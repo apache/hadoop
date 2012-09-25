@@ -85,7 +85,7 @@ public class ValueAggregatorJob {
     
     JobControl theControl = new JobControl("ValueAggregatorJobs");
     ArrayList<Job> dependingJobs = new ArrayList<Job>();
-    JobConf aJobConf = createValueAggregatorJob(args);
+    JobConf aJobConf = createValueAggregatorJob(args, (Class<?>) null);
     if(descriptors != null)
       setAggregatorDescriptors(aJobConf, descriptors);
     Job aJob = new Job(aJobConf, dependingJobs);
@@ -96,18 +96,34 @@ public class ValueAggregatorJob {
   public static JobControl createValueAggregatorJobs(String args[]) throws IOException {
     return createValueAggregatorJobs(args, null);
   }
-  
+
+  /**
+   * Create an Aggregate based map/reduce job.
+   *
+   * @param args the arguments used for job creation. Generic hadoop
+   * arguments are accepted.
+   * @return a JobConf object ready for submission.
+   *
+   * @throws IOException
+   * @see GenericOptionsParser
+   */
+  public static JobConf createValueAggregatorJob(String args[])
+  throws IOException {
+    return createValueAggregatorJob(args, (Class<?>) null);
+  }
+
   /**
    * Create an Aggregate based map/reduce job.
    * 
    * @param args the arguments used for job creation. Generic hadoop
    * arguments are accepted.
+   * @param caller the the caller class.
    * @return a JobConf object ready for submission.
    * 
    * @throws IOException
    * @see GenericOptionsParser
    */
-  public static JobConf createValueAggregatorJob(String args[])
+  public static JobConf createValueAggregatorJob(String args[], Class<?> caller)
     throws IOException {
 
     Configuration conf = new Configuration();
@@ -156,7 +172,7 @@ public class ValueAggregatorJob {
     }
     String userJarFile = theJob.get("user.jar.file");
     if (userJarFile == null) {
-      theJob.setJarByClass(ValueAggregator.class);
+      theJob.setJarByClass(caller != null ? caller : ValueAggregatorJob.class);
     } else {
       theJob.setJar(userJarFile);
     }
@@ -180,10 +196,16 @@ public class ValueAggregatorJob {
     return theJob;
   }
 
+  public static JobConf createValueAggregatorJob(String args[],
+      Class<? extends ValueAggregatorDescriptor>[] descriptors)
+      throws IOException {
+    return createValueAggregatorJob(args, descriptors, null);
+  }
+
   public static JobConf createValueAggregatorJob(String args[]
-    , Class<? extends ValueAggregatorDescriptor>[] descriptors)
+    , Class<? extends ValueAggregatorDescriptor>[] descriptors, Class<?> caller)
   throws IOException {
-    JobConf job = createValueAggregatorJob(args);
+    JobConf job = createValueAggregatorJob(args, caller);
     setAggregatorDescriptors(job, descriptors);
     return job;
   }
@@ -204,7 +226,8 @@ public class ValueAggregatorJob {
    * @throws IOException
    */
   public static void main(String args[]) throws IOException {
-    JobConf job = ValueAggregatorJob.createValueAggregatorJob(args);
+    JobConf job = ValueAggregatorJob.createValueAggregatorJob(args,
+        ValueAggregatorJob.class);
     JobClient.runJob(job);
   }
 }

@@ -72,8 +72,9 @@ public class AggregateWordHistogram {
    */
   @SuppressWarnings("unchecked")
   public static void main(String[] args) throws IOException {
-    JobConf conf = ValueAggregatorJob.createValueAggregatorJob(args
-        , new Class[] {AggregateWordHistogramPlugin.class});
+    JobConf conf = ValueAggregatorJob.createValueAggregatorJob(args,
+        new Class[] { AggregateWordHistogramPlugin.class },
+        AggregateWordHistogram.class);
     
     JobClient.runJob(conf);
   }

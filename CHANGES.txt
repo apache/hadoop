@@ -251,6 +251,9 @@ Release 1.2.0 - unreleased
 
     HADOOP-7698. jsvc target fails on x86_64. (daryn via harsh)
 
+    MAPREDUCE-4652. ValueAggregatorJob sets the wrong job jar.
+    (Ahmed Radwan via tomwhite)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
