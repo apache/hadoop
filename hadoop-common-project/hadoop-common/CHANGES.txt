@@ -575,6 +575,10 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12386. RetryPolicies.RETRY_FOREVER should be able to specify a 
     retry interval. (Sunil G via wangda)
 
+    HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
+    required context item is not configured
+    (Brahma Reddy Battula via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()

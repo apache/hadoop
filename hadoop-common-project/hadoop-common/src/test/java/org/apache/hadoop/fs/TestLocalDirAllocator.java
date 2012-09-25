@@ -299,6 +299,23 @@ public class TestLocalDirAllocator {
     }
   }
 
+  /*
+   * Test when mapred.local.dir not configured and called
+   * getLocalPathForWrite
+   */
+  @Test
+  public void testShouldNotthrowNPE() throws Exception {
+    Configuration conf1 = new Configuration();
+    try {
+      dirAllocator.getLocalPathForWrite("/test", conf1);
+      fail("Exception not thrown when " + CONTEXT + " is not set");
+    } catch (IOException e) {
+      assertEquals(CONTEXT + " not configured", e.getMessage());
+    } catch (NullPointerException e) {
+      fail("Lack of configuration should not have thrown an NPE.");
+    }
+  }
+
   /** Test no side effect files are left over. After creating a temp
    * temp file, remove both the temp file and its parent. Verify that
    * no files or directories are left over as can happen when File objects
