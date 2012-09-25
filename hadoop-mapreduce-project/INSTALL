@@ -19,7 +19,7 @@ mvn clean package -Pdist -Dtar -DskipTests -Pnative
 You can omit -Pnative it you don't want to build native packages.
 
 Step 4) Untar the tarball from hadoop-dist/target/ into a clean and different
-directory, say YARN_HOME.
+directory, say HADOOP_YARN_HOME.
 
 Step 5)
 Start hdfs
@@ -32,7 +32,7 @@ You probably want to export these in hadoop-env.sh and yarn-env.sh also.
 export HADOOP_MAPRED_HOME=<mapred loc>
 export HADOOP_COMMON_HOME=<common loc>
 export HADOOP_HDFS_HOME=<hdfs loc>
-export YARN_HOME=directory where you untarred yarn
+export HADOOP_YARN_HOME=directory where you untarred yarn
 export HADOOP_CONF_DIR=<conf loc>
 export YARN_CONF_DIR=$HADOOP_CONF_DIR
 
@@ -53,7 +53,7 @@ Step 8) Modify mapred-site.xml to use yarn framework
       <value>yarn</value>  
     </property>
 
-Step 9) cd $YARN_HOME
+Step 9) cd $HADOOP_YARN_HOME
 
 Step 10) sbin/yarn-daemon.sh start resourcemanager
 
@@ -64,7 +64,7 @@ Step 12) sbin/mr-jobhistory-daemon.sh start historyserver
 Step 13) You are all set, an example on how to run a mapreduce job is:
 cd $HADOOP_MAPRED_HOME
 ant examples -Dresolvers=internal 
-$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-*.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.randomwriter.bytespermap=10000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $YARN_HOME/modules/hadoop-mapreduce-client-jobclient-*.jar output 
+$HADOOP_COMMON_HOME/bin/hadoop jar $HADOOP_MAPRED_HOME/build/hadoop-mapreduce-examples-*.jar randomwriter -Dmapreduce.job.user.name=$USER -Dmapreduce.randomwriter.bytespermap=10000 -Ddfs.blocksize=536870912 -Ddfs.block.size=536870912 -libjars $HADOOP_YARN_HOME/modules/hadoop-mapreduce-client-jobclient-*.jar output 
 
 The output on the command line should be almost similar to what you see in the JT/TT setup (Hadoop 0.20/0.21)
 

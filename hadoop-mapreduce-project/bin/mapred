@@ -115,6 +115,11 @@ for f in $HADOOP_MAPRED_HOME/${MAPRED_DIR}/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+# Need YARN jars also
+for f in $HADOOP_YARN_HOME/${YARN_DIR}/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
 # add libs to CLASSPATH
 for f in $HADOOP_MAPRED_HOME/${MAPRED_LIB_JARS_DIR}/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
