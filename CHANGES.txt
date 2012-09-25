@@ -76,9 +76,6 @@ Release 1.2.0 - unreleased
 
     HDFS-3697. Enable fadvise readahead by default. (todd via eli)
 
-    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
-    (Todd Lipcon and Brandon Li via sseth)
-
     MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
 
     MAPREDUCE-4565. Backport MR-2855 to branch-1: ResourceBundle lookup during
@@ -406,6 +403,9 @@ Release 1.1.0 - unreleased
 
     HDFS-3814. Make the replication monitor multipliers configurable in 1.x.
     (Jing Zhao via suresh)
+
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Brandon Li via sseth)
 
   BUG FIXES
 
