@@ -108,6 +108,9 @@ Trunk (Unreleased)
     NullPointerException if the serializations list is empty.
     (Sho Shimauchi via harsh)
 
+    HADOOP-7930. Kerberos relogin interval in UserGroupInformation
+    should be configurable (Robert Kanter via harsh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
