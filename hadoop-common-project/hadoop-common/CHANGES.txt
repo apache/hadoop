@@ -111,6 +111,9 @@ Trunk (Unreleased)
     HADOOP-7930. Kerberos relogin interval in UserGroupInformation
     should be configurable (Robert Kanter via harsh)
 
+    HADOOP-8838. Colorize the test-patch output sent to JIRA (Harsh J via
+    bobby)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
