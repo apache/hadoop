@@ -192,6 +192,9 @@ Release 1.1.0 - 2012.09.16
     HADOOP-8748. Refactor DFSClient retry utility methods to a new class in
     org.apache.hadoop.io.retry.  Contributed by Arun C Murthy.
 
+    HDFS-3871. Change DFSClient to use RetryUtils.  (Arun C Murthy
+    via szetszwo)
+
   BUG FIXES
 
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
