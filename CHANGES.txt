@@ -23,13 +23,6 @@ Release 1.2.0 - unreleased
     HADOOP-7754. Expose file descriptors from Hadoop-wrapped local 
     FileSystems (todd and ahmed via tucu)
 
-    MAPREDUCE-4328. Add a JobTracker safemode to allow it to be resilient to
-    NameNode failures. The safemode can be entered either automatically via
-    the configurable background thread to monitor the NameNode or by the
-    admin. In the safemode the JobTracker doesn't schedule new tasks, marks
-    all failed tasks as KILLED for future retries and doesn't accept new job
-    submissions. (acmurthy)
-
     MAPREDUCE-461. Enable service-plugins for JobTracker. (Fredrik Hedberg and
     Brandon Li via vinodkv)
 
@@ -286,6 +279,13 @@ Release 1.1.0 - unreleased
     HDFS-3703. Datanodes are marked stale if heartbeat is not received in
     configured timeout and are selected as the last location to read from.
     (Jing Zhao via szetszwo)
+
+    MAPREDUCE-4328. Add a JobTracker safemode to allow it to be resilient to
+    NameNode failures. The safemode can be entered either automatically via
+    the configurable background thread to monitor the NameNode or by the
+    admin. In the safemode the JobTracker doesn't schedule new tasks, marks
+    all failed tasks as KILLED for future retries and doesn't accept new job
+    submissions. (acmurthy)
 
   IMPROVEMENTS
 
