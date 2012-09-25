@@ -244,6 +244,9 @@ Trunk (Unreleased)
     required context item is not configured
     (Brahma Reddy Battula via harsh)
 
+    HADOOP-3957. Change MutableQuantiles to use a shared thread for rolling
+    over metrics. (Andrew Wang via todd)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
