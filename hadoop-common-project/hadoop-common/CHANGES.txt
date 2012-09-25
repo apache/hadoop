@@ -234,6 +234,10 @@ Trunk (Unreleased)
     HADOOP-8815. RandomDatum needs to override hashCode().
     (Brandon Li via suresh)
 
+    HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
+    required context item is not configured
+    (Brahma Reddy Battula via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
