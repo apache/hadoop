@@ -631,6 +631,8 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3938. remove current limitations from HttpFS docs. (tucu)
 
     HDFS-3944. Httpfs resolveAuthority() is not resolving host correctly. (tucu)
+
+    HDFS-3972. Trash emptier fails in secure HA cluster. (todd via eli)
  
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
