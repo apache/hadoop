@@ -136,7 +136,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0, 
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -213,7 +213,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -279,7 +279,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -639,7 +639,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -743,7 +743,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator =
         new MyContainerAllocator(rm, conf, appAttemptId, mockJob);
 
@@ -909,7 +909,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -1346,7 +1346,7 @@ public class TestRMContainerAllocator {
     Job job = mock(Job.class);
     when(job.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
-            0, 0, 0, 0, 0, 0, "jobfile", null, false));
+            0, 0, 0, 0, 0, 0, "jobfile", null, false, ""));
     doReturn(10).when(job).getTotalMaps();
     doReturn(10).when(job).getTotalReduces();
     doReturn(0).when(job).getCompletedMaps();

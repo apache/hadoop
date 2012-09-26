@@ -32,6 +32,9 @@ Release 0.23.4 - UNRELEASED
     MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in
     MR2. (tomwhite)
 
+    MAPREDUCE-4646. Fixed MR framework to send diagnostic information correctly
+    to clients in case of failed jobs also. (Jason Lowe via vinodkv)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
