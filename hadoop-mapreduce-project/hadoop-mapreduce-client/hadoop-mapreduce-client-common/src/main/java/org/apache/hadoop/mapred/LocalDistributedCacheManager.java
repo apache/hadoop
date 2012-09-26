@@ -152,6 +152,10 @@ class LocalDistributedCacheManager {
           localArchives.add(pathString);
         } else if (resource.getType() == LocalResourceType.FILE) {
           localFiles.add(pathString);
+        } else if (resource.getType() == LocalResourceType.PATTERN) {
+          //PATTERN is not currently used in local mode
+          throw new IllegalArgumentException("Resource type PATTERN is not " +
+          		"implemented yet. " + resource.getResource());
         }
         Path resourcePath;
         try {
