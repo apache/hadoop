@@ -152,9 +152,9 @@ public interface AllocateRequest {
   void clearAsks();
 
   /**
-   * Get the list of <code>ContainerId</code> of unused containers being 
+   * Get the list of <code>ContainerId</code> of containers being 
    * released by the <code>ApplicationMaster</code>.
-   * @return list of <code>ContainerId</code> of unused containers being 
+   * @return list of <code>ContainerId</code> of containers being 
    *         released by the <code>ApplicationMaster</code> 
    */
   @Public
@@ -170,9 +170,9 @@ public interface AllocateRequest {
   int getReleaseCount();
 
   /**
-   * Add the list of <code>ContainerId</code> of unused containers being 
+   * Add the list of <code>ContainerId</code> of containers being 
    * released by the <code>ApplicationMaster</code>
-   * @param releaseContainers list of <code>ContainerId</code> of unused 
+   * @param releaseContainers list of <code>ContainerId</code> of 
    *                          containers being released by the <
    *                          code>ApplicationMaster</code>
    */

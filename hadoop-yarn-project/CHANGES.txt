@@ -21,6 +21,9 @@ Release 0.23.4 - UNRELEASED
     YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
     NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
 
+    YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
+    event at RUNNING state. (Siddharth Seth via vinodkv)
+
 Release 0.23.3 - Unreleased
 
   INCOMPATIBLE CHANGES
