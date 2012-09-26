@@ -747,6 +747,9 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8843. Old trash directories are never deleted on upgrade
+    from 1.x (jlowe)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
