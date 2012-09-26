@@ -223,10 +223,10 @@ class HeartbeatManager implements DatanodeStatistics {
       if (!allAlive) {
         // acquire the fsnamesystem lock, and then remove the dead node.
         namesystem.writeLock();
-        if (namesystem.isInSafeMode()) {
-          return;
-        }
         try {
+          if (namesystem.isInSafeMode()) {
+            return;
+          }
           synchronized(this) {
             dm.removeDeadDatanode(dead);
           }
