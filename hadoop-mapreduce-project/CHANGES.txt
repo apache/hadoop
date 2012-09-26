@@ -16,6 +16,9 @@ Release 0.23.4 - UNRELEASED
 
     MAPREDUCE-4651. Benchmarking random reads with DFSIO. (shv)
 
+    MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
+    (rkanter via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

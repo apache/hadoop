@@ -345,7 +345,7 @@ public class YARNRunner implements ClientProtocol {
         createApplicationResource(defaultFileContext,
             jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
-      Path jobJarPath = new Path(jobSubmitDir, MRJobConfig.JOB_JAR);
+      Path jobJarPath = new Path(jobConf.get(MRJobConfig.JAR));
       LocalResource rc = createApplicationResource(defaultFileContext,
           jobJarPath, 
           LocalResourceType.PATTERN);
