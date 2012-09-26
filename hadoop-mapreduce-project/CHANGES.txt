@@ -29,6 +29,9 @@ Release 0.23.4 - UNRELEASED
     MAPREDUCE-4647. We should only unjar jobjar if there is a lib directory
     in it. (Robert Evans via tgraves)
 
+    MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in
+    MR2. (tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
