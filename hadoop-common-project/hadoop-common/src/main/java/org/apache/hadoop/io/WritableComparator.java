@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.io;
 
-import java.io.*;
-import java.util.*;
+import java.io.DataInput;
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -38,12 +39,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceStability.Stable
 public class WritableComparator implements RawComparator {
 
-  private static HashMap<Class, WritableComparator> comparators =
-    new HashMap<Class, WritableComparator>(); // registry
+  private static final ConcurrentHashMap<Class, WritableComparator> comparators 
+          = new ConcurrentHashMap<Class, WritableComparator>(); // registry
 
   /** Get a comparator for a {@link WritableComparable} implementation. */
-  public static synchronized 
-  WritableComparator get(Class<? extends WritableComparable> c) {
+  public static WritableComparator get(Class<? extends WritableComparable> c) {
     WritableComparator comparator = comparators.get(c);
     if (comparator == null) {
       // force the static initializers to run
@@ -76,11 +76,9 @@ public class WritableComparator implements RawComparator {
   /** Register an optimized comparator for a {@link WritableComparable}
    * implementation. Comparators registered with this method must be
    * thread-safe. */
-  public static synchronized void define(Class c,
-                                         WritableComparator comparator) {
+  public static void define(Class c, WritableComparator comparator) {
     comparators.put(c, comparator);
   }
-
 
   private final Class<? extends WritableComparable> keyClass;
   private final WritableComparable key1;
