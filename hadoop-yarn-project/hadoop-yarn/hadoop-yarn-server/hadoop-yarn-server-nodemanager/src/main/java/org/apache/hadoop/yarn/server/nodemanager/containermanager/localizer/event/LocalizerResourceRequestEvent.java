@@ -32,14 +32,16 @@ public class LocalizerResourceRequestEvent extends LocalizerEvent {
   private final LocalizerContext context;
   private final LocalizedResource resource;
   private final LocalResourceVisibility vis;
+  private final String pattern;
 
   public LocalizerResourceRequestEvent(LocalizedResource resource,
-      LocalResourceVisibility vis, LocalizerContext context) {
+      LocalResourceVisibility vis, LocalizerContext context, String pattern) {
     super(LocalizerEventType.REQUEST_RESOURCE_LOCALIZATION,
         ConverterUtils.toString(context.getContainerId()));
     this.vis = vis;
     this.context = context;
     this.resource = resource;
+    this.pattern = pattern;
   }
 
   public LocalizedResource getResource() {
@@ -52,6 +54,10 @@ public class LocalizerResourceRequestEvent extends LocalizerEvent {
 
   public LocalResourceVisibility getVisibility() {
     return vis;
+  }
+
+  public String getPattern() {
+    return pattern;
   }
 
 }

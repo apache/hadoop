@@ -422,6 +422,9 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4647. We should only unjar jobjar if there is a lib directory 
+    in it. (Robert Evans via tgraves)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
