@@ -126,6 +126,8 @@ Trunk (Unreleased)
 
     MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
 
+    MAPREDUCE-4685. DBCount should not use ACCESS. (Viji via harsh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
