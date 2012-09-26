@@ -1037,7 +1037,8 @@ public class TestDFSClientRetries {
    * way. See HDFS-3067.
    */
   @Test
-  public void testRetryOnChecksumFailure() throws Exception {
+  public void testRetryOnChecksumFailure()
+      throws UnresolvedLinkException, IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

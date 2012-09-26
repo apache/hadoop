@@ -23,7 +23,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.zip.GZIPOutputStream;
-import java.util.concurrent.TimeoutException;
 
 import junit.framework.TestCase;
 
@@ -279,7 +278,7 @@ public class TestCombineFileInputFormat extends TestCase {
     assertFalse(rr.nextKeyValue());
   }
 
-  public void testSplitPlacement() throws Exception {
+  public void testSplitPlacement() throws IOException {
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;
     try {
@@ -679,8 +678,7 @@ public class TestCombineFileInputFormat extends TestCase {
   }
 
   static void writeFile(Configuration conf, Path name,
-                        short replication, int numBlocks)
-      throws IOException, TimeoutException, InterruptedException {
+      short replication, int numBlocks) throws IOException {
     FileSystem fileSys = FileSystem.get(conf);
 
     FSDataOutputStream stm = fileSys.create(name, true,
@@ -691,8 +689,7 @@ public class TestCombineFileInputFormat extends TestCase {
 
   // Creates the gzip file and return the FileStatus
   static FileStatus writeGzipFile(Configuration conf, Path name,
-      short replication, int numBlocks)
-      throws IOException, TimeoutException, InterruptedException {
+      short replication, int numBlocks) throws IOException {
     FileSystem fileSys = FileSystem.get(conf);
 
     GZIPOutputStream out = new GZIPOutputStream(fileSys.create(name, true, conf
@@ -702,8 +699,7 @@ public class TestCombineFileInputFormat extends TestCase {
   }
 
   private static void writeDataAndSetReplication(FileSystem fileSys, Path name,
-        OutputStream out, short replication, int numBlocks)
-      throws IOException, TimeoutException, InterruptedException {
+      OutputStream out, short replication, int numBlocks) throws IOException {
     for (int i = 0; i < numBlocks; i++) {
       out.write(databuf);
     }
@@ -711,7 +707,7 @@ public class TestCombineFileInputFormat extends TestCase {
     DFSTestUtil.waitReplication(fileSys, name, replication);
   }
   
-  public void testSplitPlacementForCompressedFiles() throws Exception {
+  public void testSplitPlacementForCompressedFiles() throws IOException {
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;
     try {
@@ -1062,7 +1058,7 @@ public class TestCombineFileInputFormat extends TestCase {
   /**
    * Test that CFIF can handle missing blocks.
    */
-  public void testMissingBlocks() throws Exception {
+  public void testMissingBlocks() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;

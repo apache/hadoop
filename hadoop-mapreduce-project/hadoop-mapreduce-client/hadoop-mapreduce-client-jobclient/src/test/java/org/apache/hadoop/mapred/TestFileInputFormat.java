@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
 import junit.framework.TestCase;
 
@@ -96,7 +95,7 @@ public class TestFileInputFormat extends TestCase {
   }
 
   private void createInputs(FileSystem fs, Path inDir, String fileName)
-      throws IOException, TimeoutException, InterruptedException {
+  throws IOException {
     // create a multi-block file on hdfs
     Path path = new Path(inDir, fileName);
     final short replication = 2;
@@ -158,7 +157,7 @@ public class TestFileInputFormat extends TestCase {
     }
   }
 
-  public void testMultiLevelInput() throws Exception {
+  public void testMultiLevelInput() throws IOException {
     JobConf job = new JobConf(conf);
 
     job.setBoolean("dfs.replication.considerLoad", false);
@@ -292,8 +291,7 @@ public class TestFileInputFormat extends TestCase {
   }
 
   static void writeFile(Configuration conf, Path name,
-      short replication, int numBlocks)
-      throws IOException, TimeoutException, InterruptedException {
+      short replication, int numBlocks) throws IOException {
     FileSystem fileSys = FileSystem.get(conf);
 
     FSDataOutputStream stm = fileSys.create(name, true,

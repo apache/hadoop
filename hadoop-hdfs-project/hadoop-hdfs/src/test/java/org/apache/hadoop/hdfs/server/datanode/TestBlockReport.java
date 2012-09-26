@@ -27,9 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeoutException;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,7 +65,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 /**
  * This test simulates a variety of situations when blocks are being
- * intentionally corrupted, unexpectedly modified, and so on before a block
+ * intentionally orrupted, unexpectedly modified, and so on before a block
  * report is happening
  */
 public class TestBlockReport {
@@ -319,7 +316,7 @@ public class TestBlockReport {
    * @throws IOException in case of an error
    */
   @Test
-  public void blockReport_06() throws Exception {
+  public void blockReport_06() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
     final int DN_N1 = DN_N0 + 1;
@@ -356,7 +353,7 @@ public class TestBlockReport {
   @Test
   // Currently this test is failing as expected 'cause the correct behavior is
   // not yet implemented (9/15/09)
-  public void blockReport_07() throws Exception {
+  public void blockReport_07() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
     final int DN_N1 = DN_N0 + 1;
@@ -673,24 +670,21 @@ public class TestBlockReport {
   }
 
   private void startDNandWait(Path filePath, boolean waitReplicas) 
-      throws IOException, InterruptedException, TimeoutException {
-    if (LOG.isDebugEnabled()) {
+    throws IOException {
+    if(LOG.isDebugEnabled()) {
       LOG.debug("Before next DN start: " + cluster.getDataNodes().size());
     }
     cluster.startDataNodes(conf, 1, true, null, null);
-    cluster.waitClusterUp();
     ArrayList<DataNode> datanodes = cluster.getDataNodes();
     assertEquals(datanodes.size(), 2);
 
-    if (LOG.isDebugEnabled()) {
+    if(LOG.isDebugEnabled()) {
       int lastDn = datanodes.size() - 1;
       LOG.debug("New datanode "
           + cluster.getDataNodes().get(lastDn).getDisplayName() 
           + " has been started");
     }
-    if (waitReplicas) {
-      DFSTestUtil.waitReplication(fs, filePath, REPL_FACTOR);
-    }
+    if (waitReplicas) DFSTestUtil.waitReplication(fs, filePath, REPL_FACTOR);
   }
 
   private ArrayList<Block> prepareForRide(final Path filePath,
@@ -842,9 +836,8 @@ public class TestBlockReport {
     public void run() {
       try {
         startDNandWait(filePath, true);
-      } catch (Exception e) {
-        e.printStackTrace();
-        Assert.fail("Failed to start BlockChecker: " + e);
+      } catch (IOException e) {
+        LOG.warn("Shouldn't happen", e);
       }
     }
   }

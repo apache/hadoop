@@ -137,7 +137,7 @@ public class TestDatanodeRestart {
   }
 
   // test recovering unlinked tmp replicas
-  @Test public void testRecoverReplicas() throws Exception {
+  @Test public void testRecoverReplicas() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);

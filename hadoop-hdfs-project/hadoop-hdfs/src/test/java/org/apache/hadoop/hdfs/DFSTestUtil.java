@@ -273,7 +273,7 @@ public class DFSTestUtil {
    * specified target.
    */
   public void waitReplication(FileSystem fs, String topdir, short value) 
-      throws IOException, InterruptedException, TimeoutException {
+                                              throws IOException {
     Path root = new Path(topdir);
 
     /** wait for the replication factor to settle down */
@@ -498,44 +498,36 @@ public class DFSTestUtil {
       return fileNames;
     }
   }
-
-  /**
-   * Wait for the given file to reach the given replication factor.
-   * @throws TimeoutException if we fail to sufficiently replicate the file
-   */
-  public static void waitReplication(FileSystem fs, Path fileName, short replFactor)
-      throws IOException, InterruptedException, TimeoutException {
-    boolean correctReplFactor;
-    final int ATTEMPTS = 20;
-    int count = 0;
-
+  
+  /** wait for the file's replication to be done */
+  public static void waitReplication(FileSystem fs, Path fileName, 
+      short replFactor)  throws IOException {
+    boolean good;
     do {
-      correctReplFactor = true;
+      good = true;
       BlockLocation locs[] = fs.getFileBlockLocations(
         fs.getFileStatus(fileName), 0, Long.MAX_VALUE);
-      count++;
       for (int j = 0; j < locs.length; j++) {
         String[] hostnames = locs[j].getNames();
         if (hostnames.length != replFactor) {
-          correctReplFactor = false;
-          System.out.println("Block " + j + " of file " + fileName
-              + " has replication factor " + hostnames.length
-              + " (desired " + replFactor + "); locations "
-              + Joiner.on(' ').join(hostnames));
-          Thread.sleep(1000);
+          String hostNameList = "";
+          for (String h : hostnames) hostNameList += h + " ";
+          System.out.println("Block " + j + " of file " + fileName 
+              + " has replication factor " + hostnames.length + "; locations "
+              + hostNameList);
+          good = false;
+          try {
+            System.out.println("Waiting for replication factor to drain");
+            Thread.sleep(100);
+          } catch (InterruptedException e) {} 
           break;
         }
       }
-      if (correctReplFactor) {
+      if (good) {
         System.out.println("All blocks of file " + fileName
             + " verified to have replication factor " + replFactor);
       }
-    } while (!correctReplFactor && count < ATTEMPTS);
-
-    if (count == ATTEMPTS) {
-      throw new TimeoutException("Timed out waiting for " + fileName +
-          " to reach " + replFactor + " replicas");
-    }
+    } while(!good);
   }
   
   /** delete directory and everything underneath it.*/
