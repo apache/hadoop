@@ -20,6 +20,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3939. NN RPC address cleanup. (eli)
 
+    HDFS-3373. Change DFSClient input stream socket cache to global static and add
+    a thread to cleanup expired cache entries. (John George via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 

@@ -117,12 +117,9 @@ public class TestDistributedFileSystem {
       DFSTestUtil.readFile(fileSys, p);
       
       DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-      SocketCache cache = client.socketCache;
-      assertEquals(1, cache.size());
 
       fileSys.close();
       
-      assertEquals(0, cache.size());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
