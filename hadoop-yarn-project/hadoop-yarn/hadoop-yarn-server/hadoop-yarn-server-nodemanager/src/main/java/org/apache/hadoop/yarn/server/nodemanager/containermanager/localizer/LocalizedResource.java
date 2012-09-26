@@ -219,7 +219,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       ContainerId container = ctxt.getContainerId();
       rsrc.ref.add(container);
       rsrc.dispatcher.getEventHandler().handle(
-          new LocalizerResourceRequestEvent(rsrc, req.getVisibility(), ctxt));
+          new LocalizerResourceRequestEvent(rsrc, req.getVisibility(), ctxt, 
+              req.getLocalResourceRequest().getPattern()));
     }
   }
 

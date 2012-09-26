@@ -345,10 +345,14 @@ public class YARNRunner implements ClientProtocol {
         createApplicationResource(defaultFileContext,
             jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
-      localResources.put(MRJobConfig.JOB_JAR,
-          createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, MRJobConfig.JOB_JAR), 
-              LocalResourceType.ARCHIVE));
+      Path jobJarPath = new Path(jobSubmitDir, MRJobConfig.JOB_JAR);
+      LocalResource rc = createApplicationResource(defaultFileContext,
+          jobJarPath, 
+          LocalResourceType.PATTERN);
+      String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN, 
+          JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
+      rc.setPattern(pattern);
+      localResources.put(MRJobConfig.JOB_JAR, rc);
     } else {
       // Job jar may be null. For e.g, for pipes, the job jar is the hadoop
       // mapreduce jar itself which is already on the classpath.

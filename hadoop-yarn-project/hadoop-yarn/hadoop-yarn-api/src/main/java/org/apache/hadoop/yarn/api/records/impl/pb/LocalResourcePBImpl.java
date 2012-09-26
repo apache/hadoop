@@ -151,6 +151,25 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto>
     }
     builder.setVisibility(convertToProtoFormat(visibility));
   }
+  
+  @Override
+  public synchronized String getPattern() {
+    LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasPattern()) {
+      return null;
+    }
+    return p.getPattern();
+  }
+
+  @Override
+  public synchronized void setPattern(String pattern) {
+    maybeInitBuilder();
+    if (pattern == null) {
+      builder.clearPattern();
+      return;
+    }
+    builder.setPattern(pattern);
+  }
 
   private LocalResourceTypeProto convertToProtoFormat(LocalResourceType e) {
     return ProtoUtils.convertToProtoFormat(e);

@@ -83,7 +83,7 @@ public class TestResourceRetention {
     for (int i = 0; i < nRsrcs; ++i) {
       final LocalResourceRequest req = new LocalResourceRequest(
           new Path("file:///" + user + "/rsrc" + i), timestamp + i * tsstep,
-          LocalResourceType.FILE, LocalResourceVisibility.PUBLIC);
+          LocalResourceType.FILE, LocalResourceVisibility.PUBLIC, null);
       final long ts = timestamp + i * tsstep;
       final Path p = new Path("file:///local/" + user + "/rsrc" + i);
       LocalizedResource rsrc = new LocalizedResource(req, null) {

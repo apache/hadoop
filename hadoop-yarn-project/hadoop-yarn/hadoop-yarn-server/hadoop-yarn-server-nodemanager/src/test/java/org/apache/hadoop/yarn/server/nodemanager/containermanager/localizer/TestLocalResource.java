@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
 public class TestLocalResource {
 
   static org.apache.hadoop.yarn.api.records.LocalResource getYarnResource(Path p, long size,
-      long timestamp, LocalResourceType type, LocalResourceVisibility state)
+      long timestamp, LocalResourceType type, LocalResourceVisibility state, String pattern)
       throws URISyntaxException {
     org.apache.hadoop.yarn.api.records.LocalResource ret = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(org.apache.hadoop.yarn.api.records.LocalResource.class);
     ret.setResource(ConverterUtils.getYarnUrlFromURI(p.toUri()));
@@ -45,6 +45,7 @@ public class TestLocalResource {
     ret.setTimestamp(timestamp);
     ret.setType(type);
     ret.setVisibility(state);
+    ret.setPattern(pattern);
     return ret;
   }
 
@@ -72,9 +73,9 @@ public class TestLocalResource {
 
     long basetime = r.nextLong() >>> 2;
     org.apache.hadoop.yarn.api.records.LocalResource yA = getYarnResource(
-        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PUBLIC, null);
     org.apache.hadoop.yarn.api.records.LocalResource yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PUBLIC, null);
     final LocalResourceRequest a = new LocalResourceRequest(yA);
     LocalResourceRequest b = new LocalResourceRequest(yA);
     checkEqual(a, b);
@@ -83,31 +84,37 @@ public class TestLocalResource {
 
     // ignore visibility
     yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PRIVATE);
+        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PRIVATE, null);
     b = new LocalResourceRequest(yB);
     checkEqual(a, b);
 
     // ignore size
     yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), 0, basetime, FILE, PRIVATE);
+        new Path("http://yak.org:80/foobar"), 0, basetime, FILE, PRIVATE, null);
     b = new LocalResourceRequest(yB);
     checkEqual(a, b);
 
     // note path
     yB = getYarnResource(
-        new Path("hdfs://dingo.org:80/foobar"), 0, basetime, ARCHIVE, PUBLIC);
+        new Path("hdfs://dingo.org:80/foobar"), 0, basetime, ARCHIVE, PUBLIC, null);
     b = new LocalResourceRequest(yB);
     checkNotEqual(a, b);
 
     // note type
     yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), 0, basetime, ARCHIVE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), 0, basetime, ARCHIVE, PUBLIC, null);
     b = new LocalResourceRequest(yB);
     checkNotEqual(a, b);
 
     // note timestamp
     yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), 0, basetime + 1, FILE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), 0, basetime + 1, FILE, PUBLIC, null);
+    b = new LocalResourceRequest(yB);
+    checkNotEqual(a, b);
+
+    // note pattern
+    yB = getYarnResource(
+        new Path("http://yak.org:80/foobar"), 0, basetime + 1, FILE, PUBLIC, "^/foo/.*");
     b = new LocalResourceRequest(yB);
     checkNotEqual(a, b);
   }
@@ -120,24 +127,35 @@ public class TestLocalResource {
     System.out.println("SEED: " + seed);
     long basetime = r.nextLong() >>> 2;
     org.apache.hadoop.yarn.api.records.LocalResource yA = getYarnResource(
-        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), -1, basetime, FILE, PUBLIC, "^/foo/.*");
     final LocalResourceRequest a = new LocalResourceRequest(yA);
 
     // Path primary
     org.apache.hadoop.yarn.api.records.LocalResource yB = getYarnResource(
-        new Path("http://yak.org:80/foobaz"), -1, basetime, FILE, PUBLIC);
+        new Path("http://yak.org:80/foobaz"), -1, basetime, FILE, PUBLIC, "^/foo/.*");
     LocalResourceRequest b = new LocalResourceRequest(yB);
     assertTrue(0 > a.compareTo(b));
 
     // timestamp secondary
     yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), -1, basetime + 1, FILE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), -1, basetime + 1, FILE, PUBLIC, "^/foo/.*");
     b = new LocalResourceRequest(yB);
     assertTrue(0 > a.compareTo(b));
 
     // type tertiary
     yB = getYarnResource(
-        new Path("http://yak.org:80/foobar"), -1, basetime, ARCHIVE, PUBLIC);
+        new Path("http://yak.org:80/foobar"), -1, basetime, ARCHIVE, PUBLIC, "^/foo/.*");
+    b = new LocalResourceRequest(yB);
+    assertTrue(0 != a.compareTo(b)); // don't care about order, just ne
+    
+    // path 4th
+    yB = getYarnResource(
+        new Path("http://yak.org:80/foobar"), -1, basetime, ARCHIVE, PUBLIC, "^/food/.*");
+    b = new LocalResourceRequest(yB);
+    assertTrue(0 != a.compareTo(b)); // don't care about order, just ne
+    
+    yB = getYarnResource(
+        new Path("http://yak.org:80/foobar"), -1, basetime, ARCHIVE, PUBLIC, null);
     b = new LocalResourceRequest(yB);
     assertTrue(0 != a.compareTo(b)); // don't care about order, just ne
   }

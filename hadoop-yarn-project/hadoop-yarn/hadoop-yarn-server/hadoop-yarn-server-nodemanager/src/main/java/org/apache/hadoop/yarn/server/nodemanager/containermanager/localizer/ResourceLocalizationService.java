@@ -752,6 +752,7 @@ public class ResourceLocalizationService extends CompositeService
           next.setTimestamp(nextRsrc.getTimestamp());
           next.setType(nextRsrc.getType());
           next.setVisibility(evt.getVisibility());
+          next.setPattern(evt.getPattern());
           scheduled.put(nextRsrc, evt);
           return next;
         }
