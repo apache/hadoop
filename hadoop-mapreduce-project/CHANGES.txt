@@ -61,9 +61,6 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-3921. MR AM should act on node health status changes. 
     (Bikas Saha via sseth)
 
-    MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
-    mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
-
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
 
     MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
