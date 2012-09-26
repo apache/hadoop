@@ -61,6 +61,8 @@ Trunk (Unreleased)
     MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
     (madhukara phatak via bobby)
 
+    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse due to missing Avro-generated classes (Chris Nauroth via harsh)
+
   BUG FIXES
 
     MAPREDUCE-4356. [Rumen] Provide access to the method
