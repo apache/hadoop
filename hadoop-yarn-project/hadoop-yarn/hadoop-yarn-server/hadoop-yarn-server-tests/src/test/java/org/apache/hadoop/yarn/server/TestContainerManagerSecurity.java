@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -222,7 +221,7 @@ public class TestContainerManagerSecurity {
     Resource modifiedResource = BuilderUtils.newResource(2048);
     ContainerTokenIdentifier modifiedIdentifier = new ContainerTokenIdentifier(
         dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(),
-        modifiedResource, Long.MAX_VALUE, 0);
+        modifiedResource, Long.MAX_VALUE, dummyIdentifier.getMasterKeyId());
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -250,19 +249,14 @@ public class TestContainerManagerSecurity {
               + "it will indicate RPC success");
         } catch (Exception e) {
           Assert.assertEquals(
-              java.lang.reflect.UndeclaredThrowableException.class
-                  .getCanonicalName(), e.getClass().getCanonicalName());
-          Assert.assertEquals(RemoteException.class.getCanonicalName(), e
-            .getCause().getClass().getCanonicalName());
-          Assert.assertEquals(
-            "org.apache.hadoop.security.token.SecretManager$InvalidToken",
-            ((RemoteException) e.getCause()).getClassName());
+            java.lang.reflect.UndeclaredThrowableException.class
+              .getCanonicalName(), e.getClass().getCanonicalName());
           Assert.assertTrue(e
             .getCause()
             .getMessage()
-            .matches(
-              "Given Container container_\\d*_\\d*_\\d\\d_\\d*"
-                  + " seems to have an illegally generated token."));
+            .contains(
+              "DIGEST-MD5: digest response format violation. "
+                  + "Mismatched response."));
         }
         return null;
       }

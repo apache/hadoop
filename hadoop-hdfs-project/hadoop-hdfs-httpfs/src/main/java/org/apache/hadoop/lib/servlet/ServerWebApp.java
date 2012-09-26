@@ -181,7 +181,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
       throw new ServerException(ServerException.ERROR.S13, portKey);
     }
     try {
-      InetAddress add = InetAddress.getByName(hostnameKey);
+      InetAddress add = InetAddress.getByName(host);
       int portNum = Integer.parseInt(port);
       return new InetSocketAddress(add, portNum);
     } catch (UnknownHostException ex) {

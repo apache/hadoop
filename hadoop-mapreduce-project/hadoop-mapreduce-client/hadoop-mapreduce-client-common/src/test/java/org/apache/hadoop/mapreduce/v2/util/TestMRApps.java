@@ -140,11 +140,19 @@ public class TestMRApps {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
     assertTrue(environment.get("CLASSPATH").startsWith("$PWD:"));
-    String confClasspath = job.getConfiguration().get(YarnConfiguration.YARN_APPLICATION_CLASSPATH);
-    if (confClasspath != null) {
-      confClasspath = confClasspath.replaceAll(",\\s*", ":").trim();
+    String yarnAppClasspath = 
+        job.getConfiguration().get(
+            YarnConfiguration.YARN_APPLICATION_CLASSPATH);
+    if (yarnAppClasspath != null) {
+      yarnAppClasspath = yarnAppClasspath.replaceAll(",\\s*", ":").trim();
     }
-    assertTrue(environment.get("CLASSPATH").contains(confClasspath));
+    assertTrue(environment.get("CLASSPATH").contains(yarnAppClasspath));
+    String mrAppClasspath = 
+        job.getConfiguration().get(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH);
+    if (mrAppClasspath != null) {
+      mrAppClasspath = mrAppClasspath.replaceAll(",\\s*", ":").trim();
+    }
+    assertTrue(environment.get("CLASSPATH").contains(mrAppClasspath));
   }
 
  @Test public void testSetClasspathWithUserPrecendence() {
@@ -158,7 +166,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     assertSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
-      env_str.indexOf("$PWD:job.jar/:job.jar/classes/:job.jar/lib/*:$PWD/*"), 0);
+      env_str.indexOf("$PWD:job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*"), 0);
   }
 
   @Test public void testSetClasspathWithNoUserPrecendence() {
@@ -172,7 +180,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     int index = 
-         env_str.indexOf("job.jar/:job.jar/classes/:job.jar/lib/*:$PWD/*");
+         env_str.indexOf("job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*");
     assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not"
             + " in the classpath!", index, -1);
     assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",

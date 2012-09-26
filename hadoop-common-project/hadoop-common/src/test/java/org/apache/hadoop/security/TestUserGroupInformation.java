@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -49,6 +50,7 @@ public class TestUserGroupInformation {
   final private static String GROUP3_NAME = "group3";
   final private static String[] GROUP_NAMES = 
     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+  private static Configuration conf;
   
   /**
    * UGI should not use the default security conf, else it will collide
@@ -68,7 +70,7 @@ public class TestUserGroupInformation {
   /** configure ugi */
   @BeforeClass
   public static void setup() {
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
@@ -536,5 +538,40 @@ public class TestUserGroupInformation {
           return null;
         }
       });
+  }
+
+  /** Test hasSufficientTimeElapsed method */
+  @Test
+  public void testHasSufficientTimeElapsed() throws Exception {
+    // Make hasSufficientTimeElapsed public
+    Method method = UserGroupInformation.class
+            .getDeclaredMethod("hasSufficientTimeElapsed", long.class);
+    method.setAccessible(true);
+
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    User user = ugi.getSubject().getPrincipals(User.class).iterator().next();
+    long now = System.currentTimeMillis();
+
+    // Using default relogin time (1 minute)
+    user.setLastLogin(now - 2 * 60 * 1000);  // 2 minutes before "now"
+    assertTrue((Boolean)method.invoke(ugi, now));
+    user.setLastLogin(now - 30 * 1000);      // 30 seconds before "now"
+    assertFalse((Boolean)method.invoke(ugi, now));
+
+    // Using relogin time of 10 minutes
+    Configuration conf2 = new Configuration(conf);
+    conf2.setLong(
+       CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
+       10 * 60);
+    UserGroupInformation.setConfiguration(conf2);
+    user.setLastLogin(now - 15 * 60 * 1000); // 15 minutes before "now"
+    assertTrue((Boolean)method.invoke(ugi, now));
+    user.setLastLogin(now - 6 * 60 * 1000);  // 6 minutes before "now"
+    assertFalse((Boolean)method.invoke(ugi, now));
+    // Restore original conf to UGI
+    UserGroupInformation.setConfiguration(conf);
+
+    // Restore hasSufficientTimElapsed back to private
+    method.setAccessible(false);
   }
 }

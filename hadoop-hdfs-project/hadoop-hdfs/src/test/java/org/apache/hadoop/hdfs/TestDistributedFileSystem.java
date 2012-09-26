@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -54,6 +56,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -117,17 +120,38 @@ public class TestDistributedFileSystem {
       DFSTestUtil.readFile(fileSys, p);
       
       DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-      SocketCache cache = client.socketCache;
-      assertEquals(1, cache.size());
 
       fileSys.close();
       
-      assertEquals(0, cache.size());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+
+  @Test
+  public void testDFSCloseOrdering() throws Exception {
+    DistributedFileSystem fs = new MyDistributedFileSystem();
+    Path path = new Path("/a");
+    fs.deleteOnExit(path);
+    fs.close();
+
+    InOrder inOrder = inOrder(fs.dfs);
+    inOrder.verify(fs.dfs).closeOutputStreams(eq(false));
+    inOrder.verify(fs.dfs).delete(eq(path.toString()), eq(true));
+    inOrder.verify(fs.dfs).close();
+  }
   
+  private static class MyDistributedFileSystem extends DistributedFileSystem {
+    MyDistributedFileSystem() {
+      statistics = new FileSystem.Statistics("myhdfs"); // can't mock finals
+      dfs = mock(DFSClient.class);
+    }
+    @Override
+    public boolean exists(Path p) {
+      return true; // trick out deleteOnExit
+    }
+  }
+
   @Test
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();

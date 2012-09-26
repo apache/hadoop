@@ -42,6 +42,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -106,8 +107,9 @@ public class TestFSDownload {
     FileStatus status = files.getFileStatus(p);
     ret.setSize(status.getLen());
     ret.setTimestamp(status.getModificationTime());
-    ret.setType(LocalResourceType.ARCHIVE);
+    ret.setType(LocalResourceType.PATTERN);
     ret.setVisibility(vis);
+    ret.setPattern("classes/.*");
     return ret;
   }
   
@@ -115,6 +117,7 @@ public class TestFSDownload {
   public void testDownload() throws IOException, URISyntaxException,
       InterruptedException {
     Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
       TestFSDownload.class.getSimpleName()));
@@ -162,8 +165,14 @@ public class TestFSDownload {
         Path localized = p.getValue().get();
         assertEquals(sizes[Integer.valueOf(localized.getName())], p.getKey()
             .getSize());
-        FileStatus status = files.getFileStatus(localized);
+
+        FileStatus status = files.getFileStatus(localized.getParent());
         FsPermission perm = status.getPermission();
+        assertEquals("Cache directory permissions are incorrect",
+            new FsPermission((short)0755), perm);
+
+        status = files.getFileStatus(localized);
+        perm = status.getPermission();
         System.out.println("File permission " + perm + 
             " for rsrc vis " + p.getKey().getVisibility().name());
         assert(rsrcVis.containsKey(p.getKey()));

@@ -23,6 +23,7 @@
  */
 #include <assert.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -33,9 +34,10 @@
 
 #define USE_PIPELINED
 
+#define CRC_INITIAL_VAL 0xffffffff
+
 typedef uint32_t (*crc_update_func_t)(uint32_t, const uint8_t *, size_t);
-static uint32_t crc_init();
-static uint32_t crc_val(uint32_t crc);
+static inline uint32_t crc_val(uint32_t crc);
 static uint32_t crc32_zlib_sb8(uint32_t crc, const uint8_t *buf, size_t length);
 static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length);
 
@@ -44,6 +46,35 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
 #endif
 static int cached_cpu_supports_crc32; // initialized by constructor below
 static uint32_t crc32c_hardware(uint32_t crc, const uint8_t* data, size_t length);
+
+int bulk_calculate_crc(const uint8_t *data, size_t data_len,
+                    uint32_t *sums, int checksum_type,
+                    int bytes_per_checksum) {
+  uint32_t crc;
+  crc_update_func_t crc_update_func;
+
+  switch (checksum_type) {
+    case CRC32_ZLIB_POLYNOMIAL:
+      crc_update_func = crc32_zlib_sb8;
+      break;
+    case CRC32C_POLYNOMIAL:
+      crc_update_func = crc32c_sb8;
+      break;
+    default:
+      return -EINVAL;
+      break;
+  }
+  while (likely(data_len > 0)) {
+    int len = likely(data_len >= bytes_per_checksum) ? bytes_per_checksum : data_len;
+    crc = CRC_INITIAL_VAL;
+    crc = crc_update_func(crc, data, len);
+    *sums = ntohl(crc_val(crc));
+    data += len;
+    data_len -= len;
+    sums++;
+  }
+  return 0;
+}
 
 int bulk_verify_crc(const uint8_t *data, size_t data_len,
                     const uint32_t *sums, int checksum_type,
@@ -80,7 +111,7 @@ int bulk_verify_crc(const uint8_t *data, size_t data_len,
   if (do_pipelined) {
     /* Process three blocks at a time */
     while (likely(n_blocks >= 3)) {
-      crc1 = crc2 = crc3 = crc_init();  
+      crc1 = crc2 = crc3 = CRC_INITIAL_VAL;
       pipelined_crc32c(&crc1, &crc2, &crc3, data, bytes_per_checksum, 3);
 
       crc = ntohl(crc_val(crc1));
@@ -101,7 +132,7 @@ int bulk_verify_crc(const uint8_t *data, size_t data_len,
 
     /* One or two blocks */
     if (n_blocks) {
-      crc1 = crc2 = crc_init();
+      crc1 = crc2 = crc3 = CRC_INITIAL_VAL;
       pipelined_crc32c(&crc1, &crc2, &crc3, data, bytes_per_checksum, n_blocks);
 
       if ((crc = ntohl(crc_val(crc1))) != *sums)
@@ -118,7 +149,7 @@ int bulk_verify_crc(const uint8_t *data, size_t data_len,
  
     /* For something smaller than a block */
     if (remainder) {
-      crc1 = crc_init();
+      crc1 = crc2 = crc3 = CRC_INITIAL_VAL;
       pipelined_crc32c(&crc1, &crc2, &crc3, data, remainder, 1);
 
       if ((crc = ntohl(crc_val(crc1))) != *sums)
@@ -130,7 +161,7 @@ int bulk_verify_crc(const uint8_t *data, size_t data_len,
 
   while (likely(data_len > 0)) {
     int len = likely(data_len >= bytes_per_checksum) ? bytes_per_checksum : data_len;
-    crc = crc_init();
+    crc = CRC_INITIAL_VAL;
     crc = crc_update_func(crc, data, len);
     crc = ntohl(crc_val(crc));
     if (unlikely(crc != *sums)) {
@@ -151,18 +182,10 @@ return_crc_error:
   return INVALID_CHECKSUM_DETECTED;
 }
 
-
-/**
- * Initialize a CRC
- */
-static uint32_t crc_init() {
-  return 0xffffffff;
-}
-
 /**
  * Extract the final result of a CRC
  */
-static uint32_t crc_val(uint32_t crc) {
+static inline uint32_t crc_val(uint32_t crc) {
   return ~crc;
 }
 
@@ -398,7 +421,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         counter--;
       }
 
-      /* Take care of the remainder. They are only up to three bytes,
+      /* Take care of the remainder. They are only up to seven bytes,
        * so performing byte-level crc32 won't take much time.
        */
       bdata = (uint8_t*)data;
@@ -433,7 +456,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         "crc32b (%5), %0;\n\t"
         "crc32b (%5,%4,1), %1;\n\t"
          : "=r"(c1), "=r"(c2) 
-         : "r"(c1), "r"(c2), "r"(c3), "r"(block_size), "r"(bdata)
+         : "r"(c1), "r"(c2), "r"(block_size), "r"(bdata)
         );
         bdata++;
         remainder--;
@@ -593,7 +616,7 @@ static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, con
         "crc32b (%5), %0;\n\t"
         "crc32b (%5,%4,1), %1;\n\t"
          : "=r"(c1), "=r"(c2) 
-         : "r"(c1), "r"(c2), "r"(c3), "r"(block_size), "r"(bdata)
+         : "r"(c1), "r"(c2), "r"(block_size), "r"(bdata)
         );
         bdata++;
         remainder--;

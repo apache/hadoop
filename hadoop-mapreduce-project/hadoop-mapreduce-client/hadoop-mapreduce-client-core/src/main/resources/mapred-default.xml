@@ -797,9 +797,12 @@
 
 <property>
   <name>mapreduce.job.maxtaskfailures.per.tracker</name>
-  <value>4</value>
+  <value>3</value>
   <description>The number of task-failures on a tasktracker of a given job 
-               after which new tasks of that job aren't assigned to it.
+               after which new tasks of that job aren't assigned to it. It
+               MUST be less than mapreduce.map.maxattempts and
+               mapreduce.reduce.maxattempts otherwise the failed task will
+               never be tried on a different node.
   </description>
 </property>
 
@@ -1200,6 +1203,8 @@
 
 <!--  end of node health script variables -->
 
+<!-- MR YARN Application properties -->
+
 <property>
  <name>mapreduce.job.counters.limit</name>
   <value>120</value>
@@ -1307,6 +1312,13 @@
   <name>yarn.app.mapreduce.am.resource.mb</name>
   <value>1536</value>
   <description>The amount of memory the MR AppMaster needs.</description>
+</property>
+
+<property>
+  <description>CLASSPATH for MR applications. A comma-separated list
+  of CLASSPATH entries</description>
+   <name>mapreduce.application.classpath</name>
+   <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
 </property>
 
 <!-- jobhistory properties -->

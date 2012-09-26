@@ -321,7 +321,8 @@ public class TestRMAppTransitions {
   }
 
   protected RMApp testCreateAppFinished(
-      ApplicationSubmissionContext submissionContext) throws IOException {
+      ApplicationSubmissionContext submissionContext,
+      String diagnostics) throws IOException {
     // unmanaged AMs don't use the FINISHING state
     RMApp application = null;
     if (submissionContext != null && submissionContext.getUnmanagedAM()) {
@@ -330,14 +331,15 @@ public class TestRMAppTransitions {
       application = testCreateAppFinishing(submissionContext);
     }
     // RUNNING/FINISHING => FINISHED event RMAppEventType.ATTEMPT_FINISHED
-    RMAppEvent finishedEvent = 
-        new RMAppEvent(application.getApplicationId(), 
-            RMAppEventType.ATTEMPT_FINISHED);
+    RMAppEvent finishedEvent = new RMAppFinishedAttemptEvent(
+        application.getApplicationId(), diagnostics);
     application.handle(finishedEvent);
     assertAppState(RMAppState.FINISHED, application);
     assertTimesAtFinish(application);
     // finished without a proper unregister implies failed
     assertFinalAppStatus(FinalApplicationStatus.FAILED, application);
+    Assert.assertTrue("Finished app missing diagnostics",
+        application.getDiagnostics().indexOf(diagnostics) != -1);
     return application;
   }
 
@@ -348,11 +350,14 @@ public class TestRMAppTransitions {
 
     // test success path
     LOG.info("--- START: testUnmanagedAppSuccessPath ---");
-    testCreateAppFinished(subContext);
+    final String diagMsg = "some diagnostics";
+    RMApp application = testCreateAppFinished(subContext, diagMsg);
+    Assert.assertTrue("Finished app missing diagnostics",
+        application.getDiagnostics().indexOf(diagMsg) != -1);
 
     // test app fails after 1 app attempt failure
     LOG.info("--- START: testUnmanagedAppFailPath ---");
-    RMApp application = testCreateAppRunning(subContext);
+    application = testCreateAppRunning(subContext);
     RMAppEvent event = new RMAppFailedAttemptEvent(
         application.getApplicationId(), RMAppEventType.ATTEMPT_FAILED, "");
     application.handle(event);
@@ -366,7 +371,10 @@ public class TestRMAppTransitions {
   @Test
   public void testAppSuccessPath() throws IOException {
     LOG.info("--- START: testAppSuccessPath ---");
-    testCreateAppFinished(null);
+    final String diagMsg = "some diagnostics";
+    RMApp application = testCreateAppFinished(null, diagMsg);
+    Assert.assertTrue("Finished application missing diagnostics",
+        application.getDiagnostics().indexOf(diagMsg) != -1);
   }
 
   @Test
@@ -551,7 +559,7 @@ public class TestRMAppTransitions {
   public void testAppFinishedFinished() throws IOException {
     LOG.info("--- START: testAppFinishedFinished ---");
 
-    RMApp application = testCreateAppFinished(null);
+    RMApp application = testCreateAppFinished(null, "");
     // FINISHED => FINISHED event RMAppEventType.KILL
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
@@ -579,9 +587,8 @@ public class TestRMAppTransitions {
     assertAppState(RMAppState.KILLED, application);
 
     // KILLED => KILLED event RMAppEventType.ATTEMPT_FINISHED
-    event =
-        new RMAppEvent(application.getApplicationId(), 
-            RMAppEventType.ATTEMPT_FINISHED);
+    event = new RMAppFinishedAttemptEvent(
+        application.getApplicationId(), "");
     application.handle(event);
     rmDispatcher.await();
     assertTimesAtFinish(application);

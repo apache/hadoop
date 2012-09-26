@@ -98,6 +98,11 @@ public class DistCp extends Configured implements Tool {
    * @return On success, it returns 0. Else, -1.
    */
   public int run(String[] argv) {
+    if (argv.length < 1) {
+      OptionsParser.usage();
+      return DistCpConstants.INVALID_ARGUMENT;
+    }
+    
     try {
       inputOptions = (OptionsParser.parse(argv));
 

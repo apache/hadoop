@@ -102,7 +102,7 @@
 <property><!--Loaded from job.xml--><name>dfs.permissions.enabled</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.tasktracker.taskcontroller</name><value>org.apache.hadoop.mapred.DefaultTaskController</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.shuffle.parallelcopies</name><value>5</value></property>
-<property><!--Loaded from job.xml--><name>yarn.nodemanager.env-whitelist</name><value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,YARN_HOME</value></property>
+<property><!--Loaded from job.xml--><name>yarn.nodemanager.env-whitelist</name><value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,HADOOP_YARN_HOME</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.heartbeats.in.second</name><value>100</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.maxtaskfailures.per.tracker</name><value>4</value></property>
 <property><!--Loaded from job.xml--><name>ipc.client.connection.maxidletime</name><value>10000</value></property>
@@ -317,8 +317,8 @@
         $HADOOP_COMMON_HOME/share/hadoop/common/lib/*,
         $HADOOP_HDFS_HOME/share/hadoop/hdfs/*,
         $HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,
-        $YARN_HOME/share/hadoop/mapreduce/*,
-        $YARN_HOME/share/hadoop/mapreduce/lib/*
+        $HADOOP_YARN_HOME/share/hadoop/mapreduce/*,
+        $HADOOP_YARN_HOME/share/hadoop/mapreduce/lib/*
      </value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.log-aggregation.compression-type</name><value>gz</value></property>
 <property><!--Loaded from job.xml--><name>dfs.image.compress</name><value>false</value></property>

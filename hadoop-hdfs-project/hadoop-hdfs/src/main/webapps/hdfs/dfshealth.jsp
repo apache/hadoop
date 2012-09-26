@@ -34,7 +34,7 @@
   boolean isActive = (nnHAState == HAServiceState.ACTIVE);
   String namenodeRole = nn.getRole().toString();
   String namenodeState = nnHAState.toString();
-  String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
+  String namenodeLabel = nn.getNameNodeAddressHostPortString();
 %>
 
 <!DOCTYPE html>

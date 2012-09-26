@@ -161,7 +161,7 @@ public class TestProcfsBasedProcessTree {
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
     ProcfsBasedProcessTree p = createProcessTree(pid);
-    p = p.getProcessTree(); // initialize
+    p.getProcessTree(); // initialize
     LOG.info("ProcessTree: " + p.toString());
 
     File leaf = new File(lowestDescendant);
@@ -174,7 +174,7 @@ public class TestProcfsBasedProcessTree {
       }
     }
 
-    p = p.getProcessTree(); // reconstruct
+    p.getProcessTree(); // reconstruct
     LOG.info("ProcessTree: " + p.toString());
 
     // Get the process-tree dump
@@ -213,7 +213,7 @@ public class TestProcfsBasedProcessTree {
     }
 
     // ProcessTree is gone now. Any further calls should be sane.
-    p = p.getProcessTree();
+    p.getProcessTree();
     Assert.assertFalse("ProcessTree must have been gone", isAlive(pid));
     Assert.assertTrue("Cumulative vmem for the gone-process is "
         + p.getCumulativeVmem() + " . It should be zero.", p
@@ -222,13 +222,11 @@ public class TestProcfsBasedProcessTree {
   }
 
   protected ProcfsBasedProcessTree createProcessTree(String pid) {
-    return new ProcfsBasedProcessTree(pid,
-                               isSetsidAvailable());
+    return new ProcfsBasedProcessTree(pid);
   }
 
-  protected ProcfsBasedProcessTree createProcessTree(String pid,
-      boolean setsidUsed, String procfsRootDir) {
-    return new ProcfsBasedProcessTree(pid, setsidUsed, procfsRootDir);
+  protected ProcfsBasedProcessTree createProcessTree(String pid, String procfsRootDir) {
+    return new ProcfsBasedProcessTree(pid, procfsRootDir);
   }
 
   protected void destroyProcessTree(String pid) throws IOException {
@@ -237,7 +235,7 @@ public class TestProcfsBasedProcessTree {
 
   /**
    * Get PID from a pid-file.
-   * 
+   *
    * @param pidFileName
    *          Name of the pid-file.
    * @return the PID string read from the pid-file. Returns null if the
@@ -279,11 +277,11 @@ public class TestProcfsBasedProcessTree {
     }
     return pid;
   }
-  
+
   public static class ProcessStatInfo {
-    // sample stat in a single line : 3910 (gpm) S 1 3910 3910 0 -1 4194624 
-    // 83 0 0 0 0 0 0 0 16 0 1 0 7852 2408448 88 4294967295 134512640 
-    // 134590050 3220521392 3220520036 10975138 0 0 4096 134234626 
+    // sample stat in a single line : 3910 (gpm) S 1 3910 3910 0 -1 4194624
+    // 83 0 0 0 0 0 0 0 16 0 1 0 7852 2408448 88 4294967295 134512640
+    // 134590050 3220521392 3220520036 10975138 0 0 4096 134234626
     // 4294967295 0 0 17 1 0 0
     String pid;
     String name;
@@ -294,7 +292,7 @@ public class TestProcfsBasedProcessTree {
     String rssmemPage = "0";
     String utime = "0";
     String stime = "0";
-    
+
     public ProcessStatInfo(String[] statEntries) {
       pid = statEntries[0];
       name = statEntries[1];
@@ -310,19 +308,19 @@ public class TestProcfsBasedProcessTree {
         stime = statEntries[8];
       }
     }
-    
+
     // construct a line that mimics the procfs stat file.
     // all unused numerical entries are set to 0.
     public String getStatLine() {
       return String.format("%s (%s) S %s %s %s 0 0 0" +
                       " 0 0 0 0 %s %s 0 0 0 0 0 0 0 %s %s 0 0" +
                       " 0 0 0 0 0 0 0 0" +
-                      " 0 0 0 0 0", 
+                      " 0 0 0 0 0",
                       pid, name, ppid, pgrpId, session,
                       utime, stime, vmem, rssmemPage);
     }
   }
-  
+
   /**
    * A basic test that creates a few process directories and writes
    * stat files. Verifies that the cpu time and memory is correctly
@@ -335,33 +333,33 @@ public class TestProcfsBasedProcessTree {
 
     // test processes
     String[] pids = { "100", "200", "300", "400" };
-    // create the fake procfs root directory. 
+    // create the fake procfs root directory.
     File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
 
     try {
       setupProcfsRootDir(procfsRootDir);
       setupPidDirs(procfsRootDir, pids);
-      
+
       // create stat objects.
       // assuming processes 100, 200, 300 are in tree and 400 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[4];
-      procInfos[0] = new ProcessStatInfo(new String[] 
+      procInfos[0] = new ProcessStatInfo(new String[]
           {"100", "proc1", "1", "100", "100", "100000", "100", "1000", "200"});
-      procInfos[1] = new ProcessStatInfo(new String[] 
+      procInfos[1] = new ProcessStatInfo(new String[]
           {"200", "proc2", "100", "100", "100", "200000", "200", "2000", "400"});
-      procInfos[2] = new ProcessStatInfo(new String[] 
+      procInfos[2] = new ProcessStatInfo(new String[]
           {"300", "proc3", "200", "100", "100", "300000", "300", "3000", "600"});
-      procInfos[3] = new ProcessStatInfo(new String[] 
+      procInfos[3] = new ProcessStatInfo(new String[]
           {"400", "proc4", "1", "400", "400", "400000", "400", "4000", "800"});
-      
+
       writeStatFiles(procfsRootDir, pids, procInfos);
-      
+
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", true, procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath());
       // build the process tree.
       processTree.getProcessTree();
-      
+
       // verify cumulative memory
       Assert.assertEquals("Cumulative virtual memory does not match", 600000L,
                    processTree.getCumulativeVmem());
@@ -397,7 +395,7 @@ public class TestProcfsBasedProcessTree {
       FileUtil.fullyDelete(procfsRootDir);
     }
   }
-  
+
   /**
    * Tests that cumulative memory is computed only for
    * processes older than a given age.
@@ -408,33 +406,33 @@ public class TestProcfsBasedProcessTree {
   public void testMemForOlderProcesses() throws IOException {
     // initial list of processes
     String[] pids = { "100", "200", "300", "400" };
-    // create the fake procfs root directory. 
+    // create the fake procfs root directory.
     File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
 
     try {
       setupProcfsRootDir(procfsRootDir);
       setupPidDirs(procfsRootDir, pids);
-      
+
       // create stat objects.
       // assuming 100, 200 and 400 are in tree, 300 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[4];
-      procInfos[0] = new ProcessStatInfo(new String[] 
+      procInfos[0] = new ProcessStatInfo(new String[]
                         {"100", "proc1", "1", "100", "100", "100000", "100"});
-      procInfos[1] = new ProcessStatInfo(new String[] 
+      procInfos[1] = new ProcessStatInfo(new String[]
                         {"200", "proc2", "100", "100", "100", "200000", "200"});
-      procInfos[2] = new ProcessStatInfo(new String[] 
+      procInfos[2] = new ProcessStatInfo(new String[]
                         {"300", "proc3", "1", "300", "300", "300000", "300"});
-      procInfos[3] = new ProcessStatInfo(new String[] 
+      procInfos[3] = new ProcessStatInfo(new String[]
                         {"400", "proc4", "100", "100", "100", "400000", "400"});
-      
+
       writeStatFiles(procfsRootDir, pids, procInfos);
-      
+
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", true, procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath());
       // build the process tree.
       processTree.getProcessTree();
-      
+
       // verify cumulative memory
       Assert.assertEquals("Cumulative memory does not match",
                    700000L, processTree.getCumulativeVmem());
@@ -442,12 +440,12 @@ public class TestProcfsBasedProcessTree {
       // write one more process as child of 100.
       String[] newPids = { "500" };
       setupPidDirs(procfsRootDir, newPids);
-      
+
       ProcessStatInfo[] newProcInfos = new ProcessStatInfo[1];
       newProcInfos[0] = new ProcessStatInfo(new String[]
                       {"500", "proc5", "100", "100", "100", "500000", "500"});
       writeStatFiles(procfsRootDir, newPids, newProcInfos);
-      
+
       // check memory includes the new process.
       processTree.getProcessTree();
       Assert.assertEquals("Cumulative vmem does not include new process",
@@ -456,7 +454,7 @@ public class TestProcfsBasedProcessTree {
                         1200L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
       Assert.assertEquals("Cumulative rssmem does not include new process",
                    cumuRssMem, processTree.getCumulativeRssmem());
-      
+
       // however processes older than 1 iteration will retain the older value
       Assert.assertEquals("Cumulative vmem shouldn't have included new process",
                    700000L, processTree.getCumulativeVmem(1));
@@ -468,7 +466,7 @@ public class TestProcfsBasedProcessTree {
       // one more process
       newPids = new String[]{ "600" };
       setupPidDirs(procfsRootDir, newPids);
-      
+
       newProcInfos = new ProcessStatInfo[1];
       newProcInfos[0] = new ProcessStatInfo(new String[]
                       {"600", "proc6", "100", "100", "100", "600000", "600"});
@@ -476,7 +474,7 @@ public class TestProcfsBasedProcessTree {
 
       // refresh process tree
       processTree.getProcessTree();
-      
+
       // processes older than 2 iterations should be same as before.
       Assert.assertEquals("Cumulative vmem shouldn't have included new processes",
                    700000L, processTree.getCumulativeVmem(2));
@@ -515,15 +513,14 @@ public class TestProcfsBasedProcessTree {
   public void testDestroyProcessTree() throws IOException {
     // test process
     String pid = "100";
-    // create the fake procfs root directory. 
+    // create the fake procfs root directory.
     File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
 
     try {
       setupProcfsRootDir(procfsRootDir);
-      
+
       // crank up the process tree class.
-      ProcfsBasedProcessTree processTree =
-          createProcessTree(pid, true, procfsRootDir.getAbsolutePath());
+      createProcessTree(pid, procfsRootDir.getAbsolutePath());
 
       // Let us not create stat file for pid 100.
       Assert.assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(
@@ -532,10 +529,10 @@ public class TestProcfsBasedProcessTree {
       FileUtil.fullyDelete(procfsRootDir);
     }
   }
-  
+
   /**
    * Test the correctness of process-tree dump.
-   * 
+   *
    * @throws IOException
    */
   @Test
@@ -578,7 +575,7 @@ public class TestProcfsBasedProcessTree {
       writeCmdLineFiles(procfsRootDir, pids, cmdLines);
 
       ProcfsBasedProcessTree processTree = createProcessTree(
-          "100", true, procfsRootDir.getAbsolutePath());
+          "100", procfsRootDir.getAbsolutePath());
       // build the process tree.
       processTree.getProcessTree();
 
@@ -675,11 +672,11 @@ public class TestProcfsBasedProcessTree {
    * @param procfsRootDir root directory to create.
    * @throws IOException if could not delete the procfs root directory
    */
-  public static void setupProcfsRootDir(File procfsRootDir) 
-                                        throws IOException { 
+  public static void setupProcfsRootDir(File procfsRootDir)
+                                        throws IOException {
     // cleanup any existing process root dir.
     if (procfsRootDir.exists()) {
-      Assert.assertTrue(FileUtil.fullyDelete(procfsRootDir));  
+      Assert.assertTrue(FileUtil.fullyDelete(procfsRootDir));
     }
 
     // create afresh
@@ -692,7 +689,7 @@ public class TestProcfsBasedProcessTree {
    * @param pids the PID directories to create.
    * @throws IOException If PID dirs could not be created
    */
-  public static void setupPidDirs(File procfsRootDir, String[] pids) 
+  public static void setupPidDirs(File procfsRootDir, String[] pids)
                       throws IOException {
     for (String pid : pids) {
       File pidDir = new File(procfsRootDir, pid);
@@ -705,7 +702,7 @@ public class TestProcfsBasedProcessTree {
       }
     }
   }
-  
+
   /**
    * Write stat files under the specified pid directories with data
    * setup in the corresponding ProcessStatInfo objects
@@ -715,7 +712,7 @@ public class TestProcfsBasedProcessTree {
    *              written to the stat files.
    * @throws IOException if stat files could not be written
    */
-  public static void writeStatFiles(File procfsRootDir, String[] pids, 
+  public static void writeStatFiles(File procfsRootDir, String[] pids,
                               ProcessStatInfo[] procs) throws IOException {
     for (int i=0; i<pids.length; i++) {
       File statFile =
@@ -726,7 +723,7 @@ public class TestProcfsBasedProcessTree {
         FileWriter fw = new FileWriter(statFile);
         bw = new BufferedWriter(fw);
         bw.write(procs[i].getStatLine());
-        LOG.info("wrote stat file for " + pids[i] + 
+        LOG.info("wrote stat file for " + pids[i] +
                   " with contents: " + procs[i].getStatLine());
       } finally {
         // not handling exception - will throw an error and fail the test.

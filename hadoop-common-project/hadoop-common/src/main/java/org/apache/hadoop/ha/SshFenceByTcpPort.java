@@ -241,7 +241,7 @@ public class SshFenceByTcpPort extends Configured
       sshPort = DEFAULT_SSH_PORT;
 
       // Parse optional user and ssh port
-      if (arg != null && !"".equals(arg)) {
+      if (arg != null && !arg.isEmpty()) {
         Matcher m = USER_PORT_RE.matcher(arg);
         if (!m.matches()) {
           throw new BadFencingConfigurationException(

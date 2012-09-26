@@ -71,7 +71,7 @@ public class FileChecksumServlets {
         String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
         dtParam = JspHelper.getDelegationTokenUrlParam(tokenString);
       }
-      String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+      String addr = nn.getNameNodeAddressHostPortString();
       String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
 
       return new URL(scheme, hostname, port, 

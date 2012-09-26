@@ -21,9 +21,12 @@ package org.apache.hadoop.yarn.conf;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -281,7 +284,12 @@ public class YarnConfiguration extends Configuration {
 
   /** Environment variables that containers may override rather than use NodeManager's default.*/
   public static final String NM_ENV_WHITELIST = NM_PREFIX + "env-whitelist";
-  public static final String DEFAULT_NM_ENV_WHITELIST = "JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,YARN_HOME";
+  public static final String DEFAULT_NM_ENV_WHITELIST = StringUtils.join(",",
+    Arrays.asList(ApplicationConstants.Environment.JAVA_HOME.key(),
+      ApplicationConstants.Environment.HADOOP_COMMON_HOME.key(),
+      ApplicationConstants.Environment.HADOOP_HDFS_HOME.key(),
+      ApplicationConstants.Environment.HADOOP_CONF_DIR.key(),
+      ApplicationConstants.Environment.HADOOP_YARN_HOME.key()));
   
   /** address of node manager IPC.*/
   public static final String NM_ADDRESS = NM_PREFIX + "address";
@@ -416,10 +424,13 @@ public class YarnConfiguration extends Configuration {
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
   public final static int DEFAULT_NM_CONTAINER_MON_INTERVAL_MS = 3000;
-  
+
   /** Class that calculates containers current resource utilization.*/
   public static final String NM_CONTAINER_MON_RESOURCE_CALCULATOR =
     NM_PREFIX + "container-monitor.resource-calculator.class";
+  /** Class that calculates process tree resource utilization.*/
+  public static final String NM_CONTAINER_MON_PROCESS_TREE =
+    NM_PREFIX + "container-monitor.process-tree.class";
 
   /**
    * Enable/Disable disks' health checker. Default is true.
@@ -567,12 +578,19 @@ public class YarnConfiguration extends Configuration {
    * CLASSPATH entries
    */
   public static final String[] DEFAULT_YARN_APPLICATION_CLASSPATH = {
-      "$HADOOP_CONF_DIR", "$HADOOP_COMMON_HOME/share/hadoop/common/*",
-      "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
-      "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
-      "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
-      "$YARN_HOME/share/hadoop/mapreduce/*",
-      "$YARN_HOME/share/hadoop/mapreduce/lib/*"};
+      ApplicationConstants.Environment.HADOOP_CONF_DIR.$(),
+      ApplicationConstants.Environment.HADOOP_COMMON_HOME.$()
+          + "/share/hadoop/common/*",
+      ApplicationConstants.Environment.HADOOP_COMMON_HOME.$()
+          + "/share/hadoop/common/lib/*",
+      ApplicationConstants.Environment.HADOOP_HDFS_HOME.$()
+          + "/share/hadoop/hdfs/*",
+      ApplicationConstants.Environment.HADOOP_HDFS_HOME.$()
+          + "/share/hadoop/hdfs/lib/*",
+      ApplicationConstants.Environment.HADOOP_YARN_HOME.$()
+          + "/share/hadoop/yarn/*",
+      ApplicationConstants.Environment.HADOOP_YARN_HOME.$()
+          + "/share/hadoop/yarn/lib/*" };
 
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";

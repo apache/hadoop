@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,7 +97,7 @@ public class TestBalancerWithMultipleNameNodes {
 
   /* create a file with a length of <code>fileLen</code> */
   private static void createFile(Suite s, int index, long len
-      ) throws IOException {
+      ) throws IOException, InterruptedException, TimeoutException {
     final FileSystem fs = s.cluster.getFileSystem(index);
     DFSTestUtil.createFile(fs, FILE_PATH, len, s.replication, RANDOM.nextLong());
     DFSTestUtil.waitReplication(fs, FILE_PATH, s.replication);
@@ -106,7 +107,7 @@ public class TestBalancerWithMultipleNameNodes {
    * whose used space to be <code>size</code>
    */
   private static ExtendedBlock[][] generateBlocks(Suite s, long size
-      ) throws IOException {
+      ) throws IOException, InterruptedException, TimeoutException {
     final ExtendedBlock[][] blocks = new ExtendedBlock[s.clients.length][];
     for(int n = 0; n < s.clients.length; n++) {
       final long fileLen = size/s.replication;

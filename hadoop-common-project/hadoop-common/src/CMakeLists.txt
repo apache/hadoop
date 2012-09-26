@@ -60,6 +60,7 @@ find_package(ZLIB REQUIRED)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall -O2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_REENTRANT -D_FILE_OFFSET_BITS=64")
 set(D main/native/src/org/apache/hadoop)
+set(T main/native/src/test/org/apache/hadoop)
 
 GET_FILENAME_COMPONENT(HADOOP_ZLIB_LIBRARY ${ZLIB_LIBRARIES} NAME)
 
@@ -98,9 +99,17 @@ include_directories(
     ${JNI_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
     ${SNAPPY_INCLUDE_DIR}
+    ${D}/util
 )
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
+add_executable(test_bulk_crc32
+    ${D}/util/bulk_crc32.c
+    ${T}/util/test_bulk_crc32.c
+)
+set_property(SOURCE main.cpp PROPERTY INCLUDE_DIRECTORIES "\"-Werror\" \"-Wall\"")
+
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 add_dual_library(hadoop
     ${D}/io/compress/lz4/Lz4Compressor.c
     ${D}/io/compress/lz4/Lz4Decompressor.c
@@ -117,6 +126,17 @@ add_dual_library(hadoop
     ${D}/util/NativeCrc32.c
     ${D}/util/bulk_crc32.c
 )
+
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    #
+    # By embedding '$ORIGIN' into the RPATH of libhadoop.so,
+    # dlopen will look in the directory containing libhadoop.so.
+    # However, $ORIGIN is not supported by all operating systems.
+    #
+    SET_TARGET_PROPERTIES(hadoop 
+        PROPERTIES INSTALL_RPATH "\$ORIGIN/")
+ENDIF()
+
 target_link_dual_libraries(hadoop
     dl
     ${JAVA_JVM_LIBRARY}

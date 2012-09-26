@@ -1073,7 +1073,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public boolean getBoolean(String name, boolean defaultValue) {
     String valueString = getTrimmed(name);
-    if (null == valueString || "".equals(valueString)) {
+    if (null == valueString || valueString.isEmpty()) {
       return defaultValue;
     }
 
@@ -1140,7 +1140,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Pattern getPattern(String name, Pattern defaultValue) {
     String valString = get(name);
-    if (null == valString || "".equals(valString)) {
+    if (null == valString || valString.isEmpty()) {
       return defaultValue;
     }
     try {
@@ -1871,11 +1871,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (url == null) {
       return null;
     }
-    return parse(builder, url.openStream());
+    return parse(builder, url.openStream(), url.toString());
   }
 
-  private Document parse(DocumentBuilder builder, InputStream is)
-      throws IOException, SAXException {
+  private Document parse(DocumentBuilder builder, InputStream is,
+      String systemId) throws IOException, SAXException {
     if (!quietmode) {
       LOG.info("parsing input stream " + is);
     }
@@ -1883,7 +1883,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return null;
     }
     try {
-      return builder.parse(is);
+      return (systemId == null) ? builder.parse(is) : builder.parse(is,
+          systemId);
     } finally {
       is.close();
     }
@@ -1951,10 +1952,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           if (!quiet) {
             LOG.info("parsing File " + file);
           }
-          doc = parse(builder, new BufferedInputStream(new FileInputStream(file)));
+          doc = parse(builder, new BufferedInputStream(
+              new FileInputStream(file)), ((Path)resource).toString());
         }
       } else if (resource instanceof InputStream) {
-        doc = parse(builder, (InputStream) resource);
+        doc = parse(builder, (InputStream) resource, null);
         returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
@@ -2324,11 +2326,23 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
     Configuration.addDeprecation("fs.default.name", 
                new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
+    Configuration.addDeprecation("dfs.umaskmode",
+        new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY});
   }
   
   /**
    * A unique class which is used as a sentinel value in the caching
-   * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
+   * for getClassByName. {@link Configuration#getClassByNameOrNull(String)}
    */
   private static abstract class NegativeCacheSentinel {}
+
+  public static void dumpDeprecatedKeys() {
+    for (Map.Entry<String, DeprecatedKeyInfo> entry : deprecatedKeyMap.entrySet()) {
+      StringBuilder newKeys = new StringBuilder();
+      for (String newKey : entry.getValue().newKeys) {
+        newKeys.append(newKey).append("\t");
+      }
+      System.out.println(entry.getKey() + "\t" + newKeys.toString());
+    }
+  }
 }

@@ -16,8 +16,12 @@
 * limitations under the License.
 */
 
-package org.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.client.YarnClient;
+import org.apache.hadoop.yarn.client.YarnClientImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.Test;
 
 public class TestYarnClient {
@@ -27,4 +31,16 @@ public class TestYarnClient {
     // More to come later.
   }
 
+  @Test
+  public void testClientStop() {
+    Configuration conf = new Configuration();
+    ResourceManager rm = new ResourceManager(null);
+    rm.init(conf);
+    rm.start();
+
+    YarnClient client = new YarnClientImpl();
+    client.init(conf);
+    client.start();
+    client.stop();
+  }
 }

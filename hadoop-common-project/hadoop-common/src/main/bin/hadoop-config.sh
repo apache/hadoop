@@ -74,6 +74,10 @@ fi
 
 export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_PREFIX/$DEFAULT_CONF_DIR}"
 
+if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
+  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
+fi
+
 # User can specify hostnames or a file where the hostnames are (not both)
 if [[ ( "$HADOOP_SLAVES" != '' ) && ( "$HADOOP_SLAVE_NAMES" != '' ) ]] ; then
   echo \
@@ -113,9 +117,6 @@ case "`uname`" in
 CYGWIN*) cygwin=true;;
 esac
 
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
-fi
 
 # check if net.ipv6.bindv6only is set to 1
 bindv6only=$(/sbin/sysctl -n net.ipv6.bindv6only 2> /dev/null)
@@ -243,6 +244,7 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH
 fi  
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 
@@ -267,21 +269,21 @@ fi
 CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/$HDFS_DIR'/*'
 
 # put yarn in classpath if present
-if [ "$YARN_HOME" = "" ]; then
+if [ "$HADOOP_YARN_HOME" = "" ]; then
   if [ -d "${HADOOP_PREFIX}/$YARN_DIR" ]; then
-    export YARN_HOME=$HADOOP_PREFIX
+    export HADOOP_YARN_HOME=$HADOOP_PREFIX
   fi
 fi
 
-if [ -d "$YARN_HOME/$YARN_DIR/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_DIR
+if [ -d "$HADOOP_YARN_HOME/$YARN_DIR/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/$YARN_DIR
 fi
 
-if [ -d "$YARN_HOME/$YARN_LIB_JARS_DIR" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_LIB_JARS_DIR'/*'
+if [ -d "$HADOOP_YARN_HOME/$YARN_LIB_JARS_DIR" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/$YARN_LIB_JARS_DIR'/*'
 fi
 
-CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_DIR'/*'
+CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/$YARN_DIR'/*'
 
 # put mapred in classpath if present AND different from YARN
 if [ "$HADOOP_MAPRED_HOME" = "" ]; then
@@ -290,7 +292,7 @@ if [ "$HADOOP_MAPRED_HOME" = "" ]; then
   fi
 fi
 
-if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$YARN_HOME/$YARN_DIR" ] ; then
+if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$HADOOP_YARN_HOME/$YARN_DIR" ] ; then
   if [ -d "$HADOOP_MAPRED_HOME/$MAPRED_DIR/webapps" ]; then
     CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR
   fi

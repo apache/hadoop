@@ -71,13 +71,13 @@ public class TestMultipleLevelCaching extends TestCase {
     return rack.toString();
   }
 
-  public void testMultiLevelCaching() throws IOException {
+  public void testMultiLevelCaching() throws Exception {
     for (int i = 1 ; i <= MAX_LEVEL; ++i) {
       testCachingAtLevel(i);
     }
   }
 
-  private void testCachingAtLevel(int level) throws IOException {
+  private void testCachingAtLevel(int level) throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;

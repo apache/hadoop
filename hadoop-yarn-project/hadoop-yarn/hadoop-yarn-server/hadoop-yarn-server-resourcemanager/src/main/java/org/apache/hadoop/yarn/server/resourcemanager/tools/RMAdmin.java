@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.tools;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -63,6 +64,7 @@ public class RMAdmin extends Configured implements Tool {
       " [-refreshUserToGroupsMappings]" +
       " [-refreshAdminAcls]" +
       " [-refreshServiceAcl]" +
+      " [-getGroup [username]]" +
       " [-help [cmd]]\n";
 
     String refreshQueues =
@@ -81,12 +83,16 @@ public class RMAdmin extends Configured implements Tool {
 
     String refreshAdminAcls =
       "-refreshAdminAcls: Refresh acls for administration of ResourceManager\n";
-    String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
-    "\t\tis specified.\n";
 
     String refreshServiceAcl = 
-        "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
-        "\t\tResoureceManager will reload the authorization policy file.\n";
+      "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
+      "\t\tResoureceManager will reload the authorization policy file.\n";
+    
+    String getGroups = 
+      "-getGroups [username]: Get the groups which given user belongs to\n";
+
+    String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
+      "\t\tis specified.\n";
 
     if ("refreshQueues".equals(cmd)) {
       System.out.println(refreshQueues);
@@ -100,6 +106,8 @@ public class RMAdmin extends Configured implements Tool {
       System.out.println(refreshAdminAcls);
     } else if ("refreshServiceAcl".equals(cmd)) {
       System.out.println(refreshServiceAcl);
+    } else if ("getGroups".equals(cmd)) {
+      System.out.println(getGroups);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -110,6 +118,7 @@ public class RMAdmin extends Configured implements Tool {
       System.out.println(refreshSuperUserGroupsConfiguration);
       System.out.println(refreshAdminAcls);
       System.out.println(refreshServiceAcl);
+      System.out.println(getGroups);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -133,6 +142,8 @@ public class RMAdmin extends Configured implements Tool {
       System.err.println("Usage: java RMAdmin" + " [-refreshAdminAcls]");
     } else if ("-refreshService".equals(cmd)){
       System.err.println("Usage: java RMAdmin" + " [-refreshServiceAcl]");
+    } else if ("-getGroups".equals(cmd)){
+      System.err.println("Usage: java RMAdmin" + " [-getGroups [username]]");
     } else {
       System.err.println("Usage: java RMAdmin");
       System.err.println("           [-refreshQueues]");
@@ -141,6 +152,7 @@ public class RMAdmin extends Configured implements Tool {
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           [-refreshAdminAcls]");
       System.err.println("           [-refreshServiceAcl]");
+      System.err.println("           [-getGroups [username]]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -229,6 +241,27 @@ public class RMAdmin extends Configured implements Tool {
     return 0;
   }
   
+  private int getGroups(String[] usernames) throws IOException {
+    // Get groups users belongs to
+    RMAdminProtocol adminProtocol = createAdminProtocol();
+
+    if (usernames.length == 0) {
+      usernames = new String[] { UserGroupInformation.getCurrentUser().getUserName() };
+    }
+    
+    for (String username : usernames) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(username + " :");
+      for (String group : adminProtocol.getGroupsForUser(username)) {
+        sb.append(" ");
+        sb.append(group);
+      }
+      System.out.println(sb);
+    }
+    
+    return 0;
+  }
+  
   @Override
   public int run(String[] args) throws Exception {
     if (args.length < 1) {
@@ -251,7 +284,7 @@ public class RMAdmin extends Configured implements Tool {
         return exitCode;
       }
     }
-
+    
     exitCode = 0;
     try {
       if ("-refreshQueues".equals(cmd)) {
@@ -266,6 +299,9 @@ public class RMAdmin extends Configured implements Tool {
         exitCode = refreshAdminAcls();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcls();
+      } else if ("-getGroups".equals(cmd)) {
+        String[] usernames = Arrays.copyOfRange(args, i, args.length);
+        exitCode = getGroups(usernames);
       } else if ("-help".equals(cmd)) {
         if (i < args.length) {
           printUsage(args[i]);

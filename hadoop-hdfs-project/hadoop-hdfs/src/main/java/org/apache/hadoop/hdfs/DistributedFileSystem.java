@@ -535,10 +535,10 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public void close() throws IOException {
     try {
-      super.processDeleteOnExit();
-      dfs.close();
-    } finally {
+      dfs.closeOutputStreams(false);
       super.close();
+    } finally {
+      dfs.close();
     }
   }
 
@@ -623,6 +623,16 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void saveNamespace() throws AccessControlException, IOException {
     dfs.saveNamespace();
+  }
+  
+  /**
+   * Rolls the edit log on the active NameNode.
+   * Requires super-user privileges.
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#rollEdits()
+   * @return the transaction ID of the newly created segment
+   */
+  public long rollEdits() throws AccessControlException, IOException {
+    return dfs.rollEdits();
   }
 
   /**

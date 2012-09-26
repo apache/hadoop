@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -26,8 +27,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -38,6 +42,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.FakeFSDataInputStream;
 
 import static org.apache.hadoop.fs.CreateFlag.*;
@@ -91,11 +96,16 @@ public class TestDefaultContainerExecutor {
   }
   */
 
+  private static final Path BASE_TMP_PATH = new Path("target",
+      TestDefaultContainerExecutor.class.getSimpleName());
+
   @AfterClass
   public static void deleteTmpFiles() throws IOException {
     FileContext lfs = FileContext.getLocalFSFileContext();
-    lfs.delete(new Path("target",
-          TestDefaultContainerExecutor.class.getSimpleName()), true);
+    try {
+      lfs.delete(BASE_TMP_PATH, true);
+    } catch (FileNotFoundException e) {
+    }
   }
 
   byte[] createTmpFile(Path dst, Random r, int len)
@@ -114,6 +124,71 @@ public class TestDefaultContainerExecutor {
       if (out != null) out.close();
     }
     return bytes;
+  }
+
+  @Test
+  public void testDirPermissions() throws Exception {
+    deleteTmpFiles();
+
+    final String user = "somebody";
+    final String appId = "app_12345_123";
+    final FsPermission userCachePerm = new FsPermission(
+        DefaultContainerExecutor.USER_PERM);
+    final FsPermission appCachePerm = new FsPermission(
+        DefaultContainerExecutor.APPCACHE_PERM);
+    final FsPermission fileCachePerm = new FsPermission(
+        DefaultContainerExecutor.FILECACHE_PERM);
+    final FsPermission appDirPerm = new FsPermission(
+        DefaultContainerExecutor.APPDIR_PERM);
+    final FsPermission logDirPerm = new FsPermission(
+        DefaultContainerExecutor.LOGDIR_PERM);
+    List<String> localDirs = new ArrayList<String>();
+    localDirs.add(new Path(BASE_TMP_PATH, "localDirA").toString());
+    localDirs.add(new Path(BASE_TMP_PATH, "localDirB").toString());
+    List<String> logDirs = new ArrayList<String>();
+    logDirs.add(new Path(BASE_TMP_PATH, "logDirA").toString());
+    logDirs.add(new Path(BASE_TMP_PATH, "logDirB").toString());
+
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+    FileContext lfs = FileContext.getLocalFSFileContext(conf);
+    DefaultContainerExecutor executor = new DefaultContainerExecutor(lfs);
+    executor.init();
+
+    try {
+      executor.createUserLocalDirs(localDirs, user);
+      executor.createUserCacheDirs(localDirs, user);
+      executor.createAppDirs(localDirs, user, appId);
+
+      for (String dir : localDirs) {
+        FileStatus stats = lfs.getFileStatus(
+            new Path(new Path(dir, ContainerLocalizer.USERCACHE), user));
+        Assert.assertEquals(userCachePerm, stats.getPermission());
+      }
+
+      for (String dir : localDirs) {
+        Path userCachePath = new Path(
+            new Path(dir, ContainerLocalizer.USERCACHE), user);
+        Path appCachePath = new Path(userCachePath,
+            ContainerLocalizer.APPCACHE);
+        FileStatus stats = lfs.getFileStatus(appCachePath);
+        Assert.assertEquals(appCachePerm, stats.getPermission());
+        stats = lfs.getFileStatus(
+            new Path(userCachePath, ContainerLocalizer.FILECACHE));
+        Assert.assertEquals(fileCachePerm, stats.getPermission());
+        stats = lfs.getFileStatus(new Path(appCachePath, appId));
+        Assert.assertEquals(appDirPerm, stats.getPermission());
+      }
+
+      executor.createAppLogDirs(appId, logDirs);
+
+      for (String dir : logDirs) {
+        FileStatus stats = lfs.getFileStatus(new Path(dir, appId));
+        Assert.assertEquals(logDirPerm, stats.getPermission());
+      }
+    } finally {
+      deleteTmpFiles();
+    }
   }
 
 //  @Test

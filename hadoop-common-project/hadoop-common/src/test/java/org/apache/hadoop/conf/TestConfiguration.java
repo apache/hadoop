@@ -358,6 +358,36 @@ public class TestConfiguration extends TestCase {
     tearDown();
   }
 
+  public void testRelativeIncludes() throws Exception {
+    tearDown();
+    String relConfig = new File("./tmp/test-config.xml").getAbsolutePath();
+    String relConfig2 = new File("./tmp/test-config2.xml").getAbsolutePath();
+
+    new File(new File(relConfig).getParent()).mkdirs();
+    out = new BufferedWriter(new FileWriter(relConfig2));
+    startConfig();
+    appendProperty("a", "b");
+    endConfig();
+
+    out = new BufferedWriter(new FileWriter(relConfig));
+    startConfig();
+    // Add the relative path instead of the absolute one.
+    addInclude(new File(relConfig2).getName());
+    appendProperty("c", "d");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(relConfig);
+    conf.addResource(fileResource);
+    assertEquals(conf.get("a"), "b");
+    assertEquals(conf.get("c"), "d");
+
+    // Cleanup
+    new File(relConfig).delete();
+    new File(relConfig2).delete();
+    new File(new File(relConfig).getParent()).delete();
+  }
+
   BufferedWriter out;
 	
   public void testIntegerRanges() {

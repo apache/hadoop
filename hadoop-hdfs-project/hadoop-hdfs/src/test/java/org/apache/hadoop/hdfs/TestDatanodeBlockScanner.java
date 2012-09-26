@@ -34,14 +34,19 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -59,6 +64,10 @@ public class TestDatanodeBlockScanner {
   
   private static Pattern pattern_blockVerify = 
              Pattern.compile(".*?(SCAN_PERIOD)\\s*:\\s*(\\d+.*?)");
+  
+  static {
+    ((Log4JLogger)FSNamesystem.auditLog).getLogger().setLevel(Level.WARN);
+  }
   /**
    * This connects to datanode and fetches block verification data.
    * It repeats this until the given block has a verification time > newTime.
@@ -173,7 +182,7 @@ public class TestDatanodeBlockScanner {
   }
 
   @Test
-  public void testBlockCorruptionPolicy() throws IOException {
+  public void testBlockCorruptionPolicy() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     Random random = new Random();
@@ -206,12 +215,12 @@ public class TestDatanodeBlockScanner {
     assertTrue(MiniDFSCluster.corruptReplica(1, block));
     assertTrue(MiniDFSCluster.corruptReplica(2, block));
 
-    // Read the file to trigger reportBadBlocks by client
-    try {
-      IOUtils.copyBytes(fs.open(file1), new IOUtils.NullOutputStream(), 
-                        conf, true);
-    } catch (IOException e) {
-      // Ignore exception
+    // Trigger each of the DNs to scan this block immediately.
+    // The block pool scanner doesn't run frequently enough on its own
+    // to notice these, and due to HDFS-1371, the client won't report
+    // bad blocks to the NN when all replicas are bad.
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.runBlockScannerForBlock(dn, block);
     }
 
     // We now have the blocks to be marked as corrupt and we get back all
@@ -260,6 +269,7 @@ public class TestDatanodeBlockScanner {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 3);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 5L);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
@@ -267,35 +277,47 @@ public class TestDatanodeBlockScanner {
     Path file1 = new Path("/tmp/testBlockCorruptRecovery/file");
     DFSTestUtil.createFile(fs, file1, 1024, numReplicas, 0);
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
+    final int ITERATIONS = 10;
 
     // Wait until block is replicated to numReplicas
     DFSTestUtil.waitReplication(fs, file1, numReplicas);
 
-    // Corrupt numCorruptReplicas replicas of block 
-    int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
-    for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
-      if (corruptReplica(block, i)) {
-        corruptReplicasDNIDs[j++] = i;
-        LOG.info("successfully corrupted block " + block + " on node " 
-                 + i + " " + cluster.getDataNodes().get(i).getDisplayName());
+    for (int k = 0; ; k++) {
+      // Corrupt numCorruptReplicas replicas of block 
+      int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
+      for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
+        if (corruptReplica(block, i)) {
+          corruptReplicasDNIDs[j++] = i;
+          LOG.info("successfully corrupted block " + block + " on node " 
+                   + i + " " + cluster.getDataNodes().get(i).getDisplayName());
+        }
       }
-    }
-    
-    // Restart the datanodes containing corrupt replicas 
-    // so they would be reported to namenode and re-replicated
-    // They MUST be restarted in reverse order from highest to lowest index,
-    // because the act of restarting them removes them from the ArrayList
-    // and causes the indexes of all nodes above them in the list to change.
-    for (int i = numCorruptReplicas - 1; i >= 0 ; i--) {
-      LOG.info("restarting node with corrupt replica: position " 
-          + i + " node " + corruptReplicasDNIDs[i] + " " 
-          + cluster.getDataNodes().get(corruptReplicasDNIDs[i]).getDisplayName());
-      cluster.restartDataNode(corruptReplicasDNIDs[i]);
-    }
+      
+      // Restart the datanodes containing corrupt replicas 
+      // so they would be reported to namenode and re-replicated
+      // They MUST be restarted in reverse order from highest to lowest index,
+      // because the act of restarting them removes them from the ArrayList
+      // and causes the indexes of all nodes above them in the list to change.
+      for (int i = numCorruptReplicas - 1; i >= 0 ; i--) {
+        LOG.info("restarting node with corrupt replica: position " 
+            + i + " node " + corruptReplicasDNIDs[i] + " " 
+            + cluster.getDataNodes().get(corruptReplicasDNIDs[i]).getDisplayName());
+        cluster.restartDataNode(corruptReplicasDNIDs[i]);
+      }
 
-    // Loop until all corrupt replicas are reported
-    DFSTestUtil.waitCorruptReplicas(fs, cluster.getNamesystem(), file1, 
-        block, numCorruptReplicas);
+      // Loop until all corrupt replicas are reported
+      try {
+        DFSTestUtil.waitCorruptReplicas(fs, cluster.getNamesystem(), file1, 
+                                        block, numCorruptReplicas);
+      } catch(TimeoutException e) {
+        if (k > ITERATIONS) {
+          throw e;
+        }
+        LOG.info("Timed out waiting for corrupt replicas, trying again, iteration " + k);
+        continue;
+      }
+      break;
+    }
     
     // Loop until the block recovers after replication
     DFSTestUtil.waitReplication(fs, file1, numReplicas);

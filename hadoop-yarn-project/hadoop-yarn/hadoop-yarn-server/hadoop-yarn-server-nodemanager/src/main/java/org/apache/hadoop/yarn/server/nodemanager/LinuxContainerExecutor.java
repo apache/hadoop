@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -92,7 +93,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   protected String getContainerExecutorExecutablePath(Configuration conf) {
-    File hadoopBin = new File(System.getenv("YARN_HOME"), "bin");
+    String yarnHomeEnvVar =
+        System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
+    File hadoopBin = new File(yarnHomeEnvVar, "bin");
     String defaultPath =
       new File(hadoopBin, "container-executor").getAbsolutePath();
     return null == conf

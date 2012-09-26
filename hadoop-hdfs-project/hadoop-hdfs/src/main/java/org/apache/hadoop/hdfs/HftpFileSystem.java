@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -247,14 +248,13 @@ public class HftpFileSystem extends FileSystem
           Credentials c;
           try {
             c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
-          } catch (Exception e) {
-            LOG.info("Couldn't get a delegation token from " + nnHttpUrl + 
-            " using http.");
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("error was ", e);
+          } catch (IOException e) {
+            if (e.getCause() instanceof ConnectException) {
+              LOG.warn("Couldn't connect to " + nnHttpUrl +
+                  ", assuming security is disabled");
+              return null;
             }
-            //Maybe the server is in unsecure mode (that's bad but okay)
-            return null;
+            throw e;
           }
           for (Token<? extends TokenIdentifier> t : c.getAllTokens()) {
             if(LOG.isDebugEnabled()) {

@@ -67,7 +67,7 @@ public class TestNativeIO {
 
     assertEquals(System.getProperty("user.name"), stat.getOwner());
     assertNotNull(stat.getGroup());
-    assertTrue(!"".equals(stat.getGroup()));
+    assertTrue(!stat.getGroup().isEmpty());
     assertEquals("Stat mode field should indicate a regular file",
       NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
   }
@@ -96,7 +96,7 @@ public class TestNativeIO {
               NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
               assertEquals(System.getProperty("user.name"), stat.getOwner());
               assertNotNull(stat.getGroup());
-              assertTrue(!"".equals(stat.getGroup()));
+              assertTrue(!stat.getGroup().isEmpty());
               assertEquals("Stat mode field should indicate a regular file",
                 NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
             } catch (Throwable t) {

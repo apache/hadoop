@@ -80,9 +80,11 @@ public class TestClientProtocolWithDelegationToken {
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT,
         3600000, mockNameSys);
     sm.startThreads();
-    final Server server = RPC.getServer(ClientProtocol.class, mockNN, ADDRESS,
-        0, 5, true, conf, sm);
-
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(ClientProtocol.class).setInstance(mockNN)
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .setSecretManager(sm).build();
+    
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();

@@ -34,5 +34,5 @@ DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/yarn-config.sh
 
-exec "$bin/slaves.sh" --config $YARN_CONF_DIR cd "$YARN_HOME" \; "$bin/yarn-daemon.sh" --config $YARN_CONF_DIR "$@"
+exec "$bin/slaves.sh" --config $YARN_CONF_DIR cd "$HADOOP_YARN_HOME" \; "$bin/yarn-daemon.sh" --config $YARN_CONF_DIR "$@"
 

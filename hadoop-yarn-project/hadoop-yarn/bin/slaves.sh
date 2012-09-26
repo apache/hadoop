@@ -22,7 +22,7 @@
 #
 #   YARN_SLAVES    File naming remote hosts.
 #     Default is ${YARN_CONF_DIR}/slaves.
-#   YARN_CONF_DIR  Alternate conf dir. Default is ${YARN_HOME}/conf.
+#   YARN_CONF_DIR  Alternate conf dir. Default is ${HADOOP_YARN_HOME}/conf.
 #   YARN_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
 #   YARN_SSH_OPTS Options passed to ssh when running remote commands.
 ##

@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Trunk (unreleased changes)
+Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -8,9 +8,16 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
+  OPTIMAZATIONS
+
   BUG FIXES
 
-Branch-2 ( Unreleased changes )
+Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -18,14 +25,30 @@ Branch-2 ( Unreleased changes )
 
   IMPROVEMENTS
 
+    YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
+    vinodkv)
+
+    YARN-93. Fixed RM to propagate diagnostics from applications that have
+    finished but failed (Jason Lowe via vinodkv). 
+
+    YARN-28. Fixed TestCompositeService to not depend on test-order and thus
+    made it pass on JDK7 (Thomas Graves via vinodkv).
+
+    YARN-82. Change the default local and log dirs to be based on
+    hadoop.tmp.dir and yarn.log.dir. (Hemanth Yamijala via sseth)
+
+    YARN-53. Added the missing getGroups API to ResourceManager. (Bo Wang via
+    vinodkv)
+
+  OPTIMIZATIONS
+
   BUG FIXES
 
-    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
-    via atm)
-
-Release 2.1.0-alpha - Unreleased 
+Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
+
+    YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
 
   NEW FEATURES
 
@@ -34,6 +57,14 @@ Release 2.1.0-alpha - Unreleased
   IMPROVEMENTS
 
     YARN-29. Add a yarn-client module. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-10. Fix DistributedShell module to not have a dependency on 
+    hadoop-mapreduce-client-core. (Hitesh Shah via vinodkv)
+
+    YARN-80. Add support for delaying rack-local containers in
+    CapacityScheduler. (acmurthy) 
+
+  OPTIMAZATIONS
 
   BUG FIXES
 
@@ -45,6 +76,41 @@ Release 2.1.0-alpha - Unreleased
     YARN-37. Change TestRMAppTransitions to use the DrainDispatcher.
     (Mayank Bansal via sseth)
 
+    YARN-79. Implement close on all clients to YARN so that RPC clients don't
+    throw exceptions on shut-down. (Vinod Kumar Vavilapalli)
+
+    YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
+    NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
+
+    YARN-15. Updated default classpath for YARN applications to reflect split of
+    YARN into a sub-project. (Arun C Murthy via vinodkv)
+
+    YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
+    event at RUNNING state. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+
+    YARN-108. FSDownload can create cache directories with the wrong
+    permissions (Jason Lowe via bobby)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
+
 Release 0.23.3 - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -52,6 +118,8 @@ Release 0.23.3 - Unreleased
   NEW FEATURES
 
   IMPROVEMENTS
+
+  OPTIMAZATIONS
 
   BUG FIXES
 
@@ -70,3 +138,17 @@ Release 0.23.3 - Unreleased
 
     YARN-31. Fix TestDelegationTokenRenewer to not depend on test order so as to
     pass tests on jdk7. (Thomas Graves via vinodkv)
+
+    YARN-63. RMNodeImpl is missing valid transitions from the UNHEALTHY state
+    (Jason Lowe via bobby)
+
+    YARN-60. Fixed a bug in ResourceManager which causes all NMs to get NPEs and
+    thus causes all containers to be rejected. (vinodkv)
+
+    YARN-66. aggregated logs permissions not set properly (tgraves via bobby)
+
+    YARN-68. NodeManager will refuse to shutdown indefinitely due to container
+    log aggregation (daryn via bobby)
+
+    YARN-87. NM ResourceLocalizationService does not set permissions of local 
+    cache directories (Jason Lowe via tgraves)

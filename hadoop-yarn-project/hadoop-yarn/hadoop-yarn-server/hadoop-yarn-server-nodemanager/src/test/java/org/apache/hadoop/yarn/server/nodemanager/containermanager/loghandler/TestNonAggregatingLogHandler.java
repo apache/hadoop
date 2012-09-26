@@ -183,6 +183,24 @@ public class TestNonAggregatingLogHandler {
     verify(mockSched).schedule(any(Runnable.class), eq(10800l),
         eq(TimeUnit.SECONDS));
   }
+  
+  @Test
+  public void testStop() throws Exception {
+    NonAggregatingLogHandler aggregatingLogHandler = 
+        new NonAggregatingLogHandler(null, null, null);
+
+    // It should not throw NullPointerException
+    aggregatingLogHandler.stop();
+
+    NonAggregatingLogHandlerWithMockExecutor logHandler = 
+        new NonAggregatingLogHandlerWithMockExecutor(null, null, null);
+    logHandler.init(new Configuration());
+    logHandler.stop();
+    verify(logHandler.mockSched).shutdown();
+    verify(logHandler.mockSched)
+        .awaitTermination(eq(10l), eq(TimeUnit.SECONDS));
+    verify(logHandler.mockSched).shutdownNow();
+  }
 
   private class NonAggregatingLogHandlerWithMockExecutor extends
       NonAggregatingLogHandler {
