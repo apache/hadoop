@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -510,7 +511,7 @@ public class NameNode {
     stopHttpServer();
   }
   
-  private void startTrashEmptier(Configuration conf) throws IOException {
+  private void startTrashEmptier(final Configuration conf) throws IOException {
     long trashInterval =
         conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
     if (trashInterval == 0) {
@@ -519,7 +520,18 @@ public class NameNode {
       throw new IOException("Cannot start tresh emptier with negative interval."
           + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
-    this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
+    
+    // This may be called from the transitionToActive code path, in which
+    // case the current user is the administrator, not the NN. The trash
+    // emptier needs to run as the NN. See HDFS-3972.
+    FileSystem fs = SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<FileSystem>() {
+          @Override
+          public FileSystem run() throws IOException {
+            return FileSystem.get(conf);
+          }
+        });
+    this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();
   }
