@@ -8,6 +8,9 @@ Release 1.2.0 - unreleased
     module external to HDFS to specify how HDFS blocks should be placed.
     (Sumadhur Reddy Bolli via szetszwo)
  
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via eli)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES
