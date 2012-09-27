@@ -41,6 +41,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8791. Fix rm command documentation to indicte it deletes
     files and not directories. (Jing Zhao via suresh)
 
+    HADOOP-8855. SSL-based image transfer does not work when Kerberos
+    is disabled. (todd via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
