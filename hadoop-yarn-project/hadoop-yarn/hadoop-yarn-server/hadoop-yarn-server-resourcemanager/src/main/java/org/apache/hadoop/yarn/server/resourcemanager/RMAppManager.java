@@ -231,7 +231,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     RMApp application = null;
     try {
       String clientTokenStr = null;
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
       if (UserGroupInformation.isSecurityEnabled()) {
         Token<ClientTokenIdentifier> clientToken = new 
             Token<ClientTokenIdentifier>(
@@ -256,11 +255,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
           submissionContext);
 
       // Create RMApp
-      application = new RMAppImpl(applicationId, rmContext,
-          this.conf, submissionContext.getApplicationName(), user,
-          submissionContext.getQueue(), submissionContext, clientTokenStr,
-          appStore, this.scheduler,
-          this.masterService, submitTime);
+      application =
+          new RMAppImpl(applicationId, rmContext, this.conf,
+            submissionContext.getApplicationName(),
+            submissionContext.getUser(), submissionContext.getQueue(),
+            submissionContext, clientTokenStr, appStore, this.scheduler,
+            this.masterService, submitTime);
 
       // Sanity check - duplicate?
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 

@@ -329,7 +329,6 @@ public class ContainerManagerImpl extends CompositeService implements
             + remoteUgi.getTokenIdentifiers().size());
       }
 
-
       // Get the tokenId from the remote user ugi
       ContainerTokenIdentifier tokenId =
           selectContainerTokenIdentifier(remoteUgi);
@@ -341,8 +340,16 @@ public class ContainerManagerImpl extends CompositeService implements
                 + containerIDStr);
       } else {
 
+        // Is the container coming in with correct user-name?
+        if (!tokenId.getApplicationSubmitter().equals(launchContext.getUser())) {
+          unauthorized = true;
+          messageBuilder.append("\n Expected user-name "
+              + tokenId.getApplicationSubmitter() + " but found "
+              + launchContext.getUser());
+        }
+
         // Is the container being relaunched? Or RPC layer let startCall with 
-    	//  tokens generated off old-secret through 
+      	//  tokens generated off old-secret through?
         if (!this.context.getContainerTokenSecretManager()
           .isValidStartContainerRequest(tokenId)) {
           unauthorized = true;
