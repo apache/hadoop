@@ -273,24 +273,29 @@ public class TestRMAppTransitions {
     return application;
   }
 
-  protected RMApp testCreateAppFinished() throws IOException {
+  protected RMApp testCreateAppFinished(String diagnostics)
+      throws IOException {
     RMApp application = testCreateAppRunning();
     // RUNNING => FINISHED event RMAppEventType.ATTEMPT_FINISHED
-    RMAppEvent event = 
-        new RMAppEvent(application.getApplicationId(), 
-            RMAppEventType.ATTEMPT_FINISHED);
-    application.handle(event);
+    RMAppEvent finishedEvent = new RMAppFinishedAttemptEvent(
+        application.getApplicationId(), diagnostics);
+    application.handle(finishedEvent);
     assertAppState(RMAppState.FINISHED, application);
     assertTimesAtFinish(application);
     // finished without a proper unregister implies failed
     assertFinalAppStatus(FinalApplicationStatus.FAILED, application);
+    Assert.assertTrue("Finished app missing diagnostics",
+        application.getDiagnostics().indexOf(diagnostics) != -1);
     return application;
   }
 
   @Test
   public void testAppSuccessPath() throws IOException {
     LOG.info("--- START: testAppSuccessPath ---");
-    testCreateAppFinished();
+    final String diagMsg = "some diagnostics";
+    RMApp application = testCreateAppFinished(diagMsg);
+    Assert.assertTrue("Finished application missing diagnostics",
+        application.getDiagnostics().indexOf(diagMsg) != -1);
   }
 
   @Test
@@ -446,7 +451,7 @@ public class TestRMAppTransitions {
   public void testAppFinishedFinished() throws IOException {
     LOG.info("--- START: testAppFinishedFinished ---");
 
-    RMApp application = testCreateAppFinished();
+    RMApp application = testCreateAppFinished("");
     // FINISHED => FINISHED event RMAppEventType.KILL
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
@@ -472,9 +477,8 @@ public class TestRMAppTransitions {
     assertAppState(RMAppState.KILLED, application);
 
     // KILLED => KILLED event RMAppEventType.ATTEMPT_FINISHED
-    event =
-        new RMAppEvent(application.getApplicationId(), 
-            RMAppEventType.ATTEMPT_FINISHED);
+    event = new RMAppFinishedAttemptEvent(
+        application.getApplicationId(), "");
     application.handle(event);
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);

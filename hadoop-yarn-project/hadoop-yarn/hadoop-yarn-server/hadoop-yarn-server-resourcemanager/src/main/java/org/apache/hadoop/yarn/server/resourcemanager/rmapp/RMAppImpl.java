@@ -96,6 +96,8 @@ public class RMAppImpl implements RMApp {
   @SuppressWarnings("rawtypes")
   private EventHandler handler;
   private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
+  private static final AppFinishedTransition FINISHED_TRANSITION =
+      new AppFinishedTransition();
 
   private static final StateMachineFactory<RMAppImpl,
                                            RMAppState,
@@ -135,7 +137,7 @@ public class RMAppImpl implements RMApp {
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
-        RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
+        RMAppEventType.ATTEMPT_FINISHED, FINISHED_TRANSITION)
     .addTransition(RMAppState.RUNNING,
         EnumSet.of(RMAppState.SUBMITTED, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
@@ -485,6 +487,15 @@ public class RMAppImpl implements RMApp {
   private static final class StartAppAttemptTransition extends RMAppTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.createNewAttempt();
+    };
+  }
+
+  private static class AppFinishedTransition extends FinalTransition {
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      RMAppFinishedAttemptEvent finishedEvent =
+          (RMAppFinishedAttemptEvent)event;
+      app.diagnostics.append(finishedEvent.getDiagnostics());
+      super.transition(app, event);
     };
   }
 
