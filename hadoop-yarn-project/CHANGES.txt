@@ -24,6 +24,9 @@ Release 0.23.4 - UNRELEASED
     YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
     event at RUNNING state. (Siddharth Seth via vinodkv)
 
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
 Release 0.23.3 - Unreleased
 
   INCOMPATIBLE CHANGES
