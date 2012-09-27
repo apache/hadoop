@@ -2916,6 +2916,12 @@ class ReduceTask extends Task {
             {
               URI u = URI.create(event.getTaskTrackerHttp());
               String host = u.getHost();
+              if (host == null) {
+                throw new IOException("Invalid hostname found in tracker" +
+                   " location: '" +
+                   event.getTaskTrackerHttp() +
+                   "'");
+              }
               TaskAttemptID taskId = event.getTaskAttemptId();
               URL mapOutputLocation = new URL(event.getTaskTrackerHttp() + 
                                       "/mapOutput?job=" + taskId.getJobID() +

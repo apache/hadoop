@@ -78,6 +78,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-2770. Improve hadoop.job.history.location doc in
     mapred-default.xml. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4464. Reduce tasks failing with NullPointerException in
+    ConcurrentHashMap.get(). (Clint Heath via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
