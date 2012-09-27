@@ -224,9 +224,6 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8727. Gracefully deprecate dfs.umaskmode in 2.x onwards (Harsh J
     via bobby)
 
-    HDFS-3922. namenode throws away blocks under construction on restart
-    (Kihwal Lee via daryn)
-
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
