@@ -579,6 +579,8 @@ Release 2.0.2-alpha - 2012-09-07
 
     HADOOP-8781. hadoop-config.sh should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH. (tucu)
 
+    HADOOP-8855. SSL-based image transfer does not work when Kerberos is disabled. (todd via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
