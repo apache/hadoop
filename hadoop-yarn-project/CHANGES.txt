@@ -87,6 +87,9 @@ Release 0.23.4 - UNRELEASED
     YARN-108. FSDownload can create cache directories with the wrong
     permissions (Jason Lowe via bobby)
 
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES
