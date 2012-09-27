@@ -63,7 +63,7 @@ public final class ExitUtil {
   public static ExitException getFirstExitException() {
     return firstExitException;
   }
-  
+
   /**
    * Reset the tracking of process termination. This is for use
    * in unit tests where one test in the suite expects an exit
