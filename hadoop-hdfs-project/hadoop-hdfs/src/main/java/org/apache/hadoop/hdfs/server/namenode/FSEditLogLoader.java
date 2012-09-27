@@ -202,6 +202,8 @@ public class FSEditLogLoader {
                   addCloseOp.path, permissions, blocks, replication,
                   addCloseOp.mtime, addCloseOp.atime, blockSize,
                   addCloseOp.clientName, addCloseOp.clientMachine);
+              fsNamesys.leaseManager.addLease(addCloseOp.clientName, 
+                  addCloseOp.path);
             } else {
               fsDir.updateFile(oldFile, addCloseOp.path, blocks,
                   addCloseOp.mtime, addCloseOp.atime);
@@ -221,28 +223,14 @@ public class FSEditLogLoader {
                   INodeFile newFile =
                     ((INodeFileUnderConstruction)oldFile).convertToInodeFile();
                   fsDir.replaceNode(addCloseOp.path, oldFile, newFile);
+                  fsNamesys.leaseManager.removeLease(
+                      ((INodeFileUnderConstruction)oldFile).getClientName(),
+                      addCloseOp.path);
                 }
               } else if(! oldFile.isUnderConstruction()) {  // OP_ADD for append
-                INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                    oldFile.getLocalNameBytes(),
-                    oldFile.getReplication(), 
-                    oldFile.getModificationTime(),
-                    oldFile.getPreferredBlockSize(),
-                    oldFile.getBlocks(),
-                    oldFile.getPermissionStatus(),
-                    addCloseOp.clientName,
-                    addCloseOp.clientMachine,
-                    null);
-                fsDir.replaceNode(addCloseOp.path, oldFile, cons);
-              }
-            }
-            // Update file lease
-            if(addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
-              fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
-            } else {  // Ops.OP_CLOSE
-              if (oldFile.isUnderConstruction()) {
-                fsNamesys.leaseManager.removeLease(
-                    ((INodeFileUnderConstruction)oldFile).getClientName(), addCloseOp.path);
+                fsNamesys.prepareFileForWrite(addCloseOp.path, oldFile,
+                    addCloseOp.clientName, addCloseOp.clientMachine, null,
+                    false);
               }
             }
             break;

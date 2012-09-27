@@ -1199,7 +1199,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     try {
-      INode myFile = dir.getFileINode(src);
+      INodeFile myFile = dir.getFileINode(src);
       recoverLeaseInternal(myFile, src, holder, clientMachine, false);
 
       try {
@@ -1228,30 +1228,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
 
       if (append && myFile != null) {
-        //
-        // Replace current node with a INodeUnderConstruction.
-        // Recreate in-memory lease record.
-        //
-        INodeFile node = (INodeFile) myFile;
-        INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                        node.getLocalNameBytes(),
-                                        node.getReplication(),
-                                        node.getModificationTime(),
-                                        node.getPreferredBlockSize(),
-                                        node.getBlocks(),
-                                        node.getPermissionStatus(),
-                                        holder,
-                                        clientMachine,
-                                        clientNode);
-        dir.replaceNode(src, node, cons);
-        leaseManager.addLease(cons.getClientName(), src);
-        
-        // convert last block to under-construction
-        LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
-
-        // add append file record to log, record lease, etc.
-        getEditLog().logOpenFile(src, cons);
-        return ret;
+        return prepareFileForWrite(
+            src, myFile, holder, clientMachine, clientNode, true);
       } else {
        // Now we can add the name to the filesystem. This file has no
        // blocks associated with it.
@@ -1281,6 +1259,43 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw ie;
     }
     return null;
+  }
+
+  /**
+   * Replace current node with a INodeUnderConstruction.
+   * Recreate in-memory lease record.
+   * 
+   * @param src path to the file
+   * @param file existing file object
+   * @param leaseHolder identifier of the lease holder on this file
+   * @param clientMachine identifier of the client machine
+   * @param clientNode if the client is collocated with a DN, that DN's descriptor
+   * @param writeToEditLog whether to persist this change to the edit log
+   * @return the last block locations if the block is partial or null otherwise
+   * @throws UnresolvedLinkException
+   * @throws IOException
+   */
+  LocatedBlock prepareFileForWrite(String src, INodeFile file,
+      String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
+      boolean writeToEditLog) throws IOException {
+    INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                    file.getLocalNameBytes(),
+                                    file.getReplication(),
+                                    file.getModificationTime(),
+                                    file.getPreferredBlockSize(),
+                                    file.getBlocks(),
+                                    file.getPermissionStatus(),
+                                    leaseHolder,
+                                    clientMachine,
+                                    clientNode);
+    dir.replaceNode(src, file, cons);
+    leaseManager.addLease(cons.getClientName(), src);
+
+    LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
+    if (writeToEditLog) {
+      getEditLog().logOpenFile(src, cons);
+    }
+    return ret;
   }
 
   /**

@@ -33,6 +33,7 @@ import java.util.SortedMap;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -147,6 +148,57 @@ public class TestFSEditLogLoader {
       }
     }
   }
+
+  @Test(timeout=30000)
+  public void testBlocksUnderConstruction() throws IOException {
+    // start a cluster 
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
+    MiniDFSCluster cluster = null;
+    FSDataOutputStream out = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+          .build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+
+      Path p = new Path("/testfile1");
+      DFSTestUtil.createFile(fs, p, 10, (short)1, 1);
+
+      // Reopen for append. The block will become RBW.
+      out = fs.append(p);
+      out.write(1234);
+      out.hflush();
+
+      // Shutdown without finalizing the last block. It will become
+      // RWR in the initial block report.
+      cluster.shutdown();
+      cluster = null;
+      try {
+        out.close();
+      } catch (IOException ioe) { }
+
+      try {
+         fs.close();
+      } catch (IOException ioe) { }
+
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+          .format(false).build();
+      cluster.waitActive();
+
+      // If NN thinks there is no block under construction, the 
+      // reported RWR block will be thrown away and it will never
+      // get out of safe mode.  This should not happen.
+      cluster.shutdown();
+      cluster = null;
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   
   /**
    * Test that the valid number of transactions can be counted from a file.
