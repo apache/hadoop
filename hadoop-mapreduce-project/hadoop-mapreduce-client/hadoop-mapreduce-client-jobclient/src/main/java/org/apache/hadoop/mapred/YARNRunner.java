@@ -436,8 +436,12 @@ public class YARNRunner implements ClientProtocol {
     ApplicationSubmissionContext appContext =
         recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     appContext.setApplicationId(applicationId);                // ApplicationId
-    appContext.setUser(                                        // User name
+    //TODO change this
+    String user = conf.get("hack.me", 
         UserGroupInformation.getCurrentUser().getShortUserName());
+    LOG.warn("launching app as user "+user);
+    appContext.setUser(                                        // User name
+        user);
     appContext.setQueue(                                       // Queue name
         jobConf.get(JobContext.QUEUE_NAME,
         YarnConfiguration.DEFAULT_QUEUE_NAME));
