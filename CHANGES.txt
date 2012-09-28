@@ -10,7 +10,7 @@ Release 1.1.1 - Unreleased
 
   BUG FIXES
 
-Release 1.1.0 - 2012.09.16
+Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
 
@@ -396,6 +396,9 @@ Release 1.1.0 - 2012.09.16
 
     HDFS-3701. HDFS may miss the final block when reading a file opened for writing
     if one of the datanode is dead. (umamahesh and nkeywal via umamahesh)
+
+    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
+    even for short reads.  (Brandon Li via szetszwo)
 
 
 Release 1.0.4 - Unreleased
