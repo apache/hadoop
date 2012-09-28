@@ -130,6 +130,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-4685. DBCount should not use ACCESS. (Viji via harsh)
 
+    MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
+
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
