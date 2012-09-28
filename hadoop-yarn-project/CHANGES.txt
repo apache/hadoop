@@ -30,6 +30,9 @@ Release 0.23.4 - UNRELEASED
     YARN-93. Diagnostics missing from applications that have finished but
     failed (jlowe via bobby)
 
+    YARN-106. Nodemanager needs to set permissions of local directories (jlowe
+    via bobby)
+
 Release 0.23.3 - Unreleased
 
   INCOMPATIBLE CHANGES
