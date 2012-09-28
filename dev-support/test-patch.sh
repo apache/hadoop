@@ -335,7 +335,7 @@ checkTests () {
         echo "The patch appears to be a documentation patch that doesn't require tests."
         JIRA_COMMENT="$JIRA_COMMENT
 
-    +0 tests included.  The patch appears to be a documentation patch that doesn't require tests."
+    {color:green}+0 tests included{color}.  The patch appears to be a documentation patch that doesn't require tests."
         return 0
       fi
     fi
