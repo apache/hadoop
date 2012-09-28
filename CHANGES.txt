@@ -394,6 +394,10 @@ Release 1.1.0 - 2012.09.16
 
     MAPREDUCE-4558. Disable TestJobTrackerSafeMode (sseth)
 
+    HDFS-3701. HDFS may miss the final block when reading a file opened for writing
+    if one of the datanode is dead. (umamahesh and nkeywal via umamahesh)
+
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
