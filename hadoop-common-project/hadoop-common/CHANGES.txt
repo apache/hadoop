@@ -20,6 +20,8 @@ Release 0.23.4 - UNRELEASED
     HADOOP-8684. Deadlock between WritableComparator and WritableComparable.
     (Jing Zhao via suresh)
 
+    HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
