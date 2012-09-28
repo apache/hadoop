@@ -22,6 +22,9 @@ Release 0.23.4 - UNRELEASED
 
     HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
 
+    HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
+    (Steven Willis via suresh)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
