@@ -89,7 +89,6 @@ public class TestDistributedFileSystem {
   /**
    * Tests DFSClient.close throws no ConcurrentModificationException if 
    * multiple files are open.
-   * Also tests that any cached sockets are closed. (HDFS-3359)
    */
   @Test
   public void testDFSClose() throws Exception {
@@ -109,12 +108,9 @@ public class TestDistributedFileSystem {
       DFSTestUtil.readFile(fileSys, p);
       
       DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-      SocketCache cache = client.socketCache;
-      assertEquals(1, cache.size());
 
       fileSys.close();
       
-      assertEquals(0, cache.size());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }

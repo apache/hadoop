@@ -24,6 +24,9 @@ Release 0.23.4 - UNRELEASED
     HDFS-3731. Release upgrade must handle blocks being written from 1.0
     (Kihwal Lee via daryn)
 
+    HDFS-3373. FileContext HDFS implementation can leak socket caches (John
+    George via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
