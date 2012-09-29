@@ -140,6 +140,14 @@ This feature is by default turned * off *. To turn on the feature, set the HDFS 
 Please see hdfs-default.xml for detailed description.
 </blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1906">MAPREDUCE-1906</a>.
+     Major improvement reported by scott_carey and fixed by tlipcon (jobtracker, performance, tasktracker)<br>
+     <b>Lower default minimum heartbeat interval for tasktracker &gt; Jobtracker</b><br>
+     <blockquote>                                          The default minimum heartbeat interval has been dropped from 3 seconds to 300ms to increase scheduling throughput on small clusters. Users may tune mapreduce.jobtracker.heartbeats.in.second to adjust this value.
+
+      
+</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2517">MAPREDUCE-2517</a>.
      Major task reported by vinaythota and fixed by vinaythota (contrib/gridmix)<br>
      <b>Porting Gridmix v3 system tests into trunk branch.</b><br>
@@ -176,6 +184,22 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by ravidotg and fixed by ravidotg <br>
      <b>[Gridmix] GenerateDistCacheData job of Gridmix can become slow in some cases</b><br>
      <blockquote>                                          Fixes the issue of GenerateDistCacheData  job slowness.
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4673">MAPREDUCE-4673</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta (test)<br>
+     <b>make TestRawHistoryFile and TestJobHistoryServer more robust</b><br>
+     <blockquote>                                          Fixed TestRawHistoryFile and TestJobHistoryServer to not write to /tmp.
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4675">MAPREDUCE-4675</a>.
+     Major bug reported by arpitgupta and fixed by bikassaha (test)<br>
+     <b>TestKillSubProcesses fails as the process is still alive after the job is done</b><br>
+     <blockquote>                                          Fixed a race condition caused in TestKillSubProcesses caused due to a recent commit.
 
       
 </blockquote></li>
@@ -361,10 +385,25 @@ Please see hdfs-default.xml for detailed description.
      <b>Conflict: Same security.log.file for multiple users. </b><br>
      <blockquote>In log4j.properties, hadoop.security.log.file is set to SecurityAuth.audit. In the presence of multiple users, this can lead to a potential conflict.<br><br>Adding username to the log file would avoid this scenario.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8617">HADOOP-8617</a>.
+     Major bug reported by brandonli and fixed by brandonli (performance)<br>
+     <b>backport pure Java CRC32 calculator changes to branch-1</b><br>
+     <blockquote>Multiple efforts have been made gradually to improve the CRC performance in Hadoop. This JIRA is to back port these changes to branch-1, which include HADOOP-6166, HADOOP-6148, HADOOP-7333.<br><br>The related HDFS and MAPREDUCE patches are uploaded to their original JIRAs HDFS-496 and MAPREDUCE-782.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8656">HADOOP-8656</a>.
      Minor improvement reported by stevel@apache.org and fixed by rvs (bin)<br>
      <b>backport forced daemon shutdown of HADOOP-8353 into branch-1</b><br>
      <blockquote>the init.d service shutdown code doesn&apos;t work if the daemon is hung -backporting the portion of HADOOP-8353 that edits bin/hadoop-daemon.sh corrects this</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8748">HADOOP-8748</a>.
+     Minor improvement reported by acmurthy and fixed by acmurthy (io)<br>
+     <b>Move dfsclient retry to a util class</b><br>
+     <blockquote>HDFS-3504 introduced mechanisms to retry RPCs. I want to move that to common to allow MAPREDUCE-4603 to share it too. Should be a trivial patch.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-496">HDFS-496</a>.
+     Minor improvement reported by tlipcon and fixed by tlipcon (data-node, hdfs client, performance)<br>
+     <b>Use PureJavaCrc32 in HDFS</b><br>
+     <blockquote>Common now has a pure java CRC32 implementation which is more efficient than java.util.zip.CRC32. This issue is to make use of it.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1378">HDFS-1378</a>.
      Major improvement reported by tlipcon and fixed by cmccabe (name-node)<br>
@@ -420,6 +459,11 @@ Please see hdfs-default.xml for detailed description.
      Minor bug reported by qwertymaniac and fixed by qwertymaniac (name-node)<br>
      <b>Remove dfsadmin -printTopology from branch-1 docs since it does not exist</b><br>
      <blockquote>It is documented we have -printTopology but we do not really have it in this branch. Possible docs mixup from somewhere in security branch pre-merge?<br><br>{code}<br>?  branch-1  grep printTopology -R .<br>./src/docs/src/documentation/content/xdocs/.svn/text-base/hdfs_user_guide.xml.svn-base:      &lt;code&gt;-printTopology&lt;/code&gt;<br>./src/docs/src/documentation/content/xdocs/hdfs_user_guide.xml:      &lt;code&gt;-printTopology&lt;/code&gt;<br>{code}<br><br>Lets remove the reference.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2751">HDFS-2751</a>.
+     Major bug reported by tlipcon and fixed by tlipcon (data-node)<br>
+     <b>Datanode drops OS cache behind reads even for short reads</b><br>
+     <blockquote>HDFS-2465 has some code which attempts to disable the &quot;drop cache behind reads&quot; functionality when the reads are &lt;256KB (eg HBase random access). But this check was missing in the {{close()}} function, so it always drops cache behind reads regardless of the size of the read. This hurts HBase random read performance when this patch is enabled.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2790">HDFS-2790</a>.
      Minor bug reported by arpitgupta and fixed by arpitgupta <br>
@@ -506,6 +550,11 @@ Please see hdfs-default.xml for detailed description.
      <b>WebHDFS CREATE does not use client location for redirection</b><br>
      <blockquote>CREATE currently redirects client to a random datanode but not using the client location information.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3596">HDFS-3596</a>.
+     Minor improvement reported by cmccabe and fixed by cmccabe <br>
+     <b>Improve FSEditLog pre-allocation in branch-1</b><br>
+     <blockquote>Implement HDFS-3510 in branch-1.  This will improve FSEditLog preallocation to decrease the incidence of corrupted logs after disk full conditions.  (See HDFS-3510 for a longer description.)</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3617">HDFS-3617</a>.
      Major improvement reported by mattf and fixed by qwertymaniac <br>
      <b>Port HDFS-96 to branch-1 (support blocks greater than 2GB)</b><br>
@@ -516,10 +565,40 @@ Please see hdfs-default.xml for detailed description.
      <b>1.x: FSEditLog failure removes the wrong edit stream when storage dirs have same name</b><br>
      <blockquote>In {{FSEditLog.removeEditsForStorageDir}}, we iterate over the edits streams trying to find the stream corresponding to a given dir. To check equality, we currently use the following condition:<br>{code}<br>      File parentDir = getStorageDirForStream(idx);<br>      if (parentDir.getName().equals(sd.getRoot().getName())) {<br>{code}<br>... which is horribly incorrect. If two or more storage dirs happen to have the same terminal path component (eg /data/1/nn and /data/2/nn) then it will pick the wrong strea...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3667">HDFS-3667</a>.
+     Major improvement reported by szetszwo and fixed by szetszwo (webhdfs)<br>
+     <b>Add retry support to WebHdfsFileSystem</b><br>
+     <blockquote>DFSClient (i.e. DistributedFileSystem) has a configurable retry policy and it retries on exceptions such as connection failure, safemode.  WebHdfsFileSystem should have similar retry support.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3696">HDFS-3696</a>.
      Critical bug reported by kihwal and fixed by szetszwo <br>
      <b>Create files with WebHdfsFileSystem goes OOM when file size is big</b><br>
      <blockquote>When doing &quot;fs -put&quot; to a WebHdfsFileSystem (webhdfs://), the FsShell goes OOM if the file size is large. When I tested, 20MB files were fine, but 200MB didn&apos;t work.  <br><br>I also tried reading a large file by issuing &quot;-cat&quot; and piping to a slow sink in order to force buffering. The read path didn&apos;t have this problem. The memory consumption stayed the same regardless of progress.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3698">HDFS-3698</a>.
+     Major bug reported by atm and fixed by atm (security)<br>
+     <b>TestHftpFileSystem is failing in branch-1 due to changed default secure port</b><br>
+     <blockquote>This test is failing since the default secure port changed to the HTTP port upon the commit of HDFS-2617.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3701">HDFS-3701</a>.
+     Critical bug reported by nkeywal and fixed by nkeywal (hdfs client)<br>
+     <b>HDFS may miss the final block when reading a file opened for writing if one of the datanode is dead</b><br>
+     <blockquote>When the file is opened for writing, the DFSClient calls one of the datanode owning the last block to get its size. If this datanode is dead, the socket exception is shallowed and the size of this last block is equals to zero. This seems to be fixed on trunk, but I didn&apos;t find a related Jira. On 1.0.3, it&apos;s not fixed. It&apos;s on the same area as HDFS-1950 or HDFS-3222.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3871">HDFS-3871</a>.
+     Minor improvement reported by acmurthy and fixed by acmurthy (hdfs client)<br>
+     <b>Change NameNodeProxies to use HADOOP-8748</b><br>
+     <blockquote>Change NameNodeProxies to use util method introduced via HADOOP-8748.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3966">HDFS-3966</a>.
+     Minor bug reported by jingzhao and fixed by jingzhao <br>
+     <b>For branch-1, TestFileCreation should use JUnit4 to make assumeTrue work</b><br>
+     <blockquote>Currently in TestFileCreation for branch-1, assumeTrue() is used by two test cases in order to check if the OS is Linux. Thus JUnit 4 should be used to enable assumeTrue.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-782">MAPREDUCE-782</a>.
+     Minor improvement reported by tlipcon and fixed by tlipcon (performance)<br>
+     <b>Use PureJavaCrc32 in mapreduce spills</b><br>
+     <blockquote>HADOOP-6148 implemented a Pure Java implementation of CRC32 which performs better than the built-in one. This issue is to make use of it in the mapred package</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1740">MAPREDUCE-1740</a>.
      Major bug reported by tlipcon and fixed by ahmed.radwan (jobtracker)<br>
@@ -601,6 +680,11 @@ Please see hdfs-default.xml for detailed description.
      <b>0.20: avoid a busy-loop in ReduceTask scheduling</b><br>
      <blockquote>Looking at profiling results, it became clear that the ReduceTask has the following busy-loop which was causing it to suck up 100% of CPU in the fetch phase in some configurations:<br>- the number of reduce fetcher threads is configured to more than the number of hosts<br>- therefore &quot;busyEnough()&quot; never returns true<br>- the &quot;scheduling&quot; portion of the code can&apos;t schedule any new fetches, since all of the pending fetches in the mapLocations buffer correspond to hosts that are already being fetched (t...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3289">MAPREDUCE-3289</a>.
+     Major improvement reported by tlipcon and fixed by tlipcon (mrv2, nodemanager, performance)<br>
+     <b>Make use of fadvise in the NM&apos;s shuffle handler</b><br>
+     <blockquote>Using the new NativeIO fadvise functions, we can make the NodeManager prefetch map output before it&apos;s send over the socket, and drop it out of the fs cache once it&apos;s been sent (since it&apos;s very rare for an output to have to be re-sent). This improves IO efficiency and reduces cache pollution.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3365">MAPREDUCE-3365</a>.
      Trivial improvement reported by sho.shimauchi and fixed by sho.shimauchi (contrib/fair-share)<br>
      <b>Uncomment eventlog settings from the documentation</b><br>
@@ -641,6 +725,11 @@ Please see hdfs-default.xml for detailed description.
      <b>CapacityTaskScheduler may perform unnecessary reservations in heterogenous tracker environments</b><br>
      <blockquote>Briefly, to reproduce:<br><br>* Run JT with CapacityTaskScheduler [Say, Cluster max map = 8G, Cluster map = 2G]<br>* Run two TTs but with varied capacity, say, one with 4 map slot, another with 3 map slots.<br>* Run a job with two tasks, each demanding mem worth 4 slots at least (Map mem = 7G or so).<br>* Job will begin running on TT #1, but will also end up reserving the 3 slots on TT #2 cause it does not check for the maximum limit of slots when reserving (as it goes greedy, and hopes to gain more slots i...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3837">MAPREDUCE-3837</a>.
+     Major new feature reported by mayank_bansal and fixed by mayank_bansal <br>
+     <b>Job tracker is not able to recover job in case of crash and after that no user can submit job.</b><br>
+     <blockquote>If job tracker is crashed while running , and there were some jobs are running , so if job tracker&apos;s property mapreduce.jobtracker.restart.recover is true then it should recover the job.<br><br>However the current behavior is as follows<br>jobtracker try to restore the jobs but it can not . And after that jobtracker closes its handle to hdfs and nobody else can submit job. <br><br>Thanks,<br>Mayank</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3992">MAPREDUCE-3992</a>.
      Major bug reported by tlipcon and fixed by tlipcon (mrv1)<br>
      <b>Reduce fetcher doesn&apos;t verify HTTP status code of response</b><br>
@@ -666,6 +755,11 @@ Please see hdfs-default.xml for detailed description.
      <b>Pipes examples do not compile on Ubuntu 12.04</b><br>
      <blockquote>-lssl alone won&apos;t work for compiling the pipes examples on 12.04. -lcrypto needs to be added explicitly.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4328">MAPREDUCE-4328</a>.
+     Major improvement reported by acmurthy and fixed by acmurthy (mrv1)<br>
+     <b>Add the option to quiesce the JobTracker</b><br>
+     <blockquote>In several failure scenarios it would be very handy to have an option to quiesce the JobTracker.<br><br>Recently, we saw a case where the NameNode had to be rebooted at a customer due to a random hardware failure - in such a case it would have been nice to not lose jobs by quiescing the JobTracker.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4399">MAPREDUCE-4399</a>.
      Major bug reported by vicaya and fixed by vicaya (performance, tasktracker)<br>
      <b>Fix performance regression in shuffle </b><br>
@@ -675,6 +769,21 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by vicaya and fixed by vicaya (performance, task)<br>
      <b>Fix performance regression for small jobs/workflows</b><br>
      <blockquote>There is a significant performance regression for small jobs/workflows (vs 0.20.2) in the Hadoop 1.x series. Most noticeable with Hive and Pig jobs. PigMix has an average 40% regression against 0.20.2.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4511">MAPREDUCE-4511</a>.
+     Major improvement reported by ahmed.radwan and fixed by ahmed.radwan (mrv1, mrv2, performance)<br>
+     <b>Add IFile readahead</b><br>
+     <blockquote>This ticket is to add IFile readahead as part of HADOOP-7714.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4558">MAPREDUCE-4558</a>.
+     Major bug reported by sseth and fixed by sseth <br>
+     <b>TestJobTrackerSafeMode is failing</b><br>
+     <blockquote>MAPREDUCE-1906 exposed an issue with this unit test. It has 3 TTs running, but has a check for the TT count to reach exactly 2 (which would be reached with a higher heartbeat interval).<br><br>The test ends up getting stuck, with the following message repeated multiple times.<br>{code}<br>    [junit] 2012-08-15 11:26:46,299 INFO  mapred.TestJobTrackerSafeMode (TestJobTrackerSafeMode.java:checkTrackers(201)) - Waiting for Initialize all Task Trackers<br>    [junit] 2012-08-15 11:26:47,301 INFO  mapred.TestJo...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4603">MAPREDUCE-4603</a>.
+     Major improvement reported by acmurthy and fixed by acmurthy <br>
+     <b>Allow JobClient to retry job-submission when JT is in safemode</b><br>
+     <blockquote>Similar to HDFS-3504, it would be useful to allow JobClient to retry job-submission when JT is in safemode (via MAPREDUCE-4328).<br><br>This way applications like Pig/Hive don&apos;t bork midway when the NN/JT are not operational.</blockquote></li>
 
 
 </ul>
