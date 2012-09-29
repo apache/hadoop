@@ -400,6 +400,8 @@ Release 1.1.0 - unreleased
     MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. 
     (Todd Lipcon, backport by Brandon Li via sseth)
 
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
+
     HADOOP-8748. Refactor DFSClient retry utility methods to a new class in
     org.apache.hadoop.io.retry.  Contributed by Arun C Murthy.
 
