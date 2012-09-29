@@ -23,6 +23,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3373. Change DFSClient input stream socket cache to global static and add
     a thread to cleanup expired cache entries. (John George via szetszwo)
 
+    HDFS-3896. Add descriptions for dfs.namenode.rpc-address and
+    dfs.namenode.servicerpc-address to hdfs-default.xml. (Jeff Lord via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 

@@ -41,11 +41,34 @@
 </property>
 
 <property>
+  <name>dfs.namenode.rpc-address</name>
+  <value></value>
+  <description>
+    RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
+    the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
+    dfs.namenode.rpc-address.EXAMPLENAMESERVICE
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.servicerpc-address</name>
+  <value></value>
+  <description>
+    RPC address for HDFS Services communication. BackupNode, Datanodes and all other services should be
+    connecting to this address if it is configured. In the case of HA/Federation where multiple namenodes exist,
+    the name service id is added to the name e.g. dfs.namenode.servicerpc-address.ns1
+    dfs.namenode.rpc-address.EXAMPLENAMESERVICE
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+    If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:50090</value>
   <description>
     The secondary namenode http server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -54,7 +77,6 @@
   <value>0.0.0.0:50010</value>
   <description>
     The datanode server address and port for data transfer.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -63,7 +85,6 @@
   <value>0.0.0.0:50075</value>
   <description>
     The datanode http server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -72,7 +93,6 @@
   <value>0.0.0.0:50020</value>
   <description>
     The datanode ipc server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -87,7 +107,6 @@
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
