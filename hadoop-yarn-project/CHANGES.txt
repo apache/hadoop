@@ -1,4 +1,4 @@
-Hadoop MapReduce Change Log
+Hadoop YARN Change Log
 
 Release 2.0.3-alpha - Unreleased
   
@@ -74,6 +74,18 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
     event at RUNNING state. (Siddharth Seth via vinodkv)
 
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -100,7 +112,7 @@ Release 0.23.4 - UNRELEASED
     YARN-106. Nodemanager needs to set permissions of local directories (jlowe
     via bobby)
 
-Release 0.23.3 - Unreleased 
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 
