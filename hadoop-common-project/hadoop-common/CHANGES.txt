@@ -993,6 +993,18 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1010,7 +1022,7 @@ Release 0.23.4 - UNRELEASED
     HADOOP-8843. Old trash directories are never deleted on upgrade
     from 1.x (jlowe)
 
-Release 0.23.3 - UNRELEASED
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 
