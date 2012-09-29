@@ -103,8 +103,16 @@ public class NodesListManager extends AbstractService implements
     }
   }
 
-  public void refreshNodes() throws IOException {
+  public void refreshNodes(Configuration yarnConf) throws IOException {
     synchronized (hostsReader) {
+      if (null == yarnConf) {
+        yarnConf = new YarnConfiguration();
+      }
+      hostsReader.updateFileNames(yarnConf.get(
+          YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+          YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH), yarnConf.get(
+          YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+          YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
       hostsReader.refresh();
       printConfiguredHosts();
     }
