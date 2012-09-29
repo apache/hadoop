@@ -914,6 +914,7 @@ if [[ $RESULT != 0 ]] ; then
 fi
 buildWithPatch
 checkAuthor
+(( RESULT = RESULT + $? ))
 
 if [[ $JENKINS == "true" ]] ; then
   cleanUpXml
