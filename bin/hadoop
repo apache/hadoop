@@ -48,7 +48,7 @@
 #
 
 bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin" > /dev/null; pwd`
 
 if [ -e "$bin"/../libexec/hadoop-config.sh ]; then
   . "$bin"/../libexec/hadoop-config.sh

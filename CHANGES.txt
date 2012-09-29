@@ -226,6 +226,10 @@ Release 1.2.0 - unreleased
     HADOOP-8791. Fix rm command documentation to indicte it deletes
     files and not directories. (Jing Zhao via suresh)
 
+    HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
+    (default behavior in Ubuntu).
+    (Christopher Berner and Andy Isaacson via harsh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
