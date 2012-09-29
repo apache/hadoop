@@ -28,7 +28,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>0.23.3-SNAPSHOT</version>
+      <version>0.23.5-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>
