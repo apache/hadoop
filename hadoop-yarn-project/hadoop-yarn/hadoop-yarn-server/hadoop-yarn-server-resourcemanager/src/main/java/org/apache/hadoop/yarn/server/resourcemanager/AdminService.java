@@ -189,15 +189,14 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
       throws YarnRemoteException {
     UserGroupInformation user = checkAcls("refreshNodes");
     try {
-      this.nodesListManager.refreshNodes();
+      this.nodesListManager.refreshNodes(new YarnConfiguration());
       RMAuditLogger.logSuccess(user.getShortUserName(), "refreshNodes",
           "AdminService");
       return recordFactory.newRecordInstance(RefreshNodesResponse.class);
     } catch (IOException ioe) {
       LOG.info("Exception refreshing nodes ", ioe);
       RMAuditLogger.logFailure(user.getShortUserName(), "refreshNodes",
-          adminAcl.toString(), "AdminService",
-          "Exception refreshing nodes");
+          adminAcl.toString(), "AdminService", "Exception refreshing nodes");
       throw RPCUtil.getRemoteException(ioe);
     }
   }

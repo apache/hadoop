@@ -23,6 +23,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-53. Added the missing getGroups API to ResourceManager. (Bo Wang via
     vinodkv)
 
+    YARN-116. Add the ability to change the RM include/exclude file without
+    a restart. (xieguiming and Harsh J via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
