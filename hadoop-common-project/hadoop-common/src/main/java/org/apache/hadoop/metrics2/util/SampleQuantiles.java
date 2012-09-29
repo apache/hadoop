@@ -210,9 +210,12 @@ public class SampleQuantiles {
     int rankMin = 0;
     int desired = (int) (quantile * count);
 
+    ListIterator<SampleItem> it = samples.listIterator();
+    SampleItem prev = null;
+    SampleItem cur = it.next();
     for (int i = 1; i < samples.size(); i++) {
-      SampleItem prev = samples.get(i - 1);
-      SampleItem cur = samples.get(i);
+      prev = cur;
+      cur = it.next();
 
       rankMin += prev.g;
 
