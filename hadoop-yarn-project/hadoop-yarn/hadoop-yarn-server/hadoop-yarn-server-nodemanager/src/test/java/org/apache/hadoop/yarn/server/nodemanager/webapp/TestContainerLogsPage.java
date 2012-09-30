@@ -43,8 +43,9 @@ public class TestContainerLogsPage {
 
   @Test
   public void testContainerLogDirs() throws IOException {
-    String logdirwithFile = "file:///target/"
-        + TestNMWebServer.class.getSimpleName() + "LogDir";
+    String absLogDir = new File("target",
+        TestNMWebServer.class.getSimpleName() + "LogDir").getAbsolutePath();
+    String logdirwithFile = "file://" + absLogDir;
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOG_DIRS, logdirwithFile);
     NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
