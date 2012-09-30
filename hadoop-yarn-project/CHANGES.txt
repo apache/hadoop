@@ -8,6 +8,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES

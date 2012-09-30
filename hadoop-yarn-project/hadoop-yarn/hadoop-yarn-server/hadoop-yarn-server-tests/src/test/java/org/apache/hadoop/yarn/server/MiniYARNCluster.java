@@ -100,6 +100,12 @@ public class MiniYARNCluster extends CompositeService {
       nodeManagers[index] = new CustomNodeManager();
     }
   }
+  
+  @Override
+  public void init(Configuration conf) {
+    super.init(conf instanceof YarnConfiguration ? conf
+        : new YarnConfiguration(conf));
+  }
 
   public File getTestWorkDir() {
     return testWorkDir;
@@ -170,7 +176,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     public synchronized void init(Configuration conf) {                          
-      Configuration config = new Configuration(conf);                            
+      Configuration config = new YarnConfiguration(conf);                            
       super.init(config);                                                        
     }                                                                            
 
