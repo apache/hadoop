@@ -97,6 +97,9 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
     via atm)
 
+    YARN-138. Ensure default values for minimum/maximum container sizes is
+    sane. (harsh & sseth via acmurthy)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

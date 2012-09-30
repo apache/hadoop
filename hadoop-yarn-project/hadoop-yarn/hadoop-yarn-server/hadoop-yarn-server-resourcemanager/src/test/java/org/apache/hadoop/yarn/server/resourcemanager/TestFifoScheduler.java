@@ -194,7 +194,7 @@ public class TestFifoScheduler {
   @Test
   public void testNonDefaultMinimumAllocation() throws Exception {
     // Set custom min-alloc to test tweaking it
-    int allocMB = 512;
+    int allocMB = 1536;
     YarnConfiguration conf = new YarnConfiguration(TestFifoScheduler.conf);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, allocMB);
     // Test for something lesser than this.
