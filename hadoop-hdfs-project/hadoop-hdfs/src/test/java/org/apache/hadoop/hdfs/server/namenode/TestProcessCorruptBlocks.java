@@ -53,7 +53,7 @@ public class TestProcessCorruptBlocks {
    *      replicas (2) is equal to replication factor (2))
    */
   @Test
-  public void testWhenDecreasingReplication() throws Exception {
+  public void testWhenDecreasingReplication() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
@@ -108,7 +108,7 @@ public class TestProcessCorruptBlocks {
    * 
    */
   @Test
-  public void testByAddingAnExtraDataNode() throws Exception {
+  public void testByAddingAnExtraDataNode() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
@@ -159,7 +159,7 @@ public class TestProcessCorruptBlocks {
    *      replicas (1) is equal to replication factor (1))
    */
   @Test
-  public void testWithReplicationFactorAsOne() throws Exception {
+  public void testWithReplicationFactorAsOne() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
@@ -208,7 +208,7 @@ public class TestProcessCorruptBlocks {
    *    Verify that all replicas are corrupt and 3 replicas are present.
    */
   @Test
-  public void testWithAllCorruptReplicas() throws Exception {
+  public void testWithAllCorruptReplicas() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));

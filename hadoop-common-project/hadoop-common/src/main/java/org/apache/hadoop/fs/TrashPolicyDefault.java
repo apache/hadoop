@@ -69,8 +69,9 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   public TrashPolicyDefault() { }
 
-  private TrashPolicyDefault(Path home, Configuration conf) throws IOException {
-    initialize(conf, home.getFileSystem(conf), home);
+  private TrashPolicyDefault(FileSystem fs, Path home, Configuration conf)
+      throws IOException {
+    initialize(conf, fs, home);
   }
 
   @Override
@@ -278,7 +279,8 @@ public class TrashPolicyDefault extends TrashPolicy {
               if (!home.isDirectory())
                 continue;
               try {
-                TrashPolicyDefault trash = new TrashPolicyDefault(home.getPath(), conf);
+                TrashPolicyDefault trash = new TrashPolicyDefault(
+                    fs, home.getPath(), conf);
                 trash.deleteCheckpoint();
                 trash.createCheckpoint();
               } catch (IOException e) {

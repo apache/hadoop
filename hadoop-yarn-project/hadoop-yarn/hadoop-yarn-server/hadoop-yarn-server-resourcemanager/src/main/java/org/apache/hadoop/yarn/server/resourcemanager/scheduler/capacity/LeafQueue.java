@@ -1197,7 +1197,7 @@ public class LeafQueue implements CSQueue {
     if (UserGroupInformation.isSecurityEnabled()) {
       containerToken =
           containerTokenSecretManager.createContainerToken(containerId, nodeId,
-            capability);
+            application.getUser(), capability);
       if (containerToken == null) {
         return null; // Try again later.
       }

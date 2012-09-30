@@ -61,7 +61,7 @@ public class TestBlockReaderLocal {
    * of this class might immediately issue a retry on failure, so it's polite.
    */
   @Test
-  public void testStablePositionAfterCorruptRead() throws Exception {
+  public void testStablePositionAfterCorruptRead() throws IOException {
     final short REPL_FACTOR = 1;
     final long FILE_LENGTH = 512L;
     cluster.waitActive();

@@ -43,9 +43,6 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-3921. MR AM should act on node health status changes. 
     (Bikas Saha via sseth)
 
-    MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
-    mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
-
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
 
     MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
@@ -395,6 +392,15 @@ Release 0.23.4 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-4647. We should only unjar jobjar if there is a lib directory 
+    in it. (Robert Evans via tgraves)
+
+    MAPREDUCE-4691. Historyserver can report "Unknown job" after RM says job
+    has completed (Robert Joseph Evans via jlowe)
+
+    MAPREDUCE-4689. JobClient.getMapTaskReports on failed job results in NPE
+    (jlowe via bobby)
 
 Release 0.23.3 - UNRELEASED
 

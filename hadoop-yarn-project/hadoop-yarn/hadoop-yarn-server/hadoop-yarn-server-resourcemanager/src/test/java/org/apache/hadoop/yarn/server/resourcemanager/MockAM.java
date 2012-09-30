@@ -112,7 +112,7 @@ public class MockAM {
       ResourceRequest hostReq = createResourceReq(host, memory, priority,
           containers);
       reqs.add(hostReq);
-      ResourceRequest rackReq = createResourceReq("default-rack", memory,
+      ResourceRequest rackReq = createResourceReq("/default-rack", memory,
           priority, containers);
       reqs.add(rackReq);
     }

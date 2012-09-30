@@ -88,7 +88,7 @@ public class TestBalancer {
   /* create a file with a length of <code>fileLen</code> */
   static void createFile(MiniDFSCluster cluster, Path filePath, long fileLen,
       short replicationFactor, int nnIndex)
-  throws IOException, InterruptedException, TimeoutException {
+  throws IOException {
     FileSystem fs = cluster.getFileSystem(nnIndex);
     DFSTestUtil.createFile(fs, filePath, fileLen, 
         replicationFactor, r.nextLong());
@@ -100,7 +100,7 @@ public class TestBalancer {
    * whose used space to be <code>size</code>
    */
   private ExtendedBlock[] generateBlocks(Configuration conf, long size,
-      short numNodes) throws IOException, InterruptedException, TimeoutException {
+      short numNodes) throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numNodes).build();
     try {
       cluster.waitActive();

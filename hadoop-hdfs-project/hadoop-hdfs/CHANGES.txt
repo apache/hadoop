@@ -252,8 +252,6 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3907. Allow multiple users for local block readers. (eli)
 
-    HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
-
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -578,6 +576,8 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3928. MiniDFSCluster should reset the first ExitException on shutdown. (eli)
     
+    HDFS-3972. Trash emptier fails in secure HA cluster. (todd via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

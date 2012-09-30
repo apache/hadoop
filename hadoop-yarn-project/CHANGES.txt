@@ -18,6 +18,9 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-80. Add support for delaying rack-local containers in
     CapacityScheduler. (acmurthy) 
 
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -47,6 +50,24 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
     event at RUNNING state. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
+    YARN-138. Ensure default values for minimum/maximum container sizes is
+    sane. (harsh & sseth via acmurthy)
+
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -55,11 +76,20 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
-     Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+    Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+
+    YARN-108. FSDownload can create cache directories with the wrong
+    permissions (Jason Lowe via bobby)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
+
+    YARN-106. Nodemanager needs to set permissions of local directories (jlowe
+    via bobby)
 
 Release 0.23.3 - Unreleased 
 

@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.util.Random;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -200,11 +199,11 @@ public class TestClientReportBadBlock {
   }
 
   /**
-   * Create a file with one block and corrupt some/all of the block replicas.
+   * create a file with one block and corrupt some/all of the block replicas.
    */
   private void createAFileWithCorruptedBlockReplicas(Path filePath, short repl,
       int corruptBlockCount) throws IOException, AccessControlException,
-      FileNotFoundException, UnresolvedLinkException, InterruptedException, TimeoutException {
+      FileNotFoundException, UnresolvedLinkException {
     DFSTestUtil.createFile(dfs, filePath, BLOCK_SIZE, repl, 0);
     DFSTestUtil.waitReplication(dfs, filePath, repl);
     // Locate the file blocks by asking name node

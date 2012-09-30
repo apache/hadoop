@@ -182,7 +182,7 @@ public class TestDatanodeBlockScanner {
   }
 
   @Test
-  public void testBlockCorruptionPolicy() throws Exception {
+  public void testBlockCorruptionPolicy() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     Random random = new Random();

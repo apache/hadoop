@@ -89,7 +89,7 @@ public class TestBlockReplacement {
   }
   
   @Test
-  public void testBlockReplacement() throws Exception {
+  public void testBlockReplacement() throws IOException, TimeoutException {
     final Configuration CONF = new HdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};

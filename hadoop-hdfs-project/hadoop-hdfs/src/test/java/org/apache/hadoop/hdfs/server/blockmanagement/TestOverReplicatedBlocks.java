@@ -53,7 +53,7 @@ public class TestOverReplicatedBlocks {
    * corrupt ones.
    */
   @Test
-  public void testProcesOverReplicateBlock() throws Exception {
+  public void testProcesOverReplicateBlock() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(
@@ -141,7 +141,7 @@ public class TestOverReplicatedBlocks {
    * send heartbeats. 
    */
   @Test
-  public void testChooseReplicaToDelete() throws Exception {
+  public void testChooseReplicaToDelete() throws IOException {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {

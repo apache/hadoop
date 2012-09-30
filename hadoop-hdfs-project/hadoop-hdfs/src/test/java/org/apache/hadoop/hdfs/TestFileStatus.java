@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -101,7 +100,7 @@ public class TestFileStatus {
   }
   
   private void checkFile(FileSystem fileSys, Path name, int repl)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException {
     DFSTestUtil.waitReplication(fileSys, name, (short) repl);
   }
   
@@ -130,7 +129,7 @@ public class TestFileStatus {
 
   /** Test the FileStatus obtained calling getFileStatus on a file */  
   @Test
-  public void testGetFileStatusOnFile() throws Exception {
+  public void testGetFileStatusOnFile() throws IOException {
     checkFile(fs, file1, 1);
     // test getFileStatus on a file
     FileStatus status = fs.getFileStatus(file1);
