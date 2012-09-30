@@ -48,6 +48,9 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-80. Add support for delaying rack-local containers in
     CapacityScheduler. (acmurthy) 
 
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES

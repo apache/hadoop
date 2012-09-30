@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -93,7 +94,7 @@ public class TestFairScheduler {
   @Before
   public void setUp() throws IOException {
     scheduler = new FairScheduler();
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     // All tests assume only one assignment per node update
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
     Store store = StoreFactory.getStore(conf);
@@ -107,6 +108,13 @@ public class TestFairScheduler {
   public void tearDown() {
     scheduler = null;
     resourceManager = null;
+  }
+
+  private Configuration createConfiguration() {
+    Configuration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
+        ResourceScheduler.class);
+    return conf;
   }
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
@@ -278,7 +286,7 @@ public class TestFairScheduler {
 
   @Test
   public void testUserAsDefaultQueue() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
@@ -299,7 +307,7 @@ public class TestFairScheduler {
 
   @Test
   public void testFairShareWithMinAlloc() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -405,7 +413,7 @@ public class TestFairScheduler {
 
   @Test
   public void testAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -508,7 +516,7 @@ public class TestFairScheduler {
 
   @Test
   public void testBackwardsCompatibleAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -611,7 +619,7 @@ public class TestFairScheduler {
 
   @Test
   public void testIsStarvedForMinShare() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -670,7 +678,7 @@ public class TestFairScheduler {
 
   @Test
   public void testIsStarvedForFairShare() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -734,7 +742,7 @@ public class TestFairScheduler {
    * now this means decreasing order of priority.
    */
   public void testChoiceOfPreemptedContainers() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE + ".allocation.file", ALLOC_FILE);
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
@@ -867,7 +875,7 @@ public class TestFairScheduler {
    * Tests the timing of decision to preempt tasks.
    */
   public void testPreemptionDecision() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     MockClock clock = new MockClock();
     scheduler.setClock(clock);

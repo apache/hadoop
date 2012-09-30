@@ -64,7 +64,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -256,10 +255,22 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ResourceScheduler createScheduler() {
-    return ReflectionUtils.newInstance(this.conf.getClass(
-        YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
-        ResourceScheduler.class), this.conf);
-  }
+    String schedulerClassName = conf.get(YarnConfiguration.RM_SCHEDULER,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER);
+    LOG.info("Using Scheduler: " + schedulerClassName);
+    try {
+      Class<?> schedulerClazz = Class.forName(schedulerClassName);
+      if (ResourceScheduler.class.isAssignableFrom(schedulerClazz)) {
+        return (ResourceScheduler) ReflectionUtils.newInstance(schedulerClazz,
+            this.conf);
+      } else {
+        throw new YarnException("Class: " + schedulerClassName
+            + " not instance of " + ResourceScheduler.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnException("Could not instantiate Scheduler: "
+          + schedulerClassName, e);
+    }  }
 
   protected ApplicationMasterLauncher createAMLauncher() {
     return new ApplicationMasterLauncher(this.clientToAMSecretManager,
