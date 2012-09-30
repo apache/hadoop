@@ -208,6 +208,8 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
  
+  public static final String DEFAULT_RM_SCHEDULER = 
+      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler";
 
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 

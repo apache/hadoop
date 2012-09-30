@@ -64,4 +64,8 @@ public abstract class Priority implements Comparable<Priority> {
     return this.getPriority() - other.getPriority();
   }
 
+  @Override
+  public String toString() {
+    return "{Priority: " + getPriority() + "}";
+  }
 }
