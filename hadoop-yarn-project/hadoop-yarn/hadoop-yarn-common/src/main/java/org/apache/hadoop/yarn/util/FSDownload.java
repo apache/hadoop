@@ -83,6 +83,13 @@ public class FSDownload implements Callable<Path> {
     return resource;
   }
 
+  private void createDir(Path path, FsPermission perm) throws IOException {
+    files.mkdir(path, perm, false);
+    if (!perm.equals(files.getUMask().applyUMask(perm))) {
+      files.setPermission(path, perm);
+    }
+  }
+
   private Path copy(Path sCopy, Path dstdir) throws IOException {
     FileSystem sourceFs = sCopy.getFileSystem(conf);
     Path dCopy = new Path(dstdir, sCopy.getName() + ".tmp");
@@ -177,9 +184,9 @@ public class FSDownload implements Callable<Path> {
     } while (files.util().exists(tmp));
     destDirPath = tmp;
 
-    files.mkdir(destDirPath, cachePerms, false);
+    createDir(destDirPath, cachePerms);
     final Path dst_work = new Path(destDirPath + "_tmp");
-    files.mkdir(dst_work, cachePerms, false);
+    createDir(dst_work, cachePerms);
 
     Path dFinal = files.makeQualified(new Path(dst_work, sCopy.getName()));
     try {
