@@ -225,7 +225,9 @@ public class TestFairScheduler {
       new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
     scheduler.handle(updateEvent);
 
-    assertEquals(512, scheduler.getQueueManager().getQueue("queue1").
+    // Asked for less than min_allocation.
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        scheduler.getQueueManager().getQueue("queue1").
         getQueueSchedulable().getResourceUsage().getMemory());
 
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2,
@@ -362,31 +364,35 @@ public class TestFairScheduler {
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
     scheduler.addApplication(id22, "queue2", "user1");
 
-    // First ask, queue1 requests 1024
+    int minReqSize = YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB;
+    
+    // First ask, queue1 requests 1 large (minReqSize * 2).
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
-    ResourceRequest request1 = createResourceRequest(1024, "*", 1, 1);
+    ResourceRequest request1 = createResourceRequest(minReqSize * 2, "*", 1, 1);
     ask1.add(request1);
     scheduler.allocate(id11, ask1, new ArrayList<ContainerId>());
 
-    // Second ask, queue2 requests 1024 + (2 * 512)
+    // Second ask, queue2 requests 1 large + (2 * minReqSize)
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
-    ResourceRequest request2 = createResourceRequest(1024, "foo", 1, 1);
-    ResourceRequest request3 = createResourceRequest(512, "bar", 1, 2);
+    ResourceRequest request2 = createResourceRequest(2 * minReqSize, "foo", 1, 1);
+    ResourceRequest request3 = createResourceRequest(minReqSize, "bar", 1, 2);
     ask2.add(request2);
     ask2.add(request3);
     scheduler.allocate(id21, ask2, new ArrayList<ContainerId>());
 
-    // Third ask, queue2 requests 1024
+    // Third ask, queue2 requests 1 large
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
-    ResourceRequest request4 = createResourceRequest(1024, "*", 1, 1);
+    ResourceRequest request4 = createResourceRequest(2 * minReqSize, "*", 1, 1);
     ask3.add(request4);
     scheduler.allocate(id22, ask3, new ArrayList<ContainerId>());
 
     scheduler.update();
 
-    assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").getQueueSchedulable().getDemand().getMemory());
-    assertEquals(1024 + 1024 + (2 * 512), scheduler.getQueueManager().getQueue("queue2").getQueueSchedulable().getDemand().getMemory());
-
+    assertEquals(2 * minReqSize, scheduler.getQueueManager().getQueue("queue1")
+        .getQueueSchedulable().getDemand().getMemory());
+    assertEquals(2 * minReqSize + 2 * minReqSize + (2 * minReqSize), scheduler
+        .getQueueManager().getQueue("queue2").getQueueSchedulable().getDemand()
+        .getMemory());
   }
 
   @Test
