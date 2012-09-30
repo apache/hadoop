@@ -21,6 +21,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4674. Hadoop examples secondarysort has a typo
     "secondarysrot" in the usage. (Robert Justice via eli)
 
+    MAPREDUCE-4681. Fix unit tests broken by HDFS-3910. (acmurthy) 
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

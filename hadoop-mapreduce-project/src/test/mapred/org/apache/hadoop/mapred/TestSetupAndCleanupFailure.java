@@ -149,7 +149,7 @@ public class TestSetupAndCleanupFailure extends TestCase {
   private void testSetupAndCleanupKill(MiniMRCluster mr, 
                                        MiniDFSCluster dfs, 
                                        boolean commandLineKill) 
-  throws IOException {
+  throws Exception {
     // launch job with waiting setup/cleanup
     RunningJob job = launchJobWithWaitingSetupAndCleanup(mr);
     
@@ -223,7 +223,7 @@ public class TestSetupAndCleanupFailure extends TestCase {
   // Also Tests the command-line kill for setup/cleanup attempts. 
   // tests the setup/cleanup attempts getting killed if 
   // they were running on a lost tracker
-  public void testWithDFS() throws IOException {
+  public void testWithDFS() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
