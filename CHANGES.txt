@@ -396,12 +396,16 @@ Release 1.1.0 - 2012.09.28
 
     MAPREDUCE-4558. Disable TestJobTrackerSafeMode (sseth)
 
-    HDFS-3701. HDFS may miss the final block when reading a file opened for writing
-    if one of the datanode is dead. (umamahesh and nkeywal via umamahesh)
+    HDFS-3701. HDFS may miss the final block when reading a file opened for 
+    writing if one of the datanode is dead. (umamahesh and nkeywal via 
+    umamahesh)
 
     HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
     even for short reads.  (Brandon Li via szetszwo)
 
+    HDFS-3461. Make HFTP and HSFTP use http and https respectively for 
+    getting, renewing, and cancelling the underlying token. Systems with
+    weak crypto (kssl) configured will continue to use https. (omalley)
 
 Release 1.0.4 - Unreleased
 
