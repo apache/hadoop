@@ -11,6 +11,9 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8755. Print thread dump when tests fail due to timeout. (Andrey
     Klochkov via atm)
 
+    HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
+    (Andy Isaacson via eli)
+
   OPTIMIZATIONS
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
