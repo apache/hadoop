@@ -1,17 +1,5 @@
 Hadoop Change Log
 
-Release 0.23.5 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -36,6 +24,8 @@ Release 0.23.4 - UNRELEASED
 
     HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
     (Steven Willis via suresh)
+
+    HADOOP-8310. FileContext#checkPath should handle URIs with no port. (atm)
 
 Release 0.23.3
 
