@@ -12,6 +12,16 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 0.23.3</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-137">YARN-137</a>.
+     Major improvement reported by Siddharth Seth and fixed by Siddharth Seth (scheduler)<br>
+     <b>Change the default scheduler to the CapacityScheduler</b><br>
+     <blockquote>There's some bugs in the FifoScheduler atm - doesn't distribute tasks across nodes and some headroom (available resource) issues.
+That's not the best experience for users trying out the 2.0 branch. The CS with the default configuration of a single queue behaves the same as the FifoScheduler and doesn't have these issues.
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-108">YARN-108</a>.
+     Critical bug reported by Jason Lowe and fixed by Jason Lowe (nodemanager)<br>
+     <b>FSDownload can create cache directories with the wrong permissions</b><br>
+     <blockquote>When the cluster is configured with a restrictive umask, e.g.: {{fs.permissions.umask-mode=0077}}, the nodemanager can end up creating directory entries in the public cache with the wrong permissions.  The permissions can end up where only the nodemanager user can access files in the public cache, preventing jobs from running properly.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-106">YARN-106</a>.
      Major bug reported by Jason Lowe and fixed by Jason Lowe (nodemanager)<br>
      <b>Nodemanager needs to set permissions of local directories</b><br>
@@ -143,6 +153,10 @@ java.lang.NullPointerException
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8623">HADOOP-8623</a>.
      Minor improvement reported by Steven Willis and fixed by Steven Willis (scripts)<br>
      <b>hadoop jar command should respect HADOOP_OPTS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8310">HADOOP-8310</a>.
+     Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (fs)<br>
+     <b>FileContext#checkPath should handle URIs with no port</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8183">HADOOP-8183</a>.
      Minor improvement reported by Harsh J and fixed by Harsh J (util)<br>
