@@ -16,6 +16,9 @@ Release 0.23.5 - UNRELEASED
     (default behavior in some bash setups (esp. Ubuntu))
     (Chiristopher Berner and Andy Isaacson via harsh)
 
+    HADOOP-8791. Fix rm command documentation to indicte it deletes
+    files and not directories. (Jing Zhao via suresh)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
