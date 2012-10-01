@@ -101,9 +101,7 @@ class IFileInputStream extends InputStream {
   private static FileDescriptor getFileDescriptorIfAvail(InputStream in) {
     FileDescriptor fd = null;
     try {
-      if (in instanceof HasFileDescriptor) {
-        fd = ((HasFileDescriptor)in).getFileDescriptor();
-      } else if (in instanceof FileInputStream) {
+      if (in instanceof FileInputStream) {
         fd = ((FileInputStream)in).getFD();
       }
     } catch (IOException e) {
