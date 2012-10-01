@@ -8,6 +8,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-138. Ensure default values for minimum/maximum container sizes is 
+    sane. (harsh & sseth via acmurthy)
+
     YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
     (sseth via acmurthy) 
 
