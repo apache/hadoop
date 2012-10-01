@@ -8,6 +8,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8755. Print thread dump when tests fail due to timeout. (Andrey
+    Klochkov via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
