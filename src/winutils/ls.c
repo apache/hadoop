@@ -35,6 +35,8 @@ static BOOL GetMaskString(USHORT accessMask, LPWSTR maskString)
 
   if ((accessMask & UX_DIRECTORY) == UX_DIRECTORY)
     maskString[0] = L'd';
+  else if ((accessMask & UX_SYMLINK) == UX_SYMLINK)
+    maskString[0] = L'l';
 
   if ((accessMask & UX_U_READ) == UX_U_READ)
     maskString[1] = L'r';
@@ -167,6 +169,8 @@ int Ls(int argc, wchar_t *argv[])
 
   LARGE_INTEGER fileSize;
 
+  BOOL isSymlink = FALSE;
+
   int ret = EXIT_FAILURE;
 
   if (argc > 2)
@@ -197,17 +201,24 @@ int Ls(int argc, wchar_t *argv[])
     goto LsEnd;
   }
 
-  dwErrorCode = GetFileInformationByName(longPathName, &fileInformation);
+  dwErrorCode = GetFileInformationByName(longPathName, FALSE, &fileInformation);
   if (dwErrorCode != ERROR_SUCCESS)
   {
     ReportErrorCode(L"GetFileInformationByName", dwErrorCode);
     goto LsEnd;
   }
 
-  if (IsDirFileInfo(&fileInformation))
+  dwErrorCode = SymbolicLinkCheck(pathName, &isSymlink);
+  if (dwErrorCode != ERROR_SUCCESS)
   {
-    accessMask |= UX_DIRECTORY;
+     ReportErrorCode(L"IsSymbolicLink", dwErrorCode);
+     goto LsEnd;
   }
+
+  if (isSymlink)
+    accessMask |= UX_SYMLINK;
+  else if (IsDirFileInfo(&fileInformation))
+    accessMask |= UX_DIRECTORY;
 
   if (!FindFileOwnerAndPermission(longPathName,
     &ownerName, &groupName, &accessMask))

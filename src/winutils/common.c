@@ -61,15 +61,29 @@ const ACCESS_MASK WinMasks[WIN_MASKS_TOTAL] =
 //  error code: otherwise
 //
 // Notes:
+//  If followLink parameter is set to TRUE, we will follow the symbolic link
+//  or junction point to get the target file information. Otherwise, the
+//  information for the symbolic link or junction point is retrieved.
 //
 DWORD GetFileInformationByName(
   __in LPCWSTR pathName,
+  __in BOOL followLink,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation)
 {
-  HANDLE fileHandle = NULL;
+  HANDLE fileHandle = INVALID_HANDLE_VALUE;
+  BOOL isSymlink = FALSE;
+  DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS;
   DWORD dwErrorCode = ERROR_SUCCESS;
 
   assert(lpFileInformation != NULL);
+
+  if (!followLink)
+  {
+    if ((dwErrorCode = SymbolicLinkCheck(pathName, &isSymlink)) != ERROR_SUCCESS)
+      return dwErrorCode;
+    if (isSymlink)
+      dwFlagsAndAttributes |= FILE_FLAG_OPEN_REPARSE_POINT;
+  }
 
   fileHandle = CreateFileW(
     pathName,
@@ -77,7 +91,7 @@ DWORD GetFileInformationByName(
     FILE_SHARE_READ,
     NULL,
     OPEN_EXISTING,
-    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+    dwFlagsAndAttributes,
     NULL);
   if (fileHandle == INVALID_HANDLE_VALUE)
   {
@@ -196,6 +210,122 @@ BOOL IsDirFileInfo(const BY_HANDLE_FILE_INFORMATION *fileInformation)
     == FILE_ATTRIBUTE_DIRECTORY)
     return TRUE;
   return FALSE;
+}
+
+//----------------------------------------------------------------------------
+// Function: CheckFileAttributes
+//
+// Description:
+//	Check if the given file has all the given attribute(s)
+//
+// Returns:
+//	ERROR_SUCCESS on success
+//  error code otherwise
+//
+// Notes:
+//
+static DWORD FileAttributesCheck(
+  __in LPCWSTR path, __in DWORD attr, __out PBOOL res)
+{
+  DWORD attrs = INVALID_FILE_ATTRIBUTES;
+  *res = FALSE;
+  if ((attrs = GetFileAttributes(path)) != INVALID_FILE_ATTRIBUTES)
+    *res = ((attrs & attr) == attr);
+  else
+    return GetLastError();
+  return ERROR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------
+// Function: IsDirectory
+//
+// Description:
+//	Check if the given file is a directory
+//
+// Returns:
+//	ERROR_SUCCESS on success
+//  error code otherwise
+//
+// Notes:
+//
+DWORD DirectoryCheck(__in LPCWSTR pathName, __out PBOOL res)
+{
+  return FileAttributesCheck(pathName, FILE_ATTRIBUTE_DIRECTORY, res);
+}
+
+//----------------------------------------------------------------------------
+// Function: IsReparsePoint
+//
+// Description:
+//	Check if the given file is a reparse point
+//
+// Returns:
+//	ERROR_SUCCESS on success
+//  error code otherwise
+//
+// Notes:
+//
+static DWORD ReparsePointCheck(__in LPCWSTR pathName, __out PBOOL res)
+{
+  return FileAttributesCheck(pathName, FILE_ATTRIBUTE_REPARSE_POINT, res);
+}
+
+//----------------------------------------------------------------------------
+// Function: CheckReparseTag
+//
+// Description:
+//	Check if the given file is a reparse point of the given tag.
+//
+// Returns:
+//	ERROR_SUCCESS on success
+//  error code otherwise
+//
+// Notes:
+//
+static DWORD ReparseTagCheck(__in LPCWSTR path, __in DWORD tag, __out PBOOL res)
+{
+  BOOL isReparsePoint = FALSE;
+  HANDLE hFind = INVALID_HANDLE_VALUE;
+  WIN32_FIND_DATA findData;
+  DWORD dwRtnCode;
+
+  if ((dwRtnCode = ReparsePointCheck(path, &isReparsePoint)) != ERROR_SUCCESS)
+    return dwRtnCode;
+
+  if (!isReparsePoint)
+  {
+    *res = FALSE;
+  }
+  else
+  {
+    if ((hFind = FindFirstFile(path, &findData)) == INVALID_HANDLE_VALUE)
+    {
+      return GetLastError();
+    }
+    else
+    {
+      *res = (findData.dwReserved0 == tag);
+      FindClose(hFind);
+    }
+  }
+  return ERROR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------
+// Function: IsSymbolicLink
+//
+// Description:
+//	Check if the given file is a symbolic link.
+//
+// Returns:
+//	ERROR_SUCCESS on success
+//  error code otherwise
+//
+// Notes:
+//
+DWORD SymbolicLinkCheck(__in LPCWSTR pathName, __out PBOOL res)
+{
+  return ReparseTagCheck(pathName, IO_REPARSE_TAG_SYMLINK, res);
 }
 
 //----------------------------------------------------------------------------
