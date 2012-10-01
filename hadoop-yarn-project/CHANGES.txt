@@ -1,20 +1,5 @@
 Hadoop YARN Change Log
 
-Release 0.23.5 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
-    (sseth via acmurthy) 
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -47,6 +32,12 @@ Release 0.23.4 - UNRELEASED
 
     YARN-106. Nodemanager needs to set permissions of local directories (jlowe
     via bobby)
+
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
+
+    YARN-138. Ensure default values for minimum/maximum container sizes is 
+    sane. (harsh & sseth via acmurthy)
 
 Release 0.23.3
 

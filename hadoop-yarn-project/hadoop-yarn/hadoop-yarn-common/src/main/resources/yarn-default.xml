@@ -193,7 +193,7 @@
     in MBs. Memory requests lower than this won't take effect,
     and the specified value will get allocated at minimum.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
-    <value>128</value>
+    <value>1024</value>
   </property>
 
   <property>
@@ -201,7 +201,7 @@
     in MBs. Memory requests higher than this won't take effect,
     and will get capped to this value.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
-    <value>10240</value>
+    <value>8192</value>
   </property>
 
   <property>
