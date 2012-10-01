@@ -48,7 +48,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenRenewer;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
@@ -91,12 +90,12 @@ public class HftpFileSystem extends FileSystem
   private URI hftpURI;
 
   protected InetSocketAddress nnAddr;
-  protected InetSocketAddress nnSecureAddr;  
 
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
   private Token<?> delegationToken;
+  private boolean createdToken = false;
   private Token<?> renewToken;
   private static final HftpDelegationTokenSelector hftpTokenSelector =
       new HftpDelegationTokenSelector();
@@ -120,27 +119,14 @@ public class HftpFileSystem extends FileSystem
         DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
   }
 
-  protected int getDefaultSecurePort() {
-    return !SecurityUtil.useKsslAuth() ? getDefaultPort() :
-        getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
-            DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
-  }
-
   protected InetSocketAddress getNamenodeAddr(URI uri) {
     // use authority so user supplied uri can override port
     return NetUtils.createSocketAddr(uri.getAuthority(), getDefaultPort());
   }
 
-  protected InetSocketAddress getNamenodeSecureAddr(URI uri) {
-    // must only use the host and the configured https port
-    return NetUtils.makeSocketAddr(uri.getHost(), getDefaultSecurePort());
-  }
-
   @Override
   public String getCanonicalServiceName() {
-    // unlike other filesystems, hftp's service is the secure port, not the
-    // actual port in the uri
-    return SecurityUtil.buildTokenService(nnSecureAddr).toString();
+    return SecurityUtil.buildTokenService(nnAddr).toString();
   }
 
   @Override
@@ -150,7 +136,6 @@ public class HftpFileSystem extends FileSystem
     super.initialize(name, conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.nnAddr = getNamenodeAddr(name);
-    this.nnSecureAddr = getNamenodeSecureAddr(name);
     this.hftpURI = DFSUtil.createUri(name.getScheme(), nnAddr);
   }
   
@@ -162,7 +147,6 @@ public class HftpFileSystem extends FileSystem
     }   
 
     //since we don't already have a token, go get one over https
-    boolean createdToken = false;
     if (token == null) {
       token = getDelegationToken(null);
       createdToken = (token != null);
@@ -181,7 +165,7 @@ public class HftpFileSystem extends FileSystem
   }
 
   protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
-    Text serviceName = SecurityUtil.buildTokenService(nnSecureAddr);
+    Text serviceName = SecurityUtil.buildTokenService(nnAddr);
     return hftpTokenSelector.selectToken(serviceName, ugi.getTokens());      
   }
   
@@ -190,10 +174,29 @@ public class HftpFileSystem extends FileSystem
         nnAddr, ugi, getConf());
   }
   
+  @Override
+  public void close() throws IOException {
+    // if we created a token, we should cancel it
+    if (createdToken) {
+      try {
+        renewToken.cancel(getConf());
+      } catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
+    }
+    super.close();
+  }
 
   @Override
   public Token<?> getRenewToken() {
     return renewToken;
+  }
+
+  /**
+   * Return the underlying protocol that is used to talk to the namenode.
+   */
+  protected String getUnderlyingProtocol() {
+    return "http";
   }
 
   @Override
@@ -213,35 +216,31 @@ public class HftpFileSystem extends FileSystem
   @Override
   public synchronized Token<?> getDelegationToken(final String renewer
                                                   ) throws IOException {
+    //Renew TGT if needed
+    ugi.checkTGTAndReloginFromKeytab();
+    Credentials c;
     try {
-      //Renew TGT if needed
-      ugi.checkTGTAndReloginFromKeytab();
-      return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
-        public Token<?> run() throws IOException {
-          final String nnHttpUrl = DFSUtil.createUri(
-              NameNode.getHttpUriScheme(), nnSecureAddr).toString();
-          Credentials c;
-          try {
-            c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
-          } catch (Exception e) {
-            LOG.info("Couldn't get a delegation token from " + nnHttpUrl + 
-            " using " + NameNode.getHttpUriScheme());
-            LOG.debug("error was ", e);
-            //Maybe the server is in unsecure mode (that's bad but okay)
-            remoteIsInsecure = true;
-            return null;
-          }
-          for (Token<? extends TokenIdentifier> t : c.getAllTokens()) {
-            LOG.debug("Got dt for " + getUri() + ";t.service="
-                      +t.getService());
-            return t;
-          }
-          return null;
+      c = ugi.doAs(new PrivilegedExceptionAction<Credentials>(){
+        public Credentials run() throws Exception {
+          return
+            DelegationTokenFetcher.getDTfromRemote(getUnderlyingProtocol(),
+                                                   nnAddr,
+                                                   renewer,
+                                                   getConf());
         }
       });
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+    } catch (Exception e) {
+      LOG.info("Couldn't get a delegation token from " + nnAddr);
+      LOG.debug("error was ", e);
+      //Maybe the server is in unsecure mode (that's bad but okay)
+      remoteIsInsecure = true;
+      return null;
     }
+    for (Token<? extends TokenIdentifier> t : c.getAllTokens()) {
+      LOG.debug("Got dt for " + getUri() + ";t.service=" + t.getService());
+      return t;
+    }
+    return null;
   }
 
   @Override
@@ -281,8 +280,9 @@ public class HftpFileSystem extends FileSystem
       throws IOException {
     try {
       query = updateQuery(query);
-      final URL url = new URI("http", null, nnAddr.getHostName(),
-          nnAddr.getPort(), path, query, null).toURL();
+      final URL url = new URI(getUnderlyingProtocol(), null, 
+			      nnAddr.getHostName(),
+			      nnAddr.getPort(), path, query, null).toURL();
       if (LOG.isTraceEnabled()) {
         LOG.trace("url=" + url);
       }
@@ -653,7 +653,7 @@ public class HftpFileSystem extends FileSystem
     final ContentSummary cs = new ContentSummaryParser().getContentSummary(s);
     return cs != null? cs: super.getContentSummary(f);
   }
-  
+
   @InterfaceAudience.Private
   public static class TokenManager extends TokenRenewer {
 
@@ -667,17 +667,22 @@ public class HftpFileSystem extends FileSystem
       return true;
     }
 
+    protected String getUnderlyingProtocol() {
+      return "http";
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public long renew(Token<?> token, 
                       Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-      // use http/s to renew the token
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-      return DelegationTokenFetcher.renewDelegationToken(
-          DFSUtil.createUri(NameNode.getHttpUriScheme(), serviceAddr).toString(),
-          (Token<DelegationTokenIdentifier>) token);
+      return DelegationTokenFetcher.
+        renewDelegationToken(getUnderlyingProtocol(),
+                             serviceAddr,
+                             (Token<DelegationTokenIdentifier>) token,
+                             conf);
     }
 
     @SuppressWarnings("unchecked")
@@ -686,11 +691,12 @@ public class HftpFileSystem extends FileSystem
                        Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-      // use http/s to cancel the token
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-      DelegationTokenFetcher.cancelDelegationToken(
-          DFSUtil.createUri(NameNode.getHttpUriScheme(), serviceAddr).toString(),
-          (Token<DelegationTokenIdentifier>) token);
+      DelegationTokenFetcher.
+        cancelDelegationToken(getUnderlyingProtocol(),
+                              serviceAddr,
+                              (Token<DelegationTokenIdentifier>) token,
+                              conf);
     }
     
   }
