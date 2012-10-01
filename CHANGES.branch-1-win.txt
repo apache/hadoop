@@ -137,3 +137,9 @@ BUG FIXES
     HADOOP-8733. Fix the tests TestStreamingTaskLog, TestJvmManager
     and TestLinuxTaskControllerLaunchArgs to not fail on Windows. (Ivan Mitic via
     vinodkv)
+
+    HADOOP-8694. Add support for windows native symbolic links.
+    (Chuan Liu via suresh)
+    
+    HADOOP-8836. UGI should throw exception in case winutils.exe cannot be
+    loaded. (Bikas Saha via suresh)

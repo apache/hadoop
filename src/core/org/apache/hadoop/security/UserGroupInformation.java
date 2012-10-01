@@ -1040,7 +1040,7 @@ public class UserGroupInformation {
       List<String> result = groups.getGroups(getShortUserName());
       return result.toArray(new String[result.size()]);
     } catch (IOException ie) {
-      LOG.warn("No groups available for user " + getShortUserName());
+      LOG.warn("No groups available for user " + getShortUserName(), ie);
       return new String[0];
     }
   }
