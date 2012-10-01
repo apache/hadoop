@@ -12,6 +12,10 @@ Release 0.23.5 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
+    (default behavior in some bash setups (esp. Ubuntu))
+    (Chiristopher Berner and Andy Isaacson via harsh)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
