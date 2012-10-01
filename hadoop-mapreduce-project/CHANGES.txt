@@ -12,6 +12,9 @@ Release 0.23.5 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4674. Hadoop examples secondarysort has a typo
+    "secondarysrot" in the usage. (Robert Justice via eli)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
