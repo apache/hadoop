@@ -34,6 +34,8 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8775. MR2 distcp permits non-positive value to -bandwidth option
     which causes job never to complete. (Sandy Ryza via atm)
 
+    HADOOP-8310. FileContext#checkPath should handle URIs with no port. (atm)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
