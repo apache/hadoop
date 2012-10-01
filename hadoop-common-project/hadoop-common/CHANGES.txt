@@ -14,6 +14,9 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
     (Andy Isaacson via eli)
 
+    HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
+    tests. (Ivan A. Veselovsky via atm)
+
   OPTIMIZATIONS
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
