@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -327,5 +329,37 @@ public class TestFileUtil {
 
     long du = FileUtil.getDU(TEST_DIR);
     Assert.assertEquals(du, 0);
+  }
+
+  @Test
+  public void testSymlink() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    byte[] data = "testSymLink".getBytes();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    //write some data to the file
+    FileOutputStream os = new FileOutputStream(file);
+    os.write(data);
+    os.close();
+
+    //create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    //ensure that symlink length is correctly reported by Java
+    Assert.assertEquals(data.length, file.length());
+    Assert.assertEquals(Shell.WINDOWS ? 0 : data.length, link.length());
+
+    //ensure that we can read from link.
+    FileInputStream in = new FileInputStream(link);
+    long len = 0;
+    while (in.read() > 0) {
+      len++;
+    }
+    in.close();
+    Assert.assertEquals(data.length, len);
   }
 }

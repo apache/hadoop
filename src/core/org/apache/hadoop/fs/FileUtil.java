@@ -39,6 +39,13 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 public class FileUtil {
   private static final Log LOG = LogFactory.getLog(FileUtil.class);
 
+  /* The error code is defined in winutils to indicate insufficient
+   * privilege to create symbolic links. This value need to keep in
+   * sync with the constant of the same name in:
+   * "src\winutils\common.h"
+   * */
+  public static final int SYMLINK_NO_PRIVILEGE = 2;
+  
   /**
    * convert an array of FileStatus to an array of Path
    * 
@@ -554,115 +561,46 @@ public class FileUtil {
     }
   }
 
-  //review minwei: temp hack to copy file
-  private static void copyDirectory(String fromFileName, String toFileName)
-      throws IOException {
-
-    File fromFolder = new File(fromFileName);
-    File toFolder = new File(toFileName);
-    if (fromFolder.isFile()) {
-      copyFile(fromFileName, toFileName);
-      return;
-    }
-
-    File[] filelist = fromFolder.listFiles();
-    if (filelist == null) {
-      return;
-    }
-
-    String fromPath = fromFileName;
-    String toPath = toFileName;
-    if (!toFolder.exists())
-      toFolder.mkdirs();
-    for (int i = 0; i < filelist.length; i++) {
-      String subPath = filelist[i].getName();
-      if (filelist[i].isDirectory()) {
-        copyDirectory(fromPath + "/" + subPath, toPath + "/" + subPath);
-      } else {
-        copyFile(fromPath + "/" + subPath, toPath + "/" + subPath);
-      }
-    }
-  }
-
-  private static void copyFile(String fromFileName, String toFileName)
-      throws IOException {
-    File fromFile = new File(fromFileName);
-    File toFile = new File(toFileName);
-
-    if (!fromFile.exists())
-      throw new IOException("FileCopy: " + "no such source file: "
-                            + fromFileName);
-
-    if (fromFile.isDirectory()) {
-      copyDirectory(fromFileName, toFileName);
-      return;
-    }
-
-    if (!fromFile.canRead())
-      throw new IOException("FileCopy: " + "source file is unreadable: "
-                            + fromFileName);
-
-    // Make sure the parent directory exist for the toFileName
-    if (toFile.getParent() != null) {
-      File toFileParentDir = new File(toFile.getParent());
-      if (!toFileParentDir.exists() && !toFileParentDir.mkdirs()) {
-        throw new IOException("FileCopy: failed to create target directory: "
-                              + toFileParentDir.getPath());
-      }
-    }
-
-    InputStream from = null;
-    OutputStream to = null;
-    try {
-      from = new BufferedInputStream(new FileInputStream(fromFile));
-      to = new BufferedOutputStream(new FileOutputStream(toFile));
-      byte[] buffer = new byte[4*1024*1024];
-      int bytesRead;
-
-      while ((bytesRead = from.read(buffer)) != -1)
-        to.write(buffer, 0, bytesRead); // write
-    } finally {
-      if (from != null)
-        try {
-          from.close();
-        } catch (IOException e) {
-          ;
-        }
-      if (to != null)
-        try {
-          to.close();
-        } catch (IOException e) {
-          ;
-        }
-    }
-  }
-  
   /**
    * Create a soft link between a src and destination
-   * only on a local disk. HDFS does not support this
+   * only on a local disk. HDFS does not support this.
+   * On Windows, when symlink creation fails due to security
+   * setting, we will log a warning. The return code in this
+   * case is 2.
    * @param target the target for symlink 
    * @param linkname the symlink
    * @return value returned by the command
    */
   public static int symLink(String target, String linkname) throws IOException{
-    if (Shell.DISABLEWINDOWS_TEMPORARILY) {
-      copyFile(target, linkname);
-      return 0;
+    // Run the input paths through Java's File so that they are converted to the
+    // native OS form. FIXME: Long term fix is to expose symLink API that
+    // accepts File instead of String, as symlinks can only be created on the
+    // local FS.
+    String[] cmd = Shell.getSymlinkCommand(new File(target).getPath(),
+        new File(linkname).getPath());
+    ShellCommandExecutor shExec = new ShellCommandExecutor(cmd);
+    try {
+      shExec.execute();
+    } catch (Shell.ExitCodeException ec) {
+      int returnVal = ec.getExitCode();
+      if (Shell.WINDOWS && returnVal == SYMLINK_NO_PRIVILEGE) {
+        LOG.warn("Fail to create symbolic links on Windows. "
+            + "The default security settings in Windows disallow non-elevated "
+            + "administrators and all non-administrators from creating symbolic links. "
+            + "This behavior can be changed in the Local Security Policy management console");
+      } else if (returnVal != 0) {
+        LOG.warn("Command '" + cmd + "' failed " + returnVal + " with: "
+            + ec.getMessage());
+      }
+      return returnVal;
+    } catch (IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error while create symlink " + linkname + " to " + target
+            + "." + " Exception: " + StringUtils.stringifyException(e));
+      }
+      throw e;
     }
-
-    String cmd = "ln -s " + target + " " + linkname;
-    Process p = Runtime.getRuntime().exec(cmd, null);
-    int returnVal = -1;
-    try{
-      returnVal = p.waitFor();
-    } catch(InterruptedException e){
-      //do nothing as of yet
-    }
-    if (returnVal != 0) {
-      LOG.warn("Command '" + cmd + "' failed " + returnVal + 
-               " with: " + copyStderr(p));
-    }
-    return returnVal;
+    return shExec.getExitCode();
   }
   
   private static String copyStderr(Process p) throws IOException {

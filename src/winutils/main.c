@@ -51,6 +51,10 @@ int wmain(int argc, wchar_t* argv[])
   {
     return Hardlink(argc - 1, argv + 1);
   }
+  else if (wcscmp(L"symlink", cmd) == 0)
+  {
+    return Symlink(argc - 1, argv + 1);
+  }
   else if (wcscmp(L"task", cmd) == 0)
   {
     return Task(argc - 1, argv + 1);
@@ -80,18 +84,14 @@ static void Usage(LPCWSTR program)
 Provide basic command line utilities for Hadoop on Windows.\n\n\
 The available commands and their usages are:\n\n", program);
 
-  fwprintf(stdout, L"%-15s%s\n\n", L"ls", L"List file information.");
-  LsUsage(L"ls");
-  fwprintf(stdout, L"\n\n");
-
   fwprintf(stdout, L"%-15s%s\n\n", L"chmod", L"Change file mode bits.");
   ChmodUsage(L"chmod");
   fwprintf(stdout, L"\n\n");
-    
+
   fwprintf(stdout, L"%-15s%s\n\n", L"chown", L"Change file owner.");
   ChownUsage(L"chown");
   fwprintf(stdout, L"\n\n");
-  
+
   fwprintf(stdout, L"%-15s%s\n\n", L"groups", L"List user groups.");
   GroupsUsage(L"groups");
   fwprintf(stdout, L"\n\n");
@@ -100,12 +100,20 @@ The available commands and their usages are:\n\n", program);
   HardlinkUsage();
   fwprintf(stdout, L"\n\n");
 
-  fwprintf(stdout, L"%-15s%s\n\n", L"task", L"Task operations.");
-  TaskUsage();
+  fwprintf(stdout, L"%-15s%s\n\n", L"ls", L"List file information.");
+  LsUsage(L"ls");
+  fwprintf(stdout, L"\n\n");
+ 
+  fwprintf(stdout, L"%-10s%s\n\n", L"symlink", L"Create a symbolic link.");
+  SymlinkUsage();
   fwprintf(stdout, L"\n\n");
 
   fwprintf(stdout, L"%-15s%s\n\n", L"systeminfo", L"System information.");
   SystemInfoUsage();
+
+  fwprintf(stdout, L"%-15s%s\n\n", L"task", L"Task operations.");
+  TaskUsage();
+  fwprintf(stdout, L"\n\n");
 
   fwprintf(stdout, L"\n\n");
 }

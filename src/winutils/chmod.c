@@ -199,12 +199,15 @@ static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt USHORT unixAccessMask,
 //
 // Notes:
 //  The recursion works in the following way:
-//    - If the path is not a directory, change its mode and return;
+//    - If the path is not a directory, change its mode and return.
+//      Symbolic links and junction points are not considered as directories.
 //    - Otherwise, call the method on all its children, then change its mode.
 //
 static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt USHORT mode,
   __in_opt PMODE_CHANGE_ACTION actions)
 {
+  BOOL isDir = FALSE;
+  BOOL isSymlink = FALSE;
   LPWSTR dir = NULL;
 
   size_t pathSize = 0;
@@ -215,24 +218,23 @@ static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt USHORT mode,
   DWORD dwRtnCode = ERROR_SUCCESS;
   BOOL ret = FALSE;
 
-  BY_HANDLE_FILE_INFORMATION fileInfo;
-
-  if ((dwRtnCode = GetFileInformationByName(path, &fileInfo)) != ERROR_SUCCESS)
+  if ((dwRtnCode = DirectoryCheck(path, &isDir)) != ERROR_SUCCESS)
   {
-    ReportErrorCode(L"GetFileInformationByName", dwRtnCode);
+    ReportErrorCode(L"IsDirectory", dwRtnCode);
+    return FALSE;
+  }
+  if ((dwRtnCode = SymbolicLinkCheck(path, &isSymlink)) != ERROR_SUCCESS)
+  {
+    ReportErrorCode(L"IsSymbolicLink", dwRtnCode);
     return FALSE;
   }
 
-  if (!IsDirFileInfo(&fileInfo))
+  if (isSymlink || !isDir)
   {
      if (ChangeFileMode(path, mode, actions))
-     {
        return TRUE;
-     }
      else
-     {
        return FALSE;
-     }
   }
 
   if (FAILED(StringCchLengthW(path, STRSAFE_MAX_CCH - 3, &pathSize)))
@@ -499,7 +501,7 @@ static BOOL ParseCommandLineArguments(__in int argc, __in wchar_t *argv[],
       // Check if the given path name is a file or directory
       // Only set recursive flag if the given path is a directory
       //
-      dwRtnCode = GetFileInformationByName(*path, &fileInfo);
+      dwRtnCode = GetFileInformationByName(*path, FALSE, &fileInfo);
       if (dwRtnCode != ERROR_SUCCESS)
       {
         ReportErrorCode(L"GetFileInformationByName", dwRtnCode);
@@ -698,7 +700,7 @@ static BOOL ConvertActionsToMask(__in LPCWSTR path,
 
   USHORT mode = 0;
 
-  dwErrorCode = GetFileInformationByName(path, &fileInformation);
+  dwErrorCode = GetFileInformationByName(path, FALSE, &fileInformation);
   if (dwErrorCode != ERROR_SUCCESS)
   {
     ReportErrorCode(L"GetFileInformationByName", dwErrorCode);
