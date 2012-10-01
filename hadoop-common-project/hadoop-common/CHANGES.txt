@@ -285,6 +285,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
 
+    HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
+    tests. (Ivan A. Veselovsky via atm)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
