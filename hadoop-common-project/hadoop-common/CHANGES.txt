@@ -25,6 +25,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-3957. Change MutableQuantiles to use a shared thread for rolling
     over metrics. (Andrew Wang via todd)
 
+    HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
+    tests. (Ivan A. Veselovsky via atm)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang

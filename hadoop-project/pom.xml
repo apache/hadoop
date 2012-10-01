@@ -874,7 +874,7 @@
         <configuration>
           <forkMode>always</forkMode>
           <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-          <argLine>-Xmx1024m</argLine>
+          <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
           <environmentVariables>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
