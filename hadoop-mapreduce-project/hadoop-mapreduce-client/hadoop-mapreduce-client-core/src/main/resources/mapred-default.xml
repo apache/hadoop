@@ -644,6 +644,17 @@
 </property>
 
 <property>
+  <name>mapreduce.cluster.local.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/local</value>
+  <description>
+      The local directory where MapReduce stores intermediate
+      data files.  May be a comma-separated list of
+      directories on different devices in order to spread disk i/o.
+      Directories that do not exist are ignored.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.cluster.acls.enabled</name>
   <value>false</value>
   <description> Specifies whether ACLs should be checked

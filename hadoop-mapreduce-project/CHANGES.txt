@@ -135,6 +135,9 @@ Trunk (Unreleased)
     MAPREDUCE-4678. Running the Pentomino example with defaults throws
     java.lang.NegativeArraySizeException (Chris McConnell via harsh)
 
+    MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
+    (harsh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
