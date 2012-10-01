@@ -17,6 +17,9 @@ Release 0.23.5 - UNRELEASED
     YARN-116. Add the ability to change the RM include/exclude file without
     a restart. (xieguiming and Harsh J via sseth)
 
+    YARN-28. Fixed TestCompositeService to not depend on test-order and thus
+    made it pass on JDK7 (Thomas Graves via vinodkv).
+
   OPTIMIZATIONS
 
   BUG FIXES
