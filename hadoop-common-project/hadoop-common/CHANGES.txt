@@ -13,6 +13,9 @@ Release 0.23.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-8819. Incorrectly & is used instead of && in some file system 
+    implementations. (Brandon Li via suresh)
+
   BUG FIXES
 
     HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
