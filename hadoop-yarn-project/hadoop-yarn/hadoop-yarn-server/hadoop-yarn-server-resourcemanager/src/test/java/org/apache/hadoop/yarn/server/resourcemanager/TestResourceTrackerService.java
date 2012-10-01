@@ -31,6 +31,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -56,7 +57,7 @@ public class TestResourceTrackerService {
       .getRecordFactory(null);
 
   /**
-   * decommissioning using a include hosts file
+   * Decommissioning using a pre-configured include hosts file
    */
   @Test
   public void testDecommissionWithIncludeHosts() throws Exception {
@@ -83,7 +84,7 @@ public class TestResourceTrackerService {
 
     writeToHostsFile("host1");
 
-    rm.getNodesListManager().refreshNodes();
+    rm.getNodesListManager().refreshNodes(conf);
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
@@ -98,7 +99,7 @@ public class TestResourceTrackerService {
   }
 
   /**
-   * decommissioning using a exclude hosts file
+   * Decommissioning using a pre-configured exclude hosts file
    */
   @Test
   public void testDecommissionWithExcludeHosts() throws Exception {
@@ -123,7 +124,7 @@ public class TestResourceTrackerService {
 
     writeToHostsFile("host2");
 
-    rm.getNodesListManager().refreshNodes();
+    rm.getNodesListManager().refreshNodes(conf);
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
@@ -132,7 +133,81 @@ public class TestResourceTrackerService {
         NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
     checkDecommissionedNMCount(rm, ++initialMetricCount);
   }
+
+  /**
+  * Decommissioning using a post-configured include hosts file
+  */
+  @Test
+  public void testAddNewIncludePathToConfiguration() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 10240);
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    assert(metrics != null);
+    int initialMetricCount = metrics.getNumDecommisionedNMs();
+    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(
+        NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction());
+    nodeHeartbeat = nm2.nodeHeartbeat(true);
+    Assert.assertEquals(
+        NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction());
+    writeToHostsFile("host1");
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+    rm.getNodesListManager().refreshNodes(conf);
+    nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(
+        "Node should not have been decomissioned.",
+        NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction());
+    nodeHeartbeat = nm2.nodeHeartbeat(true);
+    Assert.assertEquals("Node should have been decomissioned but is in state" +
+        nodeHeartbeat.getNodeAction(),
+        NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
+    checkDecommissionedNMCount(rm, ++initialMetricCount);
+  }
   
+  /**
+   * Decommissioning using a post-configured exclude hosts file
+   */
+  @Test
+  public void testAddNewExcludePathToConfiguration() throws Exception {
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 10240);
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    assert(metrics != null);
+    int initialMetricCount = metrics.getNumDecommisionedNMs();
+    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(
+        NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction());
+    nodeHeartbeat = nm2.nodeHeartbeat(true);
+    Assert.assertEquals(
+        NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction());
+    writeToHostsFile("host2");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+    rm.getNodesListManager().refreshNodes(conf);
+    nodeHeartbeat = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(
+        "Node should not have been decomissioned.",
+        NodeAction.NORMAL,
+        nodeHeartbeat.getNodeAction());
+    nodeHeartbeat = nm2.nodeHeartbeat(true);
+    Assert.assertEquals("Node should have been decomissioned but is in state" +
+        nodeHeartbeat.getNodeAction(),
+        NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
+    checkDecommissionedNMCount(rm, ++initialMetricCount);
+  }
+
   @Test
   public void testNodeRegistrationFailure() throws Exception {
     writeToHostsFile("host1");

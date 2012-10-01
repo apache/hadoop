@@ -14,6 +14,9 @@ Release 0.23.5 - UNRELEASED
     YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
     (sseth via acmurthy) 
 
+    YARN-116. Add the ability to change the RM include/exclude file without
+    a restart. (xieguiming and Harsh J via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
