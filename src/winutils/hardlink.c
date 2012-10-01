@@ -94,7 +94,7 @@ static DWORD HardlinkStat(__in LPCWSTR fileName, __out DWORD *puHardLinkCount)
 
   // Get file information which contains the hard link count
   //
-  dwErrorCode = GetFileInformationByName(longFileName, FALSE, &fileInformation);
+  dwErrorCode = GetFileInformationByName(longFileName, &fileInformation);
   if (dwErrorCode != ERROR_SUCCESS)
   {
     goto HardlinkStatExit;

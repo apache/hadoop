@@ -28,16 +28,6 @@
 #include <accctrl.h>
 #include <tchar.h>
 #include <strsafe.h>
-enum EXIT_CODE
-{
-  /* Common success exit code shared among all utilities */
-  SUCCESS = EXIT_SUCCESS,
-  /* Generic failure exit code share among all utilities */
-  FAILURE = EXIT_FAILURE,
-  /* Failure code indicates the user does not privilege to create symlinks */
-  SYMLINK_NO_PRIVILEGE = 2,
-};
-
 
 /*
  * The array of 12 months' three-letter abbreviations 
@@ -59,7 +49,6 @@ enum UnixAclMask
   UX_U_WRITE   = 0x0080,
   UX_U_READ    = 0x0100,
   UX_DIRECTORY = 0x0200,
-  UX_SYMLINK   = 0x0400,
 };
 
 
@@ -97,13 +86,10 @@ void HardlinkUsage();
 int Task(int argc, wchar_t *argv[]);
 void TaskUsage();
 
-int Symlink(int argc, wchar_t *argv[]);
-void SymlinkUsage();
-
 int SystemInfo();
 void SystemInfoUsage();
 
-DWORD GetFileInformationByName(__in LPCWSTR pathName,  __in BOOL followLink,
+DWORD GetFileInformationByName(__in LPCWSTR pathName,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation);
 
 DWORD ConvertToLongPath(__in PCWSTR path, __deref_out PWSTR *newPath);
@@ -119,7 +105,3 @@ BOOL FindFileOwnerAndPermission(
   __out_opt LPWSTR *pOwnerName,
   __out_opt LPWSTR *pGroupName,
   __out_opt PUSHORT pMask);
-
-DWORD DirectoryCheck(__in LPCWSTR pathName, __out LPBOOL result);
-
-DWORD SymbolicLinkCheck(__in LPCWSTR pathName, __out LPBOOL result);

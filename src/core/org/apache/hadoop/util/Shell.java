@@ -102,12 +102,6 @@ abstract public class Shell {
     return (WINDOWS) ? new String[] { WINUTILS, "chown", owner }
                      : new String[] { "chown", owner };
   }
-
-  /** Return a command to create symbolic links */
-  public static String[] getSymlinkCommand(String target, String link) {
-    return WINDOWS ? new String[] { WINUTILS, "symlink", link, target }
-                   : new String[] { "ln", "-s", target, link };
-  }
   
   /** Return a command to execute the given command in OS shell.
    *  On Windows, the passed in groupId can be used to launch
