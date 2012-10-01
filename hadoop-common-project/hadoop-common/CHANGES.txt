@@ -28,6 +28,9 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8791. Fix rm command documentation to indicte it deletes
     files and not directories. (Jing Zhao via suresh)
 
+    HADOOP-8775. MR2 distcp permits non-positive value to -bandwidth option
+    which causes job never to complete. (Sandy Ryza via atm)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
