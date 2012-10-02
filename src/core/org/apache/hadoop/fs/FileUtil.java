@@ -589,8 +589,8 @@ public class FileUtil {
             + "administrators and all non-administrators from creating symbolic links. "
             + "This behavior can be changed in the Local Security Policy management console");
       } else if (returnVal != 0) {
-        LOG.warn("Command '" + cmd + "' failed " + returnVal + " with: "
-            + ec.getMessage());
+        LOG.warn("Command '" + StringUtils.join(" ", cmd) + "' failed "
+            + returnVal + " with: " + ec.getMessage());
       }
       return returnVal;
     } catch (IOException e) {
