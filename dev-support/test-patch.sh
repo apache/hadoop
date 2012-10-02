@@ -686,7 +686,7 @@ runTests () {
     cd $module
     echo "  Running tests in $module"
     echo "  $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess"
-    $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess
+    $MVN clean install -fn -Pnative -Drequire.test.libhadoop -D${PROJECT_NAME}PatchProcess
     module_failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
     # With -fn mvn always exits with a 0 exit code.  Because of this we need to
     # find the errors instead of using the exit code.  We assume that if the build
