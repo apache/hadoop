@@ -50,6 +50,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8855. SSL-based image transfer does not work when Kerberos
     is disabled. (todd via eli)
 
+    HADOOP-8616. ViewFS configuration requires a trailing slash. (Sandy Ryza
+    via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
