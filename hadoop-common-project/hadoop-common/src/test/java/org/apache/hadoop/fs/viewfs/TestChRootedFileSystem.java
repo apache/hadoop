@@ -342,6 +342,15 @@ public class TestChRootedFileSystem {
     chrootFs.close();
     verify(mockFs).delete(eq(rawPath), eq(true));
   }
+  
+  @Test
+  public void testURIEmptyPath() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+
+    URI chrootUri = URI.create("mockfs://foo");
+    new ChRootedFileSystem(chrootUri, conf);
+  }
 
   static class MockFileSystem extends FilterFileSystem {
     MockFileSystem() {
