@@ -15,6 +15,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4674. Hadoop examples secondarysort has a typo
     "secondarysrot" in the usage. (Robert Justice via eli)
 
+    MAPREDUCE-4107. Fix tests in org.apache.hadoop.ipc.TestSocketFactory
+    (Devaraj K via tgraves)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
