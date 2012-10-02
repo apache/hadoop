@@ -53,6 +53,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3992. Method org.apache.hadoop.hdfs.TestHftpFileSystem.tearDown()
     sometimes throws NPEs. (Ivan A. Veselovsky via atm)
 
+    HDFS-3753. Tests don't run with native libraries.
+    (Colin Patrick McCabe via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES

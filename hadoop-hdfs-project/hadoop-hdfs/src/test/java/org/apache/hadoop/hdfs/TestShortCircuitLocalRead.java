@@ -115,6 +115,14 @@ public class TestShortCircuitLocalRead {
     stm.close();
   }
 
+  private static byte [] arrayFromByteBuffer(ByteBuffer buf) {
+    ByteBuffer alt = buf.duplicate();
+    alt.clear();
+    byte[] arr = new byte[alt.remaining()];
+    alt.get(arr);
+    return arr;
+  }
+  
   /**
    * Verifies that reading a file with the direct read(ByteBuffer) api gives the expected set of bytes.
    */
@@ -122,7 +130,7 @@ public class TestShortCircuitLocalRead {
       int readOffset) throws IOException {
     DFSDataInputStream stm = (DFSDataInputStream)fs.open(name);
 
-    ByteBuffer actual = ByteBuffer.allocate(expected.length - readOffset);
+    ByteBuffer actual = ByteBuffer.allocateDirect(expected.length - readOffset);
 
     IOUtils.skipFully(stm, readOffset);
 
@@ -136,7 +144,8 @@ public class TestShortCircuitLocalRead {
     // Read across chunk boundary
     actual.limit(Math.min(actual.capacity(), nread + 517));
     nread += stm.read(actual);
-    checkData(actual.array(), readOffset, expected, nread, "A few bytes");
+    checkData(arrayFromByteBuffer(actual), readOffset, expected, nread,
+        "A few bytes");
     //Now read rest of it
     actual.limit(actual.capacity());
     while (actual.hasRemaining()) {
@@ -147,7 +156,7 @@ public class TestShortCircuitLocalRead {
       }
       nread += nbytes;
     }
-    checkData(actual.array(), readOffset, expected, "Read 3");
+    checkData(arrayFromByteBuffer(actual), readOffset, expected, "Read 3");
     stm.close();
   }
 
