@@ -89,11 +89,7 @@ class ChRootedFileSystem extends FilterFileSystem {
   public ChRootedFileSystem(final URI uri, Configuration conf)
       throws IOException {
     super(FileSystem.get(uri, conf));
-    String pathString = uri.getPath();
-    if (pathString.isEmpty()) {
-      pathString = "/";
-    }
-    chRootPathPart = new Path(pathString);
+    chRootPathPart = new Path(uri.getPath());
     chRootPathPartString = chRootPathPart.toUri().getPath();
     myUri = uri;
     workingDir = getHomeDirectory();
