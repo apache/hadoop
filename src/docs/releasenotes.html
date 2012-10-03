@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.0.3 Release Notes</title>
+<title>Hadoop 1.0.4 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,40 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.0.3 Release Notes</h1>
+<h1>Hadoop 1.0.4 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+
+<h2>Changes since Hadoop 1.0.3</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+
+</ul>
+
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7154">HADOOP-7154</a>.
+     Minor improvement reported by tlipcon and fixed by tlipcon (scripts)<br>
+     <b>Should set MALLOC_ARENA_MAX in hadoop-config.sh</b><br>
+     <blockquote>New versions of glibc present in RHEL6 include a new arena allocator design. In several clusters we&apos;ve seen this new allocator cause huge amounts of virtual memory to be used, since when multiple threads perform allocations, they each get their own memory arena. On a 64-bit system, these arenas are 64M mappings, and the maximum number of arenas is 8 times the number of cores. We&apos;ve observed a DN process using 14GB of vmem for only 300M of resident set. This causes all kinds of nasty issues fo...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3652">HDFS-3652</a>.
+     Blocker bug reported by tlipcon and fixed by tlipcon (name-node)<br>
+     <b>1.x: FSEditLog failure removes the wrong edit stream when storage dirs have same name</b><br>
+     <blockquote>In {{FSEditLog.removeEditsForStorageDir}}, we iterate over the edits streams trying to find the stream corresponding to a given dir. To check equality, we currently use the following condition:<br>{code}<br>      File parentDir = getStorageDirForStream(idx);<br>      if (parentDir.getName().equals(sd.getRoot().getName())) {<br>{code}<br>... which is horribly incorrect. If two or more storage dirs happen to have the same terminal path component (eg /data/1/nn and /data/2/nn) then it will pick the wrong strea...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4399">MAPREDUCE-4399</a>.
+     Major bug reported by vicaya and fixed by vicaya (performance, tasktracker)<br>
+     <b>Fix performance regression in shuffle </b><br>
+     <blockquote>There is a significant (up to 3x) performance regression in shuffle (vs 0.20.2) in the Hadoop 1.x series. Most noticeable with high-end switches.</blockquote></li>
+
+
+</ul>
+
 
 <h2>Changes since Hadoop 1.0.2</h2>
 
