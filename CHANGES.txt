@@ -614,6 +614,9 @@ Release 1.1.0 - unreleased
     getting, renewing, and cancelling the underlying token. Systems with
     weak crypto (kssl) configured will continue to use https. (omalley)
 
+    MAPREDUCE-4698. Fix failing unit test - TestJobHistoryConfig. Optionally
+    initialize the jobtracker on a JobTracker.startTracker. (Gopal V via sseth)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
