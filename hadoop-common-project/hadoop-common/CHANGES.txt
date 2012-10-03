@@ -28,6 +28,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
     tests. (Ivan A. Veselovsky via atm)
 
+    HADOOP-8783. Improve RPC.Server's digest auth (daryn)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang

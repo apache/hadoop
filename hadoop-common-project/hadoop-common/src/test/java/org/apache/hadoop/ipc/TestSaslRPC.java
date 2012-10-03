@@ -60,6 +60,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.log4j.Level;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /** Unit tests for using Sasl over RPC. */
@@ -76,7 +77,8 @@ public class TestSaslRPC {
   static final String SERVER_PRINCIPAL_2 = "p2/foo@BAR";
   
   private static Configuration conf;
-  static {
+  @BeforeClass
+  public static void setup() {
     conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -449,11 +451,25 @@ public class TestSaslRPC {
   }
   
   @Test
-  public void testDigestAuthMethod() throws Exception {
+  public void testDigestAuthMethodSecureServer() throws Exception {
+    checkDigestAuthMethod(true);
+  }
+
+  @Test
+  public void testDigestAuthMethodInsecureServer() throws Exception {
+    checkDigestAuthMethod(false);
+  }
+
+  private void checkDigestAuthMethod(boolean secureServer) throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     Server server = new RPC.Builder(conf).setProtocol(TestSaslProtocol.class)
         .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();      
+    if (secureServer) {
+      server.enableSecurity();
+    } else {
+      server.disableSecurity();
+    }
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
