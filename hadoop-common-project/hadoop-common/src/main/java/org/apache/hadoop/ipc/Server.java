@@ -87,7 +87,6 @@ import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -1374,20 +1373,38 @@ public abstract class Server {
           dataLengthBuffer.clear();
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
-          }
-          if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-            AccessControlException ae = new AccessControlException("Authorization ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
-              + ") is enabled but authentication ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
-              + ") is configured as simple. Please configure another method "
-              + "like kerberos or digest.");
-            setupResponse(authFailedResponse, authFailedCall, RpcStatusProto.FATAL,
-                null, ae.getClass().getName(), ae.getMessage());
-            responder.doRespond(authFailedCall);
-            throw ae;
-          }
-          if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+          }          
+          final boolean clientUsingSasl;
+          switch (authMethod) {
+            case SIMPLE: { // no sasl for simple
+              if (isSecurityEnabled) {
+                AccessControlException ae = new AccessControlException("Authorization ("
+                    + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
+                    + ") is enabled but authentication ("
+                    + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
+                    + ") is configured as simple. Please configure another method "
+                    + "like kerberos or digest.");
+                setupResponse(authFailedResponse, authFailedCall, RpcStatusProto.FATAL,
+                    null, ae.getClass().getName(), ae.getMessage());
+                responder.doRespond(authFailedCall);
+                throw ae;
+              }
+              clientUsingSasl = false;
+              useSasl = false; 
+              break;
+            }
+            case DIGEST: {
+              clientUsingSasl = true;
+              useSasl = (secretManager != null);
+              break;
+            }
+            default: {
+              clientUsingSasl = true;
+              useSasl = isSecurityEnabled; 
+              break;
+            }
+          }          
+          if (clientUsingSasl && !useSasl) {
             doSaslReply(SaslStatus.SUCCESS, new IntWritable(
                 SaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
             authMethod = AuthMethod.SIMPLE;
@@ -1395,9 +1412,6 @@ public abstract class Server {
             // should ignore it. Both client and server should fall back
             // to simple auth from now on.
             skipInitialSaslHandshake = true;
-          }
-          if (authMethod != AuthMethod.SIMPLE) {
-            useSasl = true;
           }
           
           connectionHeaderBuf = null;
@@ -1532,8 +1546,6 @@ public abstract class Server {
             UserGroupInformation realUser = user;
             user = UserGroupInformation.createProxyUser(protocolUser
                 .getUserName(), realUser);
-            // Now the user is a proxy user, set Authentication method Proxy.
-            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
       }
@@ -1883,7 +1895,7 @@ public abstract class Server {
     // Create the responder here
     responder = new Responder();
     
-    if (isSecurityEnabled) {
+    if (secretManager != null) {
       SaslRpcServer.init(conf);
     }
     
