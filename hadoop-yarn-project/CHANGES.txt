@@ -29,6 +29,9 @@ Release 2.0.3-alpha - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES 
+    
+    YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
+    (Ahmed Radwan via sseth)
 
 Release 2.0.2-alpha - 2012-09-07 
 
