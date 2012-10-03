@@ -53,6 +53,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8616. ViewFS configuration requires a trailing slash. (Sandy Ryza
     via atm)
 
+    HADOOP-8756. Fix SEGV when libsnappy is in java.library.path but
+    not LD_LIBRARY_PATH. (Colin Patrick McCabe via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
