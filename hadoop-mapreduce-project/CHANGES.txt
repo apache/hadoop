@@ -4,6 +4,9 @@ Release 2.0.3-alpha - Unreleased
   
   INCOMPATIBLE CHANGES
 
+    MAPREDUCE-4123. Remove the 'mapred groups' command, which is no longer 
+    supported. (Devaraj K via sseth)
+
   NEW FEATURES
 
   IMPROVEMENTS
