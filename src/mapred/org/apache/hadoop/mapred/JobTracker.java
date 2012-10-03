@@ -296,8 +296,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                                  InterruptedException {
     return startTracker(conf, generateNewIdentifier());
   }
-  
+
   public static JobTracker startTracker(JobConf conf, String identifier) 
+  throws IOException, InterruptedException {
+  	return startTracker(conf, identifier, false);
+  }
+  
+  public static JobTracker startTracker(JobConf conf, String identifier, boolean initialize) 
   throws IOException, InterruptedException {
     DefaultMetricsSystem.initialize("JobTracker");
     JobTracker result = null;
@@ -325,6 +330,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     if (result != null) {
       JobEndNotifier.startNotifier();
       MBeans.register("JobTracker", "JobTrackerInfo", result);
+      if(initialize == true) {
+        result.setSafeModeInternal(SafeModeAction.SAFEMODE_ENTER);
+        result.initializeFilesystem();
+        result.setSafeModeInternal(SafeModeAction.SAFEMODE_LEAVE);
+        result.initialize();
+      }
     }
     return result;
   }
