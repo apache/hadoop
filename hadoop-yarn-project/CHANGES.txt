@@ -23,6 +23,9 @@ Release 0.23.5 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    
+    YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
+    (Ahmed Radwan via sseth)
 
 Release 0.23.4 - UNRELEASED
 
