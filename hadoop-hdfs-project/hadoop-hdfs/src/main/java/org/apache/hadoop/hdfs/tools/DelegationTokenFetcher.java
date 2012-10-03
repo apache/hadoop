@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
@@ -385,10 +386,24 @@ public class DelegationTokenFetcher {
       return ugi.doAs(
           new PrivilegedExceptionAction<URLConnection>() {
             public URLConnection run() throws IOException {
-              SecurityUtil.fetchServiceTicket(url);
-              URLConnection connection = URLUtils.openConnection(url);
-              connection.connect();
-              return connection;
+              // might not be fatal if secure port doesn't connect because
+              // security may be disabled on remote cluster
+              IOException ioeForTGS = null;
+              try {
+                SecurityUtil.fetchServiceTicket(url);
+              } catch (IOException ioe) {
+                ioeForTGS = ioe;
+              }
+              try {
+                URLConnection connection = URLUtils.openConnection(url);
+                connection.connect();
+                return connection;
+              } catch (ConnectException e) {
+                throw e;
+              } catch (IOException ioe) {
+                // throw TGS exception instead if negotiation fails
+                throw (ioeForTGS != null) ? ioeForTGS : ioe;
+              }
             }
           });
     } catch (InterruptedException ie) {

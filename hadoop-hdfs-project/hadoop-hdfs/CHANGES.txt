@@ -15,6 +15,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
     (Andy Isaacson via eli)
 
+    HDFS-3905. Secure cluster cannot use hftp to an insecure cluster
+    (Daryn Sharp via tgraves)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
