@@ -33,6 +33,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
     (Ahmed Radwan via sseth)
 
+    YARN-102. Move the apache header to the top of the file in MemStore.java.
+    (Devaraj K via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
