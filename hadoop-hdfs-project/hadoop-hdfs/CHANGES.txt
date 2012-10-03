@@ -26,6 +26,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3896. Add descriptions for dfs.namenode.rpc-address and
     dfs.namenode.servicerpc-address to hdfs-default.xml. (Jeff Lord via atm)
 
+    HDFS-3996. Add debug log removed in HDFS-3873 back. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
