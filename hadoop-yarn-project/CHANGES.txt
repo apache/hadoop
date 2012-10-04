@@ -26,6 +26,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-116. Add the ability to change the RM include/exclude file without
     a restart. (xieguiming and Harsh J via sseth)
 
+    YARN-23. FairScheduler: FSQueueSchedulable#updateDemand() - potential 
+    redundant aggregation. (kkambatl via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES 
