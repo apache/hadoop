@@ -143,3 +143,6 @@ BUG FIXES
     
     HADOOP-8836. UGI should throw exception in case winutils.exe cannot be
     loaded. (Bikas Saha via suresh)
+
+    MAPREDUCE-4567. WindowsResourceCalculatorPlugin has NPE.
+    (Bikas Saha via suresh)

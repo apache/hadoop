@@ -70,5 +70,13 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
     assertTrue(tester.memAvailable == 5400417792L);
     assertTrue(tester.cpuUsage >= 0.1);
   }
+  
+  public void testErrorInGetSystemInfo() {
+    WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
+    // info str derived from windows shell command has \r\n termination
+    tester.infoStr = null;
+    // call a method to refresh values
+    tester.getAvailablePhysicalMemorySize();    
+  }
 
 }

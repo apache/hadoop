@@ -79,29 +79,31 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       long lastCumCpuTimeMs = cumulativeCpuTimeMs;
       reset();
       String sysInfoStr = getSystemInfoInfoFromShell();
-      final int sysInfoSplitCount = 7;
-      String[] sysInfo = sysInfoStr.substring(0, sysInfoStr.indexOf("\r\n"))
-          .split(",");
-      if (sysInfo.length == sysInfoSplitCount) {
-        try {
-          vmemSize = Long.parseLong(sysInfo[0]);
-          memSize = Long.parseLong(sysInfo[1]);
-          vmemAvailable = Long.parseLong(sysInfo[2]);
-          memAvailable = Long.parseLong(sysInfo[3]);
-          numProcessors = Integer.parseInt(sysInfo[4]);
-          cpuFrequencyKhz = Long.parseLong(sysInfo[5]);
-          cumulativeCpuTimeMs = Long.parseLong(sysInfo[6]);
-          if (lastCumCpuTimeMs != -1) {
-            cpuUsage = (cumulativeCpuTimeMs - lastCumCpuTimeMs)
-                / (refreshInterval * 1.0f);
-          }
+      if (sysInfoStr != null) {
+        final int sysInfoSplitCount = 7;
+        String[] sysInfo = sysInfoStr.substring(0, sysInfoStr.indexOf("\r\n"))
+            .split(",");
+        if (sysInfo.length == sysInfoSplitCount) {
+          try {
+            vmemSize = Long.parseLong(sysInfo[0]);
+            memSize = Long.parseLong(sysInfo[1]);
+            vmemAvailable = Long.parseLong(sysInfo[2]);
+            memAvailable = Long.parseLong(sysInfo[3]);
+            numProcessors = Integer.parseInt(sysInfo[4]);
+            cpuFrequencyKhz = Long.parseLong(sysInfo[5]);
+            cumulativeCpuTimeMs = Long.parseLong(sysInfo[6]);
+            if (lastCumCpuTimeMs != -1) {
+              cpuUsage = (cumulativeCpuTimeMs - lastCumCpuTimeMs)
+                  / (refreshInterval * 1.0f);
+            }
 
-        } catch (NumberFormatException nfe) {
-          LOG.debug("Error parsing sysInfo." + nfe);
+          } catch (NumberFormatException nfe) {
+            LOG.warn("Error parsing sysInfo." + nfe);
+          }
+        } else {
+          LOG.warn("Expected split length of sysInfo to be "
+              + sysInfoSplitCount + ". Got " + sysInfo.length);
         }
-      } else {
-        LOG.debug("Expected split length of sysInfo to be " + sysInfoSplitCount
-            + ". Got " + sysInfo.length);
       }
     }
   }
