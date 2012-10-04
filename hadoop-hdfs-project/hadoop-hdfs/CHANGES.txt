@@ -64,6 +64,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4000. TestParallelLocalRead fails with "input ByteBuffers
     must be direct buffers". (Colin Patrick McCabe via eli)
 
+    HDFS-3999. HttpFS OPEN operation expects len parameter, it should be length. (tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
