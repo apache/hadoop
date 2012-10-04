@@ -155,12 +155,6 @@ Release 1.1.0 - 2012.09.28
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
     (todd via suresh)
 
-    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
-    (todd via mattf)
-
-    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
-    shuffle performance. (Luke Lu via suresh)
-
     MAPREDUCE-4400. Avoid task finish sleep to improve small job/workflow
     latency. (llu)
 
@@ -410,11 +404,17 @@ Release 1.1.0 - 2012.09.28
     MAPREDUCE-4698. Fix failing unit test - TestJobHistoryConfig. Optionally
     initialize the jobtracker on a JobTracker.startTracker. (Gopal V via sseth)
 
-Release 1.0.4 - Unreleased
+Release 1.0.4 - 2012.10.02
 
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
+    (todd via mattf)
+
+    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
+    shuffle performance. (Luke Lu via suresh)
 
   BUG FIXES
 

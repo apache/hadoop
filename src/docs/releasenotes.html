@@ -204,6 +204,14 @@ Please see hdfs-default.xml for detailed description.
       
 </blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4698">MAPREDUCE-4698</a>.
+     Minor bug reported by gopalv and fixed by gopalv <br>
+     <b>TestJobHistoryConfig throws Exception in testJobHistoryLogging</b><br>
+     <blockquote>                                          Optionally call initialize/initializeFileSystem in JobTracker::startTracker() to allow for proper initialization when offerService is not being called.
+
+      
+</blockquote></li>
+
 </ul>
 
 
@@ -529,6 +537,12 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by kihwal and fixed by kihwal (hdfs client)<br>
      <b>HDFS does not use ClientProtocol in a backward-compatible way</b><br>
      <blockquote>HDFS-617 was brought into branch-0.20-security/branch-1 to support non-recursive create, along with HADOOP-6840 and HADOOP-6886. However, the changes in HDFS was done in an incompatible way, making the client unusable against older clusters, even when plain old create() is called. This is because DFS now internally calls create() through the newly introduced method. By simply changing how the methods are wired internally, we can remove this limitation. We may eventually switch back to the app...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3461">HDFS-3461</a>.
+     Major bug reported by owen.omalley and fixed by owen.omalley <br>
+     <b>HFTP should use the same port &amp; protocol for getting the delegation token</b><br>
+     <blockquote>Currently, hftp uses http to the Namenode&apos;s https port, which doesn&apos;t work.</blockquote></li>
+
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3466">HDFS-3466</a>.
      Major bug reported by owen.omalley and fixed by owen.omalley (name-node, security)<br>
