@@ -59,12 +59,12 @@ import com.google.common.primitives.Ints;
 public class TestJournalNode {
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
-  private static final String JID = "test-journalid";
 
   private JournalNode jn;
   private Journal journal; 
   private Configuration conf = new Configuration();
   private IPCLoggerChannel ch;
+  private String journalId;
 
   static {
     // Avoid an error when we double-initialize JvmMetrics
@@ -84,10 +84,11 @@ public class TestJournalNode {
     jn = new JournalNode();
     jn.setConf(conf);
     jn.start();
-    journal = jn.getOrCreateJournal(JID);
+    journalId = "test-journalid-" + GenericTestUtils.uniqueSequenceId();
+    journal = jn.getOrCreateJournal(journalId);
     journal.format(FAKE_NSINFO);
     
-    ch = new IPCLoggerChannel(conf, FAKE_NSINFO, JID, jn.getBoundIpcAddress());
+    ch = new IPCLoggerChannel(conf, FAKE_NSINFO, journalId, jn.getBoundIpcAddress());
   }
   
   @After
@@ -104,7 +105,7 @@ public class TestJournalNode {
     MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
 
     IPCLoggerChannel ch = new IPCLoggerChannel(
-        conf, FAKE_NSINFO, JID, jn.getBoundIpcAddress());
+        conf, FAKE_NSINFO, journalId, jn.getBoundIpcAddress());
     ch.newEpoch(1).get();
     ch.setEpoch(1);
     ch.startLogSegment(1).get();
@@ -177,7 +178,7 @@ public class TestJournalNode {
     // Create some edits on server side
     byte[] EDITS_DATA = QJMTestUtil.createTxnData(1, 3);
     IPCLoggerChannel ch = new IPCLoggerChannel(
-        conf, FAKE_NSINFO, JID, jn.getBoundIpcAddress());
+        conf, FAKE_NSINFO, journalId, jn.getBoundIpcAddress());
     ch.newEpoch(1).get();
     ch.setEpoch(1);
     ch.startLogSegment(1).get();
@@ -187,7 +188,7 @@ public class TestJournalNode {
     // Attempt to retrieve via HTTP, ensure we get the data back
     // including the header we expected
     byte[] retrievedViaHttp = DFSTestUtil.urlGetBytes(new URL(urlRoot +
-        "/getJournal?segmentTxId=1&jid=" + JID));
+        "/getJournal?segmentTxId=1&jid=" + journalId));
     byte[] expected = Bytes.concat(
             Ints.toByteArray(HdfsConstants.LAYOUT_VERSION),
             EDITS_DATA);
@@ -196,7 +197,7 @@ public class TestJournalNode {
     
     // Attempt to fetch a non-existent file, check that we get an
     // error status code
-    URL badUrl = new URL(urlRoot + "/getJournal?segmentTxId=12345&jid=" + JID);
+    URL badUrl = new URL(urlRoot + "/getJournal?segmentTxId=12345&jid=" + journalId);
     HttpURLConnection connection = (HttpURLConnection)badUrl.openConnection();
     try {
       assertEquals(404, connection.getResponseCode());
