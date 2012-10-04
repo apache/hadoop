@@ -81,6 +81,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4464. Reduce tasks failing with NullPointerException in
     ConcurrentHashMap.get(). (Clint Heath via harsh)
 
+    MAPREDUCE-4556. FairScheduler: PoolSchedulable#updateDemand() has potential 
+    redundant computation (kkambatl via tucu)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

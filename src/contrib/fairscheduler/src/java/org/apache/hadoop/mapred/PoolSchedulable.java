@@ -79,15 +79,20 @@ public class PoolSchedulable extends Schedulable {
    */
   @Override
   public void updateDemand() {
+    // limit the demand to maxTasks
+    int maxTasks = poolMgr.getMaxSlots(pool.getName(), taskType);
     demand = 0;
     for (JobSchedulable sched: jobScheds) {
       sched.updateDemand();
       demand += sched.getDemand();
+      if (demand >= maxTasks) {
+        demand = maxTasks;
+        break;
+      }
     }
-    // if demand exceeds the cap for this pool, limit to the max
-    int maxTasks = poolMgr.getMaxSlots(pool.getName(), taskType);
-    if(demand > maxTasks) {
-      demand = maxTasks;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("The pool " + pool.getName() + " demand is " + demand
+          + "; maxTasks is " + maxTasks);
     }
   }
   
