@@ -149,3 +149,6 @@ BUG FIXES
 
     HADOOP-8879. TestUserGroupInformation fails on Windows when run as
     Administrator. (Bikas Saha via suresh)
+
+    HADOOP-8880. Missing jersey jars as dependency in the pom causes 
+    hive tests to fail. (gkesavan via suresh)

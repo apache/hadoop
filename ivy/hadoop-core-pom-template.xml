@@ -34,6 +34,21 @@
       <version>0.52</version>
     </dependency>
     <dependency>
+       <groupId>com.sun.jersey</groupId>
+       <artifactId>jersey-core</artifactId>
+      <version>1.8</version>
+    </dependency>
+     <dependency>
+       <groupId>com.sun.jersey</groupId>
+       <artifactId>jersey-json</artifactId>
+      <version>1.8</version>
+    </dependency>
+    <dependency>
+       <groupId>com.sun.jersey</groupId>
+       <artifactId>jersey-server</artifactId>
+      <version>1.8</version>
+    </dependency>
+    <dependency>
       <groupId>commons-httpclient</groupId>
       <artifactId>commons-httpclient</artifactId>
       <version>3.0.1</version>
