@@ -65,6 +65,17 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
   long lastTimeAtMinShare;
   long lastTimeAtHalfFairShare;
 
+  // Constructor for tests
+  protected FSQueueSchedulable(FairScheduler scheduler, FSQueue fsQueue,
+      QueueManager qMgr, QueueMetrics metrics, long minShare, long fairShare) {
+    this.scheduler = scheduler;
+    this.queueMgr = qMgr;
+    this.queue = fsQueue;
+    this.metrics = metrics;
+    this.lastTimeAtMinShare = minShare;
+    this.lastTimeAtHalfFairShare = fairShare;
+  }
+
   public FSQueueSchedulable(FairScheduler scheduler, FSQueue queue) {
     this.scheduler = scheduler;
     this.queue = queue;
@@ -93,19 +104,27 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
    */
   @Override
   public void updateDemand() {
+    // Compute demand by iterating through apps in the queue
+    // Limit demand to maxResources
+    Resource maxRes = queueMgr.getMaxResources(queue.getName());
     demand = Resources.createResource(0);
     for (AppSchedulable sched: appScheds) {
       sched.updateDemand();
       Resource toAdd = sched.getDemand();
-      LOG.debug("Counting resource from " + sched.getName() + " " + toAdd.toString());
-      LOG.debug("Total resource consumption for " + this.getName() + " now " + demand.toString());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Counting resource from " + sched.getName() + " " + toAdd
+            + "; Total resource consumption for " + this.getName() + " now "
+            + demand);
+      }
       demand = Resources.add(demand, toAdd);
-
+      if (Resources.greaterThanOrEqual(demand, maxRes)) {
+        demand = maxRes;
+        break;
+      }
     }
-    // if demand exceeds the cap for this queue, limit to the max
-    Resource maxRes = queueMgr.getMaxResources(queue.getName());
-    if(Resources.greaterThan(demand, maxRes)) {
-      demand = maxRes;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("The updated demand for " + this.getName() + " is " + demand
+          + "; the max is " + maxRes);
     }
   }
 
