@@ -119,6 +119,8 @@ public class TestUserGroupInformation {
       if (sp != -1) {
         userName = userName.substring(sp + 1);
       }
+      // user names are case insensitive on Windows. Make consistent
+      userName = userName.toLowerCase();
     }
     // get the groups
     pp = Runtime.getRuntime().exec(Shell.WINDOWS ?
@@ -134,7 +136,12 @@ public class TestUserGroupInformation {
     }
     
     final UserGroupInformation login = UserGroupInformation.getCurrentUser();
-    assertEquals(userName, login.getShortUserName());
+    String loginUserName = login.getShortUserName();
+    if(Shell.WINDOWS) {
+      // user names are case insensitive on Windows. Make consistent
+      loginUserName = loginUserName.toLowerCase();
+    }
+    assertEquals(userName, loginUserName);
 
     String[] gi = login.getGroupNames();
     assertEquals(groups.size(), gi.length);

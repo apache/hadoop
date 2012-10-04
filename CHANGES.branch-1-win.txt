@@ -146,3 +146,6 @@ BUG FIXES
 
     MAPREDUCE-4567. WindowsResourceCalculatorPlugin has NPE.
     (Bikas Saha via suresh)
+
+    HADOOP-8879. TestUserGroupInformation fails on Windows when run as
+    Administrator. (Bikas Saha via suresh)
