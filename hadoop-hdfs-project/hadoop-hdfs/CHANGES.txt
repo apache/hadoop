@@ -28,6 +28,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3996. Add debug log removed in HDFS-3873 back. (eli)
 
+    HDFS-3916. libwebhdfs (C client) code cleanups.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 

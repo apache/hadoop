@@ -21,8 +21,42 @@
 #ifndef _HDFS_HTTP_CLIENT_H_
 #define _HDFS_HTTP_CLIENT_H_
 
-#include "webhdfs.h"
-#include <curl/curl.h>
+#include "hdfs.h" /* for tSize */
+
+#include <pthread.h> /* for pthread_t */
+#include <unistd.h> /* for size_t */
+
+enum hdfsStreamType
+{
+    UNINITIALIZED = 0,
+    INPUT = 1,
+    OUTPUT = 2,
+};
+
+/**
+ * webhdfsBuffer - used for hold the data for read/write from/to http connection
+ */
+typedef struct {
+    const char *wbuffer;  // The user's buffer for uploading
+    size_t remaining;     // Length of content
+    size_t offset;        // offset for reading
+    int openFlag;         // Check whether the hdfsOpenFile has been called before
+    int closeFlag;        // Whether to close the http connection for writing
+    pthread_mutex_t writeMutex; // Synchronization between the curl and hdfsWrite threads
+    pthread_cond_t newwrite_or_close; // Transferring thread waits for this condition
+                                      // when there is no more content for transferring in the buffer
+    pthread_cond_t transfer_finish; // Condition used to indicate finishing transferring (one buffer)
+} webhdfsBuffer;
+
+struct webhdfsFileHandle {
+    char *absPath;
+    int bufferSize;
+    short replication;
+    tSize blockSize;
+    char *datanode;
+    webhdfsBuffer *uploadBuffer;
+    pthread_t connThread;
+};
 
 enum HttpHeader {
     GET,

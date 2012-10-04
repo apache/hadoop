@@ -65,6 +65,21 @@
 #define NOPRINT_EXC_ILLEGAL_ARGUMENT            0x10
 
 /**
+ * Get information about an exception.
+ *
+ * @param excName         The Exception name.
+ *                        This is a Java class name in JNI format.
+ * @param noPrintFlags    Flags which determine which exceptions we should NOT
+ *                        print.
+ * @param excErrno        (out param) The POSIX error number associated with the
+ *                        exception.
+ * @param shouldPrint     (out param) Nonzero if we should print this exception,
+ *                        based on the noPrintFlags and its name. 
+ */
+void getExceptionInfo(const char *excName, int noPrintFlags,
+                      int *excErrno, int *shouldPrint);
+
+/**
  * Print out information about an exception and free it.
  *
  * @param env             The JNI environment
