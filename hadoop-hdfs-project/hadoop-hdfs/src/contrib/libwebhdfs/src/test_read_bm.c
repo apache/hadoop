@@ -1,8 +1,9 @@
+#include "hdfs.h"
+
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include "webhdfs.h"
 
 #ifdef __MACH__
 #include <mach/clock.h>
