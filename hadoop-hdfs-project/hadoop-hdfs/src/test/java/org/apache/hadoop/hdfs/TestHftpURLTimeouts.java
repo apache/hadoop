@@ -53,19 +53,23 @@ public class TestHftpURLTimeouts {
     boolean timedout = false;
 
     HftpFileSystem fs = (HftpFileSystem)FileSystem.get(uri, conf);
-    HttpURLConnection conn = fs.openConnection("/", "");
-    timedout = false;
     try {
-      // this will consume the only slot in the backlog
-      conn.getInputStream();
-    } catch (SocketTimeoutException ste) {
-      timedout = true;
-      assertEquals("Read timed out", ste.getMessage());
+      HttpURLConnection conn = fs.openConnection("/", "");
+      timedout = false;
+      try {
+        // this will consume the only slot in the backlog
+        conn.getInputStream();
+      } catch (SocketTimeoutException ste) {
+        timedout = true;
+        assertEquals("Read timed out", ste.getMessage());
+      } finally {
+        if (conn != null) conn.disconnect();
+      }
+      assertTrue("read timedout", timedout);
+      assertTrue("connect timedout", checkConnectTimeout(fs, false));
     } finally {
-      if (conn != null) conn.disconnect();
+      fs.close();
     }
-    assertTrue("read timedout", timedout);
-    assertTrue("connect timedout", checkConnectTimeout(fs, false));
   }
 
   @Test
@@ -79,20 +83,24 @@ public class TestHftpURLTimeouts {
     boolean timedout = false;
 
     HsftpFileSystem fs = (HsftpFileSystem)FileSystem.get(uri, conf);
-    HttpURLConnection conn = null;
-    timedout = false;
     try {
-      // this will consume the only slot in the backlog
-      conn = fs.openConnection("/", "");
-    } catch (SocketTimeoutException ste) {
-      // SSL expects a negotiation, so it will timeout on read, unlike hftp
-      timedout = true;
-      assertEquals("Read timed out", ste.getMessage());
+      HttpURLConnection conn = null;
+      timedout = false;
+      try {
+        // this will consume the only slot in the backlog
+        conn = fs.openConnection("/", "");
+      } catch (SocketTimeoutException ste) {
+        // SSL expects a negotiation, so it will timeout on read, unlike hftp
+        timedout = true;
+        assertEquals("Read timed out", ste.getMessage());
+      } finally {
+        if (conn != null) conn.disconnect();
+      }
+      assertTrue("ssl read connect timedout", timedout);
+      assertTrue("connect timedout", checkConnectTimeout(fs, true));
     } finally {
-      if (conn != null) conn.disconnect();
+      fs.close();
     }
-    assertTrue("ssl read connect timedout", timedout);
-    assertTrue("connect timedout", checkConnectTimeout(fs, true));
   }
   
   private boolean checkConnectTimeout(HftpFileSystem fs, boolean ignoreReadTimeout)
