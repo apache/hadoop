@@ -31,6 +31,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3916. libwebhdfs (C client) code cleanups.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3813. Log error message if security and WebHDFS are enabled but
+    principal/keytab are not configured. (Stephen Chu via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 
