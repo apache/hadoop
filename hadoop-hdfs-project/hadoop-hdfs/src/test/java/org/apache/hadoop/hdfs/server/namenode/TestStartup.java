@@ -77,20 +77,6 @@ public class TestStartup {
   static final int fileSize = 8192;
   private long editsLength=0, fsimageLength=0;
 
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-
-
   @Before
   public void setUp() throws Exception {
     config = new HdfsConfiguration();
@@ -150,7 +136,8 @@ public class TestStartup {
       // create a file
       FileSystem fileSys = cluster.getFileSystem();
       Path file1 = new Path("t1");
-      this.writeFile(fileSys, file1, 1);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize, 
+          (short) 1, seed);
 
       LOG.info("--doing checkpoint");
       sn.doCheckpoint();  // this shouldn't fail

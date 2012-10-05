@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
@@ -47,17 +48,6 @@ public class TestMetaSave {
   static final int blockSize = 8192;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
-
-  private void createFile(FileSystem fileSys, Path name) throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 2, blockSize);
-    byte[] buffer = new byte[1024];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
 
   @BeforeClass
   public static void setUp() throws IOException {
@@ -84,7 +74,8 @@ public class TestMetaSave {
 
     for (int i = 0; i < 2; i++) {
       Path file = new Path("/filestatus" + i);
-      createFile(fileSys, file);
+      DFSTestUtil.createFile(fileSys, file, 1024, 1024, blockSize, (short) 2,
+          seed);
     }
 
     cluster.stopDataNode(1);

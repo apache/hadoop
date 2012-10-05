@@ -52,22 +52,6 @@ public class TestInjectionForSimulatedStorage {
   private static final Log LOG = LogFactory.getLog(
       "org.apache.hadoop.hdfs.TestInjectionForSimulatedStorage");
 
-  
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-                                                throws IOException {
-    // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[filesize];
-    for (int i=0; i<buffer.length; i++) {
-      buffer[i] = '1';
-    }
-    stm.write(buffer);
-    stm.close();
-  }
-  
-  // Waits for all of the blocks to have expected replication
 
   // Waits for all of the blocks to have expected replication
   private void waitForBlockReplication(String filename, 
@@ -149,7 +133,8 @@ public class TestInjectionForSimulatedStorage {
                                             cluster.getNameNodePort()),
                                             conf);
       
-      writeFile(cluster.getFileSystem(), testPath, numDataNodes);
+      DFSTestUtil.createFile(cluster.getFileSystem(), testPath, filesize,
+          filesize, blockSize, (short) numDataNodes, 0L);
       waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, 20);
       Iterable<Block>[] blocksList = cluster.getAllBlockReports(bpid);
       

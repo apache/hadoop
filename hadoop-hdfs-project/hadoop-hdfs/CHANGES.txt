@@ -140,6 +140,9 @@ Trunk (Unreleased)
     HDFS-2127. Add a test that ensure AccessControlExceptions contain
     a full path. (Stephen Chu via eli)
 
+    HDFS-3995. Use DFSTestUtil.createFile() for file creation and 
+    writing in test cases. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

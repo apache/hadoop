@@ -40,16 +40,6 @@ public class TestSeekBug {
   static final long seed = 0xDEADBEEFL;
   static final int ONEMB = 1 << 20;
   
-  private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    // create and write a file that contains 1MB
-    DataOutputStream stm = fileSys.create(name);
-    byte[] buffer = new byte[ONEMB];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-  
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
       assertEquals(message+" byte "+(from+idx)+" differs. expected "+
@@ -132,7 +122,9 @@ public class TestSeekBug {
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("seektest.dat");
-      writeFile(fileSys, file1);
+      DFSTestUtil.createFile(fileSys, file1, ONEMB, ONEMB,
+          fileSys.getDefaultBlockSize(file1),
+          fileSys.getDefaultReplication(file1), seed);
       seekReadFile(fileSys, file1);
       smallReadSeek(fileSys, file1);
       cleanupFile(fileSys, file1);
@@ -151,7 +143,9 @@ public class TestSeekBug {
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path("build/test/data", "seektest.dat");
-      writeFile(fileSys, file1);
+      DFSTestUtil.createFile(fileSys, file1, ONEMB, ONEMB,
+          fileSys.getDefaultBlockSize(file1),
+          fileSys.getDefaultReplication(file1), seed);
       seekReadFile(fileSys, file1);
       cleanupFile(fileSys, file1);
     } finally {
