@@ -143,6 +143,10 @@ Trunk (Unreleased)
     HDFS-3995. Use DFSTestUtil.createFile() for file creation and 
     writing in test cases. (Jing Zhao via suresh)
 
+    HDFS-3735. NameNode WebUI should allow sorting live datanode list by fields
+    Block Pool Used, Block Pool Used(%) and Failed Volumes.
+    (Brahma Reddy Battula via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

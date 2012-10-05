@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -29,7 +30,9 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
@@ -398,5 +401,44 @@ public class TestJspHelper {
       Assert.assertEquals(AuthenticationMethod.TOKEN,
                           ugi.getAuthenticationMethod());
     }
+  }
+
+  @Test
+  public void testSortNodeByFields() throws Exception {
+    DatanodeID dnId1 = new DatanodeID("127.0.0.1", "localhost1", "storage1",
+        1234, 2345, 3456);
+    DatanodeID dnId2 = new DatanodeID("127.0.0.2", "localhost2", "storage2",
+        1235, 2346, 3457);
+    DatanodeDescriptor dnDesc1 = new DatanodeDescriptor(dnId1, "rack1", 1024,
+        100, 924, 100, 10, 2);
+    DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2", 2500,
+        200, 1848, 200, 20, 1);
+    ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    live.add(dnDesc1);
+    live.add(dnDesc2);
+
+    // Test sorting by failed volumes
+    JspHelper.sortNodeList(live, "volfails", "ASC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+    JspHelper.sortNodeList(live, "volfails", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+
+    // Test sorting by Blockpool used
+    JspHelper.sortNodeList(live, "bpused", "ASC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
+    JspHelper.sortNodeList(live, "bpused", "DSC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+
+    // Test sorting by Percentage Blockpool used
+    JspHelper.sortNodeList(live, "pcbpused", "ASC");
+    Assert.assertEquals(dnDesc2, live.get(0));
+    Assert.assertEquals(dnDesc1, live.get(1));
+    JspHelper.sortNodeList(live, "pcbpused", "DSC");
+    Assert.assertEquals(dnDesc1, live.get(0));
+    Assert.assertEquals(dnDesc2, live.get(1));
   }
 }
