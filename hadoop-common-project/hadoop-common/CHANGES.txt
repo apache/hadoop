@@ -290,6 +290,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8783. Improve RPC.Server's digest auth (daryn)
 
+    HADOOP-8889. Upgrade to Surefire 2.12.3 (todd)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
