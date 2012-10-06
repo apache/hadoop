@@ -259,6 +259,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3813. Log error message if security and WebHDFS are enabled but
     principal/keytab are not configured. (Stephen Chu via atm)
 
+    HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
+    config. (Stephen Fritz via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
