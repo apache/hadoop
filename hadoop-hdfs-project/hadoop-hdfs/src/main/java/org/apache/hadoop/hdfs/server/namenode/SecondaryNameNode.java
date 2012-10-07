@@ -76,6 +76,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 /**********************************************************
@@ -119,6 +120,8 @@ public class SecondaryNameNode implements Runnable {
 
   private CheckpointConf checkpointConf;
   private FSNamesystem namesystem;
+
+  private Thread checkpointThread;
 
 
   @Override
@@ -275,6 +278,15 @@ public class SecondaryNameNode implements Runnable {
    */
   public void shutdown() {
     shouldRun = false;
+    if (checkpointThread != null) {
+      checkpointThread.interrupt();
+      try {
+        checkpointThread.join(10000);
+      } catch (InterruptedException e) {
+        LOG.info("Interrupted waiting to join on checkpointer thread");
+        Thread.currentThread().interrupt(); // maintain status
+      }
+    }
     try {
       if (infoServer != null) infoServer.stop();
     } catch (Exception e) {
@@ -588,12 +600,20 @@ public class SecondaryNameNode implements Runnable {
       terminate(ret);
     }
 
-    // Create a never ending deamon
-    Daemon checkpointThread = new Daemon(secondary);
-    checkpointThread.start();
+    secondary.startCheckpointThread();
   }
   
   
+  public void startCheckpointThread() {
+    Preconditions.checkState(checkpointThread == null,
+        "Should not already have a thread");
+    Preconditions.checkState(shouldRun, "shouldRun should be true");
+    
+    checkpointThread = new Daemon(this);
+    checkpointThread.start();
+  }
+
+
   /**
    * Container for parsed command-line options.
    */
