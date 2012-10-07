@@ -622,14 +622,20 @@ public class MiniDFSCluster {
     }
     
     federation = nnTopology.isFederated();
-    createNameNodesAndSetConf(
-        nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
-        enableManagedDfsDirsRedundancy,
-        format, operation, clusterId, conf);
-    
+    try {
+      createNameNodesAndSetConf(
+          nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
+          enableManagedDfsDirsRedundancy,
+          format, operation, clusterId, conf);
+    } catch (IOException ioe) {
+      LOG.error("IOE creating namenodes. Permissions dump:\n" +
+          createPermissionsDiagnosisString(data_dir));
+      throw ioe;
+    }
     if (format) {
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-        throw new IOException("Cannot remove data directory: " + data_dir);
+        throw new IOException("Cannot remove data directory: " + data_dir +
+            createPermissionsDiagnosisString(data_dir));
       }
     }
     
@@ -645,6 +651,27 @@ public class MiniDFSCluster {
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
   
+  /**
+   * @return a debug string which can help diagnose an error of why
+   * a given directory might have a permissions error in the context
+   * of a test case
+   */
+  private String createPermissionsDiagnosisString(File path) {
+    StringBuilder sb = new StringBuilder();
+    while (path != null) { 
+      sb.append("path '" + path + "': ").append("\n");
+      sb.append("\tabsolute:").append(path.getAbsolutePath()).append("\n");
+      sb.append("\tpermissions: ");
+      sb.append(path.isDirectory() ? "d": "-");
+      sb.append(path.canRead() ? "r" : "-");
+      sb.append(path.canWrite() ? "w" : "-");
+      sb.append(path.canExecute() ? "x" : "-");
+      sb.append("\n");
+      path = path.getParentFile();
+    }
+    return sb.toString();
+  }
+
   private void createNameNodesAndSetConf(MiniDFSNNTopology nnTopology,
       boolean manageNameDfsDirs, boolean manageNameDfsSharedDirs,
       boolean enableManagedDfsDirsRedundancy, boolean format,
