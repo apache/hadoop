@@ -262,6 +262,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
     config. (Stephen Fritz via atm)
 
+    HDFS-3682. MiniDFSCluster#init should provide more info when it fails.
+    (todd via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
