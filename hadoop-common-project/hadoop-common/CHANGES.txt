@@ -65,10 +65,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8881. FileBasedKeyStoresFactory initialization logging should be debug not info. (tucu)
 
-    HADOOP-8884. DEBUG should be WARN for DEBUG util.NativeCodeLoader: Failed
-    to load native-hadoop with error: java.lang.UnsatisfiedLinkError. (Anthony
-    Rojas via atm)
-
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
