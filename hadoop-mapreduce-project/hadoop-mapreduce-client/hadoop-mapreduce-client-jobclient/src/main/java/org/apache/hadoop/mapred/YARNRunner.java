@@ -372,12 +372,9 @@ public class YARNRunner implements ClientProtocol {
     }
 
     // Setup security tokens
-    ByteBuffer securityTokens = null;
-    if (UserGroupInformation.isSecurityEnabled()) {
-      DataOutputBuffer dob = new DataOutputBuffer();
-      ts.writeTokenStorageToStream(dob);
-      securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-    }
+    DataOutputBuffer dob = new DataOutputBuffer();
+    ts.writeTokenStorageToStream(dob);
+    ByteBuffer securityTokens  = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
     // Setup the command to run the AM
     List<String> vargs = new ArrayList<String>(8);
