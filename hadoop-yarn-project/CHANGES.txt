@@ -100,6 +100,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-127. Move RMAdmin tool to its correct location - the client module.
+    (vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
