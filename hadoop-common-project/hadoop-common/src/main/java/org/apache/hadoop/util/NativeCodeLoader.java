@@ -50,12 +50,9 @@ public class NativeCodeLoader {
       LOG.debug("Loaded the native-hadoop library");
       nativeCodeLoaded = true;
     } catch (Throwable t) {
-      // Ignore failure to load
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Failed to load native-hadoop with error: " + t);
-        LOG.debug("java.library.path=" +
-            System.getProperty("java.library.path"));
-      }
+      // Display warning if native-hadoop failed to load
+      LOG.warn("Continuing after failing to load native-hadoop - java.library.path=" +
+          System.getProperty("java.library.path") + " with error:", t);
     }
     
     if (!nativeCodeLoaded) {
