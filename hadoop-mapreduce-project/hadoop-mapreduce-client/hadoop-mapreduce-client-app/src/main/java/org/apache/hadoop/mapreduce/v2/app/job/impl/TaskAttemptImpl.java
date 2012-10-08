@@ -742,12 +742,9 @@ public abstract class TaskAttemptImpl implements
       myServiceData.put(entry.getKey(), entry.getValue().duplicate());
     }
 
-    String user = conf.get("hack.me.again", commonContainerSpec.getUser());
-
-    LOG.warn("Launching task as user "+user);
     // Construct the actual Container
     ContainerLaunchContext container = BuilderUtils.newContainerLaunchContext(
-        containerID, user, assignedCapability,
+        containerID, commonContainerSpec.getUser(), assignedCapability,
         commonContainerSpec.getLocalResources(), myEnv, commands,
         myServiceData, commonContainerSpec.getContainerTokens().duplicate(),
         applicationACLs);
