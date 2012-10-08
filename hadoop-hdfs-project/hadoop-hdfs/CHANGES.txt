@@ -42,6 +42,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4008. TestBalancerWithEncryptedTransfer needs a timeout. (eli)
 
+    HDFS-4007. Rehabilitate bit-rotted unit tests under
+    hadoop-hdfs-project/hadoop-hdfs/src/test/unit/ (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES 

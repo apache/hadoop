@@ -61,7 +61,7 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = -1;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null,
+    new INodeFile(new PermissionStatus(userName, null,
                                   FsPermission.getDefault()), null, replication,
                                   0L, 0L, preferredBlockSize);
   }
@@ -102,7 +102,7 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = 3;
     preferredBlockSize = -1;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null, 
+    new INodeFile(new PermissionStatus(userName, null, 
                                   FsPermission.getDefault()), null, replication,
                                   0L, 0L, preferredBlockSize);
   } 
@@ -117,7 +117,7 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = 3;
     preferredBlockSize = BLKSIZE_MAXVALUE+1;
-    INodeFile inf = new INodeFile(new PermissionStatus(userName, null, 
+    new INodeFile(new PermissionStatus(userName, null, 
                                   FsPermission.getDefault()), null, replication,
                                   0L, 0L, preferredBlockSize);
   }
@@ -160,10 +160,6 @@ public class TestINodeFile {
     INodeFile[] appendFiles =   createINodeFiles(4, "appendfile");
     origFile.appendBlocks(appendFiles, getTotalBlocks(appendFiles));
     assertEquals("Number of blocks didn't match", origFile.numBlocks(), 5L);
-    
-    for(int i=0; i< origFile.numBlocks(); i++) {
-      assertSame("INodeFiles didn't Match", origFile, origFile.getBlocks()[i].getINode());
-    }
   }
 
   /** 
