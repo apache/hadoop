@@ -52,6 +52,40 @@ Usage: yarn [--config confdir] COMMAND
   Usage: yarn jar <jar> [mainClass] args...
 -------
 
+** application
+
+  Prints application(s) report/kill application
+
+-------
+  Usage: yarn application <options>
+-------
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -status  ApplicationId | Specify an application id |
+*---------------+--------------+
+| -list | Lists all the Applications from RM |
+*---------------+--------------+
+| -kill ApplicationId | Specify an application id |
+*---------------+--------------+
+
+** node
+
+  Prints node report(s)
+
+-------
+  Usage: yarn node <options>
+-------
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -status NodeId | Specify a node id |
+*---------------+--------------+
+| -list | Lists all the Nodes |
+*---------------+--------------+
+
 ** logs
 
   Dump the container logs

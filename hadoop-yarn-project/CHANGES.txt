@@ -29,6 +29,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-23. FairScheduler: FSQueueSchedulable#updateDemand() - potential 
     redundant aggregation. (kkambatl via tucu)
 
+    YARN-127. Move RMAdmin tool to its correct location - the client module.
+    (vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -100,8 +103,8 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
-    YARN-127. Move RMAdmin tool to its correct location - the client module.
-    (vinodkv)
+    YARN-40. Provided support for missing YARN commands (Devaraj K and Vinod
+    Kumar Vavilapalli via vinodkv)
 
   OPTIMIZATIONS
 
