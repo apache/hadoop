@@ -36,6 +36,12 @@ fi
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+if [ -e ${HADOOP_LIBEXEC_DIR}/mapred-config.sh ]; then
+  . $HADOOP_LIBEXEC_DIR/mapred-config.sh
+fi
+
 # get arguments
 startStop=$1
 shift
@@ -67,10 +73,6 @@ export HADOOP_MAPRED_HOME=${HADOOP_MAPRED_HOME:-${HADOOP_PREFIX}}
 export HADOOP_MAPRED_LOGFILE=mapred-$HADOOP_MAPRED_IDENT_STRING-$command-$HOSTNAME.log
 export HADOOP_MAPRED_ROOT_LOGGER=${HADOOP_MAPRED_ROOT_LOGGER:-INFO,RFA}
 export HADOOP_JHS_LOGGER=${HADOOP_JHS_LOGGER:-INFO,JSA}
-
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/mapred-config.sh
 
 if [ -f "${HADOOP_CONF_DIR}/mapred-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/mapred-env.sh"
