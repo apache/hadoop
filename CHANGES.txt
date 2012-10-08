@@ -233,6 +233,9 @@ Release 1.2.0 - unreleased
     (default behavior in Ubuntu).
     (Christopher Berner and Andy Isaacson via harsh)
 
+    MAPREDUCE-4706. FairScheduler#dump(): Computing of # running maps and
+    reduces is commented out. (Karthik Kambatla via tomwhite)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

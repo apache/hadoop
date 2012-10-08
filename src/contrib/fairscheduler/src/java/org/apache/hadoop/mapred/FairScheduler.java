@@ -1082,16 +1082,8 @@ public class FairScheduler extends TaskScheduler {
           else return p1.getName().compareTo(p2.getName());
         }});
       for (Pool pool: pools) {
-        int runningMaps = 0;
-        int runningReduces = 0;
-        for (JobInProgress job: pool.getJobs()) {
-          JobInfo info = infos.get(job);
-          if (info != null) {
-            // TODO: Fix
-            //runningMaps += info.runningMaps;
-            //runningReduces += info.runningReduces;
-          }
-        }
+        int runningMaps = pool.getMapSchedulable().getRunningTasks();
+        int runningReduces = pool.getReduceSchedulable().getRunningTasks();
         String name = pool.getName();
         eventLog.log("POOL",
             name, poolMgr.getPoolWeight(name), pool.getJobs().size(),
