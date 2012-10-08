@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
@@ -157,6 +158,7 @@ public class GetJournalEditServlet extends HttpServlet {
   @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
+    FileInputStream editFileIn = null;
     try {
       final ServletContext context = getServletContext();
       final Configuration conf = (Configuration) getServletContext()
@@ -181,8 +183,7 @@ public class GetJournalEditServlet extends HttpServlet {
 
       FileJournalManager fjm = storage.getJournalManager();
       File editFile;
-      FileInputStream editFileIn;
-      
+
       synchronized (fjm) {
         // Synchronize on the FJM so that the file doesn't get finalized
         // out from underneath us while we're in the process of opening
@@ -209,6 +210,8 @@ public class GetJournalEditServlet extends HttpServlet {
       String errMsg = "getedit failed. " + StringUtils.stringifyException(t);
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errMsg);
       throw new IOException(errMsg);
+    } finally {
+      IOUtils.closeStream(editFileIn);
     }
   }
 

@@ -84,3 +84,5 @@ HDFS-3955. QJM: Make acceptRecovery() atomic. (todd)
 HDFS-3956. QJM: purge temporary files when no longer within retention period (todd)
 
 HDFS-4004. TestJournalNode#testJournal fails because of test case execution order (Chao Shi via todd)
+
+HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet (Chao Shi via todd)
