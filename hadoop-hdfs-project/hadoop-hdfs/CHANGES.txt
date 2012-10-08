@@ -305,6 +305,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4006. TestCheckpoint#testSecondaryHasVeryOutOfDateImage
     occasionally fails due to unexpected exit. (todd via eli)
 
+    HDFS-4003. test-patch should build the common native libs before
+    running hdfs tests. (Colin Patrick McCabe via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
