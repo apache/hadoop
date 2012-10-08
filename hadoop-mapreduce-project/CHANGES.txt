@@ -164,6 +164,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4681. Fix unit tests broken by HDFS-3910. (acmurthy) 
 
+    MAPREDUCE-4712. mr-jobhistory-daemon.sh doesn't accept --config
+    (Vinod Kumar Vavilapalli via tgraves)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
