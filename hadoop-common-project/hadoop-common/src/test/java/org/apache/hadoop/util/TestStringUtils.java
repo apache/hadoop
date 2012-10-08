@@ -281,6 +281,19 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     }
   }
 
+  @Test
+  public void testSimpleHostName() {
+    assertEquals("Should return hostname when FQDN is specified",
+            "hadoop01",
+            StringUtils.simpleHostname("hadoop01.domain.com"));
+    assertEquals("Should return hostname when only hostname is specified",
+            "hadoop01",
+            StringUtils.simpleHostname("hadoop01"));
+    assertEquals("Should not truncate when IP address is passed",
+            "10.10.5.68",
+            StringUtils.simpleHostname("10.10.5.68"));
+  }
+
   // Benchmark for StringUtils split
   public static void main(String []args) {
     final String TO_SPLIT = "foo,bar,baz,blah,blah";

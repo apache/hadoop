@@ -32,6 +32,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8889. Upgrade to Surefire 2.12.3 (todd)
 
+    HADOOP-8804. Improve Web UIs when the wildcard address is used.
+    (Senthil Kumar via eli)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
