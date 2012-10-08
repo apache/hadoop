@@ -179,6 +179,10 @@ import org.junit.Test;
      public Configuration getConfig() {
        return conf;
      }
+
+     @Override
+     protected void downloadTokensAndSetupUGI(Configuration conf) {
+     }
    }
 
   private final class MRAppTestCleanup extends MRApp {

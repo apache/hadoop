@@ -647,14 +647,10 @@ public abstract class TaskAttemptImpl implements
       MRApps.setupDistributedCache(conf, localResources);
 
       // Setup up task credentials buffer
-      Credentials taskCredentials = new Credentials();
-
-      if (UserGroupInformation.isSecurityEnabled()) {
-        LOG.info("Adding #" + credentials.numberOfTokens()
-            + " tokens and #" + credentials.numberOfSecretKeys()
-            + " secret keys for NM use for launching container");
-        taskCredentials.addAll(credentials);
-      }
+      LOG.info("Adding #" + credentials.numberOfTokens()
+          + " tokens and #" + credentials.numberOfSecretKeys()
+          + " secret keys for NM use for launching container");
+      Credentials taskCredentials = new Credentials(credentials);
 
       // LocalStorageToken is needed irrespective of whether security is enabled
       // or not.

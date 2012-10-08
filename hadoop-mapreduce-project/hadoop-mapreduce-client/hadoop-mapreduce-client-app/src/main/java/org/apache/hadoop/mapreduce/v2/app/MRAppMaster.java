@@ -490,19 +490,17 @@ public class MRAppMaster extends CompositeService {
     try {
       this.currentUser = UserGroupInformation.getCurrentUser();
 
-      if (UserGroupInformation.isSecurityEnabled()) {
-        // Read the file-system tokens from the localized tokens-file.
-        Path jobSubmitDir = 
-            FileContext.getLocalFSFileContext().makeQualified(
-                new Path(new File(MRJobConfig.JOB_SUBMIT_DIR)
-                    .getAbsolutePath()));
-        Path jobTokenFile = 
-            new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
-        fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
-        LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
-            + jobTokenFile);
-        currentUser.addCredentials(fsTokens); // For use by AppMaster itself.
-      }
+      // Read the file-system tokens from the localized tokens-file.
+      Path jobSubmitDir = 
+          FileContext.getLocalFSFileContext().makeQualified(
+              new Path(new File(MRJobConfig.JOB_SUBMIT_DIR)
+                  .getAbsolutePath()));
+      Path jobTokenFile = 
+          new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
+      fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
+      LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
+          + jobTokenFile);
+      currentUser.addCredentials(fsTokens); // For use by AppMaster itself.
     } catch (IOException e) {
       throw new YarnException(e);
     }
