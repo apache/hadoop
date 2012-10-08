@@ -49,6 +49,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-127. Move RMAdmin tool to its correct location - the client module.
     (vinodkv)
 
+    YARN-40. Provided support for missing YARN commands (Devaraj K and Vinod
+    Kumar Vavilapalli via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -119,9 +122,6 @@ Release 0.23.5 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
-
-    YARN-40. Provided support for missing YARN commands (Devaraj K and Vinod
-    Kumar Vavilapalli via vinodkv)
 
   OPTIMIZATIONS
 
