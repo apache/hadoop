@@ -40,6 +40,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3682. MiniDFSCluster#init should provide more info when it fails.
     (todd via eli)
 
+    HDFS-4008. TestBalancerWithEncryptedTransfer needs a timeout. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
