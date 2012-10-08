@@ -169,7 +169,7 @@ if [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
-  CLASS='org.apache.hadoop.yarn.server.resourcemanager.tools.RMAdmin'
+  CLASS='org.apache.hadoop.yarn.client.RMAdmin'
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "resourcemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rm-config/log4j.properties

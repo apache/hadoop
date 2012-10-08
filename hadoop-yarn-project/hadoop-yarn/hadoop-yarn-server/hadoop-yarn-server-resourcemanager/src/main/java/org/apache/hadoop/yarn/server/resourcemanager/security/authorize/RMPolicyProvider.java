@@ -24,9 +24,9 @@ import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.yarn.api.AMRMProtocolPB;
 import org.apache.hadoop.yarn.api.ClientRMProtocolPB;
 import org.apache.hadoop.yarn.api.ContainerManagerPB;
+import org.apache.hadoop.yarn.api.RMAdminProtocolPB;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
-import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocolPB;
 
 /**
  * {@link PolicyProvider} for YARN ResourceManager protocols.
