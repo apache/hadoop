@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -130,7 +131,7 @@ public class HistoryFileManager extends AbstractService {
     }
   }
 
-  private static class JobListCache {
+  static class JobListCache {
     private ConcurrentSkipListMap<JobId, HistoryFileInfo> cache;
     private int maxSize;
     private long maxAge;
@@ -239,12 +240,14 @@ public class HistoryFileManager extends AbstractService {
           : HistoryInfoState.IN_INTERMEDIATE;
     }
 
-    private synchronized boolean isMovePending() {
+    @VisibleForTesting
+    synchronized boolean isMovePending() {
       return state == HistoryInfoState.IN_INTERMEDIATE
           || state == HistoryInfoState.MOVE_FAILED;
     }
 
-    private synchronized boolean didMoveFail() {
+    @VisibleForTesting
+    synchronized boolean didMoveFail() {
       return state == HistoryInfoState.MOVE_FAILED;
     }
     
@@ -365,7 +368,7 @@ public class HistoryFileManager extends AbstractService {
   }
 
   private SerialNumberIndex serialNumberIndex = null;
-  private JobListCache jobListCache = null;
+  protected JobListCache jobListCache = null;
 
   // Maintains a list of known done subdirectories.
   private final Set<Path> existingDoneSubdirs = Collections
@@ -707,8 +710,8 @@ public class HistoryFileManager extends AbstractService {
    * @throws IOException
    */
   private HistoryFileInfo scanOldDirsForJob(JobId jobId) throws IOException {
-    int jobSerialNumber = JobHistoryUtils.jobSerialNumber(jobId);
-    String boxedSerialNumber = String.valueOf(jobSerialNumber);
+    String boxedSerialNumber = JobHistoryUtils.serialNumberDirectoryComponent(
+        jobId, serialNumberFormat);
     Set<String> dateStringSet = serialNumberIndex.get(boxedSerialNumber);
     if (dateStringSet == null) {
       return null;

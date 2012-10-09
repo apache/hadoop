@@ -60,6 +60,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -460,6 +461,51 @@ public class TestJobHistoryParsing {
     }
   }
 
+  @Test
+  public void testScanningOldDirs() throws Exception {
+    LOG.info("STARTING testScanningOldDirs");
+    try {
+    Configuration conf = new Configuration();
+    conf
+        .setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
+    MRApp app =
+        new MRAppWithHistory(1, 1, true,
+            this.getClass().getName(), true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
+    app.waitForState(job, JobState.SUCCEEDED);
+
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
+
+    HistoryFileManagerForTest hfm = new HistoryFileManagerForTest();
+    hfm.init(conf);
+    HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
+    Assert.assertNotNull("Unable to locate job history", fileInfo);
+
+    // force the manager to "forget" the job
+    hfm.deleteJobFromJobListCache(fileInfo);
+    final int msecPerSleep = 10;
+    int msecToSleep = 10 * 1000;
+    while (fileInfo.isMovePending() && msecToSleep > 0) {
+      Assert.assertTrue(!fileInfo.didMoveFail());
+      msecToSleep -= msecPerSleep;
+      Thread.sleep(msecPerSleep);
+    }
+    Assert.assertTrue("Timeout waiting for history move", msecToSleep > 0);
+
+    fileInfo = hfm.getFileInfo(jobId);
+    Assert.assertNotNull("Unable to locate old job history", fileInfo);
+   } finally {
+      LOG.info("FINISHED testScanningOldDirs");
+    }
+  }
+
   static class MRAppWithHistoryWithFailedAttempt extends MRAppWithHistory {
 
     public MRAppWithHistoryWithFailedAttempt(int maps, int reduces, boolean autoComplete,
@@ -497,6 +543,12 @@ public class TestJobHistoryParsing {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
       }
+    }
+  }
+
+  static class HistoryFileManagerForTest extends HistoryFileManager {
+    void deleteJobFromJobListCache(HistoryFileInfo fileInfo) {
+      jobListCache.delete(fileInfo);
     }
   }
 
