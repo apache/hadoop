@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
@@ -45,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
@@ -58,14 +58,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
-  private final ClientToAMSecretManager clientToAMSecretManager;
+  private final ClientToAMTokenSecretManagerInRM clientToAMSecretManager;
   private final ApplicationMasterService masterService;
   private final YarnScheduler scheduler;
   private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
 
   public RMAppManager(RMContext context,
-      ClientToAMSecretManager clientToAMSecretManager,
+      ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
       YarnScheduler scheduler, ApplicationMasterService masterService,
       ApplicationACLsManager applicationACLsManager, Configuration conf) {
     this.rmContext = context;
@@ -230,6 +230,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
+      // TODO: This needs to move to per-AppAttempt
+      this.clientToAMSecretManager.registerApplication(applicationId);
       String clientTokenStr = null;
       if (UserGroupInformation.isSecurityEnabled()) {
         Token<ClientTokenIdentifier> clientToken = new 

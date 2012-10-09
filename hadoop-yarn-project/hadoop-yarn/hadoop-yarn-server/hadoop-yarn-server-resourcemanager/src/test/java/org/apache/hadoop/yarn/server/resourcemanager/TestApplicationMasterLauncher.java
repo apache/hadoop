@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
@@ -35,9 +34,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncher;
-import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -104,40 +100,6 @@ public class TestApplicationMasterLauncher {
       return null;
     }
 
-  }
-
-  static class MockRMWithCustomAMLauncher extends MockRM {
-
-    private final ContainerManager containerManager;
-
-    public MockRMWithCustomAMLauncher(ContainerManager containerManager) {
-      this(new Configuration(), containerManager);
-    }
-
-    public MockRMWithCustomAMLauncher(Configuration conf,
-        ContainerManager containerManager) {
-      super(conf);
-      this.containerManager = containerManager;
-    }
-
-    @Override
-    protected ApplicationMasterLauncher createAMLauncher() {
-      return new ApplicationMasterLauncher(super.clientToAMSecretManager,
-        getRMContext()) {
-        @Override
-        protected Runnable createRunnableLauncher(RMAppAttempt application,
-            AMLauncherEventType event) {
-          return new AMLauncher(context, application, event,
-            clientToAMSecretManager, getConfig()) {
-            @Override
-            protected ContainerManager getContainerMgrProxy(
-                ContainerId containerId) {
-              return containerManager;
-            }
-          };
-        }
-      };
-    }
   }
 
   @Test

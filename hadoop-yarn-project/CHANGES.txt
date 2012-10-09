@@ -44,6 +44,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-102. Move the apache header to the top of the file in MemStore.java.
     (Devaraj K via sseth)
+    
+    YARN-134. ClientToAMSecretManager creates keys without checking for
+    validity of the appID. (Vinod Kumar Vavilapalli via sseth)
 
 Release 2.0.2-alpha - 2012-09-07 
 
