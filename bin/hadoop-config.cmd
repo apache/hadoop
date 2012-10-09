@@ -154,7 +154,12 @@ for %%i in (%HADOOP_CORE_HOME%\lib\jsp-2.1\*.jar) do (
 @rem
 
 if defined HADOOP_CLASSPATH (
-  set CLASSPATH=%CLASSPATH%;%HADOOP_CLASSPATH%
+  if defined HADOOP_USER_CLASSPATH_FIRST (
+    set CLASSPATH=%HADOOP_CLASSPATH%;%CLASSPATH%;
+  )
+  if not defined HADOOP_USER_CLASSPATH_FIRST (
+    set CLASSPATH=%CLASSPATH%;%HADOOP_CLASSPATH%;
+  )
 )
 
 if not defined HADOOP_LOG_DIR (

@@ -152,3 +152,6 @@ BUG FIXES
 
     HADOOP-8880. Missing jersey jars as dependency in the pom causes 
     hive tests to fail. (gkesavan via suresh)
+
+    HADOOP-8903. support HADOOP_USER_CLASSPATH_FIRST in windows hadoop cmd.
+    (Thejas Nair via suresh)
