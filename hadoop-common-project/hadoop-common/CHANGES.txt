@@ -35,6 +35,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8804. Improve Web UIs when the wildcard address is used.
     (Senthil Kumar via eli)
 
+    HADOOP-8894. GenericTestUtils.waitFor should dump thread stacks on timeout
+    (todd)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
