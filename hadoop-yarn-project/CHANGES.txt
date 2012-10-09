@@ -38,6 +38,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-33. Change LocalDirsHandlerService to validate the configured local and
     log dirs. (Mayank Bansal via sseth)
 
+    YARN-94. Modify DistributedShell to point to main-class by default, clean up
+    the help message, and hard-code the AM class. (Hitesh Shah via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 

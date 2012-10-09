@@ -110,6 +110,22 @@ public class TestDistributedShell {
 
   }
 
+  @Test
+  public void testDSShellWithNoArgs() throws Exception {
+
+    String[] args = {};
+
+    LOG.info("Initializing DS Client with no args");
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    boolean exceptionThrown = false;
+    try {
+      boolean initSuccess = client.init(args);
+    }
+    catch (IllegalArgumentException e) {
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
+  }
 
 }
 

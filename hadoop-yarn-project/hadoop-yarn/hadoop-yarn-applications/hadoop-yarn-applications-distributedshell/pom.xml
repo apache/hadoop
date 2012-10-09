@@ -82,6 +82,13 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
+        <configuration>
+           <archive>
+             <manifest>
+               <mainClass>org.apache.hadoop.yarn.applications.distributedshell.Client</mainClass>
+             </manifest>
+           </archive>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
