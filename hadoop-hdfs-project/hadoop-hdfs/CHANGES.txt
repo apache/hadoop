@@ -311,6 +311,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4003. test-patch should build the common native libs before
     running hdfs tests. (Colin Patrick McCabe via eli)
 
+    HDFS-4018. testMiniDFSClusterWithMultipleNN is missing some
+    cluster cleanup. (eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
