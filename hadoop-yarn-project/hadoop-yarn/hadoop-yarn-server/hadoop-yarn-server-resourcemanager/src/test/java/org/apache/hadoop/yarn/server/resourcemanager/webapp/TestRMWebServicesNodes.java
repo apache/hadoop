@@ -229,9 +229,9 @@ public class TestRMWebServicesNodes extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState.BOGUSSTATE",
+              "org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState.BOGUSSTATE",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
