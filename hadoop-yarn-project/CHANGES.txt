@@ -71,6 +71,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-134. ClientToAMSecretManager creates keys without checking for
     validity of the appID. (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-30. Fixed tests verifying web-services to work on JDK7. (Thomas Graves
+    via vinodkv)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

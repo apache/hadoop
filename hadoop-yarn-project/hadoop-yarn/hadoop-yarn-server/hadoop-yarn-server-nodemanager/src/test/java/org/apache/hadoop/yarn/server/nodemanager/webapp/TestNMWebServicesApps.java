@@ -382,7 +382,7 @@ public class TestNMWebServicesApps extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      verifyStatInvalidException(message, type, classname);
+      verifyStateInvalidException(message, type, classname);
     }
   }
 
@@ -412,7 +412,7 @@ public class TestNMWebServicesApps extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      verifyStatInvalidException(message, type, classname);
+      verifyStateInvalidException(message, type, classname);
     }
   }
 
@@ -450,16 +450,16 @@ public class TestNMWebServicesApps extends JerseyTest {
       String type = WebServicesTestUtils.getXmlString(element, "exception");
       String classname = WebServicesTestUtils.getXmlString(element,
           "javaClassName");
-      verifyStatInvalidException(message, type, classname);
+      verifyStateInvalidException(message, type, classname);
     }
   }
 
-  private void verifyStatInvalidException(String message, String type,
+  private void verifyStateInvalidException(String message, String type,
       String classname) {
     WebServicesTestUtils
-        .checkStringMatch(
+        .checkStringContains(
             "exception message",
-            "No enum const class org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState.FOO_STATE",
+            "org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState.FOO_STATE",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "IllegalArgumentException", type);
