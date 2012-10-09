@@ -21,6 +21,10 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4554. Job Credentials are not transmitted if security is turned 
     off (Benoy Antony via bobby)
 
+    MAPREDUCE-4705. Fix a bug in job history lookup, which makes older jobs
+    inaccessible despite the presence of a valid history file. (Jason Lowe
+    via sseth)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
