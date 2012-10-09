@@ -104,7 +104,10 @@ public abstract class GenericTestUtils {
       
       Thread.sleep(checkEveryMillis);
     } while (Time.now() - st < waitForMillis);
-    throw new TimeoutException("Timed out waiting for condition");
+    
+    throw new TimeoutException("Timed out waiting for condition. " +
+        "Thread diagnostics:\n" +
+        TimedOutTestsListener.buildThreadDiagnosticString());
   }
   
   public static class LogCapturer {
