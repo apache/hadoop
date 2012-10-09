@@ -79,4 +79,11 @@ public class WebServicesTestUtils {
         got.matches(expected));
   }
 
+  public static void checkStringContains(String print, String expected, String got) {
+    assertTrue(
+        print + " doesn't contain expected string, got: " + got + " expected: " + expected,
+        got.contains(expected));
+  }
+
+
 }

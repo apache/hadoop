@@ -280,9 +280,9 @@ public class TestRMWebServicesApps extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState.INVALID_test",
+              "org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState.INVALID_test",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
@@ -359,9 +359,9 @@ public class TestRMWebServicesApps extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.api.records.FinalApplicationStatus.INVALID_test",
+              "org.apache.hadoop.yarn.api.records.FinalApplicationStatus.INVALID_test",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
