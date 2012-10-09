@@ -7,6 +7,8 @@ Trunk (Unreleased)
     HADOOP-8124. Remove the deprecated FSDataOutputStream constructor,
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
+    HADOOP-8886. Remove KFS support. (eli)
+
   NEW FEATURES
     
     HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
