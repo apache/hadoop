@@ -173,6 +173,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4712. mr-jobhistory-daemon.sh doesn't accept --config
     (Vinod Kumar Vavilapalli via tgraves)
 
+    MAPREDUCE-4654. TestDistCp is ignored. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
