@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -77,6 +80,8 @@ public class LocalDirsHandlerService extends AbstractService {
 
   /** when disk health checking code was last run */
   private long lastDisksCheckTime;
+  
+  private static String FILE_SCHEME = "file";
 
   /**
    * Class which is used by the {@link Timer} class to periodically execute the
@@ -84,13 +89,13 @@ public class LocalDirsHandlerService extends AbstractService {
    */
   private final class MonitoringTimerTask extends TimerTask {
 
-    public MonitoringTimerTask(Configuration conf) {
+    public MonitoringTimerTask(Configuration conf) throws YarnException {
       localDirs = new DirectoryCollection(
-          conf.getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS));
+          validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)));
       logDirs = new DirectoryCollection(
-          conf.getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS));
-      localDirsAllocator =
-          new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
+          validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)));
+      localDirsAllocator = new LocalDirAllocator(
+          YarnConfiguration.NM_LOCAL_DIRS);
       logDirsAllocator = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
     }
 
@@ -106,6 +111,7 @@ public class LocalDirsHandlerService extends AbstractService {
 
   /**
    * Method which initializes the timertask and its interval time.
+   * 
    */
   @Override
   public void init(Configuration config) {
@@ -293,5 +299,32 @@ public class LocalDirsHandlerService extends AbstractService {
 
   public Path getLogPathToRead(String pathStr) throws IOException {
     return logDirsAllocator.getLocalPathToRead(pathStr, getConfig());
+  }
+  
+  public static String[] validatePaths(String[] paths) {
+    ArrayList<String> validPaths = new ArrayList<String>();
+    for (int i = 0; i < paths.length; ++i) {
+      try {
+        URI uriPath = new URI(paths[i]);
+        if (uriPath.getScheme() == null
+            || uriPath.getScheme().equals(FILE_SCHEME)) {
+          validPaths.add(uriPath.getPath());
+        } else {
+          LOG.warn(paths[i] + " is not a valid path. Path should be with "
+              + FILE_SCHEME + " scheme or without scheme");
+          throw new YarnException(paths[i]
+              + " is not a valid path. Path should be with " + FILE_SCHEME
+              + " scheme or without scheme");
+        }
+      } catch (URISyntaxException e) {
+        LOG.warn(e.getMessage());
+        throw new YarnException(paths[i]
+            + " is not a valid path. Path should be with " + FILE_SCHEME
+            + " scheme or without scheme");
+      }
+    }
+    String[] arrValidPaths = new String[validPaths.size()];
+    validPaths.toArray(arrValidPaths);
+    return arrValidPaths;
   }
 }

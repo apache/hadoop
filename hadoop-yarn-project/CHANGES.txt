@@ -35,6 +35,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-40. Provided support for missing YARN commands (Devaraj K and Vinod
     Kumar Vavilapalli via vinodkv)
 
+    YARN-33. Change LocalDirsHandlerService to validate the configured local and
+    log dirs. (Mayank Bansal via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
