@@ -152,6 +152,9 @@ Release 2.0.3-alpha - Unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-3678. The Map tasks logs should have the value of input
+    split it processed. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
