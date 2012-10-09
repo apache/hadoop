@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -54,13 +55,12 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 /**
@@ -76,7 +76,7 @@ public class AMLauncher implements Runnable {
   private final Configuration conf;
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
-  private final ClientToAMSecretManager clientToAMSecretManager;
+  private final ClientToAMTokenSecretManagerInRM clientToAMSecretManager;
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   
@@ -85,7 +85,7 @@ public class AMLauncher implements Runnable {
   
   public AMLauncher(RMContext rmContext, RMAppAttempt application,
       AMLauncherEventType eventType,
-      ClientToAMSecretManager clientToAMSecretManager, Configuration conf) {
+      ClientToAMTokenSecretManagerInRM clientToAMSecretManager, Configuration conf) {
     this.application = application;
     this.conf = conf;
     this.clientToAMSecretManager = clientToAMSecretManager;
@@ -194,10 +194,12 @@ public class AMLauncher implements Runnable {
     String parts[] =
         application.getMasterContainer().getNodeHttpAddress().split(":");
     environment.put(ApplicationConstants.NM_HTTP_PORT_ENV, parts[1]);
+    ApplicationId applicationId =
+        application.getAppAttemptId().getApplicationId();
     environment.put(
         ApplicationConstants.APP_SUBMIT_TIME_ENV,
         String.valueOf(rmContext.getRMApps()
-            .get(application.getAppAttemptId().getApplicationId())
+            .get(applicationId)
             .getSubmitTime()));
  
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -237,10 +239,8 @@ public class AMLauncher implements Runnable {
       container.setContainerTokens(
           ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
 
-      ClientTokenIdentifier identifier = new ClientTokenIdentifier(
-          application.getAppAttemptId().getApplicationId());
       SecretKey clientSecretKey =
-          this.clientToAMSecretManager.getMasterKey(identifier);
+          this.clientToAMSecretManager.getMasterKey(applicationId);
       String encoded =
           Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
       environment.put(
