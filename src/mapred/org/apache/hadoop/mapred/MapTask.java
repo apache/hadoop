@@ -454,6 +454,7 @@ class MapTask extends Task {
       job.setLong("map.input.start", fileSplit.getStart());
       job.setLong("map.input.length", fileSplit.getLength());
     }
+    LOG.info("Processing split: " + inputSplit);
   }
 
   static class NewTrackingRecordReader<K,V> 
@@ -727,6 +728,7 @@ class MapTask extends Task {
     org.apache.hadoop.mapreduce.InputSplit split = null;
     split = getSplitDetails(new Path(splitIndex.getSplitLocation()),
         splitIndex.getStartOffset());
+    LOG.info("Processing split: " + split);
 
     org.apache.hadoop.mapreduce.RecordReader<INKEY,INVALUE> input =
       new NewTrackingRecordReader<INKEY,INVALUE>

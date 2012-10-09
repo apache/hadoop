@@ -84,6 +84,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4556. FairScheduler: PoolSchedulable#updateDemand() has potential 
     redundant computation (kkambatl via tucu)
 
+    MAPREDUCE-3678. The Map tasks logs should have the value of input
+    split it processed. (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
