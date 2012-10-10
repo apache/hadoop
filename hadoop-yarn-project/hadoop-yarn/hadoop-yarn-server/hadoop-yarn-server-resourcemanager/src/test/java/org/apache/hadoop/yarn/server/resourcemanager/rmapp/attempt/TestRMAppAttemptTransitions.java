@@ -262,6 +262,10 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     
+    // Check events
+    verify(masterService).
+        unregisterAttempt(applicationAttempt.getAppAttemptId());
+    
     // this works for unmanaged and managed AM's because this is actually doing
     // verify(application).handle(anyObject());
     verify(application).handle(any(RMAppRejectedEvent.class));
@@ -527,7 +531,8 @@ public class TestRMAppAttemptTransitions {
     // launch AM and verify attempt failed
     applicationAttempt.handle(new RMAppAttemptRegistrationEvent(
         applicationAttempt.getAppAttemptId(), "host", 8042, "oldtrackingurl"));
-    testAppAttemptSubmittedToFailedState("Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
+    testAppAttemptSubmittedToFailedState(
+        "Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
   }
 
   @Test
