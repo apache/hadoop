@@ -159,6 +159,35 @@ class Host2NodesMap {
     }
   }
   
+  /**
+   * Find data node by its transfer address
+   *
+   * @return DatanodeDescriptor if found or null otherwise
+   */
+  public DatanodeDescriptor getDatanodeByXferAddr(String ipAddr,
+      int xferPort) {
+    if (ipAddr==null) {
+      return null;
+    }
+
+    hostmapLock.readLock().lock();
+    try {
+      DatanodeDescriptor[] nodes = map.get(ipAddr);
+      // no entry
+      if (nodes== null) {
+        return null;
+      }
+      for(DatanodeDescriptor containedNode:nodes) {
+        if (xferPort == containedNode.getXferPort()) {
+          return containedNode;
+        }
+      }
+      return null;
+    } finally {
+      hostmapLock.readLock().unlock();
+    }
+  }
+
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
