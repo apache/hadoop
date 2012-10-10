@@ -15,7 +15,7 @@
 * the License.
 */
 
-#include "common.h"
+#include "winutils.h"
 #include <psapi.h>
 #include <PowrProf.h>
 

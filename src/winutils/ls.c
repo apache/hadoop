@@ -15,7 +15,7 @@
  * the License.
  */
 
-#include "common.h"
+#include "winutils.h"
 
 //----------------------------------------------------------------------------
 // Function: GetMaskString
@@ -27,8 +27,12 @@
 //	TRUE: on success
 //
 // Notes:
+//  The function only sets the existed permission in the mask string. If the
+//  permission does not exist, the corresponding character in mask string is not
+//  altered. The caller need to initilize the mask string to be all '-' to get
+//  the correct mask string.
 //
-static BOOL GetMaskString(USHORT accessMask, LPWSTR maskString)
+static BOOL GetMaskString(INT accessMask, LPWSTR maskString)
 {
   if(wcslen(maskString) != 10)
     return FALSE;
@@ -40,42 +44,24 @@ static BOOL GetMaskString(USHORT accessMask, LPWSTR maskString)
 
   if ((accessMask & UX_U_READ) == UX_U_READ)
     maskString[1] = L'r';
-  else
-    maskString[1] = L'-';
   if ((accessMask & UX_U_WRITE) == UX_U_WRITE)
     maskString[2] = L'w';
-  else
-    maskString[2] = L'-';
   if ((accessMask & UX_U_EXECUTE) == UX_U_EXECUTE)
     maskString[3] = L'x';
-  else
-    maskString[3] = L'-';
 
   if ((accessMask & UX_G_READ) == UX_G_READ)
     maskString[4] = L'r';
-  else
-    maskString[4] = L'-';
   if ((accessMask & UX_G_WRITE) == UX_G_WRITE)
     maskString[5] = L'w';
-  else
-    maskString[5] = L'-';
   if ((accessMask & UX_G_EXECUTE) == UX_G_EXECUTE)
     maskString[6] = L'x';
-  else
-    maskString[6] = L'-';
 
   if ((accessMask & UX_O_READ) == UX_O_READ)
     maskString[7] = L'r';
-  else
-    maskString[7] = L'-';
   if ((accessMask & UX_O_WRITE) == UX_O_WRITE)
     maskString[8] = L'w';
-  else
-    maskString[8] = L'-';
   if ((accessMask & UX_O_EXECUTE) == UX_O_EXECUTE)
     maskString[9] = L'x';
-  else
-    maskString[9] = L'-';
 
   return TRUE;
 }
@@ -92,7 +78,7 @@ static BOOL GetMaskString(USHORT accessMask, LPWSTR maskString)
 // Notes:
 //
 static BOOL LsPrintLine(
-  const USHORT mask,
+  const INT mask,
   const DWORD hardlinkCount,
   LPCWSTR ownerName,
   LPCWSTR groupName,
@@ -114,7 +100,7 @@ static BOOL LsPrintLine(
     return FALSE;
   }
 
-  // Build mask string from ushort mask
+  // Build mask string from mask mode
   if (FAILED(StringCchCopyW(maskString, (ck_ullMaskLen+1), L"----------")))
   {
     goto LsPrintLineEnd;
@@ -164,7 +150,7 @@ int Ls(int argc, wchar_t *argv[])
 
   LPWSTR ownerName = NULL;
   LPWSTR groupName = NULL;
-  USHORT accessMask = 0x0000;
+  INT unixAccessMode = 0;
   DWORD dwErrorCode = ERROR_SUCCESS;
 
   LARGE_INTEGER fileSize;
@@ -216,20 +202,24 @@ int Ls(int argc, wchar_t *argv[])
   }
 
   if (isSymlink)
-    accessMask |= UX_SYMLINK;
+    unixAccessMode |= UX_SYMLINK;
   else if (IsDirFileInfo(&fileInformation))
-    accessMask |= UX_DIRECTORY;
+    unixAccessMode |= UX_DIRECTORY;
 
-  if (!FindFileOwnerAndPermission(longPathName,
-    &ownerName, &groupName, &accessMask))
+  dwErrorCode = FindFileOwnerAndPermission(longPathName,
+    &ownerName, &groupName, &unixAccessMode);
+  if (dwErrorCode != ERROR_SUCCESS)
+  {
+    ReportErrorCode(L"FindFileOwnerAndPermission", dwErrorCode);
     goto LsEnd;
+  }
 
   fileSize.HighPart = fileInformation.nFileSizeHigh;
   fileSize.LowPart = fileInformation.nFileSizeLow;
 
   // Print output using the input path name (not the long one)
   //
-  if (!LsPrintLine(accessMask,
+  if (!LsPrintLine(unixAccessMode,
     fileInformation.nNumberOfLinks,
     ownerName, groupName,
     &fileInformation.ftLastWriteTime,

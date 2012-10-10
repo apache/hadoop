@@ -15,7 +15,7 @@
 * the License.
 */
 
-#include "common.h"
+#include "winutils.h"
 #include <errno.h>
 #include <psapi.h>
 
@@ -99,7 +99,6 @@ DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine)
   DWORD exitCode = EXIT_FAILURE;
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
-  SECURITY_ATTRIBUTES sa;
   HANDLE jobObject = NULL;
   JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
 

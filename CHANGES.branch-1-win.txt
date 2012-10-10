@@ -1,9 +1,5 @@
 Branch-hadoop-1-win - unreleased
 
-  NEW FEATURES
-
-  IMPROVEMENTS
-
     HADOOP-8223 Initial patch for branch-1-win. (David Lao via Sanjay)
 
     HADOOP-8234 Enable user group mappings on Windows. (Bikas Saha via Sanjay)
@@ -96,10 +92,6 @@ Branch-hadoop-1-win - unreleased
     HDFS-3566. Add AzureBlockPlacementPolicy to handle fault and upgrade
     domains in Azure.  (Sumadhur Reddy Bolli via szetszwo)
 
-OPTIMAZATIONS
-
-BUG FIXES
-
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
@@ -155,3 +147,5 @@ BUG FIXES
 
     HADOOP-8903. support HADOOP_USER_CLASSPATH_FIRST in windows hadoop cmd.
     (Thejas Nair via suresh)
+
+    HADOOP-8908. Refactor winutil.exe related code. (Chuan Liu via suresh)

@@ -15,7 +15,7 @@
 * the License.
 */
 
-#include "common.h"
+#include "winutils.h"
 
 // List of different hardlink related command line options supported by
 // winutils.

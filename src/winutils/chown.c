@@ -15,7 +15,7 @@
  * the License.
  */
 
-#include "common.h"
+#include "winutils.h"
 
 //----------------------------------------------------------------------------
 // Function: GetNewAclSize
@@ -389,16 +389,26 @@ int Chown(int argc, wchar_t *argv[])
     goto ChownEnd;
   }
 
-  if (userName != NULL && !GetSidFromAcctNameW(userName, &pNewOwnerSid))
+  if (userName != NULL)
   {
-    fwprintf(stderr, L"Invalid user name: %s\n", userName);
-    goto ChownEnd;
+    dwRtnCode = GetSidFromAcctNameW(userName, &pNewOwnerSid);
+    if (dwRtnCode != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"GetSidFromAcctName", dwRtnCode);
+      fwprintf(stderr, L"Invalid user name: %s\n", userName);
+      goto ChownEnd;
+    }
   }
 
-  if (groupName != NULL && !GetSidFromAcctNameW(groupName, &pNewGroupSid))
+  if (groupName != NULL)
   {
-    fwprintf(stderr, L"Invalid group name: %s\n", groupName);
-    goto ChownEnd;
+    dwRtnCode = GetSidFromAcctNameW(groupName, &pNewGroupSid);
+    if (dwRtnCode != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"GetSidFromAcctName", dwRtnCode);
+      fwprintf(stderr, L"Invalid group name: %s\n", groupName);
+      goto ChownEnd;
+    }
   }
 
   if (wcslen(pathName) == 0 || wcsspn(pathName, L"/?|><:*\"") != 0)

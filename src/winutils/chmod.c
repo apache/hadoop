@@ -15,7 +15,7 @@
 * the License.
 */
 
-#include "common.h"
+#include "winutils.h"
 #include <errno.h>
 
 enum CHMOD_WHO
@@ -64,38 +64,28 @@ typedef struct _MODE_CHANGE_ACTION
   struct _MODE_CHANGE_ACTION *next_action;
 } MODE_CHANGE_ACTION, *PMODE_CHANGE_ACTION;
 
-
 const MODE_CHANGE_ACTION INIT_MODE_CHANGE_ACTION = {
   CHMOD_WHO_NONE, CHMOD_OP_INVALID, CHMOD_PERM_NA, CHMOD_WHO_NONE, NULL
 };
 
-
-static BOOL ParseOctalMode(LPCWSTR tsMask, USHORT *uMask);
+static BOOL ParseOctalMode(LPCWSTR tsMask, INT *uMask);
 
 static BOOL ParseMode(LPCWSTR modeString, PMODE_CHANGE_ACTION *actions);
 
 static BOOL FreeActions(PMODE_CHANGE_ACTION actions);
 
-static BOOL GetWindowsDACLs(__in USHORT unixMask, __in PSID pOwnerSid,
-  __in PSID pGroupSid, __out PACL *ppNewDACL);
-
 static BOOL ParseCommandLineArguments(__in int argc, __in wchar_t *argv[],
-  __out BOOL *rec, __out_opt USHORT *mask,
+  __out BOOL *rec, __out_opt INT *mask,
   __out_opt PMODE_CHANGE_ACTION *actions, __out LPCWSTR *path);
-
-static BOOL ChangeFileModeByMask(__in LPCWSTR path, USHORT mode);
 
 static BOOL ChangeFileModeByActions(__in LPCWSTR path,
   PMODE_CHANGE_ACTION actions);
 
-static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt USHORT mode,
+static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt INT mode,
   __in_opt PMODE_CHANGE_ACTION actions);
 
-static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt USHORT mode,
+static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
   __in_opt PMODE_CHANGE_ACTION actions);
-
-static USHORT ComputeNewMode(__in USHORT oldMode, __in USHORT who,
-  __in USHORT op, __in USHORT perm, __in USHORT ref);
 
 
 //----------------------------------------------------------------------------
@@ -118,7 +108,7 @@ int Chmod(int argc, wchar_t *argv[])
 
   PMODE_CHANGE_ACTION actions = NULL;
 
-  USHORT unixAccessMask = 0x0000;
+  INT unixAccessMask = 0;
 
   DWORD dwRtnCode = 0;
 
@@ -178,13 +168,21 @@ ChmodEnd:
 //
 // Notes:
 //
-static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt USHORT unixAccessMask,
+static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt INT unixAccessMask,
   __in_opt PMODE_CHANGE_ACTION actions)
 {
   if (actions != NULL)
     return ChangeFileModeByActions(path, actions);
   else
-    return ChangeFileModeByMask(path, unixAccessMask);
+  {
+    DWORD dwRtnCode = ChangeFileModeByMask(path, unixAccessMask);
+    if (dwRtnCode != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"ChangeFileModeByMask", dwRtnCode);
+      return FALSE;
+    }
+    return TRUE;
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -203,7 +201,7 @@ static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt USHORT unixAccessMask,
 //      Symbolic links and junction points are not considered as directories.
 //    - Otherwise, call the method on all its children, then change its mode.
 //
-static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt USHORT mode,
+static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
   __in_opt PMODE_CHANGE_ACTION actions)
 {
   BOOL isDir = FALSE;
@@ -311,157 +309,6 @@ ChangeFileModeRecursivelyEnd:
 }
 
 //----------------------------------------------------------------------------
-// Function: ChangeFileModeByMask
-//
-// Description:
-//  Change a file or direcotry at the path to Unix mode
-//
-// Returns:
-//  TRUE: on success
-//  FALSE: otherwise
-//
-// Notes:
-//
-static BOOL ChangeFileModeByMask(__in LPCWSTR path, USHORT mode)
-{
-  PACL pOldDACL = NULL;
-  PACL pNewDACL = NULL;
-  PSID pOwnerSid = NULL;
-  PSID pGroupSid = NULL;
-  PSECURITY_DESCRIPTOR pSD = NULL;
-
-  SECURITY_DESCRIPTOR_CONTROL control;
-  DWORD revision = 0;
-
-  PSECURITY_DESCRIPTOR pAbsSD = NULL;
-  PACL pAbsDacl = NULL;
-  PACL pAbsSacl = NULL;
-  PSID pAbsOwner = NULL;
-  PSID pAbsGroup = NULL;
-
-  DWORD dwRtnCode = 0;
-  DWORD dwErrorCode = 0;
-
-  BOOL ret = FALSE;
-
-  // Get owner and group Sids
-  //
-  dwRtnCode = GetNamedSecurityInfoW(
-    path,
-    SE_FILE_OBJECT, 
-    OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
-    DACL_SECURITY_INFORMATION,
-    &pOwnerSid,
-    &pGroupSid,
-    &pOldDACL,
-    NULL,
-    &pSD);
-  if (ERROR_SUCCESS != dwRtnCode)
-  {
-    ReportErrorCode(L"GetNamedSecurityInfo", dwRtnCode);
-    goto ChangeFileMode; 
-  }
-
-  // SetSecurityDescriptorDacl function used below only accepts security
-  // descriptor in absolute format, meaning that its members must be pointers to
-  // other structures, rather than offsets to contiguous data.
-  // To determine whether a security descriptor is self-relative or absolute,
-  // call the GetSecurityDescriptorControl function and check the
-  // SE_SELF_RELATIVE flag of the SECURITY_DESCRIPTOR_CONTROL parameter.
-  //
-  if (!GetSecurityDescriptorControl(pSD, &control, &revision))
-  {
-    ReportErrorCode(L"GetSecurityDescriptorControl", GetLastError());
-    goto ChangeFileMode;
-  }
-
-  // If the security descriptor is self-relative, we use MakeAbsoluteSD function
-  // to convert it to absolute format.
-  //
-  if ((control & SE_SELF_RELATIVE) == SE_SELF_RELATIVE)
-  {
-    DWORD absSDSize = 0;
-    DWORD daclSize = 0;
-    DWORD saclSize = 0;
-    DWORD ownerSize = 0;
-    DWORD primaryGroupSize = 0;
-    MakeAbsoluteSD(pSD, NULL, &absSDSize, NULL, &daclSize, NULL,
-      &saclSize, NULL, &ownerSize, NULL, &primaryGroupSize);
-    if ((dwErrorCode = GetLastError()) != ERROR_INSUFFICIENT_BUFFER)
-    {
-      ReportErrorCode(L"MakeAbsoluteSD", dwErrorCode);
-      goto ChangeFileMode;
-    }
-    pAbsSD = (PSECURITY_DESCRIPTOR) LocalAlloc(LPTR, absSDSize);
-    pAbsDacl = (PACL) LocalAlloc(LPTR, daclSize);
-    pAbsSacl = (PACL) LocalAlloc(LPTR, saclSize);
-    pAbsOwner = (PSID) LocalAlloc(LPTR, ownerSize);
-    pAbsGroup = (PSID) LocalAlloc(LPTR, primaryGroupSize);
-    if (pAbsSD == NULL || pAbsDacl == NULL || pAbsSacl == NULL ||
-      pAbsOwner == NULL || pAbsGroup == NULL)
-    {
-      ReportErrorCode(L"LocalAlloc", GetLastError());
-      goto ChangeFileMode;
-    }
-
-    if (!MakeAbsoluteSD(pSD, pAbsSD, &absSDSize, pAbsDacl, &daclSize, pAbsSacl,
-      &saclSize, pAbsOwner, &ownerSize, pAbsGroup, &primaryGroupSize))
-    {
-      ReportErrorCode(L"MakeAbsoluteSD", GetLastError());
-      goto ChangeFileMode;
-    }
-  }
-
-  // Get Windows DACLs based on Unix access mask
-  //
-  if (!GetWindowsDACLs(mode, pOwnerSid, pGroupSid, &pNewDACL))
-    goto ChangeFileMode;
-
-  // Set the DACL information in the security descriptor; if a DACL is already
-  // present in the security descriptor, the DACL is replaced. The security
-  // descriptor is then used to set the security of a file or directory.
-  //
-  if (!SetSecurityDescriptorDacl(pAbsSD, TRUE, pNewDACL, FALSE))
-  {
-    ReportErrorCode(L"SetSecurityDescriptorDacl", GetLastError());
-    goto ChangeFileMode;
-  }
-
-  // MSDN states "This function is obsolete. Use the SetNamedSecurityInfo
-  // function instead." However we have the following problem when using
-  // SetNamedSecurityInfo:
-  //  - When PROTECTED_DACL_SECURITY_INFORMATION is not passed in as part of
-  //    security information, the object will include inheritable permissions
-  //    from its parent.
-  //  - When PROTECTED_DACL_SECURITY_INFORMATION is passsed in to set
-  //    permissions on a directory, the child object of the directory will lose
-  //    inheritable permissions from their parent (the current directory).
-  // By using SetFileSecurity, we have the nice property that the new
-  // permissions of the object does not include the inheritable permissions from
-  // its parent, and the child objects will not lose their inherited permissions
-  // from the current object.
-  //
-  if (!SetFileSecurity(path, DACL_SECURITY_INFORMATION, pAbsSD))
-  {
-    ReportErrorCode(L"SetFileSecurity", GetLastError());
-    goto ChangeFileMode;
-  }
-
-  ret = TRUE;
-
-ChangeFileMode:
-  LocalFree(pSD);
-  LocalFree(pNewDACL);
-  LocalFree(pAbsDacl);
-  LocalFree(pAbsSacl);
-  LocalFree(pAbsOwner);
-  LocalFree(pAbsGroup);
-  LocalFree(pAbsSD);
-
-  return ret;
-}
-
-//----------------------------------------------------------------------------
 // Function: ParseCommandLineArguments
 //
 // Description:
@@ -477,7 +324,7 @@ ChangeFileMode:
 //
 static BOOL ParseCommandLineArguments(__in int argc, __in wchar_t *argv[],
   __out BOOL *rec,
-  __out_opt USHORT *mask,
+  __out_opt INT *mask,
   __out_opt PMODE_CHANGE_ACTION *actions,
   __out LPCWSTR *path)
 {
@@ -584,16 +431,16 @@ static BOOL FreeActions(PMODE_CHANGE_ACTION actions)
 //  Apply 'rwx' permission mask or reference permission mode according to the
 //  '+', '-', or '=' operator.
 //
-static USHORT ComputeNewMode(__in USHORT oldMode,
+static INT ComputeNewMode(__in INT oldMode,
   __in USHORT who, __in USHORT op,
   __in USHORT perm, __in USHORT ref)
 {
-  static const USHORT readMask  = 0444;
-  static const USHORT writeMask = 0222;
-  static const USHORT exeMask   = 0111;
+  static const INT readMask  = 0444;
+  static const INT writeMask = 0222;
+  static const INT exeMask   = 0111;
 
-  USHORT mask = 0;
-  USHORT mode = 0;
+  INT mask = 0;
+  INT mode = 0;
 
   // Operations are exclusive, and cannot be invalid
   //
@@ -691,14 +538,14 @@ static USHORT ComputeNewMode(__in USHORT oldMode,
 //  none
 //
 static BOOL ConvertActionsToMask(__in LPCWSTR path,
-  __in PMODE_CHANGE_ACTION actions, __out PUSHORT puMask)
+  __in PMODE_CHANGE_ACTION actions, __out PINT puMask)
 {
   PMODE_CHANGE_ACTION curr = NULL;
 
   BY_HANDLE_FILE_INFORMATION fileInformation;
   DWORD dwErrorCode = ERROR_SUCCESS;
 
-  USHORT mode = 0;
+  INT mode = 0;
 
   dwErrorCode = GetFileInformationByName(path, FALSE, &fileInformation);
   if (dwErrorCode != ERROR_SUCCESS)
@@ -710,8 +557,10 @@ static BOOL ConvertActionsToMask(__in LPCWSTR path,
   {
     mode |= UX_DIRECTORY;
   }
-  if (!FindFileOwnerAndPermission(path, NULL, NULL, &mode))
+  dwErrorCode = FindFileOwnerAndPermission(path, NULL, NULL, &mode);
+  if (dwErrorCode != ERROR_SUCCESS)
   {
+    ReportErrorCode(L"FindFileOwnerAndPermission", dwErrorCode);
     return FALSE;
   }
   *puMask = mode;
@@ -748,10 +597,18 @@ static BOOL ConvertActionsToMask(__in LPCWSTR path,
 static BOOL ChangeFileModeByActions(__in LPCWSTR path,
   PMODE_CHANGE_ACTION actions)
 {
-  USHORT mask = 0;
+  INT mask = 0;
 
   if (ConvertActionsToMask(path, actions, &mask))
-    return ChangeFileModeByMask(path, mask);
+  {
+    DWORD dwRtnCode = ChangeFileModeByMask(path, mask);
+    if (dwRtnCode != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"ChangeFileModeByMask", dwRtnCode);
+      return FALSE;
+    }
+    return TRUE;
+  }
   else
     return FALSE;
 }
@@ -965,7 +822,7 @@ static BOOL ParseMode(LPCWSTR modeString, PMODE_CHANGE_ACTION *pActions)
 // Notes:
 //	none
 //
-static BOOL ParseOctalMode(LPCWSTR tsMask, USHORT *uMask)
+static BOOL ParseOctalMode(LPCWSTR tsMask, INT *uMask)
 {
   size_t tsMaskLen = 0;
   DWORD i;
@@ -1004,209 +861,9 @@ static BOOL ParseOctalMode(LPCWSTR tsMask, USHORT *uMask)
     return FALSE;
   }
 
-  *uMask = (USHORT) l;
+  *uMask = (INT) l;
 
   return TRUE;
-}
-
-//----------------------------------------------------------------------------
-// Function: GetWindowsAccessMask
-//
-// Description:
-//  Get the Windows AccessMask for user, group and everyone based on the Unix
-//  permission mask
-//
-// Returns:
-//  none
-//
-// Notes:
-//  none
-//
-static void GetWindowsAccessMask(USHORT unixMask,
-  ACCESS_MASK *userAllow,
-  ACCESS_MASK *userDeny,
-  ACCESS_MASK *groupAllow,
-  ACCESS_MASK *groupDeny,
-  ACCESS_MASK *otherAllow)
-{
-  assert (userAllow != NULL && userDeny != NULL &&
-    groupAllow != NULL && groupDeny != NULL &&
-    otherAllow != NULL);
-
-  *userAllow = WinMasks[WIN_ALL] | WinMasks[WIN_OWNER_SE];
-  if ((unixMask & UX_U_READ) == UX_U_READ)
-    *userAllow |= WinMasks[WIN_READ];
-
-  if ((unixMask & UX_U_WRITE) == UX_U_WRITE)
-    *userAllow |= WinMasks[WIN_WRITE];
-
-  if ((unixMask & UX_U_EXECUTE) == UX_U_EXECUTE)
-    *userAllow |= WinMasks[WIN_EXECUTE];
-
-  *userDeny = 0;
-  if ((unixMask & UX_U_READ) != UX_U_READ &&
-    ((unixMask & UX_G_READ) == UX_G_READ ||
-    (unixMask & UX_O_READ) == UX_O_READ))
-    *userDeny |= WinMasks[WIN_READ];
-
-  if ((unixMask & UX_U_WRITE) != UX_U_WRITE &&
-    ((unixMask & UX_G_WRITE) == UX_G_WRITE ||
-    (unixMask & UX_O_WRITE) == UX_O_WRITE))
-    *userDeny |= WinMasks[WIN_WRITE];
-
-  if ((unixMask & UX_U_EXECUTE) != UX_U_EXECUTE &&
-    ((unixMask & UX_G_EXECUTE) == UX_G_EXECUTE ||
-    (unixMask & UX_O_EXECUTE) == UX_O_EXECUTE))
-    *userDeny |= WinMasks[WIN_EXECUTE];
-
-  *groupAllow = WinMasks[WIN_ALL];
-  if ((unixMask & UX_G_READ) == UX_G_READ)
-    *groupAllow |= FILE_GENERIC_READ;
-
-  if ((unixMask & UX_G_WRITE) == UX_G_WRITE)
-    *groupAllow |= WinMasks[WIN_WRITE];
-
-  if ((unixMask & UX_G_EXECUTE) == UX_G_EXECUTE)
-    *groupAllow |= WinMasks[WIN_EXECUTE];
-
-  *groupDeny = 0;
-  if ((unixMask & UX_G_READ) != UX_G_READ &&
-    (unixMask & UX_O_READ) == UX_O_READ)
-    *groupDeny |= WinMasks[WIN_READ];
-
-  if ((unixMask & UX_G_WRITE) != UX_G_WRITE &&
-    (unixMask & UX_O_WRITE) == UX_O_WRITE)
-    *groupDeny |= WinMasks[WIN_WRITE];
-
-  if ((unixMask & UX_G_EXECUTE) != UX_G_EXECUTE &&
-    (unixMask & UX_O_EXECUTE) == UX_O_EXECUTE)
-    *groupDeny |= WinMasks[WIN_EXECUTE];
-
-  *otherAllow = WinMasks[WIN_ALL];
-  if ((unixMask & UX_O_READ) == UX_O_READ)
-    *otherAllow |= WinMasks[WIN_READ];
-
-  if ((unixMask & UX_O_WRITE) == UX_O_WRITE)
-    *otherAllow |= WinMasks[WIN_WRITE];
-
-  if ((unixMask & UX_O_EXECUTE) == UX_O_EXECUTE)
-    *otherAllow |= WinMasks[WIN_EXECUTE];
-}
-
-//----------------------------------------------------------------------------
-// Function: GetWindowsDACLs
-//
-// Description:
-//  Get the Windows DACs based the Unix access mask
-//
-// Returns:
-//  TRUE: on success
-//  FALSE: otherwise
-//
-// Notes:
-//  none
-//
-static BOOL GetWindowsDACLs(__in USHORT unixMask,
-  __in PSID pOwnerSid, __in PSID pGroupSid, __out PACL *ppNewDACL)
-{
-  DWORD winUserAccessDenyMask;
-  DWORD winUserAccessAllowMask;
-  DWORD winGroupAccessDenyMask;
-  DWORD winGroupAccessAllowMask;
-  DWORD winOtherAccessAllowMask;
-
-  PSID pEveryoneSid = NULL;
-
-  PACL pNewDACL = NULL;
-  DWORD dwNewAclSize = 0;
-
-  SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
-
-  BOOL ret = FALSE;
-
-  GetWindowsAccessMask(unixMask,
-    &winUserAccessAllowMask, &winUserAccessDenyMask,
-    &winGroupAccessAllowMask, &winGroupAccessDenyMask,
-    &winOtherAccessAllowMask);
-
-  // Create a well-known SID for the Everyone group
-  //
-  if(!AllocateAndInitializeSid(&SIDAuthWorld, 1,
-    SECURITY_WORLD_RID,
-    0, 0, 0, 0, 0, 0, 0,
-    &pEveryoneSid))
-  {
-    return FALSE;
-  }
-
-  // Create the new DACL
-  //
-  dwNewAclSize = sizeof(ACL);
-  dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
-    GetLengthSid(pOwnerSid) - sizeof(DWORD);
-  if (winUserAccessDenyMask)
-    dwNewAclSize += sizeof(ACCESS_DENIED_ACE) +
-    GetLengthSid(pOwnerSid) - sizeof(DWORD);
-  dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
-    GetLengthSid(pGroupSid) - sizeof(DWORD);
-  if (winGroupAccessDenyMask)
-    dwNewAclSize += sizeof(ACCESS_DENIED_ACE) +
-    GetLengthSid(pGroupSid) - sizeof(DWORD);
-  dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
-    GetLengthSid(pEveryoneSid) - sizeof(DWORD);
-  pNewDACL = (PACL)LocalAlloc(LPTR, dwNewAclSize);
-  if (pNewDACL == NULL)
-  {
-    ReportErrorCode(L"LocalAlloc", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-  if (!InitializeAcl(pNewDACL, dwNewAclSize, ACL_REVISION))
-  {
-    ReportErrorCode(L"InitializeAcl", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-
-  if (winUserAccessDenyMask &&
-    !AddAccessDeniedAce(pNewDACL, ACL_REVISION,
-    winUserAccessDenyMask, pOwnerSid))
-  {
-    ReportErrorCode(L"AddAccessDeniedAce", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-  if (!AddAccessAllowedAce(pNewDACL, ACL_REVISION,
-    winUserAccessAllowMask, pOwnerSid))
-  {
-    ReportErrorCode(L"AddAccessAllowedAce", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-  if (winGroupAccessDenyMask &&
-    !AddAccessDeniedAce(pNewDACL, ACL_REVISION,
-    winGroupAccessDenyMask, pGroupSid))
-  {
-    ReportErrorCode(L"AddAccessDeniedAce", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-  if (!AddAccessAllowedAce(pNewDACL, ACL_REVISION,
-    winGroupAccessAllowMask, pGroupSid))
-  {
-    ReportErrorCode(L"AddAccessAllowedAce", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-  if (!AddAccessAllowedAce(pNewDACL, ACL_REVISION,
-    winOtherAccessAllowMask, pEveryoneSid))
-  {
-    ReportErrorCode(L"AddAccessAllowedAce", GetLastError());
-    goto GetWindowsDACLsEnd;
-  }
-
-  *ppNewDACL = pNewDACL;
-  ret = TRUE;
-
-GetWindowsDACLsEnd:
-  if (pEveryoneSid) FreeSid(pEveryoneSid);
-  if (!ret) LocalFree(pNewDACL);
-  
-  return ret;
 }
 
 void ChmodUsage(LPCWSTR program)
