@@ -57,6 +57,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-30. Fixed tests verifying web-services to work on JDK7. (Thomas Graves
     via vinodkv)
 
+    YARN-150. Fixes AppRejectedTransition does not unregister a rejected
+    app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
