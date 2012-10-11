@@ -58,6 +58,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-94. Modify DistributedShell to point to main-class by default, clean up
     the help message, and hard-code the AM class. (Hitesh Shah via vinodkv)
 
+    YARN-146. Add unit tests for computing fair share in the fair scheduler.
+    (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
