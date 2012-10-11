@@ -316,6 +316,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4020. TestRBWBlockInvalidation may time out. (eli)
 
+    HDFS-4021. Misleading error message when resources are low on the NameNode.
+    (Christopher Conner via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
