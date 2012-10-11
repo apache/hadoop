@@ -9,8 +9,7 @@ Release 2.0.3-alpha - Unreleased
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
     (Jaimin D Jetly and Jing Zhao via szetszwo)
 
-    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
-    configured timeout and are selected as the last location to read from.
+    HDFS-3912. Detect and avoid stale datanodes for writes.
     (Jing Zhao via suresh)
 
   IMPROVEMENTS
@@ -121,6 +120,10 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-2793. Add an admin command to trigger an edit log roll. (todd)
 
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via suresh)
+    
   IMPROVEMENTS
 
     HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak

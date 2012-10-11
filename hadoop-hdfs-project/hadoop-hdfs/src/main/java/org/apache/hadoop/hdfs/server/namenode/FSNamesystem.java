@@ -5524,4 +5524,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public void setNNResourceChecker(NameNodeResourceChecker nnResourceChecker) {
     this.nnResourceChecker = nnResourceChecker;
   }
+
+  @Override
+  public boolean isAvoidingStaleDataNodesForWrite() {
+    return this.blockManager.getDatanodeManager()
+        .isAvoidingStaleDataNodesForWrite();
+  }
 }

@@ -32,8 +32,16 @@ public interface FSClusterStats {
    * @return a count of the total number of block transfers and block
    *         writes that are currently occuring on the cluster.
    */
-
-  public int getTotalLoad() ;
+  public int getTotalLoad();
+  
+  /**
+   * Indicate whether or not the cluster is now avoiding 
+   * to use stale DataNodes for writing.
+   * 
+   * @return True if the cluster is currently avoiding using stale DataNodes 
+   *         for writing targets, and false otherwise.
+   */
+  public boolean isAvoidingStaleDataNodesForWrite();
 }
     
     
