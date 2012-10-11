@@ -988,12 +988,28 @@
   <name>dfs.namenode.check.stale.datanode</name>
   <value>false</value>
   <description>
-  	Indicate whether or not to check "stale" datanodes whose 
-  	heartbeat messages have not been received by the namenode 
-  	for more than a specified time interval. If this configuration 
-  	parameter is set as true, the stale datanodes will be moved to 
-  	the end of the target node list for reading. The writing will 
-  	also try to avoid stale nodes.
+    Indicate whether or not to check "stale" datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. If this configuration 
+    parameter is set as true, the system will keep track 
+    of the number of stale datanodes. The stale datanodes will be 
+    moved to the end of the node list returned for reading. See
+    dfs.namenode.avoid.write.stale.datanode for details on how this 
+    affects writes. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.write.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid writing to "stale" datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. If this configuration 
+    parameter and dfs.namenode.check.stale.datanode are both set as true, 
+    the writing will avoid using stale datanodes unless a high number 
+    of datanodes are marked as stale. See 
+    dfs.namenode.write.stale.datanode.ratio for details.
   </description>
 </property>
 
@@ -1001,10 +1017,24 @@
   <name>dfs.namenode.stale.datanode.interval</name>
   <value>30000</value>
   <description>
-  	Default time interval for marking a datanode as "stale", i.e., if 
-  	the namenode has not received heartbeat msg from a datanode for 
-  	more than this time interval, the datanode will be marked and treated 
-  	as "stale" by default.
+    Default time interval for marking a datanode as "stale", i.e., if 
+    the namenode has not received heartbeat msg from a datanode for 
+    more than this time interval, the datanode will be marked and treated 
+    as "stale" by default. The stale interval cannot be too small since 
+    otherwise this may cause too frequent change of stale states. 
+    We thus set a minimum stale interval value (the default value is 3 times 
+    of heartbeat interval) and guarantee that the stale interval cannot be less
+    than the minimum value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.write.stale.datanode.ratio</name>
+  <value>0.5f</value>
+  <description>
+    When the ratio of number stale datanodes to total datanodes marked
+    is greater than this ratio, stop avoiding writing to stale nodes so
+    as to prevent causing hotspots.
   </description>
 </property>
 

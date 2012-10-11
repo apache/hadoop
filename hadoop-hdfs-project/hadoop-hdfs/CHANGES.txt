@@ -13,10 +13,6 @@ Trunk (Unreleased)
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
     with 4-layer network topology.  (Junping Du via szetszwo)
 
-    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
-    configured timeout and are selected as the last location to read from.
-    (Jing Zhao via suresh)
-
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -238,6 +234,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
     (Jaimin D Jetly and Jing Zhao via szetszwo)
 
+    HDFS-3912. Detect and avoid stale datanodes for writes.
+    (Jing Zhao via suresh)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log
@@ -348,6 +347,11 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
 
     HDFS-2793. Add an admin command to trigger an edit log roll. (todd)
+
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via suresh)
+    
 
   IMPROVEMENTS
 
