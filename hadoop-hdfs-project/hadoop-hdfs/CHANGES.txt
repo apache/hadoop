@@ -13,6 +13,10 @@ Trunk (Unreleased)
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
     with 4-layer network topology.  (Junping Du via szetszwo)
 
+    HDFS-3077. Implement QuorumJournalManager, a distributed mechanism for
+    reliably storing HDFS edit logs. See dedicated section below for breakdown
+    of subtasks.
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -224,6 +228,108 @@ Trunk (Unreleased)
 
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
+
+  BREAKDOWN OF HDFS-3077 SUBTASKS
+
+    HDFS-3077. Quorum-based protocol for reading and writing edit logs.
+    (todd, Brandon Li, and Hari Mankude via todd)
+    
+    HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary (todd)
+    
+    HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs
+    (todd)
+    
+    HDFS-3693. JNStorage should read its storage info even before a writer
+    becomes active (todd)
+    
+    HDFS-3725. Fix QJM startup when individual JNs have gaps (todd)
+    
+    HDFS-3741. Exhaustive failure injection test for skipped RPCs (todd)
+    
+    HDFS-3773. TestNNWithQJM fails after HDFS-3741. (atm)
+    
+    HDFS-3793. Implement genericized format() in QJM (todd)
+    
+    HDFS-3795. QJM: validate journal dir at startup (todd)
+    
+    HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid
+    segment (todd)
+    
+    HDFS-3799. QJM: handle empty log segments during recovery (todd)
+    
+    HDFS-3797. QJM: add segment txid as a parameter to journal() RPC (todd)
+    
+    HDFS-3800. improvements to QJM fault testing (todd)
+    
+    HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed
+    setting of HTTP port. (todd and atm)
+    
+    HDFS-3826. QJM: Some trivial logging / exception text improvements. (todd
+    and atm)
+    
+    HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode"
+    (eli)
+    
+    HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)
+    
+    HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address (eli)
+    
+    HDFS-3863. Track last "committed" txid in QJM (todd)
+    
+    HDFS-3869. Expose non-file journal manager details in web UI (todd)
+    
+    HDFS-3884. Journal format() should reset cached values (todd)
+    
+    HDFS-3870. Add metrics to JournalNode (todd)
+    
+    HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)
+    
+    HDFS-3726. If a logger misses an RPC, don't retry that logger until next
+    segment (todd)
+    
+    HDFS-3893. QJM: Make QJM work with security enabled. (atm)
+    
+    HDFS-3897. QJM: TestBlockToken fails after HDFS-3893. (atm)
+    
+    HDFS-3898. QJM: enable TCP_NODELAY for IPC (todd)
+    
+    HDFS-3885. QJM: optimize log sync when JN is lagging behind (todd)
+    
+    HDFS-3900. QJM: avoid validating log segments on log rolls (todd)
+    
+    HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are
+    out-of-sync (todd)
+    
+    HDFS-3899. QJM: Add client-side metrics (todd)
+    
+    HDFS-3914. QJM: acceptRecovery should abort current segment (todd)
+    
+    HDFS-3915. QJM: Failover fails with auth error in secure cluster (todd)
+    
+    HDFS-3906. QJM: quorum timeout on failover with large log segment (todd)
+    
+    HDFS-3840. JournalNodes log JournalNotFormattedException backtrace error
+    before being formatted (todd)
+    
+    HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC
+    client caching (todd)
+    
+    HDFS-3926. QJM: Add user documentation for QJM. (atm)
+    
+    HDFS-3943. QJM: remove currently-unused md5sum field (todd)
+    
+    HDFS-3950. QJM: misc TODO cleanup, improved log messages, etc. (todd)
+    
+    HDFS-3955. QJM: Make acceptRecovery() atomic. (todd)
+    
+    HDFS-3956. QJM: purge temporary files when no longer within retention
+    period (todd)
+    
+    HDFS-4004. TestJournalNode#testJournal fails because of test case execution
+    order (Chao Shi via todd)
+    
+    HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
+    (Chao Shi via todd)
 
 Release 2.0.3-alpha - Unreleased 
 
