@@ -325,7 +325,16 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8756. Fix SEGV when libsnappy is in java.library.path but
     not LD_LIBRARY_PATH. (Colin Patrick McCabe via eli)
 
-    HADOOP-8881. FileBasedKeyStoresFactory initialization logging should be debug not info. (tucu)
+    HADOOP-8881. FileBasedKeyStoresFactory initialization logging should
+    be debug not info. (tucu)
+
+    HADOOP-8913. hadoop-metrics2.properties should give units in comment 
+    for sampling period. (Sandy Ryza via suresh)
+
+    HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with 
+    webhdfs filesystem and fsck to fail when security is on.
+    (Arpit Gupta via suresh)
+
 
 Release 2.0.2-alpha - 2012-09-07 
 
