@@ -24,6 +24,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-3824. TestHftpDelegationToken fails intermittently with JDK7 (Trevor
     Robinson via tgraves)
 
+    HDFS-3224. Bug in check for DN re-registration with different storage ID
+    (jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -17,12 +17,19 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.DFSClient;
 import junit.framework.TestCase;
+
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 
 /**
  * This class tests that a file need not be closed before its
@@ -68,6 +75,52 @@ public class TestDatanodeRegistration extends TestCase {
       int realIpcPort = cluster.getDataNodes().get(0).getIpcPort();
       // Now make sure the reported IPC port is the correct one.
       assertEquals(realIpcPort, report[0].getIpcPort());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  public void testChangeStorageID() throws Exception {
+    final String DN_IP_ADDR = "127.0.0.1";
+    final int DN_XFER_PORT = 12345;
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .build();
+      InetSocketAddress addr = new InetSocketAddress(
+          "localhost",
+          cluster.getNameNodePort());
+      DFSClient client = new DFSClient(addr, conf);
+      NamenodeProtocols rpcServer = cluster.getNameNodeRpc();
+
+      // register a datanode
+      String nodeName = DN_IP_ADDR + ":" + DN_XFER_PORT;
+      long nnCTime = cluster.getNameNodeRpc().versionRequest().getCTime();
+      StorageInfo mockStorageInfo = mock(StorageInfo.class);
+      doReturn(nnCTime).when(mockStorageInfo).getCTime();
+      doReturn(HdfsConstants.LAYOUT_VERSION).when(mockStorageInfo)
+          .getLayoutVersion();
+      doReturn("fake-storage-id").when(mockStorageInfo).getClusterID();
+      DatanodeRegistration dnReg = new DatanodeRegistration(nodeName);
+      dnReg.storageInfo = mockStorageInfo;
+      rpcServer.registerDatanode(dnReg);
+
+      DatanodeInfo[] report = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals("Expected a registered datanode", 1, report.length);
+
+      // register the same datanode again with a different storage ID
+      doReturn("changed-fake-storage-id").when(mockStorageInfo).getClusterID();
+      dnReg = new DatanodeRegistration(nodeName);
+      dnReg.storageInfo = mockStorageInfo;
+      rpcServer.registerDatanode(dnReg);
+
+      report = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals("Datanode with changed storage ID not recognized",
+          1, report.length);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
