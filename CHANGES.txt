@@ -243,6 +243,9 @@ Release 1.2.0 - unreleased
     webhdfs filesystem and fsck to fail when security is on.
     (Arpit Gupta via suresh)
 
+    MAPREDUCE-4451. fairscheduler fail to init job with kerberos authentication 
+    configured. (erik.fang via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
