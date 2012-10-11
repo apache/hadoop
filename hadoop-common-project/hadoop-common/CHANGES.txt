@@ -38,6 +38,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8894. GenericTestUtils.waitFor should dump thread stacks on timeout
     (todd)
 
+    HADOOP-8909. Hadoop Common Maven protoc calls must not depend on external
+    sh script. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
