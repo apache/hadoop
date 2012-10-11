@@ -33,17 +33,17 @@ public class TestBalancerWithEncryptedTransfer {
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testEncryptedBalancer0() throws Exception {
     new TestBalancer().testBalancer0Internal(conf);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testEncryptedBalancer1() throws Exception {
     new TestBalancer().testBalancer1Internal(conf);
   }
   
-  @Test
+  @Test(timeout=60000)
   public void testEncryptedBalancer2() throws Exception {
     new TestBalancer().testBalancer2Internal(conf);
   }

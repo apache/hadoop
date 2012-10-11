@@ -128,7 +128,8 @@ public class BaseContainerTokenSecretManager extends
   public byte[] createPassword(ContainerTokenIdentifier identifier) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating password for " + identifier.getContainerID()
-          + " to be run on NM " + identifier.getNmHostAddress());
+          + " for user " + identifier.getUser() + " to be run on NM "
+          + identifier.getNmHostAddress());
     }
     this.readLock.lock();
     try {
@@ -155,7 +156,8 @@ public class BaseContainerTokenSecretManager extends
       throws org.apache.hadoop.security.token.SecretManager.InvalidToken {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Retrieving password for " + identifier.getContainerID()
-          + " to be run on NM " + identifier.getNmHostAddress());
+          + " for user " + identifier.getUser() + " to be run on NM "
+          + identifier.getNmHostAddress());
     }
     return createPassword(identifier.getBytes(), masterKey.getSecretKey());
   }
@@ -173,11 +175,12 @@ public class BaseContainerTokenSecretManager extends
    * 
    * @param containerId
    * @param nodeId
+   * @param appSubmitter
    * @param capability
    * @return the container-token
    */
   public ContainerToken createContainerToken(ContainerId containerId,
-      NodeId nodeId, Resource capability) {
+      NodeId nodeId, String appSubmitter, Resource capability) {
     byte[] password;
     ContainerTokenIdentifier tokenIdentifier;
     long expiryTimeStamp =
@@ -188,8 +191,8 @@ public class BaseContainerTokenSecretManager extends
     try {
       tokenIdentifier =
           new ContainerTokenIdentifier(containerId, nodeId.toString(),
-            capability, expiryTimeStamp, this.currentMasterKey.getMasterKey()
-              .getKeyId());
+            appSubmitter, capability, expiryTimeStamp, this.currentMasterKey
+              .getMasterKey().getKeyId());
       password = this.createPassword(tokenIdentifier);
 
     } finally {

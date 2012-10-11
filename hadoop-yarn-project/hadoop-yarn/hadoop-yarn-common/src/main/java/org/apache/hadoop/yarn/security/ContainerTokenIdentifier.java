@@ -48,14 +48,16 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   private ContainerId containerId;
   private String nmHostAddr;
+  private String appSubmitter;
   private Resource resource;
   private long expiryTimeStamp;
   private int masterKeyId;
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
-      Resource r, long expiryTimeStamp, int masterKeyId) {
+      String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId) {
     this.containerId = containerID;
     this.nmHostAddr = hostName;
+    this.appSubmitter = appSubmitter;
     this.resource = r;
     this.expiryTimeStamp = expiryTimeStamp;
     this.masterKeyId = masterKeyId;
@@ -69,6 +71,10 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   public ContainerId getContainerID() {
     return this.containerId;
+  }
+
+  public String getApplicationSubmitter() {
+    return this.appSubmitter;
   }
 
   public String getNmHostAddress() {
@@ -98,6 +104,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeInt(applicationAttemptId.getAttemptId());
     out.writeInt(this.containerId.getId());
     out.writeUTF(this.nmHostAddr);
+    out.writeUTF(this.appSubmitter);
     out.writeInt(this.resource.getMemory());
     out.writeLong(this.expiryTimeStamp);
     out.writeInt(this.masterKeyId);
@@ -112,6 +119,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     this.containerId = BuilderUtils.newContainerId(applicationAttemptId, in
         .readInt());
     this.nmHostAddr = in.readUTF();
+    this.appSubmitter = in.readUTF();
     this.resource = BuilderUtils.newResource(in.readInt());
     this.expiryTimeStamp = in.readLong();
     this.masterKeyId = in.readInt();

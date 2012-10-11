@@ -7,6 +7,8 @@ Trunk (Unreleased)
     HADOOP-8124. Remove the deprecated FSDataOutputStream constructor,
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
+    HADOOP-8886. Remove KFS support. (eli)
+
   NEW FEATURES
     
     HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
@@ -116,6 +118,9 @@ Trunk (Unreleased)
 
     HADOOP-8840. Fix the test-patch colorizer to cover all sorts of +1 lines.
     (Harsh J via bobby)
+
+    HADOOP-8864. Addendum to HADOOP-8840: Add a coloring case for +0 results
+    too. (harsh)
 
   BUG FIXES
 
@@ -244,6 +249,16 @@ Trunk (Unreleased)
     required context item is not configured
     (Brahma Reddy Battula via harsh)
 
+    HADOOP-3957. Change MutableQuantiles to use a shared thread for rolling
+    over metrics. (Andrew Wang via todd)
+
+    HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout
+    (default behavior in some bash setups (esp. Ubuntu))
+    (Chiristopher Berner and Andy Isaacson via harsh)
+
+    HADOOP-8839. test-patch's -1 on @author tag presence doesn't cause
+    a -1 to the overall result (harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -272,7 +287,23 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
 
+    HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
+    tests. (Ivan A. Veselovsky via atm)
+
+    HADOOP-8783. Improve RPC.Server's digest auth (daryn)
+
+    HADOOP-8889. Upgrade to Surefire 2.12.3 (todd)
+
+    HADOOP-8804. Improve Web UIs when the wildcard address is used.
+    (Senthil Kumar via eli)
+
+    HADOOP-8894. GenericTestUtils.waitFor should dump thread stacks on timeout
+    (todd)
+
   OPTIMIZATIONS
+
+    HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
+    via atm)
 
   BUG FIXES
 
@@ -288,6 +319,14 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8791. Fix rm command documentation to indicte it deletes
     files and not directories. (Jing Zhao via suresh)
 
+    HADOOP-8616. ViewFS configuration requires a trailing slash. (Sandy Ryza
+    via atm)
+
+    HADOOP-8756. Fix SEGV when libsnappy is in java.library.path but
+    not LD_LIBRARY_PATH. (Colin Patrick McCabe via eli)
+
+    HADOOP-8881. FileBasedKeyStoresFactory initialization logging should be debug not info. (tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -298,6 +337,8 @@ Release 2.0.2-alpha - 2012-09-07
     HADOOP-8689. Make trash a server side configuration option. (eli)
 
     HADOOP-8710. Remove ability for users to easily run the trash emptire. (eli)
+    
+    HADOOP-8794. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
 
   NEW FEATURES
  
@@ -543,8 +584,6 @@ Release 2.0.2-alpha - 2012-09-07
     HADOOP-8031. Configuration class fails to find embedded .jar resources; 
     should use URL.openStream() (genman via tucu)
 
-    HADOOP-8738. junit JAR is showing up in the distro (tucu)
-
     HADOOP-8737. cmake: always use JAVA_HOME to find libjvm.so, jni.h, jni_md.h.
     (Colin Patrick McCabe via eli)
 
@@ -573,6 +612,8 @@ Release 2.0.2-alpha - 2012-09-07
     which causes job never to complete. (Sandy Ryza via atm)
 
     HADOOP-8781. hadoop-config.sh should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH. (tucu)
+
+    HADOOP-8855. SSL-based image transfer does not work when Kerberos is disabled. (todd via eli)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -976,6 +1017,18 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -990,7 +1043,10 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
-Release 0.23.3 - UNRELEASED
+    HADOOP-8843. Old trash directories are never deleted on upgrade
+    from 1.x (jlowe)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 

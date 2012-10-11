@@ -38,3 +38,15 @@ else
   echo "Hadoop common not found."
   exit
 fi
+
+# Only set locally to use in HADOOP_OPTS. No need to export.
+# The following defaults are useful when somebody directly invokes bin/mapred.
+HADOOP_MAPRED_LOG_DIR=${HADOOP_MAPRED_LOG_DIR:-${HADOOP_MAPRED_HOME}/logs}
+HADOOP_MAPRED_LOGFILE=${HADOOP_MAPRED_LOGFILE:-hadoop.log}
+HADOOP_MAPRED_ROOT_LOGGER=${HADOOP_MAPRED_ROOT_LOGGER:-INFO,console}
+
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_MAPRED_LOG_DIR"
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_MAPRED_LOGFILE"
+export HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_MAPRED_ROOT_LOGGER}"
+
+

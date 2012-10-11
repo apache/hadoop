@@ -166,7 +166,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     assertSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
-      env_str.indexOf("$PWD:job.jar/:job.jar/classes/:job.jar/lib/*:$PWD/*"), 0);
+      env_str.indexOf("$PWD:job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*"), 0);
   }
 
   @Test public void testSetClasspathWithNoUserPrecendence() {
@@ -180,7 +180,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     int index = 
-         env_str.indexOf("job.jar/:job.jar/classes/:job.jar/lib/*:$PWD/*");
+         env_str.indexOf("job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*");
     assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not"
             + " in the classpath!", index, -1);
     assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",

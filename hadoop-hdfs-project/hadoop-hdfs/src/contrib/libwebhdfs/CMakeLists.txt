@@ -16,28 +16,21 @@
 # limitations under the License.
 #
 
-find_package(CURL)
-if (CURL_FOUND)
-    include_directories(${CURL_INCLUDE_DIRS})
-else (CURL_FOUND)
-    MESSAGE(STATUS "Failed to find CURL library.")
-endif (CURL_FOUND)
+find_package(CURL REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 "${CMAKE_SOURCE_DIR}/contrib/libwebhdfs/resources/")
-MESSAGE("CMAKE_MODULE_PATH IS: " ${CMAKE_MODULE_PATH})
 
-find_package(Jansson)
+find_package(Jansson REQUIRED)
 include_directories(${JANSSON_INCLUDE_DIR})
 
 add_dual_library(webhdfs
-    src/exception.c
     src/hdfs_web.c
-    src/hdfs_jni.c
-    src/jni_helper.c
     src/hdfs_http_client.c
     src/hdfs_http_query.c
     src/hdfs_json_parser.c
+    ../../main/native/libhdfs/exception.c
+    ../../main/native/libhdfs/jni_helper.c
 )
 target_link_dual_libraries(webhdfs
     ${JAVA_JVM_LIBRARY}
@@ -55,10 +48,6 @@ add_executable(test_libwebhdfs_ops
 )
 target_link_libraries(test_libwebhdfs_ops
     webhdfs
-    ${CURL_LIBRARY}
-    ${JAVA_JVM_LIBRARY}
-    ${JANSSON_LIBRARY}
-    pthread
 )
 
 add_executable(test_libwebhdfs_read
@@ -66,10 +55,6 @@ add_executable(test_libwebhdfs_read
 )
 target_link_libraries(test_libwebhdfs_read
     webhdfs
-    ${CURL_LIBRARY}
-    ${JAVA_JVM_LIBRARY}
-    ${JANSSON_LIBRARY}
-    pthread
 )
 
 add_executable(test_libwebhdfs_write
@@ -77,10 +62,6 @@ add_executable(test_libwebhdfs_write
 )
 target_link_libraries(test_libwebhdfs_write
     webhdfs
-    ${CURL_LIBRARY}
-    ${JAVA_JVM_LIBRARY}
-    ${JANSSON_LIBRARY}
-    pthread
 )
 
 add_executable(test_libwebhdfs_threaded
@@ -88,8 +69,4 @@ add_executable(test_libwebhdfs_threaded
 )
 target_link_libraries(test_libwebhdfs_threaded
     webhdfs
-    ${CURL_LIBRARY}
-    ${JAVA_JVM_LIBRARY}
-    ${JANSSON_LIBRARY}
-    pthread
 )

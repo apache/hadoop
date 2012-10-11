@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -49,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service;
 import org.junit.Test;
@@ -140,7 +140,7 @@ public class TestAppManager{
     }
 
     public TestRMAppManager(RMContext context,
-        ClientToAMSecretManager clientToAMSecretManager,
+        ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
         YarnScheduler scheduler, ApplicationMasterService masterService,
         ApplicationACLsManager applicationACLsManager, Configuration conf) {
       super(context, clientToAMSecretManager, scheduler, masterService,
@@ -342,7 +342,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(1);
@@ -390,7 +390,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(10);
@@ -438,7 +438,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(0);

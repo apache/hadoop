@@ -67,6 +67,25 @@ static const struct ExceptionInfo gExceptionInfo[] = {
     
 };
 
+void getExceptionInfo(const char *excName, int noPrintFlags,
+                      int *excErrno, int *shouldPrint)
+{
+    int i;
+
+    for (i = 0; i < EXCEPTION_INFO_LEN; i++) {
+        if (strstr(gExceptionInfo[i].name, excName)) {
+            break;
+        }
+    }
+    if (i < EXCEPTION_INFO_LEN) {
+        *shouldPrint = !(gExceptionInfo[i].noPrintFlag & noPrintFlags);
+        *excErrno = gExceptionInfo[i].excErrno;
+    } else {
+        *shouldPrint = 1;
+        *excErrno = EINTERNAL;
+    }
+}
+
 int printExceptionAndFreeV(JNIEnv *env, jthrowable exc, int noPrintFlags,
         const char *fmt, va_list ap)
 {

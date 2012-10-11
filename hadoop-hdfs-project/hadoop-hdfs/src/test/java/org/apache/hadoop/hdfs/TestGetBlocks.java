@@ -110,9 +110,7 @@ public class TestGetBlocks {
       // do the writing but do not close the FSDataOutputStream
       // in order to mimic the ongoing writing
       final Path fileName = new Path("/file1");
-      stm = fileSys.create(
-          fileName,
-          true,
+      stm = fileSys.create(fileName, true,
           fileSys.getConf().getInt(
               CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
           (short) 3, blockSize);
@@ -180,29 +178,15 @@ public class TestGetBlocks {
 
     final short REPLICATION_FACTOR = (short) 2;
     final int DEFAULT_BLOCK_SIZE = 1024;
-    final Random r = new Random();
 
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
         REPLICATION_FACTOR).build();
     try {
       cluster.waitActive();
-
-      // create a file with two blocks
-      FileSystem fs = cluster.getFileSystem();
-      FSDataOutputStream out = fs.create(new Path("/tmp.txt"),
-          REPLICATION_FACTOR);
-      byte[] data = new byte[1024];
       long fileLen = 2 * DEFAULT_BLOCK_SIZE;
-      long bytesToWrite = fileLen;
-      while (bytesToWrite > 0) {
-        r.nextBytes(data);
-        int bytesToWriteNext = (1024 < bytesToWrite) ? 1024
-            : (int) bytesToWrite;
-        out.write(data, 0, bytesToWriteNext);
-        bytesToWrite -= bytesToWriteNext;
-      }
-      out.close();
+      DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/tmp.txt"),
+          fileLen, REPLICATION_FACTOR, 0L);
 
       // get blocks & data nodes
       List<LocatedBlock> locatedBlocks;

@@ -137,6 +137,16 @@ Trunk (Unreleased)
     HDFS-3880. Use Builder to build RPC server in HDFS.
     (Brandon Li vias suresh)
 
+    HDFS-2127. Add a test that ensure AccessControlExceptions contain
+    a full path. (Stephen Chu via eli)
+
+    HDFS-3995. Use DFSTestUtil.createFile() for file creation and 
+    writing in test cases. (Jing Zhao via suresh)
+
+    HDFS-3735. NameNode WebUI should allow sorting live datanode list by fields
+    Block Pool Used, Block Pool Used(%) and Failed Volumes.
+    (Brahma Reddy Battula via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -235,6 +245,31 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3939. NN RPC address cleanup. (eli)
 
+    HDFS-3373. Change DFSClient input stream socket cache to global static and add
+    a thread to cleanup expired cache entries. (John George via szetszwo)
+
+    HDFS-3896. Add descriptions for dfs.namenode.rpc-address and
+    dfs.namenode.servicerpc-address to hdfs-default.xml. (Jeff Lord via atm)
+
+    HDFS-3996. Add debug log removed in HDFS-3873 back. (eli)
+
+    HDFS-3916. libwebhdfs (C client) code cleanups.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3813. Log error message if security and WebHDFS are enabled but
+    principal/keytab are not configured. (Stephen Chu via atm)
+
+    HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
+    config. (Stephen Fritz via atm)
+
+    HDFS-3682. MiniDFSCluster#init should provide more info when it fails.
+    (todd via eli)
+
+    HDFS-4008. TestBalancerWithEncryptedTransfer needs a timeout. (eli)
+
+    HDFS-4007. Rehabilitate bit-rotted unit tests under
+    hadoop-hdfs-project/hadoop-hdfs/src/test/unit/ (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -258,6 +293,31 @@ Release 2.0.3-alpha - Unreleased
     (Andy Isaacson via eli)
 
     HDFS-3964. Make NN log of fs.defaultFS debug rather than info. (eli)
+
+    HDFS-3992. Method org.apache.hadoop.hdfs.TestHftpFileSystem.tearDown()
+    sometimes throws NPEs. (Ivan A. Veselovsky via atm)
+
+    HDFS-3753. Tests don't run with native libraries.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-4000. TestParallelLocalRead fails with "input ByteBuffers
+    must be direct buffers". (Colin Patrick McCabe via eli)
+
+    HDFS-3999. HttpFS OPEN operation expects len parameter, it should be length. (tucu)
+
+    HDFS-4006. TestCheckpoint#testSecondaryHasVeryOutOfDateImage
+    occasionally fails due to unexpected exit. (todd via eli)
+
+    HDFS-4003. test-patch should build the common native libs before
+    running hdfs tests. (Colin Patrick McCabe via eli)
+
+    HDFS-4018. testMiniDFSClusterWithMultipleNN is missing some
+    cluster cleanup. (eli)
+
+    HDFS-4020. TestRBWBlockInvalidation may time out. (eli)
+
+    HDFS-4021. Misleading error message when resources are low on the NameNode.
+    (Christopher Conner via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -792,6 +852,8 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3938. remove current limitations from HttpFS docs. (tucu)
 
     HDFS-3944. Httpfs resolveAuthority() is not resolving host correctly. (tucu)
+
+    HDFS-3972. Trash emptier fails in secure HA cluster. (todd via eli)
  
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -1628,6 +1690,27 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
+    Robinson via tgraves)
+
+    HDFS-3824. TestHftpDelegationToken fails intermittently with JDK7 (Trevor
+    Robinson via tgraves)
+
+    HDFS-3224. Bug in check for DN re-registration with different storage ID
+    (jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1640,7 +1723,10 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
-Release 0.23.3 - UNRELEASED
+    HDFS-3831. Failure to renew tokens due to test-sources left in classpath
+    (jlowe via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 

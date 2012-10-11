@@ -15,14 +15,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include "exception.h"
+#include "hdfs.h" /* for hdfsFileInfo */
+#include "hdfs_json_parser.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <jansson.h>
-#include "hdfs_json_parser.h"
-#include "exception.h"
 
-hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat, int *numEntries, const char *operation); //Forward Declaration
+/**
+ * Exception information after calling JSON operations
+ */
+struct jsonException {
+  const char *exception;
+  const char *javaClassName;
+  const char *message;
+};
+
+static hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat,
+                           int *numEntries, const char *operation);
+
+static void dotsToSlashes(char *str)
+{
+    for (; *str != '\0'; str++) {
+        if (*str == '.')
+            *str = '/';
+    }
+}
+
+int printJsonExceptionV(struct jsonException *exc, int noPrintFlags,
+                        const char *fmt, va_list ap)
+{
+    char *javaClassName = NULL;
+    int excErrno = EINTERNAL, shouldPrint = 0;
+    if (!exc) {
+        fprintf(stderr, "printJsonExceptionV: the jsonException is NULL\n");
+        return EINTERNAL;
+    }
+    javaClassName = strdup(exc->javaClassName);
+    if (!javaClassName) {
+        fprintf(stderr, "printJsonExceptionV: internal out of memory error\n");
+        return EINTERNAL;
+    }
+    dotsToSlashes(javaClassName);
+    getExceptionInfo(javaClassName, noPrintFlags, &excErrno, &shouldPrint);
+    free(javaClassName);
+    
+    if (shouldPrint) {
+        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, " error:\n");
+        fprintf(stderr, "Exception: %s\nJavaClassName: %s\nMessage: %s\n",
+                exc->exception, exc->javaClassName, exc->message);
+    }
+    
+    free(exc);
+    return excErrno;
+}
+
+int printJsonException(struct jsonException *exc, int noPrintFlags,
+                       const char *fmt, ...)
+{
+    va_list ap;
+    int ret;
+    
+    va_start(ap, fmt);
+    ret = printJsonExceptionV(exc, noPrintFlags, fmt, ap);
+    va_end(ap);
+    return ret;
+}
 
 static hdfsFileInfo *json_parse_array(json_t *jobj, char *key, hdfsFileInfo *fileStat, int *numEntries, const char *operation) {
     int arraylen = json_array_size(jobj);                      //Getting the length of the array
@@ -88,12 +150,12 @@ int parseDELETE(char *response) {
     return (parseBoolean(response));
 }
 
-hdfs_exception_msg *parseJsonException(json_t *jobj) {
+struct jsonException *parseJsonException(json_t *jobj) {
     const char *key;
     json_t *value;
-    hdfs_exception_msg *exception = NULL;
+    struct jsonException *exception = NULL;
     
-    exception = (hdfs_exception_msg *) calloc(1, sizeof(hdfs_exception_msg));
+    exception = calloc(1, sizeof(*exception));
     if (!exception) {
         return NULL;
     }
@@ -117,7 +179,7 @@ hdfs_exception_msg *parseJsonException(json_t *jobj) {
     return exception;
 }
 
-hdfs_exception_msg *parseException(const char *content) {
+struct jsonException *parseException(const char *content) {
     if (!content) {
         return NULL;
     }
@@ -145,7 +207,9 @@ hdfs_exception_msg *parseException(const char *content) {
     return NULL;
 }
 
-hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat, int *numEntries, const char *operation) {
+static hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat,
+                                  int *numEntries, const char *operation)
+{
     const char *tempstr;
     const char *key;
     json_t *value;
@@ -196,9 +260,9 @@ hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat, int *numEntries
                     fileStat = parseJsonGFS(value, &fileStat[0], numEntries, operation);
                 } else if (!strcmp(key,"RemoteException")) {
                     //Besides returning NULL, we also need to print the exception information
-                    hdfs_exception_msg *exception = parseJsonException(value);
+                    struct jsonException *exception = parseJsonException(value);
                     if (exception) {
-                        errno = printExceptionWeb(exception, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
+                        errno = printJsonException(exception, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
                     }
                     
                     if(fileStat != NULL) {
@@ -234,9 +298,9 @@ int checkHeader(char *header, const char *content, const char *operation) {
         return 0;
     }
     if(!(strstr(header, responseCode)) || !(header = strstr(header, "Content-Length"))) {
-        hdfs_exception_msg *exc = parseException(content);
+        struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printExceptionWeb(exc, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
+            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
         }
         return 0;
     }
@@ -259,14 +323,14 @@ int parseOPEN(const char *header, const char *content) {
         return -1;
     }
     if(!(strstr(header,responseCode1) && strstr(header, responseCode2))) {
-        hdfs_exception_msg *exc = parseException(content);
+        struct jsonException *exc = parseException(content);
         if (exc) {
             //if the exception is an IOException and it is because the offset is out of the range
             //do not print out the exception
             if (!strcasecmp(exc->exception, "IOException") && strstr(exc->message, "out of the range")) {
                 return 0;
             }
-            errno = printExceptionWeb(exc, PRINT_EXC_ALL, "Calling WEBHDFS (OPEN)");
+            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (OPEN)");
         }
         return -1;
     }
@@ -297,9 +361,9 @@ int checkIfRedirect(const char *const headerstr, const char *content, const char
     }
     if(!(tempHeader = strstr(headerstr,responseCode))) {
         //process possible exception information
-        hdfs_exception_msg *exc = parseException(content);
+        struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printExceptionWeb(exc, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
+            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
         }
         return 0;
     }
@@ -350,9 +414,9 @@ int parseDnWRITE(const char *header, const char *content) {
         return 0;
     }
     if(!(strstr(header,responseCode))) {
-        hdfs_exception_msg *exc = parseException(content);
+        struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printExceptionWeb(exc, PRINT_EXC_ALL, "Calling WEBHDFS (WRITE(DataNode))");
+            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (WRITE(DataNode))");
         }
         return 0;
     }
@@ -365,9 +429,9 @@ int parseDnAPPEND(const char *header, const char *content) {
         return 0;
     }
     if(!(strstr(header, responseCode))) {
-        hdfs_exception_msg *exc = parseException(content);
+        struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printExceptionWeb(exc, PRINT_EXC_ALL, "Calling WEBHDFS (APPEND(DataNode))");
+            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (APPEND(DataNode))");
         }
         return 0;
     }

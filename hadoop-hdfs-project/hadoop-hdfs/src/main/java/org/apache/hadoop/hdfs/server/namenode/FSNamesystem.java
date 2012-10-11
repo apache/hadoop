@@ -4059,7 +4059,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         return "Safe mode is OFF.";
       String leaveMsg = "";
       if (areResourcesLow()) {
-        leaveMsg = "Resources are low on NN. Safe mode must be turned off manually";
+        leaveMsg = "Resources are low on NN. " 
+        	+ "Please add or free up more resources then turn off safe mode manually.  "
+        	+ "NOTE:  If you turn off safe mode before adding resources, "
+        	+ "the NN will immediately return to safe mode.";
       } else {
         leaveMsg = "Safe mode will be turned off automatically";
       }

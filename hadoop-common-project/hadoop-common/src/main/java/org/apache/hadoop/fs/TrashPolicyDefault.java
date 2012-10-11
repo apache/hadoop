@@ -61,6 +61,9 @@ public class TrashPolicyDefault extends TrashPolicy {
     new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE);
 
   private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmmss");
+  /** Format of checkpoint directories used prior to Hadoop 0.23. */
+  private static final DateFormat OLD_CHECKPOINT =
+      new SimpleDateFormat("yyMMddHHmm");
   private static final int MSECS_PER_MINUTE = 60*1000;
 
   private Path current;
@@ -69,8 +72,9 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   public TrashPolicyDefault() { }
 
-  private TrashPolicyDefault(Path home, Configuration conf) throws IOException {
-    initialize(conf, home.getFileSystem(conf), home);
+  private TrashPolicyDefault(FileSystem fs, Path home, Configuration conf)
+      throws IOException {
+    initialize(conf, fs, home);
   }
 
   @Override
@@ -202,9 +206,7 @@ public class TrashPolicyDefault extends TrashPolicy {
 
       long time;
       try {
-        synchronized (CHECKPOINT) {
-          time = CHECKPOINT.parse(name).getTime();
-        }
+        time = getTimeFromCheckpoint(name);
       } catch (ParseException e) {
         LOG.warn("Unexpected item in trash: "+dir+". Ignoring.");
         continue;
@@ -278,7 +280,8 @@ public class TrashPolicyDefault extends TrashPolicy {
               if (!home.isDirectory())
                 continue;
               try {
-                TrashPolicyDefault trash = new TrashPolicyDefault(home.getPath(), conf);
+                TrashPolicyDefault trash = new TrashPolicyDefault(
+                    fs, home.getPath(), conf);
                 trash.deleteCheckpoint();
                 trash.createCheckpoint();
               } catch (IOException e) {
@@ -303,5 +306,23 @@ public class TrashPolicyDefault extends TrashPolicy {
     private long floor(long time, long interval) {
       return (time / interval) * interval;
     }
+  }
+
+  private long getTimeFromCheckpoint(String name) throws ParseException {
+    long time;
+
+    try {
+      synchronized (CHECKPOINT) {
+        time = CHECKPOINT.parse(name).getTime();
+      }
+    } catch (ParseException pe) {
+      // Check for old-style checkpoint directories left over
+      // after an upgrade from Hadoop 1.x
+      synchronized (OLD_CHECKPOINT) {
+        time = OLD_CHECKPOINT.parse(name).getTime();
+      }
+    }
+
+    return time;
   }
 }

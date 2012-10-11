@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,7 +43,7 @@ public class TestDistributedShell {
       LogFactory.getLog(TestDistributedShell.class);
 
   protected static MiniYARNCluster yarnCluster = null;
-  protected static Configuration conf = new Configuration();
+  protected static Configuration conf = new YarnConfiguration();
 
   protected static String APPMASTER_JAR = JarFinder.getJar(ApplicationMaster.class);
 
@@ -49,6 +51,8 @@ public class TestDistributedShell {
   public static void setup() throws InterruptedException, IOException {
     LOG.info("Starting up YARN cluster");
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+        FifoScheduler.class, ResourceScheduler.class);
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(TestDistributedShell.class.getName(),
           1, 1, 1);
@@ -106,6 +110,22 @@ public class TestDistributedShell {
 
   }
 
+  @Test
+  public void testDSShellWithNoArgs() throws Exception {
+
+    String[] args = {};
+
+    LOG.info("Initializing DS Client with no args");
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    boolean exceptionThrown = false;
+    try {
+      boolean initSuccess = client.init(args);
+    }
+    catch (IllegalArgumentException e) {
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
+  }
 
 }
 

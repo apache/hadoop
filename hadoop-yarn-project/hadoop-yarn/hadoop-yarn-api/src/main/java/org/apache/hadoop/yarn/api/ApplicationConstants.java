@@ -34,7 +34,7 @@ public interface ApplicationConstants {
 
   // TODO: They say tokens via env isn't good.
   public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
-    "AppClientTokenEnv";
+    "AppClientSecretEnv";
   
   /**
    * The environment variable for CONTAINER_ID. Set in AppMaster environment
@@ -169,9 +169,9 @@ public interface ApplicationConstants {
     MALLOC_ARENA_MAX("MALLOC_ARENA_MAX"),
     
     /**
-     * $YARN_HOME
+     * $HADOOP_YARN_HOME
      */
-    YARN_HOME("YARN_HOME");
+    HADOOP_YARN_HOME("HADOOP_YARN_HOME");
 
     private final String variable;
     private Environment(String variable) {

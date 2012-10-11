@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
@@ -58,12 +59,12 @@ import org.apache.log4j.Logger;
 public class MockRM extends ResourceManager {
 
   public MockRM() {
-    this(new Configuration());
+    this(new YarnConfiguration());
   }
 
   public MockRM(Configuration conf) {
-    super(StoreFactory.getStore(conf));
-    init(conf);
+    super(StoreFactory.getStore(conf));    
+    init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
   }

@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -91,6 +92,58 @@ public class TestDatanodeRegistration {
     }
   }
   
+  @Test
+  public void testChangeStorageID() throws Exception {
+    final String DN_IP_ADDR = "127.0.0.1";
+    final String DN_HOSTNAME = "localhost";
+    final int DN_XFER_PORT = 12345;
+    final int DN_INFO_PORT = 12346;
+    final int DN_IPC_PORT = 12347;
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(0)
+          .build();
+      InetSocketAddress addr = new InetSocketAddress(
+        "localhost",
+        cluster.getNameNodePort());
+      DFSClient client = new DFSClient(addr, conf);
+      NamenodeProtocols rpcServer = cluster.getNameNodeRpc();
+
+      // register a datanode
+      DatanodeID dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
+          "fake-storage-id", DN_XFER_PORT, DN_INFO_PORT, DN_IPC_PORT);
+      long nnCTime = cluster.getNamesystem().getFSImage().getStorage()
+          .getCTime();
+      StorageInfo mockStorageInfo = mock(StorageInfo.class);
+      doReturn(nnCTime).when(mockStorageInfo).getCTime();
+      doReturn(HdfsConstants.LAYOUT_VERSION).when(mockStorageInfo)
+          .getLayoutVersion();
+      DatanodeRegistration dnReg = new DatanodeRegistration(dnId,
+          mockStorageInfo, null, VersionInfo.getVersion());
+      rpcServer.registerDatanode(dnReg);
+
+      DatanodeInfo[] report = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals("Expected a registered datanode", 1, report.length);
+
+      // register the same datanode again with a different storage ID
+      dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
+          "changed-fake-storage-id", DN_XFER_PORT, DN_INFO_PORT, DN_IPC_PORT);
+      dnReg = new DatanodeRegistration(dnId,
+          mockStorageInfo, null, VersionInfo.getVersion());
+      rpcServer.registerDatanode(dnReg);
+
+      report = client.datanodeReport(DatanodeReportType.ALL);
+      assertEquals("Datanode with changed storage ID not recognized",
+          1, report.length);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test
   public void testRegistrationWithDifferentSoftwareVersions() throws Exception {
     Configuration conf = new HdfsConfiguration();

@@ -1,4 +1,4 @@
-Hadoop MapReduce Change Log
+Hadoop YARN Change Log
 
 Trunk - Unreleased 
 
@@ -40,13 +40,48 @@ Release 2.0.3-alpha - Unreleased
     YARN-53. Added the missing getGroups API to ResourceManager. (Bo Wang via
     vinodkv)
 
+    YARN-116. Add the ability to change the RM include/exclude file without
+    a restart. (xieguiming and Harsh J via sseth)
+
+    YARN-23. FairScheduler: FSQueueSchedulable#updateDemand() - potential 
+    redundant aggregation. (kkambatl via tucu)
+
+    YARN-127. Move RMAdmin tool to its correct location - the client module.
+    (vinodkv)
+
+    YARN-40. Provided support for missing YARN commands (Devaraj K and Vinod
+    Kumar Vavilapalli via vinodkv)
+
+    YARN-33. Change LocalDirsHandlerService to validate the configured local and
+    log dirs. (Mayank Bansal via sseth)
+
+    YARN-94. Modify DistributedShell to point to main-class by default, clean up
+    the help message, and hard-code the AM class. (Hitesh Shah via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
+    
+    YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
+    (Ahmed Radwan via sseth)
+
+    YARN-102. Move the apache header to the top of the file in MemStore.java.
+    (Devaraj K via sseth)
+    
+    YARN-134. ClientToAMSecretManager creates keys without checking for
+    validity of the appID. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-30. Fixed tests verifying web-services to work on JDK7. (Thomas Graves
+    via vinodkv)
+
+    YARN-150. Fixes AppRejectedTransition does not unregister a rejected
+    app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
 
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
+
+    YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
 
   NEW FEATURES
 
@@ -61,6 +96,9 @@ Release 2.0.2-alpha - 2012-09-07
 
     YARN-80. Add support for delaying rack-local containers in
     CapacityScheduler. (acmurthy) 
+
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
 
   OPTIMAZATIONS
 
@@ -89,6 +127,21 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
     via atm)
 
+    YARN-138. Ensure default values for minimum/maximum container sizes is
+    sane. (harsh & sseth via acmurthy)
+
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -109,7 +162,10 @@ Release 0.23.4 - UNRELEASED
     YARN-88. DefaultContainerExecutor can fail to set proper permissions.
     (Jason Lowe via sseth)
 
-Release 0.23.3 - Unreleased 
+    YARN-106. Nodemanager needs to set permissions of local directories (jlowe
+    via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 

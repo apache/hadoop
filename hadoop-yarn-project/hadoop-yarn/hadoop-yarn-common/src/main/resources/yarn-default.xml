@@ -185,6 +185,7 @@
   <property>
     <description>The class to use as the resource scheduler.</description>
     <name>yarn.resourcemanager.scheduler.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
   </property>
 
   <property>
@@ -192,7 +193,7 @@
     in MBs. Memory requests lower than this won't take effect,
     and the specified value will get allocated at minimum.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
-    <value>128</value>
+    <value>1024</value>
   </property>
 
   <property>
@@ -200,7 +201,7 @@
     in MBs. Memory requests higher than this won't take effect,
     and will get capped to this value.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
-    <value>10240</value>
+    <value>8192</value>
   </property>
 
   <property>
@@ -266,7 +267,7 @@
   <property>
     <description>Environment variables that containers may override rather than use NodeManager's default.</description>
     <name>yarn.nodemanager.env-whitelist</name>
-    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,YARN_HOME</value>
+    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,HADOOP_YARN_HOME</value>
   </property>
 
   <property>
@@ -561,7 +562,7 @@
     <description>CLASSPATH for YARN applications. A comma-separated list
     of CLASSPATH entries</description>
      <name>yarn.application.classpath</name>
-     <value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$YARN_HOME/share/hadoop/yarn/*,$YARN_HOME/share/hadoop/yarn/lib/*</value>
+     <value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*</value>
   </property>
 
 </configuration>

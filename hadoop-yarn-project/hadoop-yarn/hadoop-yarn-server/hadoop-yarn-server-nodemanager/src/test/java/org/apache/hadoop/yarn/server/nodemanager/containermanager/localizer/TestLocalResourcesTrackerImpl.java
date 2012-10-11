@@ -230,7 +230,7 @@ public class TestLocalResourcesTrackerImpl {
       long ts, LocalResourceVisibility vis) {
     final LocalResourceRequest req =
         new LocalResourceRequest(new Path("file:///tmp/" + user + "/rsrc" + i),
-            ts + i * 2000, LocalResourceType.FILE, vis);
+            ts + i * 2000, LocalResourceType.FILE, vis, null);
     return req;
   }
 

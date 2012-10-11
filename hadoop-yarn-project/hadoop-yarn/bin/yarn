@@ -41,13 +41,13 @@
 #                              more than one command (fs, dfs, fsck, 
 #                              dfsadmin etc)  
 #
-#   YARN_CONF_DIR  Alternate conf dir. Default is ${YARN_HOME}/conf.
+#   YARN_CONF_DIR  Alternate conf dir. Default is ${HADOOP_YARN_HOME}/conf.
 #
 #   YARN_ROOT_LOGGER The root appender. Default is INFO,console
 #
 
 bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin" > /dev/null; pwd`
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
@@ -67,6 +67,8 @@ if [ $# = 0 ]; then
   echo "  rmadmin              admin tools" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
+  echo "  application          prints application(s) report/kill application"
+  echo "  node                 prints node report(s)"
   echo "  logs                 dump container logs"
   echo "  classpath            prints the class path needed to get the"
   echo "                       Hadoop jar and the required libraries"
@@ -116,43 +118,43 @@ fi
 CLASSPATH="${HADOOP_CONF_DIR}:${YARN_CONF_DIR}:${CLASSPATH}"
 
 # for developers, add Hadoop classes to CLASSPATH
-if [ -d "$YARN_HOME/yarn-api/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-api/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-api/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-api/target/classes
 fi
-if [ -d "$YARN_HOME/yarn-common/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-common/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-common/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-common/target/classes
 fi
-if [ -d "$YARN_HOME/yarn-mapreduce/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-mapreduce/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-mapreduce/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-mapreduce/target/classes
 fi
-if [ -d "$YARN_HOME/yarn-master-worker/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-master-worker/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-master-worker/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-master-worker/target/classes
 fi
-if [ -d "$YARN_HOME/yarn-server/yarn-server-nodemanager/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-server/yarn-server-nodemanager/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-nodemanager/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-nodemanager/target/classes
 fi
-if [ -d "$YARN_HOME/yarn-server/yarn-server-common/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-server/yarn-server-common/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-common/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-common/target/classes
 fi
-if [ -d "$YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes
+if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes
 fi
-if [ -d "$YARN_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/target/test/classes
+if [ -d "$HADOOP_YARN_HOME/build/test/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/target/test/classes
 fi
-if [ -d "$YARN_HOME/build/tools" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/build/tools
+if [ -d "$HADOOP_YARN_HOME/build/tools" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/build/tools
 fi
 
-CLASSPATH=${CLASSPATH}:$YARN_HOME/${YARN_DIR}/*
-CLASSPATH=${CLASSPATH}:$YARN_HOME/${YARN_LIB_JARS_DIR}/*
+CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/${YARN_DIR}/*
+CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/${YARN_LIB_JARS_DIR}/*
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
 # default log directory & file
 if [ "$YARN_LOG_DIR" = "" ]; then
-  YARN_LOG_DIR="$YARN_HOME/logs"
+  YARN_LOG_DIR="$HADOOP_YARN_HOME/logs"
 fi
 if [ "$YARN_LOGFILE" = "" ]; then
   YARN_LOGFILE='yarn.log'
@@ -169,7 +171,13 @@ if [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
-  CLASS='org.apache.hadoop.yarn.server.resourcemanager.tools.RMAdmin'
+  CLASS='org.apache.hadoop.yarn.client.RMAdmin'
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "application" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "node" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "resourcemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rm-config/log4j.properties
@@ -210,7 +218,7 @@ fi
 # cygwin path translation
 if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  YARN_HOME=`cygpath -w "$YARN_HOME"`
+  HADOOP_YARN_HOME=`cygpath -w "$HADOOP_YARN_HOME"`
   YARN_LOG_DIR=`cygpath -w "$YARN_LOG_DIR"`
   TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
 fi
@@ -224,8 +232,8 @@ YARN_OPTS="$YARN_OPTS -Dhadoop.log.dir=$YARN_LOG_DIR"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.dir=$YARN_LOG_DIR"
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.file=$YARN_LOGFILE"
-YARN_OPTS="$YARN_OPTS -Dyarn.home.dir=$YARN_HOME"
-YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$YARN_HOME"
+YARN_OPTS="$YARN_OPTS -Dyarn.home.dir=$HADOOP_YARN_HOME"
+YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_YARN_HOME"
 YARN_OPTS="$YARN_OPTS -Dhadoop.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
 YARN_OPTS="$YARN_OPTS -Dyarn.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then

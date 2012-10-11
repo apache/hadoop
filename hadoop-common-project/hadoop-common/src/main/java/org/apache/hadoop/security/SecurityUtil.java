@@ -452,7 +452,7 @@ public class SecurityUtil {
       return action.run();
     }
   }
-
+  
   /**
    * Perform the given action as the daemon's login user. If an
    * InterruptedException is thrown, it is converted to an IOException.
@@ -499,7 +499,7 @@ public class SecurityUtil {
    * @throws IOException If unable to authenticate via SPNEGO
    */
   public static URLConnection openSecureHttpConnection(URL url) throws IOException {
-    if(!UserGroupInformation.isSecurityEnabled()) {
+    if (!HttpConfig.isSecure() && !UserGroupInformation.isSecurityEnabled()) {
       return url.openConnection();
     }
 

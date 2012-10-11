@@ -20,7 +20,7 @@
 #
 # Environment Variables
 #
-#   YARN_CONF_DIR  Alternate conf dir. Default is ${YARN_HOME}/conf.
+#   YARN_CONF_DIR  Alternate conf dir. Default is ${HADOOP_YARN_HOME}/conf.
 #   YARN_LOG_DIR   Where log files are stored.  PWD by default.
 #   YARN_MASTER    host:path where hadoop code should be rsync'd from
 #   YARN_PID_DIR   The pid files are stored. /tmp by default.
@@ -76,7 +76,7 @@ fi
 
 # get log directory
 if [ "$YARN_LOG_DIR" = "" ]; then
-  export YARN_LOG_DIR="$YARN_HOME/logs"
+  export YARN_LOG_DIR="$HADOOP_YARN_HOME/logs"
 fi
 
 if [ ! -w "$YARN_LOG_DIR" ] ; then
@@ -115,13 +115,13 @@ case $startStop in
 
     if [ "$YARN_MASTER" != "" ]; then
       echo rsync from $YARN_MASTER
-      rsync -a -e ssh --delete --exclude=.svn --exclude='logs/*' --exclude='contrib/hod/logs/*' $YARN_MASTER/ "$YARN_HOME"
+      rsync -a -e ssh --delete --exclude=.svn --exclude='logs/*' --exclude='contrib/hod/logs/*' $YARN_MASTER/ "$HADOOP_YARN_HOME"
     fi
 
     hadoop_rotate_log $log
     echo starting $command, logging to $log
-    cd "$YARN_HOME"
-    nohup nice -n $YARN_NICENESS "$YARN_HOME"/bin/yarn --config $YARN_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    cd "$HADOOP_YARN_HOME"
+    nohup nice -n $YARN_NICENESS "$HADOOP_YARN_HOME"/bin/yarn --config $YARN_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;

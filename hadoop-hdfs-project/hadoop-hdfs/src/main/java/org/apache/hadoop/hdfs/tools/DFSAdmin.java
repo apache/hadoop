@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,6 +54,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
@@ -80,7 +82,7 @@ public class DFSAdmin extends FsShell {
       super(fs.getConf());
       if (!(fs instanceof DistributedFileSystem)) {
         throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-            " is not a distributed file system");
+            " is not an HDFS file system");
       }
       this.dfs = (DistributedFileSystem)fs;
     }
@@ -284,7 +286,7 @@ public class DFSAdmin extends FsShell {
     FileSystem fs = getFS();
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-      " is not a distributed file system");
+      " is not an HDFS file system");
     }
     return (DistributedFileSystem)fs;
   }
@@ -511,11 +513,17 @@ public class DFSAdmin extends FsShell {
    * @return an exit code indicating success or failure.
    * @throws IOException
    */
-  public int fetchImage(String[] argv, int idx) throws IOException {
-    String infoServer = DFSUtil.getInfoServer(
+  public int fetchImage(final String[] argv, final int idx) throws IOException {
+    final String infoServer = DFSUtil.getInfoServer(
         HAUtil.getAddressOfActive(getDFS()), getConf(), false);
-    TransferFsImage.downloadMostRecentImageToDirectory(infoServer,
-        new File(argv[idx]));
+    SecurityUtil.doAsCurrentUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        TransferFsImage.downloadMostRecentImageToDirectory(infoServer,
+            new File(argv[idx]));
+        return null;
+      }
+    });
     return 0;
   }
 

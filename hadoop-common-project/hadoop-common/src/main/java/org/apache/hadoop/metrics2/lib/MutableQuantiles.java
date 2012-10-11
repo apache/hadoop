@@ -35,6 +35,7 @@ import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Watches a stream of long values, maintaining online estimates of specific
@@ -60,8 +61,9 @@ public class MutableQuantiles extends MutableMetric {
   @VisibleForTesting
   protected Map<Quantile, Long> previousSnapshot = null;
 
-  private final ScheduledExecutorService scheduler = Executors
-      .newScheduledThreadPool(1);
+  private static final ScheduledExecutorService scheduler = Executors
+      .newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat("MutableQuantiles-%d").build());
 
   /**
    * Instantiates a new {@link MutableQuantiles} for a metric that rolls itself

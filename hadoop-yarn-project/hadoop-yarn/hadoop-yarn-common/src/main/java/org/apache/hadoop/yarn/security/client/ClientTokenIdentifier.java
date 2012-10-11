@@ -28,36 +28,39 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class ClientTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
-  private Text appId;
+  private ApplicationId applicationId;
 
   // TODO: Add more information in the tokenID such that it is not
   // transferrable, more secure etc.
 
-  public ClientTokenIdentifier(ApplicationId id) {
-    this.appId = new Text(Integer.toString(id.getId()));
-  }
-
   public ClientTokenIdentifier() {
-    this.appId = new Text();
   }
 
-  public Text getApplicationID() {
-    return appId;
+  public ClientTokenIdentifier(ApplicationId id) {
+    this();
+    this.applicationId = id;
+  }
+
+  public ApplicationId getApplicationID() {
+    return this.applicationId;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    appId.write(out);
+    out.writeLong(this.applicationId.getClusterTimestamp());
+    out.writeInt(this.applicationId.getId());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    appId.readFields(in);
+    this.applicationId =
+        BuilderUtils.newApplicationId(in.readLong(), in.readInt());
   }
 
   @Override
@@ -67,10 +70,10 @@ public class ClientTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    if (appId == null || "".equals(appId.toString())) {
+    if (this.applicationId == null) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(appId.toString());
+    return UserGroupInformation.createRemoteUser(this.applicationId.toString());
   }
 
   @InterfaceAudience.Private

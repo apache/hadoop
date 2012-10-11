@@ -160,7 +160,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       } finally {
         is.close();
       }
-      LOG.info(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
+      LOG.debug(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
     } else {
       keystore.load(null, null);
     }
@@ -201,7 +201,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
                                                  truststorePassword,
                                                  truststoreReloadInterval);
     trustManager.init();
-    LOG.info(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+    LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
 
     trustManagers = new TrustManager[]{trustManager};
   }

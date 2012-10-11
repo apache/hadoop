@@ -612,7 +612,8 @@ public class DatanodeManager {
         + " storage " + nodeReg.getStorageID());
 
     DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
-    DatanodeDescriptor nodeN = getDatanodeByHost(nodeReg.getXferAddr());
+    DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
+        nodeReg.getIpAddr(), nodeReg.getXferPort());
       
     if (nodeN != null && nodeN != nodeS) {
       NameNode.LOG.info("BLOCK* NameSystem.registerDatanode: "

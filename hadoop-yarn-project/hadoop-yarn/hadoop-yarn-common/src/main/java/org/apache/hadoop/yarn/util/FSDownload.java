@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -103,9 +104,9 @@ public class FSDownload implements Callable<Path> {
     return dCopy;
   }
 
-  private long unpack(File localrsrc, File dst) throws IOException {
+  private long unpack(File localrsrc, File dst, Pattern pattern) throws IOException {
     switch (resource.getType()) {
-    case ARCHIVE:
+    case ARCHIVE: {
       String lowerDst = dst.getName().toLowerCase();
       if (lowerDst.endsWith(".jar")) {
         RunJar.unJar(localrsrc, dst);
@@ -122,7 +123,39 @@ public class FSDownload implements Callable<Path> {
               + "] to [" + dst + "]");
         }
       }
-      break;
+    }
+    break;
+    case PATTERN: {
+      String lowerDst = dst.getName().toLowerCase();
+      if (lowerDst.endsWith(".jar")) {
+        RunJar.unJar(localrsrc, dst, pattern);
+        File newDst = new File(dst, dst.getName());
+        if (!dst.exists() && !dst.mkdir()) {
+          throw new IOException("Unable to create directory: [" + dst + "]");
+        }
+        if (!localrsrc.renameTo(newDst)) {
+          throw new IOException("Unable to rename file: [" + localrsrc
+              + "] to [" + newDst + "]");
+        }
+      } else if (lowerDst.endsWith(".zip")) {
+        LOG.warn("Treating [" + localrsrc + "] as an archive even though it " +
+        		"was specified as PATTERN");
+        FileUtil.unZip(localrsrc, dst);
+      } else if (lowerDst.endsWith(".tar.gz") ||
+                 lowerDst.endsWith(".tgz") ||
+                 lowerDst.endsWith(".tar")) {
+        LOG.warn("Treating [" + localrsrc + "] as an archive even though it " +
+        "was specified as PATTERN");
+        FileUtil.unTar(localrsrc, dst);
+      } else {
+        LOG.warn("Cannot unpack " + localrsrc);
+        if (!localrsrc.renameTo(dst)) {
+          throw new IOException("Unable to rename file: [" + localrsrc
+              + "] to [" + dst + "]");
+        }
+      }
+    }
+    break;
     case FILE:
     default:
       if (!localrsrc.renameTo(dst)) {
@@ -163,8 +196,13 @@ public class FSDownload implements Callable<Path> {
             public Path run() throws Exception {
               return files.makeQualified(copy(sCopy, dst_work));
             };
-      });
-      unpack(new File(dTmp.toUri()), new File(dFinal.toUri()));
+          });
+      Pattern pattern = null;
+      String p = resource.getPattern();
+      if(p != null) {
+        pattern = Pattern.compile(p);
+      }
+      unpack(new File(dTmp.toUri()), new File(dFinal.toUri()), pattern);
       changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(dst_work, destDirPath, Rename.OVERWRITE);
     } catch (Exception e) {

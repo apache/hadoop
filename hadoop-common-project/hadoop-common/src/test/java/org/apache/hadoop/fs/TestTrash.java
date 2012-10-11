@@ -26,6 +26,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -432,6 +434,36 @@ public class TestTrash extends TestCase {
           " or we deleted / even though we could not get server defaults",
           output.indexOf("Consider using -skipTrash option") != -1 ||
           output.indexOf("Failed to determine server trash configuration") != -1);
+    }
+
+    // Verify old checkpoint format is recognized
+    {
+      // emulate two old trash checkpoint directories, one that is old enough
+      // to be deleted on the next expunge and one that isn't.
+      long trashInterval = conf.getLong(FS_TRASH_INTERVAL_KEY,
+          FS_TRASH_INTERVAL_DEFAULT);
+      long now = Time.now();
+      DateFormat oldCheckpointFormat = new SimpleDateFormat("yyMMddHHmm");
+      Path dirToDelete = new Path(trashRoot.getParent(),
+          oldCheckpointFormat.format(now - (trashInterval * 60 * 1000) - 1));
+      Path dirToKeep = new Path(trashRoot.getParent(),
+          oldCheckpointFormat.format(now));
+      mkdir(trashRootFs, dirToDelete);
+      mkdir(trashRootFs, dirToKeep);
+
+      // Clear out trash
+      int rc = -1;
+      try {
+        rc = shell.run(new String [] { "-expunge" } );
+      } catch (Exception e) {
+        System.err.println("Exception raised from fs expunge " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, rc);
+      assertFalse("old checkpoint format not recognized",
+          trashRootFs.exists(dirToDelete));
+      assertTrue("old checkpoint format directory should not be removed",
+          trashRootFs.exists(dirToKeep));
     }
 
   }

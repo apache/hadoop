@@ -19,12 +19,17 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -66,6 +71,31 @@ class DirectoryCollection {
   }
 
   /**
+   * Create any non-existent directories and parent directories, updating the
+   * list of valid directories if necessary.
+   * @param localFs local file system to use
+   * @param perm absolute permissions to use for any directories created
+   * @return true if there were no errors, false if at least one error occurred
+   */
+  synchronized boolean createNonExistentDirs(FileContext localFs,
+      FsPermission perm) {
+    boolean failed = false;
+    for (final String dir : localDirs) {
+      try {
+        createDir(localFs, new Path(dir), perm);
+      } catch (IOException e) {
+        LOG.warn("Unable to create directory " + dir + " error " +
+            e.getMessage() + ", removing from the list of valid directories.");
+        localDirs.remove(dir);
+        failedDirs.add(dir);
+        numFailures++;
+        failed = true;
+      }
+    }
+    return !failed;
+  }
+
+  /**
    * Check the health of current set of local directories, updating the list
    * of valid directories if necessary.
    * @return <em>true</em> if there is a new disk-failure identified in
@@ -85,5 +115,21 @@ class DirectoryCollection {
       }
     }
     return numFailures > oldNumFailures;
+  }
+
+  private void createDir(FileContext localFs, Path dir, FsPermission perm)
+      throws IOException {
+    if (dir == null) {
+      return;
+    }
+    try {
+      localFs.getFileStatus(dir);
+    } catch (FileNotFoundException e) {
+      createDir(localFs, dir.getParent(), perm);
+      localFs.mkdir(dir, perm, false);
+      if (!perm.equals(perm.applyUMask(localFs.getUMask()))) {
+        localFs.setPermission(dir, perm);
+      }
+    }
   }
 }

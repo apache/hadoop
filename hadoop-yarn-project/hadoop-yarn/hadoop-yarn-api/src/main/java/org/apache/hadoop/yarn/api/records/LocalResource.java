@@ -106,4 +106,20 @@ public interface LocalResource {
    *                   localized
    */
   public void setVisibility(LocalResourceVisibility visibility);
+  
+  /**
+   * Get the <em>pattern</em> that should be used to extract entries from the
+   * archive (only used when type is <code>PATTERN</code>).
+   * @return <em>pattern</em> that should be used to extract entries from the 
+   * archive. 
+   */
+  public String getPattern();
+  
+  /**
+   * Set the <em>pattern</em> that should be used to extract entries from the
+   * archive (only used when type is <code>PATTERN</code>).
+   * @param pattern <em>pattern</em> that should be used to extract entries 
+   * from the archive.
+   */
+  public void setPattern(String pattern);
 }

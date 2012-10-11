@@ -107,8 +107,9 @@ public class TestFSDownload {
     FileStatus status = files.getFileStatus(p);
     ret.setSize(status.getLen());
     ret.setTimestamp(status.getModificationTime());
-    ret.setType(LocalResourceType.ARCHIVE);
+    ret.setType(LocalResourceType.PATTERN);
     ret.setVisibility(vis);
+    ret.setPattern("classes/.*");
     return ret;
   }
   

@@ -43,7 +43,7 @@ $ mvn clean install assembly:assembly -Pnative
   Assuming you have installed hadoop-common/hadoop-hdfs and exported
   <<$HADOOP_COMMON_HOME>>/<<$HADOOP_HDFS_HOME>>, untar hadoop mapreduce 
   tarball and set environment variable <<$HADOOP_MAPRED_HOME>> to the 
-  untarred directory. Set <<$YARN_HOME>> the same as <<$HADOOP_MAPRED_HOME>>. 
+  untarred directory. Set <<$HADOOP_YARN_HOME>> the same as <<$HADOOP_MAPRED_HOME>>. 
  
   <<NOTE:>> The following instructions assume you have hdfs running.
 
@@ -174,7 +174,7 @@ Add the following configs to your <<<yarn-site.xml>>>
 * Running daemons.
 
   Assuming that the environment variables <<$HADOOP_COMMON_HOME>>, <<$HADOOP_HDFS_HOME>>, <<$HADOO_MAPRED_HOME>>,
-  <<$YARN_HOME>>, <<$JAVA_HOME>> and <<$HADOOP_CONF_DIR>> have been set appropriately.
+  <<$HADOOP_YARN_HOME>>, <<$JAVA_HOME>> and <<$HADOOP_CONF_DIR>> have been set appropriately.
   Set $<<$YARN_CONF_DIR>> the same as $<<HADOOP_CONF_DIR>>
  
   Run ResourceManager and NodeManager as:

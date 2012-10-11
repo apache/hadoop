@@ -219,9 +219,10 @@ public class TestContainerManagerSecurity {
 
     // Malice user modifies the resource amount
     Resource modifiedResource = BuilderUtils.newResource(2048);
-    ContainerTokenIdentifier modifiedIdentifier = new ContainerTokenIdentifier(
-        dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(),
-        modifiedResource, Long.MAX_VALUE, dummyIdentifier.getMasterKeyId());
+    ContainerTokenIdentifier modifiedIdentifier =
+        new ContainerTokenIdentifier(dummyIdentifier.getContainerID(),
+          dummyIdentifier.getNmHostAddress(), "testUser", modifiedResource,
+          Long.MAX_VALUE, dummyIdentifier.getMasterKeyId());
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -320,12 +321,14 @@ public class TestContainerManagerSecurity {
 
         callWithIllegalContainerID(client, tokenId);
         callWithIllegalResource(client, tokenId);
+        callWithIllegalUserName(client, tokenId);
 
         return client;
       }
     });
     
-    /////////// End of testing for illegal containerIDs and illegal Resources
+    // ///////// End of testing for illegal containerIDs, illegal Resources and
+    // illegal users
 
     /////////// Test calls with expired tokens
     RPC.stopProxy(client);
@@ -336,7 +339,7 @@ public class TestContainerManagerSecurity {
       resourceManager.getRMContainerTokenSecretManager(); 
     final ContainerTokenIdentifier newTokenId =
         new ContainerTokenIdentifier(tokenId.getContainerID(),
-          tokenId.getNmHostAddress(), tokenId.getResource(),
+          tokenId.getNmHostAddress(), "testUser", tokenId.getResource(),
           System.currentTimeMillis() - 1, 
           containerTokenSecreteManager.getCurrentKey().getKeyId());
     byte[] passowrd =
@@ -346,9 +349,7 @@ public class TestContainerManagerSecurity {
     token = new Token<ContainerTokenIdentifier>(
         newTokenId.getBytes(), passowrd, new Text(
             containerToken.getKind()), new Text(containerToken.getService()));
-    
-    
-    
+
     unauthorizedUser.addToken(token);
     unauthorizedUser.doAs(new PrivilegedAction<Void>() {
       @Override
@@ -564,6 +565,29 @@ public class TestContainerManagerSecurity {
       Assert.assertTrue(e.getMessage().contains(
           "\nExpected resource " + tokenId.getResource().toString()
               + " but found " + context.getResource().toString()));
+    }
+  }
+
+  void callWithIllegalUserName(ContainerManager client,
+      ContainerTokenIdentifier tokenId) {
+    StartContainerRequest request = recordFactory
+        .newRecordInstance(StartContainerRequest.class);
+    // Authenticated but unauthorized, due to wrong resource
+    ContainerLaunchContext context =
+        createContainerLaunchContextForTest(tokenId);
+    context.setUser("Saruman"); // Set a different user-name.
+    request.setContainerLaunchContext(context);
+    try {
+      client.startContainer(request);
+      fail("Connection initiation with unauthorized "
+          + "access is expected to fail.");
+    } catch (YarnRemoteException e) {
+      LOG.info("Got exception : ", e);
+      Assert.assertTrue(e.getMessage().contains(
+          "Unauthorized request to start container. "));
+      Assert.assertTrue(e.getMessage().contains(
+        "Expected user-name " + tokenId.getApplicationSubmitter()
+            + " but found " + context.getUser()));
     }
   }
 

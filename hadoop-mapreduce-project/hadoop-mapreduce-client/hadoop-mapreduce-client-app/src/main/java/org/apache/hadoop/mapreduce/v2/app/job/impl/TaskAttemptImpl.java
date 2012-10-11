@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapred.MapReduceChildJVM;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapred.Task;
@@ -610,10 +611,12 @@ public abstract class TaskAttemptImpl implements
       if (jobJar != null) {
         Path remoteJobJar = (new Path(jobJar)).makeQualified(remoteFS
             .getUri(), remoteFS.getWorkingDirectory());
-        localResources.put(
-            MRJobConfig.JOB_JAR,
-            createLocalResource(remoteFS, remoteJobJar,
-                LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION));
+        LocalResource rc = createLocalResource(remoteFS, remoteJobJar,
+            LocalResourceType.PATTERN, LocalResourceVisibility.APPLICATION);
+        String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN, 
+            JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
+        rc.setPattern(pattern);
+        localResources.put(MRJobConfig.JOB_JAR, rc);
         LOG.info("The job-jar file on the remote FS is "
             + remoteJobJar.toUri().toASCIIString());
       } else {
@@ -644,14 +647,10 @@ public abstract class TaskAttemptImpl implements
       MRApps.setupDistributedCache(conf, localResources);
 
       // Setup up task credentials buffer
-      Credentials taskCredentials = new Credentials();
-
-      if (UserGroupInformation.isSecurityEnabled()) {
-        LOG.info("Adding #" + credentials.numberOfTokens()
-            + " tokens and #" + credentials.numberOfSecretKeys()
-            + " secret keys for NM use for launching container");
-        taskCredentials.addAll(credentials);
-      }
+      LOG.info("Adding #" + credentials.numberOfTokens()
+          + " tokens and #" + credentials.numberOfSecretKeys()
+          + " secret keys for NM use for launching container");
+      Credentials taskCredentials = new Credentials(credentials);
 
       // LocalStorageToken is needed irrespective of whether security is enabled
       // or not.
