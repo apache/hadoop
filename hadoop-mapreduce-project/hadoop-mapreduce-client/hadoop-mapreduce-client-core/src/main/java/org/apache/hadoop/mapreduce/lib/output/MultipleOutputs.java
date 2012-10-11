@@ -20,7 +20,10 @@ package org.apache.hadoop.mapreduce.lib.output;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -37,6 +40,7 @@ import java.util.*;
  * Each additional output, or named output, may be configured with its own
  * <code>OutputFormat</code>, with its own key class and with its own value
  * class.
+ * </p>
  * 
  * <p>
  * Case two: to write data to different files provided by user
@@ -107,6 +111,64 @@ import java.util.*;
  *
  * }
  * </pre>
+ * 
+ * <p>
+ * When used in conjuction with org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat,
+ * MultipleOutputs can mimic the behaviour of MultipleTextOutputFormat and MultipleSequenceFileOutputFormat
+ * from the old Hadoop API - ie, output can be written from the Reducer to more than one location.
+ * </p>
+ * 
+ * <p>
+ * Use <code>MultipleOutputs.write(KEYOUT key, VALUEOUT value, String baseOutputPath)</code> to write key and 
+ * value to a path specified by <code>baseOutputPath</code>, with no need to specify a named output:
+ * </p>
+ * 
+ * <pre>
+ * private MultipleOutputs<Text, Text> out;
+ * 
+ * public void setup(Context context) {
+ *   out = new MultipleOutputs<Text, Text>(context);
+ *   ...
+ * }
+ * 
+ * public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+ * for (Text t : values) {
+ *   out.write(key, t, generateFileName(<<i>parameter list...</i>>));
+ *   }
+ * }
+ * 
+ * protected void cleanup(Context context) throws IOException, InterruptedException {
+ *   out.close();
+ * }
+ * </pre>
+ * 
+ * <p>
+ * Use your own code in <code>generateFileName()</code> to create a custom path to your results. 
+ * '/' characters in <code>baseOutputPath</code> will be translated into directory levels in your file system. 
+ * Also, append your custom-generated path with "part" or similar, otherwise your output will be -00000, -00001 etc. 
+ * No call to <code>context.write()</code> is necessary. See example <code>generateFileName()</code> code below. 
+ * </p>
+ * 
+ * <pre>
+ * private String generateFileName(Text k) {
+ *   // expect Text k in format "Surname|Forename"
+ *   String[] kStr = k.toString().split("\\|");
+ *   
+ *   String sName = kStr[0];
+ *   String fName = kStr[1];
+ *
+ *   // example for k = Smith|John
+ *   // output written to /user/hadoop/path/to/output/Smith/John-r-00000 (etc)
+ *   return sName + "/" + fName;
+ * }
+ * </pre>
+ * 
+ * <p>
+ * Using MultipleOutputs in this way will still create zero-sized default output, eg part-00000.
+ * To prevent this use <code>LazyOutputFormat.setOutputFormatClass(job, TextOutputFormat.class);</code>
+ * instead of <code>job.setOutputFormatClass(TextOutputFormat.class);</code> in your Hadoop job configuration.
+ * </p> 
+ * 
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

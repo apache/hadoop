@@ -155,6 +155,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-3678. The Map tasks logs should have the value of input
     split it processed. (harsh)
 
+    MAPREDUCE-4616. Improve javadoc for MultipleOutputs. (Tony Burton via
+    acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES
