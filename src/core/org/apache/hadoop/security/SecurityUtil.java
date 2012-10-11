@@ -258,7 +258,14 @@ public class SecurityUtil {
     return components[0] + "/" + fqdn.toLowerCase() + "@" + components[2];
   }
   
-  static String getLocalHostName() throws UnknownHostException {
+  /**
+   * Get the fqdn for the current host.
+   * 
+   * @return fqdn of the current host.
+   * @throws UnknownHostException
+   *           if no IP address for the local host could be found.
+   */
+  public static String getLocalHostName() throws UnknownHostException {
     return InetAddress.getLocalHost().getCanonicalHostName();
   }
 

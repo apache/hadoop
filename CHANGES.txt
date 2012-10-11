@@ -239,6 +239,10 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4706. FairScheduler#dump(): Computing of # running maps and
     reduces is commented out. (Karthik Kambatla via tomwhite)
 
+    HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
+    webhdfs filesystem and fsck to fail when security is on.
+    (Arpit Gupta via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
