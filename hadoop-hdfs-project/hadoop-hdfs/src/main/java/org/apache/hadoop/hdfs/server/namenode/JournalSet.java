@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -147,7 +148,7 @@ public class JournalSet implements JournalManager {
       return journal;
     }
 
-    private boolean isDisabled() {
+    boolean isDisabled() {
       return disabled;
     }
 
@@ -165,8 +166,12 @@ public class JournalSet implements JournalManager {
       return required;
     }
   }
-  
-  private List<JournalAndStream> journals = Lists.newArrayList();
+ 
+  // COW implementation is necessary since some users (eg the web ui) call
+  // getAllJournalStreams() and then iterate. Since this is rarely
+  // mutated, there is no performance concern.
+  private List<JournalAndStream> journals =
+      new CopyOnWriteArrayList<JournalSet.JournalAndStream>();
   final int minimumRedundantJournals;
   
   JournalSet(int minimumRedundantResources) {
@@ -242,8 +247,20 @@ public class JournalSet implements JournalManager {
         LOG.info("Skipping jas " + jas + " since it's disabled");
         continue;
       }
-      jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+      try {
+        jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+      } catch (IOException ioe) {
+        LOG.warn("Unable to determine input streams from " + jas.getManager() +
+            ". Skipping.", ioe);
+      }
     }
+    chainAndMakeRedundantStreams(streams, allStreams, fromTxId, inProgressOk);
+  }
+  
+  public static void chainAndMakeRedundantStreams(
+      Collection<EditLogInputStream> outStreams,
+      PriorityQueue<EditLogInputStream> allStreams,
+      long fromTxId, boolean inProgressOk) {
     // We want to group together all the streams that start on the same start
     // transaction ID.  To do this, we maintain an accumulator (acc) of all
     // the streams we've seen at a given start transaction ID.  When we see a
@@ -261,7 +278,7 @@ public class JournalSet implements JournalManager {
         if (accFirstTxId == elis.getFirstTxId()) {
           acc.add(elis);
         } else if (accFirstTxId < elis.getFirstTxId()) {
-          streams.add(new RedundantEditLogInputStream(acc, fromTxId));
+          outStreams.add(new RedundantEditLogInputStream(acc, fromTxId));
           acc.clear();
           acc.add(elis);
         } else if (accFirstTxId > elis.getFirstTxId()) {
@@ -272,7 +289,7 @@ public class JournalSet implements JournalManager {
       }
     }
     if (!acc.isEmpty()) {
-      streams.add(new RedundantEditLogInputStream(acc, fromTxId));
+      outStreams.add(new RedundantEditLogInputStream(acc, fromTxId));
       acc.clear();
     }
   }
@@ -454,12 +471,12 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    protected void flushAndSync() throws IOException {
+    protected void flushAndSync(final boolean durable) throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
         public void apply(JournalAndStream jas) throws IOException {
           if (jas.isActive()) {
-            jas.getCurrentStream().flushAndSync();
+            jas.getCurrentStream().flushAndSync(durable);
           }
         }
       }, "flushAndSync");
@@ -512,7 +529,6 @@ public class JournalSet implements JournalManager {
     }
   }
   
-  @VisibleForTesting
   List<JournalAndStream> getAllJournalStreams() {
     return journals;
   }

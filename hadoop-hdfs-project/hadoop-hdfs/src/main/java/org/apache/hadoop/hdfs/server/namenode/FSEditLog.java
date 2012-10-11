@@ -1171,6 +1171,7 @@ public class FSEditLog implements LogsPurgeable {
       journalSet.recoverUnfinalizedSegments();
     } catch (IOException ex) {
       // All journals have failed, it is handled in logSync.
+      // TODO: are we sure this is OK?
     }
   }
 

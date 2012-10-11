@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -48,12 +49,22 @@ import com.google.common.collect.Sets;
  */
 public abstract class GenericTestUtils {
 
+  private static final AtomicInteger sequence = new AtomicInteger();
+
   /**
    * Extracts the name of the method where the invocation has happened
    * @return String name of the invoking method
    */
   public static String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  /**
+   * Generates a process-wide unique sequence number.
+   * @return an unique sequence number
+   */
+  public static int uniqueSequenceId() {
+    return sequence.incrementAndGet();
   }
   
   /**
