@@ -60,8 +60,10 @@
 <%= NamenodeJspHelper.getCorruptFilesWarning(fsn)%>
 
 <% healthjsp.generateHealthReport(out, nn, request); %>
-<hr>
+<% healthjsp.generateJournalReport(out, nn, request); %>
+<hr/>
 <% healthjsp.generateConfReport(out, nn, request); %>
+<hr>
 <%
 out.println(ServletUtil.htmlFooter());
 %>

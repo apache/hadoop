@@ -98,7 +98,7 @@ public class TestJobQueueInformation extends TestCase {
     dfsCluster.shutdown();
   }
 
-  public void testJobQueues() throws IOException {
+  public void testJobQueues() throws Exception {
     JobClient jc = new JobClient(mrCluster.createJobConf());
     String expectedQueueInfo = "Maximum Tasks Per Job :: 10";
     JobQueueInfo[] queueInfos = jc.getQueues();

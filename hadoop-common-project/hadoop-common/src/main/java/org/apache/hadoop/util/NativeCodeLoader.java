@@ -75,6 +75,11 @@ public class NativeCodeLoader {
   }
 
   /**
+   * Returns true only if this build was compiled with support for snappy.
+   */
+  public static native boolean buildSupportsSnappy();
+
+  /**
    * Return if native hadoop libraries, if present, can be used for this job.
    * @param conf configuration
    * 

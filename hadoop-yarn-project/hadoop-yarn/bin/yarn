@@ -47,7 +47,7 @@
 #
 
 bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin" > /dev/null; pwd`
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
@@ -67,6 +67,8 @@ if [ $# = 0 ]; then
   echo "  rmadmin              admin tools" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
+  echo "  application          prints application(s) report/kill application"
+  echo "  node                 prints node report(s)"
   echo "  logs                 dump container logs"
   echo "  classpath            prints the class path needed to get the"
   echo "                       Hadoop jar and the required libraries"
@@ -169,7 +171,13 @@ if [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
-  CLASS='org.apache.hadoop.yarn.server.resourcemanager.tools.RMAdmin'
+  CLASS='org.apache.hadoop.yarn.client.RMAdmin'
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "application" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "node" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "resourcemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rm-config/log4j.properties

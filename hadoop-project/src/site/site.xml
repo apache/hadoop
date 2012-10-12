@@ -54,7 +54,8 @@
     </menu>
     
     <menu name="HDFS" inherit="top">
-      <item name="High Availability" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailability.html"/>
+      <item name="High Availability With QJM" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithQJM.html"/>
+      <item name="High Availability With NFS" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="WebHDFS REST API" href="hadoop-yarn/hadoop-yarn-site/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>

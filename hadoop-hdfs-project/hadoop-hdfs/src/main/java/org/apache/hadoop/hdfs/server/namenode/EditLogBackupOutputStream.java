@@ -114,7 +114,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   }
 
   @Override // EditLogOutputStream
-  protected void flushAndSync() throws IOException {
+  protected void flushAndSync(boolean durable) throws IOException {
     assert out.getLength() == 0 : "Output buffer is not empty";
     
     int numReadyTxns = doubleBuf.countReadyTxns();

@@ -166,7 +166,7 @@ public class TestPermission {
   }
 
   @Test
-  public void testFilePermision() throws Exception {
+  public void testFilePermission() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
@@ -244,6 +244,10 @@ public class TestPermission {
       fs.mkdirs(p);
       return true;
     } catch(AccessControlException e) {
+      // We check that AccessControlExceptions contain absolute paths.
+      Path parent = p.getParent();
+      assertTrue(parent.isUriPathAbsolute());
+      assertTrue(e.getMessage().contains(parent.toString()));
       return false;
     }
   }
@@ -253,6 +257,9 @@ public class TestPermission {
       fs.create(p);
       return true;
     } catch(AccessControlException e) {
+      Path parent = p.getParent();
+      assertTrue(parent.isUriPathAbsolute());
+      assertTrue(e.getMessage().contains(parent.toString()));
       return false;
     }
   }
@@ -262,6 +269,8 @@ public class TestPermission {
       fs.open(p);
       return true;
     } catch(AccessControlException e) {
+      assertTrue(p.isUriPathAbsolute());
+      assertTrue(e.getMessage().contains(p.toString()));
       return false;
     }
   }
@@ -272,6 +281,9 @@ public class TestPermission {
       fs.rename(src, dst);
       return true;
     } catch(AccessControlException e) {
+      Path parent = dst.getParent();
+      assertTrue(parent.isUriPathAbsolute());
+      assertTrue(e.getMessage().contains(parent.toString()));
       return false;
     }
   }

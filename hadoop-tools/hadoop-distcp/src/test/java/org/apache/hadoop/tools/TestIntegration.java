@@ -21,8 +21,11 @@ package org.apache.hadoop.tools;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -30,6 +33,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TestIntegration {
   private static final Log LOG = LogFactory.getLog(TestIntegration.class);
@@ -317,6 +322,58 @@ public class TestIntegration {
       TestDistCpUtils.delete(fs, root);
     }
   }
+  
+  @Test
+  public void testDeleteMissingInDestination() {
+    
+    try {
+      addEntries(listFile, "srcdir");
+      createFiles("srcdir/file1", "dstdir/file1", "dstdir/file2");
+      
+      Path target = new Path(root + "/dstdir");
+      runTest(listFile, target, true, true, false);
+      
+      checkResult(target, 1, "file1");
+    } catch (IOException e) {
+      LOG.error("Exception encountered while running distcp", e);
+      Assert.fail("distcp failure");
+    } finally {
+      TestDistCpUtils.delete(fs, root);
+      TestDistCpUtils.delete(fs, "target/tmp1");
+    }
+  }
+  
+  @Test
+  public void testOverwrite() {
+    byte[] contents1 = "contents1".getBytes();
+    byte[] contents2 = "contents2".getBytes();
+    Assert.assertEquals(contents1.length, contents2.length);
+    
+    try {
+      addEntries(listFile, "srcdir");
+      createWithContents("srcdir/file1", contents1);
+      createWithContents("dstdir/file1", contents2);
+      
+      Path target = new Path(root + "/dstdir");
+      runTest(listFile, target, false, false, true);
+      
+      checkResult(target, 1, "file1");
+      
+      // make sure dstdir/file1 has been overwritten with the contents
+      // of srcdir/file1
+      FSDataInputStream is = fs.open(new Path(root + "/dstdir/file1"));
+      byte[] dstContents = new byte[contents1.length];
+      is.readFully(dstContents);
+      is.close();
+      Assert.assertArrayEquals(contents1, dstContents);
+    } catch (IOException e) {
+      LOG.error("Exception encountered while running distcp", e);
+      Assert.fail("distcp failure");
+    } finally {
+      TestDistCpUtils.delete(fs, root);
+      TestDistCpUtils.delete(fs, "target/tmp1");
+    }
+  }
 
   @Test
   public void testGlobTargetMissingSingleLevel() {
@@ -410,7 +467,33 @@ public class TestIntegration {
       TestDistCpUtils.delete(fs, "target/tmp1");
     }
   }
+  
+  @Test
+  public void testCleanup() {
+    try {
+      Path sourcePath = new Path("noscheme:///file");
+      List<Path> sources = new ArrayList<Path>();
+      sources.add(sourcePath);
 
+      DistCpOptions options = new DistCpOptions(sources, target);
+
+      Configuration conf = getConf();
+      Path stagingDir = JobSubmissionFiles.getStagingDir(
+              new Cluster(conf), conf);
+      stagingDir.getFileSystem(conf).mkdirs(stagingDir);
+
+      try {
+        new DistCp(conf, options).execute();
+      } catch (Throwable t) {
+        Assert.assertEquals(stagingDir.getFileSystem(conf).
+            listStatus(stagingDir).length, 0);
+      }
+    } catch (Exception e) {
+      LOG.error("Exception encountered ", e);
+      Assert.fail("testCleanup failed " + e.getMessage());
+    }
+  }
+  
   private void addEntries(Path listFile, String... entries) throws IOException {
     OutputStream out = fs.create(listFile);
     try {
@@ -434,16 +517,32 @@ public class TestIntegration {
       }
     }
   }
+  
+  private void createWithContents(String entry, byte[] contents) throws IOException {
+    OutputStream out = fs.create(new Path(root + "/" + entry));
+    try {
+      out.write(contents);
+    } finally {
+      out.close();
+    }
+  }
 
   private void mkdirs(String... entries) throws IOException {
     for (String entry : entries){
       fs.mkdirs(new Path(entry));
     }
   }
-
+    
   private void runTest(Path listFile, Path target, boolean sync) throws IOException {
+    runTest(listFile, target, sync, false, false);
+  }
+  
+  private void runTest(Path listFile, Path target, boolean sync, boolean delete,
+      boolean overwrite) throws IOException {
     DistCpOptions options = new DistCpOptions(listFile, target);
     options.setSyncFolder(sync);
+    options.setDeleteMissing(delete);
+    options.setOverwrite(overwrite);
     try {
       new DistCp(getConf(), options).execute();
     } catch (Exception e) {

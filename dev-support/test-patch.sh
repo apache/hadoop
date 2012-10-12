@@ -335,7 +335,7 @@ checkTests () {
         echo "The patch appears to be a documentation patch that doesn't require tests."
         JIRA_COMMENT="$JIRA_COMMENT
 
-    +0 tests included.  The patch appears to be a documentation patch that doesn't require tests."
+    {color:green}+0 tests included{color}.  The patch appears to be a documentation patch that doesn't require tests."
         return 0
       fi
     fi
@@ -681,12 +681,46 @@ runTests () {
 
   failed_tests=""
   modules=$(findModules)
-  for module in $modules;
-  do
+  #
+  # If we are building hadoop-hdfs-project, we must build the native component
+  # of hadoop-common-project first.  In order to accomplish this, we move the
+  # hadoop-hdfs subprojects to the end of the list so that common will come
+  # first.
+  #
+  # Of course, we may not be building hadoop-common at all-- in this case, we
+  # explicitly insert a mvn compile -Pnative of common, to ensure that the
+  # native libraries show up where we need them.
+  #
+  building_common=0
+  for module in $modules; do
+      if [[ $module == hadoop-hdfs-project* ]]; then
+          hdfs_modules="$hdfs_modules $module"
+      elif [[ $module == hadoop-common-project* ]]; then
+          ordered_modules="$ordered_modules $module"
+          building_common=1
+      else
+          ordered_modules="$ordered_modules $module"
+      fi
+  done
+  if [ -n $hdfs_modules ]; then
+      ordered_modules="$ordered_modules $hdfs_modules"
+      if [[ $building_common -eq 0 ]]; then
+          echo "  Building hadoop-common with -Pnative in order to provide \
+libhadoop.so to the hadoop-hdfs unit tests."
+          echo "  $MVN compile -Pnative -D${PROJECT_NAME}PatchProcess"
+          if ! $MVN compile -Pnative -D${PROJECT_NAME}PatchProcess; then
+              JIRA_COMMENT="$JIRA_COMMENT
+        {color:red}-1 core tests{color}.  Failed to build the native portion \
+of hadoop-common prior to running the unit tests in $ordered_modules"
+              return 1
+          fi
+      fi
+  fi
+  for module in $ordered_modules; do
     cd $module
     echo "  Running tests in $module"
     echo "  $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess"
-    $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess
+    $MVN clean install -fn -Pnative -Drequire.test.libhadoop -D${PROJECT_NAME}PatchProcess
     module_failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
     # With -fn mvn always exits with a 0 exit code.  Because of this we need to
     # find the errors instead of using the exit code.  We assume that if the build
@@ -914,6 +948,7 @@ if [[ $RESULT != 0 ]] ; then
 fi
 buildWithPatch
 checkAuthor
+(( RESULT = RESULT + $? ))
 
 if [[ $JENKINS == "true" ]] ; then
   cleanUpXml

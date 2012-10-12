@@ -68,7 +68,7 @@
   </property>
 
   <property>
-    <name>yarn.scheduler.capacity.root.default.acl_submit_jobs</name>
+    <name>yarn.scheduler.capacity.root.default.acl_submit_applications</name>
     <value>*</value>
     <description>
       The ACL of who can submit jobs to the default queue.
@@ -76,19 +76,10 @@
   </property>
 
   <property>
-    <name>yarn.scheduler.capacity.root.default.acl_administer_jobs</name>
+    <name>yarn.scheduler.capacity.root.default.acl_administer_queue</name>
     <value>*</value>
     <description>
       The ACL of who can administer jobs on the default queue.
-    </description>
-  </property>
-
-  <property>
-    <name>yarn.scheduler.capacity.root.acl_administer_queues</name>
-    <value>*</value>
-    <description>
-      The ACL for who can administer this queue i.e. change sub-queue 
-      allocations.
     </description>
   </property>
 

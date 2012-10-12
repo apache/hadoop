@@ -58,18 +58,27 @@ public class TimedOutTestsListener extends RunListener {
         && failure.getMessage().startsWith(TEST_TIMED_OUT_PREFIX)) {
       output.println("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
       output.println();
-      DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
-      output.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
-      output.println();
-      output.println(buildThreadDump());
-      
-      String deadlocksInfo = buildDeadlockInfo();
-      if (deadlocksInfo != null) {
-        output.println("====> DEADLOCKS DETECTED <====");
-        output.println();
-        output.println(deadlocksInfo);
-      }
+      output.print(buildThreadDiagnosticString());
     }
+  }
+  
+  public static String buildThreadDiagnosticString() {
+    StringWriter sw = new StringWriter();
+    PrintWriter output = new PrintWriter(sw);
+    
+    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
+    output.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
+    output.println();
+    output.println(buildThreadDump());
+    
+    String deadlocksInfo = buildDeadlockInfo();
+    if (deadlocksInfo != null) {
+      output.println("====> DEADLOCKS DETECTED <====");
+      output.println();
+      output.println(deadlocksInfo);
+    }
+
+    return sw.toString();
   }
 
   static String buildThreadDump() {

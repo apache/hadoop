@@ -42,18 +42,6 @@ public class TestSmallBlock {
   static final int blockSize = 1;
   static final int fileSize = 20;
   boolean simulatedStorage = false;
-
-  private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 1, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
@@ -105,7 +93,8 @@ public class TestSmallBlock {
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("smallblocktest.dat");
-      writeFile(fileSys, file1);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 1, seed);
       checkFile(fileSys, file1);
       cleanupFile(fileSys, file1);
     } finally {

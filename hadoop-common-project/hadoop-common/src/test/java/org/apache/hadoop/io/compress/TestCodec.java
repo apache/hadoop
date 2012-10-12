@@ -54,7 +54,6 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.compress.snappy.LoadSnappy;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
@@ -103,14 +102,9 @@ public class TestCodec {
   
   @Test
   public void testSnappyCodec() throws IOException {
-    if (LoadSnappy.isAvailable()) {
-      if (LoadSnappy.isLoaded()) {
-        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
-      }
-      else {
-        Assert.fail("Snappy native available but Hadoop native not");
-      }
+    if (SnappyCodec.isNativeCodeLoaded()) {
+      codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
     }
   }
   

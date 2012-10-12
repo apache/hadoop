@@ -41,11 +41,34 @@
 </property>
 
 <property>
+  <name>dfs.namenode.rpc-address</name>
+  <value></value>
+  <description>
+    RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
+    the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
+    dfs.namenode.rpc-address.EXAMPLENAMESERVICE
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.servicerpc-address</name>
+  <value></value>
+  <description>
+    RPC address for HDFS Services communication. BackupNode, Datanodes and all other services should be
+    connecting to this address if it is configured. In the case of HA/Federation where multiple namenodes exist,
+    the name service id is added to the name e.g. dfs.namenode.servicerpc-address.ns1
+    dfs.namenode.rpc-address.EXAMPLENAMESERVICE
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+    If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:50090</value>
   <description>
     The secondary namenode http server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -54,7 +77,6 @@
   <value>0.0.0.0:50010</value>
   <description>
     The datanode server address and port for data transfer.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -63,7 +85,6 @@
   <value>0.0.0.0:50075</value>
   <description>
     The datanode http server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -72,7 +93,6 @@
   <value>0.0.0.0:50020</value>
   <description>
     The datanode ipc server address and port.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -87,7 +107,6 @@
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
-    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -238,6 +257,11 @@
   does not need to be listed in dfs.namenode.edits.dir above. It should be
   left empty in a non-HA cluster.
   </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.journal-plugin.qjournal</name>
+  <value>org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager</value>
 </property>
 
 <property>
@@ -964,12 +988,28 @@
   <name>dfs.namenode.check.stale.datanode</name>
   <value>false</value>
   <description>
-  	Indicate whether or not to check "stale" datanodes whose 
-  	heartbeat messages have not been received by the namenode 
-  	for more than a specified time interval. If this configuration 
-  	parameter is set as true, the stale datanodes will be moved to 
-  	the end of the target node list for reading. The writing will 
-  	also try to avoid stale nodes.
+    Indicate whether or not to check "stale" datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. If this configuration 
+    parameter is set as true, the system will keep track 
+    of the number of stale datanodes. The stale datanodes will be 
+    moved to the end of the node list returned for reading. See
+    dfs.namenode.avoid.write.stale.datanode for details on how this 
+    affects writes. 
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.write.stale.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid writing to "stale" datanodes whose 
+    heartbeat messages have not been received by the namenode 
+    for more than a specified time interval. If this configuration 
+    parameter and dfs.namenode.check.stale.datanode are both set as true, 
+    the writing will avoid using stale datanodes unless a high number 
+    of datanodes are marked as stale. See 
+    dfs.namenode.write.stale.datanode.ratio for details.
   </description>
 </property>
 
@@ -977,10 +1017,24 @@
   <name>dfs.namenode.stale.datanode.interval</name>
   <value>30000</value>
   <description>
-  	Default time interval for marking a datanode as "stale", i.e., if 
-  	the namenode has not received heartbeat msg from a datanode for 
-  	more than this time interval, the datanode will be marked and treated 
-  	as "stale" by default.
+    Default time interval for marking a datanode as "stale", i.e., if 
+    the namenode has not received heartbeat msg from a datanode for 
+    more than this time interval, the datanode will be marked and treated 
+    as "stale" by default. The stale interval cannot be too small since 
+    otherwise this may cause too frequent change of stale states. 
+    We thus set a minimum stale interval value (the default value is 3 times 
+    of heartbeat interval) and guarantee that the stale interval cannot be less
+    than the minimum value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.write.stale.datanode.ratio</name>
+  <value>0.5f</value>
+  <description>
+    When the ratio of number stale datanodes to total datanodes marked
+    is greater than this ratio, stop avoiding writing to stale nodes so
+    as to prevent causing hotspots.
   </description>
 </property>
 
@@ -1096,6 +1150,23 @@
   <value>60</value>
   <description>
     Timeout (in seconds) for the parallel RPCs made in DistributedFileSystem#getFileBlockStorageLocations().
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.rpc-address</name>
+  <value>0.0.0.0:8485</value>
+  <description>
+    The JournalNode RPC server address and port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.http-address</name>
+  <value>0.0.0.0:8480</value>
+  <description>
+    The address and port the JournalNode web UI listens on.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 

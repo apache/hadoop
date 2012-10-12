@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -59,6 +60,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -402,6 +404,108 @@ public class TestJobHistoryParsing {
     }
   }
   
+  @Test
+  public void testCountersForFailedTask() throws Exception {
+    LOG.info("STARTING testCountersForFailedTask");
+    try {
+    Configuration conf = new Configuration();
+    conf
+        .setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
+    MRApp app = new MRAppWithHistoryWithFailedTask(2, 1, true,
+        this.getClass().getName(), true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    app.waitForState(job, JobState.FAILED);
+
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
+
+    String jobhistoryDir = JobHistoryUtils
+        .getHistoryIntermediateDoneDirForUser(conf);
+    JobHistory jobHistory = new JobHistory();
+    jobHistory.init(conf);
+
+    JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
+        .getJobIndexInfo();
+    String jobhistoryFileName = FileNameIndexUtils
+        .getDoneFileName(jobIndexInfo);
+
+    Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
+    FSDataInputStream in = null;
+    FileContext fc = null;
+    try {
+      fc = FileContext.getFileContext(conf);
+      in = fc.open(fc.makeQualified(historyFilePath));
+    } catch (IOException ioe) {
+      LOG.info("Can not open history file: " + historyFilePath, ioe);
+      throw (new Exception("Can not open History File"));
+    }
+
+    JobHistoryParser parser = new JobHistoryParser(in);
+    JobInfo jobInfo = parser.parse();
+    Exception parseException = parser.getParseException();
+    Assert.assertNull("Caught an expected exception " + parseException,
+        parseException);
+    for (Map.Entry<TaskID,TaskInfo> entry : jobInfo.getAllTasks().entrySet()) {
+      TaskId yarnTaskID = TypeConverter.toYarn(entry.getKey());
+      CompletedTask ct = new CompletedTask(yarnTaskID, entry.getValue());
+      Assert.assertNotNull("completed task report has null counters",
+          ct.getReport().getCounters());
+    }
+    } finally {
+      LOG.info("FINISHED testCountersForFailedTask");
+    }
+  }
+
+  @Test
+  public void testScanningOldDirs() throws Exception {
+    LOG.info("STARTING testScanningOldDirs");
+    try {
+    Configuration conf = new Configuration();
+    conf
+        .setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
+    MRApp app =
+        new MRAppWithHistory(1, 1, true,
+            this.getClass().getName(), true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
+    app.waitForState(job, JobState.SUCCEEDED);
+
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
+
+    HistoryFileManagerForTest hfm = new HistoryFileManagerForTest();
+    hfm.init(conf);
+    HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
+    Assert.assertNotNull("Unable to locate job history", fileInfo);
+
+    // force the manager to "forget" the job
+    hfm.deleteJobFromJobListCache(fileInfo);
+    final int msecPerSleep = 10;
+    int msecToSleep = 10 * 1000;
+    while (fileInfo.isMovePending() && msecToSleep > 0) {
+      Assert.assertTrue(!fileInfo.didMoveFail());
+      msecToSleep -= msecPerSleep;
+      Thread.sleep(msecPerSleep);
+    }
+    Assert.assertTrue("Timeout waiting for history move", msecToSleep > 0);
+
+    fileInfo = hfm.getFileInfo(jobId);
+    Assert.assertNotNull("Unable to locate old job history", fileInfo);
+   } finally {
+      LOG.info("FINISHED testScanningOldDirs");
+    }
+  }
+
   static class MRAppWithHistoryWithFailedAttempt extends MRAppWithHistory {
 
     public MRAppWithHistoryWithFailedAttempt(int maps, int reduces, boolean autoComplete,
@@ -419,6 +523,32 @@ public class TestJobHistoryParsing {
         getContext().getEventHandler().handle(
             new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
       }
+    }
+  }
+
+  static class MRAppWithHistoryWithFailedTask extends MRAppWithHistory {
+
+    public MRAppWithHistoryWithFailedTask(int maps, int reduces, boolean autoComplete,
+        String testName, boolean cleanOnStart) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void attemptLaunched(TaskAttemptId attemptID) {
+      if (attemptID.getTaskId().getId() == 0) {
+        getContext().getEventHandler().handle(
+            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_FAILMSG));
+      } else {
+        getContext().getEventHandler().handle(
+            new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
+      }
+    }
+  }
+
+  static class HistoryFileManagerForTest extends HistoryFileManager {
+    void deleteJobFromJobListCache(HistoryFileInfo fileInfo) {
+      jobListCache.delete(fileInfo);
     }
   }
 

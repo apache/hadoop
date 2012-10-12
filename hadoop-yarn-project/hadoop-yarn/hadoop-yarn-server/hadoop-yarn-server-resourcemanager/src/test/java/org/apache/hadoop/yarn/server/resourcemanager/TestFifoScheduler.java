@@ -52,18 +52,27 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestFifoScheduler {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
   
   private final int GB = 1024;
+  private static YarnConfiguration conf;
+  
+  @BeforeClass
+  public static void setup() {
+    conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+        FifoScheduler.class, ResourceScheduler.class);
+  }
   
   @Test
   public void test() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    MockRM rm = new MockRM();
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
     MockNM nm2 = rm.registerNode("h2:5678", 4 * GB);
@@ -178,15 +187,15 @@ public class TestFifoScheduler {
   public void testDefaultMinimumAllocation() throws Exception {
     // Test with something lesser than default
     testMinimumAllocation(
-        new YarnConfiguration(),
+        new YarnConfiguration(TestFifoScheduler.conf),
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB / 2);
   }
 
   @Test
   public void testNonDefaultMinimumAllocation() throws Exception {
     // Set custom min-alloc to test tweaking it
-    int allocMB = 512;
-    YarnConfiguration conf = new YarnConfiguration();
+    int allocMB = 1536;
+    YarnConfiguration conf = new YarnConfiguration(TestFifoScheduler.conf);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, allocMB);
     // Test for something lesser than this.
     testMinimumAllocation(conf, allocMB / 2);

@@ -130,13 +130,33 @@ Trunk (Unreleased)
 
     MAPREDUCE-4685. DBCount should not use ACCESS. (Viji via harsh)
 
+    MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
+
+    MAPREDUCE-4678. Running the Pentomino example with defaults throws
+    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
+
+    MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
+    (harsh)
+
+    MAPREDUCE-4574. Fix TotalOrderParitioner to work with
+    non-WritableComparable key types. (harsh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
+    MAPREDUCE-4123. Remove the 'mapred groups' command, which is no longer
+    supported. (Devaraj K via sseth)
+
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-3678. The Map tasks logs should have the value of input
+    split it processed. (harsh)
+
+    MAPREDUCE-4616. Improve javadoc for MultipleOutputs. (Tony Burton via
+    acmurthy) 
 
   OPTIMIZATIONS
 
@@ -150,6 +170,13 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4674. Hadoop examples secondarysort has a typo
     "secondarysrot" in the usage. (Robert Justice via eli)
+
+    MAPREDUCE-4681. Fix unit tests broken by HDFS-3910. (acmurthy) 
+
+    MAPREDUCE-4712. mr-jobhistory-daemon.sh doesn't accept --config
+    (Vinod Kumar Vavilapalli via tgraves)
+
+    MAPREDUCE-4654. TestDistCp is ignored. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -527,6 +554,25 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4554. Job Credentials are not transmitted if security is turned 
+    off (Benoy Antony via bobby)
+
+    MAPREDUCE-4705. Fix a bug in job history lookup, which makes older jobs
+    inaccessible despite the presence of a valid history file. (Jason Lowe
+    via sseth)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -550,7 +596,13 @@ Release 0.23.4 - UNRELEASED
     MAPREDUCE-4647. We should only unjar jobjar if there is a lib directory 
     in it. (Robert Evans via tgraves)
 
-Release 0.23.3 - UNRELEASED
+    MAPREDUCE-4691. Historyserver can report "Unknown job" after RM says job
+    has completed (Robert Joseph Evans via jlowe)
+
+    MAPREDUCE-4689. JobClient.getMapTaskReports on failed job results in NPE
+    (jlowe via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 

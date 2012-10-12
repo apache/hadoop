@@ -23,7 +23,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ListIterator;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -64,5 +70,38 @@ public class TestDirectoryCollection {
 
     // Verify no ConcurrentModification is thrown
     li.next();
+  }
+
+  @Test
+  public void testCreateDirectories() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+    FileContext localFs = FileContext.getLocalFSFileContext(conf);
+
+    String dirA = new File(testDir, "dirA").getPath();
+    String dirB = new File(dirA, "dirB").getPath();
+    String dirC = new File(testDir, "dirC").getPath();
+    Path pathC = new Path(dirC);
+    FsPermission permDirC = new FsPermission((short)0710);
+
+    localFs.mkdir(pathC, null, true);
+    localFs.setPermission(pathC, permDirC);
+
+    String[] dirs = { dirA, dirB, dirC };
+    DirectoryCollection dc = new DirectoryCollection(dirs);
+    FsPermission defaultPerm = FsPermission.getDefault()
+        .applyUMask(new FsPermission((short)FsPermission.DEFAULT_UMASK));
+    boolean createResult = dc.createNonExistentDirs(localFs, defaultPerm);
+    Assert.assertTrue(createResult);
+
+    FileStatus status = localFs.getFileStatus(new Path(dirA));
+    Assert.assertEquals("local dir parent not created with proper permissions",
+        defaultPerm, status.getPermission());
+    status = localFs.getFileStatus(new Path(dirB));
+    Assert.assertEquals("local dir not created with proper permissions",
+        defaultPerm, status.getPermission());
+    status = localFs.getFileStatus(pathC);
+    Assert.assertEquals("existing local directory permissions modified",
+        permDirC, status.getPermission());
   }
 }

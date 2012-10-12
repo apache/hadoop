@@ -499,7 +499,7 @@ public class SecurityUtil {
    * @throws IOException If unable to authenticate via SPNEGO
    */
   public static URLConnection openSecureHttpConnection(URL url) throws IOException {
-    if(!UserGroupInformation.isSecurityEnabled()) {
+    if (!HttpConfig.isSecure() && !UserGroupInformation.isSecurityEnabled()) {
       return url.openConnection();
     }
 

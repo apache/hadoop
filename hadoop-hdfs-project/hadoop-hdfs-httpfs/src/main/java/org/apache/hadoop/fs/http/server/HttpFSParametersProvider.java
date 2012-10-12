@@ -261,7 +261,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     /**
      * Parameter name.
      */
-    public static final String NAME = "len";
+    public static final String NAME = "length";
 
     /**
      * Constructor.

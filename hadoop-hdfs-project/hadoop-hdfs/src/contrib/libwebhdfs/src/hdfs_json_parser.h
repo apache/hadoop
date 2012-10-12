@@ -17,7 +17,23 @@
  */
 #ifndef _HDFS_JSON_PARSER_H_
 #define _HDFS_JSON_PARSER_H_
-#include "webhdfs.h"
+
+struct jsonException;
+
+/**
+ * Print out JSON exception information.
+ *
+ * @param exc             The exception information to print and free
+ * @param noPrintFlags    Flags which determine which exceptions we should NOT
+ *                        print.
+ * @param fmt             Printf-style format list
+ * @param ...             Printf-style varargs
+ *
+ * @return                The POSIX error number associated with the exception
+ *                        object.
+ */
+int printJsonException(struct jsonException *exc, int noPrintFlags,
+                       const char *fmt, ...);
 
 int parseMKDIR(char *response);
 int parseRENAME(char *response);

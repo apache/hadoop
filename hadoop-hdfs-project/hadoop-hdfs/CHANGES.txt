@@ -13,9 +13,9 @@ Trunk (Unreleased)
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
     with 4-layer network topology.  (Junping Du via szetszwo)
 
-    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
-    configured timeout and are selected as the last location to read from.
-    (Jing Zhao via suresh)
+    HDFS-3077. Implement QuorumJournalManager, a distributed mechanism for
+    reliably storing HDFS edit logs. See dedicated section below for breakdown
+    of subtasks.
 
   IMPROVEMENTS
 
@@ -137,6 +137,16 @@ Trunk (Unreleased)
     HDFS-3880. Use Builder to build RPC server in HDFS.
     (Brandon Li vias suresh)
 
+    HDFS-2127. Add a test that ensure AccessControlExceptions contain
+    a full path. (Stephen Chu via eli)
+
+    HDFS-3995. Use DFSTestUtil.createFile() for file creation and 
+    writing in test cases. (Jing Zhao via suresh)
+
+    HDFS-3735. NameNode WebUI should allow sorting live datanode list by fields
+    Block Pool Used, Block Pool Used(%) and Failed Volumes.
+    (Brahma Reddy Battula via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -219,6 +229,108 @@ Trunk (Unreleased)
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
 
+  BREAKDOWN OF HDFS-3077 SUBTASKS
+
+    HDFS-3077. Quorum-based protocol for reading and writing edit logs.
+    (todd, Brandon Li, and Hari Mankude via todd)
+    
+    HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary (todd)
+    
+    HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs
+    (todd)
+    
+    HDFS-3693. JNStorage should read its storage info even before a writer
+    becomes active (todd)
+    
+    HDFS-3725. Fix QJM startup when individual JNs have gaps (todd)
+    
+    HDFS-3741. Exhaustive failure injection test for skipped RPCs (todd)
+    
+    HDFS-3773. TestNNWithQJM fails after HDFS-3741. (atm)
+    
+    HDFS-3793. Implement genericized format() in QJM (todd)
+    
+    HDFS-3795. QJM: validate journal dir at startup (todd)
+    
+    HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid
+    segment (todd)
+    
+    HDFS-3799. QJM: handle empty log segments during recovery (todd)
+    
+    HDFS-3797. QJM: add segment txid as a parameter to journal() RPC (todd)
+    
+    HDFS-3800. improvements to QJM fault testing (todd)
+    
+    HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed
+    setting of HTTP port. (todd and atm)
+    
+    HDFS-3826. QJM: Some trivial logging / exception text improvements. (todd
+    and atm)
+    
+    HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode"
+    (eli)
+    
+    HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)
+    
+    HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address (eli)
+    
+    HDFS-3863. Track last "committed" txid in QJM (todd)
+    
+    HDFS-3869. Expose non-file journal manager details in web UI (todd)
+    
+    HDFS-3884. Journal format() should reset cached values (todd)
+    
+    HDFS-3870. Add metrics to JournalNode (todd)
+    
+    HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)
+    
+    HDFS-3726. If a logger misses an RPC, don't retry that logger until next
+    segment (todd)
+    
+    HDFS-3893. QJM: Make QJM work with security enabled. (atm)
+    
+    HDFS-3897. QJM: TestBlockToken fails after HDFS-3893. (atm)
+    
+    HDFS-3898. QJM: enable TCP_NODELAY for IPC (todd)
+    
+    HDFS-3885. QJM: optimize log sync when JN is lagging behind (todd)
+    
+    HDFS-3900. QJM: avoid validating log segments on log rolls (todd)
+    
+    HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are
+    out-of-sync (todd)
+    
+    HDFS-3899. QJM: Add client-side metrics (todd)
+    
+    HDFS-3914. QJM: acceptRecovery should abort current segment (todd)
+    
+    HDFS-3915. QJM: Failover fails with auth error in secure cluster (todd)
+    
+    HDFS-3906. QJM: quorum timeout on failover with large log segment (todd)
+    
+    HDFS-3840. JournalNodes log JournalNotFormattedException backtrace error
+    before being formatted (todd)
+    
+    HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC
+    client caching (todd)
+    
+    HDFS-3926. QJM: Add user documentation for QJM. (atm)
+    
+    HDFS-3943. QJM: remove currently-unused md5sum field (todd)
+    
+    HDFS-3950. QJM: misc TODO cleanup, improved log messages, etc. (todd)
+    
+    HDFS-3955. QJM: Make acceptRecovery() atomic. (todd)
+    
+    HDFS-3956. QJM: purge temporary files when no longer within retention
+    period (todd)
+    
+    HDFS-4004. TestJournalNode#testJournal fails because of test case execution
+    order (Chao Shi via todd)
+    
+    HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
+    (Chao Shi via todd)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -227,6 +339,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
     (Jaimin D Jetly and Jing Zhao via szetszwo)
+
+    HDFS-3912. Detect and avoid stale datanodes for writes.
+    (Jing Zhao via suresh)
 
   IMPROVEMENTS
   
@@ -237,6 +352,32 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3373. Change DFSClient input stream socket cache to global static and add
     a thread to cleanup expired cache entries. (John George via szetszwo)
+
+    HDFS-3896. Add descriptions for dfs.namenode.rpc-address and
+    dfs.namenode.servicerpc-address to hdfs-default.xml. (Jeff Lord via atm)
+
+    HDFS-3996. Add debug log removed in HDFS-3873 back. (eli)
+
+    HDFS-3916. libwebhdfs (C client) code cleanups.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3813. Log error message if security and WebHDFS are enabled but
+    principal/keytab are not configured. (Stephen Chu via atm)
+
+    HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
+    config. (Stephen Fritz via atm)
+
+    HDFS-3682. MiniDFSCluster#init should provide more info when it fails.
+    (todd via eli)
+
+    HDFS-4008. TestBalancerWithEncryptedTransfer needs a timeout. (eli)
+
+    HDFS-4007. Rehabilitate bit-rotted unit tests under
+    hadoop-hdfs-project/hadoop-hdfs/src/test/unit/ 
+    (Colin Patrick McCabe via todd)
+
+    HDFS-4041. Hadoop HDFS Maven protoc calls must not depend on external
+    sh script. (Chris Nauroth via suresh)
 
   OPTIMIZATIONS
 
@@ -261,6 +402,31 @@ Release 2.0.3-alpha - Unreleased
     (Andy Isaacson via eli)
 
     HDFS-3964. Make NN log of fs.defaultFS debug rather than info. (eli)
+
+    HDFS-3992. Method org.apache.hadoop.hdfs.TestHftpFileSystem.tearDown()
+    sometimes throws NPEs. (Ivan A. Veselovsky via atm)
+
+    HDFS-3753. Tests don't run with native libraries.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-4000. TestParallelLocalRead fails with "input ByteBuffers
+    must be direct buffers". (Colin Patrick McCabe via eli)
+
+    HDFS-3999. HttpFS OPEN operation expects len parameter, it should be length. (tucu)
+
+    HDFS-4006. TestCheckpoint#testSecondaryHasVeryOutOfDateImage
+    occasionally fails due to unexpected exit. (todd via eli)
+
+    HDFS-4003. test-patch should build the common native libs before
+    running hdfs tests. (Colin Patrick McCabe via eli)
+
+    HDFS-4018. testMiniDFSClusterWithMultipleNN is missing some
+    cluster cleanup. (eli)
+
+    HDFS-4020. TestRBWBlockInvalidation may time out. (eli)
+
+    HDFS-4021. Misleading error message when resources are low on the NameNode.
+    (Christopher Conner via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -291,6 +457,11 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
 
     HDFS-2793. Add an admin command to trigger an edit log roll. (todd)
+
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via suresh)
+    
 
   IMPROVEMENTS
 
@@ -1633,6 +1804,27 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
+    Robinson via tgraves)
+
+    HDFS-3824. TestHftpDelegationToken fails intermittently with JDK7 (Trevor
+    Robinson via tgraves)
+
+    HDFS-3224. Bug in check for DN re-registration with different storage ID
+    (jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1645,7 +1837,10 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
-Release 0.23.3 - UNRELEASED
+    HDFS-3831. Failure to renew tokens due to test-sources left in classpath
+    (jlowe via bobby)
+
+Release 0.23.3
 
   INCOMPATIBLE CHANGES
 

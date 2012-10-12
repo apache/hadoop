@@ -35,6 +35,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -157,6 +158,7 @@ public class TestResourceLocalizationService {
 
       // verify directory creation
       for (Path p : localDirs) {
+        p = new Path((new URI(p.toString())).getPath());
         Path usercache = new Path(p, ContainerLocalizer.USERCACHE);
         verify(spylfs)
           .mkdir(eq(usercache),
@@ -192,7 +194,8 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-
+    String logDir = lfs.makeQualified(new Path(basedir, "logdir " )).toString();
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
     LocalizerTracker mockLocallilzerTracker = mock(LocalizerTracker.class);
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
@@ -379,7 +382,8 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-
+    String logDir = lfs.makeQualified(new Path(basedir, "logdir " )).toString();
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
     dispatcher.start();

@@ -722,6 +722,12 @@ public class NameNode {
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
     checkAllowFormat(conf);
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      InetSocketAddress socAddr = getAddress(conf);
+      SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
+          DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+    }
     
     Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
@@ -763,13 +769,13 @@ public class NameNode {
   }
   
   @VisibleForTesting
-  public static boolean initializeSharedEdits(Configuration conf) {
+  public static boolean initializeSharedEdits(Configuration conf) throws IOException {
     return initializeSharedEdits(conf, true);
   }
   
   @VisibleForTesting
   public static boolean initializeSharedEdits(Configuration conf,
-      boolean force) {
+      boolean force) throws IOException {
     return initializeSharedEdits(conf, force, false);
   }
 
@@ -783,7 +789,7 @@ public class NameNode {
    * @return true if the command aborts, false otherwise
    */
   private static boolean initializeSharedEdits(Configuration conf,
-      boolean force, boolean interactive) {
+      boolean force, boolean interactive) throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
@@ -792,6 +798,12 @@ public class NameNode {
       LOG.fatal("No shared edits directory configured for namespace " +
           nsId + " namenode " + namenodeId);
       return false;
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      InetSocketAddress socAddr = getAddress(conf);
+      SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
+          DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
     }
 
     NNStorage existingStorage = null;

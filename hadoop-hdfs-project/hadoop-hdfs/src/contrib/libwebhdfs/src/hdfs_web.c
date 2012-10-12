@@ -16,38 +16,63 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <jni.h>
-#include "webhdfs.h"
+#include "exception.h"
+#include "hdfs.h"
 #include "hdfs_http_client.h"
 #include "hdfs_http_query.h"
 #include "hdfs_json_parser.h"
 #include "jni_helper.h"
-#include "exception.h"
+
+#include <inttypes.h>
+#include <jni.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define HADOOP_HDFS_CONF        "org/apache/hadoop/hdfs/HdfsConfiguration"
 #define HADOOP_NAMENODE         "org/apache/hadoop/hdfs/server/namenode/NameNode"
 #define JAVA_INETSOCKETADDRESS  "java/net/InetSocketAddress"
 
-static void initFileinfo(hdfsFileInfo *fileInfo) {
-    if (fileInfo) {
-        fileInfo->mKind = kObjectKindFile;
-        fileInfo->mName = NULL;
-        fileInfo->mLastMod = 0;
-        fileInfo->mSize = 0;
-        fileInfo->mReplication = 0;
-        fileInfo->mBlockSize = 0;
-        fileInfo->mOwner = NULL;
-        fileInfo->mGroup = NULL;
-        fileInfo->mPermissions = 0;
-        fileInfo->mLastAccess = 0;
-    }
-}
+struct hdfsBuilder {
+    int forceNewInstance;
+    const char *nn;
+    tPort port;
+    const char *kerbTicketCachePath;
+    const char *userName;
+};
 
-static webhdfsBuffer *initWebHdfsBuffer() {
-    webhdfsBuffer *buffer = (webhdfsBuffer *) calloc(1, sizeof(webhdfsBuffer));
+/**
+ * The information required for accessing webhdfs,
+ * including the network address of the namenode and the user name
+ *
+ * Unlike the string in hdfsBuilder, the strings in this structure are
+ * dynamically allocated.  This structure will not be freed until we disconnect
+ * from HDFS.
+ */
+struct hdfs_internal {
+    char *nn;
+    tPort port;
+    char *userName;
+
+    /**
+     * Working directory -- stored with a trailing slash.
+     */
+    char *workingDir;
+};
+
+/**
+ * The 'file-handle' to a file in hdfs.
+ */
+struct hdfsFile_internal {
+    struct webhdfsFileHandle* file;
+    enum hdfsStreamType type;
+    int flags;
+    tOffset offset;
+};
+
+static webhdfsBuffer *initWebHdfsBuffer(void)
+{
+    webhdfsBuffer *buffer = calloc(1, sizeof(*buffer));
     if (!buffer) {
         fprintf(stderr, "Fail to allocate memory for webhdfsBuffer.\n");
         return NULL;
@@ -107,49 +132,36 @@ static void freeWebhdfsBuffer(webhdfsBuffer *buffer) {
 }
 
 static void freeWebFileHandle(struct webhdfsFileHandle * handle) {
-    if (handle) {
-        freeWebhdfsBuffer(handle->uploadBuffer);
-        if (handle->datanode) {
-            free(handle->datanode);
-        }
-        if (handle->absPath) {
-            free(handle->absPath);
-        }
-        free(handle);
-        handle = NULL;
-    }
+    if (!handle)
+        return;
+    freeWebhdfsBuffer(handle->uploadBuffer);
+    free(handle->datanode);
+    free(handle->absPath);
+    free(handle);
 }
 
 struct hdfsBuilder *hdfsNewBuilder(void)
 {
     struct hdfsBuilder *bld = calloc(1, sizeof(struct hdfsBuilder));
-    if (!bld) {
+    if (!bld)
         return NULL;
-    }
-    hdfsSetWorkingDirectory(bld, "/");
     return bld;
 }
 
 void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {
-    if (bld && bld->workingDir) {
-        free(bld->workingDir);
-    }
     free(bld);
 }
 
 void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld)
 {
-    if (bld) {
-        bld->forceNewInstance = 1;
-    }
+    // We don't cache instances in libwebhdfs, so this is not applicable.
 }
 
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
 {
     if (bld) {
         bld->nn = nn;
-        bld->nn_jni = nn;
     }
 }
 
@@ -199,7 +211,7 @@ hdfsFS hdfsConnectNewInstance(const char* nn, tPort port)
         return NULL;
     }
     hdfsBuilderSetForceNewInstance(bld);
-    return bld;
+    return hdfsBuilderConnect(bld);
 }
 
 hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port,
@@ -215,290 +227,356 @@ hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port,
     return hdfsBuilderConnect(bld);
 }
 
-const char *hdfsBuilderToStr(const struct hdfsBuilder *bld,
-                             char *buf, size_t bufLen);
+static const char *maybeNull(const char *str)
+{
+    return str ? str : "(NULL)";
+}
+
+static const char *hdfsBuilderToStr(const struct hdfsBuilder *bld,
+                                    char *buf, size_t bufLen)
+{
+    snprintf(buf, bufLen, "nn=%s, port=%d, "
+             "kerbTicketCachePath=%s, userName=%s",
+             maybeNull(bld->nn), bld->port,
+             maybeNull(bld->kerbTicketCachePath), maybeNull(bld->userName));
+    return buf;
+}
+
+static void freeWebHdfsInternal(struct hdfs_internal *fs)
+{
+    if (fs) {
+        free(fs->nn);
+        free(fs->userName);
+        free(fs->workingDir);
+    }
+}
+
+static int retrieveDefaults(const struct hdfsBuilder *bld, tPort *port,
+                            char **nn)
+{
+    JNIEnv *env = 0;
+    jobject jHDFSConf = NULL, jAddress = NULL;
+    jstring jHostName = NULL;
+    jvalue jVal;
+    jthrowable jthr = NULL;
+    int ret = 0;
+    char buf[512];
+    
+    // TODO: can we do this without using JNI?  See HDFS-3917
+    env = getJNIEnv();
+    if (!env) {
+        return EINTERNAL;
+    }
+    
+    //  jHDFSConf = new HDFSConfiguration();
+    jthr = constructNewObjectOfClass(env, &jHDFSConf, HADOOP_HDFS_CONF, "()V");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                                    "hdfsBuilderConnect(%s)",
+                                    hdfsBuilderToStr(bld, buf, sizeof(buf)));
+        goto done;
+    }
+    
+    jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_NAMENODE, "getHttpAddress",
+                        "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/InetSocketAddress;",
+                        jHDFSConf);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                        "hdfsBuilderConnect(%s)", hdfsBuilderToStr(bld, buf, sizeof(buf)));
+        goto done;
+    }
+    jAddress = jVal.l;
+    
+    jthr = invokeMethod(env, &jVal, INSTANCE, jAddress,
+                        JAVA_INETSOCKETADDRESS, "getPort", "()I");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                                    "hdfsBuilderConnect(%s)",
+                                    hdfsBuilderToStr(bld, buf, sizeof(buf)));
+        goto done;
+    }
+    *port = jVal.i;
+    
+    jthr = invokeMethod(env, &jVal, INSTANCE, jAddress,
+                        JAVA_INETSOCKETADDRESS, "getHostName", "()Ljava/lang/String;");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                                    "hdfsBuilderConnect(%s)",
+                                    hdfsBuilderToStr(bld, buf, sizeof(buf)));
+        goto done;
+    }
+    jHostName = jVal.l;
+    jthr = newCStr(env, jHostName, nn);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                                    "hdfsBuilderConnect(%s)",
+                                    hdfsBuilderToStr(bld, buf, sizeof(buf)));
+        goto done;
+    }
+
+done:
+    destroyLocalReference(env, jHDFSConf);
+    destroyLocalReference(env, jAddress);
+    destroyLocalReference(env, jHostName);
+    return ret;
+}
 
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
 {
+    struct hdfs_internal *fs = NULL;
+    int ret;
+
     if (!bld) {
-        return NULL;
+        ret = EINVAL;
+        goto done;
     }
-    // if the hostname is null for the namenode, set it to localhost
-    //only handle bld->nn
     if (bld->nn == NULL) {
-        bld->nn = "localhost";
-    } else {
-        /* check whether the hostname of the namenode (nn in hdfsBuilder) has already contained the port */
-        const char *lastColon = rindex(bld->nn, ':');
-        if (lastColon && (strspn(lastColon + 1, "0123456789") == strlen(lastColon + 1))) {
-            fprintf(stderr, "port %d was given, but URI '%s' already "
-                    "contains a port!\n", bld->port, bld->nn);
-            char *newAddr = (char *)malloc(strlen(bld->nn) - strlen(lastColon) + 1);
-            if (!newAddr) {
-                return NULL;
-            }
-            strncpy(newAddr, bld->nn, strlen(bld->nn) - strlen(lastColon));
-            newAddr[strlen(bld->nn) - strlen(lastColon)] = '\0';
-            free(bld->nn);
-            bld->nn = newAddr;
-        }
+        // In the JNI version of libhdfs this returns a LocalFileSystem.
+        ret = ENOTSUP;
+        goto done;
     }
     
-    /* if the namenode is "default" and/or the port of namenode is 0, get the default namenode/port by using JNI */
+    fs = calloc(1, sizeof(*fs));
+    if (!fs) {
+        ret = ENOMEM;
+        goto done;
+    }
+    /* If the namenode is "default" and/or the port of namenode is 0, get the
+     * default namenode/port */
     if (bld->port == 0 || !strcasecmp("default", bld->nn)) {
-        JNIEnv *env = 0;
-        jobject jHDFSConf = NULL, jAddress = NULL;
-        jvalue jVal;
-        jthrowable jthr = NULL;
-        int ret = 0;
-        char buf[512];
-        
-        //Get the JNIEnv* corresponding to current thread
-        env = getJNIEnv();
-        if (env == NULL) {
-            errno = EINTERNAL;
-            free(bld);
-            bld = NULL;
-            return NULL;
-        }
-        
-        //  jHDFSConf = new HDFSConfiguration();
-        jthr = constructNewObjectOfClass(env, &jHDFSConf, HADOOP_HDFS_CONF, "()V");
-        if (jthr) {
-            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                        "hdfsBuilderConnect(%s)",
-                                        hdfsBuilderToStr(bld, buf, sizeof(buf)));
+        ret = retrieveDefaults(bld, &fs->port, &fs->nn);
+        if (ret)
+            goto done;
+    } else {
+        fs->port = bld->port;
+        fs->nn = strdup(bld->nn);
+        if (!fs->nn) {
+            ret = ENOMEM;
             goto done;
         }
-        
-        jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_NAMENODE, "getHttpAddress",
-                            "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/InetSocketAddress;",
-                            jHDFSConf);
-        if (jthr) {
-            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                            "hdfsBuilderConnect(%s)", hdfsBuilderToStr(bld, buf, sizeof(buf)));
-            goto done; //free(bld), deleteReference for jHDFSConf
-        }
-        jAddress = jVal.l;
-        
-        if (bld->port == 0) {
-            jthr = invokeMethod(env, &jVal, INSTANCE, jAddress,
-                                JAVA_INETSOCKETADDRESS, "getPort", "()I");
-            if (jthr) {
-                ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                            "hdfsBuilderConnect(%s)",
-                                            hdfsBuilderToStr(bld, buf, sizeof(buf)));
-                goto done;
-            }
-            bld->port = jVal.i;
-        }
-        
-        if (!strcasecmp("default", bld->nn)) {
-            jthr = invokeMethod(env, &jVal, INSTANCE, jAddress,
-                                JAVA_INETSOCKETADDRESS, "getHostName", "()Ljava/lang/String;");
-            if (jthr) {
-                ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                            "hdfsBuilderConnect(%s)",
-                                            hdfsBuilderToStr(bld, buf, sizeof(buf)));
-                goto done;
-            }
-            bld->nn = (const char*) ((*env)->GetStringUTFChars(env, jVal.l, NULL));
-        }
-        
-    done:
-        destroyLocalReference(env, jHDFSConf);
-        destroyLocalReference(env, jAddress);
-        if (ret) { //if there is error/exception, we free the builder and return NULL
-            free(bld);
-            bld = NULL;
+    }
+    if (bld->userName) {
+        // userName may be NULL
+        fs->userName = strdup(bld->userName);
+        if (!fs->userName) {
+            ret = ENOMEM;
+            goto done;
         }
     }
-    
+    // The working directory starts out as root.
+    fs->workingDir = strdup("/");
+    if (!fs->workingDir) {
+        ret = ENOMEM;
+        goto done;
+    }
     //for debug
     fprintf(stderr, "namenode: %s:%d\n", bld->nn, bld->port);
-    return bld;
+
+done:
+    free(bld);
+    if (ret) {
+        freeWebHdfsInternal(fs);
+        errno = ret;
+        return NULL;
+    }
+    return fs;
 }
 
 int hdfsDisconnect(hdfsFS fs)
 {
     if (fs == NULL) {
-        errno = EBADF;
+        errno = EINVAL;
         return -1;
-    } else {
-        free(fs);
-        fs = NULL;
     }
+    freeWebHdfsInternal(fs);
     return 0;
 }
 
-char *getAbsolutePath(hdfsFS fs, const char *path) {
-    if (fs == NULL || path == NULL) {
+static char *getAbsolutePath(hdfsFS fs, const char *path)
+{
+    char *absPath = NULL;
+    size_t absPathLen;
+    
+    if (path[0] == '/') {
+        // path is already absolute.
+        return strdup(path);
+    }
+    // prepend the workingDir to the path.
+    absPathLen = strlen(fs->workingDir) + strlen(path);
+    absPath = malloc(absPathLen + 1);
+    if (!absPath) {
         return NULL;
     }
-    char *absPath = NULL;
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    
-    if ('/' != *path && bld->workingDir) {
-        absPath = (char *)malloc(strlen(bld->workingDir) + strlen(path) + 1);
-        if (!absPath) {
-            return NULL;
-        }
-        absPath = strcpy(absPath, bld->workingDir);
-        absPath = strcat(absPath, path);
-        return absPath;
-    } else {
-        absPath = (char *)malloc(strlen(path) + 1);
-        if (!absPath) {
-            return NULL;
-        }
-        absPath = strcpy(absPath, path);
-        return absPath;
-    }
+    snprintf(absPath, absPathLen + 1, "%s%s", fs->workingDir, path);
+    return absPath;
 }
 
 int hdfsCreateDirectory(hdfsFS fs, const char* path)
 {
-    if (fs == NULL || path == NULL) {
-        return -1;
-    }
-    
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return -1;
-    }
-    
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url = NULL;
+    char *url = NULL, *absPath = NULL;
     Response resp = NULL;
     int ret = 0;
-    
-    if(!((url = prepareMKDIR(bld->nn, bld->port, absPath, bld->userName))
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareMKDIR(fs->nn, fs->port, absPath, fs->userName))
          && (resp = launchMKDIR(url))
          && (parseMKDIR(resp->body->content)))) {
-        ret = -1;
+        ret = EIO;
+        goto done;
     }
     
+done:
     freeResponse(resp);
     free(url);
     free(absPath);
-    return ret;
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }
 
 int hdfsChmod(hdfsFS fs, const char* path, short mode)
 {
-    if (fs == NULL || path == NULL) {
-        return -1;
-    }
-    
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return -1;
-    }
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url=NULL;
+    char *absPath = NULL, *url = NULL;
     Response resp = NULL;
     int ret = 0;
-    
-    if(!((url = prepareCHMOD(bld->nn, bld->port, absPath, (int)mode, bld->userName))
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareCHMOD(fs->nn, fs->port, absPath, (int)mode, fs->userName))
          && (resp = launchCHMOD(url))
          && (parseCHMOD(resp->header->content, resp->body->content)))) {
-        ret = -1;
+        ret = EIO;
+        goto done;
     }
-    
+done:
     freeResponse(resp);
     free(absPath);
     free(url);
-    return ret;
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }
 
 int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
 {
-    if (fs == NULL || path == NULL) {
-        return -1;
-    }
-    
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return -1;
-    }
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url=NULL;
-    Response resp = NULL;
     int ret = 0;
+    char *absPath = NULL, *url = NULL;
+    Response resp = NULL;
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
     
-    if(!((url = prepareCHOWN(bld->nn, bld->port, absPath, owner, group, bld->userName))
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    
+    if(!((url = prepareCHOWN(fs->nn, fs->port, absPath, owner, group, fs->userName))
          && (resp = launchCHOWN(url))
          && (parseCHOWN(resp->header->content, resp->body->content)))) {
-        ret = -1;
+        ret = EIO;
+        goto done;
     }
     
+done:
     freeResponse(resp);
     free(absPath);
     free(url);
-    return ret;
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }
 
 int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath)
 {
-    if (fs == NULL || oldPath == NULL || newPath == NULL) {
-        return -1;
-    }
-    
-    char *oldAbsPath = getAbsolutePath(fs, oldPath);
-    if (!oldAbsPath) {
-        return -1;
-    }
-    char *newAbsPath = getAbsolutePath(fs, newPath);
-    if (!newAbsPath) {
-        return -1;
-    }
-    
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url=NULL;
-    Response resp = NULL;
+    char *oldAbsPath = NULL, *newAbsPath = NULL, *url = NULL;
     int ret = 0;
-    
-    if(!((url = prepareRENAME(bld->nn, bld->port, oldAbsPath, newAbsPath, bld->userName))
+    Response resp = NULL;
+
+    if (fs == NULL || oldPath == NULL || newPath == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
+    oldAbsPath = getAbsolutePath(fs, oldPath);
+    if (!oldAbsPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    newAbsPath = getAbsolutePath(fs, newPath);
+    if (!newAbsPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareRENAME(fs->nn, fs->port, oldAbsPath, newAbsPath, fs->userName))
          && (resp = launchRENAME(url))
          && (parseRENAME(resp->body->content)))) {
         ret = -1;
     }
-    
+done:
     freeResponse(resp);
     free(oldAbsPath);
     free(newAbsPath);
     free(url);
-    return ret;
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }
 
 hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
 {
-    if (fs == NULL || path == NULL) {
-        return NULL;
-    }
-    
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return NULL;
-    }
-    
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
+    char *absPath = NULL;
     char *url=NULL;
     Response resp = NULL;
     int numEntries = 0;
     int ret = 0;
-    
-    hdfsFileInfo * fileInfo = (hdfsFileInfo *) calloc(1, sizeof(hdfsFileInfo));
-    if (!fileInfo) {
-        ret = -1;
+    hdfsFileInfo *fileInfo = NULL;
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
         goto done;
     }
-    initFileinfo(fileInfo);
-    
-    if(!((url = prepareGFS(bld->nn, bld->port, absPath, bld->userName))
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    fileInfo = (hdfsFileInfo *) calloc(1, sizeof(hdfsFileInfo));
+    if (!fileInfo) {
+        ret = ENOMEM;
+        goto done;
+    }
+    fileInfo->mKind = kObjectKindFile;
+
+    if(!((url = prepareGFS(fs->nn, fs->port, absPath, fs->userName))
          && (resp = launchGFS(url))
          && (fileInfo = parseGFS(resp->body->content, fileInfo, &numEntries))))  {
-        ret = -1;
+        ret = EIO;
         goto done;
     }
     
@@ -511,36 +589,115 @@ done:
         return fileInfo;
     } else {
         free(fileInfo);
+        errno = ret;
         return NULL;
     }
 }
 
 hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
 {
-    if (fs == NULL || path == NULL) {
-        return NULL;
-    }
-    
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return NULL;
-    }
-
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url = NULL;
+    char *url = NULL, *absPath = NULL;
     Response resp = NULL;
     int ret = 0;
-    
-    hdfsFileInfo * fileInfo = (hdfsFileInfo *) calloc(1, sizeof(hdfsFileInfo));
-    if (!fileInfo) {
-        ret = -1;
+    hdfsFileInfo *fileInfo = NULL;
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
         goto done;
     }
-    
-    if(!((url = prepareLS(bld->nn, bld->port, absPath, bld->userName))
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    fileInfo = calloc(1, sizeof(*fileInfo));
+    if (!fileInfo) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareLS(fs->nn, fs->port, absPath, fs->userName))
          && (resp = launchLS(url))
          && (fileInfo = parseGFS(resp->body->content, fileInfo, numEntries))))  {
-        ret = -1;
+        ret = EIO;
+        goto done;
+    }
+done:
+    freeResponse(resp);
+    free(absPath);
+    free(url);
+
+    if (ret == 0) {
+        return fileInfo;
+    } else {
+        hdfsFreeFileInfo(fileInfo, 1);
+        errno = ret;
+        return NULL;
+    }
+}
+
+int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
+{
+    char *url = NULL, *absPath = NULL;
+    Response resp = NULL;
+    int ret = 0;
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareSETREPLICATION(fs->nn, fs->port, absPath, replication, fs->userName))
+         && (resp = launchSETREPLICATION(url))
+         && (parseSETREPLICATION(resp->body->content)))) {
+        ret = EIO;
+        goto done;
+    }
+done:
+    freeResponse(resp);
+    free(absPath);
+    free(url);
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return 0;
+}
+
+void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
+{
+    int i;
+
+    for (i=0; i < numEntries; ++i) {
+        free(hdfsFileInfo[i].mName);
+        free(hdfsFileInfo[i].mOwner);
+        free(hdfsFileInfo[i].mGroup);
+    }
+    free(hdfsFileInfo);
+}
+
+int hdfsDelete(hdfsFS fs, const char* path, int recursive)
+{
+    char *url = NULL, *absPath = NULL;
+    Response resp = NULL;
+    int ret = 0;
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareDELETE(fs->nn, fs->port, absPath, recursive, fs->userName))
+         && (resp = launchDELETE(url))
+         && (parseDELETE(resp->body->content)))) {
+        ret = EIO;
         goto done;
     }
     
@@ -548,126 +705,56 @@ done:
     freeResponse(resp);
     free(absPath);
     free(url);
-    
-    if (ret == 0) {
-        return fileInfo;
-    } else {
-        free(fileInfo);
-        return NULL;
-    }
-}
-
-int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication)
-{
-    if (fs == NULL || path == NULL) {
+    if (ret) {
+        errno = ret;
         return -1;
     }
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return -1;
-    }
-    
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url = NULL;
-    Response resp = NULL;
-    int ret = 0;
-    
-    if(!((url = prepareSETREPLICATION(bld->nn, bld->port, absPath, replication, bld->userName))
-         && (resp = launchSETREPLICATION(url))
-         && (parseSETREPLICATION(resp->body->content)))) {
-        ret = -1;
-    }
-    
-    freeResponse(resp);
-    free(absPath);
-    free(url);
-    return ret;
-}
-
-void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
-{
-    //Free the mName, mOwner, and mGroup
-    int i;
-    for (i=0; i < numEntries; ++i) {
-        if (hdfsFileInfo[i].mName) {
-            free(hdfsFileInfo[i].mName);
-        }
-        if (hdfsFileInfo[i].mOwner) {
-            free(hdfsFileInfo[i].mOwner);
-        }
-        if (hdfsFileInfo[i].mGroup) {
-            free(hdfsFileInfo[i].mGroup);
-        }
-    }
-    
-    //Free entire block
-    free(hdfsFileInfo);
-    hdfsFileInfo = NULL;
-}
-
-int hdfsDelete(hdfsFS fs, const char* path, int recursive)
-{
-    if (fs == NULL || path == NULL) {
-        return -1;
-    }
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return -1;
-    }
-    
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url = NULL;
-    Response resp = NULL;
-    int ret = 0;
-    
-    if(!((url = prepareDELETE(bld->nn, bld->port, absPath, recursive, bld->userName))
-         && (resp = launchDELETE(url))
-         && (parseDELETE(resp->body->content)))) {
-        ret = -1;
-    }
-    
-    freeResponse(resp);
-    free(absPath);
-    free(url);
-    return ret;
+    return 0;
 }
 
 int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
 {
-    if (fs == NULL || path == NULL) {
-        return -1;
-    }
-    char *absPath = getAbsolutePath(fs, path);
-    if (!absPath) {
-        return -1;
-    }
-    
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    char *url = NULL;
+    char *url = NULL, *absPath = NULL;
     Response resp = NULL;
     int ret = 0;
-    
-    if(!((url = prepareUTIMES(bld->nn, bld->port, absPath, mtime, atime, bld->userName))
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
+    }
+    absPath = getAbsolutePath(fs, path);
+    if (!absPath) {
+        ret = ENOMEM;
+        goto done;
+    }
+    if(!((url = prepareUTIMES(fs->nn, fs->port, absPath, mtime, atime,
+                              fs->userName))
          && (resp = launchUTIMES(url))
          && (parseUTIMES(resp->header->content, resp->body->content)))) {
-        ret = -1;
+        ret = EIO;
+        goto done;
     }
     
+done:
     freeResponse(resp);
     free(absPath);
     free(url);
-    return ret;
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }
 
 int hdfsExists(hdfsFS fs, const char *path)
 {
     hdfsFileInfo *fileInfo = hdfsGetPathInfo(fs, path);
-    if (fileInfo) {
-        hdfsFreeFileInfo(fileInfo, 1);
-        return 0;
-    } else {
+    if (!fileInfo) {
+        // (errno will have been set by hdfsGetPathInfo)
         return -1;
     }
+    hdfsFreeFileInfo(fileInfo, 1);
+    return 0;
 }
 
 typedef struct {
@@ -701,39 +788,160 @@ static void *writeThreadOperation(void *v) {
     return data;
 }
 
+/**
+ * Free the memory associated with a webHDFS file handle.
+ *
+ * No other resources will be freed.
+ *
+ * @param file            The webhdfs file handle
+ */
+static void freeFileInternal(hdfsFile file)
+{
+    if (!file)
+        return;
+    freeWebFileHandle(file->file);
+    free(file);
+}
+
+/**
+ * Helper function for opening a file for OUTPUT.
+ *
+ * As part of the open process for OUTPUT files, we have to connect to the
+ * NameNode and get the URL of the corresponding DataNode.
+ * We also create a background thread here for doing I/O.
+ *
+ * @param webhandle              The webhandle being opened
+ * @return                       0 on success; error code otherwise
+ */
+static int hdfsOpenOutputFileImpl(hdfsFS fs, hdfsFile file)
+{
+    struct webhdfsFileHandle *webhandle = file->file;
+    Response resp = NULL;
+    int parseRet, append, ret = 0;
+    char *prepareUrl = NULL, *dnUrl = NULL;
+    threadData *data = NULL;
+
+    webhandle->uploadBuffer = initWebHdfsBuffer();
+    if (!webhandle->uploadBuffer) {
+        ret = ENOMEM;
+        goto done;
+    }
+    append = file->flags & O_APPEND;
+    if (!append) {
+        // If we're not appending, send a create request to the NN
+        prepareUrl = prepareNnWRITE(fs->nn, fs->port, webhandle->absPath,
+            fs->userName, webhandle->replication, webhandle->blockSize);
+    } else {
+        prepareUrl = prepareNnAPPEND(fs->nn, fs->port, webhandle->absPath,
+                              fs->userName);
+    }
+    if (!prepareUrl) {
+        fprintf(stderr, "fail to create the url connecting to namenode "
+                "for file creation/appending\n");
+        ret = EIO;
+        goto done;
+    }
+    if (!append) {
+        resp = launchNnWRITE(prepareUrl);
+    } else {
+        resp = launchNnAPPEND(prepareUrl);
+    }
+    if (!resp) {
+        fprintf(stderr, "fail to get the response from namenode for "
+                "file creation/appending\n");
+        ret = EIO;
+        goto done;
+    }
+    if (!append) {
+        parseRet = parseNnWRITE(resp->header->content, resp->body->content);
+    } else {
+        parseRet = parseNnAPPEND(resp->header->content, resp->body->content);
+    }
+    if (!parseRet) {
+        fprintf(stderr, "fail to parse the response from namenode for "
+                "file creation/appending\n");
+        ret = EIO;
+        goto done;
+    }
+    dnUrl = parseDnLoc(resp->header->content);
+    if (!dnUrl) {
+        fprintf(stderr, "fail to get the datanode url from namenode "
+                "for file creation/appending\n");
+        ret = EIO;
+        goto done;
+    }
+    //store the datanode url in the file handle
+    webhandle->datanode = strdup(dnUrl);
+    if (!webhandle->datanode) {
+        ret = ENOMEM;
+        goto done;
+    }
+    //create a new thread for performing the http transferring
+    data = calloc(1, sizeof(*data));
+    if (!data) {
+        ret = ENOMEM;
+        goto done;
+    }
+    data->url = strdup(dnUrl);
+    if (!data->url) {
+        ret = ENOMEM;
+        goto done;
+    }
+    data->flags = file->flags;
+    data->uploadBuffer = webhandle->uploadBuffer;
+    ret = pthread_create(&webhandle->connThread, NULL,
+                         writeThreadOperation, data);
+    if (ret) {
+        fprintf(stderr, "Failed to create the writing thread.\n");
+        goto done;
+    }
+    webhandle->uploadBuffer->openFlag = 1;
+
+done:
+    freeResponse(resp);
+    free(prepareUrl);
+    free(dnUrl);
+    if (ret) {
+        free(data->url);
+        free(data);
+    }
+    return ret;
+}
+
 hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
                       int bufferSize, short replication, tSize blockSize)
 {
-    /*
-     * the original version of libhdfs based on JNI store a fsinputstream/fsoutputstream in the hdfsFile
-     * in libwebhdfs that is based on webhdfs, we store (absolute_path, buffersize, replication, blocksize) in it
-     */
-    if (fs == NULL || path == NULL) {
-        return NULL;
-    }
-
+    int ret = 0;
     int accmode = flags & O_ACCMODE;
-    if (accmode == O_RDWR) {
-        fprintf(stderr, "ERROR: cannot open an hdfs file in O_RDWR mode\n");
-        errno = ENOTSUP;
-        return NULL;
+    struct webhdfsFileHandle *webhandle = NULL;
+    hdfsFile file = NULL;
+
+    if (fs == NULL || path == NULL) {
+        ret = EINVAL;
+        goto done;
     }
-    
+    if (accmode == O_RDWR) {
+        // TODO: the original libhdfs has very hackish support for this; should
+        // we do the same?  It would actually be a lot easier in libwebhdfs
+        // since the protocol isn't connection-oriented. 
+        fprintf(stderr, "ERROR: cannot open an hdfs file in O_RDWR mode\n");
+        ret = ENOTSUP;
+        goto done;
+    }
     if ((flags & O_CREAT) && (flags & O_EXCL)) {
         fprintf(stderr, "WARN: hdfs does not truly support O_CREATE && O_EXCL\n");
     }
-    
-    hdfsFile hdfsFileHandle = (hdfsFile) calloc(1, sizeof(struct hdfsFile_internal));
-    if (!hdfsFileHandle) {
-        return NULL;
+    file = calloc(1, sizeof(struct hdfsFile_internal));
+    if (!file) {
+        ret = ENOMEM;
+        goto done;
     }
-    int ret = 0;
-    hdfsFileHandle->flags = flags;
-    hdfsFileHandle->type = accmode == O_RDONLY ? INPUT : OUTPUT;
-    hdfsFileHandle->offset = 0;
-    struct webhdfsFileHandle *webhandle = (struct webhdfsFileHandle *) calloc(1, sizeof(struct webhdfsFileHandle));
+    file->flags = flags;
+    file->type = accmode == O_RDONLY ? INPUT : OUTPUT;
+    file->offset = 0;
+    webhandle = calloc(1, sizeof(struct webhdfsFileHandle));
     if (!webhandle) {
-        ret = -1;
+        ret = ENOMEM;
         goto done;
     }
     webhandle->bufferSize = bufferSize;
@@ -741,105 +949,28 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     webhandle->blockSize = blockSize;
     webhandle->absPath = getAbsolutePath(fs, path);
     if (!webhandle->absPath) {
-        ret = -1;
+        ret = ENOMEM;
         goto done;
     }
-    hdfsFileHandle->file = webhandle;
-    
-    //for write/append, need to connect to the namenode
-    //and get the url of corresponding datanode
-    if (hdfsFileHandle->type == OUTPUT) {
-        webhandle->uploadBuffer = initWebHdfsBuffer();
-        if (!webhandle->uploadBuffer) {
-            ret = -1;
-            goto done;
-        }
-        struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-        char *url = NULL;
-        Response resp = NULL;
-        int append = flags & O_APPEND;
-        int create = append ? 0 : 1;
-        
-        //if create: send create request to NN
-        if (create) {
-            url = prepareNnWRITE(bld->nn, bld->port, webhandle->absPath, bld->userName, webhandle->replication, webhandle->blockSize);
-        } else if (append) {
-            url = prepareNnAPPEND(bld->nn, bld->port, webhandle->absPath, bld->userName);
-        }
-        if (!url) {
-            fprintf(stderr,
-                    "fail to create the url connecting to namenode for file creation/appending\n");
-            ret = -1;
-            goto done;
-        }
-
-        if (create) {
-            resp = launchNnWRITE(url);
-        } else if (append) {
-            resp = launchNnAPPEND(url);
-        }
-        if (!resp) {
-            fprintf(stderr,
-                    "fail to get the response from namenode for file creation/appending\n");
-            free(url);
-            ret = -1;
-            goto done;
-        }
-        
-        int parseRet = 0;
-        if (create) {
-            parseRet = parseNnWRITE(resp->header->content, resp->body->content);
-        } else if (append) {
-            parseRet = parseNnAPPEND(resp->header->content, resp->body->content);
-        }
-        if (!parseRet) {
-            fprintf(stderr,
-                    "fail to parse the response from namenode for file creation/appending\n");
-            free(url);
-            freeResponse(resp);
-            ret = -1;
-            goto done;
-        }
-            
-        free(url);
-        url = parseDnLoc(resp->header->content);
-        if (!url) {
-            fprintf(stderr,
-                    "fail to get the datanode url from namenode for file creation/appending\n");
-            freeResponse(resp);
-            ret = -1;
-            return NULL;
-        }
-        freeResponse(resp);
-        //store the datanode url in the file handle
-        webhandle->datanode = strdup(url);
- 
-        //create a new thread for performing the http transferring
-        threadData *data = (threadData *) calloc(1, sizeof(threadData));
-        if (!data) {
-            ret = -1;
-            goto done;
-        }
-        data->url = strdup(url);
-        data->flags = flags;
-        data->uploadBuffer = webhandle->uploadBuffer;
-        free(url);
-        ret = pthread_create(&webhandle->connThread, NULL, writeThreadOperation, data);
+    file->file = webhandle;
+    if (file->type == OUTPUT) {
+        ret = hdfsOpenOutputFileImpl(fs, file);
         if (ret) {
-            fprintf(stderr, "Failed to create the writing thread.\n");
-        } else {
-            webhandle->uploadBuffer->openFlag = 1;
+            goto done;
         }
     }
-    
+
 done:
-    if (ret == 0) {
-        return hdfsFileHandle;
-    } else {
-        freeWebFileHandle(webhandle);
-        free(hdfsFileHandle);
+    if (ret) {
+        if (file) {
+            freeFileInternal(file); // Also frees webhandle
+        } else {
+            freeWebFileHandle(webhandle);
+        }
+        errno = ret;
         return NULL;
     }
+    return file;
 }
 
 tSize hdfsWrite(hdfsFS fs, hdfsFile file, const void* buffer, tSize length)
@@ -848,15 +979,17 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile file, const void* buffer, tSize length)
         return 0;
     }
     if (fs == NULL || file == NULL || file->type != OUTPUT || length < 0) {
+        errno = EBADF;
         return -1;
     }
     
-    struct webhdfsFileHandle *wfile = (struct webhdfsFileHandle *) file->file;
+    struct webhdfsFileHandle *wfile = file->file;
     if (wfile->uploadBuffer && wfile->uploadBuffer->openFlag) {
         resetWebhdfsBuffer(wfile->uploadBuffer, buffer, length);
         return length;
     } else {
         fprintf(stderr, "Error: have not opened the file %s for writing yet.\n", wfile->absPath);
+        errno = EBADF;
         return -1;
     }
 }
@@ -868,7 +1001,7 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     if (file->type == OUTPUT) {
         void *respv;
         threadData *tdata;
-        struct webhdfsFileHandle *wfile = (struct webhdfsFileHandle *) file->file;
+        struct webhdfsFileHandle *wfile = file->file;
         pthread_mutex_lock(&(wfile->uploadBuffer->writeMutex));
         wfile->uploadBuffer->closeFlag = 1;
         pthread_cond_signal(&wfile->uploadBuffer->newwrite_or_close);
@@ -893,13 +1026,10 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
         //free the threaddata
         freeThreadData(tdata);
     }
-    
-    fprintf(stderr, "To clean the webfilehandle...\n");
-    if (file) {
-        freeWebFileHandle(file->file);
-        free(file);
-        file = NULL;
-        fprintf(stderr, "Cleaned the webfilehandle...\n");
+    freeFileInternal(file);
+    fprintf(stderr, "Closed the webfilehandle...\n");
+    if (ret) {
+        errno = EIO;
     }
     return ret;
 }
@@ -914,111 +1044,155 @@ int hdfsFileIsOpenForWrite(hdfsFile file)
     return (file->type == OUTPUT);
 }
 
-tSize hdfsRead(hdfsFS fs, hdfsFile file, void* buffer, tSize length)
+static int hdfsReadImpl(hdfsFS fs, hdfsFile file, void* buffer, tSize off,
+                        tSize length, tSize *numRead)
 {
-    if (length == 0) {
-        return 0;
-    }
-    if (fs == NULL || file == NULL || file->type != INPUT || buffer == NULL || length < 0) {
-        errno = EINVAL;
-        return -1;
-    }
-    struct hdfsBuilder *bld = (struct hdfsBuilder *) fs;
-    struct webhdfsFileHandle *webFile = (struct webhdfsFileHandle *) file->file;
+    int ret = 0;
     char *url = NULL;
     Response resp = NULL;
     int openResult = -1;
-    
-    resp = (Response) calloc(1, sizeof(*resp));
+
+    if (fs == NULL || file == NULL || file->type != INPUT || buffer == NULL ||
+            length < 0) {
+        ret = EINVAL;
+        goto done;
+    }
+    if (length == 0) {
+        // Special case: the user supplied a buffer of zero length, so there is
+        // nothing to do.
+        *numRead = 0;
+        goto done;
+    }
+    resp = calloc(1, sizeof(*resp)); // resp is actually a pointer type
     if (!resp) {
-        return -1;
+        ret = ENOMEM;
+        goto done;
     }
     resp->header = initResponseBuffer();
     resp->body = initResponseBuffer();
     resp->body->content = buffer;
     resp->body->remaining = length;
     
-    if (!((url = prepareOPEN(bld->nn, bld->port, webFile->absPath, bld->userName, file->offset, length))
+    if (!((url = prepareOPEN(fs->nn, fs->port, file->file->absPath,
+                             fs->userName, off, length))
           && (resp = launchOPEN(url, resp))
           && ((openResult = parseOPEN(resp->header->content, resp->body->content)) > 0))) {
-        free(url);
-        freeResponseBuffer(resp->header);
         if (openResult == 0) {
-            return 0;
-        } else {
-            return -1;
+            // Special case: if parseOPEN returns 0, we asked for a byte range
+            // with outside what the file contains.  In this case, hdfsRead and
+            // hdfsPread return 0, meaning end-of-file.
+            *numRead = 0;
+            goto done;
         }
+        ret = EIO;
+        goto done;
     }
-    
-    size_t readSize = resp->body->offset;
-    file->offset += readSize;
-    
+    *numRead = resp->body->offset;
+
+done:
     freeResponseBuffer(resp->header);
     free(resp->body);
     free(resp);
     free(url);
-    return readSize;
+    return ret;
+}
+
+tSize hdfsRead(hdfsFS fs, hdfsFile file, void* buffer, tSize length)
+{
+    int ret;
+    tSize numRead = 0;
+
+    ret = hdfsReadImpl(fs, file, buffer, file->offset, length, &numRead);
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    file->offset += numRead; 
+    return numRead;
 }
 
 int hdfsAvailable(hdfsFS fs, hdfsFile file)
 {
-    if (!file || !fs) {
-        return -1;
-    }
-    struct webhdfsFileHandle *wf = (struct webhdfsFileHandle *) file->file;
-    if (!wf) {
-        return -1;
-    }
-    hdfsFileInfo *fileInfo = hdfsGetPathInfo(fs, wf->absPath);
-    if (fileInfo) {
-        int available = (int)(fileInfo->mSize - file->offset);
-        hdfsFreeFileInfo(fileInfo, 1);
-        return available;
-    } else {
-        return -1;
-    }
+    /* We actually always block when reading from webhdfs, currently.  So the
+     * number of bytes that can be read without blocking is currently 0.
+     */
+    return 0;
+}
+
+int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
+{
+    errno = ENOTSUP;
+    return -1;
+}
+
+int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
+{
+    errno = ENOTSUP;
+    return -1;
 }
 
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos)
 {
-    if (!fs || !file || desiredPos < 0) {
-        return -1;
-    }
-    struct webhdfsFileHandle *wf = (struct webhdfsFileHandle *) file->file;
-    if (!wf) {
-        return -1;
-    }
-    hdfsFileInfo *fileInfo = hdfsGetPathInfo(fs, wf->absPath);
+    struct webhdfsFileHandle *wf;
+    hdfsFileInfo *fileInfo = NULL;
     int ret = 0;
+
+    if (!fs || !file || (file->type == OUTPUT) || (desiredPos < 0)) {
+        ret = EINVAL;
+        goto done;
+    }
+    wf = file->file;
+    if (!wf) {
+        ret = EINVAL;
+        goto done;
+    }
+    fileInfo = hdfsGetPathInfo(fs, wf->absPath);
+    if (!fileInfo) {
+        ret = errno;
+        goto done;
+    }
+    if (desiredPos > fileInfo->mSize) {
+        fprintf(stderr,
+                "hdfsSeek for %s failed since the desired position %" PRId64
+                " is beyond the size of the file %" PRId64 "\n",
+                wf->absPath, desiredPos, fileInfo->mSize);
+        ret = ENOTSUP;
+        goto done;
+    }
+    file->offset = desiredPos;
+
+done:
     if (fileInfo) {
-        if (fileInfo->mSize < desiredPos) {
-            errno = ENOTSUP;
-            fprintf(stderr,
-                    "hdfsSeek for %s failed since the desired position %lld is beyond the size of the file %lld\n",
-                    wf->absPath, desiredPos, fileInfo->mSize);
-            ret = -1;
-        } else {
-            file->offset = desiredPos;
-        }
         hdfsFreeFileInfo(fileInfo, 1);
-        return ret;
-    } else {
+    }
+    if (ret) {
+        errno = ret;
         return -1;
     }
+    return 0;
 }
 
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void* buffer, tSize length)
 {
-    if (!fs || !file || file->type != INPUT || position < 0 || !buffer || length < 0) {
+    int ret;
+    tSize numRead = 0;
+
+    if (position < 0) {
+        errno = EINVAL;
         return -1;
     }
-    file->offset = position;
-    return hdfsRead(fs, file, buffer, length);
+    ret = hdfsReadImpl(fs, file, buffer, position, length, &numRead);
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
+    return numRead;
 }
 
 tOffset hdfsTell(hdfsFS fs, hdfsFile file)
 {
     if (!file) {
+        errno = EINVAL;
         return -1;
     }
     return file->offset;
@@ -1027,29 +1201,51 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file)
 char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize)
 {
     if (fs == NULL || buffer == NULL ||  bufferSize <= 0) {
+        errno = EINVAL;
         return NULL;
     }
-    
-    struct hdfsBuilder * bld = (struct hdfsBuilder *) fs;
-    if (bld->workingDir) {
-        strncpy(buffer, bld->workingDir, bufferSize);
+    if (snprintf(buffer, bufferSize, "%s", fs->workingDir) >= bufferSize) {
+        errno = ENAMETOOLONG;
+        return NULL;
     }
     return buffer;
 }
 
 int hdfsSetWorkingDirectory(hdfsFS fs, const char* path)
 {
+    char *newWorkingDir;
+    size_t strlenPath, newWorkingDirLen;
+
     if (fs == NULL || path == NULL) {
+        errno = EINVAL;
         return -1;
     }
-    
-    struct hdfsBuilder * bld = (struct hdfsBuilder *) fs;
-    free(bld->workingDir);
-    bld->workingDir = (char *)malloc(strlen(path) + 1);
-    if (!(bld->workingDir)) {
+    strlenPath = strlen(path);
+    if (strlenPath < 1) {
+        errno = EINVAL;
         return -1;
     }
-    strcpy(bld->workingDir, path);
+    if (path[0] != '/') {
+        // TODO: support non-absolute paths.  They should be interpreted
+        // relative to the current path.
+        errno = ENOTSUP;
+        return -1;
+    }
+    if (strstr(path, "//")) {
+        // TODO: support non-normalized paths (by normalizing them.)
+        errno = ENOTSUP;
+        return -1;
+    }
+    newWorkingDirLen = strlenPath + 2;
+    newWorkingDir = malloc(newWorkingDirLen);
+    if (!newWorkingDir) {
+        errno = ENOMEM;
+        return -1;
+    }
+    snprintf(newWorkingDir, newWorkingDirLen, "%s%s",
+             path, (path[strlenPath - 1] == '/') ? "" : "/");
+    free(fs->workingDir);
+    fs->workingDir = newWorkingDir;
     return 0;
 }
 
@@ -1065,49 +1261,58 @@ void hdfsFreeHosts(char ***blockHosts)
     free(blockHosts);
 }
 
-/* not useful for libwebhdfs */
-int hdfsFileUsesDirectRead(hdfsFile file)
+tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
 {
-    /* return !!(file->flags & HDFS_FILE_SUPPORTS_DIRECT_READ); */
-    fprintf(stderr, "hdfsFileUsesDirectRead is no longer useful for libwebhdfs.\n");
+    errno = ENOTSUP;
     return -1;
 }
 
-/* not useful for libwebhdfs */
-void hdfsFileDisableDirectRead(hdfsFile file)
+int hdfsFileUsesDirectRead(hdfsFile file)
 {
-    /* file->flags &= ~HDFS_FILE_SUPPORTS_DIRECT_READ; */
-    fprintf(stderr, "hdfsFileDisableDirectRead is no longer useful for libwebhdfs.\n");
+    return 0; // webhdfs never performs direct reads.
 }
 
-/* not useful for libwebhdfs */
+void hdfsFileDisableDirectRead(hdfsFile file)
+{
+    // webhdfs never performs direct reads
+}
+
 int hdfsHFlush(hdfsFS fs, hdfsFile file)
 {
+    if (file->type != OUTPUT) {
+        errno = EINVAL; 
+        return -1;
+    }
+    // TODO: block until our write buffer is flushed
     return 0;
 }
 
-/* not useful for libwebhdfs */
 int hdfsFlush(hdfsFS fs, hdfsFile file)
 {
+    if (file->type != OUTPUT) {
+        errno = EINVAL; 
+        return -1;
+    }
+    // TODO: block until our write buffer is flushed
     return 0;
 }
 
 char*** hdfsGetHosts(hdfsFS fs, const char* path,
                      tOffset start, tOffset length)
 {
-    fprintf(stderr, "hdfsGetHosts is not but will be supported by libwebhdfs yet.\n");
+    errno = ENOTSUP;
     return NULL;
 }
 
 tOffset hdfsGetCapacity(hdfsFS fs)
 {
-    fprintf(stderr, "hdfsGetCapacity is not but will be supported by libwebhdfs.\n");
+    errno = ENOTSUP;
     return -1;
 }
 
 tOffset hdfsGetUsed(hdfsFS fs)
 {
-    fprintf(stderr, "hdfsGetUsed is not but will be supported by libwebhdfs yet.\n");
+    errno = ENOTSUP;
     return -1;
 }
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "webhdfs.h"
+#include "hdfs.h"
 
 #include <inttypes.h>
 #include <jni.h>

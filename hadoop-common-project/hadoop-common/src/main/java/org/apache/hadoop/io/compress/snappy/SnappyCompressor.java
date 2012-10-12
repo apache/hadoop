@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
  * A {@link Compressor} based on the snappy compression algorithm.
@@ -51,22 +52,24 @@ public class SnappyCompressor implements Compressor {
   private long bytesRead = 0L;
   private long bytesWritten = 0L;
 
-
+  private static boolean nativeSnappyLoaded = false;
+  
   static {
-    if (LoadSnappy.isLoaded()) {
-      // Initialize the native library
+    if (NativeCodeLoader.isNativeCodeLoaded() &&
+        NativeCodeLoader.buildSupportsSnappy()) {
       try {
         initIDs();
+        nativeSnappyLoaded = true;
       } catch (Throwable t) {
-        // Ignore failure to load/initialize snappy
-        LOG.warn(t.toString());
+        LOG.error("failed to load SnappyCompressor", t);
       }
-    } else {
-      LOG.error("Cannot load " + SnappyCompressor.class.getName() +
-          " without snappy library!");
     }
   }
-
+  
+  public static boolean isNativeCodeLoaded() {
+    return nativeSnappyLoaded;
+  }
+  
   /**
    * Creates a new compressor.
    *

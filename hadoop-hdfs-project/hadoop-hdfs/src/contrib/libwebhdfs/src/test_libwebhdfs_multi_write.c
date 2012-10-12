@@ -17,7 +17,7 @@
  */
 
 #include "expect.h"
-#include "webhdfs.h"
+#include "hdfs.h"
 
 #include <errno.h>
 #include <semaphore.h>

@@ -25,9 +25,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.security.client.BaseClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 
@@ -41,11 +42,11 @@ public class ApplicationMasterLauncher extends AbstractService implements
   private final BlockingQueue<Runnable> masterEvents
     = new LinkedBlockingQueue<Runnable>();
   
-  private ClientToAMSecretManager clientToAMSecretManager;
+  private ClientToAMTokenSecretManagerInRM clientToAMSecretManager;
   protected final RMContext context;
   
   public ApplicationMasterLauncher(
-      ClientToAMSecretManager clientToAMSecretManager, RMContext context) {
+      ClientToAMTokenSecretManagerInRM clientToAMSecretManager, RMContext context) {
     super(ApplicationMasterLauncher.class.getName());
     this.context = context;
     this.launcherPool = new ThreadPoolExecutor(10, 10, 1, 

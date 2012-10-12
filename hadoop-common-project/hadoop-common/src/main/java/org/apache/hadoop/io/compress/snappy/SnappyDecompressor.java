@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
  * A {@link Decompressor} based on the snappy compression algorithm.
@@ -47,21 +48,24 @@ public class SnappyDecompressor implements Decompressor {
   private int userBufOff = 0, userBufLen = 0;
   private boolean finished;
 
+  private static boolean nativeSnappyLoaded = false;
+
   static {
-    if (LoadSnappy.isLoaded()) {
-      // Initialize the native library
+    if (NativeCodeLoader.isNativeCodeLoaded() &&
+        NativeCodeLoader.buildSupportsSnappy()) {
       try {
         initIDs();
+        nativeSnappyLoaded = true;
       } catch (Throwable t) {
-        // Ignore failure to load/initialize snappy
-        LOG.warn(t.toString());
+        LOG.error("failed to load SnappyDecompressor", t);
       }
-    } else {
-      LOG.error("Cannot load " + SnappyDecompressor.class.getName() +
-          " without snappy library!");
     }
   }
-
+  
+  public static boolean isNativeCodeLoaded() {
+    return nativeSnappyLoaded;
+  }
+  
   /**
    * Creates a new compressor.
    *
