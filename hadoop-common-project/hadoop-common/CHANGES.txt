@@ -312,6 +312,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8912. Add .gitattributes file to prevent CRLF and LF mismatches
     for source and text files. (Raja Aluri via suresh)
 
+    HADOOP-8784. Improve IPC.Client's token use (daryn)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang

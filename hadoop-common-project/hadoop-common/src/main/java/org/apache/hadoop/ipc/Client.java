@@ -225,7 +225,6 @@ public class Client {
     private IpcConnectionContextProto connectionContext;   // connection context
     private final ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
-    private boolean useSasl;
     private Token<? extends TokenIdentifier> token;
     private SaslRpcClient saslRpcClient;
     
@@ -270,8 +269,7 @@ public class Client {
 
       UserGroupInformation ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
-      this.useSasl = UserGroupInformation.isSecurityEnabled();
-      if (useSasl && protocol != null) {
+      if (protocol != null) {
         TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol, conf);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
@@ -296,12 +294,12 @@ public class Client {
         }
       }
       
-      if (!useSasl) {
-        authMethod = AuthMethod.SIMPLE;
-      } else if (token != null) {
+      if (token != null) {
         authMethod = AuthMethod.DIGEST;
-      } else {
+      } else if (UserGroupInformation.isSecurityEnabled()) {
         authMethod = AuthMethod.KERBEROS;
+      } else {
+        authMethod = AuthMethod.SIMPLE;
       }
       
       connectionContext = ProtoUtil.makeIpcConnectionContext(
@@ -576,14 +574,12 @@ public class Client {
           InputStream inStream = NetUtils.getInputStream(socket);
           OutputStream outStream = NetUtils.getOutputStream(socket);
           writeConnectionHeader(outStream);
-          if (useSasl) {
+          if (authMethod != AuthMethod.SIMPLE) {
             final InputStream in2 = inStream;
             final OutputStream out2 = outStream;
             UserGroupInformation ticket = remoteId.getTicket();
-            if (authMethod == AuthMethod.KERBEROS) {
-              if (ticket.getRealUser() != null) {
-                ticket = ticket.getRealUser();
-              }
+            if (ticket.getRealUser() != null) {
+              ticket = ticket.getRealUser();
             }
             boolean continueSasl = false;
             try {
@@ -614,7 +610,6 @@ public class Client {
                   connectionContext.getProtocol(), 
                   ProtoUtil.getUgi(connectionContext.getUserInfo()),
                   authMethod);
-              useSasl = false;
             }
           }
         
@@ -1174,7 +1169,7 @@ public class Client {
                   call.error);
         }
       } else {
-        return call.rpcResponse;
+        return call.getRpcResult();
       }
     }
   }
