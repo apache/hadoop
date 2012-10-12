@@ -763,7 +763,7 @@ findModule (){
 findModules () {
   # Come up with a list of changed files into $TMP
   TMP=/tmp/tmp.paths.$$
-  $GREP '^+++\|^---' $PATCH_DIR/patch | cut -c '5-' | $GREP -v /dev/null | sort | uniq > $TMP
+  $GREP '^+++ \|^--- ' $PATCH_DIR/patch | cut -c '5-' | $GREP -v /dev/null | sort | uniq > $TMP
   
   # if all of the lines start with a/ or b/, then this is a git patch that
   # was generated without --no-prefix

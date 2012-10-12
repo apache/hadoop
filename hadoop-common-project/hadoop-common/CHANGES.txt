@@ -259,6 +259,9 @@ Trunk (Unreleased)
     HADOOP-8839. test-patch's -1 on @author tag presence doesn't cause
     a -1 to the overall result (harsh)
 
+    HADOOP-8918. test-patch.sh is parsing modified files wrong.
+    (Raja Aluri via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
