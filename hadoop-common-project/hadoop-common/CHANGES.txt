@@ -36,6 +36,9 @@ Release 0.23.5 - UNRELEASED
 
     HADOOP-8310. FileContext#checkPath should handle URIs with no port. (atm)
 
+    HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
+    jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
