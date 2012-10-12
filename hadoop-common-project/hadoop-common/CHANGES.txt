@@ -1054,6 +1054,9 @@ Release 0.23.5 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
+    jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
