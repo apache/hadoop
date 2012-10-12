@@ -61,6 +61,10 @@ Release 2.0.3-alpha - Unreleased
     YARN-146. Add unit tests for computing fair share in the fair scheduler.
     (Sandy Ryza via tomwhite)
 
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
+
+
   OPTIMIZATIONS
 
   BUG FIXES

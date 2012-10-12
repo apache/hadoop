@@ -306,6 +306,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8909. Hadoop Common Maven protoc calls must not depend on external
     sh script. (Chris Nauroth via suresh)
 
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
