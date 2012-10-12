@@ -92,6 +92,8 @@ Branch-hadoop-1-win - unreleased
     HDFS-3566. Add AzureBlockPlacementPolicy to handle fault and upgrade
     domains in Azure.  (Sumadhur Reddy Bolli via szetszwo)
 
+    HADOOP-8911. CRLF characters in source and text files.
+
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
@@ -149,3 +151,6 @@ Branch-hadoop-1-win - unreleased
     (Thejas Nair via suresh)
 
     HADOOP-8908. Refactor winutil.exe related code. (Chuan Liu via suresh)
+
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
