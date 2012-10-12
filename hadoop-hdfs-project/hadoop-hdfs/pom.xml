@@ -299,37 +299,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </configuration>
         <executions>
           <execution>
-            <id>compile-proto</id>
-            <phase>generate-sources</phase>
+            <id>create-protobuf-generated-sources-directory</id>
+            <phase>initialize</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <target>
-                <echo file="target/compile-proto.sh">
-                    PROTO_DIR=src/main/proto
-                    JAVA_DIR=target/generated-sources/java
-                    which cygpath 2&gt; /dev/null
-                    if [ $? = 1 ]; then
-                      IS_WIN=false
-                    else
-                      IS_WIN=true
-                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
-                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
-                    fi
-                    mkdir -p $JAVA_DIR 2&gt; /dev/null
-                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
-                    do
-                        if [ "$IS_WIN" = "true" ]; then
-                          protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
-                        else
-                          protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
-                        fi
-                    done
-                </echo>
-                <exec executable="sh" dir="${basedir}" failonerror="true">
-                  <arg line="target/compile-proto.sh"/>
-                </exec>
+                <mkdir dir="target/generated-sources/java" />
               </target>
             </configuration>
           </execution>
@@ -398,6 +375,66 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
               </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-proto</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/GetUserMappingsProtocol.proto</argument>
+                <argument>src/main/proto/HAZKInfo.proto</argument>
+                <argument>src/main/proto/InterDatanodeProtocol.proto</argument>
+                <argument>src/main/proto/JournalProtocol.proto</argument>
+                <argument>src/main/proto/RefreshAuthorizationPolicyProtocol.proto</argument>
+                <argument>src/main/proto/RefreshUserMappingsProtocol.proto</argument>
+                <argument>src/main/proto/datatransfer.proto</argument>
+                <argument>src/main/proto/hdfs.proto</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto-datanode</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/ClientDatanodeProtocol.proto</argument>
+                <argument>src/main/proto/DatanodeProtocol.proto</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto-namenode</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/ClientNamenodeProtocol.proto</argument>
+                <argument>src/main/proto/NamenodeProtocol.proto</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
