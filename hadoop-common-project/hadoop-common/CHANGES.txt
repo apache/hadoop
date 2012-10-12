@@ -122,6 +122,8 @@ Trunk (Unreleased)
     HADOOP-8864. Addendum to HADOOP-8840: Add a coloring case for +0 results
     too. (harsh)
 
+    HADOOP-8910. Add examples to GlobExpander#expand method. (suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.

@@ -1391,11 +1391,11 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
-      @Override
-      public boolean accept(Path file) {
-        return true;
-      }     
-    };
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+  };
     
   /**
    * List the statuses of the files/directories in the given path if the path is
@@ -1559,17 +1559,16 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
   
   /**
-   * Return an array of FileStatus objects whose path names match pathPattern
-   * and is accepted by the user-supplied path filter. Results are sorted by
-   * their path names.
-   * Return null if pathPattern has no glob and the path does not exist.
-   * Return an empty array if pathPattern has a glob and no path matches it. 
+   * Return an array of FileStatus objects whose path names match
+   * {@code pathPattern} and is accepted by the user-supplied path filter.
+   * Results are sorted by their path names.
    * 
-   * @param pathPattern
-   *          a regular expression specifying the path pattern
-   * @param filter
-   *          a user-supplied path filter
-   * @return an array of FileStatus objects
+   * @param pathPattern a regular expression specifying the path pattern
+   * @param filter a user-supplied path filter
+   * @return null if {@code pathPattern} has no glob and the path does not exist
+   *         an empty array if {@code pathPattern} has a glob and no path
+   *         matches it else an array of {@link FileStatus} objects matching the
+   *         pattern
    * @throws IOException if any I/O error occurs when fetching file status
    */
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
