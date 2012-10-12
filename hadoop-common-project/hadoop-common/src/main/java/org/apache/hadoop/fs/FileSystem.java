@@ -24,6 +24,7 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1575,120 +1576,113 @@ public abstract class FileSystem extends Configured implements Closeable {
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
       throws IOException {
     String filename = pathPattern.toUri().getPath();
-    List<String> filePatterns = GlobExpander.expand(filename);
-    if (filePatterns.size() == 1) {
-      return globStatusInternal(pathPattern, filter);
-    } else {
-      List<FileStatus> results = new ArrayList<FileStatus>();
-      for (String filePattern : filePatterns) {
-        FileStatus[] files = globStatusInternal(new Path(filePattern), filter);
-        for (FileStatus file : files) {
-          results.add(file);
-        }
-      }
-      return results.toArray(new FileStatus[results.size()]);
-    }
-  }
-
-  private FileStatus[] globStatusInternal(Path pathPattern, PathFilter filter)
-      throws IOException {
-    Path[] parents = new Path[1];
-    int level = 0;
-    String filename = pathPattern.toUri().getPath();
+    List<FileStatus> allMatches = null;
     
-    // path has only zero component
-    if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
-      return getFileStatus(new Path[]{pathPattern});
-    }
-
-    // path has at least one component
-    String[] components = filename.split(Path.SEPARATOR);
-    // get the first component
-    if (pathPattern.isAbsolute()) {
-      parents[0] = new Path(Path.SEPARATOR);
-      level = 1;
-    } else {
-      parents[0] = new Path(Path.CUR_DIR);
-    }
-
-    // glob the paths that match the parent path, i.e., [0, components.length-1]
-    boolean[] hasGlob = new boolean[]{false};
-    Path[] parentPaths = globPathsLevel(parents, components, level, hasGlob);
-    FileStatus[] results;
-    if (parentPaths == null || parentPaths.length == 0) {
-      results = null;
-    } else {
-      // Now work on the last component of the path
-      GlobFilter fp = new GlobFilter(components[components.length - 1], filter);
-      if (fp.hasPattern()) { // last component has a pattern
-        // list parent directories and then glob the results
-        try {
-          results = listStatus(parentPaths, fp);
-        } catch (FileNotFoundException e) {
-          results = null;
+    List<String> filePatterns = GlobExpander.expand(filename);
+    for (String filePattern : filePatterns) {
+      Path path = new Path(filePattern.isEmpty() ? Path.CUR_DIR : filePattern);
+      List<FileStatus> matches = globStatusInternal(path, filter);
+      if (matches != null) {
+        if (allMatches == null) {
+          allMatches = matches;
+        } else {
+          allMatches.addAll(matches);
         }
-        hasGlob[0] = true;
-      } else { // last component does not have a pattern
-        // remove the quoting of metachars in a non-regexp expansion
-        String name = unquotePathComponent(components[components.length - 1]);
-        // get all the path names
-        ArrayList<Path> filteredPaths = new ArrayList<Path>(parentPaths.length);
-        for (int i = 0; i < parentPaths.length; i++) {
-          parentPaths[i] = new Path(parentPaths[i], name);
-          if (fp.accept(parentPaths[i])) {
-            filteredPaths.add(parentPaths[i]);
-          }
-        }
-        // get all their statuses
-        results = getFileStatus(
-            filteredPaths.toArray(new Path[filteredPaths.size()]));
       }
     }
-
-    // Decide if the pathPattern contains a glob or not
-    if (results == null) {
-      if (hasGlob[0]) {
-        results = new FileStatus[0];
-      }
-    } else {
-      if (results.length == 0 ) {
-        if (!hasGlob[0]) {
-          results = null;
-        }
-      } else {
-        Arrays.sort(results);
-      }
+    
+    FileStatus[] results = null;
+    if (allMatches != null) {
+      results = allMatches.toArray(new FileStatus[allMatches.size()]);
+    } else if (filePatterns.size() > 1) {
+      // no matches with multiple expansions is a non-matching glob 
+      results = new FileStatus[0];
     }
     return results;
   }
 
-  /*
-   * For a path of N components, return a list of paths that match the
-   * components [<code>level</code>, <code>N-1</code>].
-   */
-  private Path[] globPathsLevel(Path[] parents, String[] filePattern,
-      int level, boolean[] hasGlob) throws IOException {
-    if (level == filePattern.length - 1)
-      return parents;
-    if (parents == null || parents.length == 0) {
-      return null;
+  // sort gripes because FileStatus Comparable isn't parameterized...
+  @SuppressWarnings("unchecked") 
+  private List<FileStatus> globStatusInternal(Path pathPattern,
+      PathFilter filter) throws IOException {
+    boolean patternHasGlob = false;       // pathPattern has any globs
+    List<FileStatus> matches = new ArrayList<FileStatus>();
+
+    // determine starting point
+    int level = 0;
+    String baseDir = Path.CUR_DIR;
+    if (pathPattern.isAbsolute()) {
+      level = 1; // need to skip empty item at beginning of split list
+      baseDir = Path.SEPARATOR;
     }
-    GlobFilter fp = new GlobFilter(filePattern[level]);
-    if (fp.hasPattern()) {
-      try {
-        parents = FileUtil.stat2Paths(listStatus(parents, fp));
-      } catch (FileNotFoundException e) {
-        parents = null;
+    
+    // parse components and determine if it's a glob
+    String[] components = null;
+    GlobFilter[] filters = null;
+    String filename = pathPattern.toUri().getPath();
+    if (!filename.isEmpty() && !Path.SEPARATOR.equals(filename)) {
+      components = filename.split(Path.SEPARATOR);
+      filters = new GlobFilter[components.length];
+      for (int i=level; i < components.length; i++) {
+        filters[i] = new GlobFilter(components[i]);
+        patternHasGlob |= filters[i].hasPattern();
       }
-      hasGlob[0] = true;
-    } else { // the component does not have a pattern
-      // remove the quoting of metachars in a non-regexp expansion
-      String name = unquotePathComponent(filePattern[level]);
-      for (int i = 0; i < parents.length; i++) {
-        parents[i] = new Path(parents[i], name);
+      if (!patternHasGlob) {
+        baseDir = unquotePathComponent(filename);
+        components = null; // short through to filter check
       }
     }
-    return globPathsLevel(parents, filePattern, level + 1, hasGlob);
+    
+    // seed the parent directory path, return if it doesn't exist
+    try {
+      matches.add(getFileStatus(new Path(baseDir)));
+    } catch (FileNotFoundException e) {
+      return patternHasGlob ? matches : null;
+    }
+    
+    // skip if there are no components other than the basedir
+    if (components != null) {
+      // iterate through each path component
+      for (int i=level; (i < components.length) && !matches.isEmpty(); i++) {
+        List<FileStatus> children = new ArrayList<FileStatus>();
+        for (FileStatus match : matches) {
+          // don't look for children in a file matched by a glob
+          if (!match.isDirectory()) {
+            continue;
+          }
+          try {
+            if (filters[i].hasPattern()) {
+              // get all children matching the filter
+              FileStatus[] statuses = listStatus(match.getPath(), filters[i]);
+              children.addAll(Arrays.asList(statuses));
+            } else {
+              // the component does not have a pattern
+              String component = unquotePathComponent(components[i]);
+              Path child = new Path(match.getPath(), component);
+              children.add(getFileStatus(child));
+            }
+          } catch (FileNotFoundException e) {
+            // don't care
+          }
+        }
+        matches = children;
+      }
+    }
+    // remove anything that didn't match the filter
+    if (!matches.isEmpty()) {
+      Iterator<FileStatus> iter = matches.iterator();
+      while (iter.hasNext()) {
+        if (!filter.accept(iter.next().getPath())) {
+          iter.remove();
+        }
+      }
+    }
+    // no final paths, if there were any globs return empty list
+    if (matches.isEmpty()) {
+      return patternHasGlob ? matches : null;
+    }
+    Collections.sort(matches);
+    return matches;
   }
 
   /**
@@ -2164,30 +2158,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     //doesn't do anything
   }
 
-  /**
-   * Return a list of file status objects that corresponds to the list of paths
-   * excluding those non-existent paths.
-   * 
-   * @param paths
-   *          the list of paths we want information from
-   * @return a list of FileStatus objects
-   * @throws IOException
-   *           see specific implementation
-   */
-  private FileStatus[] getFileStatus(Path[] paths) throws IOException {
-    if (paths == null) {
-      return null;
-    }
-    ArrayList<FileStatus> results = new ArrayList<FileStatus>(paths.length);
-    for (int i = 0; i < paths.length; i++) {
-      try {
-        results.add(getFileStatus(paths[i]));
-      } catch (FileNotFoundException e) { // do nothing
-      }
-    }
-    return results.toArray(new FileStatus[results.size()]);
-  }
-  
   /**
    * Returns a status object describing the use and capacity of the
    * file system. If the file system has multiple partitions, the
