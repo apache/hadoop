@@ -54,12 +54,7 @@ message OpReadBlockProto {
 
 
 message ChecksumProto {
-  enum ChecksumType {
-    NULL = 0;
-    CRC32 = 1;
-    CRC32C = 2;
-  }
-  required ChecksumType type = 1;
+  required ChecksumTypeProto type = 1;
   required uint32 bytesPerChecksum = 2;
 }
   
