@@ -58,7 +58,8 @@ public class TestMapReduceChildJVM {
       " -Dhadoop.root.logger=INFO,CLA" +
       " org.apache.hadoop.mapred.YarnChild2 127.0.0.1" +
       " 54321" +
-      " attempt_0_0000_m_000000_0" +
+      " job_0_0000" +
+      " MAP" +
       " 0" +
       " 1><LOG_DIR>/stdout" +
       " 2><LOG_DIR>/stderr ]", app.myCommandLine);

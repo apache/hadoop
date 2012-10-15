@@ -3,9 +3,7 @@ package org.apache.hadoop.mapreduce.v2.app2.rm;
 public enum AMSchedulerEventType {
   //Producer: TaskAttempt
   S_TA_LAUNCH_REQUEST,
-  S_TA_STOP_REQUEST, // Maybe renamed to S_TA_END / S_TA_ABNORMAL_END
-  S_TA_SUCCEEDED,
-  S_TA_ENDED,
+  S_TA_ENDED, // Annotated with FAILED/KILLED/SUCCEEDED.
 
   //Producer: RMCommunicator
   S_CONTAINERS_ALLOCATED,

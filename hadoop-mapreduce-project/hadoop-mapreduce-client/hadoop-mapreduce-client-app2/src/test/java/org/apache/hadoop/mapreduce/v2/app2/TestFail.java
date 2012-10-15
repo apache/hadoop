@@ -195,7 +195,7 @@ public class TestFail {
     // TODO XXX: This may not be a valid test.
     app.getDispatcher().getEventHandler().handle(
         new TaskAttemptEvent(attempt.getID(),
-            TaskAttemptEventType.TA_TERMINATED));
+            TaskAttemptEventType.TA_CONTAINER_TERMINATED));
     app.waitForState(job, JobState.FAILED);
   }
 

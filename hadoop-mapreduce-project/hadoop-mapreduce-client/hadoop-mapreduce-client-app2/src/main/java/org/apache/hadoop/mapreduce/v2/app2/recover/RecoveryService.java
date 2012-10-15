@@ -66,8 +66,8 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskTAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventContainerCompleted;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTAStopRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTASucceededEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventTAEnded;
+import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorLaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicatorContainerDeAllocateRequestEvent;
@@ -85,6 +85,7 @@ import org.apache.hadoop.mapreduce.v2.app2.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -468,32 +469,40 @@ public class RecoveryService extends CompositeService implements Recovery {
       } 
       
       // Handle Events which may be sent to the scheduler.
-      else if (event.getType() == AMSchedulerEventType.S_TA_SUCCEEDED) {
-        // Inform the container that the task attempt succeeded.
-        AMSchedulerTASucceededEvent sEvent = (AMSchedulerTASucceededEvent)event;
-        
-        // Leaving the event in the map - for TA failure after success.
-        ContainerId containerId = attemptToContainerMap.get(sEvent.getAttemptID());
-        actualHandler.handle(new AMContainerTASucceededEvent(containerId,
-            sEvent.getAttemptID()));
-        return;
-        // XXX (Post-3902)tal.unregister happens here. Ensure THH handles it
-        // correctly in case of recovery.
-      }
-      else if (event.getType() == AMSchedulerEventType.S_TA_STOP_REQUEST) {
+      else if (event.getType() == AMSchedulerEventType.S_TA_ENDED) {
         // Tell the container to stop.
-        AMSchedulerTAStopRequestEvent sEvent = (AMSchedulerTAStopRequestEvent) event;
-        ContainerId containerId = attemptToContainerMap.get(sEvent.getAttemptID());
-        actualHandler.handle(new AMContainerEvent(containerId,
-            AMContainerEventType.C_STOP_REQUEST));
-        return;
-        // XXX (Post-3902)chh.unregister happens here. Ensure THH handles it
-        // correctly in case of recovery.
+        AMSchedulerEventTAEnded sEvent = (AMSchedulerEventTAEnded) event;
+        ContainerId containerId = attemptToContainerMap.get(sEvent
+            .getAttemptID());
+        switch (sEvent.getState()) {
+        case FAILED: 
+        case KILLED:
+          actualHandler.handle(new AMContainerEvent(containerId,
+              AMContainerEventType.C_STOP_REQUEST));
+          return;
+          // XXX (Post-3902)chh.unregister happens here. Ensure THH handles it
+          // correctly in case of recovery.
+        case SUCCEEDED:
+          // Inform the container that the task attempt succeeded.
+          // Leaving the event in the map - for TA failure after success.
+          actualHandler.handle(new AMContainerTASucceededEvent(containerId,
+              sEvent.getAttemptID()));
+          return;
+          // XXX (Post-3902)tal.unregister happens here. Ensure THH handles it
+          // correctly in case of recovery.
+        default:
+            throw new YarnException("Invalid state " + sEvent.getState());
+        }
       }
       
-      // Ignore de-allocate requests for the container.
+      // De-allocate containers used by previous attempts immediately.
       else if (event.getType() == NMCommunicatorEventType.CONTAINER_STOP_REQUEST) {
         // Ignore. Unless we start relying on a successful NM.stopContainer() call.
+        NMCommunicatorEvent nEvent = (NMCommunicatorEvent)event;
+        ContainerId cId = nEvent.getContainerId();
+        ContainerStatus cs = BuilderUtils.newContainerStatus(cId,
+            ContainerState.COMPLETE, "", 0);
+        actualHandler.handle(new AMContainerEventCompleted(cs));
         return;
       }
       

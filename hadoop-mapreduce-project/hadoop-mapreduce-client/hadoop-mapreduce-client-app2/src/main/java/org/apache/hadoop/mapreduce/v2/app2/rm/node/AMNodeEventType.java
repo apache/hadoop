@@ -29,7 +29,7 @@ public enum AMNodeEventType {
   //Producer: RMCommunicator
   N_TURNED_UNHEALTHY,
   N_TURNED_HEALTHY,
-  N_NODE_COUNT_UPDATED,
+  N_NODE_COUNT_UPDATED, // for blacklisting.
   
   //Producer: AMNodeManager
   N_BLACKLISTING_ENABLED,

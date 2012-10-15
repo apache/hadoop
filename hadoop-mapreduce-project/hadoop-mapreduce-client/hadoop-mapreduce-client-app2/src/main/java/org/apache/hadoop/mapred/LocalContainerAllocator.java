@@ -47,12 +47,11 @@ import org.apache.hadoop.mapreduce.v2.app2.job.Job;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
-import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventTerminated;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventContainerTerminated;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptRemoteStartEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTAStopRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTASucceededEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventTAEnded;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicator;
 import org.apache.hadoop.util.StringUtils;
@@ -290,7 +289,7 @@ public class LocalContainerAllocator extends AbstractService
 
       // CLEANUP event generated.f
       appContext.getEventHandler().handle(
-          new TaskAttemptEventTerminated(attemptID));
+          new TaskAttemptEventContainerTerminated(attemptID, null));
 
     } catch (IOException ioe) {
       // if umbilical itself barfs (in error-handler of runSubMap()),
@@ -303,23 +302,23 @@ public class LocalContainerAllocator extends AbstractService
   }
   
   @SuppressWarnings("unchecked")
-  public void handleTaStopRequest(AMSchedulerTAStopRequestEvent sEvent) {
+  public void handleTaStopRequest(AMSchedulerEventTAEnded sEvent) {
     // Implies a failed or killed task.
     // This will trigger a CLEANUP event. UberAM is supposed to fail if there's
     // event a single failed attempt. Hence the CLEANUP is OK (otherwise delay
     // cleanup till end of job). TODO Enforce job failure on single task attempt
     // failure.
     appContext.getEventHandler().handle(
-        new TaskAttemptEventTerminated(sEvent.getAttemptID()));
+        new TaskAttemptEventContainerTerminated(sEvent.getAttemptID(), null));
     taskAttemptListenern.unregisterTaskAttempt(sEvent.getAttemptID());
   }
 
   @SuppressWarnings("unchecked")
-  public void handleTaSucceededRequest(AMSchedulerTASucceededEvent sEvent) {
+  public void handleTaSucceededRequest(AMSchedulerEventTAEnded sEvent) {
     // Successful taskAttempt.
     // Same CLEANUP comment as handleTaStopRequest
     appContext.getEventHandler().handle(
-        new TaskAttemptEventTerminated(sEvent.getAttemptID()));
+        new TaskAttemptEventContainerTerminated(sEvent.getAttemptID(), null));
     taskAttemptListenern.unregisterTaskAttempt(sEvent.getAttemptID());
   }
 
@@ -329,11 +328,19 @@ public class LocalContainerAllocator extends AbstractService
     case S_TA_LAUNCH_REQUEST:
       handleTaLaunchRequest((AMSchedulerTALaunchRequestEvent) sEvent);
       break;
-    case S_TA_STOP_REQUEST: // Effectively means a failure.
-      handleTaStopRequest((AMSchedulerTAStopRequestEvent) sEvent);
-      break;
-    case S_TA_SUCCEEDED:
-      handleTaSucceededRequest((AMSchedulerTASucceededEvent) sEvent);
+    case S_TA_ENDED: // Effectively means a failure.
+      AMSchedulerEventTAEnded event = (AMSchedulerEventTAEnded) sEvent;
+      switch(event.getState()) {
+      case FAILED:
+      case KILLED:
+        handleTaStopRequest(event);
+        break;
+      case SUCCEEDED:
+        handleTaSucceededRequest(event);
+        break;
+      default:
+        throw new YarnException("Unexpected TaskAttemptState: " + event.getState());
+      }
       break;
     default:
       LOG.warn("Invalid event type for LocalContainerAllocator: "

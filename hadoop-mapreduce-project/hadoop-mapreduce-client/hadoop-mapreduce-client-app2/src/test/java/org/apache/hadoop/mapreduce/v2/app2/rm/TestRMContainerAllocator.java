@@ -45,6 +45,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -815,6 +816,12 @@ public class TestRMContainerAllocator {
       super.handleEvent(event);
     }
     
+    @Override
+    protected boolean shouldProfileTaskAttempt(JobConf conf,
+        org.apache.hadoop.mapred.Task remoteTask) {
+      return false;
+    }
+    
     static Priority getMapPriority() {
       return BuilderUtils.newPriority(PRIORITY_MAP.getPriority());
     }
@@ -844,6 +851,12 @@ public class TestRMContainerAllocator {
         int assignedReduces, int mapResourceReqt, int reduceResourceReqt,
         int numPendingReduces, float maxReduceRampupLimit, float reduceSlowStart) {
       recalculatedReduceSchedule = true;
+    }
+    
+    @Override
+    protected boolean shouldProfileTaskAttempt(JobConf conf,
+        org.apache.hadoop.mapred.Task remoteTask) {
+      return false;
     }
   }
 
@@ -928,7 +941,7 @@ public class TestRMContainerAllocator {
     
     @Override
     public void handle(Event event) {
-      if (event.getType() == AMContainerEventType.C_START_REQUEST) {
+      if (event.getType() == AMContainerEventType.C_LAUNCH_REQUEST) {
         launchRequests.add((AMContainerLaunchRequestEvent)event);
       } else if (event.getType() == AMContainerEventType.C_ASSIGN_TA) {
         assignEvents.add((AMContainerAssignTAEvent)event);
@@ -960,6 +973,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getID()).thenReturn(jobId);
     when(mockJob.getProgress()).thenReturn(0.0f);
+    when(mockJob.getConf()).thenReturn(conf);
 
     Clock clock = new ControlledClock(new SystemClock());
 

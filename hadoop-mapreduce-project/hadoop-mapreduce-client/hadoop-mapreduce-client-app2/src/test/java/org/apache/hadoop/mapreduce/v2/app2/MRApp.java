@@ -72,8 +72,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTAStopRequestEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTASucceededEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventTAEnded;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
@@ -261,7 +260,8 @@ public class MRApp extends MRAppMaster {
     TaskAttemptReport report = attempt.getReport();
     while (!finalState.equals(report.getTaskAttemptState()) &&
         timeoutSecs++ < 20) {
-      System.out.println("TaskAttempt State is : " + report.getTaskAttemptState() +
+      System.out.println("TaskAttempt State for " + attempt.getID() + " is : " + 
+          report.getTaskAttemptState() +
           " Waiting for state : " + finalState +
           "   progress : " + report.getProgress());
       report = attempt.getReport();
@@ -651,24 +651,27 @@ public class MRApp extends MRAppMaster {
                 .getRemoteTask()));
 
         break;
-      case S_TA_STOP_REQUEST:
+      case S_TA_ENDED:
         // Send out a Container_stop_request.
-        AMSchedulerTAStopRequestEvent stEvent = (AMSchedulerTAStopRequestEvent) rawEvent;
-        LOG.info("XXX: Handling S_TA_STOP_REQUEST for attemptId:" + stEvent.getAttemptID());
-        getContext().getEventHandler().handle(
-            new AMContainerEvent(attemptToContainerIdMap.get(stEvent
-                .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
-
-        break;
-      case S_TA_SUCCEEDED:
-        // No re-use in MRApp. Stop the container.
-        AMSchedulerTASucceededEvent suEvent = (AMSchedulerTASucceededEvent) rawEvent;
-        LOG.info("XXX: Handling S_TA_SUCCEEDED for attemptId: "
-            + suEvent.getAttemptID());
-        getContext().getEventHandler().handle(
-            new AMContainerEvent(attemptToContainerIdMap.get(suEvent
-                .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
-        break;
+        AMSchedulerEventTAEnded sEvent = (AMSchedulerEventTAEnded) rawEvent;
+        LOG.info("XXX: Handling S_TA_ENDED for attemptId:"
+            + sEvent.getAttemptID() + " with state: " + sEvent.getState());
+        switch (sEvent.getState()) {
+        case FAILED:
+        case KILLED:
+          getContext().getEventHandler().handle(
+              new AMContainerEvent(attemptToContainerIdMap.get(sEvent
+                  .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
+          break;
+        case SUCCEEDED:
+          // No re-use in MRApp. Stop the container.
+          getContext().getEventHandler().handle(
+              new AMContainerEvent(attemptToContainerIdMap.get(sEvent
+                  .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
+          break;
+        default:
+          throw new YarnException("Unexpected state: " + sEvent.getState());
+        }
       case S_CONTAINERS_ALLOCATED:
         break;
       case S_CONTAINER_COMPLETED:

@@ -38,7 +38,7 @@ public class AMContainerLaunchRequestEvent extends AMContainerEvent {
   public AMContainerLaunchRequestEvent(ContainerId containerId, JobId jobId,
       TaskType taskType, Token<JobTokenIdentifier> jobToken,
       Credentials credentials, boolean shouldProfile, JobConf jobConf) {
-    super(containerId, AMContainerEventType.C_START_REQUEST);
+    super(containerId, AMContainerEventType.C_LAUNCH_REQUEST);
     this.jobId = jobId;
     this.taskTypeForContainer = taskType;
     this.jobToken = jobToken;

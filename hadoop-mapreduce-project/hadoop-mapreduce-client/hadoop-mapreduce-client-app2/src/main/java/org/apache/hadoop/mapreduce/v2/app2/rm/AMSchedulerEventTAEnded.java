@@ -15,16 +15,27 @@
  * the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.app2.rm.container;
+package org.apache.hadoop.mapreduce.v2.app2.rm;
 
-public enum AMContainerState {
-  ALLOCATED,
-  LAUNCHING,
-  IDLE,
-  RUNNING,
-  // indicates a NM stop request has been attempted. This request could fail, in
-  // which case an RM stop request needs to be sent.
-  STOP_REQUESTED, 
-  STOPPING,
-  COMPLETED,
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
+
+public class AMSchedulerEventTAEnded extends AMSchedulerEvent {
+
+  private final TaskAttemptId attemptId;
+  private TaskAttemptState state;
+
+  public AMSchedulerEventTAEnded(TaskAttemptId attemptId, TaskAttemptState state) {
+    super(AMSchedulerEventType.S_TA_ENDED);
+    this.attemptId = attemptId;
+    this.state = state;
+  }
+
+  public TaskAttemptId getAttemptID() {
+    return this.attemptId;
+  }
+
+  public TaskAttemptState getState() {
+    return this.state;
+  }
 }

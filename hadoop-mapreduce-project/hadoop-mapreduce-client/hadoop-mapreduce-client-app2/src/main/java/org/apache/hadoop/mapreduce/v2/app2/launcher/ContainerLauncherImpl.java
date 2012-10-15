@@ -38,9 +38,11 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.app2.AppContext;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorLaunchRequestEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventLaunchFailed;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventLaunched;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventStopFailed;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventType;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -65,7 +67,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 // TODO XXX: See what part of this lifecycle and state management can be simplified.
 // Ideally, no state - only sendStart / sendStop.
 
-// TODO XXX: ShufflePort needs to make it over to the TaskAttempt.
 // TODO XXX: Review this entire code and clean it up.
 
 /**
@@ -210,14 +211,18 @@ public class ContainerLauncherImpl extends AbstractService implements
               .newRecord(StopContainerRequest.class);
             stopRequest.setContainerId(this.containerID);
             proxy.stopContainer(stopRequest);
-
+            // If stopContainer returns without an error, assuming the stop made
+            // it over to the NodeManager.
+          context.getEventHandler().handle(
+              new AMContainerEvent(containerID, AMContainerEventType.C_NM_STOP_SENT));
         } catch (Throwable t) {
 
           // ignore the cleanup failure
           String message = "cleanup failed for container "
             + this.containerID + " : "
             + StringUtils.stringifyException(t);
-          context.getEventHandler().handle(new AMContainerEventStopFailed(containerID, message));
+          context.getEventHandler().handle(
+              new AMContainerEventStopFailed(containerID, message));
           LOG.warn(message);
           this.state = ContainerState.DONE;
           return;
@@ -228,11 +233,6 @@ public class ContainerLauncherImpl extends AbstractService implements
         }
         this.state = ContainerState.DONE;
       }
-      // TODO XXX: NO STOPPED event. Waiting for the RM to get back.
-      // after killing, send killed event to task attempt
-//      context.getEventHandler().handle(
-//          new TaskAttemptEvent(this.taskAttemptID,
-//              TaskAttemptEventType.TA_CONTAINER_CLEANED));
     }
   }
 

@@ -10,7 +10,7 @@ public class AMContainerEventStopFailed extends AMContainerEvent {
   private final String message;
 
   public AMContainerEventStopFailed(ContainerId containerId, String message) {
-    super(containerId, AMContainerEventType.C_STOP_FAILED);
+    super(containerId, AMContainerEventType.C_NM_STOP_FAILED);
     this.message = message;
   }
 

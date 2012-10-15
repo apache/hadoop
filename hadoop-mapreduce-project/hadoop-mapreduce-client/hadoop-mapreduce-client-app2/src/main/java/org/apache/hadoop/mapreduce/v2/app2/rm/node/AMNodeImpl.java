@@ -259,6 +259,7 @@ public class AMNodeImpl implements AMNode {
               AMNodeEventType.N_NODE_WAS_BLACKLISTED));
           return AMNodeState.BLACKLISTED;
           // TODO XXX: An event likely needs to go out to the scheduler.
+          // XXX Someone needs to update the scheduler tables - send a ZEROd request to the scheduler. Who's doing that ?
         }
       }
       return AMNodeState.ACTIVE;
@@ -378,6 +379,7 @@ public class AMNodeImpl implements AMNode {
       LOG.info("Node: " + node.getNodeId()
           + " got allocated a contaienr with id: " + event.getContainerId()
           + " while in UNHEALTHY state. Releasing it.");
+      // TODO XXX: Maybe consider including some diagnostics with this event. (RM reported NODE as unhealthy maybe). Which would then be included in diagnostics from the Container.
       node.sendEvent(new AMContainerEvent(event.getContainerId(),
           AMContainerEventType.C_NODE_FAILED));
     }

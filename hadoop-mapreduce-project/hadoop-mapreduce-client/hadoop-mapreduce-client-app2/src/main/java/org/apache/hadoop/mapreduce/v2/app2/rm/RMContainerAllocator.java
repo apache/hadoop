@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app2.AppContext;
 import org.apache.hadoop.mapreduce.v2.app2.job.Job;
@@ -332,18 +333,20 @@ public class RMContainerAllocator extends AbstractService
       recalculateReduceSchedule = true;
       handleTaLaunchRequest((AMSchedulerTALaunchRequestEvent) sEvent);
       break;
-    case S_TA_STOP_REQUEST: // Effectively means a failure.
+    case S_TA_ENDED: // Effectively means a failure.
       recalculateReduceSchedule = true;
-      handleTaStopRequest((AMSchedulerTAStopRequestEvent) sEvent);
-      break;
-    case S_TA_SUCCEEDED:
-      recalculateReduceSchedule = true;
-      handleTaSucceededRequest((AMSchedulerTASucceededEvent) sEvent);
-      break;
-    case S_TA_ENDED:
-      recalculateReduceSchedule = true;
-      // TODO XXX XXX: Not generated yet. Depends on E05 etc. Also look at
-      // TaskAttempt transitions.
+      AMSchedulerEventTAEnded event = (AMSchedulerEventTAEnded)sEvent;
+      switch(event.getState()) {
+      case FAILED:
+      case KILLED:
+        handleTaStopRequest((AMSchedulerEventTAEnded) sEvent);
+        break;
+      case SUCCEEDED:
+        handleTaSucceededRequest(event);
+        break;
+      default:
+        throw new YarnException("Unexecpted TA_ENDED state: " + event.getState()); 
+      }
       break;
     case S_CONTAINERS_ALLOCATED:
       // Conditional recalculateReduceSchedule
@@ -391,7 +394,7 @@ public class RMContainerAllocator extends AbstractService
     }
   }
 
-  private void handleTaStopRequest(AMSchedulerTAStopRequestEvent event) {
+  private void handleTaStopRequest(AMSchedulerEventTAEnded event) {
     TaskAttemptId aId = event.getAttemptID();
     attemptToLaunchRequestMap.remove(aId);
     // TODO XXX: This remove may need to be deferred. Possible for a SUCCESSFUL taskAttempt to fail,
@@ -410,7 +413,7 @@ public class RMContainerAllocator extends AbstractService
           // stopped.
           sendEvent(new AMNodeEventTaskAttemptEnded(containerMap
               .get(containerId).getContainer().getNodeId(), containerId,
-              event.getAttemptID(), event.failed()));
+              event.getAttemptID(), event.getState() == TaskAttemptState.FAILED));
         } else {
           LOG.warn("Received a STOP request for absent taskAttempt: "
               + event.getAttemptID());
@@ -422,7 +425,7 @@ public class RMContainerAllocator extends AbstractService
     }
   }
   
-  private void handleTaSucceededRequest(AMSchedulerTASucceededEvent event) {
+  private void handleTaSucceededRequest(AMSchedulerEventTAEnded event) {
     // TODO XXX Remember the assigned containerId even after task success.
     // Required for TOO_MANY_FETCH_FAILURES
     attemptToLaunchRequestMap.remove(event.getAttemptID());
