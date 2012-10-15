@@ -79,6 +79,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8881. FileBasedKeyStoresFactory initialization logging should be debug not info. (tucu)
 
+    HADOOP-8901. GZip and Snappy support may not work without unversioned
+    libraries (Colin Patrick McCabe via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
