@@ -352,6 +352,9 @@ Release 2.0.3-alpha - Unreleased
     (Arpit Gupta via suresh)
 
 
+    HADOOP-8901. GZip and Snappy support may not work without unversioned
+    libraries (Colin Patrick McCabe via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
