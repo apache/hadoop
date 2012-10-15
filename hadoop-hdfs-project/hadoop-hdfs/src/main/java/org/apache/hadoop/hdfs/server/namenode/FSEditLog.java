@@ -657,7 +657,7 @@ public class FSEditLog implements LogsPurgeable {
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
     AddOp op = AddOp.getInstance(cache.get())
       .setPath(path)
-      .setReplication(newNode.getReplication())
+      .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
@@ -675,7 +675,7 @@ public class FSEditLog implements LogsPurgeable {
   public void logCloseFile(String path, INodeFile newNode) {
     CloseOp op = CloseOp.getInstance(cache.get())
       .setPath(path)
-      .setReplication(newNode.getReplication())
+      .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())

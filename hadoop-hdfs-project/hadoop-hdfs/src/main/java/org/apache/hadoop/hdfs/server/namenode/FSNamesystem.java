@@ -1411,7 +1411,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     si.add(trgInode);
-    short repl = trgInode.getReplication();
+    short repl = trgInode.getBlockReplication();
 
     // now check the srcs
     boolean endSrc = false; // final src file doesn't have to have full end block
@@ -1431,10 +1431,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       // check replication and blocks size
-      if(repl != srcInode.getReplication()) {
+      if(repl != srcInode.getBlockReplication()) {
         throw new IllegalArgumentException(src + " and " + target + " " +
             "should have same replication: "
-            + repl + " vs. " + srcInode.getReplication());
+            + repl + " vs. " + srcInode.getBlockReplication());
       }
 
       //boolean endBlock=false;
@@ -1877,7 +1877,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       boolean writeToEditLog) throws IOException {
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                                     file.getLocalNameBytes(),
-                                    file.getReplication(),
+                                    file.getBlockReplication(),
                                     file.getModificationTime(),
                                     file.getPreferredBlockSize(),
                                     file.getBlocks(),
@@ -2191,7 +2191,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
-      replication = pendingFile.getReplication();
+      replication = pendingFile.getBlockReplication();
     } finally {
       writeUnlock();
     }
@@ -2435,7 +2435,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * them into invalidateBlocks.
    */
   private void checkReplicationFactor(INodeFile file) {
-    short numExpectedReplicas = file.getReplication();
+    short numExpectedReplicas = file.getBlockReplication();
     Block[] pendingBlocks = file.getBlocks();
     int nrBlocks = pendingBlocks.length;
     for (int i = 0; i < nrBlocks; i++) {
@@ -3154,7 +3154,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (diff > 0) {
       try {
         String path = leaseManager.findPath(fileINode);
-        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getReplication());
+        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getBlockReplication());
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
       }

@@ -104,7 +104,7 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
       "non-complete blocks! Blocks are: " + blocksAsString();
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
-                                  getReplication(),
+                                  getBlockReplication(),
                                   getModificationTime(),
                                   getModificationTime(),
                                   getPreferredBlockSize());
