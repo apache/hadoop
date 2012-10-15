@@ -213,8 +213,9 @@ public class FSDirectory implements Closeable {
 
   /**
    * Add the given filename to the fs.
-   * @throws QuotaExceededException 
-   * @throws FileAlreadyExistsException 
+   * @throws FileAlreadyExistsException
+   * @throws QuotaExceededException
+   * @throws UnresolvedLinkException
    */
   INodeFileUnderConstruction addFile(String path, 
                 PermissionStatus permissions,
@@ -265,8 +266,6 @@ public class FSDirectory implements Closeable {
     return newNode;
   }
 
-  /**
-   */
   INode unprotectedAddFile( String path, 
                             PermissionStatus permissions,
                             short replication,
@@ -275,8 +274,7 @@ public class FSDirectory implements Closeable {
                             long preferredBlockSize,
                             boolean underConstruction,
                             String clientName,
-                            String clientMachine)
-      throws UnresolvedLinkException {
+                            String clientMachine) {
     INode newNode;
     assert hasWriteLock();
     if (underConstruction) {

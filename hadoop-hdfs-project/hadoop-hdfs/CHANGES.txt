@@ -54,6 +54,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4037. Rename the getReplication() method in BlockCollection to
     getBlockReplication(). (szetszwo)
 
+    HDFS-4036. Remove "throw UnresolvedLinkException" from
+    FSDirectory.unprotectedAddFile(..). (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
