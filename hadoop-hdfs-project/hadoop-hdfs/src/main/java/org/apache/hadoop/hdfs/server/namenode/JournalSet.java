@@ -216,7 +216,7 @@ public class JournalSet implements JournalManager {
    */
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk) {
+      long fromTxId, boolean inProgressOk) throws IOException {
     final TreeMultiset<EditLogInputStream> allStreams =
         TreeMultiset.create(EDIT_LOG_INPUT_STREAM_COMPARATOR);
     for (JournalAndStream jas : journals) {

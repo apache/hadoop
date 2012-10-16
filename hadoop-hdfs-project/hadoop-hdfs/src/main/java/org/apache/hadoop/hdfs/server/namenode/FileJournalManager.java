@@ -232,6 +232,11 @@ class FileJournalManager implements JournalManager {
     LOG.debug(this + ": selecting input streams starting at " + fromTxId + 
         (inProgressOk ? " (inProgress ok) " : " (excluding inProgress) ") +
         "from among " + elfs.size() + " candidate file(s)");
+    addStreamsToCollectionFromFiles(elfs, streams, fromTxId, inProgressOk);
+  }
+  
+  static void addStreamsToCollectionFromFiles(Collection<EditLogFile> elfs,
+      Collection<EditLogInputStream> streams, long fromTxId, boolean inProgressOk) {
     for (EditLogFile elf : elfs) {
       if (elf.lastTxId < fromTxId) {
         LOG.debug("passing over " + elf + " because it ends at " +

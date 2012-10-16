@@ -57,6 +57,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4036. Remove "throw UnresolvedLinkException" from
     FSDirectory.unprotectedAddFile(..). (Jing Zhao via szetszwo)
 
+    HDFS-2946. HA: Put a cap on the number of completed edits files retained
+    by the NN. (atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 
