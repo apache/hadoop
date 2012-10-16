@@ -320,6 +320,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8929. Add toString, other improvements for SampleQuantiles (todd)
 
+    HADOOP-8922. Provide alternate JSONP output for JMXJsonServlet to allow
+    javascript in browser dashboard (Damien Hardy via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang

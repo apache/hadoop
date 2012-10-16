@@ -113,11 +113,16 @@ import org.codehaus.jackson.JsonGenerator;
  *  All other objects will be converted to a string and output as such.
  *  
  *  The bean's name and modelerType will be returned for all beans.
+ *
+ *  Optional paramater "callback" should be used to deliver JSONP response.
+ *  
  */
 public class JMXJsonServlet extends HttpServlet {
   private static final Log LOG = LogFactory.getLog(JMXJsonServlet.class);
 
   private static final long serialVersionUID = 1L;
+
+  private static final String CALLBACK_PARAM = "callback";
 
   /**
    * MBean server.
@@ -154,11 +159,22 @@ public class JMXJsonServlet extends HttpServlet {
         return;
       }
       JsonGenerator jg = null;
+      String jsonpcb = null;
+      PrintWriter writer = null;
       try {
-        response.setContentType("application/json; charset=utf8");
+        writer = response.getWriter();
+ 
+        // "callback" parameter implies JSONP outpout
+        jsonpcb = request.getParameter(CALLBACK_PARAM);
+        if (jsonpcb != null) {
+          response.setContentType("application/javascript; charset=utf8");
+          writer.write(jsonpcb + "(");
+        } else {
+          response.setContentType("application/json; charset=utf8");
+        }
 
-        PrintWriter writer = response.getWriter();
         jg = jsonFactory.createJsonGenerator(writer);
+        jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
         jg.useDefaultPrettyPrinter();
         jg.writeStartObject();
 
@@ -187,6 +203,12 @@ public class JMXJsonServlet extends HttpServlet {
       } finally {
         if (jg != null) {
           jg.close();
+        }
+        if (jsonpcb != null) {
+           writer.write(");");
+        }
+        if (writer != null) {
+          writer.close();
         }
       }
     } catch (IOException e) {
