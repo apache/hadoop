@@ -440,6 +440,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4044. Duplicate ChecksumType definition in HDFS .proto files.
     (Binglin Chang via suresh)
 
+    HDFS-4049. Fix hflush performance regression due to nagling delays
+    (todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
