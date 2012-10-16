@@ -33,7 +33,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface JournalManager extends Closeable {
+public interface JournalManager extends Closeable, LogsPurgeable {
   /**
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.
@@ -63,17 +63,6 @@ public interface JournalManager extends Closeable {
    * Set the amount of memory that this stream should use to buffer edits
    */
   void setOutputBufferCapacity(int size);
-
-  /**
-   * The JournalManager may archive/purge any logs for transactions less than
-   * or equal to minImageTxId.
-   *
-   * @param minTxIdToKeep the earliest txid that must be retained after purging
-   *                      old logs
-   * @throws IOException if purging fails
-   */
-  void purgeLogsOlderThan(long minTxIdToKeep)
-    throws IOException;
 
   /**
    * Recover segments which have not been finalized.

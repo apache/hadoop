@@ -58,6 +58,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -490,10 +492,6 @@ public class SecondaryNameNode implements Runnable {
     LOG.warn("Checkpoint done. New Image Size: " 
              + dstStorage.getFsImageName(txid).length());
     
-    // Since we've successfully checkpointed, we can remove some old
-    // image files
-    checkpointImage.purgeOldStorage();
-    
     return loadImage;
   }
   
@@ -728,6 +726,34 @@ public class SecondaryNameNode implements Runnable {
   }
   
   static class CheckpointStorage extends FSImage {
+    
+    private static class CheckpointLogPurger implements LogsPurgeable {
+      
+      private NNStorage storage;
+      private StoragePurger purger
+          = new NNStorageRetentionManager.DeletionStoragePurger();
+      
+      public CheckpointLogPurger(NNStorage storage) {
+        this.storage = storage;
+      }
+
+      @Override
+      public void purgeLogsOlderThan(long minTxIdToKeep) throws IOException {
+        Iterator<StorageDirectory> iter = storage.dirIterator();
+        while (iter.hasNext()) {
+          StorageDirectory dir = iter.next();
+          List<EditLogFile> editFiles = FileJournalManager.matchEditLogs(
+              dir.getCurrentDir());
+          for (EditLogFile f : editFiles) {
+            if (f.getLastTxId() < minTxIdToKeep) {
+              purger.purgeLog(f);
+            }
+          }
+        }
+      }
+      
+    }
+    
     /**
      * Construct a checkpoint image.
      * @param conf Node configuration.
@@ -744,6 +770,11 @@ public class SecondaryNameNode implements Runnable {
       // we shouldn't have any editLog instance. Setting to null
       // makes sure we don't accidentally depend on it.
       editLog = null;
+      
+      // Replace the archival manager with one that can actually work on the
+      // 2NN's edits storage.
+      this.archivalManager = new NNStorageRetentionManager(conf, storage,
+          new CheckpointLogPurger(storage));
     }
 
     /**
@@ -840,6 +871,7 @@ public class SecondaryNameNode implements Runnable {
     }
     
     Checkpointer.rollForwardByApplyingLogs(manifest, dstImage, dstNamesystem);
+    // The following has the side effect of purging old fsimages/edit logs.
     dstImage.saveFSImageInAllDirs(dstNamesystem, dstImage.getLastAppliedTxId());
     dstStorage.writeAll();
   }
