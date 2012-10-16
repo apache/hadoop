@@ -41,10 +41,14 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.MetricsAsserts;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -77,7 +81,8 @@ public class TestNameNodeMetrics {
         DFS_REPLICATION_INTERVAL);
     CONF.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, 
         "" + PERCENTILES_INTERVAL);
-
+    // Enable stale DataNodes checking
+    CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY, true);
     ((Log4JLogger)LogFactory.getLog(MetricsAsserts.class))
       .getLogger().setLevel(Level.DEBUG);
   }
@@ -117,6 +122,40 @@ public class TestNameNodeMetrics {
     byte [] buffer = new byte[4];
     stm.read(buffer,0,4);
     stm.close();
+  }
+  
+  /** Test metrics indicating the number of stale DataNodes */
+  @Test
+  public void testStaleNodes() throws Exception {
+    // Set two datanodes as stale
+    for (int i = 0; i < 2; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+      long staleInterval = CONF.getLong(
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
+      cluster.getNameNode().getNamesystem().getBlockManager()
+          .getDatanodeManager().getDatanode(dn.getDatanodeId())
+          .setLastUpdate(Time.now() - staleInterval - 1);
+    }
+    // Let HeartbeatManager to check heartbeat
+    BlockManagerTestUtil.checkHeartbeat(cluster.getNameNode().getNamesystem()
+        .getBlockManager());
+    assertGauge("StaleDataNodes", 2, getMetrics(NS_METRICS));
+    
+    // Reset stale datanodes
+    for (int i = 0; i < 2; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
+      cluster.getNameNode().getNamesystem().getBlockManager()
+          .getDatanodeManager().getDatanode(dn.getDatanodeId())
+          .setLastUpdate(Time.now());
+    }
+    
+    // Let HeartbeatManager to refresh
+    BlockManagerTestUtil.checkHeartbeat(cluster.getNameNode().getNamesystem()
+        .getBlockManager());
+    assertGauge("StaleDataNodes", 0, getMetrics(NS_METRICS));
   }
   
   /** Test metrics associated with addition of a file */
