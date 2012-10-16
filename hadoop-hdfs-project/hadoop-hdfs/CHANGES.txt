@@ -452,6 +452,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4058. DirectoryScanner may fail with IOOB if the directory
     scanning threads return out of volume order. (eli)
 
+    HDFS-3985. Add timeouts to TestMulitipleNNDataBlockScanner. (todd via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
