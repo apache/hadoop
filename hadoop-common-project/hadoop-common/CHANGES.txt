@@ -1056,6 +1056,8 @@ Release 0.23.5 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-8923. JNI-based user-group mapping modules can be too chatty on 
+    lookup failures. (Kihwal Lee via suresh)
 
   OPTIMIZATIONS
 
