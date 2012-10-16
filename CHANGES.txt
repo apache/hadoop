@@ -87,6 +87,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-3678. The Map tasks logs should have the value of input
     split it processed. (harsh)
 
+    HADOOP-8931. Add Java version to startup message. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
