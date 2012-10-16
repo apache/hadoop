@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.metrics2.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,7 +26,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,18 +51,22 @@ public class TestSampleQuantiles {
     // Counts start off zero
     assertEquals(estimator.getCount(), 0);
     assertEquals(estimator.getSampleCount(), 0);
-    try {
-      estimator.snapshot();
-      fail("Expected IOException from empty window");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains("No samples", e);
-    }
+    
+    // Snapshot should be null if there are no entries.
+    assertNull(estimator.snapshot());
 
     // Count increment correctly by 1
     estimator.insert(1337);
     assertEquals(estimator.getCount(), 1);
     estimator.snapshot();
     assertEquals(estimator.getSampleCount(), 1);
+    
+    assertEquals(
+        "50.00 %ile +/- 5.00%: 1337\n" +
+        "75.00 %ile +/- 2.50%: 1337\n" +
+        "90.00 %ile +/- 1.00%: 1337\n" +
+        "95.00 %ile +/- 0.50%: 1337\n" +
+        "99.00 %ile +/- 0.10%: 1337", estimator.toString());
   }
 
   /**
@@ -80,12 +81,7 @@ public class TestSampleQuantiles {
     estimator.clear();
     assertEquals(estimator.getCount(), 0);
     assertEquals(estimator.getSampleCount(), 0);
-    try {
-      estimator.snapshot();
-      fail("Expected IOException for an empty window.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains("No samples", e);
-    }
+    assertNull(estimator.snapshot());
   }
 
   /**

@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.lib;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -150,14 +149,8 @@ public class MutableQuantiles extends MutableMetric {
     @Override
     public void run() {
       synchronized (parent) {
-        try {
-          parent.previousCount = parent.estimator.getCount();
-          parent.previousSnapshot = parent.estimator.snapshot();
-        } catch (IOException e) {
-          // Couldn't get a new snapshot because the window was empty
-          parent.previousCount = 0;
-          parent.previousSnapshot = null;
-        }
+        parent.previousCount = parent.estimator.getCount();
+        parent.previousSnapshot = parent.estimator.snapshot();
         parent.estimator.clear();
       }
       parent.setChanged();
