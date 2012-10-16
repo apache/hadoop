@@ -113,6 +113,9 @@ import org.codehaus.jackson.JsonGenerator;
  *  All other objects will be converted to a string and output as such.
  *  
  *  The bean's name and modelerType will be returned for all beans.
+ *
+ *  Optional paramater "callback" should be used to deliver JSONP response.
+ *  
  */
 public class JMXJsonServlet extends HttpServlet {
   private static final Log LOG = LogFactory.getLog(JMXJsonServlet.class);
@@ -120,6 +123,8 @@ public class JMXJsonServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   // ----------------------------------------------------- Instance Variables
+  private static final String CALLBACK_PARAM = "callback";
+
   /**
    * MBean server.
    */
@@ -145,20 +150,33 @@ public class JMXJsonServlet extends HttpServlet {
    */
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    String jsonpcb = null;
+    PrintWriter writer = null;
     try {
       if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
                                                      request, response)) {
         return;
       }
+      
+      JsonGenerator jg = null;
 
-      response.setContentType("application/json; charset=utf8");
-
-      PrintWriter writer = response.getWriter();
+      writer = response.getWriter();
+ 
+      // "callback" parameter implies JSONP outpout
+      jsonpcb = request.getParameter(CALLBACK_PARAM);
+      if (jsonpcb != null) {
+        response.setContentType("application/javascript; charset=utf8");
+        writer.write(jsonpcb + "(");
+      } else {
+        response.setContentType("application/json; charset=utf8");
+      }
 
       JsonFactory jsonFactory = new JsonFactory();
-      JsonGenerator jg = jsonFactory.createJsonGenerator(writer);
+      jg = jsonFactory.createJsonGenerator(writer);
+      jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
       jg.useDefaultPrettyPrinter();
       jg.writeStartObject();
+
       if (mBeanServer == null) {
         jg.writeStringField("result", "ERROR");
         jg.writeStringField("message", "No MBeanServer could be found");
@@ -183,6 +201,7 @@ public class JMXJsonServlet extends HttpServlet {
             response);
         jg.close();
         return;
+        
       }
 
       // query per mbean
@@ -199,6 +218,13 @@ public class JMXJsonServlet extends HttpServlet {
     } catch ( MalformedObjectNameException e ) {
       LOG.error("Caught an exception while processing JMX request", e);
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    } finally {
+      if (jsonpcb != null) {
+         writer.write(");");
+      }
+      if (writer != null) {
+        writer.close();
+      }
     }
   }
 
