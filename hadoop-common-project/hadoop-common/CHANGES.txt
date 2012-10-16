@@ -330,6 +330,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
     via atm)
 
+    HADOOP-8926. hadoop.util.PureJavaCrc32 cache hit-ratio is low for static
+    data (Gopal V via bobby)
+
   BUG FIXES
 
     HADOOP-8795. BASH tab completion doesn't look in PATH, assumes path to
