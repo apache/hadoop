@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
 
 public class TestUnderReplicatedBlocks {
-  @Test
+  @Test(timeout=300000) // 5 min timeout
   public void testSetrepIncWithUnderReplicatedBlocks() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = 2;
