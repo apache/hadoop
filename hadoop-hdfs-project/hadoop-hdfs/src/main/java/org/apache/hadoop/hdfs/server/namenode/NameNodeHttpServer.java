@@ -18,13 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.AuthFilter;
@@ -55,11 +49,8 @@ public class NameNodeHttpServer {
   private final Configuration conf;
   private final NameNode nn;
   
-  private final Log LOG = NameNode.LOG;
   private InetSocketAddress httpAddress;
-  
   private InetSocketAddress bindAddress;
-  
   
   public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
@@ -74,12 +65,6 @@ public class NameNodeHttpServer {
     this.bindAddress = bindAddress;
   }
   
-  private String getDefaultServerPrincipal() throws IOException {
-    return SecurityUtil.getServerPrincipal(
-        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
-        nn.getNameNodeAddress().getHostName());
-  }
-
   public void start() throws IOException {
     final String infoHost = bindAddress.getHostName();
     int infoPort = bindAddress.getPort();
@@ -122,13 +107,24 @@ public class NameNodeHttpServer {
               DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
               SecurityUtil.getServerPrincipal(principalInConf,
                                               bindAddress.getHostName()));
+        } else if (UserGroupInformation.isSecurityEnabled()) {
+          LOG.error("WebHDFS and security are enabled, but configuration property '" +
+                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
+                    "' is not set.");
         }
-        String httpKeytab = conf
-          .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+        String httpKeytab = conf.get(
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+        if (httpKeytab == null) {
+          httpKeytab = conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+        }
         if (httpKeytab != null && !httpKeytab.isEmpty()) {
           params.put(
             DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
             httpKeytab);
+        } else if (UserGroupInformation.isSecurityEnabled()) {
+          LOG.error("WebHDFS and security are enabled, but configuration property '" +
+                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY +
+                    "' is not set.");
         }
         return params;
       }
@@ -152,7 +148,8 @@ public class NameNodeHttpServer {
         .getPort());
     }
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
-    httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY, nn.getNameNodeAddress());
+    httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
+        NetUtils.getConnectAddress(nn.getNameNodeAddress()));
     httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     setupServlets(httpServer, conf);

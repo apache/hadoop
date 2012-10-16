@@ -26,7 +26,7 @@ _hadoop() {
   COMPREPLY=()
   cur=${COMP_WORDS[COMP_CWORD]}
   prev=${COMP_WORDS[COMP_CWORD-1]}  
-  script=${COMP_WORDS[0]}  
+  script=`which ${COMP_WORDS[0]}`
   
   # Bash lets you tab complete things even if the script doesn't
   # exist (or isn't executable). Check to make sure it is, as we

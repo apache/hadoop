@@ -43,6 +43,7 @@ public class TestMetricsServlet extends TestCase {
    * Initializes, for testing, two NoEmitMetricsContext's, and adds one value 
    * to the first of them.
    */
+  @Override
   public void setUp() throws IOException {
     nc1 = new NoEmitMetricsContext();
     nc1.init("test1", ContextFactory.getFactory());

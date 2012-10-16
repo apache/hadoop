@@ -166,13 +166,13 @@ public class TestInitializeSharedEdits {
   }
   
   @Test
-  public void testDontOverWriteExistingDir() {
+  public void testDontOverWriteExistingDir() throws IOException {
     assertFalse(NameNode.initializeSharedEdits(conf, false));
     assertTrue(NameNode.initializeSharedEdits(conf, false));
   }
   
   @Test
-  public void testInitializeSharedEditsConfiguresGenericConfKeys() {
+  public void testInitializeSharedEditsConfiguresGenericConfKeys() throws IOException {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,

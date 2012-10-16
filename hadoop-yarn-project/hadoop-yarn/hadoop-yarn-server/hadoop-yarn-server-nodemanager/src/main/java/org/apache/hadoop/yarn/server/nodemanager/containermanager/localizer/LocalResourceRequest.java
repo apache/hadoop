@@ -34,6 +34,7 @@ public class LocalResourceRequest
   private final long timestamp;
   private final LocalResourceType type;
   private final LocalResourceVisibility visibility;
+  private final String pattern;
 
   /**
    * Wrap API resource to match against cache of localized resources.
@@ -45,22 +46,28 @@ public class LocalResourceRequest
     this(ConverterUtils.getPathFromYarnURL(resource.getResource()),
         resource.getTimestamp(),
         resource.getType(),
-        resource.getVisibility());
+        resource.getVisibility(),
+        resource.getPattern());
   }
 
   LocalResourceRequest(Path loc, long timestamp, LocalResourceType type,
-      LocalResourceVisibility visibility) {
+      LocalResourceVisibility visibility, String pattern) {
     this.loc = loc;
     this.timestamp = timestamp;
     this.type = type;
     this.visibility = visibility;
+    this.pattern = pattern;
   }
 
   @Override
   public int hashCode() {
-    return loc.hashCode() ^
+    int hash = loc.hashCode() ^
       (int)((timestamp >>> 32) ^ timestamp) *
       type.hashCode();
+    if(pattern != null) {
+      hash = hash ^ pattern.hashCode();
+    }
+    return hash;
   }
 
   @Override
@@ -72,9 +79,14 @@ public class LocalResourceRequest
       return false;
     }
     final LocalResourceRequest other = (LocalResourceRequest) o;
+    String pattern = getPattern();
+    String otherPattern = other.getPattern();
+    boolean patternEquals = (pattern == null && otherPattern == null) || 
+       (pattern != null && otherPattern != null && pattern.equals(otherPattern)); 
     return getPath().equals(other.getPath()) &&
            getTimestamp() == other.getTimestamp() &&
-           getType() == other.getType();
+           getType() == other.getType() &&
+           patternEquals;
   }
 
   @Override
@@ -87,6 +99,19 @@ public class LocalResourceRequest
       ret = (int)(getTimestamp() - other.getTimestamp());
       if (0 == ret) {
         ret = getType().ordinal() - other.getType().ordinal();
+        if (0 == ret) {
+          String pattern = getPattern();
+          String otherPattern = other.getPattern();
+          if (pattern == null && otherPattern == null) {
+            ret = 0;
+          } else if (pattern == null) {
+            ret = -1;
+          } else if (otherPattern == null) {
+            ret = 1;
+          } else {
+            ret = pattern.compareTo(otherPattern);    
+          }
+        }
       }
     }
     return ret;
@@ -122,6 +147,11 @@ public class LocalResourceRequest
   }
 
   @Override
+  public String getPattern() {
+    return pattern;
+  }
+  
+  @Override
   public void setResource(URL resource) {
     throw new UnsupportedOperationException();
   }
@@ -145,14 +175,20 @@ public class LocalResourceRequest
   public void setVisibility(LocalResourceVisibility visibility) {
     throw new UnsupportedOperationException();
   }
-
+  
+  @Override
+  public void setPattern(String pattern) {
+    throw new UnsupportedOperationException();
+  }
+  
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("{ ");
     sb.append(getPath().toString()).append(", ");
     sb.append(getTimestamp()).append(", ");
-    sb.append(getType()).append(" }");
+    sb.append(getType()).append(", ");
+    sb.append(getPattern()).append(" }");
     return sb.toString();
   }
 }

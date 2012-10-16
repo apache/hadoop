@@ -36,6 +36,7 @@ public abstract class StringParam extends Param<String> {
     parseParam(defaultValue);
   }
 
+  @Override
   public String parseParam(String str) {
     try {
       if (str != null) {
@@ -52,6 +53,7 @@ public abstract class StringParam extends Param<String> {
     return value;
   }
 
+  @Override
   protected String parse(String str) throws Exception {
     if (pattern != null) {
       if (!pattern.matcher(str).matches()) {

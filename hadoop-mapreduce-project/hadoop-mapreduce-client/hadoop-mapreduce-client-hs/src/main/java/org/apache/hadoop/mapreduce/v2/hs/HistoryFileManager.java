@@ -23,14 +23,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -77,7 +78,7 @@ public class HistoryFileManager extends AbstractService {
   private static enum HistoryInfoState {
     IN_INTERMEDIATE, IN_DONE, DELETED, MOVE_FAILED
   };
-
+  
   private static String DONE_BEFORE_SERIAL_TAIL = JobHistoryUtils
       .doneSubdirsBeforeSerialTail();
 
@@ -130,7 +131,7 @@ public class HistoryFileManager extends AbstractService {
     }
   }
 
-  private static class JobListCache {
+  static class JobListCache {
     private ConcurrentSkipListMap<JobId, HistoryFileInfo> cache;
     private int maxSize;
     private long maxAge;
@@ -199,6 +200,29 @@ public class HistoryFileManager extends AbstractService {
     }
   }
 
+  /**
+   * This class represents a user dir in the intermediate done directory.  This
+   * is mostly for locking purposes. 
+   */
+  private class UserLogDir {
+    long modTime = 0;
+    
+    public synchronized void scanIfNeeded(FileStatus fs) {
+      long newModTime = fs.getModificationTime();
+      if (modTime != newModTime) {
+        Path p = fs.getPath();
+        try {
+          scanIntermediateDirectory(p);
+          //If scanning fails, we will scan again.  We assume the failure is
+          // temporary.
+          modTime = newModTime;
+        } catch (IOException e) {
+          LOG.error("Error while trying to scan the directory " + p, e);
+        }
+      }
+    }
+  }
+  
   public class HistoryFileInfo {
     private Path historyFile;
     private Path confFile;
@@ -216,12 +240,14 @@ public class HistoryFileManager extends AbstractService {
           : HistoryInfoState.IN_INTERMEDIATE;
     }
 
-    private synchronized boolean isMovePending() {
+    @VisibleForTesting
+    synchronized boolean isMovePending() {
       return state == HistoryInfoState.IN_INTERMEDIATE
           || state == HistoryInfoState.MOVE_FAILED;
     }
 
-    private synchronized boolean didMoveFail() {
+    @VisibleForTesting
+    synchronized boolean didMoveFail() {
       return state == HistoryInfoState.MOVE_FAILED;
     }
     
@@ -342,7 +368,7 @@ public class HistoryFileManager extends AbstractService {
   }
 
   private SerialNumberIndex serialNumberIndex = null;
-  private JobListCache jobListCache = null;
+  protected JobListCache jobListCache = null;
 
   // Maintains a list of known done subdirectories.
   private final Set<Path> existingDoneSubdirs = Collections
@@ -352,13 +378,13 @@ public class HistoryFileManager extends AbstractService {
    * Maintains a mapping between intermediate user directories and the last
    * known modification time.
    */
-  private Map<String, Long> userDirModificationTimeMap = new HashMap<String, Long>();
+  private ConcurrentMap<String, UserLogDir> userDirModificationTimeMap = 
+    new ConcurrentHashMap<String, UserLogDir>();
 
   private JobACLsManager aclsMgr;
 
   private Configuration conf;
 
-  private boolean debugMode;
   private String serialNumberFormat;
 
   private Path doneDirPrefixPath = null; // folder for completed jobs
@@ -379,8 +405,7 @@ public class HistoryFileManager extends AbstractService {
   public void init(Configuration conf) {
     this.conf = conf;
 
-    debugMode = conf.getBoolean(JHAdminConfig.MR_HISTORY_DEBUG_MODE, false);
-    int serialNumberLowDigits = debugMode ? 1 : 3;
+    int serialNumberLowDigits = 3;
     serialNumberFormat = ("%0"
         + (JobHistoryUtils.SERIAL_NUMBER_DIRECTORY_DIGITS + serialNumberLowDigits)
         + "d");
@@ -392,6 +417,7 @@ public class HistoryFileManager extends AbstractService {
       doneDirPrefixPath = FileContext.getFileContext(conf).makeQualified(
           new Path(doneDirPrefix));
       doneDirFc = FileContext.getFileContext(doneDirPrefixPath.toUri(), conf);
+      doneDirFc.setUMask(JobHistoryUtils.HISTORY_DONE_DIR_UMASK);
       mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
           JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
     } catch (IOException e) {
@@ -585,23 +611,15 @@ public class HistoryFileManager extends AbstractService {
 
     for (FileStatus userDir : userDirList) {
       String name = userDir.getPath().getName();
-      long newModificationTime = userDir.getModificationTime();
-      boolean shouldScan = false;
-      synchronized (userDirModificationTimeMap) {
-        if (!userDirModificationTimeMap.containsKey(name)
-            || newModificationTime > userDirModificationTimeMap.get(name)) {
-          shouldScan = true;
-          userDirModificationTimeMap.put(name, newModificationTime);
+      UserLogDir dir = userDirModificationTimeMap.get(name);
+      if(dir == null) {
+        dir = new UserLogDir();
+        UserLogDir old = userDirModificationTimeMap.putIfAbsent(name, dir);
+        if(old != null) {
+          dir = old;
         }
       }
-      if (shouldScan) {
-        try {
-          scanIntermediateDirectory(userDir.getPath());
-        } catch (IOException e) {
-          LOG.error("Error while trying to scan the directory " 
-              + userDir.getPath(), e);
-        }
-      }
+      dir.scanIfNeeded(userDir);
     }
   }
 
@@ -692,8 +710,8 @@ public class HistoryFileManager extends AbstractService {
    * @throws IOException
    */
   private HistoryFileInfo scanOldDirsForJob(JobId jobId) throws IOException {
-    int jobSerialNumber = JobHistoryUtils.jobSerialNumber(jobId);
-    String boxedSerialNumber = String.valueOf(jobSerialNumber);
+    String boxedSerialNumber = JobHistoryUtils.serialNumberDirectoryComponent(
+        jobId, serialNumberFormat);
     Set<String> dateStringSet = serialNumberIndex.get(boxedSerialNumber);
     if (dateStringSet == null) {
       return null;
@@ -779,8 +797,8 @@ public class HistoryFileManager extends AbstractService {
   }
 
   private Path canonicalHistoryLogPath(JobId id, long millisecondTime) {
-    String timestampComponent = JobHistoryUtils.timestampDirectoryComponent(
-        millisecondTime, debugMode);
+    String timestampComponent = JobHistoryUtils
+        .timestampDirectoryComponent(millisecondTime);
     return new Path(doneDirPrefixPath, JobHistoryUtils.historyLogSubdirectory(
         id, timestampComponent, serialNumberFormat));
   }

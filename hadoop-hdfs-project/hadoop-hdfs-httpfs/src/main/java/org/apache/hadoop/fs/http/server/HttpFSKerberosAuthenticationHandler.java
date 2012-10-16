@@ -37,12 +37,9 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 

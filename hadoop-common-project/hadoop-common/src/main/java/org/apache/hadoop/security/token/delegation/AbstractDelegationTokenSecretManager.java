@@ -265,7 +265,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("User " + renewer + 
                              " tried to renew an expired token");
     }
-    if ((id.getRenewer() == null) || ("".equals(id.getRenewer().toString()))) {
+    if ((id.getRenewer() == null) || (id.getRenewer().toString().isEmpty())) {
       throw new AccessControlException("User " + renewer + 
                                        " tried to renew a token without " +
                                        "a renewer");
@@ -321,7 +321,7 @@ extends AbstractDelegationTokenIdentifier>
     HadoopKerberosName cancelerKrbName = new HadoopKerberosName(canceller);
     String cancelerShortName = cancelerKrbName.getShortName();
     if (!canceller.equals(owner)
-        && (renewer == null || "".equals(renewer.toString()) || !cancelerShortName
+        && (renewer == null || renewer.toString().isEmpty() || !cancelerShortName
             .equals(renewer.toString()))) {
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token");
@@ -404,6 +404,7 @@ extends AbstractDelegationTokenIdentifier>
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
 
+    @Override
     public void run() {
       LOG.info("Starting expired delegation token remover thread, "
           + "tokenRemoverScanInterval=" + tokenRemoverScanInterval

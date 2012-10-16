@@ -276,7 +276,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
     String pathParts[] = znodeWorkingDir.split("/");
     Preconditions.checkArgument(pathParts.length >= 1 &&
-        "".equals(pathParts[0]),
+        pathParts[0].isEmpty(),
         "Invalid path: %s", znodeWorkingDir);
     
     StringBuilder sb = new StringBuilder();
@@ -892,6 +892,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       final List<ACL> acl, final CreateMode mode)
       throws InterruptedException, KeeperException {
     return zkDoWithRetries(new ZKAction<String>() {
+      @Override
       public String run() throws KeeperException, InterruptedException {
         return zkClient.create(path, data, acl, mode);
       }
@@ -901,6 +902,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private byte[] getDataWithRetries(final String path, final boolean watch,
       final Stat stat) throws InterruptedException, KeeperException {
     return zkDoWithRetries(new ZKAction<byte[]>() {
+      @Override
       public byte[] run() throws KeeperException, InterruptedException {
         return zkClient.getData(path, watch, stat);
       }
@@ -910,6 +912,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private Stat setDataWithRetries(final String path, final byte[] data,
       final int version) throws InterruptedException, KeeperException {
     return zkDoWithRetries(new ZKAction<Stat>() {
+      @Override
       public Stat run() throws KeeperException, InterruptedException {
         return zkClient.setData(path, data, version);
       }
@@ -919,6 +922,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private void deleteWithRetries(final String path, final int version)
       throws KeeperException, InterruptedException {
     zkDoWithRetries(new ZKAction<Void>() {
+      @Override
       public Void run() throws KeeperException, InterruptedException {
         zkClient.delete(path, version);
         return null;

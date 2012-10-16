@@ -19,12 +19,12 @@
 package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
 
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.RegistrationResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.RegistrationResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 
@@ -34,7 +34,7 @@ public class RegistrationResponsePBImpl extends
   RegistrationResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  private ByteBuffer secretKey = null;
+  private MasterKey masterKey = null;
   
   public RegistrationResponsePBImpl() {
     builder = RegistrationResponseProto.newBuilder();
@@ -54,8 +54,8 @@ public class RegistrationResponsePBImpl extends
   }
 
   private void mergeLocalToBuilder() {
-    if (this.secretKey != null) {
-      builder.setSecretKey(convertToProtoFormat(this.secretKey));
+    if (this.masterKey != null) {
+      builder.setMasterKey(convertToProtoFormat(this.masterKey));
     }
   }
 
@@ -76,26 +76,26 @@ public class RegistrationResponsePBImpl extends
   }
 
   @Override
-  public ByteBuffer getSecretKey() {
+  public MasterKey getMasterKey() {
     RegistrationResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.secretKey != null) {
-      return this.secretKey;
+    if (this.masterKey != null) {
+      return this.masterKey;
     }
-    if (!p.hasSecretKey()) {
+    if (!p.hasMasterKey()) {
       return null;
     }
-    this.secretKey = convertFromProtoFormat(p.getSecretKey());
-    return this.secretKey;
+    this.masterKey = convertFromProtoFormat(p.getMasterKey());
+    return this.masterKey;
   }
 
   @Override
-  public void setSecretKey(ByteBuffer secretKey) {
+  public void setMasterKey(MasterKey masterKey) {
     maybeInitBuilder();
-    if (secretKey == null) 
-      builder.clearSecretKey();
-    this.secretKey = secretKey;
+    if (masterKey == null) 
+      builder.clearMasterKey();
+    this.masterKey = masterKey;
   }
-
+  
   @Override
   public NodeAction getNodeAction() {
     RegistrationResponseProtoOrBuilder p = viaProto ? proto : builder;
@@ -123,4 +123,11 @@ public class RegistrationResponsePBImpl extends
     return NodeActionProto.valueOf(t.name());
   }
 
+  private MasterKeyPBImpl convertFromProtoFormat(MasterKeyProto p) {
+    return new MasterKeyPBImpl(p);
+  }
+
+  private MasterKeyProto convertToProtoFormat(MasterKey t) {
+    return ((MasterKeyPBImpl)t).getProto();
+  }
 }  

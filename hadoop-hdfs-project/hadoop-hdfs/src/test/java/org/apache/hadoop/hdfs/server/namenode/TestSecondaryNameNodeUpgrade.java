@@ -23,10 +23,7 @@ import java.util.List;
 
 import org.junit.Test;
 import org.junit.Before;
-import org.junit.After;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
@@ -35,9 +32,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
-import java.util.Properties;
-import java.io.FileReader;
-import java.io.FileWriter;
 import org.junit.Assert;
 import org.apache.hadoop.test.GenericTestUtils;
 

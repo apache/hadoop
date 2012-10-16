@@ -39,6 +39,7 @@ public class VersionMismatchException extends IOException {
   }
 
   /** Returns a string representation of this object. */
+  @Override
   public String toString(){
     return "A record version mismatch occured. Expecting v"
       + expectedVersion + ", found v" + foundVersion; 

@@ -66,6 +66,12 @@ public class TestDelegationTokenRenewer {
     private static Token<?> lastRenewed = null;
     private static Token<?> tokenToRenewIn2Sec = null;
 
+    private static void reset() {
+      counter = 0;
+      lastRenewed = null;
+      tokenToRenewIn2Sec = null;
+    }
+
     @Override
     public boolean handleKind(Text kind) {
       return KIND.equals(kind);
@@ -124,6 +130,7 @@ public class TestDelegationTokenRenewer {
 
   @Before
   public void setUp() throws Exception {
+    Renewer.reset();
     delegationTokenRenewer = new DelegationTokenRenewer();
     delegationTokenRenewer.init(conf);
     delegationTokenRenewer.start();
@@ -367,7 +374,7 @@ public class TestDelegationTokenRenewer {
 
     Credentials ts = new Credentials();
     MyToken token1 = dfs.getDelegationToken(new Text("user1"));
-    
+
     //to cause this one to be set for renew in 2 secs
     Renewer.tokenToRenewIn2Sec = token1; 
     LOG.info("token="+token1+" should be renewed for 2 secs");

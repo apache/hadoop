@@ -149,6 +149,7 @@ public class XmlRecordOutput implements RecordOutput {
     }
   }
     
+  @Override
   public void writeByte(byte b, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<ex:i1>");
@@ -157,6 +158,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeBool(boolean b, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<boolean>");
@@ -165,6 +167,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeInt(int i, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<i4>");
@@ -173,6 +176,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeLong(long l, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<ex:i8>");
@@ -181,6 +185,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeFloat(float f, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<ex:float>");
@@ -189,6 +194,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeDouble(double d, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<double>");
@@ -197,6 +203,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeString(String s, String tag) throws IOException {
     printBeginEnvelope(tag);
     stream.print("<string>");
@@ -205,6 +212,7 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void writeBuffer(Buffer buf, String tag)
     throws IOException {
     printBeginEnvelope(tag);
@@ -214,12 +222,14 @@ public class XmlRecordOutput implements RecordOutput {
     printEndEnvelope(tag);
   }
     
+  @Override
   public void startRecord(Record r, String tag) throws IOException {
     insideRecord(tag);
     stream.print("<struct>\n");
     addIndent();
   }
     
+  @Override
   public void endRecord(Record r, String tag) throws IOException {
     closeIndent();
     putIndent();
@@ -227,12 +237,14 @@ public class XmlRecordOutput implements RecordOutput {
     outsideRecord(tag);
   }
     
+  @Override
   public void startVector(ArrayList v, String tag) throws IOException {
     insideVector(tag);
     stream.print("<array>\n");
     addIndent();
   }
     
+  @Override
   public void endVector(ArrayList v, String tag) throws IOException {
     closeIndent();
     putIndent();
@@ -240,12 +252,14 @@ public class XmlRecordOutput implements RecordOutput {
     outsideVector(tag);
   }
     
+  @Override
   public void startMap(TreeMap v, String tag) throws IOException {
     insideMap(tag);
     stream.print("<array>\n");
     addIndent();
   }
     
+  @Override
   public void endMap(TreeMap v, String tag) throws IOException {
     closeIndent();
     putIndent();

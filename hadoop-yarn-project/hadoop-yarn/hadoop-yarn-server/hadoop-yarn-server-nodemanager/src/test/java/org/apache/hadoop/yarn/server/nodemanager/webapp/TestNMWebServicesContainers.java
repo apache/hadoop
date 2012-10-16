@@ -91,7 +91,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
-      nmContext = new NodeManager.NMContext();
+      nmContext = new NodeManager.NMContext(null);
       nmContext.getNodeId().setHost("testhost.foo.com");
       nmContext.getNodeId().setPort(8042);
       resourceView = new ResourceView() {

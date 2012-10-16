@@ -25,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 
 /**
  * This interface is the one implemented by the schedulers. It mainly extends 
@@ -38,9 +37,7 @@ public interface ResourceScheduler extends YarnScheduler, Recoverable {
   /**
    * Re-initialize the <code>ResourceScheduler</code>.
    * @param conf configuration
-   * @param secretManager token-secret manager
    * @throws IOException
    */
-  void reinitialize(Configuration conf, 
-      ContainerTokenSecretManager secretManager, RMContext rmContext) throws IOException;    
+  void reinitialize(Configuration conf, RMContext rmContext) throws IOException;
 }

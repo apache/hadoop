@@ -124,6 +124,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
    * @throws GeneralSecurityException thrown if the keystores could not be
    * initialized due to a security error.
    */
+  @Override
   public void init(SSLFactory.Mode mode)
     throws IOException, GeneralSecurityException {
 
@@ -159,7 +160,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       } finally {
         is.close();
       }
-      LOG.info(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
+      LOG.debug(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
     } else {
       keystore.load(null, null);
     }
@@ -200,7 +201,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
                                                  truststorePassword,
                                                  truststoreReloadInterval);
     trustManager.init();
-    LOG.info(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+    LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
 
     trustManagers = new TrustManager[]{trustManager};
   }

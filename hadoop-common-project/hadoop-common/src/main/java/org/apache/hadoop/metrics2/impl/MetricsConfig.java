@@ -24,7 +24,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import static java.security.AccessController.*;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;

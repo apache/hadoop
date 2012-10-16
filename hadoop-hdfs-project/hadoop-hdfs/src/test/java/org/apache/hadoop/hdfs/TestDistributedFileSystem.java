@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -43,6 +45,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.VolumeId;
@@ -53,6 +56,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -116,17 +120,38 @@ public class TestDistributedFileSystem {
       DFSTestUtil.readFile(fileSys, p);
       
       DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-      SocketCache cache = client.socketCache;
-      assertEquals(1, cache.size());
 
       fileSys.close();
       
-      assertEquals(0, cache.size());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+
+  @Test
+  public void testDFSCloseOrdering() throws Exception {
+    DistributedFileSystem fs = new MyDistributedFileSystem();
+    Path path = new Path("/a");
+    fs.deleteOnExit(path);
+    fs.close();
+
+    InOrder inOrder = inOrder(fs.dfs);
+    inOrder.verify(fs.dfs).closeOutputStreams(eq(false));
+    inOrder.verify(fs.dfs).delete(eq(path.toString()), eq(true));
+    inOrder.verify(fs.dfs).close();
+  }
   
+  private static class MyDistributedFileSystem extends DistributedFileSystem {
+    MyDistributedFileSystem() {
+      statistics = new FileSystem.Statistics("myhdfs"); // can't mock finals
+      dfs = mock(DFSClient.class);
+    }
+    @Override
+    public boolean exists(Path p) {
+      return true; // trick out deleteOnExit
+    }
+  }
+
   @Test
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();
@@ -708,9 +733,16 @@ public class TestDistributedFileSystem {
       out2.close();
 
       // the two checksums must be different.
-      FileChecksum sum1 = dfs.getFileChecksum(path1);
-      FileChecksum sum2 = dfs.getFileChecksum(path2);
+      MD5MD5CRC32FileChecksum sum1 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path1);
+      MD5MD5CRC32FileChecksum sum2 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path2);
       assertFalse(sum1.equals(sum2));
+
+      // check the individual params
+      assertEquals(DataChecksum.Type.CRC32C, sum1.getCrcType());
+      assertEquals(DataChecksum.Type.CRC32,  sum2.getCrcType());
+
     } finally {
       if (cluster != null) {
         cluster.getFileSystem().delete(testBasePath, true);

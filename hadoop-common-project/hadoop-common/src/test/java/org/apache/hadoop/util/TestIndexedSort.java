@@ -23,7 +23,6 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -208,12 +207,14 @@ public class TestIndexedSort extends TestCase {
       return seed;
     }
 
+    @Override
     public int compare(int i, int j) {
       // assume positive
       return
         values[valindirect[valindex[i]]] - values[valindirect[valindex[j]]];
     }
 
+    @Override
     public void swap(int i, int j) {
       int tmp = valindex[i];
       valindex[i] = valindex[j];
@@ -261,12 +262,14 @@ public class TestIndexedSort extends TestCase {
     public int getCmp() { return comparisions; }
     public int getSwp() { return swaps; }
 
+    @Override
     public int compare(int i, int j) {
       assertTrue("Expected fewer than " + maxcmp + " comparisons",
                  ++comparisions < maxcmp);
       return s.compare(i, j);
     }
 
+    @Override
     public void swap(int i, int j) {
       assertTrue("Expected fewer than " + maxswp + " swaps",
                  ++swaps < maxswp);
@@ -323,6 +326,7 @@ public class TestIndexedSort extends TestCase {
       t.set(sb.toString());
     }
 
+    @Override
     public int compare(int i, int j) {
       final int ii = indices[i];
       final int ij = indices[j];
@@ -332,6 +336,7 @@ public class TestIndexedSort extends TestCase {
         ((ij + 1 == indices.length) ? eob : offsets[ij + 1]) - offsets[ij]);
     }
 
+    @Override
     public void swap(int i, int j) {
       int tmp = indices[i];
       indices[i] = indices[j];

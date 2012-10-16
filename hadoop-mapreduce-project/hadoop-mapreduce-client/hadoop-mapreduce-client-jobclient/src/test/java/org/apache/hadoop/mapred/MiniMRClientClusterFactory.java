@@ -58,8 +58,12 @@ public class MiniMRClientClusterFactory {
     Job job = Job.getInstance(conf);
 
     job.addFileToClassPath(appJar);
-    String callerJar = JarFinder.getJar(caller);
-    job.setJar(callerJar);
+
+    Path callerJar = new Path(JarFinder.getJar(caller));
+    Path remoteCallerJar = new Path(testRootDir, callerJar.getName());
+    fs.copyFromLocalFile(callerJar, remoteCallerJar);
+    fs.setPermission(remoteCallerJar, new FsPermission("744"));
+    job.addFileToClassPath(remoteCallerJar);
 
     MiniMRYarnCluster miniMRYarnCluster = new MiniMRYarnCluster(caller
         .getName(), noOfNMs);

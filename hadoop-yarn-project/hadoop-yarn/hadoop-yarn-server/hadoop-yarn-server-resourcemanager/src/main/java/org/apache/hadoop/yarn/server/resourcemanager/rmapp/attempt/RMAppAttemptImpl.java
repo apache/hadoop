@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFinishedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
@@ -590,6 +591,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
       RMAppAttemptRejectedEvent rejectedEvent = (RMAppAttemptRejectedEvent) event;
 
+      // Tell the AMS. Unregister from the ApplicationMasterService
+      appAttempt.masterService
+          .unregisterAttempt(appAttempt.applicationAttemptId);
+      
       // Save the diagnostic message
       String message = rejectedEvent.getMessage();
       appAttempt.setDiagnostics(message);
@@ -688,8 +693,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       switch (finalAttemptState) {
         case FINISHED:
         {
-          appEvent =
-              new RMAppEvent(applicationId, RMAppEventType.ATTEMPT_FINISHED);
+          appEvent = new RMAppFinishedAttemptEvent(applicationId,
+              appAttempt.getDiagnostics());
         }
         break;
         case KILLED:

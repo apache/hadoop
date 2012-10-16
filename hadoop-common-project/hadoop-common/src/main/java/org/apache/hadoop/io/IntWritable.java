@@ -42,10 +42,12 @@ public class IntWritable implements WritableComparable<IntWritable> {
   /** Return the value of this IntWritable. */
   public int get() { return value; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = in.readInt();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(value);
   }

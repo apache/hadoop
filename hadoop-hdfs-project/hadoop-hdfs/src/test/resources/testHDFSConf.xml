@@ -15885,6 +15885,23 @@
       </comparators>
     </test>
 
+    <!-- Test for rollEdits -->
+    <test> <!-- TESTED -->
+      <description>rollEdits: test rollEdits admin command</description>
+      <test-commands>
+        <dfs-admin-command>-fs NAMENODE -rollEdits</dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- no cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>New segment starts at txid \d+</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <!-- Test for refreshNodes -->
     <test> <!-- TESTED -->
       <description>refreshNodes: to refresh the nodes</description>

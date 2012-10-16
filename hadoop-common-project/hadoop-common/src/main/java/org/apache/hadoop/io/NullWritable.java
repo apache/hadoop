@@ -35,6 +35,7 @@ public class NullWritable implements WritableComparable<NullWritable> {
   /** Returns the single instance of this class. */
   public static NullWritable get() { return THIS; }
   
+  @Override
   public String toString() {
     return "(null)";
   }
@@ -46,8 +47,11 @@ public class NullWritable implements WritableComparable<NullWritable> {
   public int compareTo(NullWritable other) {
     return 0;
   }
+  @Override
   public boolean equals(Object other) { return other instanceof NullWritable; }
+  @Override
   public void readFields(DataInput in) throws IOException {}
+  @Override
   public void write(DataOutput out) throws IOException {}
 
   /** A Comparator &quot;optimized&quot; for NullWritable. */

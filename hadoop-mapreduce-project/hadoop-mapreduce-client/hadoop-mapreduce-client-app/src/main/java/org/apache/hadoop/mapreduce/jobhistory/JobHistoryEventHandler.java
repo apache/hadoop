@@ -99,8 +99,8 @@ public class JobHistoryEventHandler extends AbstractService
   protected static final Map<JobId, MetaInfo> fileMap =
     Collections.<JobId,MetaInfo>synchronizedMap(new HashMap<JobId,MetaInfo>());
 
-  // Has a signal (SIGTERM etc) been issued?
-  protected volatile boolean isSignalled = false;
+  // should job completion be force when the AM shuts down?
+  protected volatile boolean forceJobCompletion = false;
 
   public JobHistoryEventHandler(AppContext context, int startCount) {
     super("JobHistoryEventHandler");
@@ -322,7 +322,7 @@ public class JobHistoryEventHandler extends AbstractService
     // Process JobUnsuccessfulCompletionEvent for jobIds which still haven't
     // closed their event writers
     Iterator<JobId> jobIt = fileMap.keySet().iterator();
-    if(isSignalled) {
+    if(forceJobCompletion) {
       while (jobIt.hasNext()) {
         JobId toClose = jobIt.next();
         MetaInfo mi = fileMap.get(toClose);
@@ -661,6 +661,8 @@ public class JobHistoryEventHandler extends AbstractService
       summaryFileOut = doneDirFS.create(qualifiedSummaryDoneFile, true);
       summaryFileOut.writeUTF(mi.getJobSummary().getJobSummaryString());
       summaryFileOut.close();
+      doneDirFS.setPermission(qualifiedSummaryDoneFile, new FsPermission(
+          JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
     } catch (IOException e) {
       LOG.info("Unable to write out JobSummaryInfo to ["
           + qualifiedSummaryDoneFile + "]", e);
@@ -894,7 +896,7 @@ public class JobHistoryEventHandler extends AbstractService
       
       stagingDirFS.delete(fromPath, false);
     }
-    }
+  }
 
   boolean pathExists(FileSystem fileSys, Path path) throws IOException {
     return fileSys.exists(path);
@@ -909,9 +911,9 @@ public class JobHistoryEventHandler extends AbstractService
     return tmpFileName.substring(0, tmpFileName.length()-4);
   }
 
-  public void setSignalled(boolean isSignalled) {
-    this.isSignalled = isSignalled;
-    LOG.info("JobHistoryEventHandler notified that isSignalled was "
-      + isSignalled);
+  public void setForcejobCompletion(boolean forceJobCompletion) {
+    this.forceJobCompletion = forceJobCompletion;
+    LOG.info("JobHistoryEventHandler notified that forceJobCompletion is "
+      + forceJobCompletion);
   }
 }

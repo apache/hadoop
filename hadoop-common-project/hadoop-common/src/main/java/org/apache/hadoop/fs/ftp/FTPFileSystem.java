@@ -262,6 +262,7 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");
@@ -487,7 +488,7 @@ public class FTPFileSystem extends FileSystem {
       if (created) {
         String parentDir = parent.toUri().getPath();
         client.changeWorkingDirectory(parentDir);
-        created = created & client.makeDirectory(pathName);
+        created = created && client.makeDirectory(pathName);
       }
     } else if (isFile(client, absolute)) {
       throw new IOException(String.format(

@@ -20,14 +20,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -42,19 +40,6 @@ public class TestFileLimit {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   boolean simulatedStorage = false;
-
-  // creates a zero file.
-  private void createFile(FileSystem fileSys, Path name)
-    throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 1, blockSize);
-    byte[] buffer = new byte[1024];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
 
   private void waitForLimit(FSNamesystem namesys, long num)
   {
@@ -106,7 +91,7 @@ public class TestFileLimit {
       //
       for (int i = 0; i < maxObjects/2; i++) {
         Path file = new Path("/filestatus" + i);
-        createFile(fs, file);
+        DFSTestUtil.createFile(fs, file, 1024, 1024, blockSize, (short) 1, seed);
         System.out.println("Created file " + file);
         currentNodes += 2;      // two more objects for this creation.
       }
@@ -115,7 +100,7 @@ public class TestFileLimit {
       boolean hitException = false;
       try {
         Path file = new Path("/filestatus");
-        createFile(fs, file);
+        DFSTestUtil.createFile(fs, file, 1024, 1024, blockSize, (short) 1, seed);
         System.out.println("Created file " + file);
       } catch (IOException e) {
         hitException = true;
@@ -132,7 +117,7 @@ public class TestFileLimit {
       waitForLimit(namesys, currentNodes);
 
       // now, we shud be able to create a new file
-      createFile(fs, file0);
+      DFSTestUtil.createFile(fs, file0, 1024, 1024, blockSize, (short) 1, seed);
       System.out.println("Created file " + file0 + " again.");
       currentNodes += 2;
 

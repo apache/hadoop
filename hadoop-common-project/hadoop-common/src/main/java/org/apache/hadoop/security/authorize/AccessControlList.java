@@ -48,6 +48,7 @@ public class AccessControlList implements Writable {
     WritableFactories.setFactory
     (AccessControlList.class,
       new WritableFactory() {
+        @Override
         public Writable newInstance() { return new AccessControlList(); }
       });
   }
@@ -318,6 +319,7 @@ public class AccessControlList implements Writable {
   /**
    * Serializes the AccessControlList object
    */
+  @Override
   public void write(DataOutput out) throws IOException {
     String aclString = getAclString();
     Text.writeString(out, aclString);
@@ -326,6 +328,7 @@ public class AccessControlList implements Writable {
   /**
    * Deserializes the AccessControlList object
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     String aclString = Text.readString(in);
     buildACL(aclString);

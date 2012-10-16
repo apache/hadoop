@@ -31,6 +31,7 @@ import org.junit.runners.model.Statement;
 
 public class TestHdfsHelper extends TestDirHelper {
 
+  @Override
   @Test
   public void dummy() {
   }

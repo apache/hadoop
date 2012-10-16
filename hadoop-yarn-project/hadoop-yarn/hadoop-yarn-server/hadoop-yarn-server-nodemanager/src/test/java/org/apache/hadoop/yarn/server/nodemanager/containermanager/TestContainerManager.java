@@ -51,14 +51,13 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
-import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -384,11 +383,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);
 
-    ContainerTokenSecretManager containerTokenSecretManager = new 
-        ContainerTokenSecretManager(conf);
-    containerManager = new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics, containerTokenSecretManager,
-        new ApplicationACLsManager(conf), dirsHandler);
+    containerManager =
+        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+          metrics, new ApplicationACLsManager(conf), dirsHandler);
     containerManager.init(conf);
     containerManager.start();
 

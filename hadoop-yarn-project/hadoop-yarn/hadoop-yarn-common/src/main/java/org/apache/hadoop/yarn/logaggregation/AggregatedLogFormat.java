@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -67,6 +68,13 @@ public class AggregatedLogFormat {
   //Maybe write out the retention policy.
   //Maybe write out a list of containerLogs skipped by the retention policy.
   private static final int VERSION = 1;
+
+  /**
+   * Umask for the log file.
+   */
+  private static final FsPermission APP_LOG_FILE_UMASK = FsPermission
+      .createImmutable((short) (0640 ^ 0777));
+
 
   static {
     RESERVED_KEYS = new HashMap<String, AggregatedLogFormat.LogKey>();
@@ -194,7 +202,9 @@ public class AggregatedLogFormat {
             userUgi.doAs(new PrivilegedExceptionAction<FSDataOutputStream>() {
               @Override
               public FSDataOutputStream run() throws Exception {
-                return FileContext.getFileContext(conf).create(
+                FileContext fc = FileContext.getFileContext(conf);
+                fc.setUMask(APP_LOG_FILE_UMASK);
+                return fc.create(
                     remoteAppLogFile,
                     EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
                     new Options.CreateOpts[] {});

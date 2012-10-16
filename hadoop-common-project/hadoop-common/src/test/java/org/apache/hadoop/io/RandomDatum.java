@@ -21,6 +21,7 @@ package org.apache.hadoop.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 
 
@@ -40,11 +41,13 @@ public class RandomDatum implements WritableComparable<RandomDatum> {
     return length;
   }
   
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(length);
     out.write(data);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     length = in.readInt();
     if (data == null || length > data.length)
@@ -63,6 +66,11 @@ public class RandomDatum implements WritableComparable<RandomDatum> {
     return compareTo((RandomDatum)o) == 0;
   }
 
+  @Override
+  public int hashCode() {
+    return Arrays.hashCode(this.data);
+  }
+  
   private static final char[] HEX_DIGITS =
   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
@@ -102,6 +110,7 @@ public class RandomDatum implements WritableComparable<RandomDatum> {
       super(RandomDatum.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       int n1 = readInt(b1, s1);

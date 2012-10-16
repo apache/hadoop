@@ -85,8 +85,8 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_dual_library(hdfs
     main/native/libhdfs/exception.c
-    main/native/libhdfs/hdfs.c
     main/native/libhdfs/jni_helper.c
+    main/native/libhdfs/hdfs.c
 )
 target_link_dual_libraries(hdfs
     ${JAVA_JVM_LIBRARY}
@@ -147,4 +147,7 @@ target_link_libraries(test_libhdfs_threaded
     pthread
 )
 
+IF(REQUIRE_LIBWEBHDFS)
+    add_subdirectory(contrib/libwebhdfs)
+ENDIF(REQUIRE_LIBWEBHDFS)
 add_subdirectory(main/native/fuse-dfs)

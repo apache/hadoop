@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -81,22 +82,35 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestPr
 
 import com.google.protobuf.ServiceException;
 
-public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
+public class ClientRMProtocolPBClientImpl implements ClientRMProtocol,
+    Closeable {
 
   private ClientRMProtocolPB proxy;
-  
-  public ClientRMProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, ClientRMProtocolPB.class, ProtobufRpcEngine.class);
-    proxy = (ClientRMProtocolPB)RPC.getProxy(
-        ClientRMProtocolPB.class, clientVersion, addr, conf);
+
+  public ClientRMProtocolPBClientImpl(long clientVersion,
+      InetSocketAddress addr, Configuration conf) throws IOException {
+    RPC.setProtocolEngine(conf, ClientRMProtocolPB.class,
+      ProtobufRpcEngine.class);
+    proxy =
+        (ClientRMProtocolPB) RPC.getProxy(ClientRMProtocolPB.class,
+          clientVersion, addr, conf);
   }
-  
+
+  @Override
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
+  }
+
   @Override
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) throws YarnRemoteException {
-    KillApplicationRequestProto requestProto = ((KillApplicationRequestPBImpl)request).getProto();
+    KillApplicationRequestProto requestProto =
+        ((KillApplicationRequestPBImpl) request).getProto();
     try {
-      return new KillApplicationResponsePBImpl(proxy.forceKillApplication(null, requestProto));
+      return new KillApplicationResponsePBImpl(proxy.forceKillApplication(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -105,9 +119,11 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   @Override
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnRemoteException {
-    GetApplicationReportRequestProto requestProto = ((GetApplicationReportRequestPBImpl)request).getProto();
+    GetApplicationReportRequestProto requestProto =
+        ((GetApplicationReportRequestPBImpl) request).getProto();
     try {
-      return new GetApplicationReportResponsePBImpl(proxy.getApplicationReport(null, requestProto));
+      return new GetApplicationReportResponsePBImpl(proxy.getApplicationReport(
+        null, requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -116,9 +132,11 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnRemoteException {
-    GetClusterMetricsRequestProto requestProto = ((GetClusterMetricsRequestPBImpl)request).getProto();
+    GetClusterMetricsRequestProto requestProto =
+        ((GetClusterMetricsRequestPBImpl) request).getProto();
     try {
-      return new GetClusterMetricsResponsePBImpl(proxy.getClusterMetrics(null, requestProto));
+      return new GetClusterMetricsResponsePBImpl(proxy.getClusterMetrics(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -127,9 +145,11 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   @Override
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request) throws YarnRemoteException {
-    GetNewApplicationRequestProto requestProto = ((GetNewApplicationRequestPBImpl)request).getProto();
+    GetNewApplicationRequestProto requestProto =
+        ((GetNewApplicationRequestPBImpl) request).getProto();
     try {
-      return new GetNewApplicationResponsePBImpl(proxy.getNewApplication(null, requestProto));
+      return new GetNewApplicationResponsePBImpl(proxy.getNewApplication(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -138,9 +158,11 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   @Override
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) throws YarnRemoteException {
-    SubmitApplicationRequestProto requestProto = ((SubmitApplicationRequestPBImpl)request).getProto();
+    SubmitApplicationRequestProto requestProto =
+        ((SubmitApplicationRequestPBImpl) request).getProto();
     try {
-      return new SubmitApplicationResponsePBImpl(proxy.submitApplication(null, requestProto));
+      return new SubmitApplicationResponsePBImpl(proxy.submitApplication(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -149,24 +171,25 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   @Override
   public GetAllApplicationsResponse getAllApplications(
       GetAllApplicationsRequest request) throws YarnRemoteException {
-    GetAllApplicationsRequestProto requestProto = 
-      ((GetAllApplicationsRequestPBImpl)request).getProto();
+    GetAllApplicationsRequestProto requestProto =
+        ((GetAllApplicationsRequestPBImpl) request).getProto();
     try {
-      return new GetAllApplicationsResponsePBImpl(
-          proxy.getAllApplications(null, requestProto));
+      return new GetAllApplicationsResponsePBImpl(proxy.getAllApplications(
+        null, requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
   @Override
-  public GetClusterNodesResponse getClusterNodes(
-      GetClusterNodesRequest request) throws YarnRemoteException {
+  public GetClusterNodesResponse
+      getClusterNodes(GetClusterNodesRequest request)
+          throws YarnRemoteException {
     GetClusterNodesRequestProto requestProto =
-      ((GetClusterNodesRequestPBImpl)request).getProto();
+        ((GetClusterNodesRequestPBImpl) request).getProto();
     try {
-      return new GetClusterNodesResponsePBImpl(
-          proxy.getClusterNodes(null, requestProto));
+      return new GetClusterNodesResponsePBImpl(proxy.getClusterNodes(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -176,10 +199,10 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnRemoteException {
     GetQueueInfoRequestProto requestProto =
-      ((GetQueueInfoRequestPBImpl)request).getProto();
+        ((GetQueueInfoRequestPBImpl) request).getProto();
     try {
-      return new GetQueueInfoResponsePBImpl(
-          proxy.getQueueInfo(null, requestProto));
+      return new GetQueueInfoResponsePBImpl(proxy.getQueueInfo(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -189,10 +212,10 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) throws YarnRemoteException {
     GetQueueUserAclsInfoRequestProto requestProto =
-      ((GetQueueUserAclsInfoRequestPBImpl)request).getProto();
+        ((GetQueueUserAclsInfoRequestPBImpl) request).getProto();
     try {
-      return new GetQueueUserAclsInfoResponsePBImpl(
-          proxy.getQueueUserAcls(null, requestProto));
+      return new GetQueueUserAclsInfoResponsePBImpl(proxy.getQueueUserAcls(
+        null, requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -202,12 +225,12 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnRemoteException {
     GetDelegationTokenRequestProto requestProto =
-        ((GetDelegationTokenRequestPBImpl)request).getProto();
-      try {
-        return new GetDelegationTokenResponsePBImpl(
-            proxy.getDelegationToken(null, requestProto));
-      } catch (ServiceException e) {
-        throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
-      }
+        ((GetDelegationTokenRequestPBImpl) request).getProto();
+    try {
+      return new GetDelegationTokenResponsePBImpl(proxy.getDelegationToken(
+        null, requestProto));
+    } catch (ServiceException e) {
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+    }
   }
 }

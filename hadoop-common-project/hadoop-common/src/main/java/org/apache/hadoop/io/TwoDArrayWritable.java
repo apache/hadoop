@@ -57,6 +57,7 @@ public class TwoDArrayWritable implements Writable {
 
   public Writable[][] get() { return values; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     // construct matrix
     values = new Writable[in.readInt()][];          
@@ -81,6 +82,7 @@ public class TwoDArrayWritable implements Writable {
     }
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(values.length);                 // write values
     for (int i = 0; i < values.length; i++) {

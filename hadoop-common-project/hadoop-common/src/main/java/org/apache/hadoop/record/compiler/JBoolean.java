@@ -36,20 +36,24 @@ public class JBoolean extends JType {
       super("boolean", "Bool", "Boolean", "TypeID.RIOType.BOOL");
     }
     
+    @Override
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       cb.append(Consts.RIO_PREFIX + "ret = ("+fname+" == "+other+")? 0 : ("+
           fname+"?1:-1);\n");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.BoolTypeID";
     }
 
+    @Override
     void genHashCode(CodeBuffer cb, String fname) {
       cb.append(Consts.RIO_PREFIX + "ret = ("+fname+")?0:1;\n");
     }
     
     // In Binary format, boolean is written as byte. true = 1, false = 0
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("if ("+l+"<1) {\n");
@@ -61,6 +65,7 @@ public class JBoolean extends JType {
     }
     
     // In Binary format, boolean is written as byte. true = 1, false = 0
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("if (l1<1 || l2<1) {\n");
@@ -81,6 +86,7 @@ public class JBoolean extends JType {
       super("bool");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_BOOL)";
     }
@@ -93,6 +99,7 @@ public class JBoolean extends JType {
     setCType(new CType());
   }
   
+  @Override
   String getSignature() {
     return "z";
   }

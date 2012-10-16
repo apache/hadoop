@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,6 +54,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
@@ -80,7 +82,7 @@ public class DFSAdmin extends FsShell {
       super(fs.getConf());
       if (!(fs instanceof DistributedFileSystem)) {
         throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-            " is not a distributed file system");
+            " is not an HDFS file system");
       }
       this.dfs = (DistributedFileSystem)fs;
     }
@@ -284,7 +286,7 @@ public class DFSAdmin extends FsShell {
     FileSystem fs = getFS();
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-      " is not a distributed file system");
+      " is not an HDFS file system");
     }
     return (DistributedFileSystem)fs;
   }
@@ -420,6 +422,14 @@ public class DFSAdmin extends FsShell {
     return exitCode;
   }
 
+  public int rollEdits() throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    long txid = dfs.rollEdits();
+    System.out.println("Successfully rolled edit logs.");
+    System.out.println("New segment starts at txid " + txid);
+    return 0;
+  }
+  
   /**
    * Command to enable/disable/check restoring of failed storage replicas in the namenode.
    * Usage: java DFSAdmin -restoreFailedStorage true|false|check
@@ -503,11 +513,17 @@ public class DFSAdmin extends FsShell {
    * @return an exit code indicating success or failure.
    * @throws IOException
    */
-  public int fetchImage(String[] argv, int idx) throws IOException {
-    String infoServer = DFSUtil.getInfoServer(
+  public int fetchImage(final String[] argv, final int idx) throws IOException {
+    final String infoServer = DFSUtil.getInfoServer(
         HAUtil.getAddressOfActive(getDFS()), getConf(), false);
-    TransferFsImage.downloadMostRecentImageToDirectory(infoServer,
-        new File(argv[idx]));
+    SecurityUtil.doAsCurrentUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        TransferFsImage.downloadMostRecentImageToDirectory(infoServer,
+            new File(argv[idx]));
+        return null;
+      }
+    });
     return 0;
   }
 
@@ -516,6 +532,7 @@ public class DFSAdmin extends FsShell {
       "The full syntax is: \n\n" +
       "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
       "\t[-saveNamespace]\n" +
+      "\t[-rollEdits]\n" +
       "\t[-restoreFailedStorage true|false|check]\n" +
       "\t[-refreshNodes]\n" +
       "\t[" + SetQuotaCommand.USAGE + "]\n" +
@@ -548,6 +565,10 @@ public class DFSAdmin extends FsShell {
     "Save current namespace into storage directories and reset edits log.\n" +
     "\t\tRequires superuser permissions and safe mode.\n";
 
+    String rollEdits = "-rollEdits:\t" +
+    "Rolls the edit log.\n" +
+    "\t\tRequires superuser permissions.\n";
+    
     String restoreFailedStorage = "-restoreFailedStorage:\t" +
     "Set/Unset/Check flag to attempt restore of failed storage replicas if they become available.\n" +
     "\t\tRequires superuser permissions.\n";
@@ -625,6 +646,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(safemode);
     } else if ("saveNamespace".equals(cmd)) {
       System.out.println(saveNamespace);
+    } else if ("rollEdits".equals(cmd)) {
+      System.out.println(rollEdits);
     } else if ("restoreFailedStorage".equals(cmd)) {
       System.out.println(restoreFailedStorage);
     } else if ("refreshNodes".equals(cmd)) {
@@ -664,6 +687,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(report);
       System.out.println(safemode);
       System.out.println(saveNamespace);
+      System.out.println(rollEdits);
       System.out.println(restoreFailedStorage);
       System.out.println(refreshNodes);
       System.out.println(finalizeUpgrade);
@@ -859,6 +883,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-saveNamespace]");
+    } else if ("-rollEdits".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-rollEdits]");
     } else if ("-restoreFailedStorage".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
           + " [-restoreFailedStorage true|false|check ]");
@@ -913,6 +940,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-report]");
       System.err.println("           [-safemode enter | leave | get | wait]");
       System.err.println("           [-saveNamespace]");
+      System.err.println("           [-rollEdits]");
       System.err.println("           [-restoreFailedStorage true|false|check]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-finalizeUpgrade]");
@@ -970,6 +998,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-rollEdits".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }      
     } else if ("-restoreFailedStorage".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -1048,6 +1081,8 @@ public class DFSAdmin extends FsShell {
         setSafeMode(argv, i);
       } else if ("-saveNamespace".equals(cmd)) {
         exitCode = saveNamespace();
+      } else if ("-rollEdits".equals(cmd)) {
+        exitCode = rollEdits();
       } else if ("-restoreFailedStorage".equals(cmd)) {
         exitCode = restoreFaileStorage(argv[i]);
       } else if ("-refreshNodes".equals(cmd)) {

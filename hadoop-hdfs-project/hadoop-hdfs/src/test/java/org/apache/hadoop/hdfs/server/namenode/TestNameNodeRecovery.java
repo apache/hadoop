@@ -74,7 +74,7 @@ public class TestNameNodeRecovery {
 
       elts.addTransactionsToLog(elfos, cache);
       elfos.setReadyToFlush();
-      elfos.flushAndSync();
+      elfos.flushAndSync(true);
       elfos.close();
       elfos = null;
       file = new File(TEST_LOG_NAME);

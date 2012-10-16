@@ -48,10 +48,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -60,6 +60,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.znerd.xmlenc.XMLOutputter;
+
+import com.google.common.base.Preconditions;
 
 class NamenodeJspHelper {
   static String getSafeModeText(FSNamesystem fsn) {
@@ -212,6 +214,52 @@ class NamenodeJspHelper {
       }
 
       out.print("</table></div>\n");
+    }
+    
+    /**
+     * Generate an HTML report containing the current status of the HDFS
+     * journals.
+     */
+    void generateJournalReport(JspWriter out, NameNode nn,
+        HttpServletRequest request) throws IOException {
+      FSEditLog log = nn.getFSImage().getEditLog();
+      Preconditions.checkArgument(log != null, "no edit log set in %s", nn);
+      
+      out.println("<h3> " + nn.getRole() + " Journal Status: </h3>");
+
+      out.println("<b>Current transaction ID:</b> " +
+          nn.getFSImage().getLastAppliedOrWrittenTxId() + "<br/>");
+      
+      
+      boolean openForWrite = log.isOpenForWrite();
+      
+      out.println("<div class=\"dfstable\">");
+      out.println("<table class=\"storage\" title=\"NameNode Journals\">\n"
+              + "<thead><tr><td><b>Journal Manager</b></td><td><b>State</b></td></tr></thead>");
+      for (JournalAndStream jas : log.getJournals()) {
+        out.print("<tr>");
+        out.print("<td>" + jas.getManager());
+        if (jas.isRequired()) {
+          out.print(" [required]");
+        }
+        out.print("</td><td>");
+        
+        if (jas.isDisabled()) {
+          out.print("<span class=\"failed\">Failed</span>");
+        } else if (openForWrite) {
+          EditLogOutputStream elos = jas.getCurrentStream();
+          if (elos != null) {
+            out.println(elos.generateHtmlReport());
+          } else {
+            out.println("not currently writing");
+          }
+        } else {
+          out.println("open for read");
+        }
+        out.println("</td></tr>");
+      }
+      
+      out.println("</table></div>");
     }
 
     void generateHealthReport(JspWriter out, NameNode nn,
@@ -395,7 +443,7 @@ class NamenodeJspHelper {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();
     }
-    String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+    String addr = nn.getNameNodeAddressHostPortString();
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = HttpConfig.getSchemePrefix() + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="
@@ -566,8 +614,9 @@ class NamenodeJspHelper {
       final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
       dm.fetchDatanodes(live, dead, true);
 
-      InetSocketAddress nnSocketAddress = (InetSocketAddress) context
-          .getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+      InetSocketAddress nnSocketAddress =
+          (InetSocketAddress)context.getAttribute(
+              NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
       String nnaddr = nnSocketAddress.getAddress().getHostAddress() + ":"
           + nnSocketAddress.getPort();
 
@@ -785,7 +834,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("replication");
-          doc.pcdata(""+inode.getReplication());
+          doc.pcdata(""+inode.getBlockReplication());
           doc.endTag();
 
           doc.startTag("disk_space_consumed");

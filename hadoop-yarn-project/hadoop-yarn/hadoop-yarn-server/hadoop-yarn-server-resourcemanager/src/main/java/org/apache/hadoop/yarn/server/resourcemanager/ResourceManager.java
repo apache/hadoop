@@ -42,14 +42,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -64,12 +63,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -97,10 +96,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   public static final long clusterTimeStamp = System.currentTimeMillis();
 
-  protected ClientToAMSecretManager clientToAMSecretManager =
-      new ClientToAMSecretManager();
+  protected ClientToAMTokenSecretManagerInRM clientToAMSecretManager =
+      new ClientToAMTokenSecretManagerInRM();
   
-  protected ContainerTokenSecretManager containerTokenSecretManager;
+  protected RMContainerTokenSecretManager containerTokenSecretManager;
 
   protected ApplicationTokenSecretManager appTokenSecretManager;
 
@@ -150,8 +149,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
         this.rmDispatcher);
     addService(this.containerAllocationExpirer);
 
-    this.containerTokenSecretManager  = new ContainerTokenSecretManager(conf);
-
     AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
 
@@ -160,11 +157,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
     addService(tokenRenewer);
+
+    this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
     
-    this.rmContext = new RMContextImpl(this.store, this.rmDispatcher,
-        this.containerAllocationExpirer,
-        amLivelinessMonitor, amFinishingMonitor,
-        tokenRenewer, this.appTokenSecretManager);
+    this.rmContext =
+        new RMContextImpl(this.store, this.rmDispatcher,
+          this.containerAllocationExpirer, amLivelinessMonitor,
+          amFinishingMonitor, tokenRenewer, this.appTokenSecretManager,
+          this.containerTokenSecretManager);
 
     // Register event handler for NodesListManager
     this.nodesListManager = new NodesListManager(this.rmContext);
@@ -198,8 +198,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(resourceTracker);
   
     try {
-      this.scheduler.reinitialize(conf,
-          this.containerTokenSecretManager, this.rmContext);
+      this.scheduler.reinitialize(conf, this.rmContext);
     } catch (IOException ioe) {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
     }
@@ -231,6 +230,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     super.init(conf);
   }
 
+  protected RMContainerTokenSecretManager createContainerTokenSecretManager(
+      Configuration conf) {
+    return new RMContainerTokenSecretManager(conf);
+  }
+
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
     return new SchedulerEventDispatcher(this.scheduler);
   }
@@ -251,10 +255,22 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ResourceScheduler createScheduler() {
-    return ReflectionUtils.newInstance(this.conf.getClass(
-        YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
-        ResourceScheduler.class), this.conf);
-  }
+    String schedulerClassName = conf.get(YarnConfiguration.RM_SCHEDULER,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER);
+    LOG.info("Using Scheduler: " + schedulerClassName);
+    try {
+      Class<?> schedulerClazz = Class.forName(schedulerClassName);
+      if (ResourceScheduler.class.isAssignableFrom(schedulerClazz)) {
+        return (ResourceScheduler) ReflectionUtils.newInstance(schedulerClazz,
+            this.conf);
+      } else {
+        throw new YarnException("Class: " + schedulerClassName
+            + " not instance of " + ResourceScheduler.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnException("Could not instantiate Scheduler: "
+          + schedulerClassName, e);
+    }  }
 
   protected ApplicationMasterLauncher createAMLauncher() {
     return new ApplicationMasterLauncher(this.clientToAMSecretManager,
@@ -486,6 +502,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     this.appTokenSecretManager.start();
+    this.containerTokenSecretManager.start();
 
     startWepApp();
     DefaultMetricsSystem.initialize("ResourceManager");
@@ -531,6 +548,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmDTSecretManager.stopThreads();
 
     this.appTokenSecretManager.stop();
+    this.containerTokenSecretManager.stop();
 
     /*synchronized(shutdown) {
       shutdown.set(true);
@@ -616,7 +634,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Private
-  public ContainerTokenSecretManager getContainerTokenSecretManager() {
+  public RMContainerTokenSecretManager getRMContainerTokenSecretManager() {
     return this.containerTokenSecretManager;
   }
 

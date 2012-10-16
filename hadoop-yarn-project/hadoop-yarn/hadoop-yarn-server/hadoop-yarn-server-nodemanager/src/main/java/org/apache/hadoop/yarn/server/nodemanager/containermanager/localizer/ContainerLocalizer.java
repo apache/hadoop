@@ -209,6 +209,7 @@ public class ContainerLocalizer {
     }
     switch (rsrc.getType()) {
       case ARCHIVE:
+      case PATTERN:
         return 5 * rsrc.getSize();
       case FILE:
       default:

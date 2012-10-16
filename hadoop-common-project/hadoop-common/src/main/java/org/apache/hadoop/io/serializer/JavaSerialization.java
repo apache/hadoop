@@ -24,11 +24,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Map;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * <p>
@@ -45,6 +42,7 @@ public class JavaSerialization implements Serialization<Serializable> {
 
     private ObjectInputStream ois;
 
+    @Override
     public void open(InputStream in) throws IOException {
       ois = new ObjectInputStream(in) {
         @Override protected void readStreamHeader() {
@@ -53,6 +51,7 @@ public class JavaSerialization implements Serialization<Serializable> {
       };
     }
     
+    @Override
     @SuppressWarnings("unchecked")
     public T deserialize(T object) throws IOException {
       try {
@@ -63,6 +62,7 @@ public class JavaSerialization implements Serialization<Serializable> {
       }
     }
 
+    @Override
     public void close() throws IOException {
       ois.close();
     }
@@ -74,6 +74,7 @@ public class JavaSerialization implements Serialization<Serializable> {
 
     private ObjectOutputStream oos;
 
+    @Override
     public void open(OutputStream out) throws IOException {
       oos = new ObjectOutputStream(out) {
         @Override protected void writeStreamHeader() {
@@ -82,27 +83,32 @@ public class JavaSerialization implements Serialization<Serializable> {
       };
     }
 
+    @Override
     public void serialize(Serializable object) throws IOException {
       oos.reset(); // clear (class) back-references
       oos.writeObject(object);
     }
 
+    @Override
     public void close() throws IOException {
       oos.close();
     }
 
   }
 
+  @Override
   @InterfaceAudience.Private
   public boolean accept(Class<?> c) {
     return Serializable.class.isAssignableFrom(c);
   }
 
+  @Override
   @InterfaceAudience.Private
   public Deserializer<Serializable> getDeserializer(Class<Serializable> c) {
     return new JavaSerializationDeserializer<Serializable>();
   }
 
+  @Override
   @InterfaceAudience.Private
   public Serializer<Serializable> getSerializer(Class<Serializable> c) {
     return new JavaSerializationSerializer();

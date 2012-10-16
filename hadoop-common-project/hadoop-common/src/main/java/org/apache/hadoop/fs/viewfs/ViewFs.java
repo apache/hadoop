@@ -205,9 +205,13 @@ public class ViewFs extends AbstractFileSystem {
       protected
       AbstractFileSystem getTargetFileSystem(final URI uri)
         throws URISyntaxException, UnsupportedFileSystemException {
+          String pathString = uri.getPath();
+          if (pathString.isEmpty()) {
+            pathString = "/";
+          }
           return new ChRootedFs(
               AbstractFileSystem.createFileSystem(uri, config),
-              new Path(uri.getPath()));
+              new Path(pathString));
       }
 
       @Override
@@ -750,7 +754,7 @@ public class ViewFs extends AbstractFileSystem {
     public void mkdir(final Path dir, final FsPermission permission,
         final boolean createParent) throws AccessControlException,
         FileAlreadyExistsException {
-      if (theInternalDir.isRoot & dir == null) {
+      if (theInternalDir.isRoot && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       throw readOnlyMountTable("mkdir", dir);

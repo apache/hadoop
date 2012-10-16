@@ -83,7 +83,7 @@ public class TestParallelReadUtil {
   static class DirectReadWorkerHelper implements ReadWorkerHelper {
     @Override
     public int read(DFSInputStream dis, byte[] target, int startOff, int len) throws IOException {
-      ByteBuffer bb = ByteBuffer.wrap(target);
+      ByteBuffer bb = ByteBuffer.allocateDirect(target.length);
       int cnt = 0;
       synchronized(dis) {
         dis.seek(startOff);
@@ -95,6 +95,8 @@ public class TestParallelReadUtil {
           cnt += read;
         }
       }
+      bb.clear();
+      bb.get(target);
       return cnt;
     }
 

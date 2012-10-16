@@ -40,8 +40,8 @@ public class RemoteEditLogManifest {
   
   
   /**
-   * Check that the logs are contiguous and non-overlapping
-   * sequences of transactions, in sorted order
+   * Check that the logs are non-overlapping sequences of transactions,
+   * in sorted order. They do not need to be contiguous.
    * @throws IllegalStateException if incorrect
    */
   private void checkState()  {
@@ -50,8 +50,10 @@ public class RemoteEditLogManifest {
     RemoteEditLog prev = null;
     for (RemoteEditLog log : logs) {
       if (prev != null) {
-        if (log.getStartTxId() != prev.getEndTxId() + 1) {
-          throw new IllegalStateException("Invalid log manifest:" + this);
+        if (log.getStartTxId() <= prev.getEndTxId()) {
+          throw new IllegalStateException(
+              "Invalid log manifest (log " + log + " overlaps " + prev + ")\n"
+              + this);
         }
       }
       

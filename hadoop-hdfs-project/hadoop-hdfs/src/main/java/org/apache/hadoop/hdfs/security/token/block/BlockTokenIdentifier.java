@@ -118,7 +118,6 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return a == null ? b == null : a.equals(b);
   }
 
-  /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
     if (obj == this) {
@@ -135,7 +134,6 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return false;
   }
 
-  /** {@inheritDoc} */
   @Override
   public int hashCode() {
     return (int) expiryDate ^ keyId ^ (int) blockId ^ modes.hashCode()

@@ -67,7 +67,7 @@ public class TestNativeIO {
 
     assertEquals(System.getProperty("user.name"), stat.getOwner());
     assertNotNull(stat.getGroup());
-    assertTrue(!"".equals(stat.getGroup()));
+    assertTrue(!stat.getGroup().isEmpty());
     assertEquals("Stat mode field should indicate a regular file",
       NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
   }
@@ -88,6 +88,7 @@ public class TestNativeIO {
     List<Thread> statters = new ArrayList<Thread>();
     for (int i = 0; i < 10; i++) {
       Thread statter = new Thread() {
+        @Override
         public void run() {
           long et = Time.now() + 5000;
           while (Time.now() < et) {
@@ -95,7 +96,7 @@ public class TestNativeIO {
               NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
               assertEquals(System.getProperty("user.name"), stat.getOwner());
               assertNotNull(stat.getGroup());
-              assertTrue(!"".equals(stat.getGroup()));
+              assertTrue(!stat.getGroup().isEmpty());
               assertEquals("Stat mode field should indicate a regular file",
                 NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
             } catch (Throwable t) {

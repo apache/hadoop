@@ -30,19 +30,19 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.CheckpointStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -74,6 +76,7 @@ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -114,19 +117,22 @@ public class TestCheckpoint {
     faultInjector = Mockito.mock(CheckpointFaultInjector.class);
     CheckpointFaultInjector.instance = faultInjector;
   }
-
-  static void writeFile(FileSystem fileSys, Path name, int repl)
-    throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[TestCheckpoint.fileSize];
-    Random rand = new Random(TestCheckpoint.seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
   
+  @After
+  public void checkForSNNThreads() {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+    
+    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null) continue;
+      LOG.info("Check thread: " + info.getThreadName());
+      if (info.getThreadName().contains("SecondaryNameNode")) {
+        fail("Leaked thread: " + info + "\n" +
+            Joiner.on("\n").join(info.getStackTrace()));
+      }
+    }
+    LOG.info("--------");
+  }
   
   static void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
@@ -257,7 +263,8 @@ public class TestCheckpoint {
       //
       // Create a new file
       //
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fileSys, file1, replication);
     } finally {
       fileSys.close();
@@ -321,7 +328,8 @@ public class TestCheckpoint {
       //
       // Create a new file
       //
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fileSys, file1, replication);
     } finally {
       fileSys.close();
@@ -392,7 +400,8 @@ public class TestCheckpoint {
       //
       // Create a new file
       //
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fileSys, file1, replication);
     } finally {
       fileSys.close();
@@ -578,7 +587,8 @@ public class TestCheckpoint {
       //
       // Create a new file
       //
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fileSys, file1, replication);
     } finally {
       fileSys.close();
@@ -904,7 +914,8 @@ public class TestCheckpoint {
       //
       // Create file1
       //
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fileSys, file1, replication);
 
       //
@@ -931,7 +942,8 @@ public class TestCheckpoint {
       cleanupFile(fileSys, file1);
 
       // create new file file2
-      writeFile(fileSys, file2, replication);
+      DFSTestUtil.createFile(fileSys, file2, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fileSys, file2, replication);
 
       //
@@ -997,7 +1009,8 @@ public class TestCheckpoint {
       }
       // create new file
       Path file = new Path("namespace.dat");
-      writeFile(fs, file, replication);
+      DFSTestUtil.createFile(fs, file, fileSize, fileSize, blockSize,
+          replication, seed);
       checkFile(fs, file, replication);
 
       // create new link
@@ -1744,7 +1757,7 @@ public class TestCheckpoint {
   /**
    * Test that the 2NN triggers a checkpoint after the configurable interval
    */
-  @Test
+  @Test(timeout=30000)
   public void testCheckpointTriggerOnTxnCount() throws Exception {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
@@ -1758,8 +1771,7 @@ public class TestCheckpoint {
           .format(true).build();
       FileSystem fs = cluster.getFileSystem();
       secondary = startSecondaryNameNode(conf);
-      Thread t = new Thread(secondary);
-      t.start();
+      secondary.startCheckpointThread();
       final NNStorage storage = secondary.getFSImage().getStorage();
 
       // 2NN should checkpoint at startup
@@ -1837,6 +1849,50 @@ public class TestCheckpoint {
   }
   
   /**
+   * Regression test for HDFS-3678 "Edit log files are never being purged from 2NN"
+   */
+  @Test
+  public void testSecondaryPurgesEditLogs() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+      
+      FileSystem fs = cluster.getFileSystem();
+      fs.mkdirs(new Path("/foo"));
+  
+      secondary = startSecondaryNameNode(conf);
+      
+      // Checkpoint a few times. Doing this will cause a log roll, and thus
+      // several edit log segments on the 2NN.
+      for (int i = 0; i < 5; i++) {
+        secondary.doCheckpoint();
+      }
+      
+      // Make sure there are no more edit log files than there should be.
+      List<File> checkpointDirs = getCheckpointCurrentDirs(secondary);
+      for (File checkpointDir : checkpointDirs) {
+        List<EditLogFile> editsFiles = FileJournalManager.matchEditLogs(
+            checkpointDir);
+        assertEquals("Edit log files were not purged from 2NN", 1,
+            editsFiles.size());
+      }
+      
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
+  /**
    * Regression test for HDFS-3835 - "Long-lived 2NN cannot perform a
    * checkpoint if security is enabled and the NN restarts without outstanding
    * delegation tokens"
@@ -1870,6 +1926,59 @@ public class TestCheckpoint {
       // Ensure that the 2NN can still perform a checkpoint.
       secondary.doCheckpoint();
     } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Regression test for HDFS-3849.  This makes sure that when we re-load the
+   * FSImage in the 2NN, we clear the existing leases.
+   */
+  @Test
+  public void testSecondaryNameNodeWithSavedLeases() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    FSDataOutputStream fos = null;
+    Configuration conf = new HdfsConfiguration();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .format(true).build();
+      FileSystem fs = cluster.getFileSystem();
+      fos = fs.create(new Path("tmpfile"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hflush();
+      assertEquals(1, cluster.getNamesystem().getLeaseManager().countLease());
+
+      secondary = startSecondaryNameNode(conf);
+      assertEquals(0, secondary.getFSNamesystem().getLeaseManager().countLease());
+
+      // Checkpoint once, so the 2NN loads the lease into its in-memory sate.
+      secondary.doCheckpoint();
+      assertEquals(1, secondary.getFSNamesystem().getLeaseManager().countLease());
+      fos.close();
+      fos = null;
+
+      // Perform a saveNamespace, so that the NN has a new fsimage, and the 2NN
+      // therefore needs to download a new fsimage the next time it performs a
+      // checkpoint.
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      
+      // Ensure that the 2NN can still perform a checkpoint.
+      secondary.doCheckpoint();
+      
+      // And the leases have been cleared...
+      assertEquals(0, secondary.getFSNamesystem().getLeaseManager().countLease());
+    } finally {
+      if (fos != null) {
+        fos.close();
+      }
       if (secondary != null) {
         secondary.shutdown();
       }
@@ -1940,7 +2049,7 @@ public class TestCheckpoint {
         ImmutableSet.of("VERSION"));    
   }
   
-  private List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
+  private static List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
     List<File> ret = Lists.newArrayList();
     for (URI u : secondary.getCheckpointDirs()) {
       File checkpointDir = new File(u.getPath());
@@ -1949,7 +2058,7 @@ public class TestCheckpoint {
     return ret;
   }
 
-  private CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
+  private static CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
     CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());;
     secondary1.setFSImage(spy);
     return spy;

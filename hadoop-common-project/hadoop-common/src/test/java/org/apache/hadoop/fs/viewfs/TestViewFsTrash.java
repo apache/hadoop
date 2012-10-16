@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.TestTrash;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
@@ -46,6 +45,7 @@ public class TestViewFsTrash {
       super();
       this.home = home;
     }
+    @Override
     public Path getHomeDirectory() {
       return home;
     }

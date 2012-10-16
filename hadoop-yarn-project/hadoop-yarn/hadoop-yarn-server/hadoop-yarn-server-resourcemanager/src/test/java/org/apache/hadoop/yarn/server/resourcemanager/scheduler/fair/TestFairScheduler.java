@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -93,20 +94,27 @@ public class TestFairScheduler {
   @Before
   public void setUp() throws IOException {
     scheduler = new FairScheduler();
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     // All tests assume only one assignment per node update
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
     Store store = StoreFactory.getStore(conf);
     resourceManager = new ResourceManager(store);
     resourceManager.init(conf);
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
   }
 
   @After
   public void tearDown() {
     scheduler = null;
     resourceManager = null;
+  }
+
+  private Configuration createConfiguration() {
+    Configuration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
+        ResourceScheduler.class);
+    return conf;
   }
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
@@ -217,7 +225,9 @@ public class TestFairScheduler {
       new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
     scheduler.handle(updateEvent);
 
-    assertEquals(512, scheduler.getQueueManager().getQueue("queue1").
+    // Asked for less than min_allocation.
+    assertEquals(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        scheduler.getQueueManager().getQueue("queue1").
         getQueueSchedulable().getResourceUsage().getMemory());
 
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2,
@@ -278,9 +288,9 @@ public class TestFairScheduler {
 
   @Test
   public void testUserAsDefaultQueue() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
         createAppAttemptId(1, 1), "default", "user1");
     scheduler.handle(appAddedEvent);
@@ -288,7 +298,7 @@ public class TestFairScheduler {
     assertEquals(0, scheduler.getQueueManager().getQueue("default").getApplications().size());
 
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     AppAddedSchedulerEvent appAddedEvent2 = new AppAddedSchedulerEvent(
         createAppAttemptId(2, 1), "default", "user2");
     scheduler.handle(appAddedEvent2);
@@ -299,9 +309,9 @@ public class TestFairScheduler {
 
   @Test
   public void testFairShareWithMinAlloc() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -354,31 +364,35 @@ public class TestFairScheduler {
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
     scheduler.addApplication(id22, "queue2", "user1");
 
-    // First ask, queue1 requests 1024
+    int minReqSize = YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB;
+    
+    // First ask, queue1 requests 1 large (minReqSize * 2).
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
-    ResourceRequest request1 = createResourceRequest(1024, "*", 1, 1);
+    ResourceRequest request1 = createResourceRequest(minReqSize * 2, "*", 1, 1);
     ask1.add(request1);
     scheduler.allocate(id11, ask1, new ArrayList<ContainerId>());
 
-    // Second ask, queue2 requests 1024 + (2 * 512)
+    // Second ask, queue2 requests 1 large + (2 * minReqSize)
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
-    ResourceRequest request2 = createResourceRequest(1024, "foo", 1, 1);
-    ResourceRequest request3 = createResourceRequest(512, "bar", 1, 2);
+    ResourceRequest request2 = createResourceRequest(2 * minReqSize, "foo", 1, 1);
+    ResourceRequest request3 = createResourceRequest(minReqSize, "bar", 1, 2);
     ask2.add(request2);
     ask2.add(request3);
     scheduler.allocate(id21, ask2, new ArrayList<ContainerId>());
 
-    // Third ask, queue2 requests 1024
+    // Third ask, queue2 requests 1 large
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
-    ResourceRequest request4 = createResourceRequest(1024, "*", 1, 1);
+    ResourceRequest request4 = createResourceRequest(2 * minReqSize, "*", 1, 1);
     ask3.add(request4);
     scheduler.allocate(id22, ask3, new ArrayList<ContainerId>());
 
     scheduler.update();
 
-    assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").getQueueSchedulable().getDemand().getMemory());
-    assertEquals(1024 + 1024 + (2 * 512), scheduler.getQueueManager().getQueue("queue2").getQueueSchedulable().getDemand().getMemory());
-
+    assertEquals(2 * minReqSize, scheduler.getQueueManager().getQueue("queue1")
+        .getQueueSchedulable().getDemand().getMemory());
+    assertEquals(2 * minReqSize + 2 * minReqSize + (2 * minReqSize), scheduler
+        .getQueueManager().getQueue("queue2").getQueueSchedulable().getDemand()
+        .getMemory());
   }
 
   @Test
@@ -405,9 +419,9 @@ public class TestFairScheduler {
 
   @Test
   public void testAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -508,9 +522,9 @@ public class TestFairScheduler {
 
   @Test
   public void testBackwardsCompatibleAllocationFileParsing() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -611,9 +625,9 @@ public class TestFairScheduler {
 
   @Test
   public void testIsStarvedForMinShare() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -670,9 +684,9 @@ public class TestFairScheduler {
 
   @Test
   public void testIsStarvedForFairShare() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -734,9 +748,9 @@ public class TestFairScheduler {
    * now this means decreasing order of priority.
    */
   public void testChoiceOfPreemptedContainers() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE + ".allocation.file", ALLOC_FILE);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -867,11 +881,11 @@ public class TestFairScheduler {
    * Tests the timing of decision to preempt tasks.
    */
   public void testPreemptionDecision() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     MockClock clock = new MockClock();
     scheduler.setClock(clock);
-    scheduler.reinitialize(conf, null, resourceManager.getRMContext());
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");

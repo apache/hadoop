@@ -61,11 +61,6 @@ public class JHAdminConfig {
     MR_HISTORY_PREFIX + "datestring.cache.size";
   public static final int DEFAULT_MR_HISTORY_DATESTRING_CACHE_SIZE = 200000;
   
-  //TODO REMOVE debug-mode
-  /** Equivalent to 0.20 mapreduce.jobhistory.debug.mode */
-  public static final String MR_HISTORY_DEBUG_MODE = 
-    MR_HISTORY_PREFIX + "debug-mode";
-  
   /** Path where history files should be stored for DONE jobs. **/
   public static final String MR_HISTORY_DONE_DIR =
     MR_HISTORY_PREFIX + "done-dir";

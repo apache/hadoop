@@ -84,7 +84,7 @@ class BookKeeperEditLogOutputStream
   @Override
   public void close() throws IOException {
     setReadyToFlush();
-    flushAndSync();
+    flushAndSync(true);
     try {
       lh.close();
     } catch (InterruptedException ie) {
@@ -130,7 +130,7 @@ class BookKeeperEditLogOutputStream
   }
 
   @Override
-  public void flushAndSync() throws IOException {
+  public void flushAndSync(boolean durable) throws IOException {
     assert(syncLatch != null);
     try {
       syncLatch.await();

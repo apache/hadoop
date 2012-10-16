@@ -36,10 +36,12 @@ public class JString extends JCompType {
       super("String", "String", "String", "TypeID.RIOType.STRING");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.StringTypeID";
     }
 
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
@@ -48,6 +50,7 @@ public class JString extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("int i1 = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
@@ -61,6 +64,7 @@ public class JString extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genClone(CodeBuffer cb, String fname) {
       cb.append(Consts.RIO_PREFIX + "other."+fname+" = this."+fname+";\n");
     }
@@ -72,6 +76,7 @@ public class JString extends JCompType {
       super("::std::string");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_STRING)";
     }
@@ -84,6 +89,7 @@ public class JString extends JCompType {
     setCType(new CCompType());
   }
     
+  @Override
   String getSignature() {
     return "s";
   }

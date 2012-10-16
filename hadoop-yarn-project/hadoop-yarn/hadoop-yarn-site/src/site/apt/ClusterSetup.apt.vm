@@ -497,20 +497,20 @@ Hadoop MapReduce Next Generation - Cluster Setup
     ResourceManager:
   
 ----
-  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager 
+  $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager 
 ----    	  
 
     Run a script to start NodeManagers on all slaves:
 
 ----
-  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager 
+  $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager 
 ----    	  
 
     Start a standalone WebAppProxy server.  If multiple servers
     are used with load balancing it should be run on each of them:
 
 ----
-  $ $YARN_HOME/bin/yarn start proxyserver --config $HADOOP_CONF_DIR  
+  $ $HADOOP_YARN_HOME/bin/yarn start proxyserver --config $HADOOP_CONF_DIR  
 ----
 
     Start the MapReduce JobHistory Server with the following command, run on the  
@@ -539,20 +539,20 @@ Hadoop MapReduce Next Generation - Cluster Setup
     ResourceManager:
   
 ----
-  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager 
+  $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager 
 ----    	  
 
     Run a script to stop NodeManagers on all slaves:
 
 ----
-  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager 
+  $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager 
 ----    	  
 
     Stop the WebAppProxy server. If multiple servers are used with load
     balancing it should be run on each of them:
 
 ----
-  $ $YARN_HOME/bin/yarn stop proxyserver --config $HADOOP_CONF_DIR  
+  $ $HADOOP_YARN_HOME/bin/yarn stop proxyserver --config $HADOOP_CONF_DIR  
 ----
 
 
@@ -883,7 +883,7 @@ KVNO Timestamp         Principal
       The path passed in <<<-Dcontainer-executor.conf.dir>>> should be the 
       path on the cluster nodes where a configuration file for the setuid 
       executable should be located. The executable should be installed in
-      $YARN_HOME/bin.
+      $HADOOP_YARN_HOME/bin.
 
       The executable must have specific permissions: 6050 or --Sr-s--- 
       permissions user-owned by <root> (super-user) and group-owned by a 
@@ -1040,13 +1040,13 @@ KVNO Timestamp         Principal
     ResourceManager as <yarn>:
   
 ----
-[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager 
+[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager 
 ----    	  
 
     Run a script to start NodeManagers on all slaves as <yarn>:
 
 ----
-[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager 
+[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager 
 ----    	  
 
     Start a standalone WebAppProxy server. Run on the WebAppProxy 
@@ -1054,7 +1054,7 @@ KVNO Timestamp         Principal
     it should be run on each of them:
 
 ----
-[yarn]$ $YARN_HOME/bin/yarn start proxyserver --config $HADOOP_CONF_DIR  
+[yarn]$ $HADOOP_YARN_HOME/bin/yarn start proxyserver --config $HADOOP_CONF_DIR  
 ----    	  
 
     Start the MapReduce JobHistory Server with the following command, run on the  
@@ -1083,13 +1083,13 @@ KVNO Timestamp         Principal
     ResourceManager as <yarn>:
   
 ----
-[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager 
+[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager 
 ----    	  
 
     Run a script to stop NodeManagers on all slaves as <yarn>:
 
 ----
-[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager 
+[yarn]$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager 
 ----    	  
 
     Stop the WebAppProxy server. Run on the WebAppProxy  server as
@@ -1097,7 +1097,7 @@ KVNO Timestamp         Principal
     should be run on each of them:
 
 ----
-[yarn]$ $YARN_HOME/bin/yarn stop proxyserver --config $HADOOP_CONF_DIR  
+[yarn]$ $HADOOP_YARN_HOME/bin/yarn stop proxyserver --config $HADOOP_CONF_DIR  
 ----
 
     Stop the MapReduce JobHistory Server with the following command, run on the  

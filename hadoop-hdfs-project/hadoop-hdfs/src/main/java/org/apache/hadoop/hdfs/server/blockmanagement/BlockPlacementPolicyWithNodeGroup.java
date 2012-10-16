@@ -64,23 +64,20 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
    * @return the chosen node
    */
   @Override
-  protected DatanodeDescriptor chooseLocalNode(
-      DatanodeDescriptor localMachine,
-      HashMap<Node, Node> excludedNodes,
-      long blocksize,
-      int maxNodesPerRack,
-      List<DatanodeDescriptor> results)
+  protected DatanodeDescriptor chooseLocalNode(DatanodeDescriptor localMachine,
+      HashMap<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
+      List<DatanodeDescriptor> results, boolean avoidStaleNodes)
         throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
     if (localMachine == null)
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
-          blocksize, maxNodesPerRack, results);
+          blocksize, maxNodesPerRack, results, avoidStaleNodes);
 
     // otherwise try local machine first
     Node oldNode = excludedNodes.put(localMachine, localMachine);
     if (oldNode == null) { // was not in the excluded list
       if (isGoodTarget(localMachine, blocksize,
-          maxNodesPerRack, false, results)) {
+          maxNodesPerRack, false, results, avoidStaleNodes)) {
         results.add(localMachine);
         // Nodes under same nodegroup should be excluded.
         addNodeGroupToExcludedNodes(excludedNodes,
@@ -92,18 +89,15 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     // try a node on local node group
     DatanodeDescriptor chosenNode = chooseLocalNodeGroup(
         (NetworkTopologyWithNodeGroup)clusterMap, localMachine, excludedNodes, 
-        blocksize, maxNodesPerRack, results);
+        blocksize, maxNodesPerRack, results, avoidStaleNodes);
     if (chosenNode != null) {
       return chosenNode;
     }
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, 
-        blocksize, maxNodesPerRack, results);
+        blocksize, maxNodesPerRack, results, avoidStaleNodes);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected void adjustExcludedNodes(HashMap<Node, Node> excludedNodes,
       Node chosenNode) {
@@ -121,21 +115,16 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  protected DatanodeDescriptor chooseLocalRack(
-                                             DatanodeDescriptor localMachine,
-                                             HashMap<Node, Node> excludedNodes,
-                                             long blocksize,
-                                             int maxNodesPerRack,
-                                             List<DatanodeDescriptor> results)
-    throws NotEnoughReplicasException {
+  protected DatanodeDescriptor chooseLocalRack(DatanodeDescriptor localMachine,
+      HashMap<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
+      List<DatanodeDescriptor> results, boolean avoidStaleNodes)
+      throws NotEnoughReplicasException {
     // no local machine, so choose a random machine
     if (localMachine == null) {
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
-                          blocksize, maxNodesPerRack, results);
+                          blocksize, maxNodesPerRack, results, 
+                          avoidStaleNodes);
     }
 
     // choose one from the local rack, but off-nodegroup
@@ -143,7 +132,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       return chooseRandom(NetworkTopology.getFirstHalf(
                               localMachine.getNetworkLocation()),
                           excludedNodes, blocksize, 
-                          maxNodesPerRack, results);
+                          maxNodesPerRack, results, 
+                          avoidStaleNodes);
     } catch (NotEnoughReplicasException e1) {
       // find the second replica
       DatanodeDescriptor newLocal=null;
@@ -157,42 +147,39 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       }
       if (newLocal != null) {
         try {
-          return chooseRandom(clusterMap.getRack(newLocal.getNetworkLocation()),
-                              excludedNodes, blocksize, maxNodesPerRack, results);
+          return chooseRandom(
+              clusterMap.getRack(newLocal.getNetworkLocation()), excludedNodes,
+              blocksize, maxNodesPerRack, results, avoidStaleNodes);
         } catch(NotEnoughReplicasException e2) {
           //otherwise randomly choose one from the network
-          return chooseRandom(NodeBase.ROOT, excludedNodes,
-                              blocksize, maxNodesPerRack, results);
+          return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
+              maxNodesPerRack, results, avoidStaleNodes);
         }
       } else {
         //otherwise randomly choose one from the network
-        return chooseRandom(NodeBase.ROOT, excludedNodes,
-                            blocksize, maxNodesPerRack, results);
+        return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
+            maxNodesPerRack, results, avoidStaleNodes);
       }
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected void chooseRemoteRack(int numOfReplicas,
-          DatanodeDescriptor localMachine,
-          HashMap<Node, Node> excludedNodes,
-          long blocksize,
-          int maxReplicasPerRack,
-          List<DatanodeDescriptor> results)
-          throws NotEnoughReplicasException {
+      DatanodeDescriptor localMachine, HashMap<Node, Node> excludedNodes,
+      long blocksize, int maxReplicasPerRack, List<DatanodeDescriptor> results,
+      boolean avoidStaleNodes) throws NotEnoughReplicasException {
     int oldNumOfReplicas = results.size();
     // randomly choose one node from remote racks
     try {
-      chooseRandom(numOfReplicas, "~"+NetworkTopology.getFirstHalf(
-          localMachine.getNetworkLocation()),
-      excludedNodes, blocksize, maxReplicasPerRack, results);
+      chooseRandom(
+          numOfReplicas,
+          "~" + NetworkTopology.getFirstHalf(localMachine.getNetworkLocation()),
+          excludedNodes, blocksize, maxReplicasPerRack, results,
+          avoidStaleNodes);
     } catch (NotEnoughReplicasException e) {
-      chooseRandom(numOfReplicas-(results.size()-oldNumOfReplicas),
-      localMachine.getNetworkLocation(), excludedNodes, blocksize, 
-      maxReplicasPerRack, results);
+      chooseRandom(numOfReplicas - (results.size() - oldNumOfReplicas),
+          localMachine.getNetworkLocation(), excludedNodes, blocksize,
+          maxReplicasPerRack, results, avoidStaleNodes);
     }
   }
 
@@ -202,19 +189,22 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
    * if still no such node is available, choose a random node in the cluster.
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseLocalNodeGroup(NetworkTopologyWithNodeGroup clusterMap,
-      DatanodeDescriptor localMachine, HashMap<Node, Node> excludedNodes, long blocksize, 
-      int maxNodesPerRack, List<DatanodeDescriptor> results) throws NotEnoughReplicasException {
+  private DatanodeDescriptor chooseLocalNodeGroup(
+      NetworkTopologyWithNodeGroup clusterMap, DatanodeDescriptor localMachine,
+      HashMap<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
+      List<DatanodeDescriptor> results, boolean avoidStaleNodes)
+      throws NotEnoughReplicasException {
     // no local machine, so choose a random machine
     if (localMachine == null) {
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
-      blocksize, maxNodesPerRack, results);
+      blocksize, maxNodesPerRack, results, avoidStaleNodes);
     }
 
     // choose one from the local node group
     try {
-      return chooseRandom(clusterMap.getNodeGroup(localMachine.getNetworkLocation()),
-      excludedNodes, blocksize, maxNodesPerRack, results);
+      return chooseRandom(
+          clusterMap.getNodeGroup(localMachine.getNetworkLocation()),
+          excludedNodes, blocksize, maxNodesPerRack, results, avoidStaleNodes);
     } catch (NotEnoughReplicasException e1) {
       // find the second replica
       DatanodeDescriptor newLocal=null;
@@ -228,17 +218,19 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       }
       if (newLocal != null) {
         try {
-          return chooseRandom(clusterMap.getNodeGroup(newLocal.getNetworkLocation()),
-            excludedNodes, blocksize, maxNodesPerRack, results);
+          return chooseRandom(
+              clusterMap.getNodeGroup(newLocal.getNetworkLocation()),
+              excludedNodes, blocksize, maxNodesPerRack, results,
+              avoidStaleNodes);
         } catch(NotEnoughReplicasException e2) {
           //otherwise randomly choose one from the network
-          return chooseRandom(NodeBase.ROOT, excludedNodes,
-              blocksize, maxNodesPerRack, results);
+          return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
+              maxNodesPerRack, results, avoidStaleNodes);
         }
       } else {
         //otherwise randomly choose one from the network
-        return chooseRandom(NodeBase.ROOT, excludedNodes,
-            blocksize, maxNodesPerRack, results);
+        return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
+            maxNodesPerRack, results, avoidStaleNodes);
       }
     }
   }

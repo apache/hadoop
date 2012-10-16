@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.JMXGet;
@@ -52,19 +53,6 @@ public class TestJMXGet {
   static final long seed = 0xAAAAEEFL;
   static final int blockSize = 4096;
   static final int fileSize = 8192;
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true,
-        fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short)repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-
 
   @Before
   public void setUp() throws Exception {
@@ -96,7 +84,8 @@ public class TestJMXGet {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getFileSystem(), new Path("/test1"), 2);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/test1"),
+        fileSize, fileSize, blockSize, (short) 2, seed);
 
     JMXGet jmx = new JMXGet();
     //jmx.setService("*"); // list all hadoop services
@@ -125,7 +114,8 @@ public class TestJMXGet {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getFileSystem(), new Path("/test"), 2);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/test"),
+        fileSize, fileSize, blockSize, (short) 2, seed);
 
     JMXGet jmx = new JMXGet();
     //jmx.setService("*"); // list all hadoop services

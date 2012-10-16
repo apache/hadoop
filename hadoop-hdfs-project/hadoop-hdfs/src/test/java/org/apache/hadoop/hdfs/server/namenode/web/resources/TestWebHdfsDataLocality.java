@@ -89,7 +89,6 @@ public class TestWebHdfsDataLocality {
           //set client address to a particular datanode
           final DataNode dn = cluster.getDataNodes().get(i);
           final String ipAddr = dm.getDatanode(dn.getDatanodeId()).getIpAddr();
-          NamenodeWebHdfsMethods.setRemoteAddress(ipAddr);
 
           //The chosen datanode must be the same as the client address
           final DatanodeInfo chosen = NamenodeWebHdfsMethods.chooseDatanode(

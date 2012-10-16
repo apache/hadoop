@@ -26,7 +26,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Plugin to calculate resource information on the system.
- * 
+ *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -34,14 +34,14 @@ public abstract class ResourceCalculatorPlugin extends Configured {
 
   /**
    * Obtain the total size of the virtual memory present in the system.
-   * 
+   *
    * @return virtual memory size in bytes.
    */
   public abstract long getVirtualMemorySize();
 
   /**
    * Obtain the total size of the physical memory present in the system.
-   * 
+   *
    * @return physical memory size bytes.
    */
   public abstract long getPhysicalMemorySize();
@@ -133,13 +133,14 @@ public abstract class ResourceCalculatorPlugin extends Configured {
   }
 
   /**
-   * Get the ResourceCalculatorPlugin from the class name and configure it. If
+   * Create the ResourceCalculatorPlugin from the class name and configure it. If
    * class name is null, this method will try and return a memory calculator
    * plugin available for this system.
-   * 
-   * @param clazz class-name
+   *
+   * @param clazz ResourceCalculator plugin class-name
    * @param conf configure the plugin with this.
-   * @return ResourceCalculatorPlugin
+   * @return ResourceCalculatorPlugin or null if ResourceCalculatorPlugin is not
+   * 		 available for current system
    */
   public static ResourceCalculatorPlugin getResourceCalculatorPlugin(
       Class<? extends ResourceCalculatorPlugin> clazz, Configuration conf) {

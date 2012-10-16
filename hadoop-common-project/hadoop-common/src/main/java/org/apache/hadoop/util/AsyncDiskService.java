@@ -71,6 +71,7 @@ public class AsyncDiskService {
   public AsyncDiskService(String[] volumes) throws IOException {
     
     threadFactory = new ThreadFactory() {
+      @Override
       public Thread newThread(Runnable r) {
         return new Thread(threadGroup, r);
       }

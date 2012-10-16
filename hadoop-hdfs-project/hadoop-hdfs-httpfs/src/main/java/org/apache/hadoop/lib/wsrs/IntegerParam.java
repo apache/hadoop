@@ -27,6 +27,7 @@ public abstract class IntegerParam extends Param<Integer> {
     super(name, defaultValue);
   }
 
+  @Override
   protected Integer parse(String str) throws Exception {
     return Integer.parseInt(str);
   }

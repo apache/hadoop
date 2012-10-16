@@ -42,6 +42,7 @@ public abstract class PolicyProvider {
    */
   public static final PolicyProvider DEFAULT_POLICY_PROVIDER =
     new PolicyProvider() {
+    @Override
     public Service[] getServices() {
       return null;
     }

@@ -376,6 +376,8 @@ public class ConfigUtil {
       new String[] {MRJobConfig.REDUCE_SKIP_MAXGROUPS});
     Configuration.addDeprecation("mapred.reduce.child.log.level", 
       new String[] {MRJobConfig.REDUCE_LOG_LEVEL});
+    Configuration.addDeprecation("mapreduce.job.counters.limit", 
+      new String[] {MRJobConfig.COUNTERS_MAX_KEY});
     Configuration.addDeprecation("jobclient.completion.poll.interval", 
       new String[] {Job.COMPLETION_POLL_INTERVAL_KEY});
     Configuration.addDeprecation("jobclient.progress.monitor.poll.interval", 
@@ -517,6 +519,11 @@ public class ConfigUtil {
         new String[] {
         MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT   
     });
+  }
+
+  public static void main(String[] args) {
+    loadResources();
+    Configuration.dumpDeprecatedKeys();
   }
 }
 

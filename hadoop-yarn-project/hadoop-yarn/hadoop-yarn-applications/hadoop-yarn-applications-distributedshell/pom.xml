@@ -43,6 +43,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-nodemanager</artifactId>
       <scope>test</scope>
     </dependency>
@@ -54,11 +58,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-common</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -83,6 +82,13 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
+        <configuration>
+           <archive>
+             <manifest>
+               <mainClass>org.apache.hadoop.yarn.applications.distributedshell.Client</mainClass>
+             </manifest>
+           </archive>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>

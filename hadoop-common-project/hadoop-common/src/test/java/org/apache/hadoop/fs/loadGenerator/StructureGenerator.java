@@ -214,6 +214,7 @@ public class StructureGenerator {
     }
     
     /** Output a file attribute */
+    @Override
     protected void outputFiles(PrintStream out, String prefix) {
       prefix = (prefix == null)?super.name: prefix + "/"+super.name;
       out.println(prefix + " " + numOfBlocks);

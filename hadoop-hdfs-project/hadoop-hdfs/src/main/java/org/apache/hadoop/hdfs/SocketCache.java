@@ -26,33 +26,112 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import java.io.IOException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.StringUtils;
 
 /**
- * A cache of sockets.
+ * A cache of input stream sockets to Data Node.
  */
 class SocketCache {
-  static final Log LOG = LogFactory.getLog(SocketCache.class);
+  private static final Log LOG = LogFactory.getLog(SocketCache.class);
 
-  private final LinkedListMultimap<SocketAddress, SocketAndStreams> multimap;
-  private final int capacity;
-
-  /**
-   * Create a SocketCache with the given capacity.
-   * @param capacity  Max cache size.
-   */
-  public SocketCache(int capacity) {
-    multimap = LinkedListMultimap.create();
-    this.capacity = capacity;
-    if (capacity <= 0) {
-      LOG.debug("SocketCache disabled in configuration.");
+  @InterfaceAudience.Private
+  static class SocketAndStreams implements Closeable {
+    public final Socket sock;
+    public final IOStreamPair ioStreams;
+    long createTime;
+    
+    public SocketAndStreams(Socket s, IOStreamPair ioStreams) {
+      this.sock = s;
+      this.ioStreams = ioStreams;
+      this.createTime = System.currentTimeMillis();
     }
+    
+    @Override
+    public void close() {
+      if (ioStreams != null) { 
+        IOUtils.closeStream(ioStreams.in);
+        IOUtils.closeStream(ioStreams.out);
+      }
+      IOUtils.closeSocket(sock);
+    }
+
+    public long getCreateTime() {
+      return this.createTime;
+    }
+  }
+
+  private Daemon daemon;
+  /** A map for per user per datanode. */
+  private static LinkedListMultimap<SocketAddress, SocketAndStreams> multimap =
+    LinkedListMultimap.create();
+  private static int capacity;
+  private static long expiryPeriod;
+  private static SocketCache scInstance = new SocketCache();
+  private static boolean isInitedOnce = false;
+ 
+  public static synchronized SocketCache getInstance(int c, long e) {
+    // capacity is only initialized once
+    if (isInitedOnce == false) {
+      capacity = c;
+      expiryPeriod = e;
+
+      if (capacity == 0 ) {
+        LOG.info("SocketCache disabled.");
+      }
+      else if (expiryPeriod == 0) {
+        throw new IllegalStateException("Cannot initialize expiryPeriod to " +
+           expiryPeriod + "when cache is enabled.");
+      }
+      isInitedOnce = true;
+    } else { //already initialized once
+      if (capacity != c || expiryPeriod != e) {
+        LOG.info("capacity and expiry periods already set to " + capacity + 
+          " and " + expiryPeriod + " respectively. Cannot set it to " + c + 
+          " and " + e);
+      }
+    }
+
+    return scInstance;
+  }
+
+  private boolean isDaemonStarted() {
+    return (daemon == null)? false: true;
+  }
+
+  private synchronized void startExpiryDaemon() {
+    // start daemon only if not already started
+    if (isDaemonStarted() == true) {
+      return;
+    }
+    
+    daemon = new Daemon(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          SocketCache.this.run();
+        } catch(InterruptedException e) {
+          //noop
+        } finally {
+          SocketCache.this.clear();
+        }
+      }
+
+      @Override
+      public String toString() {
+        return String.valueOf(SocketCache.this);
+      }
+    });
+    daemon.start();
   }
 
   /**
@@ -61,16 +140,17 @@ class SocketCache {
    * @return  A socket with unknown state, possibly closed underneath. Or null.
    */
   public synchronized SocketAndStreams get(SocketAddress remote) {
+
     if (capacity <= 0) { // disabled
       return null;
     }
-    
-    List<SocketAndStreams> socklist = multimap.get(remote);
-    if (socklist == null) {
+
+    List<SocketAndStreams> sockStreamList = multimap.get(remote);
+    if (sockStreamList == null) {
       return null;
     }
 
-    Iterator<SocketAndStreams> iter = socklist.iterator();
+    Iterator<SocketAndStreams> iter = sockStreamList.iterator();
     while (iter.hasNext()) {
       SocketAndStreams candidate = iter.next();
       iter.remove();
@@ -86,14 +166,16 @@ class SocketCache {
    * @param sock socket not used by anyone.
    */
   public synchronized void put(Socket sock, IOStreamPair ioStreams) {
+
+    Preconditions.checkNotNull(sock);
     SocketAndStreams s = new SocketAndStreams(sock, ioStreams);
     if (capacity <= 0) {
       // Cache disabled.
       s.close();
       return;
     }
-    
-    Preconditions.checkNotNull(sock);
+ 
+    startExpiryDaemon();
 
     SocketAddress remoteAddr = sock.getRemoteSocketAddress();
     if (remoteAddr == null) {
@@ -106,11 +188,31 @@ class SocketCache {
     if (capacity == multimap.size()) {
       evictOldest();
     }
-    multimap.put(remoteAddr, new SocketAndStreams(sock, ioStreams));
+    multimap.put(remoteAddr, s);
   }
 
   public synchronized int size() {
     return multimap.size();
+  }
+
+  /**
+   * Evict and close sockets older than expiry period from the cache.
+   */
+  private synchronized void evictExpired(long expiryPeriod) {
+    while (multimap.size() != 0) {
+      Iterator<Entry<SocketAddress, SocketAndStreams>> iter =
+        multimap.entries().iterator();
+      Entry<SocketAddress, SocketAndStreams> entry = iter.next();
+      // if oldest socket expired, remove it
+      if (entry == null || 
+        System.currentTimeMillis() - entry.getValue().getCreateTime() < 
+        expiryPeriod) {
+        break;
+      }
+      iter.remove();
+      SocketAndStreams s = entry.getValue();
+      s.close();
+    }
   }
 
   /**
@@ -120,7 +222,8 @@ class SocketCache {
     Iterator<Entry<SocketAddress, SocketAndStreams>> iter =
       multimap.entries().iterator();
     if (!iter.hasNext()) {
-      throw new IllegalStateException("Cannot evict from empty cache!");
+      throw new IllegalStateException("Cannot evict from empty cache! " +
+        "capacity: " + capacity);
     }
     Entry<SocketAddress, SocketAndStreams> entry = iter.next();
     iter.remove();
@@ -129,38 +232,31 @@ class SocketCache {
   }
 
   /**
-   * Empty the cache, and close all sockets.
+   * Periodically check in the cache and expire the entries
+   * older than expiryPeriod minutes
    */
-  public synchronized void clear() {
-    for (SocketAndStreams s : multimap.values()) {
-      s.close();
+  private void run() throws InterruptedException {
+    for(long lastExpiryTime = System.currentTimeMillis();
+        !Thread.interrupted();
+        Thread.sleep(expiryPeriod)) {
+      final long elapsed = System.currentTimeMillis() - lastExpiryTime;
+      if (elapsed >= expiryPeriod) {
+        evictExpired(expiryPeriod);
+        lastExpiryTime = System.currentTimeMillis();
+      }
     }
-    multimap.clear();
+    clear();
+    throw new InterruptedException("Daemon Interrupted");
   }
 
-  @Override
-  protected void finalize() {
-    clear();
-  }
-  
-  @InterfaceAudience.Private
-  static class SocketAndStreams implements Closeable {
-    public final Socket sock;
-    public final IOStreamPair ioStreams;
-    
-    public SocketAndStreams(Socket s, IOStreamPair ioStreams) {
-      this.sock = s;
-      this.ioStreams = ioStreams;
+  /**
+   * Empty the cache, and close all sockets.
+   */
+  private synchronized void clear() {
+    for (SocketAndStreams sockAndStream : multimap.values()) {
+      sockAndStream.close();
     }
-    
-    @Override
-    public void close() {
-      if (ioStreams != null) { 
-        IOUtils.closeStream(ioStreams.in);
-        IOUtils.closeStream(ioStreams.out);
-      }
-      IOUtils.closeSocket(sock);
-    }
+    multimap.clear();
   }
 
 }

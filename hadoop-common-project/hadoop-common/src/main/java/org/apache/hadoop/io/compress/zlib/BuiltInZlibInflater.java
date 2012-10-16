@@ -39,6 +39,7 @@ public class BuiltInZlibInflater extends Inflater implements Decompressor {
     super();
   }
 
+  @Override
   public synchronized int decompress(byte[] b, int off, int len) 
     throws IOException {
     try {

@@ -72,6 +72,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
     }
   }
 
+  @Override
   public T fromString(String str) throws IOException {
     try {
       byte[] bytes = Base64.decodeBase64(str.getBytes("UTF-8"));
@@ -83,6 +84,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
     }
   }
 
+  @Override
   public String toString(T obj) throws IOException {
     outBuf.reset();
     serializer.serialize(obj);
@@ -91,6 +93,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
     return new String(Base64.encodeBase64(buf));
   }
 
+  @Override
   public void close() throws IOException {
     inBuf.close();
     outBuf.close();
@@ -189,7 +192,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
       String[] parts = itemStr.split(SEPARATOR);
 
       for (String part : parts) {
-        if (!part.equals(""))
+        if (!part.isEmpty())
           list.add(stringifier.fromString(part));
       }
 

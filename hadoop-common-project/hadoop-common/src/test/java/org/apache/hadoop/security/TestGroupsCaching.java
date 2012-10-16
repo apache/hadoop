@@ -54,6 +54,7 @@ public class TestGroupsCaching {
     private static Set<String> allGroups = new HashSet<String>();
     private static Set<String> blackList = new HashSet<String>();
 
+    @Override
     public List<String> getGroups(String user) throws IOException {
       LOG.info("Getting groups for " + user);
       if (blackList.contains(user)) {
@@ -62,6 +63,7 @@ public class TestGroupsCaching {
       return new LinkedList<String>(allGroups);
     }
 
+    @Override
     public void cacheGroupsRefresh() throws IOException {
       LOG.info("Cache is being refreshed.");
       clearBlackList();
@@ -73,6 +75,7 @@ public class TestGroupsCaching {
       blackList.clear();
     }
 
+    @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
       LOG.info("Adding " + groups + " to groups.");
       allGroups.addAll(groups);

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;

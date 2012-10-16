@@ -179,6 +179,12 @@ public class MRApps extends Apps {
         Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
             .trim());
       }
+      for (String c : conf.getStrings(
+          MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
+          MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
+            .trim());
+      }
     } finally {
       if (classpathFileStream != null) {
         classpathFileStream.close();
@@ -204,7 +210,7 @@ public class MRApps extends Apps {
     Apps.addToEnvironment(
         environment,
         Environment.CLASSPATH.name(),
-        MRJobConfig.JOB_JAR + Path.SEPARATOR);
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR);
     Apps.addToEnvironment(
         environment,
         Environment.CLASSPATH.name(),
@@ -275,7 +281,7 @@ public class MRApps extends Apps {
   }
 
   private static String getResourceDescription(LocalResourceType type) {
-    if(type == LocalResourceType.ARCHIVE) {
+    if(type == LocalResourceType.ARCHIVE || type == LocalResourceType.PATTERN) {
       return "cache archive (" + MRJobConfig.CACHE_ARCHIVES + ") ";
     }
     return "cache file (" + MRJobConfig.CACHE_FILES + ") ";

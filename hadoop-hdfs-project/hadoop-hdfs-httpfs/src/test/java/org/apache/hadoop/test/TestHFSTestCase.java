@@ -79,6 +79,7 @@ public class TestHFSTestCase extends HFSTestCase {
   public void waitFor() {
     long start = Time.now();
     long waited = waitFor(1000, new Predicate() {
+      @Override
       public boolean evaluate() throws Exception {
         return true;
       }
@@ -93,6 +94,7 @@ public class TestHFSTestCase extends HFSTestCase {
     setWaitForRatio(1);
     long start = Time.now();
     long waited = waitFor(200, new Predicate() {
+      @Override
       public boolean evaluate() throws Exception {
         return false;
       }
@@ -107,6 +109,7 @@ public class TestHFSTestCase extends HFSTestCase {
     setWaitForRatio(2);
     long start = Time.now();
     long waited = waitFor(200, new Predicate() {
+      @Override
       public boolean evaluate() throws Exception {
         return false;
       }

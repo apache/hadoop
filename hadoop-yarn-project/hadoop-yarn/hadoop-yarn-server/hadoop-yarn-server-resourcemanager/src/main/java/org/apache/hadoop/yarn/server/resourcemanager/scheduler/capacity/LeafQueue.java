@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
@@ -104,7 +104,7 @@ public class LeafQueue implements CSQueue {
   private final Resource maximumAllocation;
   private final float minimumAllocationFactor;
 
-  private ContainerTokenSecretManager containerTokenSecretManager;
+  private RMContainerTokenSecretManager containerTokenSecretManager;
 
   private Map<String, User> users = new HashMap<String, User>();
   
@@ -123,6 +123,8 @@ public class LeafQueue implements CSQueue {
   private CapacitySchedulerContext scheduler;
   
   private final ActiveUsersManager activeUsersManager;
+  
+  private final int nodeLocalityDelay;
   
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, 
@@ -188,6 +190,9 @@ public class LeafQueue implements CSQueue {
     Map<QueueACL, AccessControlList> acls = 
       cs.getConfiguration().getAcls(getQueuePath());
 
+    this.nodeLocalityDelay = 
+        cs.getConfiguration().getNodeLocalityDelay();
+    
     setupQueueConfigs(
         cs.getClusterResources(),
         capacity, absoluteCapacity, 
@@ -528,6 +533,11 @@ public class LeafQueue implements CSQueue {
     return Collections.singletonList(userAclInfo);
   }
 
+  @Private
+  public int getNodeLocalityDelay() {
+    return nodeLocalityDelay;
+  }
+  
   public String toString() {
     return queueName + ": " + 
         "capacity=" + capacity + ", " + 
@@ -1095,7 +1105,7 @@ public class LeafQueue implements CSQueue {
           reservedContainer)) {
         return assignContainer(clusterResource, node, application, priority, request, 
             NodeType.RACK_LOCAL, reservedContainer);
-      }
+      } 
     }
     return Resources.none();
   }
@@ -1112,7 +1122,6 @@ public class LeafQueue implements CSQueue {
             NodeType.OFF_SWITCH, reservedContainer);
       }
     }
-    
     return Resources.none();
   }
 
@@ -1147,7 +1156,12 @@ public class LeafQueue implements CSQueue {
       
     // If we are here, we do need containers on this rack for RACK_LOCAL req
     if (type == NodeType.RACK_LOCAL) {
-      return true;
+      // 'Delay' rack-local just a little bit...
+      long missedOpportunities = application.getSchedulingOpportunities(priority);
+      return (
+          Math.min(scheduler.getNumClusterNodes(), getNodeLocalityDelay()) < 
+          missedOpportunities
+          );
     }
 
     // Check if we need containers on this host
@@ -1183,7 +1197,7 @@ public class LeafQueue implements CSQueue {
     if (UserGroupInformation.isSecurityEnabled()) {
       containerToken =
           containerTokenSecretManager.createContainerToken(containerId, nodeId,
-            capability);
+            application.getUser(), capability);
       if (containerToken == null) {
         return null; // Try again later.
       }

@@ -21,17 +21,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.io.nativeio.NativeIO;
 
 import org.junit.BeforeClass;
-import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
 import java.io.IOException;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 public class TestSecureIOUtils {

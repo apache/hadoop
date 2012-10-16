@@ -204,6 +204,7 @@ public class BlockLocation {
     }
   }
 
+  @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
     result.append(offset);

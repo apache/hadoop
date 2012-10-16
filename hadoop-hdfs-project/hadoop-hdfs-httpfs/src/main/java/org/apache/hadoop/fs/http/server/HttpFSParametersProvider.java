@@ -33,7 +33,6 @@ import org.slf4j.MDC;
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * HttpFS ParametersProvider.
@@ -262,7 +261,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     /**
      * Parameter name.
      */
-    public static final String NAME = "len";
+    public static final String NAME = "length";
 
     /**
      * Constructor.

@@ -193,6 +193,7 @@ public abstract class Filter implements Writable {
   
   // Writable interface
   
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(VERSION);
     out.writeInt(this.nbHash);
@@ -200,6 +201,7 @@ public abstract class Filter implements Writable {
     out.writeInt(this.vectorSize);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     int ver = in.readInt();
     if (ver > 0) { // old unversioned format

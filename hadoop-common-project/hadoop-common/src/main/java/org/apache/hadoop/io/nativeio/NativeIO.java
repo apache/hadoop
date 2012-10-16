@@ -202,6 +202,7 @@ public class NativeIO {
       this.mode = mode;
     }
 
+    @Override
     public String toString() {
       return "Stat(owner='" + owner + "', group='" + group + "'" +
         ", mode=" + mode + ")";

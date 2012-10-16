@@ -36,7 +36,8 @@ public class ProtocolSignature implements Writable {
     WritableFactories.setFactory
       (ProtocolSignature.class,
        new WritableFactory() {
-         public Writable newInstance() { return new ProtocolSignature(); }
+         @Override
+        public Writable newInstance() { return new ProtocolSignature(); }
        });
   }
 

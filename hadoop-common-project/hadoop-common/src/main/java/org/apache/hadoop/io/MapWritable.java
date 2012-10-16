@@ -55,27 +55,27 @@ public class MapWritable extends AbstractMapWritable
     copy(other);
   }
   
-  /** {@inheritDoc} */
+  @Override
   public void clear() {
     instance.clear();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean containsKey(Object key) {
     return instance.containsKey(key);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean containsValue(Object value) {
     return instance.containsValue(value);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Set<Map.Entry<Writable, Writable>> entrySet() {
     return instance.entrySet();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
@@ -93,27 +93,27 @@ public class MapWritable extends AbstractMapWritable
     return false;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Writable get(Object key) {
     return instance.get(key);
   }
   
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     return 1 + this.instance.hashCode();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean isEmpty() {
     return instance.isEmpty();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Set<Writable> keySet() {
     return instance.keySet();
   }
 
-  /** {@inheritDoc} */
+  @Override
   @SuppressWarnings("unchecked")
   public Writable put(Writable key, Writable value) {
     addToMap(key.getClass());
@@ -121,31 +121,30 @@ public class MapWritable extends AbstractMapWritable
     return instance.put(key, value);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void putAll(Map<? extends Writable, ? extends Writable> t) {
     for (Map.Entry<? extends Writable, ? extends Writable> e: t.entrySet()) {
       put(e.getKey(), e.getValue());
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Writable remove(Object key) {
     return instance.remove(key);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int size() {
     return instance.size();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Collection<Writable> values() {
     return instance.values();
   }
   
   // Writable
   
-  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -164,7 +163,6 @@ public class MapWritable extends AbstractMapWritable
     }
   }
 
-  /** {@inheritDoc} */
   @SuppressWarnings("unchecked")
   @Override
   public void readFields(DataInput in) throws IOException {

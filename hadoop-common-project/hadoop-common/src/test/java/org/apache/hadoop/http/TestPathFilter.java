@@ -46,14 +46,17 @@ public class TestPathFilter extends HttpServerFunctionalTest {
   static public class RecordingFilter implements Filter {
     private FilterConfig filterConfig = null;
 
+    @Override
     public void init(FilterConfig filterConfig) {
       this.filterConfig = filterConfig;
     }
 
+    @Override
     public void destroy() {
       this.filterConfig = null;
     }
 
+    @Override
     public void doFilter(ServletRequest request, ServletResponse response,
         FilterChain chain) throws IOException, ServletException {
       if (filterConfig == null)
@@ -69,6 +72,7 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     static public class Initializer extends FilterInitializer {
       public Initializer() {}
 
+      @Override
       public void initFilter(FilterContainer container, Configuration conf) {
         container.addFilter("recording", RecordingFilter.class.getName(), null);
       }

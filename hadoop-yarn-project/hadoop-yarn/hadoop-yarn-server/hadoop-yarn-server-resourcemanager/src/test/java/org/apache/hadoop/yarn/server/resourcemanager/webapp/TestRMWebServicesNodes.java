@@ -54,6 +54,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -228,9 +229,9 @@ public class TestRMWebServicesNodes extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils
-          .checkStringMatch(
+          .checkStringContains(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.api.records.NodeState.BOGUSSTATE",
+              "org.apache.hadoop.yarn.api.records.NodeState.BOGUSSTATE",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);

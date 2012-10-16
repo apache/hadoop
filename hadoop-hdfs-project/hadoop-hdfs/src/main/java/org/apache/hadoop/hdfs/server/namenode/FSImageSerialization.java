@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
@@ -127,7 +126,7 @@ public class FSImageSerialization {
                                            String path) 
                                            throws IOException {
     writeString(path, out);
-    out.writeShort(cons.getReplication());
+    out.writeShort(cons.getBlockReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
     int nrBlocks = cons.getBlocks().length;
@@ -176,7 +175,7 @@ public class FSImageSerialization {
                              filePerm);      
     } else {
       INodeFile fileINode = (INodeFile)node;
-      out.writeShort(fileINode.getReplication());
+      out.writeShort(fileINode.getBlockReplication());
       out.writeLong(fileINode.getModificationTime());
       out.writeLong(fileINode.getAccessTime());
       out.writeLong(fileINode.getPreferredBlockSize());

@@ -27,6 +27,7 @@ import org.junit.Test;
 
 public class TestLocalFSFileContextMainOperations extends FileContextMainOperationsBaseTest {
 
+  @Override
   @Before
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();
@@ -34,6 +35,7 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
   }
   
   static Path wd = null;
+  @Override
   protected Path getDefaultWorkingDirectory() throws IOException {
     if (wd == null)
       wd = FileSystem.getLocal(new Configuration()).getWorkingDirectory();

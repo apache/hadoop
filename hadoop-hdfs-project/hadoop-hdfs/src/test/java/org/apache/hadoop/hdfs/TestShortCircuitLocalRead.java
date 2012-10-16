@@ -115,6 +115,14 @@ public class TestShortCircuitLocalRead {
     stm.close();
   }
 
+  private static byte [] arrayFromByteBuffer(ByteBuffer buf) {
+    ByteBuffer alt = buf.duplicate();
+    alt.clear();
+    byte[] arr = new byte[alt.remaining()];
+    alt.get(arr);
+    return arr;
+  }
+  
   /**
    * Verifies that reading a file with the direct read(ByteBuffer) api gives the expected set of bytes.
    */
@@ -122,7 +130,7 @@ public class TestShortCircuitLocalRead {
       int readOffset) throws IOException {
     HdfsDataInputStream stm = (HdfsDataInputStream)fs.open(name);
 
-    ByteBuffer actual = ByteBuffer.allocate(expected.length - readOffset);
+    ByteBuffer actual = ByteBuffer.allocateDirect(expected.length - readOffset);
 
     IOUtils.skipFully(stm, readOffset);
 
@@ -136,7 +144,8 @@ public class TestShortCircuitLocalRead {
     // Read across chunk boundary
     actual.limit(Math.min(actual.capacity(), nread + 517));
     nread += stm.read(actual);
-    checkData(actual.array(), readOffset, expected, nread, "A few bytes");
+    checkData(arrayFromByteBuffer(actual), readOffset, expected, nread,
+        "A few bytes");
     //Now read rest of it
     actual.limit(actual.capacity());
     while (actual.hasRemaining()) {
@@ -147,7 +156,7 @@ public class TestShortCircuitLocalRead {
       }
       nread += nbytes;
     }
-    checkData(actual.array(), readOffset, expected, "Read 3");
+    checkData(arrayFromByteBuffer(actual), readOffset, expected, "Read 3");
     stm.close();
   }
 
@@ -224,7 +233,8 @@ public class TestShortCircuitLocalRead {
   @Test
   public void testGetBlockLocalPathInfo() throws IOException, InterruptedException {
     final Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY, "alloweduser");
+    conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
+        "alloweduser1,alloweduser2");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .format(true).build();
     cluster.waitActive();
@@ -232,8 +242,10 @@ public class TestShortCircuitLocalRead {
     FileSystem fs = cluster.getFileSystem();
     try {
       DFSTestUtil.createFile(fs, new Path("/tmp/x"), 16, (short) 1, 23);
-      UserGroupInformation aUgi = UserGroupInformation
-          .createRemoteUser("alloweduser");
+      UserGroupInformation aUgi1 =
+          UserGroupInformation.createRemoteUser("alloweduser1");
+      UserGroupInformation aUgi2 =
+          UserGroupInformation.createRemoteUser("alloweduser2");
       LocatedBlocks lb = cluster.getNameNode().getRpcServer()
           .getBlockLocations("/tmp/x", 0, 16);
       // Create a new block object, because the block inside LocatedBlock at
@@ -241,7 +253,7 @@ public class TestShortCircuitLocalRead {
       ExtendedBlock blk = new ExtendedBlock(lb.get(0).getBlock());
       Token<BlockTokenIdentifier> token = lb.get(0).getBlockToken();
       final DatanodeInfo dnInfo = lb.get(0).getLocations()[0];
-      ClientDatanodeProtocol proxy = aUgi
+      ClientDatanodeProtocol proxy = aUgi1
           .doAs(new PrivilegedExceptionAction<ClientDatanodeProtocol>() {
             @Override
             public ClientDatanodeProtocol run() throws Exception {
@@ -250,13 +262,29 @@ public class TestShortCircuitLocalRead {
             }
           });
       
-      //This should succeed
+      // This should succeed
       BlockLocalPathInfo blpi = proxy.getBlockLocalPathInfo(blk, token);
       Assert.assertEquals(
           DataNodeTestUtils.getFSDataset(dn).getBlockLocalPathInfo(blk).getBlockPath(),
           blpi.getBlockPath());
 
-      // Now try with a not allowed user.
+      // Try with the other allowed user
+      proxy = aUgi2
+          .doAs(new PrivilegedExceptionAction<ClientDatanodeProtocol>() {
+            @Override
+            public ClientDatanodeProtocol run() throws Exception {
+              return DFSUtil.createClientDatanodeProtocolProxy(dnInfo, conf,
+                  60000, false);
+            }
+          });
+
+      // This should succeed as well
+      blpi = proxy.getBlockLocalPathInfo(blk, token);
+      Assert.assertEquals(
+          DataNodeTestUtils.getFSDataset(dn).getBlockLocalPathInfo(blk).getBlockPath(),
+          blpi.getBlockPath());
+
+      // Now try with a disallowed user
       UserGroupInformation bUgi = UserGroupInformation
           .createRemoteUser("notalloweduser");
       proxy = bUgi

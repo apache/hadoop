@@ -1,16 +1,6 @@
-Hadoop MapReduce Change Log
+Hadoop YARN Change Log
 
-Trunk (unreleased changes)
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  BUG FIXES
-
-Branch-2 ( Unreleased changes )
+Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -18,17 +8,106 @@ Branch-2 ( Unreleased changes )
 
   IMPROVEMENTS
 
+    YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
+  OPTIMAZATIONS
+
   BUG FIXES
 
-Release 2.1.0-alpha - Unreleased 
+Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
+    vinodkv)
+
+    YARN-93. Fixed RM to propagate diagnostics from applications that have
+    finished but failed (Jason Lowe via vinodkv). 
+
+    YARN-28. Fixed TestCompositeService to not depend on test-order and thus
+    made it pass on JDK7 (Thomas Graves via vinodkv).
+
+    YARN-82. Change the default local and log dirs to be based on
+    hadoop.tmp.dir and yarn.log.dir. (Hemanth Yamijala via sseth)
+
+    YARN-53. Added the missing getGroups API to ResourceManager. (Bo Wang via
+    vinodkv)
+
+    YARN-116. Add the ability to change the RM include/exclude file without
+    a restart. (xieguiming and Harsh J via sseth)
+
+    YARN-23. FairScheduler: FSQueueSchedulable#updateDemand() - potential 
+    redundant aggregation. (kkambatl via tucu)
+
+    YARN-127. Move RMAdmin tool to its correct location - the client module.
+    (vinodkv)
+
+    YARN-40. Provided support for missing YARN commands (Devaraj K and Vinod
+    Kumar Vavilapalli via vinodkv)
+
+    YARN-33. Change LocalDirsHandlerService to validate the configured local and
+    log dirs. (Mayank Bansal via sseth)
+
+    YARN-94. Modify DistributedShell to point to main-class by default, clean up
+    the help message, and hard-code the AM class. (Hitesh Shah via vinodkv)
+
+    YARN-146. Add unit tests for computing fair share in the fair scheduler.
+    (Sandy Ryza via tomwhite)
+
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
+
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    
+    YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
+    (Ahmed Radwan via sseth)
+
+    YARN-102. Move the apache header to the top of the file in MemStore.java.
+    (Devaraj K via sseth)
+    
+    YARN-134. ClientToAMSecretManager creates keys without checking for
+    validity of the appID. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-30. Fixed tests verifying web-services to work on JDK7. (Thomas Graves
+    via vinodkv)
+
+    YARN-150. Fixes AppRejectedTransition does not unregister a rejected
+    app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
+
+Release 2.0.2-alpha - 2012-09-07 
+
+  INCOMPATIBLE CHANGES
+
+    YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
 
   NEW FEATURES
 
     YARN-1. Promote YARN to be a sub-project of Apache Hadoop. (acmurthy)
 
   IMPROVEMENTS
+
+    YARN-29. Add a yarn-client module. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-10. Fix DistributedShell module to not have a dependency on 
+    hadoop-mapreduce-client-core. (Hitesh Shah via vinodkv)
+
+    YARN-80. Add support for delaying rack-local containers in
+    CapacityScheduler. (acmurthy) 
+
+    YARN-137. Change the default YARN scheduler to be the CapacityScheduler. 
+    (sseth via acmurthy) 
+
+  OPTIMAZATIONS
 
   BUG FIXES
 
@@ -37,13 +116,71 @@ Release 2.1.0-alpha - Unreleased
     YARN-22. Fix ContainerLogs to work if the log-dir is specified as a URI.
     (Mayank Bansal via sseth)
 
-Release 0.23.3 - Unreleased 
+    YARN-37. Change TestRMAppTransitions to use the DrainDispatcher.
+    (Mayank Bansal via sseth)
+
+    YARN-79. Implement close on all clients to YARN so that RPC clients don't
+    throw exceptions on shut-down. (Vinod Kumar Vavilapalli)
+
+    YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
+    NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
+
+    YARN-15. Updated default classpath for YARN applications to reflect split of
+    YARN into a sub-project. (Arun C Murthy via vinodkv)
+
+    YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
+    event at RUNNING state. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
+    YARN-138. Ensure default values for minimum/maximum container sizes is
+    sane. (harsh & sseth via acmurthy)
+
+Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
   IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+
+    YARN-108. FSDownload can create cache directories with the wrong
+    permissions (Jason Lowe via bobby)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
+
+    YARN-106. Nodemanager needs to set permissions of local directories (jlowe
+    via bobby)
+
+Release 0.23.3
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMAZATIONS
 
   BUG FIXES
 
@@ -55,4 +192,24 @@ Release 0.23.3 - Unreleased
     YARN-27. Failed refreshQueues due to misconfiguration prevents further 
     refreshing of queues (Arun Murthy via tgraves)
 
-    MAPREDUCE-4323. NM leaks filesystems (Jason Lowe via jeagles)
+    YARN-58. NM leaks filesystems (Jason Lowe via jeagles)
+    
+    YARN-39. RM-NM secret-keys should be randomly generated and rolled every
+    so often. (vinodkv and sseth via sseth)
+
+    YARN-31. Fix TestDelegationTokenRenewer to not depend on test order so as to
+    pass tests on jdk7. (Thomas Graves via vinodkv)
+
+    YARN-63. RMNodeImpl is missing valid transitions from the UNHEALTHY state
+    (Jason Lowe via bobby)
+
+    YARN-60. Fixed a bug in ResourceManager which causes all NMs to get NPEs and
+    thus causes all containers to be rejected. (vinodkv)
+
+    YARN-66. aggregated logs permissions not set properly (tgraves via bobby)
+
+    YARN-68. NodeManager will refuse to shutdown indefinitely due to container
+    log aggregation (daryn via bobby)
+
+    YARN-87. NM ResourceLocalizationService does not set permissions of local 
+    cache directories (Jason Lowe via tgraves)

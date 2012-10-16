@@ -34,6 +34,7 @@ public abstract class ShortParam extends Param<Short> {
     this(name, defaultValue, 10);
   }
 
+  @Override
   protected Short parse(String str) throws Exception {
     return Short.parseShort(str, radix);
   }

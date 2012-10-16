@@ -25,6 +25,7 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -212,7 +213,7 @@ public class SecurityUtil {
   private static String replacePattern(String[] components, String hostname)
       throws IOException {
     String fqdn = hostname;
-    if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
+    if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
     return components[0] + "/" + fqdn.toLowerCase() + "@" + components[2];
@@ -451,6 +452,41 @@ public class SecurityUtil {
       return action.run();
     }
   }
+  
+  /**
+   * Perform the given action as the daemon's login user. If an
+   * InterruptedException is thrown, it is converted to an IOException.
+   *
+   * @param action the action to perform
+   * @return the result of the action
+   * @throws IOException in the event of error
+   */
+  public static <T> T doAsLoginUser(PrivilegedExceptionAction<T> action)
+      throws IOException {
+    return doAsUser(UserGroupInformation.getLoginUser(), action);
+  }
+
+  /**
+   * Perform the given action as the daemon's current user. If an
+   * InterruptedException is thrown, it is converted to an IOException.
+   *
+   * @param action the action to perform
+   * @return the result of the action
+   * @throws IOException in the event of error
+   */
+  public static <T> T doAsCurrentUser(PrivilegedExceptionAction<T> action)
+      throws IOException {
+    return doAsUser(UserGroupInformation.getCurrentUser(), action);
+  }
+
+  private static <T> T doAsUser(UserGroupInformation ugi,
+      PrivilegedExceptionAction<T> action) throws IOException {
+    try {
+      return ugi.doAs(action);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
+    }
+  }
 
   /**
    * Open a (if need be) secure connection to a URL in a secure environment
@@ -463,7 +499,7 @@ public class SecurityUtil {
    * @throws IOException If unable to authenticate via SPNEGO
    */
   public static URLConnection openSecureHttpConnection(URL url) throws IOException {
-    if(!UserGroupInformation.isSecurityEnabled()) {
+    if (!HttpConfig.isSecure() && !UserGroupInformation.isSecurityEnabled()) {
       return url.openConnection();
     }
 
@@ -498,6 +534,7 @@ public class SecurityUtil {
    * Uses standard java host resolution
    */
   static class StandardHostResolver implements HostResolver {
+    @Override
     public InetAddress getByName(String host) throws UnknownHostException {
       return InetAddress.getByName(host);
     }
@@ -542,6 +579,7 @@ public class SecurityUtil {
      * @return InetAddress with the fully qualified hostname or ip
      * @throws UnknownHostException if host does not exist
      */
+    @Override
     public InetAddress getByName(String host) throws UnknownHostException {
       InetAddress addr = null;
 

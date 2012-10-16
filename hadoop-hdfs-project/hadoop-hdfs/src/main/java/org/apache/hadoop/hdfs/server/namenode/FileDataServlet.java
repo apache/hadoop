@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 
@@ -74,7 +73,7 @@ public class FileDataServlet extends DfsServlet {
     // Add namenode address to the url params
     NameNode nn = NameNodeHttpServer.getNameNodeFromContext(
         getServletContext());
-    String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+    String addr = nn.getNameNodeAddressHostPortString();
     String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
     
     return new URL(scheme, hostname, port,

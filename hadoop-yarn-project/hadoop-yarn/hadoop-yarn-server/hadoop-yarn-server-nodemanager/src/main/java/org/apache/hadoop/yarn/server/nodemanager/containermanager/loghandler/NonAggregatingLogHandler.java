@@ -79,16 +79,18 @@ public class NonAggregatingLogHandler extends AbstractService implements
 
   @Override
   public void stop() {
-    sched.shutdown();
-    boolean isShutdown = false;
-    try {
-      isShutdown = sched.awaitTermination(10, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      sched.shutdownNow();
-      isShutdown = true;
-    }
-    if (!isShutdown) {
-      sched.shutdownNow();
+    if (sched != null) {
+      sched.shutdown();
+      boolean isShutdown = false;
+      try {
+        isShutdown = sched.awaitTermination(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        sched.shutdownNow();
+        isShutdown = true;
+      }
+      if (!isShutdown) {
+        sched.shutdownNow();
+      }
     }
     super.stop();
   }

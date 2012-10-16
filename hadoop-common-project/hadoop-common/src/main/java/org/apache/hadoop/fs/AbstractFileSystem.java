@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
 /**

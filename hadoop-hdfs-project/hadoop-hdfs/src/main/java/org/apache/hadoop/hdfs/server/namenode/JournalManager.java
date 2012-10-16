@@ -35,7 +35,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface JournalManager extends Closeable, FormatConfirmable {
+public interface JournalManager extends Closeable, FormatConfirmable,
+    LogsPurgeable {
 
   /**
    * Format the underlying storage, removing any previously
@@ -64,25 +65,16 @@ public interface JournalManager extends Closeable, FormatConfirmable {
    * @param inProgressOk whether or not in-progress streams should be returned
    *
    * @return a list of streams
+   * @throws IOException if the underlying storage has an error or is otherwise
+   * inaccessible
    */
   void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxnId, boolean inProgressOk);
+      long fromTxnId, boolean inProgressOk) throws IOException;
 
   /**
    * Set the amount of memory that this stream should use to buffer edits
    */
   void setOutputBufferCapacity(int size);
-
-  /**
-   * The JournalManager may archive/purge any logs for transactions less than
-   * or equal to minImageTxId.
-   *
-   * @param minTxIdToKeep the earliest txid that must be retained after purging
-   *                      old logs
-   * @throws IOException if purging fails
-   */
-  void purgeLogsOlderThan(long minTxIdToKeep)
-    throws IOException;
 
   /**
    * Recover segments which have not been finalized.

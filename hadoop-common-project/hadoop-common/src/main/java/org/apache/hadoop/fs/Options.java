@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 
 /**
  * This class contains options related to file system operations.

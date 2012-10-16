@@ -18,8 +18,9 @@
 package org.apache.hadoop.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -28,12 +29,10 @@ import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,6 +54,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -194,12 +194,11 @@ public class UserGroupInformation {
   private static boolean useKerberos;
   /** Server-side groups fetching service */
   private static Groups groups;
+  /** Min time (in seconds) before relogin for Kerberos */
+  private static long kerberosMinSecondsBeforeRelogin;
   /** The configuration to use */
   private static Configuration conf;
 
-  
-  /** Leave 10 minutes between relogin attempts. */
-  private static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
   
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
@@ -246,6 +245,16 @@ public class UserGroupInformation {
       throw new IllegalArgumentException("Invalid attribute value for " +
                                          HADOOP_SECURITY_AUTHENTICATION + 
                                          " of " + value);
+    }
+    try {
+        kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
+                HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
+                HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT);
+    }
+    catch(NumberFormatException nfe) {
+        throw new IllegalArgumentException("Invalid attribute value for " +
+                HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN + " of " +
+                conf.get(HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN));
     }
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
@@ -343,6 +352,7 @@ public class UserGroupInformation {
       this.realUser = realUser;
     }
     
+    @Override
     public String getName() {
       return realUser.getUserName();
     }
@@ -641,14 +651,12 @@ public class UserGroupInformation {
                                           AuthenticationMethod.SIMPLE);
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
-        if (fileLocation != null && isSecurityEnabled()) {
+        if (fileLocation != null) {
           // load the token storage file and put all of the tokens into the
           // user.
           Credentials cred = Credentials.readTokenStorageFile(
               new Path("file:///" + fileLocation), conf);
-          for (Token<?> token: cred.getAllTokens()) {
-            loginUser.addToken(token);
-          }
+          loginUser.addCredentials(cred);
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
@@ -701,6 +709,7 @@ public class UserGroupInformation {
           !isKeytab) {
         Thread t = new Thread(new Runnable() {
           
+          @Override
           public void run() {
             String cmd = conf.get("hadoop.kerberos.kinit.command",
                                   "kinit");
@@ -731,7 +740,7 @@ public class UserGroupInformation {
                   return;
                 }
                 nextRefresh = Math.max(getRefreshTime(tgt),
-                                       now + MIN_TIME_BEFORE_RELOGIN);
+                                       now + kerberosMinSecondsBeforeRelogin);
               } catch (InterruptedException ie) {
                 LOG.warn("Terminating renewal thread");
                 return;
@@ -966,10 +975,10 @@ public class UserGroupInformation {
   }
 
   private boolean hasSufficientTimeElapsed(long now) {
-    if (now - user.getLastLogin() < MIN_TIME_BEFORE_RELOGIN ) {
+    if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
-          "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
-          " before.");
+          "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
+          " seconds before.");
       return false;
     }
     return true;
@@ -994,7 +1003,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     Subject subject = new Subject();
@@ -1029,7 +1038,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public static UserGroupInformation createProxyUser(String user,
       UserGroupInformation realUser) {
-    if (user == null || "".equals(user)) {
+    if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     if (realUser == null) {
@@ -1185,7 +1194,20 @@ public class UserGroupInformation {
    * @return true on successful add of new token
    */
   public synchronized boolean addToken(Token<? extends TokenIdentifier> token) {
-    return subject.getPrivateCredentials().add(token);
+    return (token != null) ? addToken(token.getService(), token) : false;
+  }
+
+  /**
+   * Add a named token to this UGI
+   * 
+   * @param alias Name of the token
+   * @param token Token to be added
+   * @return true on successful add of new token
+   */
+  public synchronized boolean addToken(Text alias,
+                                       Token<? extends TokenIdentifier> token) {
+    getCredentialsInternal().addToken(alias, token);
+    return true;
   }
   
   /**
@@ -1195,14 +1217,38 @@ public class UserGroupInformation {
    */
   public synchronized
   Collection<Token<? extends TokenIdentifier>> getTokens() {
-    Set<Object> creds = subject.getPrivateCredentials();
-    List<Token<?>> result = new ArrayList<Token<?>>(creds.size());
-    for(Object o: creds) {
-      if (o instanceof Token<?>) {
-        result.add((Token<?>) o);
-      }
+    return Collections.unmodifiableCollection(
+        getCredentialsInternal().getAllTokens());
+  }
+
+  /**
+   * Obtain the tokens in credentials form associated with this user.
+   * 
+   * @return Credentials of tokens associated with this user
+   */
+  public synchronized Credentials getCredentials() {
+    return new Credentials(getCredentialsInternal());
+  }
+  
+  /**
+   * Add the given Credentials to this user.
+   * @param credentials of tokens and secrets
+   */
+  public synchronized void addCredentials(Credentials credentials) {
+    getCredentialsInternal().addAll(credentials);
+  }
+
+  private synchronized Credentials getCredentialsInternal() {
+    final Credentials credentials;
+    final Set<Credentials> credentialsSet =
+      subject.getPrivateCredentials(Credentials.class);
+    if (!credentialsSet.isEmpty()){
+      credentials = credentialsSet.iterator().next();
+    } else {
+      credentials = new Credentials();
+      subject.getPrivateCredentials().add(credentials);
     }
-    return Collections.unmodifiableList(result);
+    return credentials;
   }
 
   /**

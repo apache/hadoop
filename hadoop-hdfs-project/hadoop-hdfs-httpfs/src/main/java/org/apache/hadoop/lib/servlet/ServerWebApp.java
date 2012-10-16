@@ -147,6 +147,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
    *
    * @param event servelt context event.
    */
+  @Override
   public void contextInitialized(ServletContextEvent event) {
     try {
       init();
@@ -180,7 +181,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
       throw new ServerException(ServerException.ERROR.S13, portKey);
     }
     try {
-      InetAddress add = InetAddress.getByName(hostnameKey);
+      InetAddress add = InetAddress.getByName(host);
       int portNum = Integer.parseInt(port);
       return new InetSocketAddress(add, portNum);
     } catch (UnknownHostException ex) {
@@ -194,6 +195,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
    *
    * @param event servelt context event.
    */
+  @Override
   public void contextDestroyed(ServletContextEvent event) {
     destroy();
   }

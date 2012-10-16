@@ -21,16 +21,11 @@ import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.JniBasedUnixGroupsMapping;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Before;
 import org.junit.Test;
 

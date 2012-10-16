@@ -609,6 +609,7 @@ class DataXceiver extends Receiver implements Runnable {
           .setBytesPerCrc(bytesPerCRC)
           .setCrcPerBlock(crcPerBlock)
           .setMd5(ByteString.copyFrom(md5.getDigest()))
+          .setCrcType(HdfsProtoUtil.toProto(checksum.getChecksumType()))
           )
         .build()
         .writeDelimitedTo(out);

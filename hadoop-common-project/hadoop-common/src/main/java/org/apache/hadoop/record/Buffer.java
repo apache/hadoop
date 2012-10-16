@@ -187,6 +187,7 @@ public class Buffer implements Comparable, Cloneable {
   }
   
   // inherit javadoc
+  @Override
   public int hashCode() {
     int hash = 1;
     byte[] b = this.get();
@@ -202,6 +203,7 @@ public class Buffer implements Comparable, Cloneable {
    * @return Positive if this is bigger than other, 0 if they are equal, and
    *         negative if this is smaller than other.
    */
+  @Override
   public int compareTo(Object other) {
     Buffer right = ((Buffer) other);
     byte[] lb = this.get();
@@ -217,6 +219,7 @@ public class Buffer implements Comparable, Cloneable {
   }
   
   // inherit javadoc
+  @Override
   public boolean equals(Object other) {
     if (other instanceof Buffer && this != other) {
       return compareTo(other) == 0;
@@ -225,6 +228,7 @@ public class Buffer implements Comparable, Cloneable {
   }
   
   // inheric javadoc
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(2*count);
     for(int idx = 0; idx < count; idx++) {
@@ -245,6 +249,7 @@ public class Buffer implements Comparable, Cloneable {
   }
   
   // inherit javadoc
+  @Override
   public Object clone() throws CloneNotSupportedException {
     Buffer result = (Buffer) super.clone();
     result.copy(this.get(), 0, this.getCount());

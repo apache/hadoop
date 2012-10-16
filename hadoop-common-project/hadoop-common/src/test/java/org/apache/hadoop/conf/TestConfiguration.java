@@ -39,7 +39,6 @@ import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 import static org.junit.Assert.assertArrayEquals;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
@@ -357,6 +356,36 @@ public class TestConfiguration extends TestCase {
     assertEquals(conf.get("e"), "f"); 
     assertEquals(conf.get("g"), "h"); 
     tearDown();
+  }
+
+  public void testRelativeIncludes() throws Exception {
+    tearDown();
+    String relConfig = new File("./tmp/test-config.xml").getAbsolutePath();
+    String relConfig2 = new File("./tmp/test-config2.xml").getAbsolutePath();
+
+    new File(new File(relConfig).getParent()).mkdirs();
+    out = new BufferedWriter(new FileWriter(relConfig2));
+    startConfig();
+    appendProperty("a", "b");
+    endConfig();
+
+    out = new BufferedWriter(new FileWriter(relConfig));
+    startConfig();
+    // Add the relative path instead of the absolute one.
+    addInclude(new File(relConfig2).getName());
+    appendProperty("c", "d");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(relConfig);
+    conf.addResource(fileResource);
+    assertEquals(conf.get("a"), "b");
+    assertEquals(conf.get("c"), "d");
+
+    // Cleanup
+    new File(relConfig).delete();
+    new File(relConfig2).delete();
+    new File(new File(relConfig).getParent()).delete();
   }
 
   BufferedWriter out;
@@ -1155,6 +1184,12 @@ public class TestConfiguration extends TestCase {
     configuration.setPattern("testPattern", testPattern);
     assertEquals(testPattern.pattern(),
         configuration.getPattern("testPattern", Pattern.compile("")).pattern());
+  }
+  
+  public void testGetClassByNameOrNull() throws Exception {
+   Configuration config = new Configuration();
+   Class<?> clazz = config.getClassByNameOrNull("java.lang.Object");
+   assertNotNull(clazz);
   }
   
   public static void main(String[] argv) throws Exception {

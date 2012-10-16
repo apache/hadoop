@@ -57,7 +57,7 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     this.md5 = md5;
   }
   
-  /** {@inheritDoc} */ 
+  @Override
   public String getAlgorithmName() {
     return "MD5-of-" + crcPerBlock + "MD5-of-" + bytesPerCRC +
         getCrcType().name();
@@ -73,11 +73,11 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
 
     throw new IOException("Unknown checksum type in " + algorithm);
   }
-
-  /** {@inheritDoc} */ 
+ 
+  @Override
   public int getLength() {return LENGTH;}
-
-  /** {@inheritDoc} */ 
+ 
+  @Override
   public byte[] getBytes() {
     return WritableUtils.toByteArray(this);
   }
@@ -92,14 +92,14 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     return new ChecksumOpt(getCrcType(), bytesPerCRC);
   }
 
-  /** {@inheritDoc} */ 
+  @Override
   public void readFields(DataInput in) throws IOException {
     bytesPerCRC = in.readInt();
     crcPerBlock = in.readLong();
     md5 = MD5Hash.read(in);
   }
-
-  /** {@inheritDoc} */ 
+ 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(bytesPerCRC);
     out.writeLong(crcPerBlock);
@@ -133,7 +133,7 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
 
     try {
       // old versions don't support crcType.
-      if (crcType == null || crcType == "") {
+      if (crcType == null || crcType.equals("")) {
         finalCrcType = DataChecksum.Type.CRC32;
       } else {
         finalCrcType = DataChecksum.Type.valueOf(crcType);
@@ -161,8 +161,8 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
           + ", md5=" + md5, e);
     }
   }
-
-  /** {@inheritDoc} */ 
+ 
+  @Override
   public String toString() {
     return getAlgorithmName() + ":" + md5;
   }

@@ -80,7 +80,7 @@ public class TestWebHDFS {
     }
   }
 
-  @Test
+  @Test(timeout=300000)
   public void testLargeFile() throws Exception {
     largeFileTest(200L << 20); //200MB file length
   }
@@ -202,7 +202,7 @@ public class TestWebHDFS {
   }
 
   /** Test client retry with namenode restarting. */
-  @Test
+  @Test(timeout=300000)
   public void testNamenodeRestart() throws Exception {
     ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
     final Configuration conf = WebHdfsTestUtil.createConf();

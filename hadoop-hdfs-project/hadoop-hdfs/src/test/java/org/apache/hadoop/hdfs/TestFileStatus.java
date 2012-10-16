@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -78,7 +79,8 @@ public class TestFileStatus {
     hftpfs = cluster.getHftpFileSystem(0);
     dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
     file1 = new Path("filestatus.dat");
-    writeFile(fs, file1, 1, fileSize, blockSize);
+    DFSTestUtil.createFile(fs, file1, fileSize, fileSize, blockSize, (short) 1,
+        seed);
   }
   
   @AfterClass
@@ -86,21 +88,9 @@ public class TestFileStatus {
     fs.close();
     cluster.shutdown();
   }
-
-  private static void writeFile(FileSystem fileSys, Path name, int repl,
-      int fileSize, int blockSize) throws IOException {
-    // Create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true,
-        HdfsConstants.IO_FILE_BUFFER_SIZE, (short)repl, (long)blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
   
   private void checkFile(FileSystem fileSys, Path name, int repl)
-      throws IOException {
+      throws IOException, InterruptedException, TimeoutException {
     DFSTestUtil.waitReplication(fileSys, name, (short) repl);
   }
   
@@ -129,7 +119,7 @@ public class TestFileStatus {
 
   /** Test the FileStatus obtained calling getFileStatus on a file */  
   @Test
-  public void testGetFileStatusOnFile() throws IOException {
+  public void testGetFileStatusOnFile() throws Exception {
     checkFile(fs, file1, 1);
     // test getFileStatus on a file
     FileStatus status = fs.getFileStatus(file1);
@@ -217,7 +207,8 @@ public class TestFileStatus {
 
     // create another file that is smaller than a block.
     Path file2 = new Path(dir, "filestatus2.dat");
-    writeFile(fs, file2, 1, blockSize/4, blockSize);
+    DFSTestUtil.createFile(fs, file2, blockSize/4, blockSize/4, blockSize,
+        (short) 1, seed);
     checkFile(fs, file2, 1);
     
     // verify file attributes
@@ -229,7 +220,8 @@ public class TestFileStatus {
 
     // Create another file in the same directory
     Path file3 = new Path(dir, "filestatus3.dat");
-    writeFile(fs, file3, 1, blockSize/4, blockSize);
+    DFSTestUtil.createFile(fs, file3, blockSize/4, blockSize/4, blockSize,
+        (short) 1, seed);
     checkFile(fs, file3, 1);
     file3 = fs.makeQualified(file3);
 

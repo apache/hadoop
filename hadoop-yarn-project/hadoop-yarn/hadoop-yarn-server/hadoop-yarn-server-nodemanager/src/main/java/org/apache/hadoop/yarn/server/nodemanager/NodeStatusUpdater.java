@@ -22,7 +22,5 @@ import org.apache.hadoop.yarn.service.Service;
 
 public interface NodeStatusUpdater extends Service {
 
-  byte[] getRMNMSharedSecret();
-
   void sendOutofBandHeartBeat();
 }

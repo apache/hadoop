@@ -21,8 +21,6 @@ package org.apache.hadoop.io;
 import java.io.DataInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.List;
 
 public class DataInputByteBuffer extends DataInputStream {
 

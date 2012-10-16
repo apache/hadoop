@@ -59,17 +59,20 @@ public class JMap extends JCompType {
       this.value = value;
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new org.apache.hadoop.record.meta.MapTypeID(" + 
         key.getTypeIDObjectString() + ", " + 
         value.getTypeIDObjectString() + ")";
     }
 
+    @Override
     void genSetRTIFilter(CodeBuffer cb, Map<String, Integer> nestedStructMap) {
       key.genSetRTIFilter(cb, nestedStructMap);
       value.genSetRTIFilter(cb, nestedStructMap);
     }
 
+    @Override
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       String setType = "java.util.Set<"+key.getWrapperType()+"> ";
       String iterType = "java.util.Iterator<"+key.getWrapperType()+"> ";
@@ -98,6 +101,7 @@ public class JMap extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
       if (decl) {
         cb.append(getType()+" "+fname+";\n");
@@ -122,6 +126,7 @@ public class JMap extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
       String setType = "java.util.Set<java.util.Map.Entry<"+
         key.getWrapperType()+","+value.getWrapperType()+">> ";
@@ -153,6 +158,7 @@ public class JMap extends JCompType {
       decrLevel();
     }
     
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       incrLevel();
@@ -170,6 +176,7 @@ public class JMap extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       incrLevel();
@@ -208,12 +215,14 @@ public class JMap extends JCompType {
       this.value = value;
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::MapTypeID(" + 
         key.getTypeIDObjectString() + ", " + 
         value.getTypeIDObjectString() + ")";
     }
 
+    @Override
     void genSetRTIFilter(CodeBuffer cb) {
       key.genSetRTIFilter(cb);
       value.genSetRTIFilter(cb);
@@ -230,6 +239,7 @@ public class JMap extends JCompType {
     valueType = t2;
   }
   
+  @Override
   String getSignature() {
     return "{" + keyType.getSignature() + valueType.getSignature() +"}";
   }

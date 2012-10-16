@@ -183,6 +183,7 @@ public abstract class MultithreadedTestUtil {
       this.ctx = ctx;
     }
 
+    @Override
     public void run() {
       try {
         doWork();
@@ -215,6 +216,7 @@ public abstract class MultithreadedTestUtil {
      * Repeats a given user action until the context is asked to stop
      * or meets an error.
      */
+    @Override
     public final void doWork() throws Exception {
       while (ctx.shouldRun() && !stopped) {
         doAnAction();

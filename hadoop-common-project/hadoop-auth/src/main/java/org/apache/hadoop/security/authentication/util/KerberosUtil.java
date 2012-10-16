@@ -20,6 +20,9 @@ package org.apache.hadoop.security.authentication.util;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Locale;
 
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.Oid;
@@ -64,5 +67,34 @@ public class KerberosUtil {
     getDefaultRealmMethod = classRef.getDeclaredMethod("getDefaultRealm",
          new Class[0]);
     return (String)getDefaultRealmMethod.invoke(kerbConf, new Object[0]);
+  }
+  
+  /* Return fqdn of the current host */
+  static String getLocalHostName() throws UnknownHostException {
+    return InetAddress.getLocalHost().getCanonicalHostName();
+  }
+  
+  /**
+   * Create Kerberos principal for a given service and hostname. It converts
+   * hostname to lower case. If hostname is null or "0.0.0.0", it uses
+   * dynamically looked-up fqdn of the current host instead.
+   * 
+   * @param service
+   *          Service for which you want to generate the principal.
+   * @param hostname
+   *          Fully-qualified domain name.
+   * @return Converted Kerberos principal name.
+   * @throws UnknownHostException
+   *           If no IP address for the local host could be found.
+   */
+  public static final String getServicePrincipal(String service, String hostname)
+      throws UnknownHostException {
+    String fqdn = hostname;
+    if (null == fqdn || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
+      fqdn = getLocalHostName();
+    }
+    // convert hostname to lowercase as kerberos does not work with hostnames
+    // with uppercase characters.
+    return service + "/" + fqdn.toLowerCase(Locale.US);
   }
 }

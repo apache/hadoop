@@ -22,8 +22,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
 
-import org.apache.hadoop.conf.Configuration;
-
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,6 +62,7 @@ public class TestReflectionUtils {
     Thread[] th = new Thread[32];
     for (int i=0; i<th.length; i++) {
       th[i] = new Thread() {
+          @Override
           public void run() {
             try {
               doTestCache();

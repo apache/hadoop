@@ -66,15 +66,18 @@ public class ObjectWritable implements Writable, Configurable {
     this.instance = instance;
   }
   
+  @Override
   public String toString() {
     return "OW[class=" + declaredClass + ",value=" + instance + "]";
   }
 
   
+  @Override
   public void readFields(DataInput in) throws IOException {
     readObject(in, this, this.conf);
   }
   
+  @Override
   public void write(DataOutput out) throws IOException {
     writeObject(out, instance, declaredClass, conf);
   }
@@ -99,6 +102,7 @@ public class ObjectWritable implements Writable, Configurable {
       super(conf);
       this.declaredClass = declaredClass;
     }
+    @Override
     public void readFields(DataInput in) throws IOException {
       String className = UTF8.readString(in);
       declaredClass = PRIMITIVE_NAMES.get(className);
@@ -110,6 +114,7 @@ public class ObjectWritable implements Writable, Configurable {
         }
       }
     }
+    @Override
     public void write(DataOutput out) throws IOException {
       UTF8.writeString(out, declaredClass.getName());
     }
@@ -375,10 +380,12 @@ public class ObjectWritable implements Writable, Configurable {
     return declaredClass;
   }
 
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
 
+  @Override
   public Configuration getConf() {
     return this.conf;
   }

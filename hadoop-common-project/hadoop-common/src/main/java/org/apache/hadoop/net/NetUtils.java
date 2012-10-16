@@ -355,9 +355,8 @@ public class NetUtils {
   }
   
   /**
-   * Returns the InetSocketAddress that a client can use to connect to the
-   * given listening address.  This returns "hostname:port" of the server,
-   * or "127.0.0.1:port" when given a wildcard address of "0.0.0.0:port".
+   * Returns an InetSocketAddress that a client can use to connect to the
+   * given listening address.
    * 
    * @param addr of a listener
    * @return socket address that a client can use to connect to the server.

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -46,16 +47,19 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 
 import com.google.protobuf.ServiceException;
 
-public class AMRMProtocolPBClientImpl implements AMRMProtocol {
+public class AMRMProtocolPBClientImpl implements AMRMProtocol, Closeable {
 
   private AMRMProtocolPB proxy;
-  
-  public AMRMProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
+
+  public AMRMProtocolPBClientImpl(long clientVersion, InetSocketAddress addr,
+      Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, AMRMProtocolPB.class, ProtobufRpcEngine.class);
-    proxy = (AMRMProtocolPB)RPC.getProxy(
-        AMRMProtocolPB.class, clientVersion, addr, conf);
+    proxy =
+        (AMRMProtocolPB) RPC.getProxy(AMRMProtocolPB.class, clientVersion,
+          addr, conf);
   }
-  
+
+  @Override
   public void close() {
     if (this.proxy != null) {
       RPC.stopProxy(this.proxy);
@@ -65,7 +69,8 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol {
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnRemoteException {
-    AllocateRequestProto requestProto = ((AllocateRequestPBImpl)request).getProto();
+    AllocateRequestProto requestProto =
+        ((AllocateRequestPBImpl) request).getProto();
     try {
       return new AllocateResponsePBImpl(proxy.allocate(null, requestProto));
     } catch (ServiceException e) {
@@ -73,14 +78,14 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol {
     }
   }
 
-  
-  
   @Override
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request) throws YarnRemoteException {
-    FinishApplicationMasterRequestProto requestProto = ((FinishApplicationMasterRequestPBImpl)request).getProto();
+    FinishApplicationMasterRequestProto requestProto =
+        ((FinishApplicationMasterRequestPBImpl) request).getProto();
     try {
-      return new FinishApplicationMasterResponsePBImpl(proxy.finishApplicationMaster(null, requestProto));
+      return new FinishApplicationMasterResponsePBImpl(
+        proxy.finishApplicationMaster(null, requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -89,9 +94,11 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol {
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) throws YarnRemoteException {
-    RegisterApplicationMasterRequestProto requestProto = ((RegisterApplicationMasterRequestPBImpl)request).getProto();
+    RegisterApplicationMasterRequestProto requestProto =
+        ((RegisterApplicationMasterRequestPBImpl) request).getProto();
     try {
-      return new RegisterApplicationMasterResponsePBImpl(proxy.registerApplicationMaster(null, requestProto));
+      return new RegisterApplicationMasterResponsePBImpl(
+        proxy.registerApplicationMaster(null, requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }

@@ -69,6 +69,8 @@
                 <argument>src/main/proto/AM_RM_protocol.proto</argument>
                 <argument>src/main/proto/client_RM_protocol.proto</argument>
                 <argument>src/main/proto/container_manager.proto</argument>
+                <argument>src/main/proto/yarn_server_resourcemanager_service_protos.proto</argument>
+                <argument>src/main/proto/RMAdminProtocol.proto</argument>
               </arguments>
             </configuration>
             <goals>

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -201,7 +202,7 @@ class BlockStorageLocationUtil {
       ArrayList<VolumeId> l = new ArrayList<VolumeId>(b.getLocations().length);
       // Start off all IDs as invalid, fill it in later with results from RPCs
       for (int i = 0; i < b.getLocations().length; i++) {
-        l.add(new HdfsVolumeId((byte)-1, false));
+        l.add(new HdfsVolumeId(null, false));
       }
       blockVolumeIds.put(b, l);
     }
@@ -234,8 +235,8 @@ class BlockStorageLocationUtil {
         }
         // Get the VolumeId by indexing into the list of VolumeIds
         // provided by the datanode
-        HdfsVolumeId id = new HdfsVolumeId(metaVolumeIds.get(volumeIndex)[0],
-            true);
+        byte[] volumeId = metaVolumeIds.get(volumeIndex);
+        HdfsVolumeId id = new HdfsVolumeId(volumeId, true);
         // Find out which index we are in the LocatedBlock's replicas
         LocatedBlock locBlock = extBlockToLocBlock.get(extBlock);
         DatanodeInfo[] dnInfos = locBlock.getLocations();
@@ -255,8 +256,8 @@ class BlockStorageLocationUtil {
         }
         // Place VolumeId at the same index as the DN's index in the list of
         // replicas
-        List<VolumeId> VolumeIds = blockVolumeIds.get(locBlock);
-        VolumeIds.set(index, id);
+        List<VolumeId> volumeIds = blockVolumeIds.get(locBlock);
+        volumeIds.set(index, id);
       }
     }
     return blockVolumeIds;

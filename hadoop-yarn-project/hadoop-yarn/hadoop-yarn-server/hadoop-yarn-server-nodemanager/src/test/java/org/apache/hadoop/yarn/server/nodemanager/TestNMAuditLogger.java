@@ -17,37 +17,29 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static junit.framework.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.TestRPC.TestImpl;
 import org.apache.hadoop.ipc.TestRPC.TestProtocol;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
-import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.Keys;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
-
-import org.apache.hadoop.net.NetUtils;
-
-import static org.mockito.Mockito.*;
-import static junit.framework.Assert.*;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 
 /**
  * Tests {@link NMAuditLogger}.
  */
 public class TestNMAuditLogger {
-  private static final Log LOG = LogFactory.getLog(TestNMAuditLogger.class);
   private static final String USER = "test";
   private static final String OPERATION = "oper";
   private static final String TARGET = "tgt";
@@ -212,8 +204,10 @@ public class TestNMAuditLogger {
   public void testNMAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     // start the IPC server
-    Server server = RPC.getServer(TestProtocol.class,
-        new MyTestRPCServer(), "0.0.0.0", 0, 5, true, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new MyTestRPCServer()).setBindAddress("0.0.0.0")
+        .setPort(0).setNumHandlers(5).setVerbose(true).build();
+
     server.start();
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);

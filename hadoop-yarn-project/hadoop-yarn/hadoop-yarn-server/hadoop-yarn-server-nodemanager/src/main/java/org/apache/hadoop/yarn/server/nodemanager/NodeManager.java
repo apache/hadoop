@@ -46,9 +46,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.ServiceStateChangeListener;
@@ -64,7 +64,6 @@ public class NodeManager extends CompositeService implements
 
   private static final Log LOG = LogFactory.getLog(NodeManager.class);
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
-  protected ContainerTokenSecretManager containerTokenSecretManager;
   private ApplicationACLsManager aclsManager;
   private NodeHealthCheckerService nodeHealthChecker;
   private LocalDirsHandlerService dirsHandler;
@@ -75,10 +74,9 @@ public class NodeManager extends CompositeService implements
   }
 
   protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-      Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-      ContainerTokenSecretManager containerTokenSecretManager) {
+      Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
     return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
-                                     metrics, containerTokenSecretManager);
+      metrics);
   }
 
   protected NodeResourceMonitor createNodeResourceMonitor() {
@@ -87,11 +85,10 @@ public class NodeManager extends CompositeService implements
 
   protected ContainerManagerImpl createContainerManager(Context context,
       ContainerExecutor exec, DeletionService del,
-      NodeStatusUpdater nodeStatusUpdater, ContainerTokenSecretManager 
-      containerTokenSecretManager, ApplicationACLsManager aclsManager,
+      NodeStatusUpdater nodeStatusUpdater, ApplicationACLsManager aclsManager,
       LocalDirsHandlerService dirsHandler) {
     return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
-        metrics, containerTokenSecretManager, aclsManager, dirsHandler);
+      metrics, aclsManager, dirsHandler);
   }
 
   protected WebServer createWebServer(Context nmContext,
@@ -110,14 +107,15 @@ public class NodeManager extends CompositeService implements
 
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
-    Context context = new NMContext();
-
     // Create the secretManager if need be.
+    NMContainerTokenSecretManager containerTokenSecretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       LOG.info("Security is enabled on NodeManager. "
           + "Creating ContainerTokenSecretManager");
-      this.containerTokenSecretManager = new ContainerTokenSecretManager(conf);
+      containerTokenSecretManager = new NMContainerTokenSecretManager(conf);
     }
+
+    Context context = new NMContext(containerTokenSecretManager);
 
     this.aclsManager = new ApplicationACLsManager(conf);
 
@@ -139,8 +137,8 @@ public class NodeManager extends CompositeService implements
     addService(nodeHealthChecker);
     dirsHandler = nodeHealthChecker.getDiskHandler();
 
-    NodeStatusUpdater nodeStatusUpdater = createNodeStatusUpdater(context,
-        dispatcher, nodeHealthChecker, this.containerTokenSecretManager);
+    NodeStatusUpdater nodeStatusUpdater =
+        createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
     nodeStatusUpdater.register(this);
 
     NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
@@ -148,7 +146,7 @@ public class NodeManager extends CompositeService implements
 
     ContainerManagerImpl containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,
-        this.containerTokenSecretManager, this.aclsManager, dirsHandler);
+        this.aclsManager, dirsHandler);
     addService(containerManager);
 
     Service webServer = createWebServer(context, containerManager
@@ -192,10 +190,13 @@ public class NodeManager extends CompositeService implements
     private final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
+    private final NMContainerTokenSecretManager containerTokenSecretManager;
+
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
 
-    public NMContext() {
+    public NMContext(NMContainerTokenSecretManager containerTokenSecretManager) {
+      this.containerTokenSecretManager = containerTokenSecretManager;
       this.nodeHealthStatus.setIsNodeHealthy(true);
       this.nodeHealthStatus.setHealthReport("Healthy");
       this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
@@ -219,6 +220,10 @@ public class NodeManager extends CompositeService implements
       return this.containers;
     }
 
+    @Override
+    public NMContainerTokenSecretManager getContainerTokenSecretManager() {
+      return this.containerTokenSecretManager;
+    }
     @Override
     public NodeHealthStatus getNodeHealthStatus() {
       return this.nodeHealthStatus;

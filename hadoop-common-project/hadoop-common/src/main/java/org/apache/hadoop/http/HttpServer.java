@@ -330,6 +330,12 @@ public class HttpServer implements FilterContainer {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
+      if (conf.getBoolean(
+          CommonConfigurationKeys.HADOOP_JETTY_LOGS_SERVE_ALIASES,
+          CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
+        logContext.getInitParams().put(
+            "org.mortbay.jetty.servlet.Default.aliases", "true");
+      }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
       defaultContexts.put(logContext, true);
@@ -468,7 +474,7 @@ public class HttpServer implements FilterContainer {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
 
@@ -488,7 +494,7 @@ public class HttpServer implements FilterContainer {
     filterNames.add(name);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void addGlobalFilter(String name, String classname,
       Map<String, String> parameters) {
     final String[] ALL_URLS = { "/*" };
@@ -670,6 +676,15 @@ public class HttpServer implements FilterContainer {
           throw new IOException(
               "Problem in starting http server. Server handlers failed");
         }
+      }
+      // Make sure there are no errors initializing the context.
+      Throwable unavailableException = webAppContext.getUnavailableException();
+      if (unavailableException != null) {
+        // Have to stop the webserver, or else its non-daemon threads
+        // will hang forever.
+        webServer.stop();
+        throw new IOException("Unable to initialize WebAppContext",
+            unavailableException);
       }
     } catch (IOException e) {
       throw e;

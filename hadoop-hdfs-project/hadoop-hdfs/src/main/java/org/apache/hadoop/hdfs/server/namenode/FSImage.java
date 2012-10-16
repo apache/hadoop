@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
@@ -91,7 +92,7 @@ public class FSImage implements Closeable {
 
   final private Configuration conf;
 
-  private final NNStorageRetentionManager archivalManager;
+  protected NNStorageRetentionManager archivalManager;
 
   /**
    * Construct an FSImage
@@ -555,9 +556,7 @@ public class FSImage implements Closeable {
    * file.
    */
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
-    target.dir.reset();
-    target.dtSecretManager.reset();
-
+    target.clear();
     LOG.debug("Reloading namespace from " + file);
     loadFSImage(file, target, null);
   }

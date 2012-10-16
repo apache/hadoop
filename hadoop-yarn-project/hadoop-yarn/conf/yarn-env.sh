@@ -17,7 +17,7 @@
 export HADOOP_YARN_USER=${HADOOP_YARN_USER:-yarn}
 
 # resolve links - $0 may be a softlink
-export YARN_CONF_DIR="${YARN_CONF_DIR:-$YARN_HOME/conf}"
+export YARN_CONF_DIR="${YARN_CONF_DIR:-$HADOOP_YARN_HOME/conf}"
 
 # some Java parameters
 # export JAVA_HOME=/home/y/libexec/jdk1.6.0/
@@ -47,7 +47,7 @@ IFS=
 
 # default log directory & file
 if [ "$YARN_LOG_DIR" = "" ]; then
-  YARN_LOG_DIR="$YARN_HOME/logs"
+  YARN_LOG_DIR="$HADOOP_YARN_HOME/logs"
 fi
 if [ "$YARN_LOGFILE" = "" ]; then
   YARN_LOGFILE='yarn.log'
@@ -60,6 +60,15 @@ fi
 
 # restore ordinary behaviour
 unset IFS
+
+MAC_OSX=false
+case "`uname`" in
+Darwin*) MAC_OSX=true;;
+esac
+
+if $MAC_OSX; then
+  YARN_OPTS="$YARN_OPTS -Djava.security.krb5.realm= -Djava.security.krb5.kdc="
+fi
 
 
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.dir=$YARN_LOG_DIR"

@@ -17,7 +17,7 @@
 
 bin=`which $0`
 bin=`dirname ${bin}`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin" > /dev/null; pwd`
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
@@ -35,7 +35,6 @@ function print_usage(){
   echo "  queue                get information regarding JobQueues"
   echo "  classpath            prints the class path needed for running"
   echo "                       mapreduce subcommands"
-  echo "  groups               get the groups which users belong to"
   echo "  historyserver        run job history servers as a standalone daemon"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
@@ -63,9 +62,6 @@ elif [ "$COMMAND" = "sampler" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "classpath" ] ; then
   echo -n 
-elif [ "$COMMAND" = "groups" ] ; then
-  CLASS=org.apache.hadoop.mapred.tools.GetGroups
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "historyserver" ] ; then
   CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
   HADOOP_OPTS="$HADOOP_OPTS -Dmapred.jobsummary.logger=${HADOOP_JHS_LOGGER:-INFO,console} $HADOOP_JOB_HISTORYSERVER_OPTS"
@@ -74,7 +70,8 @@ elif [ "$COMMAND" = "historyserver" ] ; then
   fi
 elif [ "$COMMAND" = "mradmin" ] \
     || [ "$COMMAND" = "jobtracker" ] \
-    || [ "$COMMAND" = "tasktracker" ] ; then
+    || [ "$COMMAND" = "tasktracker" ] \
+    || [ "$COMMAND" = "groups" ] ; then
   echo "Sorry, the $COMMAND command is no longer supported."
   echo "You may find similar functionality with the \"yarn\" shell command."
   print_usage
@@ -112,6 +109,11 @@ if [ -d "$HADOOP_PREFIX/${MAPRED_DIR}/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/${MAPRED_DIR}
 fi
 for f in $HADOOP_MAPRED_HOME/${MAPRED_DIR}/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# Need YARN jars also
+for f in $HADOOP_YARN_HOME/${YARN_DIR}/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 

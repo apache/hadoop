@@ -83,7 +83,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @LimitedPrivate("yarn")
@@ -97,7 +96,6 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     RecordFactoryProvider.getRecordFactory(null);
 
   Configuration conf;
-  private ContainerTokenSecretManager containerTokenSecretManager;
 
   private final static Container[] EMPTY_CONTAINER_ARRAY = new Container[] {};
   private final static List<Container> EMPTY_CONTAINER_LIST = Arrays.asList(EMPTY_CONTAINER_ARRAY);
@@ -193,14 +191,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   }
 
   @Override
-  public synchronized void reinitialize(Configuration conf,
-      ContainerTokenSecretManager containerTokenSecretManager, 
-      RMContext rmContext) 
-  throws IOException 
+  public synchronized void
+      reinitialize(Configuration conf, RMContext rmContext) throws IOException
   {
     setConf(conf);
     if (!this.initialized) {
-      this.containerTokenSecretManager = containerTokenSecretManager;
       this.rmContext = rmContext;
       this.minimumAllocation = 
         Resources.createResource(conf.getInt(
@@ -543,8 +538,9 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
           containerToken =
-              containerTokenSecretManager.createContainerToken(containerId,
-                nodeId, capability);
+              this.rmContext.getContainerTokenSecretManager()
+                .createContainerToken(containerId, nodeId,
+                  application.getUser(), capability);
           if (containerToken == null) {
             return i; // Try again later.
           }

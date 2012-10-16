@@ -312,9 +312,6 @@ public class Hdfs extends AbstractFileSystem {
     return listing.toArray(new FileStatus[listing.size()]);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
@@ -324,7 +321,7 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public void mkdir(Path dir, FsPermission permission, boolean createParent)
     throws IOException, UnresolvedLinkException {
-    dfs.mkdirs(getUriPath(dir), permission, createParent);
+    dfs.primitiveMkdir(getUriPath(dir), permission, createParent);
   }
 
   @SuppressWarnings("deprecation")

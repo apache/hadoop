@@ -53,7 +53,7 @@ public class TestRBWBlockInvalidation {
    * datanode, namenode should ask to invalidate that corrupted block and
    * schedule replication for one more replica for that under replicated block.
    */
-  @Test
+  @Test(timeout=60000)
   public void testBlockInvalidationWhenRBWReplicaMissedInDN()
       throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();

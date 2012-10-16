@@ -189,6 +189,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int read() throws IOException {
     if (!useWrap) {
       return inStream.read();
@@ -220,6 +221,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int read(byte[] b) throws IOException {
     return read(b, 0, b.length);
   }
@@ -242,6 +244,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int read(byte[] b, int off, int len) throws IOException {
     if (!useWrap) {
       return inStream.read(b, off, len);
@@ -286,6 +289,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public long skip(long n) throws IOException {
     if (!useWrap) {
       return inStream.skip(n);
@@ -312,6 +316,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int available() throws IOException {
     if (!useWrap) {
       return inStream.available();
@@ -329,6 +334,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void close() throws IOException {
     disposeSasl();
     ostart = 0;
@@ -344,6 +350,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @return <code>false</code>, since this class does not support the
    *         <code>mark</code> and <code>reset</code> methods.
    */
+  @Override
   public boolean markSupported() {
     return false;
   }

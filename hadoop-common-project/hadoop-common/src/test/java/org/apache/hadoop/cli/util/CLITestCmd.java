@@ -31,6 +31,7 @@ public class CLITestCmd implements CLICommand {
     this.type = type;
   }
 
+  @Override
   public CommandExecutor getExecutor(String tag) throws IllegalArgumentException {
     if (getType() instanceof CLICommandFS)
       return new FSCmdExecutor(tag, new FsShell());
@@ -38,12 +39,17 @@ public class CLITestCmd implements CLICommand {
         IllegalArgumentException("Unknown type of test command: " + getType());
   }
 
+  @Override
   public CLICommandTypes getType() {
     return type;
   }
+  
+  @Override
   public String getCmd() {
     return cmd;
   }
+  
+  @Override
   public String toString() {
     return cmd;
   }

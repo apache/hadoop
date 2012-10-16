@@ -35,7 +35,6 @@ import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Location;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

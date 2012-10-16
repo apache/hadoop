@@ -131,6 +131,8 @@ public class Job extends JobContextImpl implements JobContext {
 
   Job(JobConf conf) throws IOException {
     super(conf, null);
+    // propagate existing user credentials to job
+    this.credentials.mergeAll(this.ugi.getCredentials());
     this.cluster = null;
   }
 

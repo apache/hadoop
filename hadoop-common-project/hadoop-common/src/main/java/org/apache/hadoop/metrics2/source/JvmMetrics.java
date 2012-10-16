@@ -23,7 +23,6 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import static java.lang.Thread.State.*;
 import java.lang.management.GarbageCollectorMXBean;
 import java.util.Map;
 import java.util.List;

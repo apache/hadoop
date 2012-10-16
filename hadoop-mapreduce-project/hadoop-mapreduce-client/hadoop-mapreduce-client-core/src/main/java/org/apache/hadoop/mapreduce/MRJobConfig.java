@@ -595,4 +595,18 @@ public interface MRJobConfig {
   MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT =
       "security.job.client.protocol.acl";
 
+  /**
+   * CLASSPATH for all YARN MapReduce applications.
+   */
+  public static final String MAPREDUCE_APPLICATION_CLASSPATH = 
+      "mapreduce.application.classpath";
+
+  /**
+   * Default CLASSPATH for all YARN MapReduce applications.
+   */
+  public static final String[] DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH = {
+      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*",
+      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*",
+  };
+  
 }

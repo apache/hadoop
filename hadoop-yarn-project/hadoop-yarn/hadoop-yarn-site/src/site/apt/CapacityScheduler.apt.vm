@@ -278,17 +278,17 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 | | Existing applications continue to completion, thus the queue can be 
 | | <drained> gracefully. | 
 *--------------------------------------+--------------------------------------+
-| <<<yarn.scheduler.capacity.root.<queue-path>.acl_submit_jobs>>> | |
-| | The <ACL> which controls who can <submit> jobs to the given queue. |
+| <<<yarn.scheduler.capacity.root.<queue-path>.acl_submit_applications>>> | |
+| | The <ACL> which controls who can <submit> applications to the given queue. |
 | | If the given user/group has necessary ACLs on the given queue or |
-| | <one of the parent queues in the hierarchy> they can submit jobs. |
+| | <one of the parent queues in the hierarchy> they can submit applications. |
 | | <ACLs> for this property <are> inherited from the parent queue |
 | | if not specified. |
 *--------------------------------------+--------------------------------------+
-| <<<yarn.scheduler.capacity.root.<queue-path>.acl_administer_jobs>>> | |
-| | The <ACL> which controls who can <administer> jobs on the given queue. |
+| <<<yarn.scheduler.capacity.root.<queue-path>.acl_administer_queue>>> | |
+| | The <ACL> which controls who can <administer> applications on the given queue. |
 | | If the given user/group has necessary ACLs on the given queue or |
-| | <one of the parent queues in the hierarchy> they can administer jobs. |
+| | <one of the parent queues in the hierarchy> they can administer applications. |
 | | <ACLs> for this property <are> inherited from the parent queue |
 | | if not specified. |
 *--------------------------------------+--------------------------------------+
@@ -318,7 +318,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
   
 ----
 $ vi $HADOOP_CONF_DIR/capacity-scheduler.xml
-$ $YARN_HOME/bin/yarn rmadmin -refreshQueues
+$ $HADOOP_YARN_HOME/bin/yarn rmadmin -refreshQueues
 ----  
 
   <Note:> Queues cannot be <deleted>, only addition of new queues is supported -

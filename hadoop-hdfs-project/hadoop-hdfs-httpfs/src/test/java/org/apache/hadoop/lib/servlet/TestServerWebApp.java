@@ -24,7 +24,10 @@ import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.InetSocketAddress;
 
 public class TestServerWebApp extends HTestCase {
 
@@ -74,4 +77,23 @@ public class TestServerWebApp extends HTestCase {
 
     server.contextInitialized(null);
   }
+
+  @Test
+  @TestDir
+  public void testResolveAuthority() throws Exception {
+    String dir = TestDirHelper.getTestDir().getAbsolutePath();
+    System.setProperty("TestServerWebApp3.home.dir", dir);
+    System.setProperty("TestServerWebApp3.config.dir", dir);
+    System.setProperty("TestServerWebApp3.log.dir", dir);
+    System.setProperty("TestServerWebApp3.temp.dir", dir);
+    System.setProperty("testserverwebapp3.http.hostname", "localhost");
+    System.setProperty("testserverwebapp3.http.port", "14000");
+    ServerWebApp server = new ServerWebApp("TestServerWebApp3") {
+    };
+
+    InetSocketAddress address = server.resolveAuthority();
+    Assert.assertEquals("localhost", address.getHostName());
+    Assert.assertEquals(14000, address.getPort());
+  }
+
 }

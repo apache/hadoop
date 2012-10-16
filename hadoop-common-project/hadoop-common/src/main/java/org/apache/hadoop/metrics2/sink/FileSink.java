@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.metrics2.sink;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;

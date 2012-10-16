@@ -36,15 +36,18 @@ public class JDouble extends JType {
       super("double", "Double", "Double", "TypeID.RIOType.DOUBLE");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.DoubleTypeID";
     }
 
+    @Override
     void genHashCode(CodeBuffer cb, String fname) {
       String tmp = "Double.doubleToLongBits("+fname+")";
       cb.append(Consts.RIO_PREFIX + "ret = (int)("+tmp+"^("+tmp+">>>32));\n");
     }
     
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("if ("+l+"<8) {\n");
@@ -55,6 +58,7 @@ public class JDouble extends JType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("if (l1<8 || l2<8) {\n");
@@ -77,6 +81,7 @@ public class JDouble extends JType {
       super("double");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_DOUBLE)";
     }
@@ -90,6 +95,7 @@ public class JDouble extends JType {
     setCType(new CType());
   }
   
+  @Override
   String getSignature() {
     return "d";
   }

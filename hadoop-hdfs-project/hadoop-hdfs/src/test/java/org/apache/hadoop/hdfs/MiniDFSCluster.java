@@ -624,14 +624,20 @@ public class MiniDFSCluster {
     }
     
     federation = nnTopology.isFederated();
-    createNameNodesAndSetConf(
-        nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
-        enableManagedDfsDirsRedundancy,
-        format, operation, clusterId, conf);
-    
+    try {
+      createNameNodesAndSetConf(
+          nnTopology, manageNameDfsDirs, manageNameDfsSharedDirs,
+          enableManagedDfsDirsRedundancy,
+          format, operation, clusterId, conf);
+    } catch (IOException ioe) {
+      LOG.error("IOE creating namenodes. Permissions dump:\n" +
+          createPermissionsDiagnosisString(data_dir));
+      throw ioe;
+    }
     if (format) {
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-        throw new IOException("Cannot remove data directory: " + data_dir);
+        throw new IOException("Cannot remove data directory: " + data_dir +
+            createPermissionsDiagnosisString(data_dir));
       }
     }
     
@@ -647,6 +653,27 @@ public class MiniDFSCluster {
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
   
+  /**
+   * @return a debug string which can help diagnose an error of why
+   * a given directory might have a permissions error in the context
+   * of a test case
+   */
+  private String createPermissionsDiagnosisString(File path) {
+    StringBuilder sb = new StringBuilder();
+    while (path != null) { 
+      sb.append("path '" + path + "': ").append("\n");
+      sb.append("\tabsolute:").append(path.getAbsolutePath()).append("\n");
+      sb.append("\tpermissions: ");
+      sb.append(path.isDirectory() ? "d": "-");
+      sb.append(path.canRead() ? "r" : "-");
+      sb.append(path.canWrite() ? "w" : "-");
+      sb.append(path.canExecute() ? "x" : "-");
+      sb.append("\n");
+      path = path.getParentFile();
+    }
+    return sb.toString();
+  }
+
   private void createNameNodesAndSetConf(MiniDFSNNTopology nnTopology,
       boolean manageNameDfsDirs, boolean manageNameDfsSharedDirs,
       boolean enableManagedDfsDirsRedundancy, boolean format,
@@ -857,8 +884,8 @@ public class MiniDFSCluster {
     // After the NN has started, set back the bound ports into
     // the conf
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId), NetUtils
-        .getHostPortString(nn.getNameNodeAddress()));
+        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId),
+        nn.getNameNodeAddressHostPortString());
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId, nnId), NetUtils
         .getHostPortString(nn.getHttpAddress()));
@@ -880,8 +907,8 @@ public class MiniDFSCluster {
    * @return URI of the given namenode in MiniDFSCluster
    */
   public URI getURI(int nnIndex) {
-    InetSocketAddress addr = nameNodes[nnIndex].nameNode.getNameNodeAddress();
-    String hostPort = NetUtils.getHostPortString(addr);
+    String hostPort =
+        nameNodes[nnIndex].nameNode.getNameNodeAddressHostPortString();
     URI uri = null;
     try {
       uri = new URI("hdfs://" + hostPort);
@@ -918,13 +945,17 @@ public class MiniDFSCluster {
   /**
    * wait for the cluster to get out of safemode.
    */
-  public void waitClusterUp() {
+  public void waitClusterUp() throws IOException {
+    int i = 0;
     if (numDataNodes > 0) {
       while (!isClusterUp()) {
         try {
           LOG.warn("Waiting for the Mini HDFS Cluster to start...");
           Thread.sleep(1000);
         } catch (InterruptedException e) {
+        }
+        if (++i > 10) {
+          throw new IOException("Timed out waiting for Mini HDFS Cluster to start");
         }
       }
     }
@@ -1354,6 +1385,7 @@ public class MiniDFSCluster {
       if (ExitUtil.terminateCalled()) {
         LOG.fatal("Test resulted in an unexpected exit",
             ExitUtil.getFirstExitException());
+        ExitUtil.resetFirstExitException();
         throw new AssertionError("Test resulted in an unexpected exit");
       }
     }

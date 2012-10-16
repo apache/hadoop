@@ -27,7 +27,6 @@ import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.util.Timer;
 
 public class TestShell extends TestCase {
 
@@ -38,10 +37,12 @@ public class TestShell extends TestCase {
       super(interval);
     }
 
+    @Override
     protected String[] getExecString() {
       return new String[] {"echo", "hello"};
     }
 
+    @Override
     protected void parseExecResult(BufferedReader lines) throws IOException {
       ++runCount;
     }

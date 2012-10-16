@@ -83,6 +83,8 @@ import org.apache.hadoop.util.Time;
  * 
  * @see Server
  */
+@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@InterfaceStability.Evolving
 public class Client {
   
   public static final Log LOG = LogFactory.getLog(Client.class);
@@ -223,7 +225,6 @@ public class Client {
     private IpcConnectionContextProto connectionContext;   // connection context
     private final ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
-    private boolean useSasl;
     private Token<? extends TokenIdentifier> token;
     private SaslRpcClient saslRpcClient;
     
@@ -268,8 +269,7 @@ public class Client {
 
       UserGroupInformation ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
-      this.useSasl = UserGroupInformation.isSecurityEnabled();
-      if (useSasl && protocol != null) {
+      if (protocol != null) {
         TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol, conf);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
@@ -294,12 +294,12 @@ public class Client {
         }
       }
       
-      if (!useSasl) {
-        authMethod = AuthMethod.SIMPLE;
-      } else if (token != null) {
+      if (token != null) {
         authMethod = AuthMethod.DIGEST;
-      } else {
+      } else if (UserGroupInformation.isSecurityEnabled()) {
         authMethod = AuthMethod.KERBEROS;
+      } else {
+        authMethod = AuthMethod.SIMPLE;
       }
       
       connectionContext = ProtoUtil.makeIpcConnectionContext(
@@ -364,6 +364,7 @@ public class Client {
        * until a byte is read.
        * @throws IOException for any IO problem other than socket timeout
        */
+      @Override
       public int read() throws IOException {
         do {
           try {
@@ -380,6 +381,7 @@ public class Client {
        * 
        * @return the total number of bytes read; -1 if the connection is closed.
        */
+      @Override
       public int read(byte[] buf, int off, int len) throws IOException {
         do {
           try {
@@ -510,6 +512,7 @@ public class Client {
         final Random rand, final UserGroupInformation ugi) throws IOException,
         InterruptedException {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws IOException, InterruptedException {
           final short MAX_BACKOFF = 5000;
           closeConnection();
@@ -571,14 +574,12 @@ public class Client {
           InputStream inStream = NetUtils.getInputStream(socket);
           OutputStream outStream = NetUtils.getOutputStream(socket);
           writeConnectionHeader(outStream);
-          if (useSasl) {
+          if (authMethod != AuthMethod.SIMPLE) {
             final InputStream in2 = inStream;
             final OutputStream out2 = outStream;
             UserGroupInformation ticket = remoteId.getTicket();
-            if (authMethod == AuthMethod.KERBEROS) {
-              if (ticket.getRealUser() != null) {
-                ticket = ticket.getRealUser();
-              }
+            if (ticket.getRealUser() != null) {
+              ticket = ticket.getRealUser();
             }
             boolean continueSasl = false;
             try {
@@ -609,7 +610,6 @@ public class Client {
                   connectionContext.getProtocol(), 
                   ProtoUtil.getUgi(connectionContext.getUserInfo()),
                   authMethod);
-              useSasl = false;
             }
           }
         
@@ -803,6 +803,7 @@ public class Client {
       }
     }
 
+    @Override
     public void run() {
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": starting, having connections " 
@@ -1168,7 +1169,7 @@ public class Client {
                   call.error);
         }
       } else {
-        return call.rpcResponse;
+        return call.getRpcResult();
       }
     }
   }

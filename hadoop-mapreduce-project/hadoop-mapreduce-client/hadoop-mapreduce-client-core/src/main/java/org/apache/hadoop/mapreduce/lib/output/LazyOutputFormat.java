@@ -32,7 +32,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * A Convenience class that creates output lazily.  
+ * A Convenience class that creates output lazily.
+ * Use in conjuction with org.apache.hadoop.mapreduce.lib.output.MultipleOutputs to recreate the
+ * behaviour of org.apache.hadoop.mapred.lib.MultipleTextOutputFormat (etc) of the old Hadoop API.
+ * See {@link MultipleOutputs} documentation for more information.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

@@ -37,15 +37,21 @@ message NodeStatusProto {
   repeated ApplicationIdProto keep_alive_applications = 5;
 }
 
+message MasterKeyProto {
+  optional int32 key_id = 1;
+  optional bytes bytes = 2;
+}
+
 message RegistrationResponseProto {
-  optional bytes secret_key = 1;
+  optional MasterKeyProto master_key = 1;
   optional NodeActionProto nodeAction = 2;
 }
 
 message HeartbeatResponseProto {
   optional int32 response_id = 1;
-  optional NodeActionProto nodeAction = 2;
-  repeated ContainerIdProto containers_to_cleanup = 3;
-  repeated ApplicationIdProto applications_to_cleanup = 4;
+  optional MasterKeyProto master_key = 2;
+  optional NodeActionProto nodeAction = 3;
+  repeated ContainerIdProto containers_to_cleanup = 4;
+  repeated ApplicationIdProto applications_to_cleanup = 5;
 }
 

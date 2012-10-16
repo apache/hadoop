@@ -165,8 +165,10 @@ public class MiniRPCBenchmark {
         new TestDelegationTokenSecretManager(24*60*60*1000,
             7*24*60*60*1000,24*60*60*1000,3600000);
       secretManager.startThreads();
-      rpcServer = RPC.getServer(MiniProtocol.class,
-          this, DEFAULT_SERVER_ADDRESS, 0, 1, false, conf, secretManager);
+      rpcServer = new RPC.Builder(conf).setProtocol(MiniProtocol.class)
+          .setInstance(this).setBindAddress(DEFAULT_SERVER_ADDRESS).setPort(0)
+          .setNumHandlers(1).setVerbose(false).setSecretManager(secretManager)
+          .build();
       rpcServer.start();
     }
 
@@ -208,6 +210,7 @@ public class MiniRPCBenchmark {
       
       try {
         client =  proxyUserUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
+          @Override
           public MiniProtocol run() throws IOException {
             MiniProtocol p = (MiniProtocol) RPC.getProxy(MiniProtocol.class,
                 MiniProtocol.versionID, addr, conf);
@@ -235,6 +238,7 @@ public class MiniRPCBenchmark {
       long start = Time.now();
       try {
         client = currentUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
+          @Override
           public MiniProtocol run() throws IOException {
             return (MiniProtocol) RPC.getProxy(MiniProtocol.class,
                 MiniProtocol.versionID, addr, conf);

@@ -43,10 +43,12 @@ public class VLongWritable implements WritableComparable<VLongWritable> {
   /** Return the value of this LongWritable. */
   public long get() { return value; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = WritableUtils.readVLong(in);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVLong(out, value);
   }

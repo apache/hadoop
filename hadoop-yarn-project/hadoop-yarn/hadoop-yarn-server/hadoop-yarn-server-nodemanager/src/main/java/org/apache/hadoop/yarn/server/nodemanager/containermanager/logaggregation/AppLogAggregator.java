@@ -26,7 +26,4 @@ public interface AppLogAggregator extends Runnable {
       boolean wasContainerSuccessful);
 
   void finishLogAggregation();
-
-  void join();
-
 }

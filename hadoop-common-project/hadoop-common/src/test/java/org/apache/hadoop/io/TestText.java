@@ -284,6 +284,7 @@ public class TestText extends TestCase {
       super(name);
     }
 
+    @Override
     public void run() {
       String name = this.getName();
       DataOutputBuffer out = new DataOutputBuffer();

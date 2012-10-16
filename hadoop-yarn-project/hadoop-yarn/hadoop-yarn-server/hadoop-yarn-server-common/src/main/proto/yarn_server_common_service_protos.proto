@@ -35,6 +35,7 @@ message RegisterNodeManagerResponseProto {
 
 message NodeHeartbeatRequestProto {
   optional NodeStatusProto node_status = 1;
+  optional MasterKeyProto last_known_master_key = 2;
 }
 
 message NodeHeartbeatResponseProto {

@@ -32,8 +32,10 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.HeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.HeartbeatResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
 public class HeartbeatResponsePBImpl extends
@@ -43,9 +45,8 @@ public class HeartbeatResponsePBImpl extends
   boolean viaProto = false;
   
   private List<ContainerId> containersToCleanup = null;
-  
   private List<ApplicationId> applicationsToCleanup = null;
-  
+  private MasterKey masterKey = null;
   
   public HeartbeatResponsePBImpl() {
     builder = HeartbeatResponseProto.newBuilder();
@@ -70,6 +71,9 @@ public class HeartbeatResponsePBImpl extends
     }
     if (this.applicationsToCleanup != null) {
       addApplicationsToCleanupToProto();
+    }
+    if (this.masterKey != null) {
+      builder.setMasterKey(convertToProtoFormat(this.masterKey));
     }
   }
 
@@ -100,6 +104,28 @@ public class HeartbeatResponsePBImpl extends
     maybeInitBuilder();
     builder.setResponseId((responseId));
   }
+
+  @Override
+  public MasterKey getMasterKey() {
+    HeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.masterKey != null) {
+      return this.masterKey;
+    }
+    if (!p.hasMasterKey()) {
+      return null;
+    }
+    this.masterKey = convertFromProtoFormat(p.getMasterKey());
+    return this.masterKey;
+  }
+
+  @Override
+  public void setMasterKey(MasterKey masterKey) {
+    maybeInitBuilder();
+    if (masterKey == null) 
+      builder.clearMasterKey();
+    this.masterKey = masterKey;
+  }
+
   @Override
   public NodeAction getNodeAction() {
     HeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
@@ -312,5 +338,13 @@ public class HeartbeatResponsePBImpl extends
   
   private NodeActionProto convertToProtoFormat(NodeAction t) {
     return NodeActionProto.valueOf(t.name());
+  }
+
+  private MasterKeyPBImpl convertFromProtoFormat(MasterKeyProto p) {
+    return new MasterKeyPBImpl(p);
+  }
+
+  private MasterKeyProto convertToProtoFormat(MasterKey t) {
+    return ((MasterKeyPBImpl)t).getProto();
   }
 }  

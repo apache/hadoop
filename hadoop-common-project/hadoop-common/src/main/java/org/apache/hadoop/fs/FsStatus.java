@@ -60,12 +60,14 @@ public class FsStatus implements Writable {
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeLong(capacity);
     out.writeLong(used);
     out.writeLong(remaining);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     capacity = in.readLong();
     used = in.readLong();

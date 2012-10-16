@@ -40,6 +40,7 @@ public class FsPermission implements Writable {
   private static final Log LOG = LogFactory.getLog(FsPermission.class);
 
   static final WritableFactory FACTORY = new WritableFactory() {
+    @Override
     public Writable newInstance() { return new FsPermission(); }
   };
   static {                                      // register a ctor
@@ -124,12 +125,12 @@ public class FsPermission implements Writable {
     set(v[(n >>> 6) & 7], v[(n >>> 3) & 7], v[n & 7], (((n >>> 9) & 1) == 1) );
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeShort(toShort());
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     fromShort(in.readShort());
   }
@@ -155,7 +156,7 @@ public class FsPermission implements Writable {
     return (short)s;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean equals(Object obj) {
     if (obj instanceof FsPermission) {
       FsPermission that = (FsPermission)obj;
@@ -167,10 +168,10 @@ public class FsPermission implements Writable {
     return false;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {return toShort();}
 
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     String str = useraction.SYMBOL + groupaction.SYMBOL + otheraction.SYMBOL;
     if(stickyBit) {
@@ -300,9 +301,11 @@ public class FsPermission implements Writable {
     public ImmutableFsPermission(short permission) {
       super(permission);
     }
+    @Override
     public FsPermission applyUMask(FsPermission umask) {
       throw new UnsupportedOperationException();
     }
+    @Override
     public void readFields(DataInput in) throws IOException {
       throw new UnsupportedOperationException();
     }    

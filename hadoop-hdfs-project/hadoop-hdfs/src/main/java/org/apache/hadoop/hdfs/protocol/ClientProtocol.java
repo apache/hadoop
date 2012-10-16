@@ -667,6 +667,18 @@ public interface ClientProtocol {
    */
   public void saveNamespace() throws AccessControlException, IOException;
 
+  
+  /**
+   * Roll the edit log.
+   * Requires superuser privileges.
+   * 
+   * @throws AccessControlException if the superuser privilege is violated
+   * @throws IOException if log roll fails
+   * @return the txid of the new segment
+   */
+  @Idempotent
+  public long rollEdits() throws AccessControlException, IOException;
+
   /**
    * Enable/Disable restore failed storage.
    * <p>

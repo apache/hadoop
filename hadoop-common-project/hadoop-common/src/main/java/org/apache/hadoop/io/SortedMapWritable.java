@@ -57,86 +57,86 @@ public class SortedMapWritable extends AbstractMapWritable
     copy(other);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Comparator<? super WritableComparable> comparator() {
     // Returning null means we use the natural ordering of the keys
     return null;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public WritableComparable firstKey() {
     return instance.firstKey();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public SortedMap<WritableComparable, Writable>
   headMap(WritableComparable toKey) {
     
     return instance.headMap(toKey);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public WritableComparable lastKey() {
     return instance.lastKey();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public SortedMap<WritableComparable, Writable>
   subMap(WritableComparable fromKey, WritableComparable toKey) {
     
     return instance.subMap(fromKey, toKey);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public SortedMap<WritableComparable, Writable>
   tailMap(WritableComparable fromKey) {
     
     return instance.tailMap(fromKey);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void clear() {
     instance.clear();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean containsKey(Object key) {
     return instance.containsKey(key);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean containsValue(Object value) {
     return instance.containsValue(value);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Set<java.util.Map.Entry<WritableComparable, Writable>> entrySet() {
     return instance.entrySet();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Writable get(Object key) {
     return instance.get(key);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean isEmpty() {
     return instance.isEmpty();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Set<WritableComparable> keySet() {
     return instance.keySet();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Writable put(WritableComparable key, Writable value) {
     addToMap(key.getClass());
     addToMap(value.getClass());
     return instance.put(key, value);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void putAll(Map<? extends WritableComparable, ? extends Writable> t) {
     for (Map.Entry<? extends WritableComparable, ? extends Writable> e:
       t.entrySet()) {
@@ -145,22 +145,21 @@ public class SortedMapWritable extends AbstractMapWritable
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Writable remove(Object key) {
     return instance.remove(key);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int size() {
     return instance.size();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public Collection<Writable> values() {
     return instance.values();
   }
 
-  /** {@inheritDoc} */
   @SuppressWarnings("unchecked")
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -187,7 +186,6 @@ public class SortedMapWritable extends AbstractMapWritable
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);

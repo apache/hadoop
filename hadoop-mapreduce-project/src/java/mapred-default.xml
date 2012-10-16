@@ -701,7 +701,7 @@
 
 <property>
   <name>mapreduce.job.maxtaskfailures.per.tracker</name>
-  <value>4</value>
+  <value>3</value>
   <description>The number of task-failures on a tasktracker of a given job 
                after which new tasks of that job aren't assigned to it.
   </description>

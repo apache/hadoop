@@ -42,13 +42,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("rawtypes")
 public class TestRMNMRPCResponseId {
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   ResourceTrackerService resourceTrackerService;
@@ -66,14 +67,14 @@ public class TestRMNMRPCResponseId {
     });
     RMContext context = 
         new RMContextImpl(new MemStore(), dispatcher, null, null, null,
-            null, null);
+            null, null, null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
     NodesListManager nodesListManager = new NodesListManager(context);
     Configuration conf = new Configuration();
     nodesListManager.init(conf);
-    ContainerTokenSecretManager containerTokenSecretManager =
-        new ContainerTokenSecretManager(conf);
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        new RMContainerTokenSecretManager(conf);
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, new NMLivelinessMonitor(dispatcher),
         containerTokenSecretManager);

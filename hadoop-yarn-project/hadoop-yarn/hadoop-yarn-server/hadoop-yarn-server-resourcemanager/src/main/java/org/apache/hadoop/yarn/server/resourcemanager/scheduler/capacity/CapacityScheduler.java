@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -46,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -126,7 +126,6 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
   private CapacitySchedulerConfiguration conf;
   private YarnConfiguration yarnConf;
-  private ContainerTokenSecretManager containerTokenSecretManager;
   private RMContext rmContext;
 
   private Map<String, CSQueue> queues = new ConcurrentHashMap<String, CSQueue>();
@@ -163,8 +162,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   @Override
-  public ContainerTokenSecretManager getContainerTokenSecretManager() {
-    return containerTokenSecretManager;
+  public RMContainerTokenSecretManager getContainerTokenSecretManager() {
+    return this.rmContext.getContainerTokenSecretManager();
   }
 
   @Override
@@ -193,14 +192,12 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
   
   @Override
-  public synchronized void reinitialize(Configuration conf,
-      ContainerTokenSecretManager containerTokenSecretManager, RMContext rmContext) 
-  throws IOException {
+  public synchronized void
+      reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!initialized) {
       this.conf = new CapacitySchedulerConfiguration(conf);
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
-      this.containerTokenSecretManager = containerTokenSecretManager;
       this.rmContext = rmContext;
       initializeQueues(this.conf);
       initialized = true;

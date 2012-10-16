@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.io.Closeable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -58,22 +58,26 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
       + "rpc.nm-command-timeout";
 
   /**
-   *  Maximum of 1 minute timeout for a Node to react to the command
+   * Maximum of 1 minute timeout for a Node to react to the command
    */
   static final int DEFAULT_COMMAND_TIMEOUT = 60000;
 
   private ContainerManagerPB proxy;
-  
-  public ContainerManagerPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, ContainerManagerPB.class, ProtobufRpcEngine.class);
+
+  public ContainerManagerPBClientImpl(long clientVersion,
+      InetSocketAddress addr, Configuration conf) throws IOException {
+    RPC.setProtocolEngine(conf, ContainerManagerPB.class,
+      ProtobufRpcEngine.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);
-    proxy = (ContainerManagerPB)RPC.getProxy(
-        ContainerManagerPB.class, clientVersion, addr, ugi, conf,
-        NetUtils.getDefaultSocketFactory(conf), expireIntvl);
+    proxy =
+        (ContainerManagerPB) RPC.getProxy(ContainerManagerPB.class,
+          clientVersion, addr, ugi, conf,
+          NetUtils.getDefaultSocketFactory(conf), expireIntvl);
   }
 
+  @Override
   public void close() {
     if (this.proxy != null) {
       RPC.stopProxy(this.proxy);
@@ -83,9 +87,11 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
   @Override
   public GetContainerStatusResponse getContainerStatus(
       GetContainerStatusRequest request) throws YarnRemoteException {
-    GetContainerStatusRequestProto requestProto = ((GetContainerStatusRequestPBImpl)request).getProto();
+    GetContainerStatusRequestProto requestProto =
+        ((GetContainerStatusRequestPBImpl) request).getProto();
     try {
-      return new GetContainerStatusResponsePBImpl(proxy.getContainerStatus(null, requestProto));
+      return new GetContainerStatusResponsePBImpl(proxy.getContainerStatus(
+        null, requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -94,9 +100,11 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
       throws YarnRemoteException {
-    StartContainerRequestProto requestProto = ((StartContainerRequestPBImpl)request).getProto();
+    StartContainerRequestProto requestProto =
+        ((StartContainerRequestPBImpl) request).getProto();
     try {
-      return new StartContainerResponsePBImpl(proxy.startContainer(null, requestProto));
+      return new StartContainerResponsePBImpl(proxy.startContainer(null,
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
@@ -105,11 +113,11 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
   @Override
   public StopContainerResponse stopContainer(StopContainerRequest request)
       throws YarnRemoteException {
-    StopContainerRequestProto requestProto = ((StopContainerRequestPBImpl) request)
-        .getProto();
+    StopContainerRequestProto requestProto =
+        ((StopContainerRequestPBImpl) request).getProto();
     try {
       return new StopContainerResponsePBImpl(proxy.stopContainer(null,
-          requestProto));
+        requestProto));
     } catch (ServiceException e) {
       throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }

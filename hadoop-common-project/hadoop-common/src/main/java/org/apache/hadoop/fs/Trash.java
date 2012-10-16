@@ -68,8 +68,26 @@ public class Trash extends Configured {
   public static boolean moveToAppropriateTrash(FileSystem fs, Path p,
       Configuration conf) throws IOException {
     Path fullyResolvedPath = fs.resolvePath(p);
-    Trash trash = new Trash(FileSystem.get(fullyResolvedPath.toUri(), conf), conf);
-    boolean success =  trash.moveToTrash(fullyResolvedPath);
+    FileSystem fullyResolvedFs =
+        FileSystem.get(fullyResolvedPath.toUri(), conf);
+    // If the trash interval is configured server side then clobber this
+    // configuration so that we always respect the server configuration.
+    try {
+      long trashInterval = fullyResolvedFs.getServerDefaults(
+          fullyResolvedPath).getTrashInterval();
+      if (0 != trashInterval) {
+        Configuration confCopy = new Configuration(conf);
+        confCopy.setLong(CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY,
+            trashInterval);
+        conf = confCopy;
+      }
+    } catch (Exception e) {
+      // If we can not determine that trash is enabled server side then
+      // bail rather than potentially deleting a file when trash is enabled.
+      throw new IOException("Failed to get server trash configuration", e);
+    }
+    Trash trash = new Trash(fullyResolvedFs, conf);
+    boolean success = trash.moveToTrash(fullyResolvedPath);
     if (success) {
       System.out.println("Moved: '" + p + "' to trash at: " +
           trash.getCurrentTrashDir() );

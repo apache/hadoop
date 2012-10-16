@@ -122,6 +122,7 @@ public class RecordTypeInfo extends org.apache.hadoop.record.Record
   /**
    * Serialize the type information for a record
    */
+  @Override
   public void serialize(RecordOutput rout, String tag) throws IOException {
     // write out any header, version info, here
     rout.startRecord(this, tag);
@@ -133,6 +134,7 @@ public class RecordTypeInfo extends org.apache.hadoop.record.Record
   /**
    * Deserialize the type information for a record
    */
+  @Override
   public void deserialize(RecordInput rin, String tag) throws IOException {
     // read in any header, version info 
     rin.startRecord(tag);
@@ -148,6 +150,7 @@ public class RecordTypeInfo extends org.apache.hadoop.record.Record
    * So we always throw an exception.
    * Not implemented. Always returns 0 if another RecordTypeInfo is passed in. 
    */
+  @Override
   public int compareTo (final Object peer_) throws ClassCastException {
     if (!(peer_ instanceof RecordTypeInfo)) {
       throw new ClassCastException("Comparing different types of records.");

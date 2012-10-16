@@ -69,6 +69,7 @@ public class FieldTypeInfo
   /**
    * Two FieldTypeInfos are equal if ach of their fields matches
    */
+  @Override
   public boolean equals(Object o) {
     if (this == o) 
       return true;
@@ -87,6 +88,7 @@ public class FieldTypeInfo
    * We use a basic hashcode implementation, since this class will likely not
    * be used as a hashmap key 
    */
+  @Override
   public int hashCode() {
     return 37*17+typeID.hashCode() + 37*17+fieldID.hashCode();
   }

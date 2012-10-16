@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1676,10 +1677,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     List<byte[]> blocksVolumeIds = new ArrayList<byte[]>(volumes.volumes.size());
     // List of indexes into the list of VolumeIds, pointing at the VolumeId of
     // the volume that the block is on
-    List<Integer> blocksVolumendexes = new ArrayList<Integer>(blocks.size());
+    List<Integer> blocksVolumeIndexes = new ArrayList<Integer>(blocks.size());
     // Initialize the list of VolumeIds simply by enumerating the volumes
     for (int i = 0; i < volumes.volumes.size(); i++) {
-      blocksVolumeIds.add(new byte[] { (byte) i });
+      blocksVolumeIds.add(ByteBuffer.allocate(4).putInt(i).array());
     }
     // Determine the index of the VolumeId of each block's volume, by comparing 
     // the block's volume against the enumerated volumes
@@ -1700,10 +1701,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (!isValid) {
         volumeIndex = Integer.MAX_VALUE;
       }
-      blocksVolumendexes.add(volumeIndex);
+      blocksVolumeIndexes.add(volumeIndex);
     }
     return new HdfsBlocksMetadata(blocks.toArray(new ExtendedBlock[] {}), 
-        blocksVolumeIds, blocksVolumendexes);
+        blocksVolumeIds, blocksVolumeIndexes);
   }
 
   @Override

@@ -94,7 +94,7 @@ class BlocksMap {
   }
 
   void close() {
-    blocks = null;
+    // Empty blocks once GSet#clear is implemented (HDFS-3940)
   }
 
   BlockCollection getBlockCollection(Block b) {

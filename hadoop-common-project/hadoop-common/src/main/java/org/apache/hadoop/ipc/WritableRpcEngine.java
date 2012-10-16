@@ -142,6 +142,7 @@ public class WritableRpcEngine implements RpcEngine {
       return rpcVersion;
     }
 
+    @Override
     @SuppressWarnings("deprecation")
     public void readFields(DataInput in) throws IOException {
       rpcVersion = in.readLong();
@@ -159,6 +160,7 @@ public class WritableRpcEngine implements RpcEngine {
       }
     }
 
+    @Override
     @SuppressWarnings("deprecation")
     public void write(DataOutput out) throws IOException {
       out.writeLong(rpcVersion);
@@ -173,6 +175,7 @@ public class WritableRpcEngine implements RpcEngine {
       }
     }
 
+    @Override
     public String toString() {
       StringBuilder buffer = new StringBuilder();
       buffer.append(methodName);
@@ -189,10 +192,12 @@ public class WritableRpcEngine implements RpcEngine {
       return buffer.toString();
     }
 
+    @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
     }
 
+    @Override
     public Configuration getConf() {
       return this.conf;
     }
@@ -215,6 +220,7 @@ public class WritableRpcEngine implements RpcEngine {
       this.client = CLIENTS.getClient(conf, factory);
     }
 
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args)
       throws Throwable {
       long startTime = 0;
@@ -232,6 +238,7 @@ public class WritableRpcEngine implements RpcEngine {
     }
     
     /* close the IPC client that's responsible for this invoker's RPCs */ 
+    @Override
     synchronized public void close() {
       if (!isClosed) {
         isClosed = true;

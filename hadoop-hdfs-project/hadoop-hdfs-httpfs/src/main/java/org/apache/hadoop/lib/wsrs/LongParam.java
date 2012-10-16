@@ -27,6 +27,7 @@ public abstract class LongParam extends Param<Long> {
     super(name, defaultValue);
   }
 
+  @Override
   protected Long parse(String str) throws Exception {
     return Long.parseLong(str);
   }

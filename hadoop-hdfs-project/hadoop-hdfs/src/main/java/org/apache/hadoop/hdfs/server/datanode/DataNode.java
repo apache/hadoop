@@ -251,7 +251,7 @@ public class DataNode extends Configured
   Daemon dataXceiverServer = null;
   ThreadGroup threadGroup = null;
   private DNConf dnConf;
-  private boolean heartbeatsDisabledForTests = false;
+  private volatile boolean heartbeatsDisabledForTests = false;
   private DataStorage storage = null;
   private HttpServer infoServer = null;
   DataNodeMetrics metrics;
@@ -277,7 +277,7 @@ public class DataNode extends Configured
   private AbstractList<File> dataDirs;
   private Configuration conf;
 
-  private final String userWithLocalPathAccess;
+  private final List<String> usersWithLocalPathAccess;
   private boolean connectToDnViaHostname;
   ReadaheadPool readaheadPool;
   private final boolean getHdfsBlockLocationsEnabled;
@@ -300,8 +300,8 @@ public class DataNode extends Configured
            final SecureResources resources) throws IOException {
     super(conf);
 
-    this.userWithLocalPathAccess =
-        conf.get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
+    this.usersWithLocalPathAccess = Arrays.asList(
+        conf.getTrimmedStrings(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
@@ -417,10 +417,15 @@ public class DataNode extends Configured
           new ClientDatanodeProtocolServerSideTranslatorPB(this);
     BlockingService service = ClientDatanodeProtocolService
         .newReflectiveBlockingService(clientDatanodeProtocolXlator);
-    ipcServer = RPC.getServer(ClientDatanodeProtocolPB.class, service, ipcAddr
-        .getHostName(), ipcAddr.getPort(), conf.getInt(
-        DFS_DATANODE_HANDLER_COUNT_KEY, DFS_DATANODE_HANDLER_COUNT_DEFAULT),
-        false, conf, blockPoolTokenSecretManager);
+    ipcServer = new RPC.Builder(conf)
+        .setProtocol(ClientDatanodeProtocolPB.class)
+        .setInstance(service)
+        .setBindAddress(ipcAddr.getHostName())
+        .setPort(ipcAddr.getPort())
+        .setNumHandlers(
+            conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY,
+                DFS_DATANODE_HANDLER_COUNT_DEFAULT)).setVerbose(false)
+        .setSecretManager(blockPoolTokenSecretManager).build();
     
     InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
         new InterDatanodeProtocolServerSideTranslatorPB(this);
@@ -1007,7 +1012,7 @@ public class DataNode extends Configured
   private void checkBlockLocalPathAccess() throws IOException {
     checkKerberosAuthMethod("getBlockLocalPathInfo()");
     String currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
-    if (!currentUser.equals(this.userWithLocalPathAccess)) {
+    if (!usersWithLocalPathAccess.contains(currentUser)) {
       throw new AccessControlException(
           "Can't continue with getBlockLocalPathInfo() "
               + "authorization. The user " + currentUser

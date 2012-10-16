@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -39,12 +38,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -55,18 +52,27 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestFifoScheduler {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
   
   private final int GB = 1024;
+  private static YarnConfiguration conf;
+  
+  @BeforeClass
+  public static void setup() {
+    conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+        FifoScheduler.class, ResourceScheduler.class);
+  }
   
   @Test
   public void test() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    MockRM rm = new MockRM();
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
     MockNM nm2 = rm.registerNode("h2:5678", 4 * GB);
@@ -181,15 +187,15 @@ public class TestFifoScheduler {
   public void testDefaultMinimumAllocation() throws Exception {
     // Test with something lesser than default
     testMinimumAllocation(
-        new YarnConfiguration(),
+        new YarnConfiguration(TestFifoScheduler.conf),
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB / 2);
   }
 
   @Test
   public void testNonDefaultMinimumAllocation() throws Exception {
     // Set custom min-alloc to test tweaking it
-    int allocMB = 512;
-    YarnConfiguration conf = new YarnConfiguration();
+    int allocMB = 1536;
+    YarnConfiguration conf = new YarnConfiguration(TestFifoScheduler.conf);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, allocMB);
     // Test for something lesser than this.
     testMinimumAllocation(conf, allocMB / 2);
@@ -201,7 +207,7 @@ public class TestFifoScheduler {
     conf.setQueues("default", new String[] {"default"});
     conf.setCapacity("default", 100);
     FifoScheduler fs = new FifoScheduler();
-    fs.reinitialize(conf, null, null);
+    fs.reinitialize(conf, null);
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
     RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);

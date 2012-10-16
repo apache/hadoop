@@ -150,6 +150,7 @@ public class RetryPolicies {
   }
   
   static class TryOnceThenFail implements RetryPolicy {
+    @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isMethodIdempotent) throws Exception {
       return RetryAction.FAIL;
@@ -157,6 +158,7 @@ public class RetryPolicies {
   }
   
   static class RetryForever implements RetryPolicy {
+    @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isMethodIdempotent) throws Exception {
       return RetryAction.RETRY;
@@ -430,6 +432,7 @@ public class RetryPolicies {
       this.exceptionToPolicyMap = exceptionToPolicyMap;
     }
 
+    @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isMethodIdempotent) throws Exception {
       RetryPolicy policy = exceptionToPolicyMap.get(e.getClass());
@@ -457,6 +460,7 @@ public class RetryPolicies {
       }
     }
 
+    @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isMethodIdempotent) throws Exception {
       RetryPolicy policy = null;

@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -154,9 +155,12 @@ public class TestRMAppAttemptTransitions {
         mock(ContainerAllocationExpirer.class);
     amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     amFinishingMonitor = mock(AMLivelinessMonitor.class);
-    rmContext = new RMContextImpl(new MemStore(), rmDispatcher,
-      containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-      null, new ApplicationTokenSecretManager(new Configuration()));
+    Configuration conf = new Configuration();
+    rmContext =
+        new RMContextImpl(new MemStore(), rmDispatcher,
+          containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+          null, new ApplicationTokenSecretManager(conf),
+          new RMContainerTokenSecretManager(conf));
     
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);
@@ -174,7 +178,7 @@ public class TestRMAppAttemptTransitions {
     rmDispatcher.register(AMLauncherEventType.class, 
         new TestAMLauncherEventDispatcher());
 
-    rmDispatcher.init(new Configuration());
+    rmDispatcher.init(conf);
     rmDispatcher.start();
     
 
@@ -257,6 +261,10 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
+    
+    // Check events
+    verify(masterService).
+        unregisterAttempt(applicationAttempt.getAppAttemptId());
     
     // this works for unmanaged and managed AM's because this is actually doing
     // verify(application).handle(anyObject());
@@ -523,7 +531,8 @@ public class TestRMAppAttemptTransitions {
     // launch AM and verify attempt failed
     applicationAttempt.handle(new RMAppAttemptRegistrationEvent(
         applicationAttempt.getAppAttemptId(), "host", 8042, "oldtrackingurl"));
-    testAppAttemptSubmittedToFailedState("Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
+    testAppAttemptSubmittedToFailedState(
+        "Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
   }
 
   @Test

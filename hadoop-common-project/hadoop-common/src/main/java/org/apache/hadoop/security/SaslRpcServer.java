@@ -194,7 +194,6 @@ public class SaslRpcServer {
       return encodePassword(secretManager.retrievePassword(tokenid));
     }
 
-    /** {@inheritDoc} */
     @Override
     public void handle(Callback[] callbacks) throws InvalidToken,
         UnsupportedCallbackException {
@@ -253,7 +252,6 @@ public class SaslRpcServer {
   @InterfaceStability.Evolving
   public static class SaslGssCallbackHandler implements CallbackHandler {
 
-    /** {@inheritDoc} */
     @Override
     public void handle(Callback[] callbacks) throws
         UnsupportedCallbackException {

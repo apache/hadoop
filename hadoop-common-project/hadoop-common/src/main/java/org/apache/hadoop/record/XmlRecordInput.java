@@ -63,10 +63,13 @@ public class XmlRecordInput implements RecordInput {
       valList = vlist;
     }
         
+    @Override
     public void startDocument() throws SAXException {}
         
+    @Override
     public void endDocument() throws SAXException {}
         
+    @Override
     public void startElement(String ns,
                              String sname,
                              String qname,
@@ -88,6 +91,7 @@ public class XmlRecordInput implements RecordInput {
       }
     }
         
+    @Override
     public void endElement(String ns,
                            String sname,
                            String qname) throws SAXException {
@@ -98,6 +102,7 @@ public class XmlRecordInput implements RecordInput {
       }
     }
         
+    @Override
     public void characters(char buf[], int offset, int len)
       throws SAXException {
       if (charsValid) {
@@ -109,6 +114,7 @@ public class XmlRecordInput implements RecordInput {
   }
     
   private class XmlIndex implements Index {
+    @Override
     public boolean done() {
       Value v = valList.get(vIdx);
       if ("/array".equals(v.getType())) {
@@ -119,6 +125,7 @@ public class XmlRecordInput implements RecordInput {
         return false;
       }
     }
+    @Override
     public void incr() {}
   }
     
@@ -152,6 +159,7 @@ public class XmlRecordInput implements RecordInput {
     }
   }
     
+  @Override
   public byte readByte(String tag) throws IOException {
     Value v = next();
     if (!"ex:i1".equals(v.getType())) {
@@ -160,6 +168,7 @@ public class XmlRecordInput implements RecordInput {
     return Byte.parseByte(v.getValue());
   }
     
+  @Override
   public boolean readBool(String tag) throws IOException {
     Value v = next();
     if (!"boolean".equals(v.getType())) {
@@ -168,6 +177,7 @@ public class XmlRecordInput implements RecordInput {
     return "1".equals(v.getValue());
   }
     
+  @Override
   public int readInt(String tag) throws IOException {
     Value v = next();
     if (!"i4".equals(v.getType()) &&
@@ -177,6 +187,7 @@ public class XmlRecordInput implements RecordInput {
     return Integer.parseInt(v.getValue());
   }
     
+  @Override
   public long readLong(String tag) throws IOException {
     Value v = next();
     if (!"ex:i8".equals(v.getType())) {
@@ -185,6 +196,7 @@ public class XmlRecordInput implements RecordInput {
     return Long.parseLong(v.getValue());
   }
     
+  @Override
   public float readFloat(String tag) throws IOException {
     Value v = next();
     if (!"ex:float".equals(v.getType())) {
@@ -193,6 +205,7 @@ public class XmlRecordInput implements RecordInput {
     return Float.parseFloat(v.getValue());
   }
     
+  @Override
   public double readDouble(String tag) throws IOException {
     Value v = next();
     if (!"double".equals(v.getType())) {
@@ -201,6 +214,7 @@ public class XmlRecordInput implements RecordInput {
     return Double.parseDouble(v.getValue());
   }
     
+  @Override
   public String readString(String tag) throws IOException {
     Value v = next();
     if (!"string".equals(v.getType())) {
@@ -209,6 +223,7 @@ public class XmlRecordInput implements RecordInput {
     return Utils.fromXMLString(v.getValue());
   }
     
+  @Override
   public Buffer readBuffer(String tag) throws IOException {
     Value v = next();
     if (!"string".equals(v.getType())) {
@@ -217,6 +232,7 @@ public class XmlRecordInput implements RecordInput {
     return Utils.fromXMLBuffer(v.getValue());
   }
     
+  @Override
   public void startRecord(String tag) throws IOException {
     Value v = next();
     if (!"struct".equals(v.getType())) {
@@ -224,6 +240,7 @@ public class XmlRecordInput implements RecordInput {
     }
   }
     
+  @Override
   public void endRecord(String tag) throws IOException {
     Value v = next();
     if (!"/struct".equals(v.getType())) {
@@ -231,6 +248,7 @@ public class XmlRecordInput implements RecordInput {
     }
   }
     
+  @Override
   public Index startVector(String tag) throws IOException {
     Value v = next();
     if (!"array".equals(v.getType())) {
@@ -239,12 +257,15 @@ public class XmlRecordInput implements RecordInput {
     return new XmlIndex();
   }
     
+  @Override
   public void endVector(String tag) throws IOException {}
     
+  @Override
   public Index startMap(String tag) throws IOException {
     return startVector(tag);
   }
     
+  @Override
   public void endMap(String tag) throws IOException { endVector(tag); }
 
 }

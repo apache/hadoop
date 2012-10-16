@@ -24,6 +24,7 @@ import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.jasper.compiler.JspUtil;
 
 /**
  * A generic abstract class to support journaling of edits logs into 
@@ -92,18 +93,24 @@ public abstract class EditLogOutputStream implements Closeable {
   /**
    * Flush and sync all data that is ready to be flush 
    * {@link #setReadyToFlush()} into underlying persistent store.
+   * @param durable if true, the edits should be made truly durable before
+   * returning
    * @throws IOException
    */
-  abstract protected void flushAndSync() throws IOException;
+  abstract protected void flushAndSync(boolean durable) throws IOException;
 
   /**
    * Flush data to persistent store.
    * Collect sync metrics.
    */
   public void flush() throws IOException {
+    flush(true);
+  }
+  
+  public void flush(boolean durable) throws IOException {
     numSync++;
     long start = now();
-    flushAndSync();
+    flushAndSync(durable);
     long end = now();
     totalTimeSync += (end - start);
   }
@@ -131,5 +138,13 @@ public abstract class EditLogOutputStream implements Closeable {
    */
   protected long getNumSync() {
     return numSync;
+  }
+
+  /**
+   * @return a short HTML snippet suitable for describing the current
+   * status of the stream
+   */
+  public String generateHtmlReport() {
+    return JspUtil.escapeXml(this.toString());
   }
 }

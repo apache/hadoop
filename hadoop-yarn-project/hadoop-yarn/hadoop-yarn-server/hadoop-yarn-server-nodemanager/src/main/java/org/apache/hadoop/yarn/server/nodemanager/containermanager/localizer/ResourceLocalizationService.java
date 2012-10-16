@@ -181,6 +181,7 @@ public class ResourceLocalizationService extends CompositeService
     try {
       // TODO queue deletions here, rather than NM init?
       FileContext lfs = getLocalFileContext(conf);
+      lfs.setUMask(new FsPermission((short)FsPermission.DEFAULT_UMASK));
       List<String> localDirs = dirsHandler.getLocalDirs();
       for (String localDir : localDirs) {
         // $local/usercache
@@ -751,6 +752,7 @@ public class ResourceLocalizationService extends CompositeService
           next.setTimestamp(nextRsrc.getTimestamp());
           next.setType(nextRsrc.getType());
           next.setVisibility(evt.getVisibility());
+          next.setPattern(evt.getPattern());
           scheduled.put(nextRsrc, evt);
           return next;
         }

@@ -37,12 +37,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.NodeEventDispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,7 +71,7 @@ public class TestNMExpiry {
     // Dispatcher that processes events inline
     Dispatcher dispatcher = new InlineDispatcher();
     RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
-        null, null, null, null);
+        null, null, null, null, null);
     dispatcher.register(SchedulerEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     dispatcher.register(RMNodeEventType.class,
@@ -82,8 +82,9 @@ public class TestNMExpiry {
     nmLivelinessMonitor.start();
     NodesListManager nodesListManager = new NodesListManager(context);
     nodesListManager.init(conf);
-    ContainerTokenSecretManager containerTokenSecretManager =
-        new ContainerTokenSecretManager(conf);
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        new RMContainerTokenSecretManager(conf);
+    containerTokenSecretManager.start();
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, nmLivelinessMonitor, containerTokenSecretManager);
     

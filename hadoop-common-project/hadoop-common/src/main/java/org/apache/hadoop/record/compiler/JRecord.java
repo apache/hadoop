@@ -54,11 +54,13 @@ public class JRecord extends JCompType {
       }
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new org.apache.hadoop.record.meta.StructTypeID(" + 
       fullName + ".getTypeInfo())";
     }
 
+    @Override
     void genSetRTIFilter(CodeBuffer cb, Map<String, Integer> nestedStructMap) {
       // ignore, if we'ev already set the type filter for this record
       if (!nestedStructMap.containsKey(fullName)) {
@@ -129,6 +131,7 @@ public class JRecord extends JCompType {
       cb.append("}\n");
     }
 
+    @Override
     void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
       if (decl) {
         cb.append(fullName+" "+fname+";\n");
@@ -137,10 +140,12 @@ public class JRecord extends JCompType {
       cb.append(fname+".deserialize(" + Consts.RECORD_INPUT + ",\""+tag+"\");\n");
     }
     
+    @Override
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
       cb.append(fname+".serialize(" + Consts.RECORD_OUTPUT + ",\""+tag+"\");\n");
     }
     
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int r = "+fullName+
@@ -149,6 +154,7 @@ public class JRecord extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("int r1 = "+fullName+
@@ -492,6 +498,7 @@ public class JRecord extends JCompType {
       }
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::StructTypeID(" + 
       fullName + "::getTypeInfo().getFieldTypeInfos())";
@@ -501,6 +508,7 @@ public class JRecord extends JCompType {
       return "  "+name+" "+fname+";\n";
     }
     
+    @Override
     void genSetRTIFilter(CodeBuffer cb) {
       // we set the RTI filter here
       cb.append(fullName + "::setTypeFilter(rti.getNestedStructTypeInfo(\""+
@@ -797,6 +805,7 @@ public class JRecord extends JCompType {
     signature = sb.toString();
   }
   
+  @Override
   String getSignature() {
     return signature;
   }

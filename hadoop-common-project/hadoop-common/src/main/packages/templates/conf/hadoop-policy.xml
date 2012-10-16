@@ -239,5 +239,12 @@
        group list is separated by a blank. For e.g. "alice,bob users,wheel".
        A special value of "*" means all users are allowed.</description>
     </property>
+  
+  <property>
+    <name>security.qjournal.service.protocol.acl</name>
+    <value>${HADOOP_HDFS_USER}</value>
+    <description>ACL for QJournalProtocol, used by the NN to communicate with
+    JNs when using the QuorumJournalManager for edit logs.</description>
+  </property>
 
 </configuration>

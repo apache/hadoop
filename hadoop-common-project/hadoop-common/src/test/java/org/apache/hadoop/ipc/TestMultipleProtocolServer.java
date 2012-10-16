@@ -175,8 +175,9 @@ public class TestMultipleProtocolServer {
   @Before
   public void setUp() throws Exception {
     // create a server with two handlers
-    server = RPC.getServer(Foo0.class,
-                              new Foo0Impl(), ADDRESS, 0, 2, false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(Foo0.class)
+        .setInstance(new Foo0Impl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, Foo1.class, new Foo1Impl());
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, Bar.class, new BarImpl());
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, Mixin.class, new BarImpl());
@@ -263,8 +264,9 @@ public class TestMultipleProtocolServer {
   
   @Test(expected=IOException.class)
   public void testIncorrectServerCreation() throws IOException {
-    RPC.getServer(Foo1.class,
-        new Foo0Impl(), ADDRESS, 0, 2, false, conf, null);
+    new RPC.Builder(conf).setProtocol(Foo1.class).setInstance(new Foo0Impl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(2).setVerbose(false)
+        .build();
   } 
   
   // Now test a PB service - a server  hosts both PB and Writable Rpcs.

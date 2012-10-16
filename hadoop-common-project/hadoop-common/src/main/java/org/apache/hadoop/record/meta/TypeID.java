@@ -89,6 +89,7 @@ public class TypeID {
   /**
    * Two base typeIDs are equal if they refer to the same type
    */
+  @Override
   public boolean equals(Object o) {
     if (this == o) 
       return true;
@@ -107,6 +108,7 @@ public class TypeID {
    * We use a basic hashcode implementation, since this class will likely not
    * be used as a hashmap key 
    */
+  @Override
   public int hashCode() {
     // See 'Effectve Java' by Joshua Bloch
     return 37*17+(int)typeVal;

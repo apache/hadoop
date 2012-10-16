@@ -85,13 +85,14 @@ extends TokenIdentifier {
    * 
    * @return the username or owner
    */
+  @Override
   public UserGroupInformation getUser() {
-    if ( (owner == null) || ("".equals(owner.toString()))) {
+    if ( (owner == null) || (owner.toString().isEmpty())) {
       return null;
     }
     final UserGroupInformation realUgi;
     final UserGroupInformation ugi;
-    if ((realUser == null) || ("".equals(realUser.toString()))
+    if ((realUser == null) || (realUser.toString().isEmpty())
         || realUser.equals(owner)) {
       ugi = realUgi = UserGroupInformation.createRemoteUser(owner.toString());
     } else {
@@ -150,7 +151,7 @@ extends TokenIdentifier {
     return a == null ? b == null : a.equals(b);
   }
   
-  /** {@inheritDoc} */
+  @Override
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
@@ -168,11 +169,12 @@ extends TokenIdentifier {
     return false;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     return this.sequenceNumber;
   }
   
+  @Override
   public void readFields(DataInput in) throws IOException {
     byte version = in.readByte();
     if (version != VERSION) {
@@ -200,6 +202,7 @@ extends TokenIdentifier {
     WritableUtils.writeVInt(out, masterKeyId);
   }
   
+  @Override
   public void write(DataOutput out) throws IOException {
     if (owner.getLength() > Text.DEFAULT_MAX_LEN) {
       throw new IOException("owner is too long to be serialized!");
@@ -213,6 +216,7 @@ extends TokenIdentifier {
     writeImpl(out);
   }
   
+  @Override
   public String toString() {
     StringBuilder buffer = new StringBuilder();
     buffer

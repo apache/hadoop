@@ -328,6 +328,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
           getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<T>() {
+        @Override
         public T run() throws Exception {
           FileSystem fs = createFileSystem(conf);
           Instrumentation instrumentation = getServer().get(Instrumentation.class);
@@ -362,6 +363,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
         new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        @Override
         public FileSystem run() throws Exception {
           return createFileSystem(conf);
         }

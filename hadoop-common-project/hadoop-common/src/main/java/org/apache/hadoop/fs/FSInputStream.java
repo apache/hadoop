@@ -36,19 +36,23 @@ public abstract class FSInputStream extends InputStream
    * The next read() will be from that location.  Can't
    * seek past the end of the file.
    */
+  @Override
   public abstract void seek(long pos) throws IOException;
 
   /**
    * Return the current offset from the start of the file
    */
+  @Override
   public abstract long getPos() throws IOException;
 
   /**
    * Seeks a different copy of the data.  Returns true if 
    * found a new source, false otherwise.
    */
+  @Override
   public abstract boolean seekToNewSource(long targetPos) throws IOException;
 
+  @Override
   public int read(long position, byte[] buffer, int offset, int length)
     throws IOException {
     synchronized (this) {
@@ -64,6 +68,7 @@ public abstract class FSInputStream extends InputStream
     }
   }
     
+  @Override
   public void readFully(long position, byte[] buffer, int offset, int length)
     throws IOException {
     int nread = 0;
@@ -76,6 +81,7 @@ public abstract class FSInputStream extends InputStream
     }
   }
     
+  @Override
   public void readFully(long position, byte[] buffer)
     throws IOException {
     readFully(position, buffer, 0, buffer.length);
