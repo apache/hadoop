@@ -25,6 +25,9 @@ Release 0.23.5 - UNRELEASED
     inaccessible despite the presence of a valid history file. (Jason Lowe
     via sseth)
 
+    MAPREDUCE-4521. mapreduce.user.classpath.first incompatibility with 0.20/1.x
+    (Ravi Prakash via bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
