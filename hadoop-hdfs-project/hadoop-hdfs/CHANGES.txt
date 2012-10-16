@@ -147,6 +147,9 @@ Trunk (Unreleased)
     Block Pool Used, Block Pool Used(%) and Failed Volumes.
     (Brahma Reddy Battula via suresh)
 
+    HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
+    (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

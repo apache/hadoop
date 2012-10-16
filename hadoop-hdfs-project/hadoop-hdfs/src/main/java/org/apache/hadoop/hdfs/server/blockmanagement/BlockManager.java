@@ -2856,6 +2856,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * @return number of blocks scheduled for removal during this iteration.
    */
   private int invalidateWorkForOneNode(String nodeId) {
+    final List<Block> toInvalidate;
+    final DatanodeDescriptor dn;
+    
     namesystem.writeLock();
     try {
       // blocks should not be replicated or removed if safe mode is on
@@ -2865,10 +2868,23 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       }
       // get blocks to invalidate for the nodeId
       assert nodeId != null;
-      return invalidateBlocks.invalidateWork(nodeId);
+      dn = datanodeManager.getDatanode(nodeId);
+      if (dn == null) {
+        invalidateBlocks.remove(nodeId);
+        return 0;
+      }
+      toInvalidate = invalidateBlocks.invalidateWork(nodeId, dn);
+      if (toInvalidate == null) {
+        return 0;
+      }
     } finally {
       namesystem.writeUnlock();
     }
+    if (NameNode.stateChangeLog.isInfoEnabled()) {
+      NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
+          + ": ask " + dn + " to delete " + toInvalidate);
+    }
+    return toInvalidate.size();
   }
 
   boolean blockHasEnoughRacks(Block b) {
