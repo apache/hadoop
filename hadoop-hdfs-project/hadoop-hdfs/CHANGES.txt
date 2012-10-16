@@ -224,8 +224,6 @@ Trunk (Unreleased)
     HDFS-3834. Remove unused static fields NAME, DESCRIPTION and Usage from
     Command. (Jing Zhao via suresh)
 
-    HDFS-3678. Edit log files are never being purged from 2NN. (atm)
-
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
 
@@ -442,6 +440,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4049. Fix hflush performance regression due to nagling delays
     (todd)
+
+    HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
