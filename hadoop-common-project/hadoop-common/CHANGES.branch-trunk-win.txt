@@ -1,0 +1,5 @@
+branch-trunk-win changes - unreleased
+
+  HADOOP-8924. Hadoop Common creating package-info.java must not depend on sh.
+  (Chris Nauroth via suresh)
+

@@ -289,22 +289,6 @@
             </configuration>
           </execution>
           <execution>
-            <id>save-version</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="${project.build.directory}/generated-sources/java"/>
-                <exec executable="sh">
-                  <arg
-                      line="${basedir}/dev-support/saveVersion.sh ${project.version} ${project.build.directory}/generated-sources/java"/>
-                </exec>
-              </target>
-            </configuration>
-          </execution>
-          <execution>
             <id>generate-test-sources</id>
             <phase>generate-test-sources</phase>
             <goals>
@@ -364,6 +348,24 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
+          <execution>
+            <id>save-version</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>python</executable>
+              <arguments>
+                <argument>${basedir}/../../dev-support/saveVersion.py</argument>
+                <argument>@HadoopVersionAnnotation</argument>
+                <argument>${project.version}</argument>
+                <argument>${basedir}/src/main/java</argument>
+                <argument>org.apache.hadoop</argument>
+                <argument>${project.build.directory}/generated-sources/java/org/apache/hadoop</argument>
+              </arguments>
+            </configuration>
+          </execution>
           <execution>
             <id>compile-proto</id>
             <phase>generate-sources</phase>
