@@ -323,6 +323,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8922. Provide alternate JSONP output for JMXJsonServlet to allow
     javascript in browser dashboard (Damien Hardy via bobby)
 
+    HADOOP-8931. Add Java version to startup message. (eli)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
