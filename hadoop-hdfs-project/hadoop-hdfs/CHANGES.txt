@@ -114,6 +114,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
+    HDFS-4058. DirectoryScanner may fail with IOOB if the directory
+    scanning threads return out of volume order. (eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
