@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -196,6 +197,35 @@ public class TestNNStorageRetentionManager {
     runTest(tc);
   }
   
+  @Test
+  public void testRetainExtraLogsLimitedSegments() throws IOException {
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY,
+        150);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_EXTRA_EDITS_SEGMENTS_RETAINED_KEY, 2);
+    TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE);
+    tc.addRoot("/foo2", NameNodeDirType.EDITS);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
+
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(1, 100), true);
+    // Without lowering the max segments to retain, we'd retain all segments
+    // going back to txid 150 (300 - 150).
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(101, 175), true);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(176, 200), true);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(201, 225), true);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(226, 240), true);
+    // Only retain 2 extra segments. The 301-400 segment is considered required,
+    // not extra.
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(241, 275), false);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(276, 300), false);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 400), false);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(401), false);
+    runTest(tc);
+  }
+  
   private void runTest(TestCaseDescription tc) throws IOException {
     StoragePurger mockPurger =
       Mockito.mock(NNStorageRetentionManager.StoragePurger.class);
@@ -287,8 +317,10 @@ public class TestNNStorageRetentionManager {
       return mockStorageForDirs(sds.toArray(new StorageDirectory[0]));
     }
     
+    @SuppressWarnings("unchecked")
     public FSEditLog mockEditLog(StoragePurger purger) {
       final List<JournalManager> jms = Lists.newArrayList();
+      final JournalSet journalSet = new JournalSet(0);
       for (FakeRoot root : dirRoots.values()) {
         if (!root.type.isOfType(NameNodeDirType.EDITS)) continue;
         
@@ -297,6 +329,7 @@ public class TestNNStorageRetentionManager {
             root.mockStorageDir(), null);
         fjm.purger = purger;
         jms.add(fjm);
+        journalSet.add(fjm, false);
       }
 
       FSEditLog mockLog = Mockito.mock(FSEditLog.class);
@@ -314,6 +347,18 @@ public class TestNNStorageRetentionManager {
           return null;
         }
       }).when(mockLog).purgeLogsOlderThan(Mockito.anyLong());
+      
+      Mockito.doAnswer(new Answer<Void>() {
+        
+        @Override
+        public Void answer(InvocationOnMock invocation) throws Throwable {
+          Object[] args = invocation.getArguments();
+          journalSet.selectInputStreams((Collection<EditLogInputStream>)args[0],
+              (long)((Long)args[1]), (boolean)((Boolean)args[2]));
+          return null;
+        }
+      }).when(mockLog).selectInputStreams(Mockito.anyCollection(),
+          Mockito.anyLong(), Mockito.anyBoolean());
       return mockLog;
     }
   }

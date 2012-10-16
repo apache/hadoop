@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Collection;
 
 /**
  * Interface used to abstract over classes which manage edit logs that may need
@@ -33,5 +34,20 @@ interface LogsPurgeable {
    * @throws IOException in the event of error
    */
   public void purgeLogsOlderThan(long minTxIdToKeep) throws IOException;
-
+  
+  /**
+   * Get a list of edit log input streams.  The list will start with the
+   * stream that contains fromTxnId, and continue until the end of the journal
+   * being managed.
+   * 
+   * @param fromTxId the first transaction id we want to read
+   * @param inProgressOk whether or not in-progress streams should be returned
+   *
+   * @return a list of streams
+   * @throws IOException if the underlying storage has an error or is otherwise
+   * inaccessible
+   */
+  void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxId, boolean inProgressOk) throws IOException;
+  
 }
