@@ -75,6 +75,8 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.ExitUtil;
+
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -115,6 +117,7 @@ public class MiniDFSCluster {
     private boolean waitSafeMode = true;
     private boolean setupHostsFile = false;
     private boolean federation = false;
+    private boolean checkExitOnShutdown = true;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -232,7 +235,7 @@ public class MiniDFSCluster {
       this.waitSafeMode = val;
       return this;
     }
-    
+
     /**
      * Default: null
      */
@@ -249,7 +252,15 @@ public class MiniDFSCluster {
       this.setupHostsFile = val;
       return this;
     }
-    
+
+    /**
+     * Default: true
+     */
+    public Builder checkExitOnShutdown(boolean val) {
+      this.checkExitOnShutdown = val;
+      return this;
+    }
+
     /**
      * Construct the actual MiniDFSCluster
      */
@@ -283,7 +294,8 @@ public class MiniDFSCluster {
                        builder.clusterId,
                        builder.waitSafeMode,
                        builder.setupHostsFile,
-                       builder.federation);
+                       builder.federation,
+                       builder.checkExitOnShutdown);
   }
   
   public class DataNodeProperties {
@@ -307,6 +319,7 @@ public class MiniDFSCluster {
   private File data_dir;
   private boolean federation = false; 
   private boolean waitSafeMode = true;
+  private boolean checkExitOnShutdown = true;
   
   /**
    * Stores the information related to a namenode in the cluster
@@ -499,7 +512,7 @@ public class MiniDFSCluster {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
     initMiniDFSCluster(nameNodePort, 0, conf, numDataNodes, format,
         manageNameDfsDirs, true, manageDataDfsDirs, operation, racks, hosts,
-        simulatedCapacities, null, true, false, false);
+        simulatedCapacities, null, true, false, false, true);
   }
 
   private void initMiniDFSCluster(int nameNodePort, int nameNodeHttpPort,
@@ -508,13 +521,16 @@ public class MiniDFSCluster {
       boolean enableManagedDfsDirsRedundancy,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
-      boolean waitSafeMode, boolean setupHostsFile, boolean federation) 
+      boolean waitSafeMode, boolean setupHostsFile, boolean federation, boolean checkExitOnShutdown) 
   throws IOException {
+    ExitUtil.disableSystemExit();
+    
     this.conf = conf;
     base_dir = new File(determineDfsBaseDir());
     data_dir = new File(base_dir, "data");
     this.federation = federation;
     this.waitSafeMode = waitSafeMode;
+    this.checkExitOnShutdown = checkExitOnShutdown;
     
     // use alternate RPC engine if spec'd
     String rpcEngineName = System.getProperty("hdfs.rpc.engine");
@@ -1130,6 +1146,11 @@ public class MiniDFSCluster {
    */
   public void shutdown() {
     LOG.info("Shutting down the Mini HDFS Cluster");
+    if (checkExitOnShutdown)  {
+     if (ExitUtil.terminateCalled()) {
+       throw new AssertionError("Test resulted in an unexpected exit");
+     }
+    }
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
       NameNode nameNode = nnInfo.nameNode;

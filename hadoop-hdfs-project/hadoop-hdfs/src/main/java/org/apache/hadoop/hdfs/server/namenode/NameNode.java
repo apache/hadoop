@@ -52,6 +52,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 /**********************************************************
  * NameNode serves as both directory namespace manager and
  * "inode table" for the Hadoop DFS.  There is a single NameNode
@@ -731,25 +733,26 @@ public class NameNode {
     switch (startOpt) {
       case FORMAT:
         boolean aborted = format(conf, true);
-        System.exit(aborted ? 1 : 0);
+        terminate(aborted ? 1 : 0);
         return null; // avoid javac warning
       case GENCLUSTERID:
         System.err.println("Generating new cluster id:");
         System.out.println(NNStorage.newClusterID());
-        System.exit(0);
+        terminate(0);
         return null;
       case FINALIZE:
         aborted = finalize(conf, true);
-        System.exit(aborted ? 1 : 0);
+        terminate(aborted ? 1 : 0);
         return null; // avoid javac warning
       case BACKUP:
       case CHECKPOINT:
         NamenodeRole role = startOpt.toNodeRole();
         DefaultMetricsSystem.initialize(role.toString().replace(" ", ""));
         return new BackupNode(conf, role);
-      default:
+      default: {
         DefaultMetricsSystem.initialize("NameNode");
         return new NameNode(conf);
+      }
     }
   }
 
@@ -801,8 +804,8 @@ public class NameNode {
       if (namenode != null)
         namenode.join();
     } catch (Throwable e) {
-      LOG.error("Exception in namenode join", e);
-      System.exit(-1);
+      LOG.fatal("Exception in namenode join", e);
+      terminate(1);
     }
   }
 }

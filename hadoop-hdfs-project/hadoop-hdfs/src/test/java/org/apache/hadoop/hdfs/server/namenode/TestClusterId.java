@@ -26,6 +26,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
@@ -35,6 +36,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,6 +46,7 @@ import org.junit.Test;
 public class TestClusterId {
   private static final Log LOG = LogFactory.getLog(TestClusterId.class);
   File hdfsDir;
+  Configuration config;
   
   private String getClusterId(Configuration config) throws IOException {
     // see if cluster id not empty.
@@ -58,33 +62,34 @@ public class TestClusterId {
     LOG.info("successfully formated : sd="+sd.getCurrentDir() + ";cid="+cid);
     return cid;
   }
-  
+
   @Before
   public void setUp() throws IOException {
+    ExitUtil.disableSystemExit();
+
     String baseDir = System.getProperty("test.build.data", "build/test/data");
 
-    hdfsDir = new File(baseDir, "dfs");
-    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
-      throw new IOException("Could not delete test directory '" + 
-          hdfsDir + "'");
+    hdfsDir = new File(baseDir, "dfs/name");
+    if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
+      throw new IOException("Could not delete test directory '" + hdfsDir + "'");
     }
     LOG.info("hdfsdir is " + hdfsDir.getAbsolutePath());
+    
+    config = new Configuration();
+    config.set(DFS_NAMENODE_NAME_DIR_KEY, hdfsDir.getPath());
   }
-  
+
   @After
   public void tearDown() throws IOException {
-    if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
-      throw new IOException("Could not tearDown test directory '" +
-          hdfsDir + "'");
+    if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
+      throw new IOException("Could not tearDown test directory '" + hdfsDir
+          + "'");
     }
   }
-  
+
   @Test
   public void testFormatClusterIdOption() throws IOException {
-    Configuration config = new Configuration();
     
-    config.set(DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name").getPath());
-
     // 1. should format without cluster id
     //StartupOption.FORMAT.setClusterId("");
     NameNode.format(config);

@@ -8,6 +8,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4016. back-port HDFS-3582 to branch-0.23 (Ivan A. Veselovsky via
+    bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

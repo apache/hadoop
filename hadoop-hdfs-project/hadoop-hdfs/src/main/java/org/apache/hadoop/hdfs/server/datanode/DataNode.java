@@ -113,6 +113,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
@@ -1715,7 +1718,7 @@ public class DataNode extends Configured
       if ("-r".equalsIgnoreCase(cmd) || "--rack".equalsIgnoreCase(cmd)) {
         LOG.error("-r, --rack arguments are not supported anymore. RackID " +
             "resolution is handled by the NameNode.");
-        System.exit(-1);
+        terminate(1);
       } else if ("-rollback".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
       } else if ("-regular".equalsIgnoreCase(cmd)) {
@@ -1764,15 +1767,15 @@ public class DataNode extends Configured
       if (datanode != null)
         datanode.join();
     } catch (Throwable e) {
-      LOG.error("Exception in secureMain", e);
-      System.exit(-1);
+      LOG.fatal("Exception in secureMain", e);
+      terminate(1);
     } finally {
-      // We need to add System.exit here because either shutdown was called or
-      // some disk related conditions like volumes tolerated or volumes required
+      // We need to terminate the process here because either shutdown was called
+      // or some disk related conditions like volumes tolerated or volumes required
       // condition was not met. Also, In secure mode, control will go to Jsvc
-      // and Datanode process hangs without System.exit.
+      // and Datanode process hangs if it does not exit.
       LOG.warn("Exiting Datanode");
-      System.exit(0);
+      terminate(0);
     }
   }
   
