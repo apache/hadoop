@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public abstract class MetricsRecordBuilder {
   /**
-   * Add a metrics tag
+   * Add a metrics value with metrics information
    * @param info  metadata of the tag
    * @param value of the tag
    * @return self

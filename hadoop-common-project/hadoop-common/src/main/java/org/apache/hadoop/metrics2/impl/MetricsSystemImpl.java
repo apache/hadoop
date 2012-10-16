@@ -235,11 +235,9 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   void registerSource(String name, String desc, MetricsSource source) {
     checkNotNull(config, "config");
     MetricsConfig conf = sourceConfigs.get(name);
-    MetricsSourceAdapter sa = conf != null
-        ? new MetricsSourceAdapter(prefix, name, desc, source,
-                                   injectedTags, period, conf)
-        : new MetricsSourceAdapter(prefix, name, desc, source,
-          injectedTags, period, config.subset(SOURCE_KEY));
+    MetricsSourceAdapter sa = new MetricsSourceAdapter(prefix, name, desc,
+        source, injectedTags, period, conf != null ? conf
+            : config.subset(SOURCE_KEY));
     sources.put(name, sa);
     sa.start();
     LOG.debug("Registered source "+ name);

@@ -72,8 +72,8 @@ Trunk (Unreleased)
     HADOOP-8360. empty-configuration.xml fails xml validation
     (Radim Kolar via harsh)
 
-    HADOOP-8367 Improve documentation of declaringClassProtocolName in rpc headers 
-                (Sanjay Radia)
+    HADOOP-8367 Improve documentation of declaringClassProtocolName in 
+    rpc headers. (Sanjay Radia)
 
     HADOOP-8415. Add getDouble() and setDouble() in
     org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
@@ -123,6 +123,8 @@ Trunk (Unreleased)
     too. (harsh)
 
     HADOOP-8910. Add examples to GlobExpander#expand method. (suresh)
+
+    HADOOP-8920. Add more javadoc to metrics2 related classes. (suresh)
 
   BUG FIXES
 
