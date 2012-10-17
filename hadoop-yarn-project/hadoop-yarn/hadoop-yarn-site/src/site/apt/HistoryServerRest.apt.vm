@@ -1527,7 +1527,7 @@ History Server REST API's.
 *---------------+--------------+--------------------------------+
 | progress | float | The progress of the task as a percent|
 *---------------+--------------+--------------------------------+
-| startTime | long | The time in which the task started (in ms since epoch)|
+| startTime | long | The time in which the task started (in ms since epoch) or -1 if it was never started |
 *---------------+--------------+--------------------------------+
 | finishTime | long | The time in which the task finished (in ms since epoch)|
 *---------------+--------------+--------------------------------+
@@ -1607,7 +1607,7 @@ History Server REST API's.
 
 ** Task Counters API
 
-  With the task counters API, you can object a collection of resources that represent al the counters for that task. 
+  With the task counters API, you can object a collection of resources that represent all the counters for that task. 
 
 *** URI
 
