@@ -12,6 +12,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3912. Detect and avoid stale datanodes for writes.
     (Jing Zhao via suresh)
 
+    HDFS-4059. Add number of stale DataNodes to metrics. (Jing Zhao via suresh)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log

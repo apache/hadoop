@@ -868,7 +868,7 @@ public class DatanodeManager {
    * @return Return the current number of stale DataNodes (detected by
    * HeartbeatManager). 
    */
-  int getNumStaleNodes() {
+  public int getNumStaleNodes() {
     return this.numStaleNodes;
   }
 

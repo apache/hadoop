@@ -4662,6 +4662,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public int getNumDeadDataNodes() {
     return getBlockManager().getDatanodeManager().getNumDeadDataNodes();
   }
+  
+  @Override // FSNamesystemMBean
+  @Metric({"StaleDataNodes", 
+    "Number of datanodes marked stale due to delayed heartbeat"})
+  public int getNumStaleDataNodes() {
+    return getBlockManager().getDatanodeManager().getNumStaleNodes();
+  }
 
   /**
    * Sets the generation stamp for this filesystem
