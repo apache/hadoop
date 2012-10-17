@@ -20,6 +20,9 @@ Release 0.23.5 - UNRELEASED
     YARN-28. Fixed TestCompositeService to not depend on test-order and thus
     made it pass on JDK7 (Thomas Graves via vinodkv).
 
+    YARN-161. Fix multiple compiler warnings for unchecked operations in YARN
+    common. (Chris Nauroth via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
