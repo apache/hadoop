@@ -166,3 +166,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8869. Links at the bottom of the jobdetails page do not render 
     correctly in IE9. (Ivan Mitic via suresh)
+
+    HADOOP-8935. Make 'winutils ls' show the SID if the owner does not 
+    exist on the system. (Chuan Liu via suresh)

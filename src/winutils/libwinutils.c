@@ -19,6 +19,7 @@
 #pragma comment(lib, "netapi32.lib")
 #include "winutils.h"
 #include <authz.h>
+#include <sddl.h>
 
 /*
  * The array of 12 months' three-letter abbreviations 
@@ -546,7 +547,7 @@ static DWORD GetAccess(AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClient,
 }
 
 //----------------------------------------------------------------------------
-// Function: GetEffectiveRightsForUser
+// Function: GetEffectiveRightsForSid
 //
 // Description:
 //	Get Windows acces mask by AuthZ methods
@@ -560,12 +561,11 @@ static DWORD GetAccess(AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClient,
 //   an alternative way suggested on MSDN:
 // http://msdn.microsoft.com/en-us/library/windows/desktop/aa446637.aspx
 //
-static DWORD GetEffectiveRightsForUser(PSECURITY_DESCRIPTOR psd,
-  LPCWSTR userName,
+static DWORD GetEffectiveRightsForSid(PSECURITY_DESCRIPTOR psd,
+  PSID pSid,
   PACCESS_MASK pAccessRights)
 {
   AUTHZ_RESOURCE_MANAGER_HANDLE hManager;
-  PSID pSid = NULL;
   LUID unusedId = { 0 };
   AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClientContext = NULL;
   DWORD dwRtnCode = ERROR_SUCCESS;
@@ -579,38 +579,26 @@ static DWORD GetEffectiveRightsForUser(PSECURITY_DESCRIPTOR psd,
     return GetLastError();
   }
 
-  if ((dwRtnCode = GetSidFromAcctNameW(userName, &pSid)) != ERROR_SUCCESS)
-  {
-    ret = dwRtnCode;
-    goto GetEffectiveRightsForUserEnd;
-  }
-
-  if(!AuthzInitializeContextFromSid(0,
-    pSid,
-    hManager,
-    NULL,
-    unusedId,
-    NULL,
-    &hAuthzClientContext))
+  if(!AuthzInitializeContextFromSid(AUTHZ_SKIP_TOKEN_GROUPS,
+    pSid, hManager, NULL, unusedId, NULL, &hAuthzClientContext))
   {
     ret = GetLastError();
-    goto GetEffectiveRightsForUserEnd;
+    goto GetEffectiveRightsForSidEnd;
   }
 
   if ((dwRtnCode = GetAccess(hAuthzClientContext, psd, pAccessRights))
     != ERROR_SUCCESS)
   {
     ret = dwRtnCode;
-    goto GetEffectiveRightsForUserEnd;
+    goto GetEffectiveRightsForSidEnd;
   }
   if (!AuthzFreeContext(hAuthzClientContext))
   {
     ret = GetLastError();
-    goto GetEffectiveRightsForUserEnd;
+    goto GetEffectiveRightsForSidEnd;
   }
 
-GetEffectiveRightsForUserEnd:
-  LocalFree(pSid);
+GetEffectiveRightsForSidEnd:
   return ret;
 }
 
@@ -625,6 +613,8 @@ GetEffectiveRightsForUserEnd:
 //  Error code otherwise
 //
 // Notes:
+//  Caller needs to destroy the memeory of owner and group names by calling
+//  LocalFree() function.
 //
 DWORD FindFileOwnerAndPermission(
   __in LPCWSTR pathName,
@@ -633,20 +623,18 @@ DWORD FindFileOwnerAndPermission(
   __out_opt PINT pMask)
 {
   DWORD dwRtnCode = 0;
-  DWORD dwErrorCode = 0;
 
   PSECURITY_DESCRIPTOR pSd = NULL;
-  DWORD dwSdSize = 0;
-  DWORD dwSdSizeNeeded = 0;
- 
-  PTRUSTEE pOwner = NULL;
-  PTRUSTEE pGroup = NULL;
+
+  PSID psidOwner = NULL;
+  PSID psidGroup = NULL;
+  PSID psidEveryone = NULL;
+  DWORD cbSid = SECURITY_MAX_SID_SIZE;
+  PACL pDacl = NULL;
 
   ACCESS_MASK ownerAccessRights = 0;
   ACCESS_MASK groupAccessRights = 0;
   ACCESS_MASK worldAccessRights = 0;
-
-  HRESULT hr = S_OK;
 
   DWORD ret = ERROR_SUCCESS;
 
@@ -657,120 +645,80 @@ DWORD FindFileOwnerAndPermission(
     return ret;
   }
 
-  // Get the owner SID and DACL of the file
-  // First pass to get the size needed for the SD
-  //
-  GetFileSecurity(
-    pathName,
+  dwRtnCode = GetNamedSecurityInfo(pathName, SE_FILE_OBJECT,
     OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
     DACL_SECURITY_INFORMATION,
-    NULL,
-    dwSdSize,
-    (LPDWORD)&dwSdSizeNeeded);
-  if((dwErrorCode = GetLastError()) != ERROR_INSUFFICIENT_BUFFER)
-  {
-    ret = dwErrorCode;
-    goto FindFileOwnerAndPermissionEnd;
-  }
-  else
-  {
-    // Reallocate memory for the buffers
-    //
-    pSd = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR, dwSdSizeNeeded);
-    if(pSd == NULL)
-    {
-      ret = GetLastError();
-      goto FindFileOwnerAndPermissionEnd;
-    }
-
-    dwSdSize = dwSdSizeNeeded;
-
-    // Second pass to get the Sd
-    //
-    if (!GetFileSecurity(
-      pathName,
-      OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
-      DACL_SECURITY_INFORMATION,
-      pSd,
-      dwSdSize,
-      (LPDWORD)&dwSdSizeNeeded))
-    {
-      ret = GetLastError();
-      goto FindFileOwnerAndPermissionEnd;
-    }
-  }
-
-  // Get file owner and group from Sd
-  //
-  dwRtnCode = LookupSecurityDescriptorParts(&pOwner, &pGroup,
-    NULL, NULL, NULL, NULL, pSd);
+    &psidOwner, &psidGroup, &pDacl, NULL, &pSd);
   if (dwRtnCode != ERROR_SUCCESS)
   {
     ret = dwRtnCode;
     goto FindFileOwnerAndPermissionEnd;
   }
 
-  assert(pOwner->TrusteeForm == TRUSTEE_IS_NAME);
-  assert(pGroup->TrusteeForm == TRUSTEE_IS_NAME);
-
-  if (pOwnerName)
+  if (pOwnerName != NULL)
   {
-    *pOwnerName = (LPWSTR)LocalAlloc(LPTR,
-      (wcslen(pOwner->ptstrName) + 1) * sizeof(TCHAR));
-    if (pOwnerName == NULL)
+    dwRtnCode = GetAccntNameFromSid(psidOwner, pOwnerName);
+    if (dwRtnCode == ERROR_NONE_MAPPED)
     {
-      ret = GetLastError();
-      goto FindFileOwnerAndPermissionEnd;
+      if (!ConvertSidToStringSid(psidOwner, pOwnerName))
+      {
+        ret = GetLastError();
+        goto FindFileOwnerAndPermissionEnd;
+      }
     }
-    hr = StringCchCopyNW(*pOwnerName, (wcslen(pOwner->ptstrName) + 1),
-      pOwner->ptstrName, wcslen(pOwner->ptstrName) + 1);
-    if (FAILED(hr))
+    else if (dwRtnCode != ERROR_SUCCESS)
     {
-      ret = HRESULT_CODE(hr);
+      ret = dwRtnCode;
       goto FindFileOwnerAndPermissionEnd;
     }
   }
 
-  if (pGroupName)
+  if (pGroupName != NULL)
   {
-    *pGroupName = (LPWSTR)LocalAlloc(LPTR,
-      (wcslen(pGroup->ptstrName) + 1) * sizeof(TCHAR));
-    if (pGroupName == NULL)
+    dwRtnCode = GetAccntNameFromSid(psidGroup, pGroupName);
+    if (dwRtnCode == ERROR_NONE_MAPPED)
     {
-      ret = GetLastError();
-      goto FindFileOwnerAndPermissionEnd;
+      if (!ConvertSidToStringSid(psidGroup, pGroupName))
+      {
+        ret = GetLastError();
+        goto FindFileOwnerAndPermissionEnd;
+      }
     }
-    hr = StringCchCopyNW(*pGroupName, (wcslen(pGroup->ptstrName) + 1),
-      pGroup->ptstrName, wcslen(pGroup->ptstrName) + 1);
-    if (FAILED(hr))
+    else if (dwRtnCode != ERROR_SUCCESS)
     {
-      ret = HRESULT_CODE(hr);
+      ret = dwRtnCode;
       goto FindFileOwnerAndPermissionEnd;
     }
   }
 
-  if (pMask == NULL)
-  {
-    ret = ERROR_SUCCESS;
-    goto FindFileOwnerAndPermissionEnd;
-  }
+  if (pMask == NULL) goto FindFileOwnerAndPermissionEnd;
 
-  if ((dwRtnCode = GetEffectiveRightsForUser(pSd,
-    pOwner->ptstrName, &ownerAccessRights)) != ERROR_SUCCESS)
-  {
-    ret = dwRtnCode;
-    goto FindFileOwnerAndPermissionEnd;
-  }
-    
-  if ((dwRtnCode = GetEffectiveRightsForUser(pSd,
-    pGroup->ptstrName, &groupAccessRights)) != ERROR_SUCCESS)
+  if ((dwRtnCode = GetEffectiveRightsForSid(pSd,
+    psidOwner, &ownerAccessRights)) != ERROR_SUCCESS)
   {
     ret = dwRtnCode;
     goto FindFileOwnerAndPermissionEnd;
   }
 
-  if ((dwRtnCode = GetEffectiveRightsForUser(pSd,
-    L"Everyone", &worldAccessRights)) != ERROR_SUCCESS)
+  if ((dwRtnCode = GetEffectiveRightsForSid(pSd,
+    psidGroup, &groupAccessRights)) != ERROR_SUCCESS)
+  {
+    ret = dwRtnCode;
+    goto FindFileOwnerAndPermissionEnd;
+  }
+
+  if ((psidEveryone = LocalAlloc(LPTR, cbSid)) == NULL)
+  {
+    ret = GetLastError();
+    goto FindFileOwnerAndPermissionEnd;
+  }
+  if (!CreateWellKnownSid(WinWorldSid, NULL, psidEveryone, &cbSid))
+  {
+    ret = GetLastError();
+    goto FindFileOwnerAndPermissionEnd;
+  }
+  if ((dwRtnCode = GetEffectiveRightsForSid(pSd,
+    psidEveryone, &worldAccessRights)) != ERROR_SUCCESS)
   {
     ret = dwRtnCode;
     goto FindFileOwnerAndPermissionEnd;
@@ -781,8 +729,7 @@ DWORD FindFileOwnerAndPermission(
   *pMask |= GetUnixAccessMask(worldAccessRights);
 
 FindFileOwnerAndPermissionEnd:
-  LocalFree(pOwner);
-  LocalFree(pGroup);
+  LocalFree(psidEveryone);
   LocalFree(pSd);
 
   return ret;
