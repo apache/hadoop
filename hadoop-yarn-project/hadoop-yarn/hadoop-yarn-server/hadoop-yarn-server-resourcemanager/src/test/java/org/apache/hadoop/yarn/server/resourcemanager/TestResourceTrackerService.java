@@ -400,6 +400,7 @@ public class TestResourceTrackerService {
     if (hostFile != null && hostFile.exists()) {
       hostFile.delete();
     }
+    ClusterMetrics.destroy();
     if (rm != null) {
       rm.stop();
     }
