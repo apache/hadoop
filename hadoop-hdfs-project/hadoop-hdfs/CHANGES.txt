@@ -458,6 +458,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4061. TestBalancer and TestUnderReplicatedBlocks need timeouts. (eli)
 
+    HDFS-3997. OfflineImageViewer incorrectly passes value of imageVersion when
+    visiting IS_COMPRESSED element. (Mithun Radhakrishnan via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
