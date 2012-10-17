@@ -30,7 +30,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 @Metrics(context="yarn")
@@ -70,6 +70,12 @@ public class ClusterMetrics {
     if (ms != null) {
       ms.register("ClusterMetrics", "Metrics for the Yarn Cluster", INSTANCE);
     }
+  }
+
+  @VisibleForTesting
+  synchronized static void destroy() {
+    isInitialized.set(false);
+    INSTANCE = null;
   }
   
   //Active Nodemanagers
@@ -136,4 +142,5 @@ public class ClusterMetrics {
   public void decrNumActiveNodes() {
     numActiveNMs.decr();
   }
+
 }
