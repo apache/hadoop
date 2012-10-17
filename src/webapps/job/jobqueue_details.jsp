@@ -26,6 +26,7 @@ private static final long serialVersionUID = 526456771152222127L;
     schedInfo = new JobQueueInfo(queueName, "INVALID_SCHEDULING_INFO");
   }
 %>
+<!DOCTYPE html>
 <html>
 <head>
 <title>Queue details for

@@ -35,6 +35,7 @@
   }
   Map<String, JobHistory.Task> tasks = job.getAllTasks(); 
 %>
+<!DOCTYPE html>
 <html>
 <body>
 <h2><%=taskStatus%> <%=taskType %> task list for <a href="jobdetailshistory.jsp?logFile=<%=encodedLogFileName%>"><%=jobid %> </a></h2>
