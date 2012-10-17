@@ -11,6 +11,9 @@ Release 1.2.0 - unreleased
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via eli)
 
+    HADOOP-6496. HttpServer sends wrong content-type for CSS files.
+    (Todd Lipcon, Backport by Ivan Mitic via suresh).
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES
