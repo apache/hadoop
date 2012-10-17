@@ -615,13 +615,6 @@
         <artifactId>json-simple</artifactId>
         <version>1.1</version>
       </dependency>
-
-      <dependency>
-        <groupId>com.cenqua.clover</groupId>
-        <artifactId>clover</artifactId>
-        <version>3.0.2</version>
-      </dependency>
-
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
@@ -712,11 +705,6 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
           <version>2.3.2</version>
-        </plugin>
-        <plugin>
-          <groupId>com.atlassian.maven.plugins</groupId>
-          <artifactId>maven-clover2-plugin</artifactId>
-          <version>3.0.5</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -927,53 +915,6 @@
       <properties>
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
       </properties>
-    </profile>
-
-    <profile>
-      <id>clover</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>clover</name>
-        </property>
-      </activation>
-      <properties>
-        <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
-        <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>com.atlassian.maven.plugins</groupId>
-            <artifactId>maven-clover2-plugin</artifactId>
-            <configuration>
-              <includesTestSourceRoots>true</includesTestSourceRoots>
-              <licenseLocation>${cloverLicenseLocation}</licenseLocation>
-              <cloverDatabase>${cloverDatabase}</cloverDatabase>
-              <targetPercentage>50%</targetPercentage>
-              <outputDirectory>${project.build.directory}/clover</outputDirectory>
-              <generateHtml>true</generateHtml>
-              <generateXml>true</generateXml>
-            </configuration>
-            <executions>
-              <execution>
-                <id>setup</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>setup</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>clover</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>clover</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
     <profile>
       <id>test-patch</id>
