@@ -280,11 +280,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public void resetBlocks() {
-    this.capacity = 0;
-    this.remaining = 0;
-    this.blockPoolUsed = 0;
-    this.dfsUsed = 0;
-    this.xceiverCount = 0;
+    setCapacity(0);
+    setRemaining(0);
+    setBlockPoolUsed(0);
+    setDfsUsed(0);
+    setXceiverCount(0);
     this.blockList = null;
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
@@ -307,15 +307,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public void updateHeartbeat(long capacity, long dfsUsed, long remaining,
       long blockPoolUsed, int xceiverCount, int volFailures) {
-    this.capacity = capacity;
-    this.dfsUsed = dfsUsed;
-    this.remaining = remaining;
-    this.blockPoolUsed = blockPoolUsed;
-    this.lastUpdate = Time.now();
-    this.xceiverCount = xceiverCount;
+    setCapacity(capacity);
+    setRemaining(remaining);
+    setBlockPoolUsed(blockPoolUsed);
+    setDfsUsed(dfsUsed);
+    setXceiverCount(xceiverCount);
+    setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
     this.heartbeatedSinceFailover = true;
-    rollBlocksScheduled(lastUpdate);
+    rollBlocksScheduled(getLastUpdate());
   }
 
   /**
