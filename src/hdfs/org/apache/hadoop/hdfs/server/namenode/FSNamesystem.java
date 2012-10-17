@@ -365,10 +365,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private long accessTimePrecision = 0;
   private String nameNodeHostName;
   
-  /** Whether or not to check the stale datanodes */
-  private volatile boolean checkForStaleNodes;
-  /** The time interval for detecting stale datanodes */
-  private volatile long staleInterval;
+  /** Whether or not to check stale DataNodes for read/write */
+  private boolean checkForStaleDataNodes;
+  /** The interval for judging stale DataNodes for read/write */
+  private long staleInterval;
+  /** Whether or not to avoid using stale DataNodes for writing */
+  private volatile boolean avoidStaleDataNodesForWrite;
+  private boolean initialAvoidWriteStaleNodes;
+  /** The number of stale DataNodes */
+  private volatile int numStaleNodes;
+  /**
+   * When the ratio of stale datanodes reaches this number, stop avoiding
+   * writing to stale datanodes, i.e., continue using stale nodes for writing.
+   */
+  private float ratioUseStaleDataNodesForWrite;
   
   /**
    * FSNamesystem constructor.
@@ -577,20 +587,85 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         + " min(s)");
     
     // set the value of stale interval based on configuration
-    this.checkForStaleNodes = conf.getBoolean(
+    checkForStaleDataNodes = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY,
         DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_DEFAULT);
-    if (this.checkForStaleNodes) {
-      this.staleInterval = conf.getLong(
-          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
-          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT);
-      if (this.staleInterval < DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT) {
-        LOG.warn("The given interval for marking stale datanode = "
-            + this.staleInterval + ", which is smaller than the default value "
-            + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT
-            + ".");
-      }
+    staleInterval = getStaleIntervalFromConf(conf, heartbeatExpireInterval);
+    avoidStaleDataNodesForWrite = getAvoidStaleForWriteFromConf(conf,
+        checkForStaleDataNodes);
+    initialAvoidWriteStaleNodes = avoidStaleDataNodesForWrite;
+    ratioUseStaleDataNodesForWrite = 
+        getRatioUseStaleNodesForWriteFromConf(conf);
+  }
+  
+  private static float getRatioUseStaleNodesForWriteFromConf(Configuration conf) {
+    float ratioUseStaleDataNodesForWrite = conf.getFloat(
+        DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY,
+        DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_DEFAULT);
+    if (ratioUseStaleDataNodesForWrite > 0
+        && ratioUseStaleDataNodesForWrite <= 1.0f) {
+      return ratioUseStaleDataNodesForWrite;
+    } else {
+      throw new IllegalArgumentException(
+          DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY
+              + " = '" + ratioUseStaleDataNodesForWrite
+              + "' is invalid. It should be a positive non-zero float value,"
+              + " not greater than 1.0f.");
     }
+  }
+  
+  private static long getStaleIntervalFromConf(Configuration conf,
+      long heartbeatExpireInterval) {
+    long staleInterval = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
+    if (staleInterval <= 0) {
+      throw new IllegalArgumentException(
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY + " = '"
+              + staleInterval
+              + "' is invalid. It should be a positive non-zero value.");
+    }
+    final long heartbeatIntervalSeconds = conf.getLong(
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
+    // The stale interval value cannot be smaller than
+    // 3 times of heartbeat interval
+    final long minStaleInterval = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_DEFAULT)
+        * heartbeatIntervalSeconds * 1000;
+    if (staleInterval < minStaleInterval) {
+      LOG.warn("The given interval for marking stale datanode = "
+          + staleInterval + ", which is less than "
+          + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_DEFAULT
+          + " heartbeat intervals. This may cause too frequent changes of "
+          + "stale states of DataNodes since a heartbeat msg may be missing "
+          + "due to temporary short-term failures. Reset stale interval to "
+          + minStaleInterval + ".");
+      staleInterval = minStaleInterval;
+    }
+    if (staleInterval > heartbeatExpireInterval) {
+      LOG.warn("The given interval for marking stale datanode = "
+          + staleInterval + ", which is larger than heartbeat expire interval "
+          + heartbeatExpireInterval + ".");
+    }
+    return staleInterval;
+  }
+
+  static boolean getAvoidStaleForWriteFromConf(Configuration conf,
+      boolean checkForStale) {
+    boolean avoid = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
+    boolean avoidStaleDataNodesForWrite = checkForStale && avoid;
+    if (!checkForStale && avoid) {
+      LOG.warn("Cannot set "
+          + DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY
+          + " as false while setting "
+          + DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY
+          + " as true.");
+    }
+    return avoidStaleDataNodesForWrite;
   }
 
   /**
@@ -955,13 +1030,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
           clientMachine);
       DFSUtil.StaleComparator comparator = null;
-      if (checkForStaleNodes) {
+      if (checkForStaleDataNodes) {
         comparator = new DFSUtil.StaleComparator(staleInterval);
       }
       // Note: the last block is also included and sorted
       for (LocatedBlock b : blocks.getLocatedBlocks()) {
         clusterMap.pseudoSortByDistance(client, b.getLocations());
-        if (checkForStaleNodes) {
+        if (checkForStaleDataNodes) {
           Arrays.sort(b.getLocations(), comparator);
         }
       }
@@ -2698,7 +2773,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
             (now() - heartbeatExpireInterval));
   }
     
-  private void setDatanodeDead(DatanodeDescriptor node) throws IOException {
+  private void setDatanodeDead(DatanodeDescriptor node) {
     node.setLastUpdate(0);
   }
 
@@ -3490,17 +3565,40 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     boolean allAlive = false;
     while (!allAlive) {
       boolean foundDead = false;
-      DatanodeID nodeID = null;
+      DatanodeID dead = null;
+      // check the number of stale nodes
+      int numOfStaleNodes = 0;
 
-      // locate the first dead node.
-      synchronized(heartbeats) {
-        for (Iterator<DatanodeDescriptor> it = heartbeats.iterator();
-             it.hasNext();) {
+      // locate the first dead node. If need to check stale nodes,
+      // also count the number of stale nodes
+      synchronized (heartbeats) {
+        for (Iterator<DatanodeDescriptor> it = heartbeats.iterator(); it
+            .hasNext();) {
           DatanodeDescriptor nodeInfo = it.next();
-          if (isDatanodeDead(nodeInfo)) {
+          if (dead == null && isDatanodeDead(nodeInfo)) {
             foundDead = true;
-            nodeID = nodeInfo;
-            break;
+            dead = nodeInfo;
+            if (!this.checkForStaleDataNodes) {
+              break;
+            }
+          }
+          if (this.checkForStaleDataNodes
+              && nodeInfo.isStale(this.staleInterval)) {
+            numOfStaleNodes++;
+          }
+        }
+
+        // Change whether to avoid using stale datanodes for writing
+        // based on proportion of stale datanodes
+        if (this.checkForStaleDataNodes) {
+          this.numStaleNodes = numOfStaleNodes;
+          if (numOfStaleNodes > heartbeats.size()
+              * this.ratioUseStaleDataNodesForWrite) {
+            this.avoidStaleDataNodesForWrite = false;
+          } else {
+            if (this.initialAvoidWriteStaleNodes) {
+              this.avoidStaleDataNodesForWrite = true;
+            }
           }
         }
       }
@@ -3512,7 +3610,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
             synchronized (datanodeMap) {
               DatanodeDescriptor nodeInfo = null;
               try {
-                nodeInfo = getDatanode(nodeID);
+                nodeInfo = getDatanode(dead);
               } catch (IOException e) {
                 nodeInfo = null;
               }
@@ -6121,4 +6219,41 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   public String toString() {
     return getClass().getSimpleName() + ": " + host2DataNodeMap;
   }
+    
+  /**
+   * @return Return the current number of stale DataNodes (detected by
+   *         HeartbeatMonitor).
+   */
+  public int getNumStaleNodes() {
+    return this.numStaleNodes;
+  }
+
+  /**
+   * @return whether or not to avoid writing to stale datanodes
+   */
+  @Override // FSClusterStats
+  public boolean isAvoidingStaleDataNodesForWrite() {
+    return avoidStaleDataNodesForWrite;
+  }
+
+  /**
+   * @return The interval used to judge whether or not a DataNode is stale
+   */
+  public long getStaleInterval() {
+    return this.staleInterval;
+  }
+
+  /**
+   * Set the value of {@link DatanodeManager#avoidStaleDataNodesForWrite}. The
+   * HeartbeatManager disable avoidStaleDataNodesForWrite when more than half of
+   * the DataNodes are marked as stale.
+   * 
+   * @param avoidStaleDataNodesForWrite
+   *          The value to set to
+   *          {@link DatanodeManager#avoidStaleDataNodesForWrite}
+   */
+  void setAvoidStaleDataNodesForWrite(boolean avoidStaleDataNodesForWrite) {
+    this.avoidStaleDataNodesForWrite = avoidStaleDataNodesForWrite;
+  }
+  
 }

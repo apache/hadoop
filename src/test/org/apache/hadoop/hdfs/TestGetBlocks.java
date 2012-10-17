@@ -46,7 +46,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Test;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
@@ -68,11 +67,11 @@ public class TestGetBlocks extends TestCase {
   public void testReadSelectNonStaleDatanode() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY, true);
-    long staleInterval = 30 * 1000 * 60;
     // DataNode will send out heartbeat every 15 minutes
     // In this way, when we have set a datanode as stale,
     // its heartbeat will not come to refresh its state
     long heartbeatInterval = 15 * 60;
+    long staleInterval = 3 * heartbeatInterval * 1000;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
         staleInterval);
     conf.setLong("dfs.heartbeat.interval", heartbeatInterval);
