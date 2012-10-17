@@ -145,6 +145,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-161. Fix multiple compiler warnings for unchecked operations in YARN
+    common. (Chris Nauroth via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
