@@ -68,7 +68,7 @@ final public class StateMachineFactory
   
   private StateMachineFactory
       (StateMachineFactory<OPERAND, STATE, EVENTTYPE, EVENT> that,
-       ApplicableTransition t) {
+       ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT> t) {
     this.defaultInitialState = that.defaultInitialState;
     this.transitionsListNode 
         = new TransitionsListNode(t, that.transitionsListNode);
@@ -96,11 +96,12 @@ final public class StateMachineFactory
   }
 
   private class TransitionsListNode {
-    final ApplicableTransition transition;
+    final ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT> transition;
     final TransitionsListNode next;
 
     TransitionsListNode
-        (ApplicableTransition transition, TransitionsListNode next) {
+        (ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT> transition,
+        TransitionsListNode next) {
       this.transition = transition;
       this.next = next;
     }
@@ -225,8 +226,8 @@ final public class StateMachineFactory
           addTransition(STATE preState, STATE postState,
                         EVENTTYPE eventType,
                         SingleArcTransition<OPERAND, EVENT> hook){
-    return new StateMachineFactory
-        (this, new ApplicableSingleOrMultipleTransition
+    return new StateMachineFactory<OPERAND, STATE, EVENTTYPE, EVENT>
+        (this, new ApplicableSingleOrMultipleTransition<OPERAND, STATE, EVENTTYPE, EVENT>
            (preState, eventType, new SingleInternalArc(postState, hook)));
   }
 
@@ -248,9 +249,9 @@ final public class StateMachineFactory
           addTransition(STATE preState, Set<STATE> postStates,
                         EVENTTYPE eventType,
                         MultipleArcTransition<OPERAND, EVENT, STATE> hook){
-    return new StateMachineFactory
+    return new StateMachineFactory<OPERAND, STATE, EVENTTYPE, EVENT>
         (this,
-         new ApplicableSingleOrMultipleTransition
+         new ApplicableSingleOrMultipleTransition<OPERAND, STATE, EVENTTYPE, EVENT>
            (preState, eventType, new MultipleInternalArc(postStates, hook)));
   }
 
@@ -273,7 +274,7 @@ final public class StateMachineFactory
   public StateMachineFactory
              <OPERAND, STATE, EVENTTYPE, EVENT>
           installTopology() {
-    return new StateMachineFactory(this, true);
+    return new StateMachineFactory<OPERAND, STATE, EVENTTYPE, EVENT>(this, true);
   }
 
   /**
@@ -308,7 +309,8 @@ final public class StateMachineFactory
   }
 
   private void makeStateMachineTable() {
-    Stack<ApplicableTransition> stack = new Stack<ApplicableTransition>();
+    Stack<ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT>> stack =
+      new Stack<ApplicableTransition<OPERAND, STATE, EVENTTYPE, EVENT>>();
 
     Map<STATE, Map<EVENTTYPE, Transition<OPERAND, STATE, EVENTTYPE, EVENT>>>
       prototype = new HashMap<STATE, Map<EVENTTYPE, Transition<OPERAND, STATE, EVENTTYPE, EVENT>>>();
@@ -469,7 +471,7 @@ final public class StateMachineFactory
         } else if (transition instanceof StateMachineFactory.MultipleInternalArc) {
           StateMachineFactory.MultipleInternalArc ma
               = (StateMachineFactory.MultipleInternalArc) transition;
-          Iterator<STATE> iter = ma.validPostStates.iterator();
+          Iterator iter = ma.validPostStates.iterator();
           while (iter.hasNext()) {
             Graph.Node fromNode = g.getNode(startState.toString());
             Graph.Node toNode = g.getNode(iter.next().toString());
