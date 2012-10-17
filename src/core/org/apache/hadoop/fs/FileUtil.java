@@ -642,7 +642,7 @@ public class FileUtil {
     String [] cmd = Shell.getSetPermissionCommand(perm, recursive);
     String[] args = new String[cmd.length + 1];
     System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = filename;
+    args[cmd.length] = new File(filename).getPath();
     ShellCommandExecutor shExec = new ShellCommandExecutor(args);
     try {
       shExec.execute();

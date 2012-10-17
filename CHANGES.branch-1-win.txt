@@ -157,3 +157,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8912. Add .gitattributes file to prevent CRLF and LF mismatches 
     for source and text files. (Raja Aluri via suresh)
+
+    HADOOP-8868. FileUtil#chmod should normalize the path before calling 
+    into shell APIs. (Ivan Mitic via suresh)
