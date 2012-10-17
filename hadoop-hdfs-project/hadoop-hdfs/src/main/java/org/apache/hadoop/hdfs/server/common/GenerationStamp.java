@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /****************************************************************
@@ -35,7 +37,7 @@ public class GenerationStamp implements Comparable<GenerationStamp> {
    */
   public static final long GRANDFATHER_GENERATION_STAMP = 0;
 
-  private volatile long genstamp;
+  private AtomicLong genstamp = new AtomicLong();
 
   /**
    * Create a new instance, initialized to FIRST_VALID_STAMP.
@@ -48,35 +50,36 @@ public class GenerationStamp implements Comparable<GenerationStamp> {
    * Create a new instance, initialized to the specified value.
    */
   GenerationStamp(long stamp) {
-    this.genstamp = stamp;
+    genstamp.set(stamp);
   }
 
   /**
    * Returns the current generation stamp
    */
   public long getStamp() {
-    return this.genstamp;
+    return genstamp.get();
   }
 
   /**
    * Sets the current generation stamp
    */
   public void setStamp(long stamp) {
-    this.genstamp = stamp;
+    genstamp.set(stamp);
   }
 
   /**
    * First increments the counter and then returns the stamp 
    */
-  public synchronized long nextStamp() {
-    this.genstamp++;
-    return this.genstamp;
+  public long nextStamp() {
+    return genstamp.incrementAndGet();
   }
 
   @Override // Comparable
   public int compareTo(GenerationStamp that) {
-    return this.genstamp < that.genstamp ? -1 :
-           this.genstamp > that.genstamp ? 1 : 0;
+    long stamp1 = this.genstamp.get();
+    long stamp2 = that.genstamp.get();
+    return stamp1 < stamp2 ? -1 :
+           stamp1 > stamp2 ? 1 : 0;
   }
 
   @Override // Object
@@ -89,6 +92,7 @@ public class GenerationStamp implements Comparable<GenerationStamp> {
 
   @Override // Object
   public int hashCode() {
-    return (int) (genstamp^(genstamp>>>32));
+    long stamp = genstamp.get();
+    return (int) (stamp^(stamp>>>32));
   }
 }

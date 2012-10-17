@@ -394,6 +394,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-2946. HA: Put a cap on the number of completed edits files retained
     by the NN. (atm)
 
+    HDFS-4029. GenerationStamp should use an AtomicLong. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
