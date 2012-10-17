@@ -160,3 +160,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8868. FileUtil#chmod should normalize the path before calling 
     into shell APIs. (Ivan Mitic via suresh)
+
+    HADOOP-8936. Local users should be able to query a domain user's 
+    groups on Windows. (Chuan Liu via suresh)
