@@ -251,6 +251,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4451. fairscheduler fail to init job with kerberos authentication 
     configured. (erik.fang via tucu)
 
+    HADOOP-8882. Uppercase namenode host name causes fsck to fail when 
+    useKsslAuth is on. (Arpit Gupta via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

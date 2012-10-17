@@ -43,6 +43,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 
@@ -136,7 +137,8 @@ public class SecurityUtil {
     if(!UserGroupInformation.isSecurityEnabled())
       return;
     
-    String serviceName = "host/" + remoteHost.getHost();
+    String serviceName = KerberosUtil.getServicePrincipal("host",
+        remoteHost.getHost());
     if (LOG.isDebugEnabled())
       LOG.debug("Fetching service ticket for host at: " + serviceName);
     Object serviceCred = null;
