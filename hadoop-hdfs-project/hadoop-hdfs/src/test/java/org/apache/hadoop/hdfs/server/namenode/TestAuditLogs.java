@@ -117,7 +117,7 @@ public class TestAuditLogs {
     int val = istream.read();
     istream.close();
     verifyAuditLogs(true);
-    assertTrue("failed to read from file", val > 0);
+    assertTrue("failed to read from file", val >= 0);
   }
 
   /** test that allowed stat puts proper entry in audit log */
@@ -168,7 +168,7 @@ public class TestAuditLogs {
     istream.close();
 
     verifyAuditLogsRepeat(true, 3);
-    assertTrue("failed to read from file", val > 0);
+    assertTrue("failed to read from file", val >= 0);
   }
 
   /** test that stat via webhdfs puts proper entry in audit log */
