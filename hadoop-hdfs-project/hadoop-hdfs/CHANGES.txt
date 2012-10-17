@@ -396,6 +396,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4029. GenerationStamp should use an AtomicLong. (eli)
 
+    HDFS-4068. DatanodeID and DatanodeInfo member should be private. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES

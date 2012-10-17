@@ -567,7 +567,7 @@ public class DatanodeManager {
   /**
    * Decommission the node if it is in exclude list.
    */
-  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) { 
+  private void checkDecommissioning(DatanodeDescriptor nodeReg) { 
     // If the registered node is in exclude list, then decommission it
     if (inExcludedHostsList(nodeReg)) {
       startDecommission(nodeReg);
@@ -713,7 +713,7 @@ public class DatanodeManager {
         
       // also treat the registration message as a heartbeat
       heartbeatManager.register(nodeS);
-      checkDecommissioning(nodeS, dnAddress);
+      checkDecommissioning(nodeS);
       return;
     } 
 
@@ -733,7 +733,7 @@ public class DatanodeManager {
       = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
     resolveNetworkLocation(nodeDescr);
     addDatanode(nodeDescr);
-    checkDecommissioning(nodeDescr, dnAddress);
+    checkDecommissioning(nodeDescr);
     
     // also treat the registration message as a heartbeat
     // no need to update its timestamp
