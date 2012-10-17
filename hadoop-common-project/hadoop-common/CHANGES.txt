@@ -363,11 +363,14 @@ Release 2.0.3-alpha - Unreleased
     webhdfs filesystem and fsck to fail when security is on.
     (Arpit Gupta via suresh)
 
-
     HADOOP-8901. GZip and Snappy support may not work without unversioned
     libraries (Colin Patrick McCabe via todd)
 
-    HADOOP-8883. Anonymous fallback in KerberosAuthenticator is broken. (rkanter via tucu)
+    HADOOP-8883. Anonymous fallback in KerberosAuthenticator is broken.
+    (rkanter via tucu)
+
+    HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
+    doesn't match decompressed size. (Slavik Krassovsky via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
