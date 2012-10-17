@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.net.URLConnection;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -160,6 +161,30 @@ public class TestHttpServer {
                  readOutput(new URL(baseUrl, "/echomap?a=b&c=d")));
     assertEquals("a:b,&gt;\nc&lt;:d\n", 
                  readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
+  }
+
+  @Test public void testContentTypes() throws Exception {
+    // Static CSS files should have text/css
+    URL cssUrl = new URL(baseUrl, "/static/hadoop.css");
+    HttpURLConnection conn = (HttpURLConnection)cssUrl.openConnection();
+    conn.connect();
+    assertEquals(200, conn.getResponseCode());
+    assertEquals("text/css", conn.getContentType());
+
+    // Servlets should have text/html with proper encoding
+    URL servletUrl = new URL(baseUrl, "/echo?a=b");
+    conn = (HttpURLConnection)servletUrl.openConnection();
+    conn.connect();
+    assertEquals(200, conn.getResponseCode());
+    assertEquals("text/html; charset=utf-8", conn.getContentType());
+
+    // We should ignore parameters for mime types - ie a parameter
+    // ending in .css should not change mime type
+    servletUrl = new URL(baseUrl, "/echo?a=b.css");
+    conn = (HttpURLConnection)servletUrl.openConnection();
+    conn.connect();
+    assertEquals(200, conn.getResponseCode());
+    assertEquals("text/html; charset=utf-8", conn.getContentType());
   }
 
   /**

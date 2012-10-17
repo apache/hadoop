@@ -254,6 +254,9 @@ Release 1.2.0 - unreleased
     HADOOP-8882. Uppercase namenode host name causes fsck to fail when 
     useKsslAuth is on. (Arpit Gupta via suresh)
 
+    HADOOP-6496. HttpServer sends wrong content-type for CSS files.
+    (Todd Lipcon, Backport by Ivan Mitic via suresh).
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
