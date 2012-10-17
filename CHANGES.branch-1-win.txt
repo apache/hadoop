@@ -163,3 +163,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8936. Local users should be able to query a domain user's 
     groups on Windows. (Chuan Liu via suresh)
+
+    HADOOP-8869. Links at the bottom of the jobdetails page do not render 
+    correctly in IE9. (Ivan Mitic via suresh)
