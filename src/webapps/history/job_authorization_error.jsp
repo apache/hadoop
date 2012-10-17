@@ -28,6 +28,7 @@
 <%!	private static final long serialVersionUID = 1L;
 %>
 
+<!DOCTYPE html>
 <html>
 <head>
 <title>Error: User cannot access this Job</title>

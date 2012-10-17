@@ -77,6 +77,7 @@
   }%>
 
 
+<!DOCTYPE html>
 <html>
 <head>
 <title><%= trackerName %> Hadoop Map/Reduce Administration</title>

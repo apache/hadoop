@@ -72,6 +72,7 @@
   }
 %>
 
+<!DOCTYPE html>
 <html>
 
 <title></title>
