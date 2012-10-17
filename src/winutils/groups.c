@@ -128,6 +128,7 @@ int Groups(int argc, wchar_t *argv[])
   if ((dwRtnCode = GetLocalGroupsForUser(input, &groups, &entries))
     != ERROR_SUCCESS)
   {
+    ReportErrorCode(L"GetLocalGroupsForUser", dwRtnCode);
     ret = EXIT_FAILURE;
     goto GroupsEnd;
   }
