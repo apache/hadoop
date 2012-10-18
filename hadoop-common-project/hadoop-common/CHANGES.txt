@@ -56,6 +56,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8931. Add Java version to startup message. (eli)
 
+    HADOOP-8925. Remove the packaging. (eli)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
