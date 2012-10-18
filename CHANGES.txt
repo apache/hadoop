@@ -263,7 +263,19 @@ Release 1.2.0 - unreleased
     HADOOP-7827. jsp pages missing DOCTYPE tags. (Dave Vronay, Backport by
     Ivan Mitic via suresh)
 
-Release 1.1.0 - unreleased
+Release 1.1.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
+
+  BUG FIXES
+
+Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
 
@@ -407,12 +419,6 @@ Release 1.1.0 - unreleased
 
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
     (todd, backported by Brandon Li via suresh)
-
-    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
-    (todd via mattf)
-
-    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
-    shuffle performance. (Luke Lu via suresh)
 
     MAPREDUCE-4400. Avoid task finish sleep to improve small job/workflow
     latency. (llu)
@@ -650,13 +656,17 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4698. Fix failing unit test - TestJobHistoryConfig. Optionally
     initialize the jobtracker on a JobTracker.startTracker. (Gopal V via sseth)
 
-Release 1.0.4 - Unreleased
+Release 1.0.4 - 2012.10.02
 
   NEW FEATURES
 
   IMPROVEMENTS
 
-    HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
+    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
+    (todd via mattf)
+
+    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
+    shuffle performance. (Luke Lu via suresh)
 
   BUG FIXES
 
