@@ -290,13 +290,18 @@ public class FSDirectory implements Closeable {
     try {
       newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
     } catch (IOException e) {
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+            "DIR* FSDirectory.unprotectedAddFile: exception when add " + path
+                + " to the file system", e);
+      }
       return null;
     }
     return newNode;
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
-      INode newNode, boolean propagateModTime) throws UnresolvedLinkException {
+      INode newNode, boolean propagateModTime) {
     // NOTE: This does not update space counts for parents
     INodeDirectory newParent = null;
     writeLock();

@@ -66,6 +66,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4068. DatanodeID and DatanodeInfo member should be private. (eli)
 
+    HDFS-4073. Two minor improvements to FSDirectory.  (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
