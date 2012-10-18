@@ -151,6 +151,9 @@ Release 0.23.5 - UNRELEASED
     YARN-43. Fix TestResourceTrackerService to not depend on test order and thus
     pass on JDK7. (Thomas Graves via vinodkv)
 
+    YARN-32. Fix TestApplicationTokens to not depend on test order and thus pass
+    on JDK7. (vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
