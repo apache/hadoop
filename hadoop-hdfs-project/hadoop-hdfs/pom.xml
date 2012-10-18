@@ -318,9 +318,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
-        <configuration>
-          <skipTests>false</skipTests>
-        </configuration>
         <executions>
           <execution>
             <id>create-protobuf-generated-sources-directory</id>
@@ -542,47 +539,58 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.7</version>
             <executions>
               <execution>
-                <id>make</id>
-                <phase>compile</phase>
+                <id>define-classpath</id>
+                <phase>process-resources</phase>
                 <goals><goal>run</goal></goals>
                 <configuration>
-                  <target>
-                    <mkdir dir="${project.build.directory}/native"/>
-                    <exec executable="cmake" dir="${project.build.directory}/native" 
-                        failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_LIBWEBHDFS=${require.libwebhdfs} -DREQUIRE_FUSE=${require.fuse}"/>
-                    </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="VERBOSE=1"/>
-                    </exec>
-                  </target>
+                  <exportAntProperties>true</exportAntProperties>
+                  <tests>
+                    <property name="test.classpath" refid="maven.test.classpath"/>
+                  </tests>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.hadoop.cmake.maven.ng</groupId>
+            <artifactId>cmake-ng</artifactId>
+            <executions>
+              <execution>
+                <id>cmake-compile</id>
+                <goals><goal>compile</goal></goals>
+                <configuration>
+                  <target>all</target>
+                  <source>${basedir}/src</source>
+                  <vars>
+                    <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
+                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
+                    <REQUIRE_FUSE>${require.fuse}</REQUIRE_FUSE>
+                    <REQUIRE_LIBWEBHDFS>${require.libwebhdfs}</REQUIRE_LIBWEBHDFS>
+                  </vars>
                 </configuration>
               </execution>
               <execution>
-                <id>native_tests</id>
-                <phase>test</phase>
-                <goals><goal>run</goal></goals>
+                <id>test_libhdfs_threaded</id>
+                <goals><goal>test</goal></goals>
                 <configuration>
-                  <target>
-                    <property name="compile_classpath" refid="maven.compile.classpath"/>
-                    <property name="test_classpath" refid="maven.test.classpath"/>
-                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/">
-                      <arg value="-c"/>
-                      <arg value="[ x$SKIPTESTS = xtrue ] || ${project.build.directory}/native/test_libhdfs_threaded"/>
-                      <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
-                      <env key="SKIPTESTS" value="${skipTests}"/>
-                    </exec>
-                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/">
-                        <arg value="-c"/>
-                        <arg value="[ x$SKIPTESTS = xtrue ] || ${project.build.directory}/native/test_libhdfs_threaded"/>
-                      <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
-                      <env key="SKIPTESTS" value="${skipTests}"/>
-                    </exec>
-                  </target>
+                  <binary>${project.build.directory}/native/test_libhdfs_threaded</binary>
+                  <env><CLASSPATH>${test.classpath}</CLASSPATH></env>
+                  <timeout>300</timeout>
+                  <results>${project.build.directory}/results</results>
+                </configuration>
+              </execution>
+              <execution>
+                <id>test_native_mini_dfs</id>
+                <goals><goal>test</goal></goals>
+                <configuration>
+                  <binary>${project.build.directory}/native/test_native_mini_dfs</binary>
+                  <env><CLASSPATH>${test.classpath}</CLASSPATH></env>
+                  <timeout>300</timeout>
+                  <results>${project.build.directory}/results</results>
                 </configuration>
               </execution>
             </executions>
