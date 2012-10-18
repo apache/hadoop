@@ -373,7 +373,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private volatile boolean avoidStaleDataNodesForWrite;
   private boolean initialAvoidWriteStaleNodes;
   /** The number of stale DataNodes */
-  private volatile int numStaleNodes;
+  private volatile int numStaleNodes = 0;
   /**
    * When the ratio of stale datanodes reaches this number, stop avoiding
    * writing to stale datanodes, i.e., continue using stale nodes for writing.
@@ -6162,7 +6162,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       .addGauge("ScheduledReplicationBlocks", "",
                 getScheduledReplicationBlocks())
       .addGauge("MissingBlocks", "", getMissingBlocksCount())
-      .addGauge("BlockCapacity", "", getBlockCapacity());
+      .addGauge("BlockCapacity", "", getBlockCapacity())
+      .addGauge("StaleDataNodes", 
+          "Number of datanodes marked stale due to delayed heartbeat", 
+          this.getNumStaleNodes());
   }
 
   private void registerWith(MetricsSystem ms) {

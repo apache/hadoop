@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -556,6 +558,9 @@ public class TestReplicationPolicy extends TestCase {
       assertEquals(numStaleNodes, 2);
       assertTrue(miniCluster.getNameNode().getNamesystem()
           .isAvoidingStaleDataNodesForWrite());
+      // Check metrics
+      assertGauge("StaleDataNodes", numStaleNodes, miniCluster.getNameNode()
+          .getNamesystem());
       // Call chooseTarget
       DatanodeDescriptor staleNodeInfo = miniCluster.getNameNode()
           .getNamesystem()
@@ -583,6 +588,9 @@ public class TestReplicationPolicy extends TestCase {
       // to avoid hotspots
       assertFalse(miniCluster.getNameNode().getNamesystem()
           .isAvoidingStaleDataNodesForWrite());
+      // Check metrics
+      assertGauge("StaleDataNodes", numStaleNodes, miniCluster.getNameNode()
+          .getNamesystem());
       // Call chooseTarget
       targets = replicator.chooseTarget(filename, 3, staleNodeInfo, BLOCK_SIZE);
       assertEquals(targets.length, 3);
@@ -603,6 +611,9 @@ public class TestReplicationPolicy extends TestCase {
       assertEquals(numStaleNodes, 2);
       assertTrue(miniCluster.getNameNode().getNamesystem()
           .isAvoidingStaleDataNodesForWrite());
+      // Check metrics
+      assertGauge("StaleDataNodes", numStaleNodes, miniCluster.getNameNode()
+          .getNamesystem());
       // Call chooseTarget
       targets = replicator.chooseTarget(filename, 3, staleNodeInfo, BLOCK_SIZE);
       assertEquals(targets.length, 3);

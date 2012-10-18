@@ -92,6 +92,9 @@ Release 1.2.0 - unreleased
 
     HADOOP-8931. Add Java version to startup message. (eli)
 
+    HDFS-4071. Add number of stale datanodes to metrics (port of HDFS-4059).
+    (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
