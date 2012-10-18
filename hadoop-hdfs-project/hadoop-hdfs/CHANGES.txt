@@ -403,6 +403,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4074. Remove the unused default constructor from INode.  (Brandon Li
     via szetszwo)
 
+    HDFS-4053. Increase the default block size. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
