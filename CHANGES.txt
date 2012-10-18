@@ -12,6 +12,8 @@ Release 1.0.4 - 2012.10.02
     MAPREDUCE-4399. Change the Jetty response buffer size to improve 
     shuffle performance. (Luke Lu via suresh)
 
+    HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
+
   BUG FIXES
 
     HDFS-3652. FSEditLog failure removes the wrong edit stream when storage
