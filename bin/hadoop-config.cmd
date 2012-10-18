@@ -182,29 +182,6 @@ if not defined HADOOP_POLICYFILE (
   set HADOOP_POLICYFILE=hadoop-policy.xml
 )
 
-@rem
-@rem Determine the JAVA_PLATFORM
-@rem
-
-for /f "delims=" %%A in ('%JAVA% -Xmx32m %HADOOP_JAVA_PLATFORM_OPTS% -classpath "%CLASSPATH%" org.apache.hadoop.util.PlatformName') do set JAVA_PLATFORM=%%A
-@rem replace space with underscore
-set JAVA_PLATFORM=%JAVA_PLATFORM: =_%
-
-@rem
-@rem setup 'java.library.path' for native hadoop code if necessary
-@rem
-
-@rem Check if we're running hadoop directly from the build
-set JAVA_LIBRARY_PATH=
-if exist %HADOOP_CORE_HOME%\build\native (
-  set JAVA_LIBRARY_PATH=%HADOOP_CORE_HOME%\build\native\%JAVA_PLATFORM%\lib
-)
-
-@rem For the disto case, check the lib\native folder
-if exist %HADOOP_CORE_HOME%\lib\native (
-  set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;%HADOOP_CORE_HOME%\lib\native\%JAVA_PLATFORM%
-)
-
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.log.dir=%HADOOP_LOG_DIR%
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.log.file=%HADOOP_LOGFILE%
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.home.dir=%HADOOP_CORE_HOME%

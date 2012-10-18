@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-#ifdef UNIX
 #if defined HAVE_CONFIG_H
   #include <config.h>
 #endif
@@ -44,7 +43,6 @@
 #else
   #error 'dlfcn.h not found'
 #endif  
-#endif
 
 #include "org_apache_hadoop_io_compress_zlib.h"
 #include "org_apache_hadoop_io_compress_zlib_ZlibCompressor.h"
@@ -59,65 +57,30 @@ static jfieldID ZlibCompressor_directBufferSize;
 static jfieldID ZlibCompressor_finish;
 static jfieldID ZlibCompressor_finished;
 
-#ifdef UNIX
 static int (*dlsym_deflateInit2_)(z_streamp, int, int, int, int, int, const char *, int);
 static int (*dlsym_deflate)(z_streamp, int);
 static int (*dlsym_deflateSetDictionary)(z_streamp, const Bytef *, uInt);
 static int (*dlsym_deflateReset)(z_streamp);
 static int (*dlsym_deflateEnd)(z_streamp);
-#endif
-
-#ifdef WINDOWS
-typedef int (__cdecl *__dlsym_deflateInit2_) (z_streamp, int, int, int, int, int, const char *, int);
-typedef int (__cdecl *__dlsym_deflate) (z_streamp, int);
-typedef int (__cdecl *__dlsym_deflateSetDictionary) (z_streamp, const Bytef *, uInt);
-typedef int (__cdecl *__dlsym_deflateReset) (z_streamp);
-typedef int (__cdecl *__dlsym_deflateEnd) (z_streamp);
-static __dlsym_deflateInit2_ dlsym_deflateInit2_;
-static __dlsym_deflate dlsym_deflate;
-static __dlsym_deflateSetDictionary dlsym_deflateSetDictionary;
-static __dlsym_deflateReset dlsym_deflateReset;
-static __dlsym_deflateEnd dlsym_deflateEnd;
-#endif
 
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_initIDs(
 	JNIEnv *env, jclass class
 	) {
-#ifdef UNIX
 	// Load libz.so
 	void *libz = dlopen(HADOOP_ZLIB_LIBRARY, RTLD_LAZY | RTLD_GLOBAL);
-  if (!libz) {
+	if (!libz) {
 		THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load libz.so");
 	  	return;
 	}
-#endif
-
-#ifdef WINDOWS
-    HMODULE libz = LoadLibrary(HADOOP_ZLIB_LIBRARY);
-  if (!libz) {
-		THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load zlib1.dll");
-	  	return;
-	}
-#endif
 
 	// Locate the requisite symbols from libz.so
-#ifdef UNIX
 	dlerror();                                 // Clear any existing error
-  LOAD_DYNAMIC_SYMBOL(dlsym_deflateInit2_, env, libz, "deflateInit2_");
-  LOAD_DYNAMIC_SYMBOL(dlsym_deflate, env, libz, "deflate");
-  LOAD_DYNAMIC_SYMBOL(dlsym_deflateSetDictionary, env, libz, "deflateSetDictionary");
-  LOAD_DYNAMIC_SYMBOL(dlsym_deflateReset, env, libz, "deflateReset");
-  LOAD_DYNAMIC_SYMBOL(dlsym_deflateEnd, env, libz, "deflateEnd");
-#endif
-
-#ifdef WINDOWS
-  LOAD_DYNAMIC_SYMBOL(__dlsym_deflateInit2_, dlsym_deflateInit2_, env, libz, "deflateInit2_");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_deflate, dlsym_deflate, env, libz, "deflate");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_deflateSetDictionary, dlsym_deflateSetDictionary, env, libz, "deflateSetDictionary");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_deflateReset, dlsym_deflateReset, env, libz, "deflateReset");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_deflateEnd, dlsym_deflateEnd, env, libz, "deflateEnd");
-#endif
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateInit2_, env, libz, "deflateInit2_");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflate, env, libz, "deflate");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateSetDictionary, env, libz, "deflateSetDictionary");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateReset, env, libz, "deflateReset");
+	LOAD_DYNAMIC_SYMBOL(dlsym_deflateEnd, env, libz, "deflateEnd");
 
 	// Initialize the requisite fieldIds
     ZlibCompressor_clazz = (*env)->GetStaticFieldID(env, class, "clazz", 
@@ -143,8 +106,6 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_init(
 	JNIEnv *env, jclass class, jint level, jint strategy, jint windowBits
 	) {
-    int rv = 0;
-	  static const int memLevel = 8; 							// See zconf.h
 	// Create a z_stream
     z_stream *stream = malloc(sizeof(z_stream));
     if (!stream) {
@@ -154,7 +115,8 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_init(
     memset((void*)stream, 0, sizeof(z_stream));
 
 	// Initialize stream
-    rv = (*dlsym_deflateInit2_)(stream, level, Z_DEFLATED, windowBits,
+	static const int memLevel = 8; 							// See zconf.h
+    int rv = (*dlsym_deflateInit2_)(stream, level, Z_DEFLATED, windowBits,
     			memLevel, strategy, ZLIB_VERSION, sizeof(z_stream));
     			
     if (rv != Z_OK) {
@@ -189,12 +151,11 @@ Java_org_apache_hadoop_io_compress_ZlibCompressor_setDictionary(
 	JNIEnv *env, jclass class, jlong stream, 
 	jarray b, jint off, jint len
 	) {
-    int rv = 0;
     Bytef *buf = (*env)->GetPrimitiveArrayCritical(env, b, 0);
     if (!buf) {
         return;
     }
-    rv = dlsym_deflateSetDictionary(ZSTREAM(stream), buf + off, len);
+    int rv = dlsym_deflateSetDictionary(ZSTREAM(stream), buf + off, len);
     (*env)->ReleasePrimitiveArrayCritical(env, b, buf, 0);
     
     if (rv != Z_OK) {
@@ -218,17 +179,6 @@ JNIEXPORT jint JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
 	JNIEnv *env, jobject this
 	) {
-    jobject clazz = NULL;
-    jobject uncompressed_direct_buf = NULL;
-    jint uncompressed_direct_buf_off = 0;
-    jint uncompressed_direct_buf_len = 0;
-    jobject compressed_direct_buf = NULL;
-    jint compressed_direct_buf_len = 0;
-    jboolean finish;
-    Bytef* uncompressed_bytes = NULL;
-    Bytef* compressed_bytes = NULL;
-    int rv = 0;
-    jint no_compressed_bytes = 0;
 	// Get members of ZlibCompressor
     z_stream *stream = ZSTREAM(
     						(*env)->GetLongField(env, this, 
@@ -240,25 +190,25 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
     } 
 
     // Get members of ZlibCompressor
-    clazz = (*env)->GetStaticObjectField(env, this, 
+    jobject clazz = (*env)->GetStaticObjectField(env, this, 
                                                  ZlibCompressor_clazz);
-	uncompressed_direct_buf = (*env)->GetObjectField(env, this, 
+	jobject uncompressed_direct_buf = (*env)->GetObjectField(env, this, 
 									ZlibCompressor_uncompressedDirectBuf);
-	uncompressed_direct_buf_off = (*env)->GetIntField(env, this, 
+	jint uncompressed_direct_buf_off = (*env)->GetIntField(env, this, 
 									ZlibCompressor_uncompressedDirectBufOff);
-	uncompressed_direct_buf_len = (*env)->GetIntField(env, this, 
+	jint uncompressed_direct_buf_len = (*env)->GetIntField(env, this, 
 									ZlibCompressor_uncompressedDirectBufLen);
 
-	compressed_direct_buf = (*env)->GetObjectField(env, this, 
+	jobject compressed_direct_buf = (*env)->GetObjectField(env, this, 
 									ZlibCompressor_compressedDirectBuf);
-	compressed_direct_buf_len = (*env)->GetIntField(env, this, 
+	jint compressed_direct_buf_len = (*env)->GetIntField(env, this, 
 									ZlibCompressor_directBufferSize);
 
-	finish = (*env)->GetBooleanField(env, this, ZlibCompressor_finish);
+	jboolean finish = (*env)->GetBooleanField(env, this, ZlibCompressor_finish);
 
     // Get the input direct buffer
     LOCK_CLASS(env, clazz, "ZlibCompressor");
-	uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
+	Bytef* uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
 											uncompressed_direct_buf);
     UNLOCK_CLASS(env, clazz, "ZlibCompressor");
     
@@ -268,7 +218,7 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
 	
     // Get the output direct buffer
     LOCK_CLASS(env, clazz, "ZlibCompressor");
-	compressed_bytes = (*env)->GetDirectBufferAddress(env, 
+	Bytef* compressed_bytes = (*env)->GetDirectBufferAddress(env, 
 										compressed_direct_buf);
     UNLOCK_CLASS(env, clazz, "ZlibCompressor");
 
@@ -283,8 +233,9 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
 	stream->avail_out = compressed_direct_buf_len;
 	
 	// Compress
-	rv = dlsym_deflate(stream, finish ? Z_FINISH : Z_NO_FLUSH);
+	int rv = dlsym_deflate(stream, finish ? Z_FINISH : Z_NO_FLUSH);
 
+	jint no_compressed_bytes = 0;
 	switch (rv) {
     	// Contingency? - Report error by throwing appropriate exceptions
   		case Z_STREAM_END:

@@ -50,12 +50,10 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.util.Shell;
 import org.mortbay.log.Log;
 
 /**************************************************
@@ -64,15 +62,8 @@ import org.mortbay.log.Log;
  *
  ***************************************************/
 public class FSDataset implements FSConstants, FSDatasetInterface {
-  private final static boolean isNativeIOAvailable;
-  static {
-    isNativeIOAvailable = NativeIO.isAvailable();
-    if (Shell.WINDOWS && !isNativeIOAvailable) {
-      Log.warn("Data node cannot fully support concurrent reading"
-          + " and writing without native code extensions on Windows.");
-    }
-  }
   
+
   /** Find the metadata file for the specified block file.
    * Return the generation stamp from the name of the metafile.
    */
@@ -942,14 +933,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   public MetaDataInputStream getMetaDataInputStream(Block b)
       throws IOException {
     File checksumFile = getMetaFile( b );
-    if (isNativeIOAvailable) {
-      return new MetaDataInputStream(
-          NativeIO.getShareDeleteFileInputStream(checksumFile),
-          checksumFile.length());
-    } else {
-      return new MetaDataInputStream(new FileInputStream(checksumFile),
-          checksumFile.length());
-    }
+    return new MetaDataInputStream(new FileInputStream(checksumFile),
+                                                    checksumFile.length());
   }
 
   FSVolumeSet volumes;
@@ -1099,24 +1084,17 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
   
   public synchronized InputStream getBlockInputStream(Block b) throws IOException {
-    if (isNativeIOAvailable) {
-      return NativeIO.getShareDeleteFileInputStream(getBlockFile(b));
-    } else {
-      return new FileInputStream(getBlockFile(b));
-    }
+    return new FileInputStream(getBlockFile(b));
   }
 
   public synchronized InputStream getBlockInputStream(Block b, long seekOffset) throws IOException {
+
     File blockFile = getBlockFile(b);
-    if (isNativeIOAvailable) {
-      return NativeIO.getShareDeleteFileInputStream(blockFile, seekOffset);
-    } else {
-      RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
-      if (seekOffset > 0) {
-        blockInFile.seek(seekOffset);
-      }
-      return new FileInputStream(blockInFile.getFD());
+    RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
+    if (seekOffset > 0) {
+      blockInFile.seek(seekOffset);
     }
+    return new FileInputStream(blockInFile.getFD());
   }
 
   /**

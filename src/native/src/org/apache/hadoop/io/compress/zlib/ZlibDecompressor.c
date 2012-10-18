@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-#ifdef UNIX
 #if defined HAVE_CONFIG_H
   #include <config.h>
 #endif
@@ -44,7 +43,6 @@
 #else
   #error 'dlfcn.h not found'
 #endif  
-#endif
 
 #include "org_apache_hadoop_io_compress_zlib.h"
 #include "org_apache_hadoop_io_compress_zlib_ZlibDecompressor.h"
@@ -59,69 +57,32 @@ static jfieldID ZlibDecompressor_directBufferSize;
 static jfieldID ZlibDecompressor_needDict;
 static jfieldID ZlibDecompressor_finished;
 
-#ifdef UNIX
 static int (*dlsym_inflateInit2_)(z_streamp, int, const char *, int);
 static int (*dlsym_inflate)(z_streamp, int);
 static int (*dlsym_inflateSetDictionary)(z_streamp, const Bytef *, uInt);
 static int (*dlsym_inflateReset)(z_streamp);
 static int (*dlsym_inflateEnd)(z_streamp);
-#endif
-
-#ifdef WINDOWS
-typedef int (__cdecl *__dlsym_inflateInit2_)(z_streamp, int, const char *, int);
-typedef int (__cdecl *__dlsym_inflate)(z_streamp, int);
-typedef int (__cdecl *__dlsym_inflateSetDictionary)(z_streamp, const Bytef *, uInt);
-typedef int (__cdecl *__dlsym_inflateReset)(z_streamp);
-typedef int (__cdecl *__dlsym_inflateEnd)(z_streamp);
-static __dlsym_inflateInit2_ dlsym_inflateInit2_;
-static __dlsym_inflate dlsym_inflate;
-static __dlsym_inflateSetDictionary dlsym_inflateSetDictionary;
-static __dlsym_inflateReset dlsym_inflateReset;
-static __dlsym_inflateEnd dlsym_inflateEnd;
-#endif
 
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_initIDs(
-JNIEnv *env, jclass class
+	JNIEnv *env, jclass class
 	) {
 	// Load libz.so
-#ifdef UNIX
-  void *libz = dlopen(HADOOP_ZLIB_LIBRARY, RTLD_LAZY | RTLD_GLOBAL);
+    void *libz = dlopen(HADOOP_ZLIB_LIBRARY, RTLD_LAZY | RTLD_GLOBAL);
 	if (!libz) {
 	  THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load libz.so");
 	  return;
 	} 
-#endif
-
-#ifdef WINDOWS
-  HMODULE libz = LoadLibrary(HADOOP_ZLIB_LIBRARY);
-	if (!libz) {
-	  THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load zlib1.dll");
-	  return;
-	} 
-#endif
-
 
 	// Locate the requisite symbols from libz.so
-#ifdef UNIX
 	dlerror();                                 // Clear any existing error
 	LOAD_DYNAMIC_SYMBOL(dlsym_inflateInit2_, env, libz, "inflateInit2_");
 	LOAD_DYNAMIC_SYMBOL(dlsym_inflate, env, libz, "inflate");
 	LOAD_DYNAMIC_SYMBOL(dlsym_inflateSetDictionary, env, libz, "inflateSetDictionary");
 	LOAD_DYNAMIC_SYMBOL(dlsym_inflateReset, env, libz, "inflateReset");
 	LOAD_DYNAMIC_SYMBOL(dlsym_inflateEnd, env, libz, "inflateEnd");
-#endif
 
-#ifdef WINDOWS
-	LOAD_DYNAMIC_SYMBOL(__dlsym_inflateInit2_, dlsym_inflateInit2_, env, libz, "inflateInit2_");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_inflate, dlsym_inflate, env, libz, "inflate");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_inflateSetDictionary, dlsym_inflateSetDictionary, env, libz, "inflateSetDictionary");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_inflateReset, dlsym_inflateReset, env, libz, "inflateReset");
-	LOAD_DYNAMIC_SYMBOL(__dlsym_inflateEnd, dlsym_inflateEnd, env, libz, "inflateEnd");
-#endif
-
-
-  // Initialize the requisite fieldIds
+	// Initialize the requisite fieldIds
     ZlibDecompressor_clazz = (*env)->GetStaticFieldID(env, class, "clazz", 
                                                       "Ljava/lang/Class;");
     ZlibDecompressor_stream = (*env)->GetFieldID(env, class, "stream", "J");
@@ -145,7 +106,6 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_init(
 	JNIEnv *env, jclass cls, jint windowBits
 	) {
-    int rv = 0;
     z_stream *stream = malloc(sizeof(z_stream));
     memset((void*)stream, 0, sizeof(z_stream));
 
@@ -154,7 +114,7 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_init(
 		return (jlong)0;
     } 
     
-    rv = dlsym_inflateInit2_(stream, windowBits, ZLIB_VERSION, sizeof(z_stream));
+    int rv = dlsym_inflateInit2_(stream, windowBits, ZLIB_VERSION, sizeof(z_stream));
 
 	if (rv != Z_OK) {
 	    // Contingency - Report error by throwing appropriate exceptions
@@ -183,13 +143,12 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_setDictionary(
 	JNIEnv *env, jclass cls, jlong stream,
 	jarray b, jint off, jint len
 	) {
-    int rv = 0;
     Bytef *buf = (*env)->GetPrimitiveArrayCritical(env, b, 0);
     if (!buf) {
 		THROW(env, "java/lang/InternalError", NULL);
         return;
     }
-    rv = dlsym_inflateSetDictionary(ZSTREAM(stream), buf + off, len);
+    int rv = dlsym_inflateSetDictionary(ZSTREAM(stream), buf + off, len);
     (*env)->ReleasePrimitiveArrayCritical(env, b, buf, 0);
     
     if (rv != Z_OK) {
@@ -215,16 +174,6 @@ JNIEXPORT jint JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_inflateBytesDirect(
 	JNIEnv *env, jobject this
 	) {
-    jobject clazz = NULL;
-    jarray compressed_direct_buf = NULL;
-    jint compressed_direct_buf_off = 0;
-    jint compressed_direct_buf_len = 0;
-    jarray uncompressed_direct_buf = NULL;
-    jint uncompressed_direct_buf_len = 0;
-    Bytef *compressed_bytes = NULL;
-    Bytef *uncompressed_bytes = NULL;
-    int rv = 0;
-    int no_decompressed_bytes = 0;
 	// Get members of ZlibDecompressor
     z_stream *stream = ZSTREAM(
     						(*env)->GetLongField(env, this, 
@@ -236,23 +185,23 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_inflateBytesDirect(
     } 
 
     // Get members of ZlibDecompressor
-    clazz = (*env)->GetStaticObjectField(env, this, 
+    jobject clazz = (*env)->GetStaticObjectField(env, this, 
                                                  ZlibDecompressor_clazz);
-	compressed_direct_buf = (jarray)(*env)->GetObjectField(env, this, 
+	jarray compressed_direct_buf = (jarray)(*env)->GetObjectField(env, this, 
 											ZlibDecompressor_compressedDirectBuf);
-	compressed_direct_buf_off = (*env)->GetIntField(env, this, 
+	jint compressed_direct_buf_off = (*env)->GetIntField(env, this, 
 									ZlibDecompressor_compressedDirectBufOff);
-	compressed_direct_buf_len = (*env)->GetIntField(env, this, 
+	jint compressed_direct_buf_len = (*env)->GetIntField(env, this, 
 									ZlibDecompressor_compressedDirectBufLen);
 
-	uncompressed_direct_buf = (jarray)(*env)->GetObjectField(env, this, 
+	jarray uncompressed_direct_buf = (jarray)(*env)->GetObjectField(env, this, 
 											ZlibDecompressor_uncompressedDirectBuf);
-	uncompressed_direct_buf_len = (*env)->GetIntField(env, this, 
+	jint uncompressed_direct_buf_len = (*env)->GetIntField(env, this, 
 										ZlibDecompressor_directBufferSize);
 
     // Get the input direct buffer
     LOCK_CLASS(env, clazz, "ZlibDecompressor");
-	compressed_bytes = (*env)->GetDirectBufferAddress(env, 
+	Bytef *compressed_bytes = (*env)->GetDirectBufferAddress(env, 
 										compressed_direct_buf);
     UNLOCK_CLASS(env, clazz, "ZlibDecompressor");
     
@@ -262,7 +211,7 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_inflateBytesDirect(
 	
     // Get the output direct buffer
     LOCK_CLASS(env, clazz, "ZlibDecompressor");
-	uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
+	Bytef *uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
 											uncompressed_direct_buf);
     UNLOCK_CLASS(env, clazz, "ZlibDecompressor");
 
@@ -277,9 +226,10 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_inflateBytesDirect(
 	stream->avail_out = uncompressed_direct_buf_len;
 	
 	// Decompress
-	rv = dlsym_inflate(stream, Z_PARTIAL_FLUSH);
+	int rv = dlsym_inflate(stream, Z_PARTIAL_FLUSH);
 
 	// Contingency? - Report error by throwing appropriate exceptions
+	int no_decompressed_bytes = 0;	
 	switch (rv) {
 		case Z_STREAM_END:
 		{
