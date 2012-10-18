@@ -172,3 +172,7 @@ Branch-hadoop-1-win - unreleased
 
     HDFS-4065. TestDFSShell.testGet sporadically fails attempting to corrupt 
     block files due to race condition. (Chris Nauroth via suresh)
+
+    HADOOP-8564. Port and extend Hadoop native libraries for Windows to 
+    address datanode concurrent reading and writing issue.
+    (Chuan Liu via suresh)

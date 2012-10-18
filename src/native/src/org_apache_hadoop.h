@@ -24,20 +24,12 @@
 #if !defined ORG_APACHE_HADOOP_H
 #define ORG_APACHE_HADOOP_H
 
-#if defined HAVE_CONFIG_H
-  #include <config.h>
-#endif
-
-#if defined HAVE_DLFCN_H
-  #include <dlfcn.h>
+#if defined(_WIN32)
+#undef UNIX
+#define WINDOWS
 #else
-  #error "dlfcn.h not found"
-#endif  
-
-#if defined HAVE_JNI_H    
-  #include <jni.h>
-#else
-  #error 'jni.h not found'
+#undef WINDOWS
+#define UNIX
 #endif
 
 /* A helper macro to 'throw' a java exception. */ 
@@ -65,6 +57,26 @@
   { \
     if ((*env)->ExceptionCheck(env)) return (ret); \
   }
+
+/**
+ * Unix definitions
+ */
+#ifdef UNIX
+#if defined HAVE_CONFIG_H
+  #include <config.h>
+#endif
+
+#if defined HAVE_DLFCN_H
+  #include <dlfcn.h>
+#else
+  #error "dlfcn.h not found"
+#endif
+
+#if defined HAVE_JNI_H
+  #include <jni.h>
+#else
+  #error 'jni.h not found'
+#endif
 
 /** 
  * A helper function to dlsym a 'symbol' from a given library-handle. 
@@ -94,6 +106,60 @@ static void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
   if ((func_ptr = do_dlsym(env, handle, symbol)) == NULL) { \
     return; \
   }
+#endif
+// Unix part end
+
+
+/**
+ * Windows definitions
+ */
+#ifdef WINDOWS
+
+/* Force using Unicode throughout the code */ 
+#ifndef UNICODE
+#define UNICODE
+#endif
+
+#include <Windows.h>
+#include <stdio.h>
+#include <jni.h>
+
+#define snprintf(a, b ,c, d) _snprintf_s((a), (b), _TRUNCATE, (c), (d))
+
+/* A helper macro to dlsym the requisite dynamic symbol and bail-out on error. */
+#define LOAD_DYNAMIC_SYMBOL(func_type, func_ptr, env, handle, symbol) \
+  if ((func_ptr = (func_type) do_dlsym(env, handle, symbol)) == NULL) { \
+    return; \
+  }
+
+/** 
+ * A helper function to dynamic load a 'symbol' from a given library-handle. 
+ * 
+ * @param env jni handle to report contingencies.
+ * @param handle handle to the dynamic library.
+ * @param symbol symbol to load.
+ * @return returns the address where the symbol is loaded in memory, 
+ *         <code>NULL</code> on error.
+ */
+static FARPROC WINAPI do_dlsym(JNIEnv *env, HMODULE handle, LPCSTR symbol) {
+  DWORD dwErrorCode = ERROR_SUCCESS;
+  FARPROC func_ptr = NULL;
+
+  if (!env || !handle || !symbol) {
+    THROW(env, "java/lang/InternalError", NULL);
+    return NULL;
+  }
+
+  func_ptr = GetProcAddress(handle, symbol);
+  if (func_ptr == NULL)
+  {
+    THROW(env, "java/lang/UnsatisfiedLinkError", symbol);
+  }
+  return func_ptr;
+}
+#endif
+// Windows part end
+
 
 #define LOCK_CLASS(env, clazz, classname) \
   if ((*env)->MonitorEnter(env, clazz) != 0) { \
