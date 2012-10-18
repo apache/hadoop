@@ -126,6 +126,9 @@ Trunk (Unreleased)
 
     HADOOP-8920. Add more javadoc to metrics2 related classes. (suresh)
 
+    HADOOP-8776. Provide an option in test-patch that can enable/disable
+    compiling native code. (Chris Nauroth via suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
