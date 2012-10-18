@@ -169,3 +169,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8935. Make 'winutils ls' show the SID if the owner does not 
     exist on the system. (Chuan Liu via suresh)
+
+    HDFS-4065. TestDFSShell.testGet sporadically fails attempting to corrupt 
+    block files due to race condition. (Chris Nauroth via suresh)
