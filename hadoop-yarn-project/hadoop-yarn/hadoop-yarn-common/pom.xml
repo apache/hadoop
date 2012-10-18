@@ -112,10 +112,14 @@
             <id>generate-version</id>
             <phase>generate-sources</phase>
             <configuration>
-              <executable>scripts/saveVersion.sh</executable>
+              <executable>python</executable>
               <arguments>
+                <argument>${basedir}/../../../dev-support/saveVersion.py</argument>
+                <argument>@YarnVersionAnnotation</argument>
                 <argument>${project.version}</argument>
-                <argument>${project.build.directory}</argument>
+                <argument>${basedir}/..</argument>
+                <argument>org.apache.hadoop.yarn</argument>
+                <argument>${project.build.directory}/generated-sources/version/org/apache/hadoop/yarn</argument>
               </arguments>
             </configuration>
             <goals>
