@@ -400,6 +400,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4073. Two minor improvements to FSDirectory.  (Jing Zhao via szetszwo)
 
+    HDFS-4074. Remove the unused default constructor from INode.  (Brandon Li
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
