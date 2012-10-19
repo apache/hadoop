@@ -69,6 +69,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-150. Fixes AppRejectedTransition does not unregister a rejected
     app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
 
+    YARN-140. Add capacity-scheduler-default.xml to provide a default set of configurations for the capacity scheduler. (ahmed via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)

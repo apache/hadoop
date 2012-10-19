@@ -90,7 +90,6 @@ public class TestParentQueue {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 30);
@@ -344,7 +343,6 @@ public class TestParentQueue {
     
     // Define top-level queues
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 10);
