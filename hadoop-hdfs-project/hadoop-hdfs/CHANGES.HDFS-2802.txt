@@ -9,3 +9,5 @@ Branch-2802 Snapshot (Unreleased)
   directory. (Brandon Li via suresh)
 
   HDFS-4083. Protocol changes for snapshots. (suresh)
+
+  HDFS-4077. Add support for Snapshottable Directory. (Nicholas via suresh)

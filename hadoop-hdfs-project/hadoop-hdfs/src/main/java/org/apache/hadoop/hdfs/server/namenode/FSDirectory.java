@@ -1151,27 +1151,51 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Replaces the specified inode with the specified one.
+   * Replaces the specified INode.
    */
-  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode)
-      throws IOException, UnresolvedLinkException {    
+  private void replaceINodeUnsynced(String path, INode oldnode, INode newnode
+      ) throws IOException {    
+    //remove the old node from the namespace 
+    if (!oldnode.removeNode()) {
+      final String mess = "FSDirectory.replaceINodeUnsynced: failed to remove "
+          + path;
+      NameNode.stateChangeLog.warn("DIR* " + mess);
+      throw new IOException(mess);
+    } 
+    
+    //add the new node
+    rootDir.addNode(path, newnode); 
+  }
+
+  /**
+   * Replaces the specified INodeDirectory.
+   */
+  public void replaceINodeDirectory(String path, INodeDirectory oldnode,
+      INodeDirectory newnode) throws IOException {    
     writeLock();
     try {
-      //
-      // Remove the node from the namespace 
-      //
-      if (!oldnode.removeNode()) {
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
-                                     "failed to remove " + path);
-        throw new IOException("FSDirectory.replaceNode: " +
-                              "failed to remove " + path);
-      } 
-      
-      /* Currently oldnode and newnode are assumed to contain the same
-       * blocks. Otherwise, blocks need to be removed from the blocksMap.
-       */
-      rootDir.addNode(path, newnode); 
+      replaceINodeUnsynced(path, oldnode, newnode);
 
+      //update children's parent directory
+      for(INode i : newnode.getChildren()) {
+        i.parent = newnode;
+      }
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  /**
+   * Replaces the specified INodeFile with the specified one.
+   */
+  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode
+      ) throws IOException {    
+    writeLock();
+    try {
+      replaceINodeUnsynced(path, oldnode, newnode);
+      
+      //Currently, oldnode and newnode are assumed to contain the same blocks.
+      //Otherwise, blocks need to be removed from the blocksMap.
       int index = 0;
       for (BlockInfo b : newnode.getBlocks()) {
         BlockInfo info = getBlockManager().addBlockCollection(b, newnode);

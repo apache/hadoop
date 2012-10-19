@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,9 +32,21 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 /**
  * Directory INode class.
  */
-class INodeDirectory extends INode {
+public class INodeDirectory extends INode {
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
+
+  /** Cast INode to INodeDirectory. */
+  public static INodeDirectory valueOf(INode inode, String src
+      ) throws IOException {
+    if (inode == null) {
+      throw new FileNotFoundException(src + " does not exist.");
+    }
+    if (!inode.isDirectory()) {
+      throw new IOException(src + " is not a directory.");
+    }
+    return (INodeDirectory)inode; 
+  }
 
   private List<INode> children;
 
@@ -68,6 +81,11 @@ class INodeDirectory extends INode {
   @Override
   public boolean isDirectory() {
     return true;
+  }
+
+  /** Is this a snapshottable directory? */
+  public boolean isSnapshottable() {
+    return false;
   }
 
   INode removeChild(INode node) {
