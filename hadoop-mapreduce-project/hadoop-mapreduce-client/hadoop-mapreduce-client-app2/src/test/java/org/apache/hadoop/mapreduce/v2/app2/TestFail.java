@@ -37,8 +37,10 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app2.job.Job;
 import org.apache.hadoop.mapreduce.v2.app2.job.Task;
 import org.apache.hadoop.mapreduce.v2.app2.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app2.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app2.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncherImpl;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
@@ -191,7 +193,8 @@ public class TestFail {
     Assert.assertEquals("Num attempts is not correct", maxAttempts, attempts
         .size());
     TaskAttempt attempt = attempts.values().iterator().next();
-    app.waitForState(attempt, TaskAttemptState.START_WAIT);
+    app.waitForInternalState((TaskAttemptImpl) attempt,
+        TaskAttemptStateInternal.START_WAIT);
     // TODO XXX: This may not be a valid test.
     app.getDispatcher().getEventHandler().handle(
         new TaskAttemptEvent(attempt.getID(),

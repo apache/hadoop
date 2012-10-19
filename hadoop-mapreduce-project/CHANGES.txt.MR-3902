@@ -28,3 +28,5 @@ Branch MR-3902
   MAPREDUCE-4663. Container Launch should be independent of o.a.h.m.Task (sseth)
 
   MAPREDUCE-4727. Handle successful NM stop requests. (sseth)
+
+  MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol for Job, Task and TaskAttempt. (sseth)
