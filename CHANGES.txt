@@ -17,7 +17,19 @@ Release 1.2.0 - unreleased
     HADOOP-7827. jsp pages missing DOCTYPE tags. (Dave Vronay, Backport by
     Ivan Mitic via suresh)
 
-Release 1.1.0 - unreleased
+Release 1.1.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
+
+  BUG FIXES
+
+Release 1.1.0 - 2012.09.28
 
   NEW FEATURES
 
