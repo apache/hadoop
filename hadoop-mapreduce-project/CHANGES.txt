@@ -37,6 +37,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4479. Fix parameter order in assertEquals() in 
     TestCombineInputFileFormat.java (Mariappan Asokan via bobby)
 
+    MAPREDUCE-4733. Reducer can fail to make progress during shuffle if too many
+    reducers complete consecutively. (Jason Lowe via vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

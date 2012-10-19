@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -81,6 +82,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   private Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
   private Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
   private List<TaskAttemptCompletionEvent> completionEvents = null;
+  private List<TaskAttemptCompletionEvent> mapCompletionEvents = null;
   private JobACLsManager aclsMgr;
   
   
@@ -176,11 +178,28 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     if (completionEvents == null) {
       constructTaskAttemptCompletionEvents();
     }
+    return getAttemptCompletionEvents(completionEvents,
+        fromEventId, maxEvents);
+  }
+
+  @Override
+  public synchronized TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+      int startIndex, int maxEvents) {
+    if (mapCompletionEvents == null) {
+      constructTaskAttemptCompletionEvents();
+    }
+    return getAttemptCompletionEvents(mapCompletionEvents,
+        startIndex, maxEvents);
+  }
+
+  private static TaskAttemptCompletionEvent[] getAttemptCompletionEvents(
+      List<TaskAttemptCompletionEvent> eventList,
+      int startIndex, int maxEvents) {
     TaskAttemptCompletionEvent[] events = new TaskAttemptCompletionEvent[0];
-    if (completionEvents.size() > fromEventId) {
+    if (eventList.size() > startIndex) {
       int actualMax = Math.min(maxEvents,
-          (completionEvents.size() - fromEventId));
-      events = completionEvents.subList(fromEventId, actualMax + fromEventId)
+          (eventList.size() - startIndex));
+      events = eventList.subList(startIndex, actualMax + startIndex)
           .toArray(events);
     }
     return events;
@@ -190,11 +209,15 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     loadAllTasks();
     completionEvents = new LinkedList<TaskAttemptCompletionEvent>();
     List<TaskAttempt> allTaskAttempts = new LinkedList<TaskAttempt>();
+    int numMapAttempts = 0;
     for (TaskId taskId : tasks.keySet()) {
       Task task = tasks.get(taskId);
       for (TaskAttemptId taskAttemptId : task.getAttempts().keySet()) {
         TaskAttempt taskAttempt = task.getAttempts().get(taskAttemptId);
         allTaskAttempts.add(taskAttempt);
+        if (task.getType() == TaskType.MAP) {
+          ++numMapAttempts;
+        }
       }
     }
     Collections.sort(allTaskAttempts, new Comparator<TaskAttempt>() {
@@ -223,6 +246,8 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
       }
     });
 
+    mapCompletionEvents =
+        new ArrayList<TaskAttemptCompletionEvent>(numMapAttempts);
     int eventId = 0;
     for (TaskAttempt taskAttempt : allTaskAttempts) {
 
@@ -253,6 +278,9 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
           .getAssignedContainerMgrAddress());
       tace.setStatus(taceStatus);
       completionEvents.add(tace);
+      if (taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP) {
+        mapCompletionEvents.add(tace);
+      }
     }
   }
 

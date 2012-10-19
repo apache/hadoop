@@ -550,6 +550,12 @@ public class MockJobs extends MockApps {
       }
 
       @Override
+      public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+          int startIndex, int maxEvents) {
+        return null;
+      }
+
+      @Override
       public Map<TaskId, Task> getTasks(TaskType taskType) {
         throw new UnsupportedOperationException("Not supported yet.");
       }
