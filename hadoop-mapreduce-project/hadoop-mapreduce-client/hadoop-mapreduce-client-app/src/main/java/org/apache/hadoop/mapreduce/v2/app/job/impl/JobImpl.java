@@ -190,6 +190,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private int allowedMapFailuresPercent = 0;
   private int allowedReduceFailuresPercent = 0;
   private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
+  private List<TaskAttemptCompletionEvent> mapAttemptCompletionEvents;
   private final List<String> diagnostics = new ArrayList<String>();
   
   //task/attempt related datastructures
@@ -548,14 +549,28 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
       int fromEventId, int maxEvents) {
+    return getAttemptCompletionEvents(taskAttemptCompletionEvents,
+        fromEventId, maxEvents);
+  }
+
+  @Override
+  public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+      int startIndex, int maxEvents) {
+    return getAttemptCompletionEvents(mapAttemptCompletionEvents,
+        startIndex, maxEvents);
+  }
+
+  private TaskAttemptCompletionEvent[] getAttemptCompletionEvents(
+      List<TaskAttemptCompletionEvent> eventList,
+      int startIndex, int maxEvents) {
     TaskAttemptCompletionEvent[] events = EMPTY_TASK_ATTEMPT_COMPLETION_EVENTS;
     readLock.lock();
     try {
-      if (taskAttemptCompletionEvents.size() > fromEventId) {
+      if (eventList.size() > startIndex) {
         int actualMax = Math.min(maxEvents,
-            (taskAttemptCompletionEvents.size() - fromEventId));
-        events = taskAttemptCompletionEvents.subList(fromEventId,
-            actualMax + fromEventId).toArray(events);
+            (eventList.size() - startIndex));
+        events = eventList.subList(startIndex,
+            actualMax + startIndex).toArray(events);
       }
       return events;
     } finally {
@@ -1070,6 +1085,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.taskAttemptCompletionEvents =
             new ArrayList<TaskAttemptCompletionEvent>(
                 job.numMapTasks + job.numReduceTasks + 10);
+        job.mapAttemptCompletionEvents =
+            new ArrayList<TaskAttemptCompletionEvent>(job.numMapTasks + 10);
 
         job.allowedMapFailuresPercent =
             job.conf.getInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 0);
@@ -1341,6 +1358,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       //eventId is equal to index in the arraylist
       tce.setEventId(job.taskAttemptCompletionEvents.size());
       job.taskAttemptCompletionEvents.add(tce);
+      if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
+        job.mapAttemptCompletionEvents.add(tce);
+      }
       
       TaskAttemptId attemptId = tce.getAttemptId();
       TaskId taskId = attemptId.getTaskId();
