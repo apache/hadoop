@@ -42,7 +42,8 @@ Trunk (Unreleased)
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides
     client APIs cross MR1 and MR2 (Ahmed via tucu)
 
-    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
+    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks()
+    (XieXianshan via harsh)
 
     MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
     TeraOutputFormat in the terasort example.  (szetszwo)
@@ -61,7 +62,11 @@ Trunk (Unreleased)
     MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
     (madhukara phatak via bobby)
 
-    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse due to missing Avro-generated classes (Chris Nauroth via harsh)
+    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse 
+    due to missing Avro-generated classes (Chris Nauroth via harsh)
+
+    MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
+    (Brandon Li via suresh)
 
   BUG FIXES
 
