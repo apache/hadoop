@@ -241,6 +241,9 @@ public class HftpFileSystem extends FileSystem
                   ", assuming security is disabled");
               return null;
             }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Exception getting delegation token", e);
+            }
             throw e;
           }
           for (Token<? extends TokenIdentifier> t : c.getAllTokens()) {
