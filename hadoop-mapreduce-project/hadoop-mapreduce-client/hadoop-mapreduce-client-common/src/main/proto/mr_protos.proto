@@ -105,9 +105,6 @@ enum TaskAttemptStateProto {
   TA_KILL_CONTAINER_CLEANUP = 11;
   TA_KILL_TASK_CLEANUP = 12;
   TA_KILLED = 13;
-  TA_START_WAIT=14;
-  TA_KILL_IN_PROGRESS=15;
-  TA_FAIL_IN_PROGRESS=16;
 }
 
 message TaskAttemptReportProto {
