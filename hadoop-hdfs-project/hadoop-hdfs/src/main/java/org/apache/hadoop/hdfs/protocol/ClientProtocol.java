@@ -949,4 +949,20 @@ public interface ClientProtocol {
    * @throws IOException
    */
   public DataEncryptionKey getDataEncryptionKey() throws IOException;
+  
+  /**
+   * Create a snapshot
+   * @param snapshotName name of the snapshot created
+   * @param snapshotRoot the path that is being snapshotted
+   */
+  public void createSnapshot(String snapshotName, String snapshotRoot)
+      throws IOException;
+  
+  /**
+   * Delete a snapshot
+   * @param snapshotName name of the snapshot to be deleted
+   * @param snapshotRoot the path where the snapshot exists
+   */
+  public void deleteSnapshot(String snapshotName, String snapshotRoot)
+      throws IOException;
 }

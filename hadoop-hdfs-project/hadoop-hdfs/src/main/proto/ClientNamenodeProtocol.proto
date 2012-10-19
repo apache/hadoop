@@ -442,6 +442,30 @@ message GetDataEncryptionKeyResponseProto {
   required DataEncryptionKeyProto dataEncryptionKey = 1;
 }
 
+message CreateSnapshotRequestProto {
+  required string snapshotName = 1;
+  required string snapshotRoot = 2;
+}
+
+message CreateSnapshotResponseProto { // void response
+}
+
+message DeleteSnapshotRequestProto {
+  required string snapshotName = 1;
+  required string snapshotRoot = 2;
+}
+
+message DeleteSnapshotResponseProto { // void response
+}
+
+message ListSnapshotsRequestProto {
+  required string snapshotRoot = 1;
+}
+
+message ListSnapshotsResponseProto {
+  repeated SnapshotInfoProto snapshots = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -515,4 +539,10 @@ service ClientNamenodeProtocol {
       returns(SetBalancerBandwidthResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
       returns(GetDataEncryptionKeyResponseProto);
+  rpc createSnapshot(CreateSnapshotRequestProto)
+      returns(CreateSnapshotResponseProto);
+  rpc deleteSnapshot(DeleteSnapshotRequestProto)
+      returns(DeleteSnapshotResponseProto);
+  rpc listSnapshots(ListSnapshotsRequestProto)
+      returns(ListSnapshotsResponseProto);
 }

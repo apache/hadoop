@@ -375,3 +375,15 @@ message VersionResponseProto {
   required NamespaceInfoProto info = 1;
 }
 
+/**
+ * Information related to a snapshot
+ * TODO: add more information
+ */
+message SnapshotInfoProto {
+  required string snapshotName = 1;
+  required FsPermissionProto permission = 2;
+  required string owner = 3;
+  required string group = 4;
+  // TODO: do we need access time?
+}
+

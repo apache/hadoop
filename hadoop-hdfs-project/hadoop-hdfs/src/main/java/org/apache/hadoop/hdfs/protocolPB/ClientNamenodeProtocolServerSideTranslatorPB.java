@@ -46,10 +46,14 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Concat
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSnapshotRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncRequestProto;
@@ -83,6 +87,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSer
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListSnapshotsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListSnapshotsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MkdirsRequestProto;
@@ -147,6 +153,11 @@ import com.google.protobuf.ServiceException;
 public class ClientNamenodeProtocolServerSideTranslatorPB implements
     ClientNamenodeProtocolPB {
   final private ClientProtocol server;
+  static final DeleteSnapshotResponseProto VOID_DELETE_SNAPSHOT_RESPONSE =
+      DeleteSnapshotResponseProto.newBuilder().build();
+  static final CreateSnapshotResponseProto VOID_CREATE_SNAPSHOT_RESPONSE =
+      CreateSnapshotResponseProto.newBuilder().build();
+  
 
   /**
    * Constructor
@@ -841,5 +852,36 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public CreateSnapshotResponseProto createSnapshot(RpcController controller,
+      CreateSnapshotRequestProto request) throws ServiceException {
+    try {
+      server.createSnapshot(request.getSnapshotName(),
+          request.getSnapshotRoot());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_CREATE_SNAPSHOT_RESPONSE;
+  }
+
+  @Override
+  public DeleteSnapshotResponseProto deleteSnapshot(RpcController controller,
+      DeleteSnapshotRequestProto request) throws ServiceException {
+    try {
+      server.deleteSnapshot(request.getSnapshotName(),
+          request.getSnapshotRoot());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_DELETE_SNAPSHOT_RESPONSE;
+  }
+
+  @Override
+  public ListSnapshotsResponseProto listSnapshots(RpcController controller,
+      ListSnapshotsRequestProto request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
   }
 }
