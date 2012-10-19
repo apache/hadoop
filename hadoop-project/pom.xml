@@ -702,6 +702,11 @@
           <version>2.3.1</version>
         </plugin>
         <plugin>
+          <groupId>org.apache.hadoop.cmake.maven.ng</groupId>
+          <artifactId>cmake-ng</artifactId>
+          <version>${project.version}</version>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
           <version>2.3.1</version>
