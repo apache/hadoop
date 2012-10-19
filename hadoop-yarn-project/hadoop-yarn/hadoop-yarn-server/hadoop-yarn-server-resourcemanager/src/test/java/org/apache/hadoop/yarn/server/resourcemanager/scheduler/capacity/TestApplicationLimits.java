@@ -100,8 +100,7 @@ public class TestApplicationLimits {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    
+
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 10);
     

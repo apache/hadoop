@@ -66,8 +66,7 @@ public class TestQueueParsing {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    
+
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
@@ -148,7 +147,6 @@ public class TestQueueParsing {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 50);

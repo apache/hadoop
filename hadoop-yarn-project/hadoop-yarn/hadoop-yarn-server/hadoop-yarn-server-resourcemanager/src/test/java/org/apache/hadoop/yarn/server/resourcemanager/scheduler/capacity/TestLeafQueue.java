@@ -135,7 +135,6 @@ public class TestLeafQueue {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {newRoot});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
