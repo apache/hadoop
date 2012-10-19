@@ -24,7 +24,6 @@ public enum JobState {
   RUNNING,
   SUCCEEDED,
   FAILED,
-  KILL_WAIT,
   KILLED,
   ERROR
 }

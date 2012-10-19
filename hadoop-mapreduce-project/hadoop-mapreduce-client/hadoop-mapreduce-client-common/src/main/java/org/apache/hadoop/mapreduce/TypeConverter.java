@@ -128,14 +128,26 @@ public class TypeConverter {
     return taskId;
   }
 
-  public static TaskAttemptState toYarn(org.apache.hadoop.mapred.TaskStatus.State state) {
-    if (state == org.apache.hadoop.mapred.TaskStatus.State.KILLED_UNCLEAN) {
-      return TaskAttemptState.KILLED;
-    }
-    if (state == org.apache.hadoop.mapred.TaskStatus.State.FAILED_UNCLEAN) {
+  public static TaskAttemptState toYarn(
+      org.apache.hadoop.mapred.TaskStatus.State state) {
+    switch (state) {
+    case COMMIT_PENDING:
+      return TaskAttemptState.COMMIT_PENDING;
+    case FAILED:
+    case FAILED_UNCLEAN:
       return TaskAttemptState.FAILED;
-    }
-    return TaskAttemptState.valueOf(state.toString());
+    case KILLED:
+    case KILLED_UNCLEAN:
+      return TaskAttemptState.KILLED;
+    case RUNNING:
+      return TaskAttemptState.RUNNING;
+    case SUCCEEDED:
+      return TaskAttemptState.SUCCEEDED;
+    case UNASSIGNED:
+      return TaskAttemptState.STARTING;
+    default:
+      throw new YarnException("Unrecognized State: " + state);
+    }   
   }
 
   public static Phase toYarn(org.apache.hadoop.mapred.TaskStatus.Phase phase) {
@@ -309,7 +321,6 @@ public class TypeConverter {
       return org.apache.hadoop.mapred.JobStatus.PREP;
     case RUNNING:
       return org.apache.hadoop.mapred.JobStatus.RUNNING;
-    case KILL_WAIT:
     case KILLED:
       return org.apache.hadoop.mapred.JobStatus.KILLED;
     case SUCCEEDED:
@@ -329,7 +340,6 @@ public class TypeConverter {
       return org.apache.hadoop.mapred.TIPStatus.PENDING;
     case RUNNING:
       return org.apache.hadoop.mapred.TIPStatus.RUNNING;
-    case KILL_WAIT:
     case KILLED:
       return org.apache.hadoop.mapred.TIPStatus.KILLED;
     case SUCCEEDED:

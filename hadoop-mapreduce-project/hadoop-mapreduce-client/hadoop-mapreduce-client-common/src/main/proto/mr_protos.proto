@@ -50,8 +50,7 @@ enum TaskStateProto {
   TS_RUNNING = 3;
   TS_SUCCEEDED = 4;
   TS_FAILED = 5;
-  TS_KILL_WAIT = 6;
-  TS_KILLED = 7;
+  TS_KILLED = 6;
 }
 
 enum PhaseProto {
@@ -93,18 +92,12 @@ message TaskReportProto {
 
 enum TaskAttemptStateProto {
   TA_NEW = 1;
-  TA_UNASSIGNED = 2;
-  TA_ASSIGNED = 3;
-  TA_RUNNING = 4;
-  TA_COMMIT_PENDING = 5;
-  TA_SUCCESS_CONTAINER_CLEANUP = 6;
-  TA_SUCCEEDED = 7;
-  TA_FAIL_CONTAINER_CLEANUP = 8;
-  TA_FAIL_TASK_CLEANUP = 9;
-  TA_FAILED = 10;
-  TA_KILL_CONTAINER_CLEANUP = 11;
-  TA_KILL_TASK_CLEANUP = 12;
-  TA_KILLED = 13;
+  TA_STARTING= 2;
+  TA_RUNNING = 3;
+  TA_COMMIT_PENDING = 4;
+  TA_SUCCEEDED = 5;
+  TA_FAILED = 6;
+  TA_KILLED = 7;
 }
 
 message TaskAttemptReportProto {
@@ -131,9 +124,8 @@ enum JobStateProto {
   J_RUNNING = 3;
   J_SUCCEEDED = 4;
   J_FAILED = 5;
-  J_KILL_WAIT = 6;
-  J_KILLED = 7;
-  J_ERROR = 8;
+  J_KILLED = 6;
+  J_ERROR = 7;
 }
 
 message JobReportProto {

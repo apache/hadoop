@@ -103,15 +103,10 @@ public class MRApps extends Apps {
   public static enum TaskAttemptStateUI {
     NEW(
         new TaskAttemptState[] { TaskAttemptState.NEW,
-        TaskAttemptState.UNASSIGNED, TaskAttemptState.ASSIGNED }),
+        TaskAttemptState.STARTING }),
     RUNNING(
         new TaskAttemptState[] { TaskAttemptState.RUNNING,
-            TaskAttemptState.COMMIT_PENDING,
-            TaskAttemptState.SUCCESS_CONTAINER_CLEANUP,
-            TaskAttemptState.FAIL_CONTAINER_CLEANUP,
-            TaskAttemptState.FAIL_TASK_CLEANUP,
-            TaskAttemptState.KILL_CONTAINER_CLEANUP,
-            TaskAttemptState.KILL_TASK_CLEANUP }),
+            TaskAttemptState.COMMIT_PENDING }),
     SUCCESSFUL(new TaskAttemptState[] { TaskAttemptState.SUCCEEDED}),
     FAILED(new TaskAttemptState[] { TaskAttemptState.FAILED}),
     KILLED(new TaskAttemptState[] { TaskAttemptState.KILLED});
