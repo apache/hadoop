@@ -60,7 +60,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 /**
@@ -76,7 +75,6 @@ public class AMLauncher implements Runnable {
   private final Configuration conf;
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
-  private final ClientToAMTokenSecretManagerInRM clientToAMSecretManager;
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   
@@ -84,11 +82,9 @@ public class AMLauncher implements Runnable {
   private final EventHandler handler;
   
   public AMLauncher(RMContext rmContext, RMAppAttempt application,
-      AMLauncherEventType eventType,
-      ClientToAMTokenSecretManagerInRM clientToAMSecretManager, Configuration conf) {
+      AMLauncherEventType eventType, Configuration conf) {
     this.application = application;
     this.conf = conf;
-    this.clientToAMSecretManager = clientToAMSecretManager;
     this.eventType = eventType;
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
@@ -240,7 +236,8 @@ public class AMLauncher implements Runnable {
           ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
 
       SecretKey clientSecretKey =
-          this.clientToAMSecretManager.getMasterKey(applicationId);
+          this.rmContext.getClientToAMTokenSecretManager().getMasterKey(
+            applicationId);
       String encoded =
           Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
       environment.put(

@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
@@ -160,7 +161,8 @@ public class TestRMAppAttemptTransitions {
         new RMContextImpl(new MemStore(), rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new ApplicationTokenSecretManager(conf),
-          new RMContainerTokenSecretManager(conf));
+          new RMContainerTokenSecretManager(conf),
+          new ClientToAMTokenSecretManagerInRM());
     
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);

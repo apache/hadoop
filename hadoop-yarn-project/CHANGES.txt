@@ -47,6 +47,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8911. CRLF characters in source and text files.
     (Raja Aluri via suresh)
 
+    YARN-136. Make ClientToAMTokenSecretManager part of RMContext (Vinod Kumar
+    Vavilapalli via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES 

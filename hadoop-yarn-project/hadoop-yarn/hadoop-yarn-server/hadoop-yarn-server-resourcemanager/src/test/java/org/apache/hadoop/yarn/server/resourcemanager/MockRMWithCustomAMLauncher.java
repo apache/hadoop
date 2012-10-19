@@ -42,13 +42,11 @@ public class MockRMWithCustomAMLauncher extends MockRM {
 
   @Override
   protected ApplicationMasterLauncher createAMLauncher() {
-    return new ApplicationMasterLauncher(super.clientToAMSecretManager,
-      getRMContext()) {
+    return new ApplicationMasterLauncher(getRMContext()) {
       @Override
       protected Runnable createRunnableLauncher(RMAppAttempt application,
           AMLauncherEventType event) {
-        return new AMLauncher(context, application, event,
-          clientToAMSecretManager, getConfig()) {
+        return new AMLauncher(context, application, event, getConfig()) {
           @Override
           protected ContainerManager getContainerMgrProxy(
               ContainerId containerId) {

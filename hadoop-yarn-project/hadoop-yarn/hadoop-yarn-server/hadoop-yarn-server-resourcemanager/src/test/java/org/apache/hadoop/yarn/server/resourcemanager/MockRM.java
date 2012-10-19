@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
@@ -240,8 +240,7 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ApplicationMasterLauncher createAMLauncher() {
-    return new ApplicationMasterLauncher(this.clientToAMSecretManager,
-      getRMContext()) {
+    return new ApplicationMasterLauncher(getRMContext()) {
       @Override
       public void start() {
         // override to not start rpc handler
