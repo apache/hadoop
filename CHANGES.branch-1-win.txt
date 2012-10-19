@@ -175,3 +175,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8899. Classpath exceeds maximum Windows command limit.
     (Ahmed El Baz via suresh)
+
+    HADOOP-8763. Implement set-group-owner for Windows correctly. (Chuan Liu via
+    vinodkv)

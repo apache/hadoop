@@ -558,17 +558,7 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public void setOwner(Path p, String username, String groupname
       ) throws IOException {
-    if (username == null && groupname == null) {
-      throw new IOException("username == null && groupname == null");
-    }
-
-    if (username == null) {
-      FileUtil.execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
-    } else {
-      //OWNER[:[GROUP]]
-      String s = username + (groupname == null? "": ":" + groupname);
-      FileUtil.execCommand(pathToFile(p), Shell.getSetOwnerCommand(s));
-    }
+    FileUtil.setOwner(pathToFile(p), username, groupname);
   }
 
   /**

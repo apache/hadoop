@@ -413,10 +413,13 @@ DWORD GetSidFromAcctNameW(LPCWSTR acctName, PSID *ppSid)
   assert (acctName != NULL && ppSid != NULL);
 
   // Empty name is invalid. However, LookupAccountName() function will return a
-  // false Sid for an empty name instead failing.
+  // false Sid, i.e. Sid for 'BUILDIN', for an empty name instead failing. We
+  // report the error before calling LookupAccountName() function for this
+  // special case. The error code returned here is the same as the last error
+  // code set by LookupAccountName() function for an invalid name.
   //
   if (wcslen(acctName) == 0)
-    return FALSE;
+    return ERROR_NONE_MAPPED;
 
   // First pass to retrieve the buffer size.
   //

@@ -353,7 +353,7 @@ int Chown(int argc, wchar_t *argv[])
         goto ChownEnd;
     }
 
-    if (colonPos + 1 != NULL)
+    if (*(colonPos + 1) != 0)
     {
       // Length includes NULL terminator
       groupNameLen = wcslen(ownerInfo) - (colonPos - ownerInfo) + 1;
@@ -382,10 +382,16 @@ int Chown(int argc, wchar_t *argv[])
       goto ChownEnd;
   }
 
-  if ((userName == NULL || wcslen(userName) == 0) &&
-    (groupName == NULL || wcslen(groupName) == 0))
+  // Not allow zero length user name or group name in the parsing results.
+  //
+  assert(userName == NULL || wcslen(userName) > 0);
+  assert(groupName == NULL || wcslen(groupName) > 0);
+
+  // Nothing to change if both names are empty
+  //
+  if ((userName == NULL) && (groupName == NULL))
   {
-    fwprintf(stderr, L"User name and group name cannot both be empty.");
+    ret = EXIT_SUCCESS;
     goto ChownEnd;
   }
 
@@ -493,6 +499,11 @@ void ChownUsage(LPCWSTR program)
 {
   fwprintf(stdout, L"\
 Usage: %s [OWNER][:[GROUP]] [FILE]\n\
-Change the owner and/or group of the FILE to OWNER and/or GROUP.\n",
+Change the owner and/or group of the FILE to OWNER and/or GROUP.\n\
+\n\
+Note:\n\
+On Linux, if a colon but no group name follows the user name, the group of\n\
+the files is changed to that user\'s login group. Windows has no concept of\n\
+a user's login group. So we do not change the group owner in this case.\n",
 program);
 }
