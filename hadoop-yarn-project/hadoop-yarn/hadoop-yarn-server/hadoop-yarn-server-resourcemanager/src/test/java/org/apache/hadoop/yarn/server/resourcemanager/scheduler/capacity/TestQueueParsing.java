@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.Test;
 
@@ -43,7 +44,8 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(conf);
     capacityScheduler.reinitialize(conf, new RMContextImpl(null, null, null,
-      null, null, null, null, new RMContainerTokenSecretManager(conf)));
+      null, null, null, null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
     
     CSQueue a = capacityScheduler.getQueue("a");
     Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);

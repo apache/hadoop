@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
@@ -250,7 +251,8 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(conf);
     cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf)));
+      null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     conf.setCapacity(A, 80f);
@@ -347,7 +349,8 @@ public class TestCapacityScheduler {
     conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
 
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf)));
+      null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
   }
 
   @Test
@@ -357,8 +360,9 @@ public class TestCapacityScheduler {
     setupQueueConfiguration(csConf);
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(csConf)));
+    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null,
+      null, null, new RMContainerTokenSecretManager(csConf),
+      new ClientToAMTokenSecretManagerInRM()));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
     RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
