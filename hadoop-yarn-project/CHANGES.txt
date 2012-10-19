@@ -36,6 +36,9 @@ Release 0.23.5 - UNRELEASED
     YARN-131. Fix incorrect ACL properties in capacity scheduler documentation.
     (Ahmed Radwan via sseth)
 
+    YARN-163. Retrieving container log via NM webapp can hang with multibyte
+    characters in log (jlowe via bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
