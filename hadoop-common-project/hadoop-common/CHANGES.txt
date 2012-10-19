@@ -377,6 +377,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
     doesn't match decompressed size. (Slavik Krassovsky via suresh)
 
+    HADOOP-8948. TestFileUtil.testGetDU fails on Windows due to incorrect
+    assumption of line separator. (Chris Nauroth via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
