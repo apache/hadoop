@@ -5,4 +5,7 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4082. Add editlog opcodes for snapshot create and delete operations.
   (suresh via szetszwo)
 
+  HDFS-4086. Add editlog opcodes to allow and disallow snapshots on a 
+  directory. (Brandon Li via suresh)
+
 
