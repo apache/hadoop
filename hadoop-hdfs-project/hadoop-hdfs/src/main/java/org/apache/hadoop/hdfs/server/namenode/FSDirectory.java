@@ -44,10 +44,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -57,6 +57,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 import com.google.common.base.Preconditions;
@@ -298,6 +300,40 @@ public class FSDirectory implements Closeable {
       return null;
     }
     return newNode;
+  }
+
+  /** Add an INodeFileSnapshot to the source file. */
+  INodeFileSnapshot addFileSnapshot(String srcPath, String dstPath
+      ) throws IOException, QuotaExceededException {
+    waitForReady();
+
+    final INodeFile src = rootDir.getINodeFile(srcPath);
+    INodeFileSnapshot snapshot = new INodeFileSnapshot(src, src.computeFileSize(true)); 
+
+    writeLock();
+    try {
+      //add destination snaplink
+      snapshot = addNode(dstPath, snapshot, UNKNOWN_DISK_SPACE);
+
+      if (snapshot != null && src.getClass() == INodeFile.class) {
+        //created a snapshot and the source is an INodeFile, replace the source.
+        replaceNode(srcPath, src, new INodeFileWithLink(src));
+      }
+    } finally {
+      writeUnlock();
+
+      if (snapshot == null) {
+        NameNode.stateChangeLog.info(
+            "DIR* FSDirectory.addFileSnapshot: failed to add " + dstPath);
+        return null;
+      }
+    }
+
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFileSnapshot: "
+          + dstPath + " is added to the file system");
+    }
+    return snapshot;
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
