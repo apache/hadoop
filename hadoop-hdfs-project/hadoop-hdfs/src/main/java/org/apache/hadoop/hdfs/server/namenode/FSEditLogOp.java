@@ -2281,7 +2281,115 @@ public abstract class FSEditLogOp {
       return builder.toString();
     }
   }
-  
+
+  /**
+   * Operation corresponding to allow creating snapshot on a directory
+   */
+  static class AllowSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+
+    public AllowSnapshotOp() {
+      super(OP_ALLOW_SNAPSHOT);
+    }
+
+    public AllowSnapshotOp(String snapRoot) {
+      super(OP_ALLOW_SNAPSHOT);
+      snapshotRoot = snapRoot;
+    }
+
+    static AllowSnapshotOp getInstance(OpInstanceCache cache) {
+      return (AllowSnapshotOp) cache.get(OP_ALLOW_SNAPSHOT);
+    }
+
+    public AllowSnapshotOp setSnapshotRoot(String snapRoot) {
+      snapshotRoot = snapRoot;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AllowSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  /**
+   * Operation corresponding to disallow creating snapshot on a directory
+   */
+  static class DisallowSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+
+    public DisallowSnapshotOp() {
+      super(OP_DISALLOW_SNAPSHOT);
+    }
+
+    public DisallowSnapshotOp(String snapRoot) {
+      super(OP_DISALLOW_SNAPSHOT);
+      snapshotRoot = snapRoot;
+    }
+
+    static DisallowSnapshotOp getInstance(OpInstanceCache cache) {
+      return (DisallowSnapshotOp) cache.get(OP_DISALLOW_SNAPSHOT);
+    }
+
+    public DisallowSnapshotOp setSnapshotRoot(String snapRoot) {
+      snapshotRoot = snapRoot;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("DisallowSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
   static private short readShort(DataInputStream in) throws IOException {
     return Short.parseShort(FSImageSerialization.readString(in));
   }
