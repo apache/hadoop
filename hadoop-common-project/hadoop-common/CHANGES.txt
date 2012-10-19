@@ -23,6 +23,8 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8930. Cumulative code coverage calculation (Andrey Klochkov via 
     bobby)
 
+    HADOOP-8889. Upgrade to Surefire 2.12.3 (todd)
+
   OPTIMIZATIONS
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
