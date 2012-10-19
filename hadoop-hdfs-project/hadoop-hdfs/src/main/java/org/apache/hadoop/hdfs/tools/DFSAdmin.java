@@ -74,7 +74,7 @@ public class DFSAdmin extends FsShell {
       super(fs.getConf());
       if (!(fs instanceof DistributedFileSystem)) {
         throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-            " is not a distributed file system");
+            " is not an HDFS file system");
       }
       this.dfs = (DistributedFileSystem)fs;
     }
@@ -273,7 +273,7 @@ public class DFSAdmin extends FsShell {
     FileSystem fs = getFS();
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-      " is not a distributed file system");
+      " is not an HDFS file system");
     }
     return (DistributedFileSystem)fs;
   }

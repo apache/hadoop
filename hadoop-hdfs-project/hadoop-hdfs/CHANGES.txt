@@ -13,6 +13,9 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-3996. Add debug log removed in HDFS-3873 back. (eli)
 
+    HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
+    config. (Stephen Fritz via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
