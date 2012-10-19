@@ -17,19 +17,24 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import org.junit.Test;
-import org.junit.Before;
-import static org.junit.Assert.*;
-
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.Time;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestLightWeightHashSet{
 
@@ -45,7 +50,7 @@ public class TestLightWeightHashSet{
     float maxF = LightWeightHashSet.DEFAULT_MAX_LOAD_FACTOR;
     float minF = LightWeightHashSet.DEFAUT_MIN_LOAD_FACTOR;
     int initCapacity = LightWeightHashSet.MINIMUM_CAPACITY;
-    rand = new Random(System.currentTimeMillis());
+    rand = new Random(Time.now());
     list.clear();
     for (int i = 0; i < NUM; i++) {
       list.add(rand.nextInt());

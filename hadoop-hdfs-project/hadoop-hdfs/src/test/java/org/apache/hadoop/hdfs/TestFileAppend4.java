@@ -166,6 +166,7 @@ public class TestFileAppend4 {
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
       Thread t = new Thread() { 
+          @Override
           public void run() {
             try {
               stm.close();
@@ -181,7 +182,7 @@ public class TestFileAppend4 {
       // has not been completed in the NN.
       // Lose the leases
       LOG.info("Killing lease checker");
-      client.leaserenewer.interruptAndJoin();
+      client.getLeaseRenewer().interruptAndJoin();
  
       FileSystem fs1 = cluster.getFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
@@ -238,6 +239,7 @@ public class TestFileAppend4 {
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
       Thread t = new Thread() { 
+          @Override
           public void run() {
             try {
               stm.close();
@@ -253,7 +255,7 @@ public class TestFileAppend4 {
       // has not been completed in the NN.
       // Lose the leases
       LOG.info("Killing lease checker");
-      client.leaserenewer.interruptAndJoin();
+      client.getLeaseRenewer().interruptAndJoin();
  
       FileSystem fs1 = cluster.getFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(

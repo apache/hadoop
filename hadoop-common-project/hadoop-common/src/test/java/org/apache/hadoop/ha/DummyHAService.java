@@ -184,6 +184,7 @@ class DummyHAService extends HAServiceTarget {
   }
   
   public static class DummyFencer implements FenceMethod {
+    @Override
     public void checkArgs(String args) throws BadFencingConfigurationException {
     }
 

@@ -23,7 +23,9 @@ import static com.google.common.base.Preconditions.*;
 import org.hamcrest.Description;
 import org.junit.Assert;
 
+import static org.mockito.AdditionalMatchers.geq;
 import static org.mockito.Mockito.*;
+
 import org.mockito.stubbing.Answer;
 import org.mockito.internal.matchers.GreaterThan;
 import org.mockito.invocation.InvocationOnMock;
@@ -39,6 +41,9 @@ import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
+import org.apache.hadoop.metrics2.util.Quantile;
+
 import static org.apache.hadoop.metrics2.lib.Interns.*;
 
 /**
@@ -327,5 +332,24 @@ public class MetricsAsserts {
   public static void assertGaugeGt(String name, double greater,
                                    MetricsSource source) {
     assertGaugeGt(name, greater, getMetrics(source));
+  }
+  
+  /**
+   * Asserts that the NumOps and quantiles for a metric have been changed at
+   * some point to a non-zero value.
+   * 
+   * @param prefix of the metric
+   * @param rb MetricsRecordBuilder with the metric
+   */
+  public static void assertQuantileGauges(String prefix, 
+      MetricsRecordBuilder rb) {
+    verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0l));
+    for (Quantile q : MutableQuantiles.quantiles) {
+      String nameTemplate = prefix + "%dthPercentileLatency";
+      int percentile = (int) (100 * q.quantile);
+      verify(rb).addGauge(
+          eqName(info(String.format(nameTemplate, percentile), "")),
+          geq(0l));
+    }
   }
 }

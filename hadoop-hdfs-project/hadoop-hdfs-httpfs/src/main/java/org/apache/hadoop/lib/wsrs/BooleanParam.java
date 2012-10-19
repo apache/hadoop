@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.lib.wsrs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import java.text.MessageFormat;
 
+@InterfaceAudience.Private
 public abstract class BooleanParam extends Param<Boolean> {
 
   public BooleanParam(String name, Boolean defaultValue) {
     super(name, defaultValue);
   }
 
+  @Override
   protected Boolean parse(String str) throws Exception {
     if (str.equalsIgnoreCase("true")) {
       return true;

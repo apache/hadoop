@@ -313,7 +313,6 @@ public class Submitter extends Configured implements Tool {
     // add default debug script only when executable is expressed as
     // <path>#<executable>
     if (exec.contains("#")) {
-      DistributedCache.createSymlink(conf);
       // set default gdb commands for map and reduce task 
       String defScript = "$HADOOP_PREFIX/src/c++/pipes/debug/pipes-default-script";
       setIfUnset(conf, MRJobConfig.MAP_DEBUG_SCRIPT,defScript);

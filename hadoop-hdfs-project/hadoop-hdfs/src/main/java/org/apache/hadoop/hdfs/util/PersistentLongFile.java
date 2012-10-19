@@ -57,7 +57,9 @@ public class PersistentLongFile {
   }
   
   public void set(long newVal) throws IOException {
-    writeFile(file, newVal);
+    if (value != newVal || !loaded) {
+      writeFile(file, newVal);
+    }
     value = newVal;
     loaded = true;
   }

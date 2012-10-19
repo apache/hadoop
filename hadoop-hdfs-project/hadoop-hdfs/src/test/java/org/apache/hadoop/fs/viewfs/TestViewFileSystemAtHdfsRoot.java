@@ -59,9 +59,12 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
       
   @AfterClass
   public static void clusterShutdownAtEnd() throws Exception {
-    cluster.shutdown();   
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
+  @Override
   @Before
   public void setUp() throws Exception {
     fsTarget = fHdfs;
@@ -83,7 +86,7 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
 
   @Override
   int getExpectedDelegationTokenCount() {
-    return 8;
+    return 1; // all point to the same fs so 1 unique token
   }
 
   @Override

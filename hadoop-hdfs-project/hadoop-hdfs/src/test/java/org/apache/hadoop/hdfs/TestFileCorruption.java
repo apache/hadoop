@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,11 +44,12 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * A JUnit test for corrupted file handling.
  */
-public class TestFileCorruption extends TestCase {
+public class TestFileCorruption {
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
@@ -56,6 +59,7 @@ public class TestFileCorruption extends TestCase {
   static Log LOG = ((Log4JLogger)NameNode.stateChangeLog);
 
   /** check if DFS can handle corrupted blocks properly */
+  @Test
   public void testFileCorruption() throws Exception {
     MiniDFSCluster cluster = null;
     DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFileCorruption").
@@ -88,6 +92,7 @@ public class TestFileCorruption extends TestCase {
   }
 
   /** check if local FS can handle corrupted blocks properly */
+  @Test
   public void testLocalFileCorruption() throws Exception {
     Configuration conf = new HdfsConfiguration();
     Path file = new Path(System.getProperty("test.build.data"), "corruptFile");
@@ -114,6 +119,7 @@ public class TestFileCorruption extends TestCase {
    * in blocksMap. Make sure that ArrayIndexOutOfBounds does not thrown.
    * See Hadoop-4351.
    */
+  @Test
   public void testArrayOutOfBoundsException() throws Exception {
     MiniDFSCluster cluster = null;
     try {

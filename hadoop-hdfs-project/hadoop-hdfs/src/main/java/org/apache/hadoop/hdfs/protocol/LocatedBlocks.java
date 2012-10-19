@@ -113,6 +113,7 @@ public class LocatedBlocks {
     Comparator<LocatedBlock> comp = 
       new Comparator<LocatedBlock>() {
         // Returns 0 iff a is inside b or b is inside a
+        @Override
         public int compare(LocatedBlock a, LocatedBlock b) {
           long aBeg = a.getStartOffset();
           long bBeg = b.getStartOffset();

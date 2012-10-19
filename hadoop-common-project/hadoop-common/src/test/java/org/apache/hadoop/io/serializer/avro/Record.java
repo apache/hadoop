@@ -21,10 +21,12 @@ package org.apache.hadoop.io.serializer.avro;
 public class Record {
   public int x = 7;
 
+  @Override
   public int hashCode() {
     return x;
   }
 
+  @Override
   public boolean equals(Object obj) {
     if (this == obj)
       return true;

@@ -39,10 +39,12 @@ public class ByteWritable implements WritableComparable<ByteWritable> {
   /** Return the value of this ByteWritable. */
   public byte get() { return value; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = in.readByte();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeByte(value);
   }

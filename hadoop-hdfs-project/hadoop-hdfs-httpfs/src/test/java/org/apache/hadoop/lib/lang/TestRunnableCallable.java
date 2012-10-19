@@ -19,11 +19,13 @@
 package org.apache.hadoop.lib.lang;
 
 
-import junit.framework.Assert;
-import org.apache.hadoop.test.HTestCase;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Callable;
+
+import org.apache.hadoop.test.HTestCase;
+import org.junit.Test;
 
 public class TestRunnableCallable extends HTestCase {
 
@@ -59,14 +61,14 @@ public class TestRunnableCallable extends HTestCase {
     R r = new R();
     RunnableCallable rc = new RunnableCallable(r);
     rc.run();
-    Assert.assertTrue(r.RUN);
+    assertTrue(r.RUN);
 
     r = new R();
     rc = new RunnableCallable(r);
     rc.call();
-    Assert.assertTrue(r.RUN);
+    assertTrue(r.RUN);
 
-    Assert.assertEquals(rc.toString(), "R");
+    assertEquals(rc.toString(), "R");
   }
 
   @Test
@@ -74,14 +76,14 @@ public class TestRunnableCallable extends HTestCase {
     C c = new C();
     RunnableCallable rc = new RunnableCallable(c);
     rc.run();
-    Assert.assertTrue(c.RUN);
+    assertTrue(c.RUN);
 
     c = new C();
     rc = new RunnableCallable(c);
     rc.call();
-    Assert.assertTrue(c.RUN);
+    assertTrue(c.RUN);
 
-    Assert.assertEquals(rc.toString(), "C");
+    assertEquals(rc.toString(), "C");
   }
 
   @Test(expected = RuntimeException.class)

@@ -32,6 +32,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.metrics2.util.Contracts.*;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSink;
+import org.apache.hadoop.util.Time;
 
 /**
  * An adapter class for metrics sink and associated filters
@@ -106,11 +107,9 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
         retryDelay = firstRetryDelay;
         n = retryCount;
         inError = false;
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         LOG.info(name +" thread interrupted.");
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         if (n > 0) {
           int retryWindow = Math.max(0, 1000 / 2 * retryDelay - minDelay);
           int awhile = rng.nextInt(retryWindow) + minDelay;
@@ -123,8 +122,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
             LOG.info(name +" thread interrupted while waiting for retry", e2);
           }
           --n;
-        }
-        else {
+        } else {
           if (!inError) {
             LOG.error("Got sink exception and over retry limit, "+
                       "suppressing further error messages", e);
@@ -158,7 +156,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
     }
     if (ts > 0) {
       sink.flush();
-      latency.add(System.currentTimeMillis() - ts);
+      latency.add(Time.now() - ts);
     }
     LOG.debug("Done");
   }
@@ -173,8 +171,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
     sinkThread.interrupt();
     try {
       sinkThread.join();
-    }
-    catch (InterruptedException e) {
+    } catch (InterruptedException e) {
       LOG.warn("Stop interrupted", e);
     }
   }

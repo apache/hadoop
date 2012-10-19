@@ -18,18 +18,17 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URI;
-import java.net.URL;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Random;
-
-import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.*;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -38,12 +37,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.log4j.Level;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestHftpFileSystem {
   private static final Random RAN = new Random();
@@ -91,7 +92,6 @@ public class TestHftpFileSystem {
     RAN.setSeed(seed);
 
     config = new Configuration();
-    config.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     hdfs = cluster.getFileSystem();
     blockPoolId = cluster.getNamesystem().getBlockPoolId();
@@ -102,9 +102,15 @@ public class TestHftpFileSystem {
   
   @AfterClass
   public static void tearDown() throws IOException {
-    hdfs.close();
-    hftpFs.close();
-    cluster.shutdown();
+    if (hdfs != null) {
+      hdfs.close();
+    }
+    if (hftpFs != null) {
+      hftpFs.close();
+    }
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   /**

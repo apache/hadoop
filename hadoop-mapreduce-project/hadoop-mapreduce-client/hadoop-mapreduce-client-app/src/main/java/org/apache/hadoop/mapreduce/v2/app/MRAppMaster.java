@@ -87,8 +87,6 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.Clock;
@@ -172,6 +170,8 @@ public class MRAppMaster extends CompositeService {
   private Credentials fsTokens = new Credentials(); // Filled during init
   private UserGroupInformation currentUser; // Will be setup during init
 
+  private volatile boolean isLastAMRetry = false;
+
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
       long appSubmitTime) {
@@ -197,11 +197,21 @@ public class MRAppMaster extends CompositeService {
 
   @Override
   public void init(final Configuration conf) {
-
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
     downloadTokensAndSetupUGI(conf);
-
+    
+    //TODO this is a hack, we really need the RM to inform us when we
+    // are the last one.  This would allow us to configure retries on
+    // a per application basis.
+    int numAMRetries = conf.getInt(YarnConfiguration.RM_AM_MAX_RETRIES, 
+        YarnConfiguration.DEFAULT_RM_AM_MAX_RETRIES);
+    isLastAMRetry = appAttemptID.getAttemptId() >= numAMRetries;
+    LOG.info("AM Retries: " + numAMRetries + 
+        " attempt num: " + appAttemptID.getAttemptId() +
+        " is last retry: " + isLastAMRetry);
+    
+    
     context = new RunningAppContext(conf);
 
     // Job name is the same as the app name util we support DAG of jobs
@@ -419,6 +429,8 @@ public class MRAppMaster extends CompositeService {
       }
 
       try {
+        //We are finishing cleanly so this is the last retry
+        isLastAMRetry = true;
         // Stop all services
         // This will also send the final report to the ResourceManager
         LOG.info("Calling stop for all the services");
@@ -478,27 +490,17 @@ public class MRAppMaster extends CompositeService {
     try {
       this.currentUser = UserGroupInformation.getCurrentUser();
 
-      if (UserGroupInformation.isSecurityEnabled()) {
-        // Read the file-system tokens from the localized tokens-file.
-        Path jobSubmitDir = 
-            FileContext.getLocalFSFileContext().makeQualified(
-                new Path(new File(MRJobConfig.JOB_SUBMIT_DIR)
-                    .getAbsolutePath()));
-        Path jobTokenFile = 
-            new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
-        fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
-        LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
-            + jobTokenFile);
-
-        for (Token<? extends TokenIdentifier> tk : fsTokens.getAllTokens()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Token of kind " + tk.getKind()
-                + "in current ugi in the AppMaster for service "
-                + tk.getService());
-          }
-          currentUser.addToken(tk); // For use by AppMaster itself.
-        }
-      }
+      // Read the file-system tokens from the localized tokens-file.
+      Path jobSubmitDir = 
+          FileContext.getLocalFSFileContext().makeQualified(
+              new Path(new File(MRJobConfig.JOB_SUBMIT_DIR)
+                  .getAbsolutePath()));
+      Path jobTokenFile = 
+          new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
+      fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
+      LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
+          + jobTokenFile);
+      currentUser.addCredentials(fsTokens); // For use by AppMaster itself.
     } catch (IOException e) {
       throw new YarnException(e);
     }
@@ -676,7 +678,11 @@ public class MRAppMaster extends CompositeService {
     }
 
     public void setSignalled(boolean isSignalled) {
-      ((RMCommunicator) containerAllocator).setSignalled(true);
+      ((RMCommunicator) containerAllocator).setSignalled(isSignalled);
+    }
+    
+    public void setShouldUnregister(boolean shouldUnregister) {
+      ((RMCommunicator) containerAllocator).setShouldUnregister(shouldUnregister);
     }
   }
 
@@ -727,7 +733,12 @@ public class MRAppMaster extends CompositeService {
     @Override
     public synchronized void stop() {
       try {
-        cleanupStagingDir();
+        if(isLastAMRetry) {
+          cleanupStagingDir();
+        } else {
+          LOG.info("Skipping cleaning up the staging dir. "
+              + "assuming AM will be retried.");
+        }
       } catch (IOException io) {
         LOG.error("Failed to cleanup staging dir: ", io);
       }
@@ -1026,14 +1037,19 @@ public class MRAppMaster extends CompositeService {
     public void run() {
       LOG.info("MRAppMaster received a signal. Signaling RMCommunicator and "
         + "JobHistoryEventHandler.");
+
       // Notify the JHEH and RMCommunicator that a SIGTERM has been received so
       // that they don't take too long in shutting down
       if(appMaster.containerAllocator instanceof ContainerAllocatorRouter) {
         ((ContainerAllocatorRouter) appMaster.containerAllocator)
         .setSignalled(true);
+        ((ContainerAllocatorRouter) appMaster.containerAllocator)
+        .setShouldUnregister(appMaster.isLastAMRetry);
       }
+      
       if(appMaster.jobHistoryEventHandler != null) {
-        appMaster.jobHistoryEventHandler.setSignalled(true);
+        appMaster.jobHistoryEventHandler
+          .setForcejobCompletion(appMaster.isLastAMRetry);
       }
       appMaster.stop();
     }

@@ -43,31 +43,48 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_NULL    = 0;
   public static final int CHECKSUM_CRC32   = 1;
   public static final int CHECKSUM_CRC32C  = 2;
-  
-  private static String[] NAMES = new String[] {
-    "NULL", "CRC32", "CRC32C"
-  };
-  
-  private static final int CHECKSUM_NULL_SIZE  = 0;
-  private static final int CHECKSUM_CRC32_SIZE = 4;
-  private static final int CHECKSUM_CRC32C_SIZE = 4;
-  
-  
-  public static DataChecksum newDataChecksum( int type, int bytesPerChecksum ) {
+  public static final int CHECKSUM_DEFAULT = 3; 
+  public static final int CHECKSUM_MIXED   = 4;
+ 
+  /** The checksum types */
+  public static enum Type {
+    NULL  (CHECKSUM_NULL, 0),
+    CRC32 (CHECKSUM_CRC32, 4),
+    CRC32C(CHECKSUM_CRC32C, 4),
+    DEFAULT(CHECKSUM_DEFAULT, 0), // This cannot be used to create DataChecksum
+    MIXED (CHECKSUM_MIXED, 0); // This cannot be used to create DataChecksum
+
+    public final int id;
+    public final int size;
+    
+    private Type(int id, int size) {
+      this.id = id;
+      this.size = size;
+    }
+
+    /** @return the type corresponding to the id. */
+    public static Type valueOf(int id) {
+      if (id < 0 || id >= values().length) {
+        throw new IllegalArgumentException("id=" + id
+            + " out of range [0, " + values().length + ")");
+      }
+      return values()[id];
+    }
+  }
+
+
+  public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {
     if ( bytesPerChecksum <= 0 ) {
       return null;
     }
     
     switch ( type ) {
-    case CHECKSUM_NULL :
-      return new DataChecksum( CHECKSUM_NULL, new ChecksumNull(), 
-                               CHECKSUM_NULL_SIZE, bytesPerChecksum );
-    case CHECKSUM_CRC32 :
-      return new DataChecksum( CHECKSUM_CRC32, new PureJavaCrc32(), 
-                               CHECKSUM_CRC32_SIZE, bytesPerChecksum );
-    case CHECKSUM_CRC32C:
-      return new DataChecksum( CHECKSUM_CRC32C, new PureJavaCrc32C(),
-                               CHECKSUM_CRC32C_SIZE, bytesPerChecksum);
+    case NULL :
+      return new DataChecksum(type, new ChecksumNull(), bytesPerChecksum );
+    case CRC32 :
+      return new DataChecksum(type, new PureJavaCrc32(), bytesPerChecksum );
+    case CRC32C:
+      return new DataChecksum(type, new PureJavaCrc32C(), bytesPerChecksum);
     default:
       return null;  
     }
@@ -87,7 +104,7 @@ public class DataChecksum implements Checksum {
                            ( (bytes[offset+2] & 0xff) << 16 ) |
                            ( (bytes[offset+3] & 0xff) << 8 )  |
                            ( (bytes[offset+4] & 0xff) );
-    return newDataChecksum( bytes[0], bytesPerChecksum );
+    return newDataChecksum( Type.valueOf(bytes[0]), bytesPerChecksum );
   }
   
   /**
@@ -98,7 +115,7 @@ public class DataChecksum implements Checksum {
                                  throws IOException {
     int type = in.readByte();
     int bpc = in.readInt();
-    DataChecksum summer = newDataChecksum( type, bpc );
+    DataChecksum summer = newDataChecksum(Type.valueOf(type), bpc );
     if ( summer == null ) {
       throw new IOException( "Could not create DataChecksum of type " +
                              type + " with bytesPerChecksum " + bpc );
@@ -111,13 +128,13 @@ public class DataChecksum implements Checksum {
    */
   public void writeHeader( DataOutputStream out ) 
                            throws IOException { 
-    out.writeByte( type );
+    out.writeByte( type.id );
     out.writeInt( bytesPerChecksum );
   }
 
   public byte[] getHeader() {
     byte[] header = new byte[DataChecksum.HEADER_LEN];
-    header[0] = (byte) (type & 0xff);
+    header[0] = (byte) (type.id & 0xff);
     // Writing in buffer just like DataOutput.WriteInt()
     header[1+0] = (byte) ((bytesPerChecksum >>> 24) & 0xff);
     header[1+1] = (byte) ((bytesPerChecksum >>> 16) & 0xff);
@@ -133,11 +150,11 @@ public class DataChecksum implements Checksum {
    */
    public int writeValue( DataOutputStream out, boolean reset )
                           throws IOException {
-     if ( size <= 0 ) {
+     if ( type.size <= 0 ) {
        return 0;
      }
 
-     if ( size == 4 ) {
+     if ( type.size == 4 ) {
        out.writeInt( (int) summer.getValue() );
      } else {
        throw new IOException( "Unknown Checksum " + type );
@@ -147,7 +164,7 @@ public class DataChecksum implements Checksum {
        reset();
      }
      
-     return size;
+     return type.size;
    }
    
    /**
@@ -157,11 +174,11 @@ public class DataChecksum implements Checksum {
     */
     public int writeValue( byte[] buf, int offset, boolean reset )
                            throws IOException {
-      if ( size <= 0 ) {
+      if ( type.size <= 0 ) {
         return 0;
       }
 
-      if ( size == 4 ) {
+      if ( type.size == 4 ) {
         int checksum = (int) summer.getValue();
         buf[offset+0] = (byte) ((checksum >>> 24) & 0xff);
         buf[offset+1] = (byte) ((checksum >>> 16) & 0xff);
@@ -175,7 +192,7 @@ public class DataChecksum implements Checksum {
         reset();
       }
       
-      return size;
+      return type.size;
     }
    
    /**
@@ -183,36 +200,33 @@ public class DataChecksum implements Checksum {
     * @return true if the checksum matches and false otherwise.
     */
    public boolean compare( byte buf[], int offset ) {
-     if ( size == 4 ) {
+     if ( type.size == 4 ) {
        int checksum = ( (buf[offset+0] & 0xff) << 24 ) | 
                       ( (buf[offset+1] & 0xff) << 16 ) |
                       ( (buf[offset+2] & 0xff) << 8 )  |
                       ( (buf[offset+3] & 0xff) );
        return checksum == (int) summer.getValue();
      }
-     return size == 0;
+     return type.size == 0;
    }
    
-  private final int type;
-  private final int size;
+  private final Type type;
   private final Checksum summer;
   private final int bytesPerChecksum;
   private int inSum = 0;
   
-  private DataChecksum( int checksumType, Checksum checksum,
-                        int sumSize, int chunkSize ) {
-    type = checksumType;
+  private DataChecksum( Type type, Checksum checksum, int chunkSize ) {
+    this.type = type;
     summer = checksum;
-    size = sumSize;
     bytesPerChecksum = chunkSize;
   }
   
   // Accessors
-  public int getChecksumType() {
+  public Type getChecksumType() {
     return type;
   }
   public int getChecksumSize() {
-    return size;
+    return type.size;
   }
   public int getBytesPerChecksum() {
     return bytesPerChecksum;
@@ -226,19 +240,23 @@ public class DataChecksum implements Checksum {
     return 1 + SIZE_OF_INTEGER; // type byte, bytesPerChecksum int
   }
   //Checksum Interface. Just a wrapper around member summer.
+  @Override
   public long getValue() {
     return summer.getValue();
   }
+  @Override
   public void reset() {
     summer.reset();
     inSum = 0;
   }
+  @Override
   public void update( byte[] b, int off, int len ) {
     if ( len > 0 ) {
       summer.update( b, off, len );
       inSum += len;
     }
   }
+  @Override
   public void update( int b ) {
     summer.update( b );
     inSum += 1;
@@ -260,7 +278,7 @@ public class DataChecksum implements Checksum {
   public void verifyChunkedSums(ByteBuffer data, ByteBuffer checksums,
       String fileName, long basePos)
   throws ChecksumException {
-    if (size == 0) return;
+    if (type.size == 0) return;
     
     if (data.hasArray() && checksums.hasArray()) {
       verifyChunkedSums(
@@ -270,7 +288,7 @@ public class DataChecksum implements Checksum {
       return;
     }
     if (NativeCrc32.isAvailable()) {
-      NativeCrc32.verifyChunkedSums(bytesPerChecksum, type, checksums, data,
+      NativeCrc32.verifyChunkedSums(bytesPerChecksum, type.id, checksums, data,
           fileName, basePos);
       return;
     }
@@ -280,7 +298,7 @@ public class DataChecksum implements Checksum {
     checksums.mark();
     try {
       byte[] buf = new byte[bytesPerChecksum];
-      byte[] sum = new byte[size];
+      byte[] sum = new byte[type.size];
       while (data.remaining() > 0) {
         int n = Math.min(data.remaining(), bytesPerChecksum);
         checksums.get(sum);
@@ -351,7 +369,7 @@ public class DataChecksum implements Checksum {
    *                  buffer to put the checksums.
    */
   public void calculateChunkedSums(ByteBuffer data, ByteBuffer checksums) {
-    if (size == 0) return;
+    if (type.size == 0) return;
     
     if (data.hasArray() && checksums.hasArray()) {
       calculateChunkedSums(data.array(), data.arrayOffset() + data.position(), data.remaining(),
@@ -411,18 +429,12 @@ public class DataChecksum implements Checksum {
   
   @Override
   public int hashCode() {
-    return (this.type + 31) * this.bytesPerChecksum;
+    return (this.type.id + 31) * this.bytesPerChecksum;
   }
   
   @Override
   public String toString() {
-    String strType;
-    if (type < NAMES.length && type > 0) {
-      strType = NAMES[type];
-    } else {
-      strType = String.valueOf(type);
-    }
-    return "DataChecksum(type=" + strType +
+    return "DataChecksum(type=" + type +
       ", chunkSize=" + bytesPerChecksum + ")";
   }
   
@@ -436,9 +448,13 @@ public class DataChecksum implements Checksum {
     public ChecksumNull() {}
     
     //Dummy interface
+    @Override
     public long getValue() { return 0; }
+    @Override
     public void reset() {}
+    @Override
     public void update(byte[] b, int off, int len) {}
+    @Override
     public void update(int b) {}
   };
 }

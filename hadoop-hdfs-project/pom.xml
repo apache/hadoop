@@ -34,7 +34,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>hadoop-hdfs</module>
     <module>hadoop-hdfs-httpfs</module>
     <module>hadoop-hdfs/src/contrib/bkjournal</module>
-    <module>hadoop-hdfs-raid</module>
   </modules>
 
   <build>

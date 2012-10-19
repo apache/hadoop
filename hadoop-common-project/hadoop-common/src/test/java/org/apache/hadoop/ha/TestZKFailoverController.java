@@ -28,6 +28,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.ha.MiniZKFCCluster.DummyZKFC;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -394,9 +395,9 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
       // Ask it to cede active for 3 seconds. It should respond promptly
       // (i.e. the RPC itself should not take 3 seconds!)
       ZKFCProtocol proxy = zkfc.getLocalTarget().getZKFCProxy(conf, 5000);
-      long st = System.currentTimeMillis();
+      long st = Time.now();
       proxy.cedeActive(3000);
-      long et = System.currentTimeMillis();
+      long et = Time.now();
       assertTrue("RPC to cedeActive took " + (et - st) + " ms",
           et - st < 1000);
       
@@ -408,7 +409,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
       // After the prescribed 3 seconds, should go into STANDBY state,
       // since the other node in the cluster would have taken ACTIVE.
       cluster.waitForElectorState(0, ActiveStandbyElector.State.STANDBY);
-      long et2 = System.currentTimeMillis();
+      long et2 = Time.now();
       assertTrue("Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
           "ms before rejoining.",
           et2 - et > 2800);      

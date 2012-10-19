@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -81,11 +82,11 @@ public abstract class FilterFs extends AbstractFileSystem {
   public FSDataOutputStream createInternal(Path f,
     EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
     short replication, long blockSize, Progressable progress,
-    int bytesPerChecksum, boolean createParent) 
+    ChecksumOpt checksumOpt, boolean createParent) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.createInternal(f, flag, absolutePermission, bufferSize,
-        replication, blockSize, progress, bytesPerChecksum, createParent);
+        replication, blockSize, progress, checksumOpt, createParent);
   }
 
   @Override
@@ -173,9 +174,6 @@ public abstract class FilterFs extends AbstractFileSystem {
     return myFs.listStatus(f);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {

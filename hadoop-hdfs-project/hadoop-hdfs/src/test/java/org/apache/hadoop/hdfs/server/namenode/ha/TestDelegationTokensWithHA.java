@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -32,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -56,7 +62,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * Test case for client support of delegation tokens in an HA cluster.
@@ -111,7 +116,8 @@ public class TestDelegationTokensWithHA {
   
   @Test
   public void testDelegationTokenDFSApi() throws Exception {
-    Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
+    final Token<DelegationTokenIdentifier> token =
+        getDelegationToken(fs, "JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
@@ -152,13 +158,14 @@ public class TestDelegationTokensWithHA {
   @SuppressWarnings("deprecation")
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
-    final Token<DelegationTokenIdentifier> token = 
-        dfs.getDelegationToken("JobTracker");
+    final Token<DelegationTokenIdentifier> token =
+        getDelegationToken(fs, "JobTracker");
     final UserGroupInformation longUgi = UserGroupInformation
         .createRemoteUser("JobTracker/foo.com@FOO.COM");
     final UserGroupInformation shortUgi = UserGroupInformation
         .createRemoteUser("JobTracker");
     longUgi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         DistributedFileSystem dfs = (DistributedFileSystem)
             HATestUtil.configureFailoverFs(cluster, conf);
@@ -168,6 +175,7 @@ public class TestDelegationTokensWithHA {
       }
     });
     shortUgi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         DistributedFileSystem dfs = (DistributedFileSystem)
             HATestUtil.configureFailoverFs(cluster, conf);
@@ -176,6 +184,7 @@ public class TestDelegationTokensWithHA {
       }
     });
     longUgi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         DistributedFileSystem dfs = (DistributedFileSystem)
             HATestUtil.configureFailoverFs(cluster, conf);
@@ -188,8 +197,8 @@ public class TestDelegationTokensWithHA {
   
   @Test
   public void testHAUtilClonesDelegationTokens() throws Exception {
-    final Token<DelegationTokenIdentifier> token = 
-      dfs.getDelegationToken("test");
+    final Token<DelegationTokenIdentifier> token =
+        getDelegationToken(fs, "JobTracker");
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test");
     
@@ -250,8 +259,9 @@ public class TestDelegationTokensWithHA {
     URI hAUri = HATestUtil.getLogicalUri(cluster);
     String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri).toString();
     assertEquals(haService, dfs.getCanonicalServiceName());
-    Token<?> token = dfs.getDelegationToken(
-        UserGroupInformation.getCurrentUser().getShortUserName());
+    final String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
+    final Token<DelegationTokenIdentifier> token =
+        getDelegationToken(dfs, renewer);
     assertEquals(haService, token.getService().toString());
     // make sure the logical uri is handled correctly
     token.renew(dfs.getConf());
@@ -273,6 +283,13 @@ public class TestDelegationTokensWithHA {
     token.cancel(conf);
   }
   
+  @SuppressWarnings("unchecked")
+  private Token<DelegationTokenIdentifier> getDelegationToken(FileSystem fs,
+      String renewer) throws IOException {
+    final Token<?> tokens[] = fs.addDelegationTokens(renewer, null);
+    assertEquals(1, tokens.length);
+    return (Token<DelegationTokenIdentifier>) tokens[0];
+  }
   enum TokenTestAction {
     RENEW, CANCEL;
   }

@@ -48,8 +48,11 @@ import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 
 import com.google.protobuf.BlockingService;
 
@@ -71,6 +74,8 @@ import com.google.protobuf.BlockingService;
  * All methods in the protocol should throw only IOException.  No field data of
  * the protocol instance is transmitted.
  */
+@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@InterfaceStability.Evolving
 public class RPC {
   public enum RpcKind {
     RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
@@ -369,7 +374,7 @@ public class RPC {
                                int rpcTimeout,
                                RetryPolicy connectionRetryPolicy,
                                long timeout) throws IOException { 
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     IOException ioe;
     while (true) {
       try {
@@ -387,7 +392,7 @@ public class RPC {
         ioe = nrthe;
       }
       // check if timed out
-      if (System.currentTimeMillis()-timeout >= startTime) {
+      if (Time.now()-timeout >= startTime) {
         throw ioe;
       }
 
@@ -628,7 +633,7 @@ public class RPC {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address.
-   * @deprecated protocol interface should be passed.
+   * @deprecated Please use {@link Builder} to build the {@link Server}
    */
   @Deprecated
   public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
@@ -638,7 +643,7 @@ public class RPC {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address.
-   * @deprecated protocol interface should be passed.
+   * @deprecated Please use {@link Builder} to build the {@link Server}
    */
   @Deprecated
   public static Server getServer(final Object instance, final String bindAddress, final int port,
@@ -650,7 +655,10 @@ public class RPC {
                      null);
   }
 
-  /** Construct a server for a protocol implementation instance. */
+  /** Construct a server for a protocol implementation instance.
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static Server getServer(Class<?> protocol,
                                  Object instance, String bindAddress,
                                  int port, Configuration conf) 
@@ -660,7 +668,7 @@ public class RPC {
   }
 
   /** Construct a server for a protocol implementation instance.
-   * @deprecated secretManager should be passed.
+   * @deprecated Please use {@link Builder} to build the {@link Server}
    */
   @Deprecated
   public static Server getServer(Class<?> protocol,
@@ -673,7 +681,10 @@ public class RPC {
                  conf, null, null);
   }
   
-  /** Construct a server for a protocol implementation instance. */
+  /** Construct a server for a protocol implementation instance. 
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static Server getServer(Class<?> protocol,
                                  Object instance, String bindAddress, int port,
                                  int numHandlers,
@@ -684,6 +695,10 @@ public class RPC {
         conf, secretManager, null);
   }
   
+  /**
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static Server getServer(Class<?> protocol,
       Object instance, String bindAddress, int port,
       int numHandlers,
@@ -696,8 +711,10 @@ public class RPC {
                  verbose, conf, secretManager, portRangeConfig);
   }
 
-  /** Construct a server for a protocol implementation instance. */
-
+  /** Construct a server for a protocol implementation instance.
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static <PROTO extends VersionedProtocol, IMPL extends PROTO> 
         Server getServer(Class<PROTO> protocol,
                                  IMPL instance, String bindAddress, int port,
@@ -712,6 +729,110 @@ public class RPC {
                  null);
   }
 
+  /**
+   * Class to construct instances of RPC server with specific options.
+   */
+  public static class Builder {
+    private Class<?> protocol = null;
+    private Object instance = null;
+    private String bindAddress = "0.0.0.0";
+    private int port = 0;
+    private int numHandlers = 1;
+    private int numReaders = -1;
+    private int queueSizePerHandler = -1;
+    private boolean verbose = false;
+    private final Configuration conf;    
+    private SecretManager<? extends TokenIdentifier> secretManager = null;
+    private String portRangeConfig = null;
+    
+    public Builder(Configuration conf) {
+      this.conf = conf;
+    }
+
+    /** Mandatory field */
+    public Builder setProtocol(Class<?> protocol) {
+      this.protocol = protocol;
+      return this;
+    }
+    
+    /** Mandatory field */
+    public Builder setInstance(Object instance) {
+      this.instance = instance;
+      return this;
+    }
+    
+    /** Default: 0.0.0.0 */
+    public Builder setBindAddress(String bindAddress) {
+      this.bindAddress = bindAddress;
+      return this;
+    }
+    
+    /** Default: 0 */
+    public Builder setPort(int port) {
+      this.port = port;
+      return this;
+    }
+    
+    /** Default: 1 */
+    public Builder setNumHandlers(int numHandlers) {
+      this.numHandlers = numHandlers;
+      return this;
+    }
+    
+    /** Default: -1 */
+    public Builder setnumReaders(int numReaders) {
+      this.numReaders = numReaders;
+      return this;
+    }
+    
+    /** Default: -1 */
+    public Builder setQueueSizePerHandler(int queueSizePerHandler) {
+      this.queueSizePerHandler = queueSizePerHandler;
+      return this;
+    }
+    
+    /** Default: false */
+    public Builder setVerbose(boolean verbose) {
+      this.verbose = verbose;
+      return this;
+    }
+    
+    /** Default: null */
+    public Builder setSecretManager(
+        SecretManager<? extends TokenIdentifier> secretManager) {
+      this.secretManager = secretManager;
+      return this;
+    }
+    
+    /** Default: null */
+    public Builder setPortRangeConfig(String portRangeConfig) {
+      this.portRangeConfig = portRangeConfig;
+      return this;
+    }
+    
+    /**
+     * Build the RPC Server. 
+     * @throws IOException on error
+     * @throws HadoopIllegalArgumentException when mandatory fields are not set
+     */
+    public Server build() throws IOException, HadoopIllegalArgumentException {
+      if (this.conf == null) {
+        throw new HadoopIllegalArgumentException("conf is not set");
+      }
+      if (this.protocol == null) {
+        throw new HadoopIllegalArgumentException("protocol is not set");
+      }
+      if (this.instance == null) {
+        throw new HadoopIllegalArgumentException("instance is not set");
+      }
+      
+      return getProtocolEngine(this.protocol, this.conf).getServer(
+          this.protocol, this.instance, this.bindAddress, this.port,
+          this.numHandlers, this.numReaders, this.queueSizePerHandler,
+          this.verbose, this.conf, this.secretManager, this.portRangeConfig);
+    }
+  }
+  
   /** An RPC Server. */
   public abstract static class Server extends org.apache.hadoop.ipc.Server {
    boolean verbose;

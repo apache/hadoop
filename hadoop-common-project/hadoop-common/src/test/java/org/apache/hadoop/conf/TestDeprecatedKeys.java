@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.conf;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayOutputStream;
 import java.util.Map;
 

@@ -25,6 +25,8 @@
 #include "org_apache_hadoop_io_compress_snappy.h"
 #include "org_apache_hadoop_io_compress_snappy_SnappyCompressor.h"
 
+#define JINT_MAX 0x7fffffff
+
 static jfieldID SnappyCompressor_clazz;
 static jfieldID SnappyCompressor_uncompressedDirectBuf;
 static jfieldID SnappyCompressor_uncompressedDirectBufLen;
@@ -39,7 +41,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   // Load libsnappy.so
   void *libsnappy = dlopen(HADOOP_SNAPPY_LIBRARY, RTLD_LAZY | RTLD_GLOBAL);
   if (!libsnappy) {
-    char* msg = (char*)malloc(1000);
+    char msg[1000];
     snprintf(msg, 1000, "%s (%s)!", "Cannot load " HADOOP_SNAPPY_LIBRARY, dlerror());
     THROW(env, "java/lang/UnsatisfiedLinkError", msg);
     return;
@@ -71,6 +73,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   jint uncompressed_direct_buf_len = (*env)->GetIntField(env, thisj, SnappyCompressor_uncompressedDirectBufLen);
   jobject compressed_direct_buf = (*env)->GetObjectField(env, thisj, SnappyCompressor_compressedDirectBuf);
   jint compressed_direct_buf_len = (*env)->GetIntField(env, thisj, SnappyCompressor_directBufferSize);
+  size_t buf_len;
 
   // Get the input direct buffer
   LOCK_CLASS(env, clazz, "SnappyCompressor");
@@ -78,7 +81,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   UNLOCK_CLASS(env, clazz, "SnappyCompressor");
 
   if (uncompressed_bytes == 0) {
-    return (jint)0;
+    return 0;
   }
 
   // Get the output direct buffer
@@ -87,15 +90,22 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   UNLOCK_CLASS(env, clazz, "SnappyCompressor");
 
   if (compressed_bytes == 0) {
-    return (jint)0;
+    return 0;
   }
 
-  snappy_status ret = dlsym_snappy_compress(uncompressed_bytes, uncompressed_direct_buf_len, compressed_bytes, &compressed_direct_buf_len);
+  /* size_t should always be 4 bytes or larger. */
+  buf_len = (size_t)compressed_direct_buf_len;
+  snappy_status ret = dlsym_snappy_compress(uncompressed_bytes,
+        uncompressed_direct_buf_len, compressed_bytes, &buf_len);
   if (ret != SNAPPY_OK){
-    THROW(env, "Ljava/lang/InternalError", "Could not compress data. Buffer length is too small.");
+    THROW(env, "java/lang/InternalError", "Could not compress data. Buffer length is too small.");
+    return 0;
+  }
+  if (buf_len > JINT_MAX) {
+    THROW(env, "java/lang/InternalError", "Invalid return buffer length.");
+    return 0;
   }
 
   (*env)->SetIntField(env, thisj, SnappyCompressor_uncompressedDirectBufLen, 0);
-
-  return (jint)compressed_direct_buf_len;
+  return (jint)buf_len;
 }

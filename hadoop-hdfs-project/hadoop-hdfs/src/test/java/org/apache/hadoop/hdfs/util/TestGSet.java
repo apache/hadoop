@@ -21,12 +21,13 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Random;
 
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestGSet {
   private static final Random ran = new Random();
-  private static final long starttime = System.currentTimeMillis();
+  private static final long starttime = Time.now();
 
   private static void print(Object s) {
     System.out.print(s);
@@ -245,7 +246,7 @@ public class TestGSet {
     }
     println("DONE " + test.stat());
 
-    final long s = (System.currentTimeMillis() - starttime)/1000L;
+    final long s = (Time.now() - starttime)/1000L;
     println("total time elapsed=" + s + "s\n");
   }
 
@@ -257,7 +258,7 @@ public class TestGSet {
     final IntData data;
 
     final String info;
-    final long starttime = System.currentTimeMillis();
+    final long starttime = Time.now();
     /** Determine the probability in {@link #check()}. */
     final int denominator;
     int iterate_count = 0;
@@ -382,7 +383,7 @@ public class TestGSet {
     }
 
     String stat() {
-      final long t = System.currentTimeMillis() - starttime;
+      final long t = Time.now() - starttime;
       return String.format(" iterate=%5d, contain=%5d, time elapsed=%5d.%03ds",
           iterate_count, contain_count, t/1000, t%1000);
     }

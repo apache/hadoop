@@ -53,6 +53,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     super(fs);
   }
 
+  @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
     if (conf != null) {
@@ -64,6 +65,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /**
    * Set whether to verify checksum.
    */
+  @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
     this.verifyChecksum = verifyChecksum;
   }
@@ -74,6 +76,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
   
   /** get the raw file system */
+  @Override
   public FileSystem getRawFileSystem() {
     return fs;
   }
@@ -162,14 +165,17 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       return HEADER_LENGTH + 4*(dataPos/bytesPerSum);
     }
     
+    @Override
     protected long getChunkPosition( long dataPos ) {
       return dataPos/bytesPerSum*bytesPerSum;
     }
     
+    @Override
     public int available() throws IOException {
       return datas.available() + super.available();
     }
     
+    @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException {
       // parameter check
@@ -190,6 +196,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       return nread;
     }
     
+    @Override
     public void close() throws IOException {
       datas.close();
       if( sums != null ) {
@@ -290,6 +297,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
      * @exception  IOException  if an I/O error occurs.
      *             ChecksumException if the chunk to skip to is corrupted
      */
+    @Override
     public synchronized long skip(long n) throws IOException {
       long curPos = getPos();
       long fileLength = getFileLength();
@@ -311,6 +319,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
      *             ChecksumException if the chunk to seek to is corrupted
      */
 
+    @Override
     public synchronized void seek(long pos) throws IOException {
       if(pos>getFileLength()) {
         throw new IOException("Cannot seek after EOF");
@@ -339,7 +348,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     return new FSDataBoundedInputStream(fs, f, in);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");
@@ -398,6 +407,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       sums.writeInt(bytesPerSum);
     }
     
+    @Override
     public void close() throws IOException {
       flushBuffer();
       sums.close();
@@ -412,7 +422,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -454,7 +463,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     return out;
   }
 
-  /** {@inheritDoc} */
   @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -472,6 +480,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @return true if successful;
    *         false if file does not exist or is a directory
    */
+  @Override
   public boolean setReplication(Path src, short replication) throws IOException {
     boolean value = fs.setReplication(src, replication);
     if (!value)
@@ -487,6 +496,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /**
    * Rename files/dirs
    */
+  @Override
   public boolean rename(Path src, Path dst) throws IOException {
     if (fs.isDirectory(src)) {
       return fs.rename(src, dst);
@@ -516,6 +526,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * Implement the delete(Path, boolean) in checksum
    * file system.
    */
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException{
     FileStatus fstatus = null;
     try {
@@ -538,6 +549,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
     
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path file) {
       return !isChecksumFile(file);
     }

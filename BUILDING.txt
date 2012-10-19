@@ -54,11 +54,31 @@ Maven build goals:
  Build options:
 
   * Use -Pnative to compile/bundle native code
-  * Use -Dsnappy.prefix=(/usr/local) & -Dbundle.snappy=(false) to compile
-    Snappy JNI bindings and to bundle Snappy SO files
   * Use -Pdocs to generate & bundle the documentation in the distribution (using -Pdist)
   * Use -Psrc to create a project source TAR.GZ
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
+
+ Snappy build options:
+
+   Snappy is a compression library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency.
+
+  * Use -Drequire.snappy to fail the build if libsnappy.so is not found.
+    If this option is not specified and the snappy library is missing,
+    we silently build a version of libhadoop.so that cannot make use of snappy.
+    This option is recommended if you plan on making use of snappy and want
+    to get more repeatable builds.
+
+  * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
+    header files and library files. You do not need this option if you have
+    installed snappy using a package manager.
+  * Use -Dsnappy.lib to specify a nonstandard location for the libsnappy library
+    files.  Similarly to snappy.prefix, you do not need this option if you have
+    installed snappy using a package manager.
+  * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
+    the final tar file. This option requires that -Dsnappy.lib is also given,
+    and it ignores the -Dsnappy.prefix option.
 
    Tests options:
 

@@ -29,6 +29,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -84,18 +85,22 @@ extends TokenIdentifier {
    * 
    * @return the username or owner
    */
+  @Override
   public UserGroupInformation getUser() {
-    if ( (owner == null) || ("".equals(owner.toString()))) {
+    if ( (owner == null) || (owner.toString().isEmpty())) {
       return null;
     }
-    if ((realUser == null) || ("".equals(realUser.toString()))
+    final UserGroupInformation realUgi;
+    final UserGroupInformation ugi;
+    if ((realUser == null) || (realUser.toString().isEmpty())
         || realUser.equals(owner)) {
-      return UserGroupInformation.createRemoteUser(owner.toString());
+      ugi = realUgi = UserGroupInformation.createRemoteUser(owner.toString());
     } else {
-      UserGroupInformation realUgi = UserGroupInformation
-          .createRemoteUser(realUser.toString());
-      return UserGroupInformation.createProxyUser(owner.toString(), realUgi);
+      realUgi = UserGroupInformation.createRemoteUser(realUser.toString());
+      ugi = UserGroupInformation.createProxyUser(owner.toString(), realUgi);
     }
+    realUgi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
+    return ugi;
   }
 
   public Text getOwner() {
@@ -146,7 +151,7 @@ extends TokenIdentifier {
     return a == null ? b == null : a.equals(b);
   }
   
-  /** {@inheritDoc} */
+  @Override
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
@@ -164,11 +169,12 @@ extends TokenIdentifier {
     return false;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     return this.sequenceNumber;
   }
   
+  @Override
   public void readFields(DataInput in) throws IOException {
     byte version = in.readByte();
     if (version != VERSION) {
@@ -196,6 +202,7 @@ extends TokenIdentifier {
     WritableUtils.writeVInt(out, masterKeyId);
   }
   
+  @Override
   public void write(DataOutput out) throws IOException {
     if (owner.getLength() > Text.DEFAULT_MAX_LEN) {
       throw new IOException("owner is too long to be serialized!");
@@ -209,6 +216,7 @@ extends TokenIdentifier {
     writeImpl(out);
   }
   
+  @Override
   public String toString() {
     StringBuilder buffer = new StringBuilder();
     buffer

@@ -18,13 +18,24 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.junit.Test;
-import static org.mockito.Mockito.*;
-import static org.mockito.AdditionalMatchers.*;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.mockMetricsRecordBuilder;
+import static org.mockito.AdditionalMatchers.eq;
+import static org.mockito.AdditionalMatchers.geq;
+import static org.mockito.AdditionalMatchers.leq;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import static org.apache.hadoop.metrics2.lib.Interns.*;
-import static org.apache.hadoop.test.MetricsAsserts.*;
+import org.apache.hadoop.metrics2.util.Quantile;
+import org.junit.Test;
 
 /**
  * Test metrics record builder interface and mutable metrics
@@ -102,5 +113,124 @@ public class TestMutableMetrics {
     assertGauge("FooAvgTime", 0.0, rb);
     assertCounter("BarNumOps", 0L, rb);
     assertGauge("BarAvgTime", 0.0, rb);
+  }
+
+  /**
+   * Ensure that quantile estimates from {@link MutableQuantiles} are within
+   * specified error bounds.
+   */
+  @Test(timeout = 30000)
+  public void testMutableQuantilesError() throws Exception {
+    MetricsRecordBuilder mb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    // Use a 5s rollover period
+    MutableQuantiles quantiles = registry.newQuantiles("foo", "stat", "Ops",
+        "Latency", 5);
+    // Push some values in and wait for it to publish
+    long start = System.nanoTime() / 1000000;
+    for (long i = 1; i <= 1000; i++) {
+      quantiles.add(i);
+      quantiles.add(1001 - i);
+    }
+    long end = System.nanoTime() / 1000000;
+
+    Thread.sleep(6000 - (end - start));
+
+    registry.snapshot(mb, false);
+
+    // Print out the snapshot
+    Map<Quantile, Long> previousSnapshot = quantiles.previousSnapshot;
+    for (Entry<Quantile, Long> item : previousSnapshot.entrySet()) {
+      System.out.println(String.format("Quantile %.2f has value %d",
+          item.getKey().quantile, item.getValue()));
+    }
+
+    // Verify the results are within our requirements
+    verify(mb).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"),
+        (long) 2000);
+    Quantile[] quants = MutableQuantiles.quantiles;
+    String name = "Foo%dthPercentileLatency";
+    String desc = "%d percentile latency with 5 second interval for stat";
+    for (Quantile q : quants) {
+      int percentile = (int) (100 * q.quantile);
+      int error = (int) (1000 * q.error);
+      String n = String.format(name, percentile);
+      String d = String.format(desc, percentile);
+      long expected = (long) (q.quantile * 1000);
+      verify(mb).addGauge(eq(info(n, d)), leq(expected + error));
+      verify(mb).addGauge(eq(info(n, d)), geq(expected - error));
+    }
+  }
+
+  /**
+   * Test that {@link MutableQuantiles} rolls the window over at the specified
+   * interval.
+   */
+  @Test(timeout = 30000)
+  public void testMutableQuantilesRollover() throws Exception {
+    MetricsRecordBuilder mb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    // Use a 5s rollover period
+    MutableQuantiles quantiles = registry.newQuantiles("foo", "stat", "Ops",
+        "Latency", 5);
+
+    Quantile[] quants = MutableQuantiles.quantiles;
+    String name = "Foo%dthPercentileLatency";
+    String desc = "%d percentile latency with 5 second interval for stat";
+
+    // Push values for three intervals
+    long start = System.nanoTime() / 1000000;
+    for (int i = 1; i <= 3; i++) {
+      // Insert the values
+      for (long j = 1; j <= 1000; j++) {
+        quantiles.add(i);
+      }
+      // Sleep until 1s after the next 5s interval, to let the metrics
+      // roll over
+      long sleep = (start + (5000 * i) + 1000) - (System.nanoTime() / 1000000);
+      Thread.sleep(sleep);
+      // Verify that the window reset, check it has the values we pushed in
+      registry.snapshot(mb, false);
+      for (Quantile q : quants) {
+        int percentile = (int) (100 * q.quantile);
+        String n = String.format(name, percentile);
+        String d = String.format(desc, percentile);
+        verify(mb).addGauge(info(n, d), (long) i);
+      }
+    }
+
+    // Verify the metrics were added the right number of times
+    verify(mb, times(3)).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"),
+        (long) 1000);
+    for (Quantile q : quants) {
+      int percentile = (int) (100 * q.quantile);
+      String n = String.format(name, percentile);
+      String d = String.format(desc, percentile);
+      verify(mb, times(3)).addGauge(eq(info(n, d)), anyLong());
+    }
+  }
+
+  /**
+   * Test that {@link MutableQuantiles} rolls over correctly even if no items
+   * have been added to the window
+   */
+  @Test(timeout = 30000)
+  public void testMutableQuantilesEmptyRollover() throws Exception {
+    MetricsRecordBuilder mb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    // Use a 5s rollover period
+    MutableQuantiles quantiles = registry.newQuantiles("foo", "stat", "Ops",
+        "Latency", 5);
+
+    // Check it initially
+    quantiles.snapshot(mb, true);
+    verify(mb).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
+    Thread.sleep(6000);
+    quantiles.snapshot(mb, false);
+    verify(mb, times(2)).addGauge(
+        info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
   }
 }

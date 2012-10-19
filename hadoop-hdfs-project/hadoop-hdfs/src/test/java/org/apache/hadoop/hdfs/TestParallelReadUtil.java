@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-
-import static org.junit.Assert.*;
 
 /**
  * Driver class for testing the use of DFSInputStream by multiple concurrent
@@ -61,7 +63,7 @@ public class TestParallelReadUtil {
   public static void setupCluster(int replicationFactor, HdfsConfiguration conf) throws Exception {
     util = new BlockReaderTestUtil(replicationFactor, conf);
     dfsClient = util.getDFSClient();
-    long seed = System.currentTimeMillis();
+    long seed = Time.now();
     LOG.info("Random seed: " + seed);
     rand = new Random(seed);
   }
@@ -81,7 +83,7 @@ public class TestParallelReadUtil {
   static class DirectReadWorkerHelper implements ReadWorkerHelper {
     @Override
     public int read(DFSInputStream dis, byte[] target, int startOff, int len) throws IOException {
-      ByteBuffer bb = ByteBuffer.wrap(target);
+      ByteBuffer bb = ByteBuffer.allocateDirect(target.length);
       int cnt = 0;
       synchronized(dis) {
         dis.seek(startOff);
@@ -93,6 +95,8 @@ public class TestParallelReadUtil {
           cnt += read;
         }
       }
+      bb.clear();
+      bb.get(target);
       return cnt;
     }
 
@@ -321,7 +325,7 @@ public class TestParallelReadUtil {
     }
 
     // Start the workers and wait
-    long starttime = System.currentTimeMillis();
+    long starttime = Time.now();
     for (ReadWorker worker : workers) {
       worker.start();
     }
@@ -331,7 +335,7 @@ public class TestParallelReadUtil {
         worker.join();
       } catch (InterruptedException ignored) { }
     }
-    long endtime = System.currentTimeMillis();
+    long endtime = Time.now();
 
     // Cleanup
     for (TestFileInfo testInfo : testInfoArr) {

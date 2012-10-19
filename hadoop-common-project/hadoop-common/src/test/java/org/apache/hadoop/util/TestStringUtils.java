@@ -231,7 +231,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertArrayEquals(expectedArray, StringUtils.getTrimmedStrings(pathologicalDirList2));
     
     assertArrayEquals(emptyArray, StringUtils.getTrimmedStrings(emptyList1));
-    assertArrayEquals(emptyArray, StringUtils.getTrimmedStrings(emptyList2));
+    String[] estring = StringUtils.getTrimmedStrings(emptyList2);
+    assertArrayEquals(emptyArray, estring);
   } 
 
   @Test
@@ -268,6 +269,30 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("Xx", StringUtils.camelize("xX"));
     assertEquals("Yy", StringUtils.camelize("yY"));
     assertEquals("Zz", StringUtils.camelize("zZ"));
+  }
+  
+  @Test
+  public void testStringToURI() {
+    String[] str = new String[] { "file://" };
+    try {
+      StringUtils.stringToURI(str);
+      fail("Ignoring URISyntaxException while creating URI from string file://");
+    } catch (IllegalArgumentException iae) {
+      assertEquals("Failed to create uri for file://", iae.getMessage());
+    }
+  }
+
+  @Test
+  public void testSimpleHostName() {
+    assertEquals("Should return hostname when FQDN is specified",
+            "hadoop01",
+            StringUtils.simpleHostname("hadoop01.domain.com"));
+    assertEquals("Should return hostname when only hostname is specified",
+            "hadoop01",
+            StringUtils.simpleHostname("hadoop01"));
+    assertEquals("Should not truncate when IP address is passed",
+            "10.10.5.68",
+            StringUtils.simpleHostname("10.10.5.68"));
   }
 
   // Benchmark for StringUtils split

@@ -23,12 +23,10 @@ import org.apache.commons.logging.*;
 import org.apache.commons.lang.StringEscapeUtils;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Enumeration;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -57,9 +55,6 @@ public class ReconfigurationServlet extends HttpServlet {
   public static final String CONF_SERVLET_RECONFIGURABLE_PREFIX =
     "conf.servlet.reconfigurable.";
   
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public void init() throws ServletException {
     super.init();
@@ -158,9 +153,9 @@ public class ReconfigurationServlet extends HttpServlet {
           StringEscapeUtils.unescapeHtml(req.getParameter(rawParam));
         if (value != null) {
           if (value.equals(newConf.getRaw(param)) || value.equals("default") ||
-              value.equals("null") || value.equals("")) {
+              value.equals("null") || value.isEmpty()) {
             if ((value.equals("default") || value.equals("null") || 
-                 value.equals("")) && 
+                 value.isEmpty()) && 
                 oldConf.getRaw(param) != null) {
               out.println("<p>Changed \"" + 
                           StringEscapeUtils.escapeHtml(param) + "\" from \"" +
@@ -168,7 +163,7 @@ public class ReconfigurationServlet extends HttpServlet {
                           "\" to default</p>");
               reconf.reconfigureProperty(param, null);
             } else if (!value.equals("default") && !value.equals("null") &&
-                       !value.equals("") && 
+                       !value.isEmpty() && 
                        (oldConf.getRaw(param) == null || 
                         !oldConf.getRaw(param).equals(value))) {
               // change from default or value to different value
@@ -202,9 +197,6 @@ public class ReconfigurationServlet extends HttpServlet {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException {
@@ -219,9 +211,6 @@ public class ReconfigurationServlet extends HttpServlet {
     printFooter(out);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException {

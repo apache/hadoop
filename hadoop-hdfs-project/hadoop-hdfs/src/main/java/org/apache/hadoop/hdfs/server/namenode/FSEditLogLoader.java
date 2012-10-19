@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -29,12 +29,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -193,8 +191,9 @@ public class FSEditLogLoader {
           if (op.hasTransactionId()) {
             long now = now();
             if (now - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
-              int percent = Math.round((float)lastAppliedTxId / numTxns * 100);
-              LOG.info("replaying edit log: " + lastAppliedTxId + "/" + numTxns
+              long deltaTxId = lastAppliedTxId - expectedStartingTxId + 1;
+              int percent = Math.round((float) deltaTxId / numTxns * 100);
+              LOG.info("replaying edit log: " + deltaTxId + "/" + numTxns
                   + " transactions completed. (" + percent + "%)");
               lastLogTime = now;
             }
@@ -303,7 +302,9 @@ public class FSEditLogLoader {
             addCloseOp.path);
       }
       
-      // Update in-memory data structures
+      // Update the salient file attributes.
+      oldFile.setAccessTime(addCloseOp.atime);
+      oldFile.setModificationTimeForce(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file
@@ -591,13 +592,13 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           newBI = new BlockInfoUnderConstruction(
-              newBlock, file.getReplication());
+              newBlock, file.getBlockReplication());
         } else {
           // OP_CLOSE should add finalized blocks. This code path
           // is only executed when loading edits written by prior
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
-          newBI = new BlockInfo(newBlock, file.getReplication());
+          newBI = new BlockInfo(newBlock, file.getBlockReplication());
         }
         fsNamesys.getBlockManager().addBlockCollection(newBI, file);
         file.addBlock(newBI);

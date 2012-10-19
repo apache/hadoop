@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -184,7 +185,7 @@ class JobQueueClient extends Configured implements Tool {
     printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out));
     if (showJobs && (jobQueueInfo.getChildren() == null ||
         jobQueueInfo.getChildren().size() == 0)) {
-      JobStatus[] jobs = jc.getJobsFromQueue(queue);
+      JobStatus[] jobs = jobQueueInfo.getJobStatuses();
       if (jobs == null)
         jobs = new JobStatus[0];
       jc.displayJobList(jobs);

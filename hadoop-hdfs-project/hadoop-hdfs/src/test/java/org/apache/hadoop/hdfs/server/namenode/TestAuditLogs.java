@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.After;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,19 +32,25 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -80,6 +87,7 @@ public class TestAuditLogs {
     final long precision = 1L;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     util = new DFSTestUtil.Builder().setName("TestAuditAllowed").
         setNumFiles(20).build();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
@@ -109,7 +117,19 @@ public class TestAuditLogs {
     int val = istream.read();
     istream.close();
     verifyAuditLogs(true);
-    assertTrue("failed to read from file", val > 0);
+    assertTrue("failed to read from file", val >= 0);
+  }
+
+  /** test that allowed stat puts proper entry in audit log */
+  @Test
+  public void testAuditAllowedStat() throws Exception {
+    final Path file = new Path(fnames[0]);
+    FileSystem userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
+
+    setupAuditLogs();
+    FileStatus st = userfs.getFileStatus(file);
+    verifyAuditLogs(true);
+    assertTrue("failed to stat file", st != null && st.isFile());
   }
 
   /** test that denied operation puts proper entry in audit log */
@@ -132,6 +152,85 @@ public class TestAuditLogs {
     verifyAuditLogs(false);
   }
 
+  /** test that access via webhdfs puts proper entry in audit log */
+  @Test
+  public void testAuditWebHdfs() throws Exception {
+    final Path file = new Path(fnames[0]);
+
+    fs.setPermission(file, new FsPermission((short)0644));
+    fs.setOwner(file, "root", null);
+
+    setupAuditLogs();
+
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf);
+    InputStream istream = webfs.open(file);
+    int val = istream.read();
+    istream.close();
+
+    verifyAuditLogsRepeat(true, 3);
+    assertTrue("failed to read from file", val >= 0);
+  }
+
+  /** test that stat via webhdfs puts proper entry in audit log */
+  @Test
+  public void testAuditWebHdfsStat() throws Exception {
+    final Path file = new Path(fnames[0]);
+
+    fs.setPermission(file, new FsPermission((short)0644));
+    fs.setOwner(file, "root", null);
+
+    setupAuditLogs();
+
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf);
+    FileStatus st = webfs.getFileStatus(file);
+
+    verifyAuditLogs(true);
+    assertTrue("failed to stat file", st != null && st.isFile());
+  }
+
+  /** test that access via Hftp puts proper entry in audit log */
+  @Test
+  public void testAuditHftp() throws Exception {
+    final Path file = new Path(fnames[0]);
+
+    final String hftpUri =
+      "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+
+    HftpFileSystem hftpFs = null;
+
+    setupAuditLogs();
+    try {
+      hftpFs = (HftpFileSystem) new Path(hftpUri).getFileSystem(conf);
+      InputStream istream = hftpFs.open(file);
+      int val = istream.read();
+      istream.close();
+
+      verifyAuditLogs(true);
+    } finally {
+      if (hftpFs != null) hftpFs.close();
+    }
+  }
+
+  /** test that denied access via webhdfs puts proper entry in audit log */
+  @Test
+  public void testAuditWebHdfsDenied() throws Exception {
+    final Path file = new Path(fnames[0]);
+
+    fs.setPermission(file, new FsPermission((short)0600));
+    fs.setOwner(file, "root", null);
+
+    setupAuditLogs();
+    try {
+      WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf);
+      InputStream istream = webfs.open(file);
+      int val = istream.read();
+      fail("open+read must not succeed, got " + val);
+    } catch(AccessControlException E) {
+      System.out.println("got access denied, as expected.");
+    }
+    verifyAuditLogsRepeat(false, 2);
+  }
+
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
     File file = new File(auditLogFile);
@@ -145,19 +244,34 @@ public class TestAuditLogs {
     logger.addAppender(appender);
   }
 
+  // Ensure audit log has only one entry
   private void verifyAuditLogs(boolean expectSuccess) throws IOException {
+    verifyAuditLogsRepeat(expectSuccess, 1);
+  }
+
+  // Ensure audit log has exactly N entries
+  private void verifyAuditLogsRepeat(boolean expectSuccess, int ndupe)
+      throws IOException {
     // Turn off the logs
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     logger.setLevel(Level.OFF);
     
-    // Ensure audit log has only one entry
     BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
-    String line = reader.readLine();
-    assertNotNull(line);
-    assertTrue("Expected audit event not found in audit log",
-        auditPattern.matcher(line).matches());
-    assertTrue("Expected success=" + expectSuccess,
-               successPattern.matcher(line).matches() == expectSuccess);
-    assertNull("Unexpected event in audit log", reader.readLine());
+    String line = null;
+    boolean ret = true;
+   
+    try {
+      for (int i = 0; i < ndupe; i++) {
+        line = reader.readLine();
+        assertNotNull(line);
+        assertTrue("Expected audit event not found in audit log",
+            auditPattern.matcher(line).matches());
+        ret &= successPattern.matcher(line).matches();
+      }
+      assertNull("Unexpected event in audit log", reader.readLine());
+      assertTrue("Expected success=" + expectSuccess, ret == expectSuccess);
+    } finally {
+      reader.close();
+    }
   }
 }

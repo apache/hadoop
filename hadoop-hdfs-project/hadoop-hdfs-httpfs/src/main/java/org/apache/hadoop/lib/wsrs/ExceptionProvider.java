@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.wsrs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@InterfaceAudience.Private
 public class ExceptionProvider implements ExceptionMapper<Throwable> {
   private static Logger LOG = LoggerFactory.getLogger(ExceptionProvider.class);
 

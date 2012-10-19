@@ -34,10 +34,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Time;
 
 /** Provides a <i>trash</i> feature.  Files are moved to a user's trash
  * directory, a subdirectory of their home directory named ".Trash".  Files are
@@ -61,15 +61,20 @@ public class TrashPolicyDefault extends TrashPolicy {
     new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE);
 
   private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmmss");
+  /** Format of checkpoint directories used prior to Hadoop 0.23. */
+  private static final DateFormat OLD_CHECKPOINT =
+      new SimpleDateFormat("yyMMddHHmm");
   private static final int MSECS_PER_MINUTE = 60*1000;
 
   private Path current;
   private Path homesParent;
+  private long emptierInterval;
 
   public TrashPolicyDefault() { }
 
-  private TrashPolicyDefault(Path home, Configuration conf) throws IOException {
-    initialize(conf, home.getFileSystem(conf), home);
+  private TrashPolicyDefault(FileSystem fs, Path home, Configuration conf)
+      throws IOException {
+    initialize(conf, fs, home);
   }
 
   @Override
@@ -78,8 +83,12 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.trash = new Path(home, TRASH);
     this.homesParent = home.getParent();
     this.current = new Path(trash, CURRENT);
-    this.deletionInterval = (long) (conf.getFloat(FS_TRASH_INTERVAL_KEY,
-                                    FS_TRASH_INTERVAL_DEFAULT) *  MSECS_PER_MINUTE);
+    this.deletionInterval = (long)(conf.getFloat(
+        FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT)
+        * MSECS_PER_MINUTE);
+    this.emptierInterval = (long)(conf.getFloat(
+        FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
+        * MSECS_PER_MINUTE);
   }
   
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
@@ -88,7 +97,7 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   @Override
   public boolean isEnabled() {
-    return (deletionInterval != 0);
+    return deletionInterval != 0;
   }
 
   @Override
@@ -136,7 +145,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         String orig = trashPath.toString();
         
         while(fs.exists(trashPath)) {
-          trashPath = new Path(orig + System.currentTimeMillis());
+          trashPath = new Path(orig + Time.now());
         }
         
         if (fs.rename(path, trashPath))           // move to current trash
@@ -187,7 +196,7 @@ public class TrashPolicyDefault extends TrashPolicy {
       return;
     }
 
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     for (int i = 0; i < dirs.length; i++) {
       Path path = dirs[i].getPath();
       String dir = path.toUri().getPath();
@@ -197,9 +206,7 @@ public class TrashPolicyDefault extends TrashPolicy {
 
       long time;
       try {
-        synchronized (CHECKPOINT) {
-          time = CHECKPOINT.parse(name).getTime();
-        }
+        time = getTimeFromCheckpoint(name);
       } catch (ParseException e) {
         LOG.warn("Unexpected item in trash: "+dir+". Ignoring.");
         continue;
@@ -222,7 +229,7 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   @Override
   public Runnable getEmptier() throws IOException {
-    return new Emptier(getConf());
+    return new Emptier(getConf(), emptierInterval);
   }
 
   private class Emptier implements Runnable {
@@ -230,25 +237,24 @@ public class TrashPolicyDefault extends TrashPolicy {
     private Configuration conf;
     private long emptierInterval;
 
-    Emptier(Configuration conf) throws IOException {
+    Emptier(Configuration conf, long emptierInterval) throws IOException {
       this.conf = conf;
-      this.emptierInterval = (long) (conf.getFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY,
-                                     FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT) *
-                                     MSECS_PER_MINUTE);
-      if (this.emptierInterval > deletionInterval ||
-          this.emptierInterval == 0) {
-        LOG.warn("The configured interval for checkpoint is " +
-                 this.emptierInterval + " minutes." +
-                 " Using interval of " + deletionInterval +
+      this.emptierInterval = emptierInterval;
+      if (emptierInterval > deletionInterval || emptierInterval == 0) {
+        LOG.info("The configured checkpoint interval is " +
+                 (emptierInterval / MSECS_PER_MINUTE) + " minutes." +
+                 " Using an interval of " +
+                 (deletionInterval / MSECS_PER_MINUTE) +
                  " minutes that is used for deletion instead");
         this.emptierInterval = deletionInterval;
       }
     }
 
+    @Override
     public void run() {
       if (emptierInterval == 0)
         return;                                   // trash disabled
-      long now = System.currentTimeMillis();
+      long now = Time.now();
       long end;
       while (true) {
         end = ceiling(now, emptierInterval);
@@ -259,7 +265,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         }
 
         try {
-          now = System.currentTimeMillis();
+          now = Time.now();
           if (now >= end) {
 
             FileStatus[] homes = null;
@@ -274,7 +280,8 @@ public class TrashPolicyDefault extends TrashPolicy {
               if (!home.isDirectory())
                 continue;
               try {
-                TrashPolicyDefault trash = new TrashPolicyDefault(home.getPath(), conf);
+                TrashPolicyDefault trash = new TrashPolicyDefault(
+                    fs, home.getPath(), conf);
                 trash.deleteCheckpoint();
                 trash.createCheckpoint();
               } catch (IOException e) {
@@ -299,5 +306,23 @@ public class TrashPolicyDefault extends TrashPolicy {
     private long floor(long time, long interval) {
       return (time / interval) * interval;
     }
+  }
+
+  private long getTimeFromCheckpoint(String name) throws ParseException {
+    long time;
+
+    try {
+      synchronized (CHECKPOINT) {
+        time = CHECKPOINT.parse(name).getTime();
+      }
+    } catch (ParseException pe) {
+      // Check for old-style checkpoint directories left over
+      // after an upgrade from Hadoop 1.x
+      synchronized (OLD_CHECKPOINT) {
+        time = OLD_CHECKPOINT.parse(name).getTime();
+      }
+    }
+
+    return time;
   }
 }

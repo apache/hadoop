@@ -37,7 +37,6 @@ import org.apache.hadoop.util.VersionInfo;
 @InterfaceStability.Evolving
 public class NamespaceInfo extends StorageInfo {
   String  buildVersion;
-  int distributedUpgradeVersion;
   String blockPoolID = "";    // id of the block pool
   String softwareVersion;
 
@@ -47,17 +46,16 @@ public class NamespaceInfo extends StorageInfo {
   }
 
   public NamespaceInfo(int nsID, String clusterID, String bpID,
-      long cT, int duVersion, String buildVersion, String softwareVersion) {
+      long cT, String buildVersion, String softwareVersion) {
     super(HdfsConstants.LAYOUT_VERSION, nsID, clusterID, cT);
     blockPoolID = bpID;
     this.buildVersion = buildVersion;
-    this.distributedUpgradeVersion = duVersion;
     this.softwareVersion = softwareVersion;
   }
 
   public NamespaceInfo(int nsID, String clusterID, String bpID, 
-      long cT, int duVersion) {
-    this(nsID, clusterID, bpID, cT, duVersion, Storage.getBuildVersion(),
+      long cT) {
+    this(nsID, clusterID, bpID, cT, Storage.getBuildVersion(),
         VersionInfo.getVersion());
   }
   
@@ -65,10 +63,6 @@ public class NamespaceInfo extends StorageInfo {
     return buildVersion;
   }
 
-  public int getDistributedUpgradeVersion() {
-    return distributedUpgradeVersion;
-  }
-  
   public String getBlockPoolID() {
     return blockPoolID;
   }
@@ -77,6 +71,7 @@ public class NamespaceInfo extends StorageInfo {
     return softwareVersion;
   }
 
+  @Override
   public String toString(){
     return super.toString() + ";bpid=" + blockPoolID;
   }

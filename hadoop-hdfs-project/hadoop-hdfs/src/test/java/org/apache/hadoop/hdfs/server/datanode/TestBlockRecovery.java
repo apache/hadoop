@@ -147,7 +147,7 @@ public class TestBlockRecovery {
         Mockito.any(DatanodeRegistration.class));
 
     when(namenode.versionRequest()).thenReturn(new NamespaceInfo
-        (1, CLUSTER_ID, POOL_ID, 1L, 1));
+        (1, CLUSTER_ID, POOL_ID, 1L));
 
     when(namenode.sendHeartbeat(
             Mockito.any(DatanodeRegistration.class),
@@ -550,7 +550,7 @@ public class TestBlockRecovery {
     ReplicaOutputStreams streams = null;
     try {
       streams = replicaInfo.createStreams(true,
-          DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512));
+          DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 512));
       streams.getChecksumOut().write('a');
       dn.data.initReplicaRecovery(new RecoveringBlock(block, null, RECOVERY_ID+1));
       try {
@@ -595,6 +595,7 @@ public class TestBlockRecovery {
       
       final AtomicBoolean recoveryInitResult = new AtomicBoolean(true);
       Thread recoveryThread = new Thread() {
+        @Override
         public void run() {
           try {
             DatanodeInfo[] locations = block.getLocations();

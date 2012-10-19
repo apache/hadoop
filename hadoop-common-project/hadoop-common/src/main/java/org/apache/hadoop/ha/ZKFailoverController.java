@@ -80,6 +80,8 @@ public abstract class ZKFailoverController {
     ZK_AUTH_KEY
   };
   
+  protected static final String USAGE = 
+      "Usage: java zkfc [ -formatZK [-force] [-nonInteractive] ]";
 
   /** Unable to format the parent znode in ZK */
   static final int ERR_CODE_FORMAT_DENIED = 2;
@@ -248,8 +250,7 @@ public abstract class ZKFailoverController {
   }
 
   private void printUsage() {
-    System.err.println("Usage: " + this.getClass().getSimpleName() +
-        " [-formatZK [-force | -nonInteractive]]");
+    System.err.println(USAGE + "\n");
   }
 
   private int formatZK(boolean force, boolean interactive)

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.servlet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 
@@ -37,6 +38,7 @@ import java.io.IOException;
  * is streaming out HDFS data and the corresponding filesystem
  * instance have to be closed after the streaming completes.
  */
+@InterfaceAudience.Private
 public abstract class FileSystemReleaseFilter implements Filter {
   private static final ThreadLocal<FileSystem> FILE_SYSTEM_TL = new ThreadLocal<FileSystem>();
 

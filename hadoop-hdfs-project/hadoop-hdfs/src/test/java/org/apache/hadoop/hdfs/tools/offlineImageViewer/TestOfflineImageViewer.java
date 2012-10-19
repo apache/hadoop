@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import java.io.BufferedReader;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.security.token.Token;
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
@@ -37,20 +38,23 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.*;
-import static org.junit.Assert.*;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.security.token.Token;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 
 /**
@@ -122,8 +126,8 @@ public class TestOfflineImageViewer {
       }
 
       // Get delegation tokens so we log the delegation token op
-      List<Token<?>> delegationTokens = 
-          hdfs.getDelegationTokens(TEST_RENEWER);
+      Token<?>[] delegationTokens = 
+          hdfs.addDelegationTokens(TEST_RENEWER, null);
       for (Token<?> t : delegationTokens) {
         LOG.debug("got token " + t);
       }

@@ -297,6 +297,7 @@ public class TFile {
      * 
      * The underlying FSDataOutputStream is not closed.
      */
+    @Override
     public void close() throws IOException {
       if ((state == State.CLOSED)) {
         return;
@@ -820,6 +821,7 @@ public class TFile {
      * Close the reader. The state of the Reader object is undefined after
      * close. Calling close() for multiple times has no effect.
      */
+    @Override
     public void close() throws IOException {
       readerBCF.close();
     }
@@ -1573,6 +1575,7 @@ public class TFile {
        * scanner after calling close is not defined. The entry returned by the
        * previous entry() call will be invalid.
        */
+      @Override
       public void close() throws IOException {
         parkCursorAtEnd();
       }
@@ -2102,7 +2105,7 @@ public class TFile {
     }
 
     public boolean isSorted() {
-      return !strComparator.equals("");
+      return !strComparator.isEmpty();
     }
 
     public String getComparatorString() {

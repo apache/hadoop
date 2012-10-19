@@ -17,34 +17,33 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.junit.Test;
 
 /**
  * This class tests the DFS positional read functionality in a single node
  * mini-cluster.
  */
-public class TestPread extends TestCase {
+public class TestPread {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 4096;
   boolean simulatedStorage = false;
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    // create and write a file that contains three blocks of data
-    DataOutputStream stm = fileSys.create(name, true, 4096, (short)1,
-                                          blockSize);
     // test empty file open and read
-    stm.close();
+    DFSTestUtil.createFile(fileSys, name, 12 * blockSize, 0,
+        blockSize, (short) 1, seed);
     FSDataInputStream in = fileSys.open(name);
     byte[] buffer = new byte[12 * blockSize];
     in.readFully(0, buffer, 0, 0);
@@ -61,11 +60,8 @@ public class TestPread extends TestCase {
       assertTrue("Cannot delete file", false);
     
     // now create the real file
-    stm = fileSys.create(name, true, 4096, (short)1, blockSize);
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
+    DFSTestUtil.createFile(fileSys, name, 12 * blockSize, 12 * blockSize,
+        blockSize, (short) 1, seed);
   }
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
@@ -196,6 +192,7 @@ public class TestPread extends TestCase {
   /**
    * Tests positional read in DFS.
    */
+  @Test
   public void testPreadDFS() throws IOException {
     dfsPreadTest(false); //normal pread
     dfsPreadTest(true); //trigger read code path without transferTo.
@@ -225,6 +222,7 @@ public class TestPread extends TestCase {
     }
   }
   
+  @Test
   public void testPreadDFSSimulated() throws IOException {
     simulatedStorage = true;
     testPreadDFS();
@@ -234,6 +232,7 @@ public class TestPread extends TestCase {
   /**
    * Tests positional read in LocalFS.
    */
+  @Test
   public void testPreadLocalFS() throws IOException {
     Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);

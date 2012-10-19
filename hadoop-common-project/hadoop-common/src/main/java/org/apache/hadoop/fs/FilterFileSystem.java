@@ -22,15 +22,12 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -79,6 +76,7 @@ public class FilterFileSystem extends FileSystem {
    *   for this FileSystem
    * @param conf the configuration
    */
+  @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     // this is less than ideal, but existing filesystems sometimes neglect
@@ -93,6 +91,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
+  @Override
   public URI getUri() {
     return fs.getUri();
   }
@@ -107,6 +106,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   /** Make sure that a path specifies a FileSystem. */
+  @Override
   public Path makeQualified(Path path) {
     Path fqPath = fs.makeQualified(path);
     // swap in our scheme if the filtered fs is using a different scheme
@@ -128,10 +128,12 @@ public class FilterFileSystem extends FileSystem {
   ///////////////////////////////////////////////////////////////
 
   /** Check that a Path belongs to this FileSystem. */
+  @Override
   protected void checkPath(Path path) {
     fs.checkPath(path);
   }
 
+  @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
     long len) throws IOException {
       return fs.getFileBlockLocations(file, start, len);
@@ -146,17 +148,17 @@ public class FilterFileSystem extends FileSystem {
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
    */
+  @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     return fs.open(f, bufferSize);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     return fs.append(f, bufferSize, progress);
   }
 
-  /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -174,6 +176,7 @@ public class FilterFileSystem extends FileSystem {
    * @return true if successful;
    *         false if file does not exist or is a directory
    */
+  @Override
   public boolean setReplication(Path src, short replication) throws IOException {
     return fs.setReplication(src, replication);
   }
@@ -182,40 +185,23 @@ public class FilterFileSystem extends FileSystem {
    * Renames Path src to Path dst.  Can take place on local fs
    * or remote DFS.
    */
+  @Override
   public boolean rename(Path src, Path dst) throws IOException {
     return fs.rename(src, dst);
   }
   
   /** Delete a file */
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     return fs.delete(f, recursive);
   }
   
-  /**
-   * Mark a path to be deleted when FileSystem is closed.
-   * When the JVM shuts down,
-   * all FileSystem objects will be closed automatically.
-   * Then,
-   * the marked path will be deleted as a result of closing the FileSystem.
-   *
-   * The path has to exist in the file system.
-   * 
-   * @param f the path to delete.
-   * @return  true if deleteOnExit is successful, otherwise false.
-   * @throws IOException
-   */
-  public boolean deleteOnExit(Path f) throws IOException {
-    return fs.deleteOnExit(f);
-  }    
-
   /** List files in a directory. */
+  @Override
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
@@ -223,11 +209,13 @@ public class FilterFileSystem extends FileSystem {
   }
 
   /** List files and its block locations in a directory. */
+  @Override
   public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
   throws IOException {
     return fs.listLocatedStatus(f);
   }
   
+  @Override
   public Path getHomeDirectory() {
     return fs.getHomeDirectory();
   }
@@ -239,6 +227,7 @@ public class FilterFileSystem extends FileSystem {
    * 
    * @param newDir
    */
+  @Override
   public void setWorkingDirectory(Path newDir) {
     fs.setWorkingDirectory(newDir);
   }
@@ -248,21 +237,21 @@ public class FilterFileSystem extends FileSystem {
    * 
    * @return the directory pathname
    */
+  @Override
   public Path getWorkingDirectory() {
     return fs.getWorkingDirectory();
   }
   
+  @Override
   protected Path getInitialWorkingDirectory() {
     return fs.getInitialWorkingDirectory();
   }
   
-  /** {@inheritDoc} */
   @Override
   public FsStatus getStatus(Path p) throws IOException {
     return fs.getStatus(p);
   }
   
-  /** {@inheritDoc} */
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     return fs.mkdirs(f, permission);
@@ -274,6 +263,7 @@ public class FilterFileSystem extends FileSystem {
    * the given dst name.
    * delSrc indicates if the source should be removed
    */
+  @Override
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     fs.copyFromLocalFile(delSrc, src, dst);
@@ -284,6 +274,7 @@ public class FilterFileSystem extends FileSystem {
    * the given dst name.
    * delSrc indicates if the source should be removed
    */
+  @Override
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
                                 Path[] srcs, Path dst)
     throws IOException {
@@ -295,6 +286,7 @@ public class FilterFileSystem extends FileSystem {
    * the given dst name.
    * delSrc indicates if the source should be removed
    */
+  @Override
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
                                 Path src, Path dst)
     throws IOException {
@@ -306,6 +298,7 @@ public class FilterFileSystem extends FileSystem {
    * Copy it from FS control to the local dst name.
    * delSrc indicates if the src will be removed or not.
    */   
+  @Override
   public void copyToLocalFile(boolean delSrc, Path src, Path dst)
     throws IOException {
     fs.copyToLocalFile(delSrc, src, dst);
@@ -317,6 +310,7 @@ public class FilterFileSystem extends FileSystem {
    * file.  If the FS is local, we write directly into the target.  If
    * the FS is remote, we write into the tmp local area.
    */
+  @Override
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     return fs.startLocalOutput(fsOutputFile, tmpLocalFile);
@@ -328,12 +322,14 @@ public class FilterFileSystem extends FileSystem {
    * FS will copy the contents of tmpLocalFile to the correct target at
    * fsOutputFile.
    */
+  @Override
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     fs.completeLocalOutput(fsOutputFile, tmpLocalFile);
   }
 
   /** Return the total size of all files in the filesystem.*/
+  @Override
   public long getUsed() throws IOException{
     return fs.getUsed();
   }
@@ -377,23 +373,24 @@ public class FilterFileSystem extends FileSystem {
   /**
    * Get file status.
    */
+  @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     return fs.getFileStatus(f);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public FileChecksum getFileChecksum(Path f) throws IOException {
     return fs.getFileChecksum(f);
   }
   
-  /** {@inheritDoc} */
+  @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
     fs.setVerifyChecksum(verifyChecksum);
   }
   
   @Override
   public void setWriteChecksum(boolean writeChecksum) {
-    fs.setVerifyChecksum(writeChecksum);
+    fs.setWriteChecksum(writeChecksum);
   }
 
   @Override
@@ -407,21 +404,18 @@ public class FilterFileSystem extends FileSystem {
     fs.close();
   }
 
-  /** {@inheritDoc} */
   @Override
   public void setOwner(Path p, String username, String groupname
       ) throws IOException {
     fs.setOwner(p, username, groupname);
   }
 
-  /** {@inheritDoc} */
   @Override
   public void setTimes(Path p, long mtime, long atime
       ) throws IOException {
     fs.setTimes(p, mtime, atime);
   }
 
-  /** {@inheritDoc} */
   @Override
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
@@ -431,10 +425,11 @@ public class FilterFileSystem extends FileSystem {
   @Override
   protected FSDataOutputStream primitiveCreate(Path f,
       FsPermission absolutePermission, EnumSet<CreateFlag> flag,
-      int bufferSize, short replication, long blockSize, Progressable progress, int bytesPerChecksum)
+      int bufferSize, short replication, long blockSize,
+      Progressable progress, ChecksumOpt checksumOpt)
       throws IOException {
     return fs.primitiveCreate(f, absolutePermission, flag,
-        bufferSize, replication, blockSize, progress, bytesPerChecksum);
+        bufferSize, replication, blockSize, progress, checksumOpt);
   }
 
   @Override
@@ -445,25 +440,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   @Override // FileSystem
-  public String getCanonicalServiceName() {
-    return fs.getCanonicalServiceName();
-  }
-  
-  @Override // FileSystem
-  @SuppressWarnings("deprecation")
-  public Token<?> getDelegationToken(String renewer) throws IOException {
-    return fs.getDelegationToken(renewer);
-  }
-  
-  @Override // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return fs.getDelegationTokens(renewer);
-  }
-  
-  @Override
-  // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    return fs.getDelegationTokens(renewer, credentials);
+  public FileSystem[] getChildFileSystems() {
+    return new FileSystem[]{fs};
   }
 }

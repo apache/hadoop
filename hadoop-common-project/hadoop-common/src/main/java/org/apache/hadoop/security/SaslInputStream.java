@@ -22,6 +22,8 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.InputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
@@ -42,7 +44,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class SaslInputStream extends InputStream {
+public class SaslInputStream extends InputStream implements ReadableByteChannel {
   public static final Log LOG = LogFactory.getLog(SaslInputStream.class);
 
   private final DataInputStream inStream;
@@ -65,6 +67,8 @@ public class SaslInputStream extends InputStream {
   private int ostart = 0;
   // position of the last "new" byte
   private int ofinish = 0;
+  // whether or not this stream is open
+  private boolean isOpen = true;
 
   private static int unsignedBytesToInt(byte[] buf) {
     if (buf.length != 4) {
@@ -185,6 +189,7 @@ public class SaslInputStream extends InputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int read() throws IOException {
     if (!useWrap) {
       return inStream.read();
@@ -216,6 +221,7 @@ public class SaslInputStream extends InputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int read(byte[] b) throws IOException {
     return read(b, 0, b.length);
   }
@@ -238,6 +244,7 @@ public class SaslInputStream extends InputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int read(byte[] b, int off, int len) throws IOException {
     if (!useWrap) {
       return inStream.read(b, off, len);
@@ -282,6 +289,7 @@ public class SaslInputStream extends InputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public long skip(long n) throws IOException {
     if (!useWrap) {
       return inStream.skip(n);
@@ -308,6 +316,7 @@ public class SaslInputStream extends InputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public int available() throws IOException {
     if (!useWrap) {
       return inStream.available();
@@ -325,11 +334,13 @@ public class SaslInputStream extends InputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void close() throws IOException {
     disposeSasl();
     ostart = 0;
     ofinish = 0;
     inStream.close();
+    isOpen = false;
   }
 
   /**
@@ -339,7 +350,32 @@ public class SaslInputStream extends InputStream {
    * @return <code>false</code>, since this class does not support the
    *         <code>mark</code> and <code>reset</code> methods.
    */
+  @Override
   public boolean markSupported() {
     return false;
+  }
+  
+  @Override
+  public boolean isOpen() {
+    return isOpen;
+  }
+
+  @Override
+  public int read(ByteBuffer dst) throws IOException {
+    int bytesRead = 0;
+    if (dst.hasArray()) {
+      bytesRead = read(dst.array(), dst.arrayOffset() + dst.position(),
+          dst.remaining());
+      if (bytesRead > -1) {
+        dst.position(dst.position() + bytesRead);
+      }
+    } else {
+      byte[] buf = new byte[dst.remaining()];
+      bytesRead = read(buf);
+      if (bytesRead > -1) {
+        dst.put(buf, 0, bytesRead);
+      }
+    }
+    return bytesRead;
   }
 }

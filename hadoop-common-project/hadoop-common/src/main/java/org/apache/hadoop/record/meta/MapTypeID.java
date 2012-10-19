@@ -19,8 +19,6 @@
 package org.apache.hadoop.record.meta;
 
 import java.io.IOException;
-import java.util.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.record.RecordOutput;
@@ -58,6 +56,7 @@ public class MapTypeID extends TypeID {
     return this.typeIDValue;
   }
   
+  @Override
   void write(RecordOutput rout, String tag) throws IOException {
     rout.writeByte(typeVal, tag);
     typeIDKey.write(rout, tag);
@@ -68,6 +67,7 @@ public class MapTypeID extends TypeID {
    * Two map  typeIDs are equal if their constituent elements have the 
    * same type
    */
+  @Override
   public boolean equals(Object o) {
     if (!super.equals(o))
       return false;
@@ -82,6 +82,7 @@ public class MapTypeID extends TypeID {
    * We use a basic hashcode implementation, since this class will likely not
    * be used as a hashmap key 
    */
+  @Override
   public int hashCode() {
     return 37*17+typeIDKey.hashCode() + 37*17+typeIDValue.hashCode();
   }

@@ -23,6 +23,9 @@ package org.apache.hadoop.fs.viewfs;
  * Since viewfs has overlayed ViewFsFileStatus, we ran into
  * serialization problems. THis test is test the fix.
  */
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -40,11 +43,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.UserGroupInformation;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class TestViewFsFileStatusHdfs {
   

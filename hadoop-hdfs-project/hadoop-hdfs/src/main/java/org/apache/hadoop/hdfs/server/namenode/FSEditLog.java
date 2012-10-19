@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
@@ -82,7 +83,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FSEditLog  {
+public class FSEditLog implements LogsPurgeable {
 
   static final Log LOG = LogFactory.getLog(FSEditLog.class);
 
@@ -173,6 +174,7 @@ public class FSEditLog  {
 
   // stores the most current transactionId of this thread.
   private static final ThreadLocal<TransactionId> myTransactionId = new ThreadLocal<TransactionId>() {
+    @Override
     protected synchronized TransactionId initialValue() {
       return new TransactionId(Long.MAX_VALUE);
     }
@@ -330,6 +332,39 @@ public class FSEditLog  {
     }
 
     state = State.CLOSED;
+  }
+
+
+  /**
+   * Format all configured journals which are not file-based.
+   * 
+   * File-based journals are skipped, since they are formatted by the
+   * Storage format code.
+   */
+  synchronized void formatNonFileJournals(NamespaceInfo nsInfo) throws IOException {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
+    
+    for (JournalManager jm : journalSet.getJournalManagers()) {
+      if (!(jm instanceof FileJournalManager)) {
+        jm.format(nsInfo);
+      }
+    }
+  }
+  
+  synchronized List<FormatConfirmable> getFormatConfirmables() {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
+
+    List<FormatConfirmable> ret = Lists.newArrayList();
+    for (final JournalManager jm : journalSet.getJournalManagers()) {
+      // The FJMs are confirmed separately since they are also
+      // StorageDirectories
+      if (!(jm instanceof FileJournalManager)) {
+        ret.add(jm);
+      }
+    }
+    return ret;
   }
 
   /**
@@ -544,8 +579,9 @@ public class FSEditLog  {
             editLogStream.setReadyToFlush();
           } catch (IOException e) {
             final String msg =
-                "Could not sync enough journals to persistent storage. "
-                + "Unsynced transactions: " + (txid - synctxid);
+                "Could not sync enough journals to persistent storage " +
+                "due to " + e.getMessage() + ". " +
+                "Unsynced transactions: " + (txid - synctxid);
             LOG.fatal(msg, new Exception());
             terminate(1, msg);
           }
@@ -621,7 +657,7 @@ public class FSEditLog  {
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
     AddOp op = AddOp.getInstance(cache.get())
       .setPath(path)
-      .setReplication(newNode.getReplication())
+      .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
@@ -639,7 +675,7 @@ public class FSEditLog  {
   public void logCloseFile(String path, INodeFile newNode) {
     CloseOp op = CloseOp.getInstance(cache.get())
       .setPath(path)
-      .setReplication(newNode.getReplication())
+      .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
@@ -996,6 +1032,7 @@ public class FSEditLog  {
   /**
    * Archive any log files that are older than the given txid.
    */
+  @Override
   public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
     assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
       minTxIdToKeep <= curSegmentTxId :
@@ -1134,7 +1171,13 @@ public class FSEditLog  {
       journalSet.recoverUnfinalizedSegments();
     } catch (IOException ex) {
       // All journals have failed, it is handled in logSync.
+      // TODO: are we sure this is OK?
     }
+  }
+  
+  public void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxId, boolean inProgressOk) {
+    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
   }
 
   public Collection<EditLogInputStream> selectInputStreams(
@@ -1153,7 +1196,7 @@ public class FSEditLog  {
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
       boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
+    selectInputStreams(streams, fromTxId, inProgressOk);
 
     try {
       checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);

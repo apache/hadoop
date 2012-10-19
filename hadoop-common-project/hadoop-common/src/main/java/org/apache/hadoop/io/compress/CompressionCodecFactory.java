@@ -75,6 +75,7 @@ public class CompressionCodecFactory {
   /**
    * Print the extension map out as a string.
    */
+  @Override
   public String toString() {
     StringBuilder buf = new StringBuilder();
     Iterator<Map.Entry<String, CompressionCodec>> itr = 

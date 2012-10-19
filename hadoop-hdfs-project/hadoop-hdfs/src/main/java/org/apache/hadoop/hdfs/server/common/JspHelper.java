@@ -44,12 +44,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -59,14 +59,12 @@ import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
-import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
@@ -111,6 +109,7 @@ public class JspHelper {
   // compare two records based on their frequency
   private static class NodeRecordComparator implements Comparator<NodeRecord> {
 
+    @Override
     public int compare(NodeRecord o1, NodeRecord o2) {
       if (o1.frequency < o2.frequency) {
         return -1;
@@ -194,7 +193,8 @@ public class JspHelper {
   public static void streamBlockInAscii(InetSocketAddress addr, String poolId,
       long blockId, Token<BlockTokenIdentifier> blockToken, long genStamp,
       long blockSize, long offsetIntoBlock, long chunkSizeToView,
-      JspWriter out, Configuration conf) throws IOException {
+      JspWriter out, Configuration conf, DataEncryptionKey encryptionKey)
+          throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
     s.connect(addr, HdfsServerConstants.READ_TIMEOUT);
@@ -207,7 +207,7 @@ public class JspHelper {
     BlockReader blockReader = BlockReaderFactory.newBlockReader(
         conf, s, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
-        offsetIntoBlock, amtToRead);
+        offsetIntoBlock, amtToRead, encryptionKey);
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
@@ -276,6 +276,9 @@ public class JspHelper {
         FIELD_PERCENT_REMAINING = 9,
         FIELD_ADMIN_STATE       = 10,
         FIELD_DECOMMISSIONED    = 11,
+        FIELD_BLOCKPOOL_USED    = 12,
+        FIELD_PERBLOCKPOOL_USED = 13,
+        FIELD_FAILED_VOLUMES    = 14,
         SORT_ORDER_ASC          = 1,
         SORT_ORDER_DSC          = 2;
 
@@ -303,6 +306,12 @@ public class JspHelper {
           sortField = FIELD_ADMIN_STATE;
         } else if (field.equals("decommissioned")) {
           sortField = FIELD_DECOMMISSIONED;
+        } else if (field.equals("bpused")) {
+          sortField = FIELD_BLOCKPOOL_USED;
+        } else if (field.equals("pcbpused")) {
+          sortField = FIELD_PERBLOCKPOOL_USED;
+        } else if (field.equals("volfails")) {
+          sortField = FIELD_FAILED_VOLUMES;
         } else {
           sortField = FIELD_NAME;
         }
@@ -314,6 +323,7 @@ public class JspHelper {
         }
       }
 
+      @Override
       public int compare(DatanodeDescriptor d1,
                          DatanodeDescriptor d2) {
         int ret = 0;
@@ -359,6 +369,18 @@ public class JspHelper {
           break;
         case FIELD_NAME: 
           ret = d1.getHostName().compareTo(d2.getHostName());
+          break;
+        case FIELD_BLOCKPOOL_USED:
+          dlong = d1.getBlockPoolUsed() - d2.getBlockPoolUsed();
+          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
+          break;
+        case FIELD_PERBLOCKPOOL_USED:
+          ddbl = d1.getBlockPoolUsedPercent() - d2.getBlockPoolUsedPercent();
+          ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
+          break;
+        case FIELD_FAILED_VOLUMES:
+          int dint = d1.getVolumeFailures() - d2.getVolumeFailures();
+          ret = (dint < 0) ? -1 : ((dint > 0) ? 1 : 0);
           break;
         }
         return (sortOrder == SORT_ORDER_DSC) ? -ret : ret;
@@ -485,12 +507,17 @@ public class JspHelper {
    */
   public static UserGroupInformation getDefaultWebUser(Configuration conf
                                                        ) throws IOException {
+    return UserGroupInformation.createRemoteUser(getDefaultWebUserName(conf));
+  }
+
+  private static String getDefaultWebUserName(Configuration conf
+      ) throws IOException {
     String user = conf.get(
         HADOOP_HTTP_STATIC_USER, DEFAULT_HADOOP_HTTP_STATIC_USER);
     if (user == null || user.length() == 0) {
       throw new IOException("Cannot determine UGI from request or conf");
     }
-    return UserGroupInformation.createRemoteUser(user);
+    return user;
   }
 
   private static InetSocketAddress getNNServiceAddress(ServletContext context,
@@ -536,65 +563,45 @@ public class JspHelper {
       HttpServletRequest request, Configuration conf,
       final AuthenticationMethod secureAuthMethod,
       final boolean tryUgiParameter) throws IOException {
-    final UserGroupInformation ugi;
+    UserGroupInformation ugi = null;
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
     final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
-
-    if(UserGroupInformation.isSecurityEnabled()) {
-      final String remoteUser = request.getRemoteUser();
-      String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
+    final String remoteUser;
+   
+    if (UserGroupInformation.isSecurityEnabled()) {
+      remoteUser = request.getRemoteUser();
+      final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
-        Token<DelegationTokenIdentifier> token = 
-          new Token<DelegationTokenIdentifier>();
-        token.decodeFromUrlString(tokenString);
-        InetSocketAddress serviceAddress = getNNServiceAddress(context, request);
-        if (serviceAddress != null) {
-          SecurityUtil.setTokenService(token, serviceAddress);
-          token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
-        }
-        ByteArrayInputStream buf = new ByteArrayInputStream(token
-            .getIdentifier());
-        DataInputStream in = new DataInputStream(buf);
-        DelegationTokenIdentifier id = new DelegationTokenIdentifier();
-        id.readFields(in);
-        if (context != null) {
-          final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-          if (nn != null) {
-            // Verify the token.
-            nn.getNamesystem().verifyToken(id, token.getPassword());
-          }
-        }
-        ugi = id.getUser();
-        if (ugi.getRealUser() == null) {
-          //non-proxy case
-          checkUsername(ugi.getShortUserName(), usernameFromQuery);
-          checkUsername(null, doAsUserFromQuery);
-        } else {
-          //proxy case
-          checkUsername(ugi.getRealUser().getShortUserName(), usernameFromQuery);
-          checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
-          ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
-        }
-        ugi.addToken(token);
-        ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
-      } else {
-        if(remoteUser == null) {
-          throw new IOException("Security enabled but user not " +
-                                "authenticated by filter");
-        }
-        final UserGroupInformation realUgi = UserGroupInformation.createRemoteUser(remoteUser);
-        checkUsername(realUgi.getShortUserName(), usernameFromQuery);
+        // Token-based connections need only verify the effective user, and
+        // disallow proxying to different user.  Proxy authorization checks
+        // are not required since the checks apply to issuing a token.
+        ugi = getTokenUGI(context, request, tokenString, conf);
+        checkUsername(ugi.getShortUserName(), usernameFromQuery);
+        checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
+      } else if (remoteUser == null) {
+        throw new IOException(
+            "Security enabled but user not authenticated by filter");
+      }
+    } else {
+      // Security's not on, pull from url or use default web user
+      remoteUser = (usernameFromQuery == null)
+          ? getDefaultWebUserName(conf) // not specified in request
+          : usernameFromQuery;
+    }
+
+    if (ugi == null) { // security is off, or there's no token
+      ugi = UserGroupInformation.createRemoteUser(remoteUser);
+      checkUsername(ugi.getShortUserName(), usernameFromQuery);
+      if (UserGroupInformation.isSecurityEnabled()) {
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
-        realUgi.setAuthenticationMethod(secureAuthMethod);
-        ugi = initUGI(realUgi, doAsUserFromQuery, request, true, conf);
+        ugi.setAuthenticationMethod(secureAuthMethod);
       }
-    } else { // Security's not on, pull from url
-      final UserGroupInformation realUgi = usernameFromQuery == null?
-          getDefaultWebUser(conf) // not specified in request
-          : UserGroupInformation.createRemoteUser(usernameFromQuery);
-      realUgi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
-      ugi = initUGI(realUgi, doAsUserFromQuery, request, false, conf);
+      if (doAsUserFromQuery != null) {
+        // create and attempt to authorize a proxy user
+        ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);
+        ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+      }
     }
     
     if(LOG.isDebugEnabled())
@@ -602,21 +609,34 @@ public class JspHelper {
     return ugi;
   }
 
-  private static UserGroupInformation initUGI(final UserGroupInformation realUgi,
-      final String doAsUserFromQuery, final HttpServletRequest request,
-      final boolean isSecurityEnabled, final Configuration conf
-      ) throws AuthorizationException {
-    final UserGroupInformation ugi;
-    if (doAsUserFromQuery == null) {
-      //non-proxy case
-      ugi = realUgi;
-    } else {
-      //proxy case
-      ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, realUgi);
-      ugi.setAuthenticationMethod(
-          isSecurityEnabled? AuthenticationMethod.PROXY: AuthenticationMethod.SIMPLE);
-      ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+  private static UserGroupInformation getTokenUGI(ServletContext context,
+                                                  HttpServletRequest request,
+                                                  String tokenString,
+                                                  Configuration conf)
+                                                      throws IOException {
+    final Token<DelegationTokenIdentifier> token =
+        new Token<DelegationTokenIdentifier>();
+    token.decodeFromUrlString(tokenString);
+    InetSocketAddress serviceAddress = getNNServiceAddress(context, request);
+    if (serviceAddress != null) {
+      SecurityUtil.setTokenService(token, serviceAddress);
+      token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
     }
+
+    ByteArrayInputStream buf =
+        new ByteArrayInputStream(token.getIdentifier());
+    DataInputStream in = new DataInputStream(buf);
+    DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    id.readFields(in);
+    if (context != null) {
+      final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
+      if (nn != null) {
+        // Verify the token.
+        nn.getNamesystem().verifyToken(id, token.getPassword());
+      }
+    }
+    UserGroupInformation ugi = id.getUser();
+    ugi.addToken(token);
     return ugi;
   }
 

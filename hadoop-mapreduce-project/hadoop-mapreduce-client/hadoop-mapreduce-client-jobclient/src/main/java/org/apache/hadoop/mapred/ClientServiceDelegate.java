@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -232,8 +233,9 @@ public class ClientServiceDelegate {
     if (user == null) {
       throw RPCUtil.getRemoteException("User is not set in the application report");
     }
-    if (application.getYarnApplicationState() == YarnApplicationState.NEW ||
-        application.getYarnApplicationState() == YarnApplicationState.SUBMITTED) {
+    if (application.getYarnApplicationState() == YarnApplicationState.NEW
+        || application.getYarnApplicationState() == YarnApplicationState.SUBMITTED
+        || application.getYarnApplicationState() == YarnApplicationState.ACCEPTED) {
       realProxy = null;
       return getNotRunningJob(application, JobState.NEW);
     }
@@ -392,7 +394,7 @@ public class ClientServiceDelegate {
       String url = StringUtils.isNotEmpty(historyTrackingUrl)
           ? historyTrackingUrl : trackingUrl;
       if (!UNAVAILABLE.equals(url)) {
-        url = "http://" + url;
+        url = HttpConfig.getSchemePrefix() + url;
       }
       jobStatus = TypeConverter.fromYarn(report, url);
     }

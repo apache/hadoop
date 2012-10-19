@@ -195,7 +195,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
     service = newService;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     int len = WritableUtils.readVInt(in);
     if (identifier == null || identifier.length != len) {
@@ -211,7 +211,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
     service.readFields(in);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, identifier.length);
     out.write(identifier);

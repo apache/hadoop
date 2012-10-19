@@ -22,7 +22,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * The metrics system interface
+ * The metrics system interface.
+ * 
+ * The following components are used for metrics.
+ * <ul>
+ * <li>{@link MetricsSource} generate and update metrics information.</li>
+ * <li>{@link MetricsSink} consume the metrics information</li>
+ * </ul>
+ * 
+ * {@link MetricsSource} and {@link MetricsSink} register with the metrics
+ * system. Implementations of {@link MetricsSystem} polls the
+ * {@link MetricsSource}s periodically and pass the {@link MetricsRecord}s to
+ * {@link MetricsSink}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

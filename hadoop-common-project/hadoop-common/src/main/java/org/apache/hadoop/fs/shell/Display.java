@@ -17,11 +17,21 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.FileReader;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonEncoder;
+import org.apache.avro.Schema;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +47,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.codehaus.jackson.JsonEncoding;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.util.MinimalPrettyPrinter;
 
 /**
  * Display contents of files 
@@ -95,14 +109,14 @@ class Display extends FsCommand {
   
   /**
    * Same behavior as "-cat", but handles zip and TextRecordInputStream
-   * encodings. 
+   * and Avro encodings. 
    */ 
   public static class Text extends Cat {
     public static final String NAME = "text";
     public static final String USAGE = Cat.USAGE;
     public static final String DESCRIPTION =
       "Takes a source file and outputs the file in text format.\n" +
-      "The allowed formats are zip and TextRecordInputStream.";
+      "The allowed formats are zip and TextRecordInputStream and Avro.";
     
     @Override
     protected InputStream getInputStream(PathData item) throws IOException {
@@ -128,7 +142,15 @@ class Display extends FsCommand {
           CompressionCodecFactory cf = new CompressionCodecFactory(getConf());
           CompressionCodec codec = cf.getCodec(item.path);
           if (codec != null) {
+            i.seek(0);
             return codec.createInputStream(i);
+          }
+          break;
+        }
+        case 0x4f62: { // 'O' 'b'
+          if (i.readByte() == 'j') {
+            i.close();
+            return new AvroFileInputStream(item.stat);
           }
           break;
         }
@@ -161,6 +183,7 @@ class Display extends FsCommand {
       outbuf = new DataOutputBuffer();
     }
 
+    @Override
     public int read() throws IOException {
       int ret;
       if (null == inbuf || -1 == (ret = inbuf.read())) {
@@ -180,8 +203,73 @@ class Display extends FsCommand {
       return ret;
     }
 
+    @Override
     public void close() throws IOException {
       r.close();
+      super.close();
+    }
+  }
+
+  /**
+   * This class transforms a binary Avro data file into an InputStream
+   * with data that is in a human readable JSON format.
+   */
+  protected static class AvroFileInputStream extends InputStream {
+    private int pos;
+    private byte[] buffer;
+    private ByteArrayOutputStream output;
+    private FileReader fileReader;
+    private DatumWriter<Object> writer;
+    private JsonEncoder encoder;
+
+    public AvroFileInputStream(FileStatus status) throws IOException {
+      pos = 0;
+      buffer = new byte[0];
+      GenericDatumReader<Object> reader = new GenericDatumReader<Object>();
+      fileReader =
+        DataFileReader.openReader(new File(status.getPath().toUri()), reader);
+      Schema schema = fileReader.getSchema();
+      writer = new GenericDatumWriter<Object>(schema);
+      output = new ByteArrayOutputStream();
+      JsonGenerator generator =
+        new JsonFactory().createJsonGenerator(output, JsonEncoding.UTF8);
+      MinimalPrettyPrinter prettyPrinter = new MinimalPrettyPrinter();
+      prettyPrinter.setRootValueSeparator(System.getProperty("line.separator"));
+      generator.setPrettyPrinter(prettyPrinter);
+      encoder = EncoderFactory.get().jsonEncoder(schema, generator);
+    }
+
+    /**
+     * Read a single byte from the stream.
+     */
+    @Override
+    public int read() throws IOException {
+      if (pos < buffer.length) {
+        return buffer[pos++];
+      }
+      if (!fileReader.hasNext()) {
+        return -1;
+      }
+      writer.write(fileReader.next(), encoder);
+      encoder.flush();
+      if (!fileReader.hasNext()) {
+        // Write a new line after the last Avro record.
+        output.write(System.getProperty("line.separator").getBytes());
+        output.flush();
+      }
+      pos = 0;
+      buffer = output.toByteArray();
+      output.reset();
+      return read();
+    }
+
+    /**
+      * Close the stream.
+      */
+    @Override
+    public void close() throws IOException {
+      fileReader.close();
+      output.close();
       super.close();
     }
   }

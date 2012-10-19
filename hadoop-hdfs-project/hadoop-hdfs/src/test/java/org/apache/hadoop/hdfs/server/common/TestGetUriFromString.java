@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.net.URI;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.Test;
 
 /**
  * This is a unit test, which tests {@link Util#stringAsURI(String)}
  * for Windows and Unix style file paths.
  */
-public class TestGetUriFromString extends TestCase {
+public class TestGetUriFromString {
   private static final Log LOG = LogFactory.getLog(TestGetUriFromString.class);
 
   private static final String RELATIVE_FILE_PATH = "relativeFilePath";
@@ -49,6 +51,7 @@ public class TestGetUriFromString extends TestCase {
    * Test for a relative path, os independent
    * @throws IOException 
    */
+  @Test
   public void testRelativePathAsURI() throws IOException {
     URI u = Util.stringAsURI(RELATIVE_FILE_PATH);
     LOG.info("Uri: " + u);
@@ -59,6 +62,7 @@ public class TestGetUriFromString extends TestCase {
    * Test for an OS dependent absolute paths.
    * @throws IOException 
    */
+  @Test
   public void testAbsolutePathAsURI() throws IOException {
     URI u = null;
     u = Util.stringAsURI(ABSOLUTE_PATH_WINDOWS);
@@ -74,6 +78,7 @@ public class TestGetUriFromString extends TestCase {
    * Test for a URI
    * @throws IOException 
    */
+  @Test
   public void testURI() throws IOException {
     LOG.info("Testing correct Unix URI: " + URI_UNIX);
     URI u = Util.stringAsURI(URI_UNIX);

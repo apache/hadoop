@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.EnumSet;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.junit.Test;
 
 /**
  * Test for {@link LayoutVersion}

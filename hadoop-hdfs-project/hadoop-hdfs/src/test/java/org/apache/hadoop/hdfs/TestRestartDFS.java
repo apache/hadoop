@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 /**
  * A JUnit test for checking if restarting DFS preserves integrity.
  */
-public class TestRestartDFS extends TestCase {
+public class TestRestartDFS {
   public void runTests(Configuration conf, boolean serviceTest) throws Exception {
     MiniDFSCluster cluster = null;
     DFSTestUtil files = new DFSTestUtil.Builder().setName("TestRestartDFS").
@@ -110,6 +112,7 @@ public class TestRestartDFS extends TestCase {
     }
   }
   /** check if DFS remains in proper condition after a restart */
+  @Test
   public void testRestartDFS() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     runTests(conf, false);
@@ -118,6 +121,7 @@ public class TestRestartDFS extends TestCase {
   /** check if DFS remains in proper condition after a restart 
    * this rerun is with 2 ports enabled for RPC in the namenode
    */
+  @Test
    public void testRestartDualPortDFS() throws Exception {
      final Configuration conf = new HdfsConfiguration();
      runTests(conf, true);

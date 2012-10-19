@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -90,7 +91,7 @@ public class TestHASafeMode {
   }
   
   @After
-  public void shutdownCluster() throws IOException {
+  public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -407,7 +408,7 @@ public class TestHASafeMode {
         4*BLOCK_SIZE, (short) 3, 1L);
     NameNodeAdapter.enterSafeMode(nn0, false);
     NameNodeAdapter.saveNamespace(nn0);
-    NameNodeAdapter.leaveSafeMode(nn0, false);
+    NameNodeAdapter.leaveSafeMode(nn0);
     
     // OP_ADD for 2 blocks
     DFSTestUtil.createFile(fs, new Path("/test2"),
@@ -419,8 +420,8 @@ public class TestHASafeMode {
     restartActive();
   }
   
-  private void assertSafeMode(NameNode nn, int safe, int total) {
-    String status = nn1.getNamesystem().getSafemode();
+  private static void assertSafeMode(NameNode nn, int safe, int total) {
+    String status = nn.getNamesystem().getSafemode();
     if (safe == total) {
       assertTrue("Bad safemode status: '" + status + "'",
           status.startsWith(

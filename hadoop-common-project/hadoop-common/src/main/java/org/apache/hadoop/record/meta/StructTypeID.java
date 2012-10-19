@@ -72,6 +72,7 @@ public class StructTypeID extends TypeID {
     return null;
   }
   
+  @Override
   void write(RecordOutput rout, String tag) throws IOException {
     rout.writeByte(typeVal, tag);
     writeRest(rout, tag);
@@ -155,9 +156,11 @@ public class StructTypeID extends TypeID {
     }
   }
   
+  @Override
   public boolean equals(Object o) {
     return super.equals(o);
   }
   
+  @Override
   public int hashCode() { return super.hashCode(); }
 }

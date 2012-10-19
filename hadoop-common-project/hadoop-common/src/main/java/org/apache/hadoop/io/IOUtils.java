@@ -25,6 +25,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class IOUtils {
+  public static final Log LOG = LogFactory.getLog(IOUtils.class);
 
   /**
    * Copies from one stream to another.
@@ -206,12 +208,20 @@ public class IOUtils {
    * for any reason (including EOF)
    */
   public static void skipFully(InputStream in, long len) throws IOException {
-    while (len > 0) {
-      long ret = in.skip(len);
-      if (ret < 0) {
-        throw new IOException( "Premature EOF from inputStream");
+    long amt = len;
+    while (amt > 0) {
+      long ret = in.skip(amt);
+      if (ret == 0) {
+        // skip may return 0 even if we're not at EOF.  Luckily, we can 
+        // use the read() method to figure out if we're at the end.
+        int b = in.read();
+        if (b == -1) {
+          throw new EOFException( "Premature EOF from inputStream after " +
+              "skipping " + (len - amt) + " byte(s).");
+        }
+        ret = 1;
       }
-      len -= ret;
+      amt -= ret;
     }
   }
   
@@ -227,7 +237,7 @@ public class IOUtils {
       if (c != null) {
         try {
           c.close();
-        } catch(IOException e) {
+        } catch(Throwable e) {
           if (log != null && log.isDebugEnabled()) {
             log.debug("Exception in closing " + c, e);
           }
@@ -256,6 +266,7 @@ public class IOUtils {
       try {
         sock.close();
       } catch (IOException ignored) {
+        LOG.debug("Ignoring exception while closing socket", ignored);
       }
     }
   }
@@ -264,9 +275,11 @@ public class IOUtils {
    * The /dev/null of OutputStreams.
    */
   public static class NullOutputStream extends OutputStream {
+    @Override
     public void write(byte[] b, int off, int len) throws IOException {
     }
 
+    @Override
     public void write(int b) throws IOException {
     }
   }  

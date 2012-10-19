@@ -165,7 +165,7 @@
 
 <property>
   <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
-  <value>(&amp;(objectClass=user)(sAMAccountName={0})</value>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
   <description>
     An additional filter to use when searching for LDAP users. The default will
     usually be appropriate for Active Directory installations. If connecting to
@@ -248,6 +248,14 @@
   running the Hadoop client. Change this to the absolute path to kinit if this
   is not the case.
   </description>
+</property>
+
+<property>
+    <name>hadoop.kerberos.min.seconds.before.relogin</name>
+    <value>60</value>
+    <description>The minimum time between relogin attempts for Kerberos, in
+    seconds.
+    </description>
 </property>
 
 <property>
@@ -351,8 +359,12 @@
   <name>fs.trash.interval</name>
   <value>0</value>
   <description>Number of minutes after which the checkpoint
-  gets deleted.
-  If zero, the trash feature is disabled.
+  gets deleted.  If zero, the trash feature is disabled.
+  This option may be configured both on the server and the
+  client. If trash is disabled server side then the client
+  side configuration is checked. If trash is enabled on the
+  server side then the value configured on the server is
+  used and the client configuration value is ignored.
   </description>
 </property>
 
@@ -360,7 +372,8 @@
   <name>fs.trash.checkpoint.interval</name>
   <value>0</value>
   <description>Number of minutes between trash checkpoints.
-  Should be smaller or equal to fs.trash.interval.
+  Should be smaller or equal to fs.trash.interval. If zero,
+  the value is set to the value of fs.trash.interval.
   Every time the checkpointer runs it creates a new checkpoint 
   out of current and removes checkpoints created more than 
   fs.trash.interval minutes ago.
@@ -761,42 +774,6 @@
   <description>Replication factor</description>
 </property>
 
-<!-- Kosmos File System -->
-
-<property>
-  <name>kfs.stream-buffer-size</name>
-  <value>4096</value>
-  <description>The size of buffer to stream files.
-  The size of this buffer should probably be a multiple of hardware
-  page size (4096 on Intel x86), and it determines how much data is
-  buffered during read and write operations.</description>
-</property>
-
-<property>
-  <name>kfs.bytes-per-checksum</name>
-  <value>512</value>
-  <description>The number of bytes per checksum.  Must not be larger than
-  kfs.stream-buffer-size</description>
-</property>
-
-<property>
-  <name>kfs.client-write-packet-size</name>
-  <value>65536</value>
-  <description>Packet size for clients to write</description>
-</property>
-
-<property>
-  <name>kfs.blocksize</name>
-  <value>67108864</value>
-  <description>Block size</description>
-</property>
-
-<property>
-  <name>kfs.replication</name>
-  <value>3</value>
-  <description>Replication factor</description>
-</property>
-
 <!-- FTP file system -->
 <property>
   <name>ftp.stream-buffer-size</name>
@@ -1026,4 +1003,80 @@
   <name>hadoop.http.staticuser.user</name>
   <value>dr.who</value>
 </property>
+
+<!-- SSLFactory configuration -->
+
+<property>
+  <name>hadoop.ssl.keystores.factory.class</name>
+  <value>org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory</value>
+  <description>
+    The keystores factory to use for retrieving certificates.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.require.client.cert</name>
+  <value>false</value>
+  <description>Whether client certificates are required</description>
+</property>
+
+<property>
+  <name>hadoop.ssl.hostname.verifier</name>
+  <value>DEFAULT</value>
+  <description>
+    The hostname verifier to provide for HttpsURLConnections.
+    Valid values are: DEFAULT, STRICT, STRICT_I6, DEFAULT_AND_LOCALHOST and
+    ALLOW_ALL
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.server.conf</name>
+  <value>ssl-server.xml</value>
+  <description>
+    Resource file from which ssl server keystore information will be extracted.
+    This file is looked up in the classpath, typically it should be in Hadoop
+    conf/ directory.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.client.conf</name>
+  <value>ssl-client.xml</value>
+  <description>
+    Resource file from which ssl client keystore information will be extracted
+    This file is looked up in the classpath, typically it should be in Hadoop
+    conf/ directory.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Whether to use SSL for the HTTP endpoints. If set to true, the
+    NameNode, DataNode, ResourceManager, NodeManager, HistoryServer and
+    MapReduceAppMaster web UIs will be served over HTTPS instead HTTP.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.jetty.logs.serve.aliases</name>
+  <value>true</value>
+  <description>
+    Enable/Disable aliases serving from jetty
+  </description>
+</property>
+
+<property>
+  <name>fs.permissions.umask-mode</name>
+  <value>022</value>
+  <description>
+    The umask used when creating files and directories.
+    Can be in octal or in symbolic. Examples are:
+    "022" (octal for u=rwx,g=r-x,o=r-x in symbolic),
+    or "u=rwx,g=rwx,o=" (symbolic for 007 in octal).
+  </description>
+</property>
+
 </configuration>

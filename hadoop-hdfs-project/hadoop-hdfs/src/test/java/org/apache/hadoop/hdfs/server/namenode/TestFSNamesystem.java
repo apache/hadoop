@@ -18,14 +18,17 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.junit.Test;
 
 public class TestFSNamesystem {
@@ -45,4 +48,20 @@ public class TestFSNamesystem {
     assertEquals(2, editsDirs.size());
   }
 
+  /**
+   * Test that FSNamesystem#clear clears all leases.
+   */
+  @Test
+  public void testFSNamespaceClearLeases() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
+    DFSTestUtil.formatNameNode(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    LeaseManager leaseMan = fsn.getLeaseManager();
+    leaseMan.addLease("client1", "importantFile");
+    assertEquals(1, leaseMan.countLease());
+    fsn.clear();
+    leaseMan = fsn.getLeaseManager();
+    assertEquals(0, leaseMan.countLease());
+  }
 }

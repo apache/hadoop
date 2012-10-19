@@ -127,7 +127,8 @@ import org.apache.hadoop.util.ShutdownHookManager;
  *  <li> replication factor
  *  <li> block size
  *  <li> buffer size
- *  <li> bytesPerChecksum (if used).
+ *  <li> encryptDataTransfer 
+ *  <li> checksum option. (checksumType and  bytesPerChecksum)
  *  </ul>
  *
  * <p>
@@ -189,6 +190,7 @@ public final class FileContext {
     new FileContextFinalizer();
   
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
     public boolean accept(final Path file) {
       return true;
     }
@@ -317,6 +319,7 @@ public final class FileContext {
       throws UnsupportedFileSystemException, IOException {
     try {
       return user.doAs(new PrivilegedExceptionAction<AbstractFileSystem>() {
+        @Override
         public AbstractFileSystem run() throws UnsupportedFileSystemException {
           return AbstractFileSystem.get(uri, conf);
         }
@@ -613,7 +616,8 @@ public final class FileContext {
    *          <li>BufferSize - buffersize used in FSDataOutputStream
    *          <li>Blocksize - block size for file blocks
    *          <li>ReplicationFactor - replication for blocks
-   *          <li>BytesPerChecksum - bytes per checksum
+   *          <li>ChecksumParam - Checksum parameters. server default is used
+   *          if not specified.
    *          </ul>
    *          </ul>
    * 
@@ -658,6 +662,7 @@ public final class FileContext {
     final CreateOpts[] updatedOpts = 
                       CreateOpts.setOpt(CreateOpts.perms(permission), opts);
     return new FSLinkResolver<FSDataOutputStream>() {
+      @Override
       public FSDataOutputStream next(final AbstractFileSystem fs, final Path p) 
         throws IOException {
         return fs.create(p, createFlag, updatedOpts);
@@ -701,6 +706,7 @@ public final class FileContext {
     final FsPermission absFerms = (permission == null ? 
           FsPermission.getDefault() : permission).applyUMask(umask);
     new FSLinkResolver<Void>() {
+      @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         fs.mkdir(p, absFerms, createParent);
@@ -736,6 +742,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
+      @Override
       public Boolean next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return Boolean.valueOf(fs.delete(p, recursive));
@@ -764,6 +771,7 @@ public final class FileContext {
       FileNotFoundException, UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FSDataInputStream>() {
+      @Override
       public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.open(p);
@@ -794,6 +802,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FSDataInputStream>() {
+      @Override
       public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.open(p, bufferSize);
@@ -824,6 +833,7 @@ public final class FileContext {
       IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
+      @Override
       public Boolean next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return Boolean.valueOf(fs.setReplication(p, replication));
@@ -892,6 +902,7 @@ public final class FileContext {
        */
       final Path source = resolveIntermediate(absSrc);    
       new FSLinkResolver<Void>() {
+        @Override
         public Void next(final AbstractFileSystem fs, final Path p) 
           throws IOException, UnresolvedLinkException {
           fs.rename(source, p, options);
@@ -923,6 +934,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
+      @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         fs.setPermission(p, permission);
@@ -965,6 +977,7 @@ public final class FileContext {
     }
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
+      @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         fs.setOwner(p, username, groupname);
@@ -1000,6 +1013,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
+      @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         fs.setTimes(p, mtime, atime);
@@ -1032,6 +1046,7 @@ public final class FileContext {
       IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileChecksum>() {
+      @Override
       public FileChecksum next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.getFileChecksum(p);
@@ -1087,6 +1102,7 @@ public final class FileContext {
       FileNotFoundException, UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileStatus>() {
+      @Override
       public FileStatus next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.getFileStatus(p);
@@ -1133,6 +1149,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileStatus>() {
+      @Override
       public FileStatus next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         FileStatus fi = fs.getFileLinkStatus(p);
@@ -1163,6 +1180,7 @@ public final class FileContext {
       FileNotFoundException, UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<Path>() {
+      @Override
       public Path next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         FileStatus fi = fs.getFileLinkStatus(p);
@@ -1206,6 +1224,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<BlockLocation[]>() {
+      @Override
       public BlockLocation[] next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.getFileBlockLocations(p, start, len);
@@ -1244,6 +1263,7 @@ public final class FileContext {
     }
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FsStatus>() {
+      @Override
       public FsStatus next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.getFsStatus(p);
@@ -1337,6 +1357,7 @@ public final class FileContext {
       IOException { 
     final Path nonRelLink = fixRelativePart(link);
     new FSLinkResolver<Void>() {
+      @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         fs.createSymlink(target, p, createParent);
@@ -1371,6 +1392,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<RemoteIterator<FileStatus>>() {
+      @Override
       public RemoteIterator<FileStatus> next(
           final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
@@ -1430,6 +1452,7 @@ public final class FileContext {
       UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<RemoteIterator<LocatedFileStatus>>() {
+      @Override
       public RemoteIterator<LocatedFileStatus> next(
           final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
@@ -1701,6 +1724,7 @@ public final class FileContext {
         IOException {
       final Path absF = fixRelativePart(f);
       return new FSLinkResolver<FileStatus[]>() {
+        @Override
         public FileStatus[] next(final AbstractFileSystem fs, final Path p) 
           throws IOException, UnresolvedLinkException {
           return fs.listStatus(p);
@@ -1979,7 +2003,7 @@ public final class FileContext {
       String filename = inPathPattern.toUri().getPath();
       
       // path has only zero component
-      if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
+      if (filename.isEmpty() || Path.SEPARATOR.equals(filename)) {
         Path p = inPathPattern.makeQualified(uri, null);
         return getFileStatus(new Path[]{p});
       }
@@ -2012,7 +2036,11 @@ public final class FileContext {
                     new GlobFilter(components[components.length - 1], filter);
         if (fp.hasPattern()) { // last component has a pattern
           // list parent directories and then glob the results
-          results = listStatus(parentPaths, fp);
+          try {
+            results = listStatus(parentPaths, fp);
+          } catch (FileNotFoundException e) {
+            results = null;
+          }
           hasGlob[0] = true;
         } else { // last component does not have a pattern
           // get all the path names
@@ -2063,7 +2091,11 @@ public final class FileContext {
       }
       GlobFilter fp = new GlobFilter(filePattern[level]);
       if (fp.hasPattern()) {
-        parents = FileUtil.stat2Paths(listStatus(parents, fp));
+        try {
+          parents = FileUtil.stat2Paths(listStatus(parents, fp));
+        } catch (FileNotFoundException e) {
+          parents = null;
+        }
         hasGlob[0] = true;
       } else {
         for (int i = 0; i < parents.length; i++) {
@@ -2222,6 +2254,7 @@ public final class FileContext {
    * Deletes all the paths in deleteOnExit on JVM shutdown.
    */
   static class FileContextFinalizer implements Runnable {
+    @Override
     public synchronized void run() {
       processDeleteOnExit();
     }
@@ -2234,6 +2267,7 @@ public final class FileContext {
   protected Path resolve(final Path f) throws FileNotFoundException,
       UnresolvedLinkException, AccessControlException, IOException {
     return new FSLinkResolver<Path>() {
+      @Override
       public Path next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.resolvePath(p);
@@ -2249,6 +2283,7 @@ public final class FileContext {
    */
   protected Path resolveIntermediate(final Path f) throws IOException {
     return new FSLinkResolver<FileStatus>() {
+      @Override
       public FileStatus next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
         return fs.getFileLinkStatus(p);
@@ -2271,6 +2306,7 @@ public final class FileContext {
     final HashSet<AbstractFileSystem> result 
       = new HashSet<AbstractFileSystem>();
     new FSLinkResolver<Void>() {
+      @Override
       public Void next(final AbstractFileSystem fs, final Path p)
           throws IOException, UnresolvedLinkException {
         result.add(fs);

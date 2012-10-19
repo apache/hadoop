@@ -259,6 +259,7 @@ public class ZlibCompressor implements Compressor {
     }
   }
 
+  @Override
   public synchronized void setInput(byte[] b, int off, int len) {
     if (b== null) {
       throw new NullPointerException();
@@ -287,6 +288,7 @@ public class ZlibCompressor implements Compressor {
     uncompressedDirectBufLen = uncompressedDirectBuf.position();
   }
 
+  @Override
   public synchronized void setDictionary(byte[] b, int off, int len) {
     if (stream == 0 || b == null) {
       throw new NullPointerException();
@@ -297,6 +299,7 @@ public class ZlibCompressor implements Compressor {
     setDictionary(stream, b, off, len);
   }
 
+  @Override
   public synchronized boolean needsInput() {
     // Consume remaining compressed data?
     if (compressedDirectBuf.remaining() > 0) {
@@ -325,16 +328,19 @@ public class ZlibCompressor implements Compressor {
     return false;
   }
   
+  @Override
   public synchronized void finish() {
     finish = true;
   }
   
+  @Override
   public synchronized boolean finished() {
     // Check if 'zlib' says its 'finished' and
     // all compressed data has been consumed
     return (finished && compressedDirectBuf.remaining() == 0);
   }
 
+  @Override
   public synchronized int compress(byte[] b, int off, int len) 
     throws IOException {
     if (b == null) {
@@ -385,6 +391,7 @@ public class ZlibCompressor implements Compressor {
    *
    * @return the total (non-negative) number of compressed bytes output so far
    */
+  @Override
   public synchronized long getBytesWritten() {
     checkStream();
     return getBytesWritten(stream);
@@ -395,11 +402,13 @@ public class ZlibCompressor implements Compressor {
    *
    * @return the total (non-negative) number of uncompressed bytes input so far
    */
+  @Override
   public synchronized long getBytesRead() {
     checkStream();
     return getBytesRead(stream);
   }
 
+  @Override
   public synchronized void reset() {
     checkStream();
     reset(stream);
@@ -413,6 +422,7 @@ public class ZlibCompressor implements Compressor {
     userBufOff = userBufLen = 0;
   }
   
+  @Override
   public synchronized void end() {
     if (stream != 0) {
       end(stream);

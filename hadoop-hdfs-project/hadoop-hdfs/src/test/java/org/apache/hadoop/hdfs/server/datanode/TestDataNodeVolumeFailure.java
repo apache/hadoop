@@ -105,7 +105,7 @@ public class TestDataNodeVolumeFailure {
    * failure if the configuration parameter allows this.
    */
   @Test
-  public void testVolumeFailure() throws IOException {
+  public void testVolumeFailure() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     dataDir = new File(cluster.getDataDirectory());
     System.out.println("Data dir: is " +  dataDir.getPath());
@@ -281,7 +281,7 @@ public class TestDataNodeVolumeFailure {
         "test-blockpoolid",
         block.getBlockId());
     BlockReaderFactory.newBlockReader(conf, s, file, block, lblock
-        .getBlockToken(), 0, -1);
+        .getBlockToken(), 0, -1, null);
 
     // nothing - if it fails - it will throw and exception
   }
@@ -375,6 +375,7 @@ public class TestDataNodeVolumeFailure {
   private String [] metaFilesInDir(File dir) {
     String [] res = dir.list(
         new FilenameFilter() {
+          @Override
           public boolean accept(File dir, String name) {
             return name.startsWith("blk_") &&
             name.endsWith(Block.METADATA_EXTENSION);

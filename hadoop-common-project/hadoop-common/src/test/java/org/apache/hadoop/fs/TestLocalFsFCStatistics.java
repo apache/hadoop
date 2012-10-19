@@ -47,15 +47,18 @@ public class TestLocalFsFCStatistics extends FCStatisticsBaseTest {
     fc.delete(getTestRootPath(fc, "test"), true);
   }
 
+  @Override
   protected void verifyReadBytes(Statistics stats) {
     Assert.assertEquals(blockSize, stats.getBytesRead());
   }
 
+  @Override
   protected void verifyWrittenBytes(Statistics stats) {
     //Extra 12 bytes are written apart from the block.
     Assert.assertEquals(blockSize + 12, stats.getBytesWritten());
   }
   
+  @Override
   protected URI getFsUri() {
     return URI.create(LOCAL_FS_ROOT_URI);
   }

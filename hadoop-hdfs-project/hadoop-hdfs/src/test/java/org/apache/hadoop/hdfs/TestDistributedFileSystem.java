@@ -22,27 +22,41 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Random;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -106,17 +120,38 @@ public class TestDistributedFileSystem {
       DFSTestUtil.readFile(fileSys, p);
       
       DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-      SocketCache cache = client.socketCache;
-      assertEquals(1, cache.size());
 
       fileSys.close();
       
-      assertEquals(0, cache.size());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+
+  @Test
+  public void testDFSCloseOrdering() throws Exception {
+    DistributedFileSystem fs = new MyDistributedFileSystem();
+    Path path = new Path("/a");
+    fs.deleteOnExit(path);
+    fs.close();
+
+    InOrder inOrder = inOrder(fs.dfs);
+    inOrder.verify(fs.dfs).closeOutputStreams(eq(false));
+    inOrder.verify(fs.dfs).delete(eq(path.toString()), eq(true));
+    inOrder.verify(fs.dfs).close();
+  }
   
+  private static class MyDistributedFileSystem extends DistributedFileSystem {
+    MyDistributedFileSystem() {
+      statistics = new FileSystem.Statistics("myhdfs"); // can't mock finals
+      dfs = mock(DFSClient.class);
+    }
+    @Override
+    public boolean exists(Path p) {
+      return true; // trick out deleteOnExit
+    }
+  }
+
   @Test
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();
@@ -169,82 +204,82 @@ public class TestDistributedFileSystem {
       for(int i = 0; i < filepaths.length; i++) {
         filepaths[i] = new Path(filepathstring + i);
       }
-      final long millis = System.currentTimeMillis();
+      final long millis = Time.now();
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-        dfs.dfs.leaserenewer.setGraceSleepPeriod(grace);
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        dfs.dfs.getLeaseRenewer().setGraceSleepPeriod(grace);
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
   
         {
           //create a file
           final FSDataOutputStream out = dfs.create(filepaths[0]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //write something
           out.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //close
           out.close();
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           for(int i = 0; i < 3; i++) {
-            if (dfs.dfs.leaserenewer.isRunning()) {
+            if (dfs.dfs.getLeaseRenewer().isRunning()) {
               Thread.sleep(grace/2);
             }
           }
           //passed grace period
-          assertFalse(dfs.dfs.leaserenewer.isRunning());
+          assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         }
 
         {
           //create file1
           final FSDataOutputStream out1 = dfs.create(filepaths[1]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //create file2
           final FSDataOutputStream out2 = dfs.create(filepaths[2]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
 
           //write something to file1
           out1.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //close file1
           out1.close();
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
 
           //write something to file2
           out2.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //close file2
           out2.close();
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
         }
 
         {
           //create file3
           final FSDataOutputStream out3 = dfs.create(filepaths[3]);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           Thread.sleep(grace/4*3);
           //passed previous grace period, should still running
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //write something to file3
           out3.writeLong(millis);
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           //close file3
           out3.close();
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           Thread.sleep(grace/4*3);
           //within grace period
-          assertTrue(dfs.dfs.leaserenewer.isRunning());
+          assertTrue(dfs.dfs.getLeaseRenewer().isRunning());
           for(int i = 0; i < 3; i++) {
-            if (dfs.dfs.leaserenewer.isRunning()) {
+            if (dfs.dfs.getLeaseRenewer().isRunning()) {
               Thread.sleep(grace/2);
             }
           }
           //passed grace period
-          assertFalse(dfs.dfs.leaserenewer.isRunning());
+          assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         }
 
         dfs.close();
@@ -273,15 +308,15 @@ public class TestDistributedFileSystem {
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
 
         //open and check the file
         FSDataInputStream in = dfs.open(filepaths[0]);
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         assertEquals(millis, in.readLong());
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         in.close();
-        assertFalse(dfs.dfs.leaserenewer.isRunning());
+        assertFalse(dfs.dfs.getLeaseRenewer().isRunning());
         dfs.close();
       }
       
@@ -416,7 +451,6 @@ public class TestDistributedFileSystem {
 
     final Configuration conf = getTestConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
-    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem hdfs = cluster.getFileSystem();
@@ -569,5 +603,151 @@ public class TestDistributedFileSystem {
     testDFSClose();
     testDFSClient();
     testFileChecksum();
+  }
+
+  /**
+   * Tests the normal path of batching up BlockLocation[]s to be passed to a
+   * single
+   * {@link DistributedFileSystem#getFileBlockStorageLocations(java.util.List)}
+   * call
+   */
+  @Test
+  public void testGetFileBlockStorageLocationsBatching() throws Exception {
+    final Configuration conf = getTestConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
+        true);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    // Create two files
+    Path tmpFile1 = new Path("/tmpfile1.dat");
+    Path tmpFile2 = new Path("/tmpfile2.dat");
+    DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
+    DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
+    // Get locations of blocks of both files and concat together
+    BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
+    BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
+    BlockLocation[] blockLocs = (BlockLocation[]) ArrayUtils.addAll(blockLocs1,
+        blockLocs2);
+    // Fetch VolumeBlockLocations in batch
+    BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
+        .asList(blockLocs));
+    int counter = 0;
+    // Print out the list of ids received for each block
+    for (BlockStorageLocation l : locs) {
+      for (int i = 0; i < l.getVolumeIds().length; i++) {
+        VolumeId id = l.getVolumeIds()[i];
+        String name = l.getNames()[i];
+        if (id != null) {
+          System.out.println("Datanode " + name + " has block " + counter
+              + " on volume id " + id.toString());
+        }
+      }
+      counter++;
+    }
+    assertEquals("Expected two HdfsBlockLocations for two 1-block files", 2,
+        locs.length);
+    for (BlockStorageLocation l : locs) {
+      assertEquals("Expected two replicas for each block", 2,
+          l.getVolumeIds().length);
+      for (int i = 0; i < l.getVolumeIds().length; i++) {
+        VolumeId id = l.getVolumeIds()[i];
+        String name = l.getNames()[i];
+        assertTrue("Expected block to be valid on datanode " + name,
+            id.isValid());
+      }
+    }
+  }
+
+  /**
+   * Tests error paths for
+   * {@link DistributedFileSystem#getFileBlockStorageLocations(java.util.List)}
+   */
+  @Test
+  public void testGetFileBlockStorageLocationsError() throws Exception {
+    final Configuration conf = getTestConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
+        true);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2).build();
+    cluster.getDataNodes();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    // Create a file
+    Path tmpFile = new Path("/tmpfile1.dat");
+    DFSTestUtil.createFile(fs, tmpFile, 1024, (short) 2, 0xDEADDEADl);
+    // Get locations of blocks of the file
+    BlockLocation[] blockLocs = fs.getFileBlockLocations(tmpFile, 0, 1024);
+    // Stop a datanode to simulate a failure
+    cluster.stopDataNode(0);
+    // Fetch VolumeBlockLocations
+    BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
+        .asList(blockLocs));
+
+    assertEquals("Expected one HdfsBlockLocation for one 1-block file", 1,
+        locs.length);
+
+    for (BlockStorageLocation l : locs) {
+      assertEquals("Expected two replicas for each block", 2,
+          l.getVolumeIds().length);
+      assertTrue("Expected one valid and one invalid replica",
+          (l.getVolumeIds()[0].isValid()) ^ (l.getVolumeIds()[1].isValid()));
+    }
+  }
+
+  @Test
+  public void testCreateWithCustomChecksum() throws Exception {
+    Configuration conf = getTestConfiguration();
+    final long grace = 1000L;
+    MiniDFSCluster cluster = null;
+    Path testBasePath = new Path("/test/csum");
+    // create args 
+    Path path1 = new Path(testBasePath, "file_wtih_crc1");
+    Path path2 = new Path(testBasePath, "file_with_crc2");
+    ChecksumOpt opt1 = new ChecksumOpt(DataChecksum.Type.CRC32C, 512);
+    ChecksumOpt opt2 = new ChecksumOpt(DataChecksum.Type.CRC32, 512);
+
+    // common args
+    FsPermission perm = FsPermission.getDefault().applyUMask(
+        FsPermission.getUMask(conf));
+    EnumSet<CreateFlag> flags = EnumSet.of(CreateFlag.OVERWRITE,
+        CreateFlag.CREATE);
+    short repl = 1;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      FileSystem dfs = cluster.getFileSystem();
+
+      dfs.mkdirs(testBasePath);
+
+      // create two files with different checksum types
+      FSDataOutputStream out1 = dfs.create(path1, perm, flags, 4096, repl,
+          131072L, null, opt1);
+      FSDataOutputStream out2 = dfs.create(path2, perm, flags, 4096, repl,
+          131072L, null, opt2);
+
+      for (int i = 0; i < 1024; i++) {
+        out1.write(i);
+        out2.write(i);
+      }
+      out1.close();
+      out2.close();
+
+      // the two checksums must be different.
+      MD5MD5CRC32FileChecksum sum1 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path1);
+      MD5MD5CRC32FileChecksum sum2 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path2);
+      assertFalse(sum1.equals(sum2));
+
+      // check the individual params
+      assertEquals(DataChecksum.Type.CRC32C, sum1.getCrcType());
+      assertEquals(DataChecksum.Type.CRC32,  sum2.getCrcType());
+
+    } finally {
+      if (cluster != null) {
+        cluster.getFileSystem().delete(testBasePath, true);
+        cluster.shutdown();
+      }
+    }
   }
 }

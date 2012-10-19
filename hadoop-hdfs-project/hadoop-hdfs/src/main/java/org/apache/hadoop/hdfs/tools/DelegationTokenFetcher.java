@@ -40,7 +40,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -48,9 +47,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
-import org.apache.hadoop.hdfs.web.URLUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -71,8 +68,10 @@ public class DelegationTokenFetcher {
   private static final String CANCEL = "cancel";
   private static final String RENEW = "renew";
   private static final String PRINT = "print";
+  private static final String HELP = "help";
+  private static final String HELP_SHORT = "h";
 
-  private static void printUsage(PrintStream err) throws IOException {
+  private static void printUsage(PrintStream err) {
     err.println("fetchdt retrieves delegation tokens from the NameNode");
     err.println();
     err.println("fetchdt <opts> <token file>");
@@ -107,6 +106,7 @@ public class DelegationTokenFetcher {
     fetcherOptions.addOption(CANCEL, false, "cancel the token");
     fetcherOptions.addOption(RENEW, false, "renew the token");
     fetcherOptions.addOption(PRINT, false, "print the token");
+    fetcherOptions.addOption(HELP_SHORT, HELP, false, "print out help information");
     GenericOptionsParser parser = new GenericOptionsParser(conf,
         fetcherOptions, args);
     CommandLine cmd = parser.getCommandLine();
@@ -119,9 +119,14 @@ public class DelegationTokenFetcher {
     final boolean cancel = cmd.hasOption(CANCEL);
     final boolean renew = cmd.hasOption(RENEW);
     final boolean print = cmd.hasOption(PRINT);
+    final boolean help = cmd.hasOption(HELP);
     String[] remaining = parser.getRemainingArgs();
 
     // check option validity
+    if (help) {
+      printUsage(System.out);
+      System.exit(0);
+    }
     if (cancel && renew || cancel && print || renew && print || cancel && renew
         && print) {
       System.err.println("ERROR: Only specify cancel, renew or print.");
@@ -184,13 +189,14 @@ public class DelegationTokenFetcher {
                 }
               } else {
                 FileSystem fs = FileSystem.get(conf);
-                Token<?> token = fs.getDelegationToken(renewer);
                 Credentials cred = new Credentials();
-                cred.addToken(token.getService(), token);
+                Token<?> tokens[] = fs.addDelegationTokens(renewer, cred);
                 cred.writeTokenStorageFile(tokenFile, conf);
                 if(LOG.isDebugEnabled()) {
-                  LOG.debug("Fetched token for " + token.getService()
-                      + " into " + tokenFile);
+                  for (Token<?> token : tokens) {
+                    LOG.debug("Fetched token for " + token.getService()
+                        + " into " + tokenFile);
+                  }
                 }
               }
             }
@@ -259,7 +265,6 @@ public class DelegationTokenFetcher {
     try {
       URL url = new URL(buf.toString());
       connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
-      connection = (HttpURLConnection)URLUtils.openConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error renewing token: " + 
             connection.getResponseMessage());

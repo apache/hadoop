@@ -47,34 +47,42 @@ class InMemoryFileSystemStore implements FileSystemStore {
   private SortedMap<Path, INode> inodes = new TreeMap<Path, INode>();
   private Map<Long, byte[]> blocks = new HashMap<Long, byte[]>();
   
+  @Override
   public void initialize(URI uri, Configuration conf) {
     this.conf = conf;
   }
   
+  @Override
   public String getVersion() throws IOException {
     return "0";
   }
 
+  @Override
   public void deleteINode(Path path) throws IOException {
     inodes.remove(normalize(path));
   }
 
+  @Override
   public void deleteBlock(Block block) throws IOException {
     blocks.remove(block.getId());
   }
 
+  @Override
   public boolean inodeExists(Path path) throws IOException {
     return inodes.containsKey(normalize(path));
   }
 
+  @Override
   public boolean blockExists(long blockId) throws IOException {
     return blocks.containsKey(blockId);
   }
 
+  @Override
   public INode retrieveINode(Path path) throws IOException {
     return inodes.get(normalize(path));
   }
 
+  @Override
   public File retrieveBlock(Block block, long byteRangeStart) throws IOException {
     byte[] data = blocks.get(block.getId());
     File file = createTempFile();
@@ -100,6 +108,7 @@ class InMemoryFileSystemStore implements FileSystemStore {
     return result;
   }
 
+  @Override
   public Set<Path> listSubPaths(Path path) throws IOException {
     Path normalizedPath = normalize(path);
     // This is inefficient but more than adequate for testing purposes.
@@ -112,6 +121,7 @@ class InMemoryFileSystemStore implements FileSystemStore {
     return subPaths;
   }
 
+  @Override
   public Set<Path> listDeepSubPaths(Path path) throws IOException {
     Path normalizedPath = normalize(path);    
     String pathString = normalizedPath.toUri().getPath();
@@ -128,10 +138,12 @@ class InMemoryFileSystemStore implements FileSystemStore {
     return subPaths;
   }
 
+  @Override
   public void storeINode(Path path, INode inode) throws IOException {
     inodes.put(normalize(path), inode);
   }
 
+  @Override
   public void storeBlock(Block block, File file) throws IOException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] buf = new byte[8192];
@@ -157,11 +169,13 @@ class InMemoryFileSystemStore implements FileSystemStore {
     return new Path(path.toUri().getPath());
   }
 
+  @Override
   public void purge() throws IOException {
     inodes.clear();
     blocks.clear();
   }
 
+  @Override
   public void dump() throws IOException {
     StringBuilder sb = new StringBuilder(getClass().getSimpleName());
     sb.append(", \n");

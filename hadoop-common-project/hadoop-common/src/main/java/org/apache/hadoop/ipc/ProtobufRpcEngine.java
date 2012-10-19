@@ -44,19 +44,21 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ProtoUtil;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 
 /**
  * RPC Engine for for protobuf based RPCs.
  */
 @InterfaceStability.Evolving
 public class ProtobufRpcEngine implements RpcEngine {
-  private static final Log LOG = LogFactory.getLog(ProtobufRpcEngine.class);
+  public static final Log LOG = LogFactory.getLog(ProtobufRpcEngine.class);
   
   static { // Register the rpcRequest deserializer for WritableRpcEngine 
     org.apache.hadoop.ipc.Server.registerProtocolEngine(
@@ -185,21 +187,34 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = System.currentTimeMillis();
+        startTime = Time.now();
       }
 
       HadoopRpcRequestProto rpcRequest = constructRpcRequest(method, args);
       RpcResponseWritable val = null;
+      
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(Thread.currentThread().getId() + ": Call -> " +
+            remoteId + ": " + method.getName() +
+            " {" + TextFormat.shortDebugString((Message) args[1]) + "}");
+      }
       try {
         val = (RpcResponseWritable) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
             new RpcRequestWritable(rpcRequest), remoteId);
+
       } catch (Throwable e) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(Thread.currentThread().getId() + ": Exception <- " +
+              remoteId + ": " + method.getName() +
+                " {" + e + "}");
+        }
+
         throw new ServiceException(e);
       }
 
       if (LOG.isDebugEnabled()) {
-        long callTime = System.currentTimeMillis() - startTime;
-        LOG.debug("Call: " + method.getName() + " " + callTime);
+        long callTime = Time.now() - startTime;
+        LOG.debug("Call: " + method.getName() + " took " + callTime + "ms");
       }
       
       Message prototype = null;
@@ -212,12 +227,20 @@ public class ProtobufRpcEngine implements RpcEngine {
       try {
         returnMessage = prototype.newBuilderForType()
             .mergeFrom(val.responseMessage).build();
+
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(Thread.currentThread().getId() + ": Response <- " +
+              remoteId + ": " + method.getName() +
+                " {" + TextFormat.shortDebugString(returnMessage) + "}");
+        }
+
       } catch (Throwable e) {
         throw new ServiceException(e);
       }
       return returnMessage;
     }
 
+    @Override
     public void close() throws IOException {
       if (!isClosed) {
         isClosed = true;
@@ -446,10 +469,10 @@ public class ProtobufRpcEngine implements RpcEngine {
             .mergeFrom(rpcRequest.getRequest()).build();
         Message result;
         try {
-          long startTime = System.currentTimeMillis();
+          long startTime = Time.now();
           server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
           result = service.callBlockingMethod(methodDescriptor, null, param);
-          int processingTime = (int) (System.currentTimeMillis() - startTime);
+          int processingTime = (int) (Time.now() - startTime);
           int qTime = (int) (startTime - receiveTime);
           if (LOG.isDebugEnabled()) {
             LOG.info("Served: " + methodName + " queueTime= " + qTime +

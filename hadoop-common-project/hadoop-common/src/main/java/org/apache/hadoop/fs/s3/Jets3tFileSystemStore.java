@@ -83,6 +83,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
   private static final Log LOG = 
     LogFactory.getLog(Jets3tFileSystemStore.class.getName());
   
+  @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     
     this.conf = conf;
@@ -108,6 +109,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
 		      );
   }
 
+  @Override
   public String getVersion() throws IOException {
     return FILE_SYSTEM_VERSION_VALUE;
   }
@@ -123,14 +125,17 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
 
+  @Override
   public void deleteINode(Path path) throws IOException {
     delete(pathToKey(path));
   }
 
+  @Override
   public void deleteBlock(Block block) throws IOException {
     delete(blockToKey(block));
   }
 
+  @Override
   public boolean inodeExists(Path path) throws IOException {
     InputStream in = get(pathToKey(path), true);
     if (in == null) {
@@ -140,6 +145,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     return true;
   }
   
+  @Override
   public boolean blockExists(long blockId) throws IOException {
     InputStream in = get(blockToKey(blockId), false);
     if (in == null) {
@@ -203,10 +209,12 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
 
+  @Override
   public INode retrieveINode(Path path) throws IOException {
     return INode.deserialize(get(pathToKey(path), true));
   }
 
+  @Override
   public File retrieveBlock(Block block, long byteRangeStart)
     throws IOException {
     File fileBlock = null;
@@ -249,6 +257,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     return result;
   }
 
+  @Override
   public Set<Path> listSubPaths(Path path) throws IOException {
     try {
       String prefix = pathToKey(path);
@@ -270,6 +279,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
   
+  @Override
   public Set<Path> listDeepSubPaths(Path path) throws IOException {
     try {
       String prefix = pathToKey(path);
@@ -311,10 +321,12 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
 
+  @Override
   public void storeINode(Path path, INode inode) throws IOException {
     put(pathToKey(path), inode.serialize(), inode.getSerializedLength(), true);
   }
 
+  @Override
   public void storeBlock(Block block, File file) throws IOException {
     BufferedInputStream in = null;
     try {
@@ -354,6 +366,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     return blockToKey(block.getId());
   }
 
+  @Override
   public void purge() throws IOException {
     try {
       S3Object[] objects = s3Service.listObjects(bucket);
@@ -368,6 +381,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
   }
 
+  @Override
   public void dump() throws IOException {
     StringBuilder sb = new StringBuilder("S3 Filesystem, ");
     sb.append(bucket.getName()).append("\n");

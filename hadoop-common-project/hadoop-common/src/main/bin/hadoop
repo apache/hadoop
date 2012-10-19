@@ -19,7 +19,7 @@
 
 bin=`which $0`
 bin=`dirname ${bin}`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin" > /dev/null; pwd`
  
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
@@ -96,33 +96,30 @@ case $COMMAND in
     # the core commands
     if [ "$COMMAND" = "fs" ] ; then
       CLASS=org.apache.hadoop.fs.FsShell
-      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [ "$COMMAND" = "version" ] ; then
       CLASS=org.apache.hadoop.util.VersionInfo
-      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [ "$COMMAND" = "jar" ] ; then
       CLASS=org.apache.hadoop.util.RunJar
     elif [ "$COMMAND" = "distcp" ] ; then
       CLASS=org.apache.hadoop.tools.DistCp
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
-      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [ "$COMMAND" = "daemonlog" ] ; then
       CLASS=org.apache.hadoop.log.LogLevel
-      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [ "$COMMAND" = "archive" ] ; then
       CLASS=org.apache.hadoop.tools.HadoopArchives
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
-      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [[ "$COMMAND" = -*  ]] ; then
         # class and package names cannot begin with a -
         echo "Error: No command named \`$COMMAND' was found. Perhaps you meant \`hadoop ${COMMAND#-}'"
         exit 1
     else
-      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
       CLASS=$COMMAND
     fi
     shift
     
+    # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
+    HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+
     #make sure security appender is turned off
     HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
 

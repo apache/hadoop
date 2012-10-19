@@ -17,25 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.junit.Test;
 
 /**
  * Test if FSNamesystem handles heartbeat right
  */
-public class TestComputeInvalidateWork extends TestCase {
+public class TestComputeInvalidateWork {
   /**
    * Test if {@link FSNamesystem#computeInvalidateWork(int)}
    * can schedule invalidate work correctly 
    */
+  @Test
   public void testCompInvalidate() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final int NUM_OF_DATANODES = 3;

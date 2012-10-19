@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.test;
 
-import junit.framework.Assert;
-import org.junit.Rule;
-import org.junit.rules.MethodRule;
+import static org.junit.Assert.fail;
 
 import java.text.MessageFormat;
+
+import org.apache.hadoop.util.Time;
+import org.junit.Rule;
+import org.junit.rules.MethodRule;
 
 public abstract class HTestCase {
 
@@ -142,29 +144,29 @@ public abstract class HTestCase {
    *         to <code>true</code>.
    */
   protected long waitFor(int timeout, boolean failIfTimeout, Predicate predicate) {
-    long started = System.currentTimeMillis();
-    long mustEnd = System.currentTimeMillis() + (long) (getWaitForRatio() * timeout);
+    long started = Time.now();
+    long mustEnd = Time.now() + (long) (getWaitForRatio() * timeout);
     long lastEcho = 0;
     try {
-      long waiting = mustEnd - System.currentTimeMillis();
+      long waiting = mustEnd - Time.now();
       System.out.println(MessageFormat.format("Waiting up to [{0}] msec", waiting));
       boolean eval;
-      while (!(eval = predicate.evaluate()) && System.currentTimeMillis() < mustEnd) {
-        if ((System.currentTimeMillis() - lastEcho) > 5000) {
-          waiting = mustEnd - System.currentTimeMillis();
+      while (!(eval = predicate.evaluate()) && Time.now() < mustEnd) {
+        if ((Time.now() - lastEcho) > 5000) {
+          waiting = mustEnd - Time.now();
           System.out.println(MessageFormat.format("Waiting up to [{0}] msec", waiting));
-          lastEcho = System.currentTimeMillis();
+          lastEcho = Time.now();
         }
         Thread.sleep(100);
       }
       if (!eval) {
         if (failIfTimeout) {
-          Assert.fail(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
+          fail(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
         } else {
           System.out.println(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
         }
       }
-      return (eval) ? System.currentTimeMillis() - started : -1;
+      return (eval) ? Time.now() - started : -1;
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }

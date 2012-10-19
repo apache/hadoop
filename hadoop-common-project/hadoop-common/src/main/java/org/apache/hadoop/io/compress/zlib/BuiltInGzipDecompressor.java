@@ -122,7 +122,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
     //        in the first buffer load?  (But how else would one do it?)
   }
 
-  /** {@inheritDoc} */
+  @Override
   public synchronized boolean needsInput() {
     if (state == GzipStateLabel.DEFLATE_STREAM) {  // most common case
       return inflater.needsInput();
@@ -144,6 +144,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    *        the bulk deflate stream, which is a performance hit we don't want
    *        to absorb.  (Decompressor now documents this requirement.)
    */
+  @Override
   public synchronized void setInput(byte[] b, int off, int len) {
     if (b == null) {
       throw new NullPointerException();
@@ -175,6 +176,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    * methods below), the deflate stream is never copied; Inflater operates
    * directly on the user's buffer.
    */
+  @Override
   public synchronized int decompress(byte[] b, int off, int len)
   throws IOException {
     int numAvailBytes = 0;
@@ -385,7 +387,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
       copyBytesToLocal(n);       // modifies userBufLen, etc.
       if (localBufOff >= 4) {    // should be strictly ==
         long inputSize = readUIntLE(localBuf, 0);
-        if (inputSize != (inflater.getBytesWritten() & 0xffffffff)) {
+        if (inputSize != (inflater.getBytesWritten() & 0xffffffffL)) {
           throw new IOException(
             "stored gzip size doesn't match decompressed size");
         }
@@ -421,16 +423,17 @@ public class BuiltInGzipDecompressor implements Decompressor {
    *
    * @return the total (non-negative) number of unprocessed bytes in input
    */
+  @Override
   public synchronized int getRemaining() {
     return userBufLen;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public synchronized boolean needsDictionary() {
     return inflater.needsDictionary();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public synchronized void setDictionary(byte[] b, int off, int len) {
     inflater.setDictionary(b, off, len);
   }
@@ -439,6 +442,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    * Returns true if the end of the gzip substream (single "member") has been
    * reached.</p>
    */
+  @Override
   public synchronized boolean finished() {
     return (state == GzipStateLabel.FINISHED);
   }
@@ -447,6 +451,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    * Resets everything, including the input buffer, regardless of whether the
    * current gzip substream is finished.</p>
    */
+  @Override
   public synchronized void reset() {
     // could optionally emit INFO message if state != GzipStateLabel.FINISHED
     inflater.reset();
@@ -463,7 +468,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
     hasHeaderCRC = false;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public synchronized void end() {
     inflater.end();
   }
@@ -566,7 +571,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
     return ((((long)(b[off+3] & 0xff) << 24) |
              ((long)(b[off+2] & 0xff) << 16) |
              ((long)(b[off+1] & 0xff) <<  8) |
-             ((long)(b[off]   & 0xff)      )) & 0xffffffff);
+             ((long)(b[off]   & 0xff)      )) & 0xffffffffL);
   }
 
 }

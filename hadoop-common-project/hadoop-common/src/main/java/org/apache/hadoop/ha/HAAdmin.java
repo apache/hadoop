@@ -88,7 +88,7 @@ public abstract class HAAdmin extends Configured implements Tool {
 
   /** Output stream for errors, for use in tests */
   protected PrintStream errOut = System.err;
-  PrintStream out = System.out;
+  protected PrintStream out = System.out;
   private RequestSource requestSource = RequestSource.REQUEST_BY_USER;
 
   protected abstract HAServiceTarget resolveTarget(String string);
@@ -439,7 +439,10 @@ public abstract class HAAdmin extends Configured implements Tool {
   }
   
   private int help(String[] argv) {
-    if (argv.length != 2) {
+    if (argv.length == 1) { // only -help
+      printUsage(out);
+      return 0;
+    } else if (argv.length != 2) {
       printUsage(errOut, "-help");
       return -1;
     }
@@ -454,7 +457,7 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
     
-    errOut.println(cmd + " [" + usageInfo.args + "]: " + usageInfo.help);
+    out.println(cmd + " [" + usageInfo.args + "]: " + usageInfo.help);
     return 0;
   }
   

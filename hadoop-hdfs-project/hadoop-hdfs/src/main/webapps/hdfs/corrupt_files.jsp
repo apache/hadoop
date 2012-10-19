@@ -34,8 +34,7 @@
   HAServiceState nnHAState = nn.getServiceState();
   boolean isActive = (nnHAState == HAServiceState.ACTIVE);
   String namenodeRole = nn.getRole().toString();
-  String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":"
-      + nn.getNameNodeAddress().getPort();
+  String namenodeLabel = nn.getNameNodeAddressHostPortString();
   Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = 
 	fsn.listCorruptFileBlocks("/", null);
   int corruptFileCount = corruptFileBlocks.size();

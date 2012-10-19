@@ -113,7 +113,8 @@ public class TestProtoBufRpc {
         .newReflectiveBlockingService(serverImpl);
 
     // Get RPC server for server side implementation
-    server = RPC.getServer(TestRpcService.class, service, ADDRESS, PORT, conf);
+    server = new RPC.Builder(conf).setProtocol(TestRpcService.class)
+        .setInstance(service).setBindAddress(ADDRESS).setPort(PORT).build();
     addr = NetUtils.getConnectAddress(server);
     
     // now the second protocol

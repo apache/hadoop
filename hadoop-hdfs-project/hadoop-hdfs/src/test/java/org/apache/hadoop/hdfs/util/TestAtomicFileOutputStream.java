@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,8 +28,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.aspectj.util.FileUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,7 +50,7 @@ public class TestAtomicFileOutputStream {
   @Before
   public void cleanupTestDir() throws IOException {
     assertTrue(TEST_DIR.exists() || TEST_DIR.mkdirs());
-    FileUtil.deleteContents(TEST_DIR);
+    FileUtil.fullyDeleteContents(TEST_DIR);
   }
   
   /**

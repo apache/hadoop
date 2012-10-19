@@ -33,7 +33,7 @@ public class DFSClientAdapter {
   
   public static void stopLeaseRenewer(DistributedFileSystem dfs) throws IOException {
     try {
-      dfs.dfs.leaserenewer.interruptAndJoin();
+      dfs.dfs.getLeaseRenewer().interruptAndJoin();
     } catch (InterruptedException e) {
       throw new IOException(e);
     }

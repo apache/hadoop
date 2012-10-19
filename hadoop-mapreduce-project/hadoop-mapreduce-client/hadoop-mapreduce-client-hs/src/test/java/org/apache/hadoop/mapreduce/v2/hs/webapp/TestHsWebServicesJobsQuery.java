@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -217,9 +218,23 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
   @Test
   public void testJobsQueryStateNone() throws JSONException, Exception {
     WebResource r = resource();
+
+     ArrayList<JobState> JOB_STATES = 
+         new ArrayList<JobState>(Arrays.asList(JobState.values()));
+
+      // find a state that isn't in use
+      Map<JobId, Job> jobsMap = appContext.getAllJobs();
+      for (Map.Entry<JobId, Job> entry : jobsMap.entrySet()) {
+        JOB_STATES.remove(entry.getValue().getState());
+      }
+
+    assertTrue("No unused job states", JOB_STATES.size() > 0);
+    JobState notInUse = JOB_STATES.get(0);
+
     ClientResponse response = r.path("ws").path("v1").path("history")
-        .path("mapreduce").path("jobs").queryParam("state", JobState.KILL_WAIT.toString())
+        .path("mapreduce").path("jobs").queryParam("state", notInUse.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());

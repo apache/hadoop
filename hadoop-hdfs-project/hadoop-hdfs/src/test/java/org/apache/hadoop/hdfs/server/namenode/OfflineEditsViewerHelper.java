@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options.Rename;
@@ -40,13 +41,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * OfflineEditsViewerHelper is a helper class for TestOfflineEditsViewer,
@@ -195,19 +194,21 @@ public class OfflineEditsViewerHelper {
     Path pathSymlink = new Path("/file_symlink");
     fc.createSymlink(pathConcatTarget, pathSymlink, false);
     // OP_GET_DELEGATION_TOKEN 18
-    final Token<DelegationTokenIdentifier> token =
-      dfs.getDelegationToken("JobTracker");
     // OP_RENEW_DELEGATION_TOKEN 19
     // OP_CANCEL_DELEGATION_TOKEN 20
     // see TestDelegationToken.java
     // fake the user to renew token for
+    final Token<?>[] tokens = dfs.addDelegationTokens("JobTracker", null);
     UserGroupInformation longUgi = UserGroupInformation.createRemoteUser(
       "JobTracker/foo.com@FOO.COM");
     try {
       longUgi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws IOException, InterruptedException {
-          token.renew(config);
-          token.cancel(config);
+          for (Token<?> token : tokens) {
+            token.renew(config);
+            token.cancel(config);
+          }
           return null;
         }
       });

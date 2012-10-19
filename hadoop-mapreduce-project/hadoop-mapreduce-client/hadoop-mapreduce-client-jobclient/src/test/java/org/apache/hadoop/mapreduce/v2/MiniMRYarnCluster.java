@@ -72,8 +72,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   @Override
   public void init(Configuration conf) {
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
-        "apps_staging_dir/").getAbsolutePath());
+    if (conf.get(MRJobConfig.MR_AM_STAGING_DIR) == null) {
+      conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
+          "apps_staging_dir/").getAbsolutePath());
+    }
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,  "000");
 
     try {
@@ -113,10 +115,6 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     // for corresponding uberized tests.
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
 
-    // Set config for JH Server
-    conf.set(JHAdminConfig.MR_HISTORY_ADDRESS,
-        JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
-
     super.init(conf);
   }
 
@@ -128,10 +126,15 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     @Override
     public synchronized void start() {
       try {
-        getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
+        if (!getConfig().getBoolean(
+            JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS,
+            JHAdminConfig.DEFAULT_MR_HISTORY_MINICLUSTER_FIXED_PORTS)) {
+          // pick free random ports.
+          getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+        }
         historyServer = new JobHistoryServer();
         historyServer.init(getConfig());
         new Thread() {

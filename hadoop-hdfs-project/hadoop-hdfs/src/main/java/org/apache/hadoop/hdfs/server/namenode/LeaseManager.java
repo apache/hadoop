@@ -39,7 +39,7 @@ import org.apache.hadoop.util.Daemon;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files.   
@@ -157,6 +157,12 @@ public class LeaseManager {
       LOG.warn("Removing non-existent lease! holder=" + holder +
           " src=" + src);
     }
+  }
+
+  synchronized void removeAllLeases() {
+    sortedLeases.clear();
+    sortedLeasesByPath.clear();
+    leases.clear();
   }
 
   /**
@@ -390,6 +396,7 @@ public class LeaseManager {
     final String name = getClass().getSimpleName();
 
     /** Check leases periodically. */
+    @Override
     public void run() {
       for(; shouldRunMonitor && fsnamesystem.isRunning(); ) {
         try {

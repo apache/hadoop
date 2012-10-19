@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -93,13 +93,6 @@ public class TestLeaseRenewer {
   }
   
   @Test
-  public void testClientName() throws IOException {
-    String clientName = renewer.getClientName("NONMAPREDUCE");
-    Assert.assertTrue("bad client name: " + clientName,
-        clientName.startsWith("DFSClient_NONMAPREDUCE_"));
-  }
-  
-  @Test
   public void testRenewal() throws Exception {
     // Keep track of how many times the lease gets renewed
     final AtomicInteger leaseRenewalCount = new AtomicInteger();
@@ -118,8 +111,8 @@ public class TestLeaseRenewer {
     renewer.put(filePath, mockStream, MOCK_DFSCLIENT);
 
     // Wait for lease to get renewed
-    long failTime = System.currentTimeMillis() + 5000;
-    while (System.currentTimeMillis() < failTime &&
+    long failTime = Time.now() + 5000;
+    while (Time.now() < failTime &&
         leaseRenewalCount.get() == 0) {
       Thread.sleep(50);
     }
@@ -206,8 +199,8 @@ public class TestLeaseRenewer {
     renewer.closeFile(filePath, MOCK_DFSCLIENT);
     
     // Should stop the renewer running within a few seconds
-    long failTime = System.currentTimeMillis() + 5000;
-    while (renewer.isRunning() && System.currentTimeMillis() < failTime) {
+    long failTime = Time.now() + 5000;
+    while (renewer.isRunning() && Time.now() < failTime) {
       Thread.sleep(50);
     }
     Assert.assertFalse(renewer.isRunning());

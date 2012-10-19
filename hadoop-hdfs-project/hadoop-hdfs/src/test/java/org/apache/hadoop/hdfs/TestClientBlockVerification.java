@@ -18,21 +18,20 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.util.List;
-
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.fs.Path;
-import org.apache.log4j.Level;
-
-import org.junit.Test;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
+
+import java.util.List;
+
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.log4j.Level;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestClientBlockVerification {
 
@@ -61,7 +60,7 @@ public class TestClientBlockVerification {
     RemoteBlockReader2 reader = (RemoteBlockReader2)spy(
         util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024));
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024, true);
-    verify(reader).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
+    verify(reader).sendReadResult(Status.CHECKSUM_OK);
     reader.close();
   }
 
@@ -76,7 +75,7 @@ public class TestClientBlockVerification {
 
     // We asked the blockreader for the whole file, and only read
     // half of it, so no CHECKSUM_OK
-    verify(reader, never()).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
+    verify(reader, never()).sendReadResult(Status.CHECKSUM_OK);
     reader.close();
   }
 
@@ -92,7 +91,7 @@ public class TestClientBlockVerification {
         util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024 / 2));
     // And read half the file
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024 / 2, true);
-    verify(reader).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
+    verify(reader).sendReadResult(Status.CHECKSUM_OK);
     reader.close();
   }
 
@@ -111,7 +110,7 @@ public class TestClientBlockVerification {
         RemoteBlockReader2 reader = (RemoteBlockReader2)spy(
             util.getBlockReader(testBlock, startOffset, length));
         util.readAndCheckEOS(reader, length, true);
-        verify(reader).sendReadResult(reader.dnSock, Status.CHECKSUM_OK);
+        verify(reader).sendReadResult(Status.CHECKSUM_OK);
         reader.close();
       }
     }

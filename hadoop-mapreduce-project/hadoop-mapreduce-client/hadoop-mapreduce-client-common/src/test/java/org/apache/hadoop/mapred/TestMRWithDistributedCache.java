@@ -117,7 +117,8 @@ public class TestMRWithDistributedCache extends TestCase {
       TestCase.assertEquals("symlink distributed.first.symlink length not 1", 1,
           symlinkFile.length());
       
-      TestCase.assertFalse("second file should not be symlinked",
+      //This last one is a difference between MRv2 and MRv1
+      TestCase.assertTrue("second file should be symlinked too",
           expectedAbsentSymlinkFile.exists());
     }
   }
@@ -145,7 +146,6 @@ public class TestMRWithDistributedCache extends TestCase {
     job.addFileToClassPath(second);
     job.addArchiveToClassPath(third);
     job.addCacheArchive(fourth.toUri());
-    job.createSymlink();
     job.setMaxMapAttempts(1); // speed up failures
 
     job.submit();

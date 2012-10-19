@@ -65,6 +65,7 @@ class INodeDirectory extends INode {
   /**
    * Check whether it's a directory
    */
+  @Override
   public boolean isDirectory() {
     return true;
   }
@@ -422,6 +423,7 @@ class INodeDirectory extends INode {
     return children;
   }
 
+  @Override
   int collectSubtreeBlocksAndClear(List<Block> v) {
     int total = 1;
     if (children == null) {

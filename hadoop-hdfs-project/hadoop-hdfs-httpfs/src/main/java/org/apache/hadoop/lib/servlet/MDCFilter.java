@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.servlet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.MDC;
 
 import javax.servlet.Filter;
@@ -42,6 +43,7 @@ import java.security.Principal;
  * <li>path: the path of the request URL</li>
  * </ul>
  */
+@InterfaceAudience.Private
 public class MDCFilter implements Filter {
 
   /**

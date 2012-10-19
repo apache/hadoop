@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.util.Time.now;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -52,7 +53,7 @@ public class TestOverReplicatedBlocks {
    * corrupt ones.
    */
   @Test
-  public void testProcesOverReplicateBlock() throws IOException {
+  public void testProcesOverReplicateBlock() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(
@@ -140,7 +141,7 @@ public class TestOverReplicatedBlocks {
    * send heartbeats. 
    */
   @Test
-  public void testChooseReplicaToDelete() throws IOException {
+  public void testChooseReplicaToDelete() throws Exception {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {

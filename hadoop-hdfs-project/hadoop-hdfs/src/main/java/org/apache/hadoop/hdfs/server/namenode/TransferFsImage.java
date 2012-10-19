@@ -32,16 +32,21 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.MD5Hash;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 
 
@@ -53,6 +58,8 @@ public class TransferFsImage {
   
   public final static String CONTENT_LENGTH = "Content-Length";
   public final static String MD5_HEADER = "X-MD5-Digest";
+  @VisibleForTesting
+  static int timeout = 0;
 
   private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
   
@@ -205,7 +212,8 @@ public class TransferFsImage {
       String queryString, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
 
-    String str = "http://" + nnHostPort + "/getimage?" + queryString;
+    String str = HttpConfig.getSchemePrefix() + nnHostPort + "/getimage?" +
+        queryString;
     LOG.info("Opening connection to " + str);
     //
     // open connection to remote server
@@ -216,9 +224,21 @@ public class TransferFsImage {
   
   public static MD5Hash doGetUrl(URL url, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
-    long startTime = Util.monotonicNow();
+    long startTime = Time.monotonicNow();
     HttpURLConnection connection = (HttpURLConnection)
       SecurityUtil.openSecureHttpConnection(url);
+
+    if (timeout <= 0) {
+      // Set the ping interval as timeout
+      Configuration conf = new HdfsConfiguration();
+      timeout = conf.getInt(DFSConfigKeys.DFS_IMAGE_TRANSFER_TIMEOUT_KEY,
+          DFSConfigKeys.DFS_IMAGE_TRANSFER_TIMEOUT_DEFAULT);
+    }
+
+    if (timeout > 0) {
+      connection.setConnectTimeout(timeout);
+      connection.setReadTimeout(timeout);
+    }
 
     if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
       throw new HttpGetFailedException(
@@ -323,7 +343,7 @@ public class TransferFsImage {
       }
     }
     double xferSec = Math.max(
-        ((float)(Util.monotonicNow() - startTime)) / 1000.0, 0.001);
+        ((float)(Time.monotonicNow() - startTime)) / 1000.0, 0.001);
     long xferKb = received / 1024;
     LOG.info(String.format("Transfer took %.2fs at %.2f KB/s",
         xferSec, xferKb / xferSec));

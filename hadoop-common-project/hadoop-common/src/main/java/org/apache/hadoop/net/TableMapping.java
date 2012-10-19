@@ -125,6 +125,7 @@ public class TableMapping extends CachedDNSToSwitchMapping {
       }
     }
   
+    @Override
     public synchronized List<String> resolve(List<String> names) {
       if (!initialized) {
         initialized = true;

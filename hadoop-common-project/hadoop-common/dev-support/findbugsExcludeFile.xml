@@ -176,18 +176,6 @@
      </Match>
 
      <Match>
-       <Class name="org.apache.hadoop.fs.kfs.KFSOutputStream" />
-       <Field name="path" />
-       <Bug pattern="URF_UNREAD_FIELD" />
-     </Match>
-
-     <Match>
-       <Class name="org.apache.hadoop.fs.kfs.KosmosFileSystem" />
-       <Method name="initialize" />
-       <Bug pattern="DM_EXIT" />
-     </Match>
-
-     <Match>
        <Class name="org.apache.hadoop.io.Closeable" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
      </Match>
@@ -294,5 +282,14 @@
       <!-- protobuf generated code -->
       <Class name="~org\.apache\.hadoop\.ha\.proto\.ZKFCProtocolProtos.*"/>
     </Match>
+
+    <!--
+       Manually checked, misses child thread manually syncing on parent's intrinsic lock.
+    -->
+     <Match>
+       <Class name="org.apache.hadoop.metrics2.lib.MutableQuantiles" />
+       <Field name="previousSnapshot" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
 
  </FindBugsFilter>

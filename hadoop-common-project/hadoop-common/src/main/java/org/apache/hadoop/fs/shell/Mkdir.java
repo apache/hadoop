@@ -23,9 +23,11 @@ import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 
 /**
  * Create the given dir
@@ -66,7 +68,11 @@ class Mkdir extends FsCommand {
 
   @Override
   protected void processNonexistentPath(PathData item) throws IOException {
-    // TODO: should use createParents to control intermediate dir creation 
+    // check if parent exists. this is complicated because getParent(a/b/c/) returns a/b/c, but
+    // we want a/b
+    if (!item.fs.exists(new Path(item.path.toString()).getParent()) && !createParents) {
+      throw new PathNotFoundException(item.toString());
+    }
     if (!item.fs.mkdirs(item.path)) {
       throw new PathIOException(item.toString());
     }

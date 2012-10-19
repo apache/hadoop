@@ -39,7 +39,8 @@ public final class HdfsServerConstants {
    */
   static public enum NodeType {
     NAME_NODE,
-    DATA_NODE;
+    DATA_NODE,
+    JOURNAL_NODE;
   }
 
   /** Startup options */
@@ -60,7 +61,7 @@ public final class HdfsServerConstants {
     FORCE("-force"),
     NONINTERACTIVE("-nonInteractive");
     
-    private String name = null;
+    private final String name;
     
     // Used only with format and upgrade options
     private String clusterId = null;
@@ -141,6 +142,7 @@ public final class HdfsServerConstants {
     private String description = null;
     private NamenodeRole(String arg) {this.description = arg;}
   
+    @Override
     public String toString() {
       return description;
     }

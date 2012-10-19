@@ -30,11 +30,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.io.file.tfile.TFile.Reader;
 import org.apache.hadoop.io.file.tfile.TFile.Writer;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Location;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +57,7 @@ public class TestTFileByteArrays {
   private static final String VALUE = "value";
 
   private FileSystem fs;
-  private Configuration conf;
+  private Configuration conf = new Configuration();
   private Path path;
   private FSDataOutputStream out;
   private Writer writer;
@@ -71,8 +71,9 @@ public class TestTFileByteArrays {
    * generated key and value strings. This is slightly different based on
    * whether or not the native libs are present.
    */
-  private int records1stBlock = NativeCodeLoader.isNativeCodeLoaded() ? 5674 : 4480;
-  private int records2ndBlock = NativeCodeLoader.isNativeCodeLoaded() ? 5574 : 4263;
+  private boolean usingNative = ZlibFactory.isNativeZlibLoaded(conf);
+  private int records1stBlock = usingNative ? 5674 : 4480;
+  private int records2ndBlock = usingNative ? 5574 : 4263;
 
   public void init(String compression, String comparator, String outputFile,
       int numRecords1stBlock, int numRecords2ndBlock) {
@@ -89,7 +90,6 @@ public class TestTFileByteArrays {
 
   @Before
   public void setUp() throws IOException {
-    conf = new Configuration();
     path = new Path(ROOT, outputFile);
     fs = path.getFileSystem(conf);
     out = fs.create(path);

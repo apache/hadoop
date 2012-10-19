@@ -396,10 +396,6 @@ public class DataStorage extends Storage {
     if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
       return; // regular startup
-    // verify necessity of a distributed upgrade
-    UpgradeManagerDatanode um = 
-      datanode.getUpgradeManagerDatanode(nsInfo.getBlockPoolID());
-    verifyDistributedUpgradeProgress(um, nsInfo);
     
     // do upgrade
     if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION
@@ -455,6 +451,8 @@ public class DataStorage extends Storage {
     
     File curDir = sd.getCurrentDir();
     File prevDir = sd.getPreviousDir();
+    File bbwDir = new File(sd.getRoot(), Storage.STORAGE_1_BBW);
+
     assert curDir.exists() : "Data node current directory must exist.";
     // Cleanup directory "detach"
     cleanupDetachDir(new File(curDir, STORAGE_DIR_DETACHED));
@@ -475,7 +473,7 @@ public class DataStorage extends Storage {
     BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(nsInfo.getNamespaceID(), 
         nsInfo.getBlockPoolID(), nsInfo.getCTime(), nsInfo.getClusterID());
     bpStorage.format(curDir, nsInfo);
-    linkAllBlocks(tmpDir, new File(curBpDir, STORAGE_DIR_CURRENT));
+    linkAllBlocks(tmpDir, bbwDir, new File(curBpDir, STORAGE_DIR_CURRENT));
     
     // 4. Write version file under <SD>/current
     layoutVersion = HdfsConstants.LAYOUT_VERSION;
@@ -582,19 +580,27 @@ public class DataStorage extends Storage {
              + "; cur CTime = " + this.getCTime());
     assert sd.getCurrentDir().exists() : "Current directory must exist.";
     final File tmpDir = sd.getFinalizedTmp();//finalized.tmp directory
+    final File bbwDir = new File(sd.getRoot(), Storage.STORAGE_1_BBW);
     // 1. rename previous to finalized.tmp
     rename(prevDir, tmpDir);
 
     // 2. delete finalized.tmp dir in a separate thread
+    // Also delete the blocksBeingWritten from HDFS 1.x and earlier, if
+    // it exists.
     new Daemon(new Runnable() {
+        @Override
         public void run() {
           try {
             deleteDir(tmpDir);
+            if (bbwDir.exists()) {
+              deleteDir(bbwDir);
+            }
           } catch(IOException ex) {
             LOG.error("Finalize upgrade for " + dataDirPath + " failed.", ex);
           }
           LOG.info("Finalize upgrade for " + dataDirPath + " is complete.");
         }
+        @Override
         public String toString() { return "Finalize " + dataDirPath; }
       }).start();
   }
@@ -622,11 +628,16 @@ public class DataStorage extends Storage {
 
   /**
    * Hardlink all finalized and RBW blocks in fromDir to toDir
-   * @param fromDir directory where the snapshot is stored
-   * @param toDir the current data directory
-   * @throws IOException if error occurs during hardlink
+   *
+   * @param fromDir      The directory where the 'from' snapshot is stored
+   * @param fromBbwDir   In HDFS 1.x, the directory where blocks
+   *                     that are under construction are stored.
+   * @param toDir        The current data directory
+   *
+   * @throws IOException If error occurs during hardlink
    */
-  private void linkAllBlocks(File fromDir, File toDir) throws IOException {
+  private void linkAllBlocks(File fromDir, File fromBbwDir, File toDir)
+      throws IOException {
     HardLink hardLink = new HardLink();
     // do the link
     int diskLayoutVersion = this.getLayoutVersion();
@@ -634,13 +645,23 @@ public class DataStorage extends Storage {
       // hardlink finalized blocks in tmpDir/finalized
       linkBlocks(new File(fromDir, STORAGE_DIR_FINALIZED), 
           new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion, hardLink);
-      // hardlink rbw blocks in tmpDir/finalized
+      // hardlink rbw blocks in tmpDir/rbw
       linkBlocks(new File(fromDir, STORAGE_DIR_RBW), 
           new File(toDir, STORAGE_DIR_RBW), diskLayoutVersion, hardLink);
     } else { // pre-RBW version
       // hardlink finalized blocks in tmpDir
       linkBlocks(fromDir, new File(toDir, STORAGE_DIR_FINALIZED), 
           diskLayoutVersion, hardLink);      
+      if (fromBbwDir.exists()) {
+        /*
+         * We need to put the 'blocksBeingWritten' from HDFS 1.x into the rbw
+         * directory.  It's a little messy, because the blocksBeingWriten was
+         * NOT underneath the 'current' directory in those releases.  See
+         * HDFS-3731 for details.
+         */
+        linkBlocks(fromBbwDir,
+            new File(toDir, STORAGE_DIR_RBW), diskLayoutVersion, hardLink);
+      }
     } 
     LOG.info( hardLink.linkStats.report() );
   }
@@ -677,6 +698,7 @@ public class DataStorage extends Storage {
       throw new IOException("Cannot create directory " + to);
     
     String[] blockNames = from.list(new java.io.FilenameFilter() {
+      @Override
       public boolean accept(File dir, String name) {
         return name.startsWith(BLOCK_FILE_PREFIX);
       }
@@ -694,6 +716,7 @@ public class DataStorage extends Storage {
     
     // Now take care of the rest of the files and subdirectories
     String[] otherNames = from.list(new java.io.FilenameFilter() {
+        @Override
         public boolean accept(File dir, String name) {
           return name.startsWith(BLOCK_SUBDIR_PREFIX) 
             || name.startsWith(COPY_FILE_PREFIX);
@@ -704,14 +727,6 @@ public class DataStorage extends Storage {
           new File(to, otherNames[i]), oldLV, hl);
   }
 
-  private void verifyDistributedUpgradeProgress(UpgradeManagerDatanode um,
-                  NamespaceInfo nsInfo
-                ) throws IOException {
-    assert um != null : "DataNode.upgradeManager is null.";
-    um.setUpgradeState(false, getLayoutVersion());
-    um.initializeUpgrade(nsInfo);
-  }
-  
   /**
    * Add bpStorage into bpStorageMap
    */

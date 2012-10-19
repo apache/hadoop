@@ -18,12 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
-import com.google.common.collect.Maps;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -34,6 +31,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -60,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -85,6 +84,8 @@ class LocalDistributedCacheManager {
    * @throws IOException
    */
   public void setup(JobConf conf) throws IOException {
+    File workDir = new File(System.getProperty("user.dir"));
+    
     // Generate YARN local resources objects corresponding to the distributed
     // cache configuration
     Map<String, LocalResource> localResources = 
@@ -132,7 +133,8 @@ class LocalDistributedCacheManager {
         Future<Path> future = exec.submit(download);
         resourcesToPaths.put(resource, future);
       }
-      for (LocalResource resource : localResources.values()) {
+      for (Entry<String, LocalResource> entry : localResources.entrySet()) {
+        LocalResource resource = entry.getValue();
         Path path;
         try {
           path = resourcesToPaths.get(resource).get();
@@ -142,10 +144,18 @@ class LocalDistributedCacheManager {
           throw new IOException(e);
         }
         String pathString = path.toUri().toString();
+        String link = entry.getKey();
+        String target = new File(path.toUri()).getPath();
+        symlink(workDir, target, link);
+        
         if (resource.getType() == LocalResourceType.ARCHIVE) {
           localArchives.add(pathString);
         } else if (resource.getType() == LocalResourceType.FILE) {
           localFiles.add(pathString);
+        } else if (resource.getType() == LocalResourceType.PATTERN) {
+          //PATTERN is not currently used in local mode
+          throw new IllegalArgumentException("Resource type PATTERN is not " +
+          		"implemented yet. " + resource.getResource());
         }
         Path resourcePath;
         try {
@@ -174,27 +184,6 @@ class LocalDistributedCacheManager {
       conf.set(MRJobConfig.CACHE_LOCALFILES, StringUtils
           .arrayToString(localFiles.toArray(new String[localArchives
               .size()])));
-    }
-    if (DistributedCache.getSymlink(conf)) {
-      File workDir = new File(System.getProperty("user.dir"));
-      URI[] archives = DistributedCache.getCacheArchives(conf);
-      URI[] files = DistributedCache.getCacheFiles(conf);
-      Path[] localArchives = DistributedCache.getLocalCacheArchives(conf);
-      Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
-      if (archives != null) {
-        for (int i = 0; i < archives.length; i++) {
-          String link = archives[i].getFragment();
-          String target = new File(localArchives[i].toUri()).getPath();
-          symlink(workDir, target, link);
-        }
-      }
-      if (files != null) {
-        for (int i = 0; i < files.length; i++) {
-          String link = files[i].getFragment();
-          String target = new File(localFiles[i].toUri()).getPath();
-          symlink(workDir, target, link);
-        }
-      }
     }
     setupCalled = true;
   }

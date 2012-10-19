@@ -61,7 +61,7 @@ public class TestPath extends TestCase {
     assertEquals(pathString, new Path(pathString).toString());
   }
 
-  public void testNormalize() {
+  public void testNormalize() throws URISyntaxException {
     assertEquals("", new Path(".").toString());
     assertEquals("..", new Path("..").toString());
     assertEquals("/", new Path("/").toString());
@@ -75,6 +75,8 @@ public class TestPath extends TestCase {
     assertEquals("foo", new Path("foo/").toString());
     assertEquals("foo", new Path("foo//").toString());
     assertEquals("foo/bar", new Path("foo//bar").toString());
+    assertEquals("hdfs://foo/foo2/bar/baz/",
+        new Path(new URI("hdfs://foo//foo2///bar/baz///")).toString());
     if (Path.WINDOWS) {
       assertEquals("c:/a/b", new Path("c:\\a\\b").toString());
     }

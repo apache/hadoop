@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
@@ -111,10 +110,8 @@ public class TestBPOfferService {
       throws Exception {
     DatanodeProtocolClientSideTranslatorPB mock =
         Mockito.mock(DatanodeProtocolClientSideTranslatorPB.class);
-    Mockito.doReturn(
-        new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID,
-            0, HdfsConstants.LAYOUT_VERSION))
-      .when(mock).versionRequest();
+    Mockito.doReturn(new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID, 0))
+        .when(mock).versionRequest();
     
     Mockito.doReturn(DFSTestUtil.getLocalDatanodeRegistration())
       .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class));
@@ -229,10 +226,9 @@ public class TestBPOfferService {
    */
   @Test
   public void testNNsFromDifferentClusters() throws Exception {
-    Mockito.doReturn(
-        new NamespaceInfo(1, "fake foreign cluster", FAKE_BPID,
-            0, HdfsConstants.LAYOUT_VERSION))
-      .when(mockNN1).versionRequest();
+    Mockito
+        .doReturn(new NamespaceInfo(1, "fake foreign cluster", FAKE_BPID, 0))
+        .when(mockNN1).versionRequest();
         
     BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
     bpos.start();

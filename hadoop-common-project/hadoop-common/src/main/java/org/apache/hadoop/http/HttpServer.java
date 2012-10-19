@@ -24,12 +24,14 @@ import java.io.InterruptedIOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SSLServerSocketFactory;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -56,6 +58,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.mortbay.io.Buffer;
 import org.mortbay.jetty.Connector;
@@ -105,6 +108,7 @@ public class HttpServer implements FilterContainer {
 
   private AccessControlList adminsAcl;
 
+  private SSLFactory sslFactory;
   protected final Server webServer;
   protected final Connector listener;
   protected final WebAppContext webAppContext;
@@ -208,7 +212,23 @@ public class HttpServer implements FilterContainer {
     
     if(connector == null) {
       listenerStartedExternally = false;
-      listener = createBaseListener(conf);
+      if (HttpConfig.isSecure()) {
+        sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
+        try {
+          sslFactory.init();
+        } catch (GeneralSecurityException ex) {
+          throw new IOException(ex);
+        }
+        SslSocketConnector sslListener = new SslSocketConnector() {
+          @Override
+          protected SSLServerSocketFactory createFactory() throws Exception {
+            return sslFactory.createSSLServerSocketFactory();
+          }
+        };
+        listener = sslListener;
+      } else {
+        listener = createBaseListener(conf);
+      }
       listener.setHost(bindAddress);
       listener.setPort(port);
     } else {
@@ -310,6 +330,12 @@ public class HttpServer implements FilterContainer {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
+      if (conf.getBoolean(
+          CommonConfigurationKeys.HADOOP_JETTY_LOGS_SERVE_ALIASES,
+          CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
+        logContext.getInitParams().put(
+            "org.mortbay.jetty.servlet.Default.aliases", "true");
+      }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
       defaultContexts.put(logContext, true);
@@ -448,7 +474,7 @@ public class HttpServer implements FilterContainer {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
 
@@ -468,7 +494,7 @@ public class HttpServer implements FilterContainer {
     filterNames.add(name);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void addGlobalFilter(String name, String classname,
       Map<String, String> parameters) {
     final String[] ALL_URLS = { "/*" };
@@ -651,6 +677,15 @@ public class HttpServer implements FilterContainer {
               "Problem in starting http server. Server handlers failed");
         }
       }
+      // Make sure there are no errors initializing the context.
+      Throwable unavailableException = webAppContext.getUnavailableException();
+      if (unavailableException != null) {
+        // Have to stop the webserver, or else its non-daemon threads
+        // will hang forever.
+        webServer.stop();
+        throw new IOException("Unable to initialize WebAppContext",
+            unavailableException);
+      }
     } catch (IOException e) {
       throw e;
     } catch (InterruptedException e) {
@@ -716,6 +751,16 @@ public class HttpServer implements FilterContainer {
       listener.close();
     } catch (Exception e) {
       LOG.error("Error while stopping listener for webapp"
+          + webAppContext.getDisplayName(), e);
+      exception = addMultiException(exception, e);
+    }
+
+    try {
+      if (sslFactory != null) {
+          sslFactory.destroy();
+      }
+    } catch (Exception e) {
+      LOG.error("Error while destroying the SSLFactory"
           + webAppContext.getDisplayName(), e);
       exception = addMultiException(exception, e);
     }

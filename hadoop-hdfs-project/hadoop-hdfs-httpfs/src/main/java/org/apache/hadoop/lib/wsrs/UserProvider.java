@@ -24,6 +24,7 @@ import com.sun.jersey.core.spi.component.ComponentScope;
 import com.sun.jersey.server.impl.inject.AbstractHttpContextInjectable;
 import com.sun.jersey.spi.inject.Injectable;
 import com.sun.jersey.spi.inject.InjectableProvider;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.MDC;
 
 import javax.ws.rs.core.Context;
@@ -33,6 +34,7 @@ import java.security.Principal;
 import java.util.regex.Pattern;
 
 @Provider
+@InterfaceAudience.Private
 public class UserProvider extends AbstractHttpContextInjectable<Principal> implements
   InjectableProvider<Context, Type> {
 

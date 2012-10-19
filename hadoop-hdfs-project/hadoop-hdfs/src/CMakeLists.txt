@@ -21,18 +21,7 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 # Default to release builds
 set(CMAKE_BUILD_TYPE, Release)
 
-# If JVM_ARCH_DATA_MODEL is 32, compile all binaries as 32-bit.
-# This variable is set by maven.
-if (JVM_ARCH_DATA_MODEL EQUAL 32)
-    # force 32-bit code generation on amd64/x86_64, ppc64, sparc64
-    if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_SYSTEM_PROCESSOR MATCHES ".*64")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-        set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -m32")
-    endif ()
-    if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
-        set(CMAKE_SYSTEM_PROCESSOR "i686")
-    endif ()
-endif (JVM_ARCH_DATA_MODEL EQUAL 32)
+include(../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
 
 # Compile a library with both shared and static variants
 function(add_dual_library LIBNAME)
@@ -67,6 +56,12 @@ function(FLATTEN_LIST INPUT SEPARATOR OUTPUT)
   set (${OUTPUT} "${_TMPS}" PARENT_SCOPE)
 endfunction()
 
+# Check to see if our compiler and linker support the __thread attribute.
+# On Linux and some other operating systems, this is a more efficient 
+# alternative to POSIX thread local storage. 
+INCLUDE(CheckCSourceCompiles)
+CHECK_C_SOURCE_COMPILES("int main(void) { static __thread int i = 0; return 0; }" HAVE_BETTER_TLS)
+
 find_package(JNI REQUIRED)
 if (NOT GENERATED_JAVAH)
     # Must identify where the generated headers have been placed
@@ -81,15 +76,17 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
-    main/native/
+    main/native
+    main/native/libhdfs
 )
 
 set(_FUSE_DFS_VERSION 0.1.0)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_dual_library(hdfs
-    main/native/hdfs.c
-    main/native/hdfsJniHelper.c
+    main/native/libhdfs/exception.c
+    main/native/libhdfs/jni_helper.c
+    main/native/libhdfs/hdfs.c
 )
 target_link_dual_libraries(hdfs
     ${JAVA_JVM_LIBRARY}
@@ -99,31 +96,58 @@ set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
-add_executable(hdfs_test
-    main/native/hdfs_test.c
+add_library(posix_util
+    main/native/util/posix_util.c
 )
-target_link_libraries(hdfs_test
+
+add_executable(test_libhdfs_ops
+    main/native/libhdfs/test/test_libhdfs_ops.c
+)
+target_link_libraries(test_libhdfs_ops
     hdfs
     ${JAVA_JVM_LIBRARY}
 )
-output_directory(hdfs_test target/usr/local/bin)
 
-add_executable(hdfs_read
-    main/native/hdfs_read.c
+add_executable(test_libhdfs_read
+    main/native/libhdfs/test/test_libhdfs_read.c
 )
-target_link_libraries(hdfs_read
+target_link_libraries(test_libhdfs_read
     hdfs
     ${JAVA_JVM_LIBRARY}
 )
-output_directory(hdfs_read target/usr/local/bin)
 
-add_executable(hdfs_write
-    main/native/hdfs_write.c
+add_executable(test_libhdfs_write
+    main/native/libhdfs/test/test_libhdfs_write.c
 )
-target_link_libraries(hdfs_write
+target_link_libraries(test_libhdfs_write
     hdfs
     ${JAVA_JVM_LIBRARY}
 )
-output_directory(hdfs_write target/usr/local/bin)
 
-add_subdirectory(contrib/fuse-dfs/src)
+add_library(native_mini_dfs
+    main/native/libhdfs/native_mini_dfs.c
+)
+target_link_libraries(native_mini_dfs
+    hdfs
+)
+
+add_executable(test_native_mini_dfs
+    main/native/libhdfs/test_native_mini_dfs.c
+)
+target_link_libraries(test_native_mini_dfs
+    native_mini_dfs
+)
+
+add_executable(test_libhdfs_threaded
+    main/native/libhdfs/test_libhdfs_threaded.c
+)
+target_link_libraries(test_libhdfs_threaded
+    hdfs
+    native_mini_dfs
+    pthread
+)
+
+IF(REQUIRE_LIBWEBHDFS)
+    add_subdirectory(contrib/libwebhdfs)
+ENDIF(REQUIRE_LIBWEBHDFS)
+add_subdirectory(main/native/fuse-dfs)

@@ -110,6 +110,7 @@ public class RccTask extends Task {
   /**
    * Invoke the Hadoop record compiler on each record definition file
    */
+  @Override
   public void execute() throws BuildException {
     if (src == null && filesets.size()==0) {
       throw new BuildException("There must be a file attribute or a fileset child element");

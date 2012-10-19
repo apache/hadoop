@@ -39,6 +39,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
     </dependency>
     <dependency>
@@ -77,7 +81,7 @@
             <configuration>
               <executable>protoc</executable>
               <arguments>
-                <argument>-I../../hadoop-yarn/hadoop-yarn-api/src/main/proto/</argument>
+                <argument>-I../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/proto</argument>
                 <argument>src/main/proto/mr_protos.proto</argument>

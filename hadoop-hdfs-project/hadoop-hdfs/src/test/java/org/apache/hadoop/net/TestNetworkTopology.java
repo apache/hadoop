@@ -18,17 +18,18 @@
 
 package org.apache.hadoop.net;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-
-import org.junit.Test;
 import org.junit.Before;
-
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class TestNetworkTopology {
   private final static NetworkTopology cluster = new NetworkTopology();

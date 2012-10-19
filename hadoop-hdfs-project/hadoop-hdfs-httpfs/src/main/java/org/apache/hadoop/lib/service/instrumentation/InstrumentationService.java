@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.lib.service.instrumentation;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Instrumentation;
 import org.apache.hadoop.lib.service.Scheduler;
+import org.apache.hadoop.util.Time;
 import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
@@ -38,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+@InterfaceAudience.Private
 public class InstrumentationService extends BaseService implements Instrumentation {
   public static final String PREFIX = "instrumentation";
   public static final String CONF_TIMERS_SIZE = "timers.size";
@@ -82,16 +85,19 @@ public class InstrumentationService extends BaseService implements Instrumentati
     all.put("samplers", (Map) samplers);
 
     jvmVariables.put("free.memory", new VariableHolder<Long>(new Instrumentation.Variable<Long>() {
+      @Override
       public Long getValue() {
         return Runtime.getRuntime().freeMemory();
       }
     }));
     jvmVariables.put("max.memory", new VariableHolder<Long>(new Instrumentation.Variable<Long>() {
+      @Override
       public Long getValue() {
         return Runtime.getRuntime().maxMemory();
       }
     }));
     jvmVariables.put("total.memory", new VariableHolder<Long>(new Instrumentation.Variable<Long>() {
+      @Override
       public Long getValue() {
         return Runtime.getRuntime().totalMemory();
       }
@@ -159,25 +165,27 @@ public class InstrumentationService extends BaseService implements Instrumentati
     long own;
     long total;
 
+    @Override
     public Cron start() {
       if (total != 0) {
         throw new IllegalStateException("Cron already used");
       }
       if (start == 0) {
-        start = System.currentTimeMillis();
+        start = Time.now();
         lapStart = start;
       } else if (lapStart == 0) {
-        lapStart = System.currentTimeMillis();
+        lapStart = Time.now();
       }
       return this;
     }
 
+    @Override
     public Cron stop() {
       if (total != 0) {
         throw new IllegalStateException("Cron already used");
       }
       if (lapStart > 0) {
-        own += System.currentTimeMillis() - lapStart;
+        own += Time.now() - lapStart;
         lapStart = 0;
       }
       return this;
@@ -185,7 +193,7 @@ public class InstrumentationService extends BaseService implements Instrumentati
 
     void end() {
       stop();
-      total = System.currentTimeMillis() - start;
+      total = Time.now() - start;
     }
 
   }

@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -105,16 +106,16 @@ public class TestAppendDifferentChecksum {
     FileSystem fsWithCrc32C = createFsWithChecksum("CRC32C", 512);
 
     Path p = new Path("/testAlgoSwitchRandomized");
-    long seed = System.currentTimeMillis();
+    long seed = Time.now();
     System.out.println("seed: " + seed);
     Random r = new Random(seed);
     
     // Create empty to start
     IOUtils.closeStream(fsWithCrc32.create(p));
     
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     int len = 0;
-    while (System.currentTimeMillis() - st < RANDOM_TEST_RUNTIME) {
+    while (Time.now() - st < RANDOM_TEST_RUNTIME) {
       int thisLen = r.nextInt(500);
       FileSystem fs = (r.nextBoolean() ? fsWithCrc32 : fsWithCrc32C);
       FSDataOutputStream stm = fs.append(p);

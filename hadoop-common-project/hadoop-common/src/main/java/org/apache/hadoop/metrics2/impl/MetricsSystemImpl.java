@@ -60,6 +60,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricsSourceBuilder;
 import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.Time;
 
 /**
  * A base class for metrics system singletons
@@ -234,11 +235,9 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   void registerSource(String name, String desc, MetricsSource source) {
     checkNotNull(config, "config");
     MetricsConfig conf = sourceConfigs.get(name);
-    MetricsSourceAdapter sa = conf != null
-        ? new MetricsSourceAdapter(prefix, name, desc, source,
-                                   injectedTags, period, conf)
-        : new MetricsSourceAdapter(prefix, name, desc, source,
-          injectedTags, period, config.subset(SOURCE_KEY));
+    MetricsSourceAdapter sa = new MetricsSourceAdapter(prefix, name, desc,
+        source, injectedTags, period, conf != null ? conf
+            : config.subset(SOURCE_KEY));
     sources.put(name, sa);
     sa.start();
     LOG.debug("Registered source "+ name);
@@ -286,8 +285,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
               throws Throwable {
             try {
               return method.invoke(callback, args);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               // These are not considered fatal.
               LOG.warn("Caught exception in callback "+ method.getName(), e);
             }
@@ -331,11 +329,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     long millis = period * 1000;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
+          @Override
           public void run() {
             try {
               onTimerEvent();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               LOG.warn(e);
             }
           }
@@ -372,10 +370,10 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
 
   private void snapshotMetrics(MetricsSourceAdapter sa,
                                MetricsBufferBuilder bufferBuilder) {
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     bufferBuilder.add(sa.name(), sa.getMetrics(collector, false));
     collector.clear();
-    snapshotStat.add(System.currentTimeMillis() - startTime);
+    snapshotStat.add(Time.now() - startTime);
     LOG.debug("Snapshotted source "+ sa.name());
   }
 
@@ -386,9 +384,9 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   synchronized void publishMetrics(MetricsBuffer buffer) {
     int dropped = 0;
     for (MetricsSinkAdapter sa : sinks.values()) {
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.now();
       dropped += sa.putMetrics(buffer, logicalTime) ? 0 : 1;
-      publishStat.add(System.currentTimeMillis() - startTime);
+      publishStat.add(Time.now() - startTime);
     }
     droppedPubAll.incr(dropped);
   }
@@ -450,8 +448,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             conf.getString(DESC_KEY, sinkName), conf);
         sa.start();
         sinks.put(sinkName, sa);
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         LOG.warn("Error creating sink '"+ sinkName +"'", e);
       }
     }
@@ -493,8 +490,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   static String getHostname() {
     try {
       return InetAddress.getLocalHost().getHostName();
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.error("Error getting localhost name. Using 'localhost'...", e);
     }
     return "localhost";
@@ -554,6 +550,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     return true;
   }
 
+  @Override
   public MetricsSource getSource(String name) {
     return allSources.get(name);
   }

@@ -18,8 +18,21 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -33,10 +46,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 import javax.net.SocketFactory;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -55,11 +75,13 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
@@ -106,10 +128,48 @@ public class DFSUtil {
           a.isDecommissioned() ? 1 : -1;
       }
     };
+    
+      
+  /**
+   * Comparator for sorting DataNodeInfo[] based on decommissioned/stale states.
+   * Decommissioned/stale nodes are moved to the end of the array on sorting
+   * with this compartor.
+   */ 
+  @InterfaceAudience.Private 
+  public static class DecomStaleComparator implements Comparator<DatanodeInfo> {
+    private long staleInterval;
+
+    /**
+     * Constructor of DecomStaleComparator
+     * 
+     * @param interval
+     *          The time invertal for marking datanodes as stale is passed from
+     *          outside, since the interval may be changed dynamically
+     */
+    public DecomStaleComparator(long interval) {
+      this.staleInterval = interval;
+    }
+
+    @Override
+    public int compare(DatanodeInfo a, DatanodeInfo b) {
+      // Decommissioned nodes will still be moved to the end of the list
+      if (a.isDecommissioned()) {
+        return b.isDecommissioned() ? 0 : 1;
+      } else if (b.isDecommissioned()) {
+        return -1;
+      }
+      // Stale nodes will be moved behind the normal nodes
+      boolean aStale = a.isStale(staleInterval);
+      boolean bStale = b.isStale(staleInterval);
+      return aStale == bStale ? 0 : (aStale ? 1 : -1);
+    }
+  }    
+    
   /**
    * Address matcher for matching an address to local address
    */
   static final AddressMatcher LOCAL_ADDRESS_MATCHER = new AddressMatcher() {
+    @Override
     public boolean match(InetSocketAddress s) {
       return NetUtils.isLocalAddress(s.getAddress());
     };
@@ -117,7 +177,7 @@ public class DFSUtil {
   
   /**
    * Whether the pathname is valid.  Currently prohibits relative paths, 
-   * and names which contain a ":" or "/" 
+   * names which contain a ":" or "//", or other non-canonical paths.
    */
   public static boolean isValidName(String src) {
     // Path must be absolute.
@@ -126,13 +186,20 @@ public class DFSUtil {
     }
       
     // Check for ".." "." ":" "/"
-    StringTokenizer tokens = new StringTokenizer(src, Path.SEPARATOR);
-    while(tokens.hasMoreTokens()) {
-      String element = tokens.nextToken();
+    String[] components = StringUtils.split(src, '/');
+    for (int i = 0; i < components.length; i++) {
+      String element = components[i];
       if (element.equals("..") || 
           element.equals(".")  ||
           (element.indexOf(":") >= 0)  ||
           (element.indexOf("/") >= 0)) {
+        return false;
+      }
+      
+      // The string may start or end with a /, but not have
+      // "//" in the middle.
+      if (element.isEmpty() && i != components.length - 1 &&
+          i != 0) {
         return false;
       }
     }
@@ -254,13 +321,25 @@ public class DFSUtil {
     if (blocks == null) {
       return new BlockLocation[0];
     }
-    int nrBlocks = blocks.locatedBlockCount();
+    return locatedBlocks2Locations(blocks.getLocatedBlocks());
+  }
+  
+  /**
+   * Convert a List<LocatedBlock> to BlockLocation[]
+   * @param blocks A List<LocatedBlock> to be converted
+   * @return converted array of BlockLocation
+   */
+  public static BlockLocation[] locatedBlocks2Locations(List<LocatedBlock> blocks) {
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
+    int nrBlocks = blocks.size();
     BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
     if (nrBlocks == 0) {
       return blkLocations;
     }
     int idx = 0;
-    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
+    for (LocatedBlock blk : blocks) {
       assert idx < nrBlocks : "Incorrect index";
       DatanodeInfo[] locations = blk.getLocations();
       String[] hosts = new String[locations.length];
@@ -410,12 +489,39 @@ public class DFSUtil {
   }
 
   /**
+   * @return a collection of all configured NN Kerberos principals.
+   */
+  public static Set<String> getAllNnPrincipals(Configuration conf) throws IOException {
+    Set<String> principals = new HashSet<String>();
+    for (String nsId : DFSUtil.getNameServiceIds(conf)) {
+      if (HAUtil.isHAEnabled(conf, nsId)) {
+        for (String nnId : DFSUtil.getNameNodeIds(conf, nsId)) {
+          Configuration confForNn = new Configuration(conf);
+          NameNode.initializeGenericKeys(confForNn, nsId, nnId);
+          String principal = SecurityUtil.getServerPrincipal(confForNn
+              .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+              NameNode.getAddress(confForNn).getHostName());
+          principals.add(principal);
+        }
+      } else {
+        Configuration confForNn = new Configuration(conf);
+        NameNode.initializeGenericKeys(confForNn, nsId, null);
+        String principal = SecurityUtil.getServerPrincipal(confForNn
+            .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+            NameNode.getAddress(confForNn).getHostName());
+        principals.add(principal);
+      }
+    }
+
+    return principals;
+  }
+
+  /**
    * Returns list of InetSocketAddress corresponding to HA NN RPC addresses from
    * the configuration.
    * 
    * @param conf configuration
    * @return list of InetSocketAddresses
-   * @throws IOException if no addresses are configured
    */
   public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
       Configuration conf) {
@@ -832,17 +938,17 @@ public class DFSUtil {
   /** Create a {@link ClientDatanodeProtocol} proxy */
   public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
-      LocatedBlock locatedBlock) throws IOException {
+      boolean connectToDnViaHostname, LocatedBlock locatedBlock) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(datanodeid, conf, socketTimeout,
-             locatedBlock);
+        connectToDnViaHostname, locatedBlock);
   }
   
   /** Create {@link ClientDatanodeProtocol} proxy using kerberos ticket */
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
-      DatanodeID datanodeid, Configuration conf, int socketTimeout)
-      throws IOException {
+      DatanodeID datanodeid, Configuration conf, int socketTimeout,
+      boolean connectToDnViaHostname) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(
-        datanodeid, conf, socketTimeout);
+        datanodeid, conf, socketTimeout, connectToDnViaHostname);
   }
   
   /** Create a {@link ClientDatanodeProtocol} proxy */
@@ -1063,5 +1169,83 @@ public class DFSUtil {
       // No nameservice ID was given and more than one is configured
       return null;
     }
+  }
+  
+  public static Options helpOptions = new Options();
+  public static Option helpOpt = new Option("h", "help", false,
+      "get help information");
+
+  static {
+    helpOptions.addOption(helpOpt);
+  }
+
+  /**
+   * Parse the arguments for commands
+   * 
+   * @param args the argument to be parsed
+   * @param helpDescription help information to be printed out
+   * @param out Printer
+   * @param printGenericCommandUsage whether to print the 
+   *              generic command usage defined in ToolRunner
+   * @return true when the argument matches help option, false if not
+   */
+  public static boolean parseHelpArgument(String[] args,
+      String helpDescription, PrintStream out, boolean printGenericCommandUsage) {
+    if (args.length == 1) {
+      try {
+        CommandLineParser parser = new PosixParser();
+        CommandLine cmdLine = parser.parse(helpOptions, args);
+        if (cmdLine.hasOption(helpOpt.getOpt())
+            || cmdLine.hasOption(helpOpt.getLongOpt())) {
+          // should print out the help information
+          out.println(helpDescription + "\n");
+          if (printGenericCommandUsage) {
+            ToolRunner.printGenericCommandUsage(out);
+          }
+          return true;
+        }
+      } catch (ParseException pe) {
+        return false;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * Get DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION from configuration.
+   * 
+   * @param conf Configuration
+   * @return Value of DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION
+   */
+  public static float getInvalidateWorkPctPerIteration(Configuration conf) {
+    float blocksInvalidateWorkPct = conf.getFloat(
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (blocksInvalidateWorkPct > 0 && blocksInvalidateWorkPct <= 1.0f),
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION +
+        " = '" + blocksInvalidateWorkPct + "' is invalid. " +
+        "It should be a positive, non-zero float value, not greater than 1.0f, " +
+        "to indicate a percentage.");
+    return blocksInvalidateWorkPct;
+  }
+
+  /**
+   * Get DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION from
+   * configuration.
+   * 
+   * @param conf Configuration
+   * @return Value of DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION
+   */
+  public static int getReplWorkMultiplier(Configuration conf) {
+    int blocksReplWorkMultiplier = conf.getInt(
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (blocksReplWorkMultiplier > 0),
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION +
+        " = '" + blocksReplWorkMultiplier + "' is invalid. " +
+        "It should be a positive, non-zero integer value.");
+    return blocksReplWorkMultiplier;
   }
 }

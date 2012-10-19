@@ -90,6 +90,26 @@ message GetBlockLocalPathInfoResponseProto {
 }
 
 /**
+ * blocks - list of ExtendedBlocks on which we are querying additional info
+ * tokens - list of access tokens corresponding to list of ExtendedBlocks
+ */
+message GetHdfsBlockLocationsRequestProto {
+  repeated ExtendedBlockProto blocks = 1;
+  repeated BlockTokenIdentifierProto tokens = 2;
+}
+
+/**
+ * volumeIds - id of each volume, potentially multiple bytes
+ * volumeIndexes - for each block, an index into volumeIds specifying the volume
+ *               on which it is located. If block is not present on any volume,
+ *               index is set to MAX_INT.
+ */
+message GetHdfsBlockLocationsResponseProto {
+  repeated bytes volumeIds = 1;
+  repeated uint32 volumeIndexes = 2;
+}
+
+/**
  * Protocol used from client to the Datanode.
  * See the request and response for details of rpc call.
  */
@@ -119,4 +139,11 @@ service ClientDatanodeProtocolService {
    */
   rpc getBlockLocalPathInfo(GetBlockLocalPathInfoRequestProto)
       returns(GetBlockLocalPathInfoResponseProto);
+
+  /**
+   * Retrieve additional HDFS-specific metadata about a set of blocks stored
+   * on the local file system.
+   */
+  rpc getHdfsBlockLocations(GetHdfsBlockLocationsRequestProto)
+      returns(GetHdfsBlockLocationsResponseProto);
 }

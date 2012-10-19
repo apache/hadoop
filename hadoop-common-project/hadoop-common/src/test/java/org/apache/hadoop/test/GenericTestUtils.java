@@ -25,12 +25,14 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.WriterAppender;
@@ -47,12 +49,22 @@ import com.google.common.collect.Sets;
  */
 public abstract class GenericTestUtils {
 
+  private static final AtomicInteger sequence = new AtomicInteger();
+
   /**
    * Extracts the name of the method where the invocation has happened
    * @return String name of the invoking method
    */
   public static String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  /**
+   * Generates a process-wide unique sequence number.
+   * @return an unique sequence number
+   */
+  public static int uniqueSequenceId() {
+    return sequence.incrementAndGet();
   }
   
   /**
@@ -94,7 +106,7 @@ public abstract class GenericTestUtils {
       int checkEveryMillis, int waitForMillis)
       throws TimeoutException, InterruptedException
   {
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     do {
       boolean result = check.get();
       if (result) {
@@ -102,8 +114,11 @@ public abstract class GenericTestUtils {
       }
       
       Thread.sleep(checkEveryMillis);
-    } while (System.currentTimeMillis() - st < waitForMillis);
-    throw new TimeoutException("Timed out waiting for condition");
+    } while (Time.now() - st < waitForMillis);
+    
+    throw new TimeoutException("Timed out waiting for condition. " +
+        "Thread diagnostics:\n" +
+        TimedOutTestsListener.buildThreadDiagnosticString());
   }
   
   public static class LogCapturer {
@@ -170,6 +185,7 @@ public abstract class GenericTestUtils {
       waitLatch.countDown();
     }
   
+    @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
       fireLatch.countDown();

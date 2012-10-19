@@ -35,14 +35,17 @@ public class JFloat extends JType {
       super("float", "Float", "Float", "TypeID.RIOType.FLOAT");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.FloatTypeID";
     }
 
+    @Override
     void genHashCode(CodeBuffer cb, String fname) {
       cb.append(Consts.RIO_PREFIX + "ret = Float.floatToIntBits("+fname+");\n");
     }
     
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("if ("+l+"<4) {\n");
@@ -53,6 +56,7 @@ public class JFloat extends JType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("if (l1<4 || l2<4) {\n");
@@ -75,6 +79,7 @@ public class JFloat extends JType {
       super("float");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_FLOAT)";
     }
@@ -87,6 +92,7 @@ public class JFloat extends JType {
     setCType(new CType());
   }
   
+  @Override
   String getSignature() {
     return "f";
   }

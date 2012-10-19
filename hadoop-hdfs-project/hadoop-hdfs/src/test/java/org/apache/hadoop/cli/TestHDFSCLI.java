@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.cli;
 
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,7 +29,6 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.junit.After;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -74,9 +75,12 @@ public class TestHDFSCLI extends CLITestHelperDFS {
   @After
   @Override
   public void tearDown() throws Exception {
-    if (null != fs)
+    if (fs != null) {
       fs.close();
-    dfsCluster.shutdown();
+    }
+    if (dfsCluster != null) {
+      dfsCluster.shutdown();
+    }
     Thread.sleep(2000);
     super.tearDown();
   }
@@ -93,9 +97,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
   protected Result execute(CLICommand cmd) throws Exception {
     return cmd.getExecutor(namenode).executeCommand(cmd.getCmd());
   }
-
-  //TODO: The test is failing due to the change in HADOOP-7360.
-  //      HDFS-2038 is going to fix it.  Disable the test for the moment.
+  
   @Test
   @Override
   public void testAll () {

@@ -36,6 +36,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   public static final int MD5_LEN = 16;
 
   private static ThreadLocal<MessageDigest> DIGESTER_FACTORY = new ThreadLocal<MessageDigest>() {
+    @Override
     protected MessageDigest initialValue() {
       try {
         return MessageDigest.getInstance("MD5");
@@ -65,6 +66,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   }
   
   // javadoc from Writable
+  @Override
   public void readFields(DataInput in) throws IOException {
     in.readFully(digest);
   }
@@ -77,6 +79,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   }
 
   // javadoc from Writable
+  @Override
   public void write(DataOutput out) throws IOException {
     out.write(digest);
   }
@@ -155,6 +158,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /** Returns true iff <code>o</code> is an MD5Hash whose digest contains the
    * same values.  */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof MD5Hash))
       return false;
@@ -165,12 +169,14 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   /** Returns a hash code value for this object.
    * Only uses the first 4 bytes, since md5s are evenly distributed.
    */
+  @Override
   public int hashCode() {
     return quarterDigest();
   }
 
 
   /** Compares this object with the specified object for order.*/
+  @Override
   public int compareTo(MD5Hash that) {
     return WritableComparator.compareBytes(this.digest, 0, MD5_LEN,
                                            that.digest, 0, MD5_LEN);
@@ -182,6 +188,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
       super(MD5Hash.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       return compareBytes(b1, s1, MD5_LEN, b2, s2, MD5_LEN);
@@ -196,6 +203,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
   /** Returns a string representation of this object. */
+  @Override
   public String toString() {
     StringBuilder buf = new StringBuilder(MD5_LEN*2);
     for (int i = 0; i < MD5_LEN; i++) {

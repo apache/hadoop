@@ -119,4 +119,13 @@ public class BlockPoolTokenSecretManager extends
       btsm.clearAllKeysForTesting();
     }
   }
+
+  public DataEncryptionKey generateDataEncryptionKey(String blockPoolId) {
+    return get(blockPoolId).generateDataEncryptionKey();
+  }
+  
+  public byte[] retrieveDataEncryptionKey(int keyId, String blockPoolId,
+      byte[] nonce) throws IOException {
+    return get(blockPoolId).retrieveDataEncryptionKey(keyId, nonce);
+  }
 }

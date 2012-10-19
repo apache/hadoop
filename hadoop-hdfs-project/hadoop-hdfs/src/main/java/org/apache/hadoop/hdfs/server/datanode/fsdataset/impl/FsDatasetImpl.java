@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -78,6 +80,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -263,6 +266,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Return the number of failed volumes in the FSDataset.
    */
+  @Override
   public int getNumFailedVolumes() {
     return volumes.numberOfFailedVolumes();
   }
@@ -1142,7 +1146,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     
     // Otherwise remove blocks for the failed volumes
-    long mlsec = System.currentTimeMillis();
+    long mlsec = Time.now();
     synchronized (this) {
       for (FsVolumeImpl fv: failedVols) {
         for (String bpid : fv.getBlockPoolList()) {
@@ -1161,7 +1165,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
       }
     } // end of sync
-    mlsec = System.currentTimeMillis() - mlsec;
+    mlsec = Time.now() - mlsec;
     LOG.warn("Removed " + removedBlocks + " out of " + totalBlocks +
         "(took " + mlsec + " millisecs)");
 
@@ -1664,6 +1668,43 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     BlockLocalPathInfo info = new BlockLocalPathInfo(block,
         datafile.getAbsolutePath(), metafile.getAbsolutePath());
     return info;
+  }
+  
+  @Override // FsDatasetSpi
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
+      throws IOException {
+    // List of VolumeIds, one per volume on the datanode
+    List<byte[]> blocksVolumeIds = new ArrayList<byte[]>(volumes.volumes.size());
+    // List of indexes into the list of VolumeIds, pointing at the VolumeId of
+    // the volume that the block is on
+    List<Integer> blocksVolumeIndexes = new ArrayList<Integer>(blocks.size());
+    // Initialize the list of VolumeIds simply by enumerating the volumes
+    for (int i = 0; i < volumes.volumes.size(); i++) {
+      blocksVolumeIds.add(ByteBuffer.allocate(4).putInt(i).array());
+    }
+    // Determine the index of the VolumeId of each block's volume, by comparing 
+    // the block's volume against the enumerated volumes
+    for (int i = 0; i < blocks.size(); i++) {
+      ExtendedBlock block = blocks.get(i);
+      FsVolumeSpi blockVolume = getReplicaInfo(block).getVolume();
+      boolean isValid = false;
+      int volumeIndex = 0;
+      for (FsVolumeImpl volume : volumes.volumes) {
+        // This comparison of references should be safe
+        if (blockVolume == volume) {
+          isValid = true;
+          break;
+        }
+        volumeIndex++;
+      }
+      // Indicates that the block is not present, or not found in a data dir
+      if (!isValid) {
+        volumeIndex = Integer.MAX_VALUE;
+      }
+      blocksVolumeIndexes.add(volumeIndex);
+    }
+    return new HdfsBlocksMetadata(blocks.toArray(new ExtendedBlock[] {}), 
+        blocksVolumeIds, blocksVolumeIndexes);
   }
 
   @Override

@@ -88,12 +88,14 @@ public class TestPipelinesFailover {
   
   enum TestScenario {
     GRACEFUL_FAILOVER {
+      @Override
       void run(MiniDFSCluster cluster) throws IOException {
         cluster.transitionToStandby(0);
         cluster.transitionToActive(1);
       }
     },
     ORIGINAL_ACTIVE_CRASHED {
+      @Override
       void run(MiniDFSCluster cluster) throws IOException {
         cluster.restartNameNode(0);
         cluster.transitionToActive(1);

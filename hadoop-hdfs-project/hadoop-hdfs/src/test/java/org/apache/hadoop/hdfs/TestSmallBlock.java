@@ -17,39 +17,31 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.junit.Test;
 
 /**
  * This class tests the creation of files with block-size
  * smaller than the default buffer size of 4K.
  */
-public class TestSmallBlock extends TestCase {
+public class TestSmallBlock {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1;
   static final int fileSize = 20;
   boolean simulatedStorage = false;
-
-  private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 1, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
@@ -90,6 +82,7 @@ public class TestSmallBlock extends TestCase {
   /**
    * Tests small block size in in DFS.
    */
+  @Test
   public void testSmallBlock() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
@@ -100,7 +93,8 @@ public class TestSmallBlock extends TestCase {
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("smallblocktest.dat");
-      writeFile(fileSys, file1);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 1, seed);
       checkFile(fileSys, file1);
       cleanupFile(fileSys, file1);
     } finally {
@@ -108,6 +102,7 @@ public class TestSmallBlock extends TestCase {
       cluster.shutdown();
     }
   }
+  @Test
   public void testSmallBlockSimulatedStorage() throws IOException {
     simulatedStorage = true;
     testSmallBlock();

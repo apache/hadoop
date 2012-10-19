@@ -17,25 +17,26 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.BackupNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
+import org.junit.Test;
 
 /**
  * This test checks correctness of port usage by hdfs components:
@@ -47,7 +48,7 @@ import org.apache.hadoop.net.DNS;
  * - if the port = 0 (ephemeral) then the server should choose 
  * a free port and start on it.
  */
-public class TestHDFSServerPorts extends TestCase {
+public class TestHDFSServerPorts {
   public static final Log LOG = LogFactory.getLog(TestHDFSServerPorts.class);
   
   // reset default 0.0.0.0 addresses in order to avoid IPv6 problem
@@ -250,6 +251,7 @@ public class TestHDFSServerPorts extends TestCase {
     return true;
   }
 
+  @Test
   public void testNameNodePorts() throws Exception {
     runTestNameNodePorts(false);
     runTestNameNodePorts(true);
@@ -300,6 +302,7 @@ public class TestHDFSServerPorts extends TestCase {
   /**
    * Verify datanode port usage.
    */
+  @Test
   public void testDataNodePorts() throws Exception {
     NameNode nn = null;
     try {
@@ -335,6 +338,7 @@ public class TestHDFSServerPorts extends TestCase {
   /**
    * Verify secondary namenode port usage.
    */
+  @Test
   public void testSecondaryNodePorts() throws Exception {
     NameNode nn = null;
     try {
@@ -363,6 +367,7 @@ public class TestHDFSServerPorts extends TestCase {
     /**
      * Verify BackupNode port usage.
      */
+  @Test
     public void testBackupNodePorts() throws Exception {
       NameNode nn = null;
       try {

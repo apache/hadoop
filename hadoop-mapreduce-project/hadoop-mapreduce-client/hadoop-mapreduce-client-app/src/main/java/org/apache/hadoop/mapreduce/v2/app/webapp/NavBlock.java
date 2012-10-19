@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -62,7 +63,8 @@ public class NavBlock extends HtmlBlock {
           li().a(url("conf", jobid), "Configuration")._().
           li().a(url("tasks", jobid, "m"), "Map tasks")._().
           li().a(url("tasks", jobid, "r"), "Reduce tasks")._().
-          li().a(".logslink", url("http://", nodeHttpAddress, "node",
+          li().a(".logslink", url(HttpConfig.getSchemePrefix(),
+              nodeHttpAddress, "node",
               "containerlogs", thisAmInfo.getContainerId().toString(), 
               app.getJob().getUserName()), 
               "AM Logs")._()._();

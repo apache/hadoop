@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -71,8 +72,10 @@ public class RawLocalFileSystem extends FileSystem {
     return new File(path.toUri().getPath());
   }
 
+  @Override
   public URI getUri() { return NAME; }
   
+  @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
@@ -83,6 +86,7 @@ public class RawLocalFileSystem extends FileSystem {
       super(f);
     }
     
+    @Override
     public int read() throws IOException {
       int result = super.read();
       if (result != -1) {
@@ -91,6 +95,7 @@ public class RawLocalFileSystem extends FileSystem {
       return result;
     }
     
+    @Override
     public int read(byte[] data) throws IOException {
       int result = super.read(data);
       if (result != -1) {
@@ -99,6 +104,7 @@ public class RawLocalFileSystem extends FileSystem {
       return result;
     }
     
+    @Override
     public int read(byte[] data, int offset, int length) throws IOException {
       int result = super.read(data, offset, length);
       if (result != -1) {
@@ -111,7 +117,7 @@ public class RawLocalFileSystem extends FileSystem {
   /*******************************************************
    * For open()'s FSInputStream.
    *******************************************************/
-  class LocalFSFileInputStream extends FSInputStream {
+  class LocalFSFileInputStream extends FSInputStream implements HasFileDescriptor {
     private FileInputStream fis;
     private long position;
 
@@ -119,15 +125,18 @@ public class RawLocalFileSystem extends FileSystem {
       this.fis = new TrackingFileInputStream(pathToFile(f));
     }
     
+    @Override
     public void seek(long pos) throws IOException {
       fis.getChannel().position(pos);
       this.position = pos;
     }
     
+    @Override
     public long getPos() throws IOException {
       return this.position;
     }
     
+    @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
       return false;
     }
@@ -135,11 +144,14 @@ public class RawLocalFileSystem extends FileSystem {
     /*
      * Just forward to the fis
      */
+    @Override
     public int available() throws IOException { return fis.available(); }
+    @Override
     public void close() throws IOException { fis.close(); }
     @Override
     public boolean markSupported() { return false; }
     
+    @Override
     public int read() throws IOException {
       try {
         int value = fis.read();
@@ -152,6 +164,7 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
     
+    @Override
     public int read(byte[] b, int off, int len) throws IOException {
       try {
         int value = fis.read(b, off, len);
@@ -164,6 +177,7 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
     
+    @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException {
       ByteBuffer bb = ByteBuffer.wrap(b, off, len);
@@ -174,6 +188,7 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
     
+    @Override
     public long skip(long n) throws IOException {
       long value = fis.skip(n);
       if (value > 0) {
@@ -181,8 +196,14 @@ public class RawLocalFileSystem extends FileSystem {
       }
       return value;
     }
+
+    @Override
+    public FileDescriptor getFileDescriptor() throws IOException {
+      return fis.getFD();
+    }
   }
   
+  @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     if (!exists(f)) {
       throw new FileNotFoundException(f.toString());
@@ -204,8 +225,11 @@ public class RawLocalFileSystem extends FileSystem {
     /*
      * Just forward to the fos
      */
+    @Override
     public void close() throws IOException { fos.close(); }
+    @Override
     public void flush() throws IOException { fos.flush(); }
+    @Override
     public void write(byte[] b, int off, int len) throws IOException {
       try {
         fos.write(b, off, len);
@@ -214,6 +238,7 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
     
+    @Override
     public void write(int b) throws IOException {
       try {
         fos.write(b);
@@ -223,7 +248,7 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     if (!exists(f)) {
@@ -236,7 +261,6 @@ public class RawLocalFileSystem extends FileSystem {
         new LocalFSFileOutputStream(f, true), bufferSize), statistics);
   }
 
-  /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
     short replication, long blockSize, Progressable progress)
@@ -258,7 +282,6 @@ public class RawLocalFileSystem extends FileSystem {
         new LocalFSFileOutputStream(f, false), bufferSize), statistics);
   }
 
-  /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
     boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -270,7 +293,6 @@ public class RawLocalFileSystem extends FileSystem {
     return out;
   }
 
-  /** {@inheritDoc} */
   @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       boolean overwrite,
@@ -282,6 +304,7 @@ public class RawLocalFileSystem extends FileSystem {
     return out;
   }
 
+  @Override
   public boolean rename(Path src, Path dst) throws IOException {
     if (pathToFile(src).renameTo(pathToFile(dst))) {
       return true;
@@ -296,6 +319,7 @@ public class RawLocalFileSystem extends FileSystem {
    * @return true if the file or directory and all its contents were deleted
    * @throws IOException if p is non-empty and recursive is false 
    */
+  @Override
   public boolean delete(Path p, boolean recursive) throws IOException {
     File f = pathToFile(p);
     if (f.isFile()) {
@@ -313,6 +337,7 @@ public class RawLocalFileSystem extends FileSystem {
    * (<b>Note</b>: Returned list is not sorted in any given order,
    * due to reliance on Java's {@link File#list()} API.)
    */
+  @Override
   public FileStatus[] listStatus(Path f) throws IOException {
     File localf = pathToFile(f);
     FileStatus[] results;
@@ -350,6 +375,7 @@ public class RawLocalFileSystem extends FileSystem {
    * Creates the specified directory hierarchy. Does not
    * treat existence as an error.
    */
+  @Override
   public boolean mkdirs(Path f) throws IOException {
     if(f == null) {
       throw new IllegalArgumentException("mkdirs path arg is null");
@@ -367,7 +393,6 @@ public class RawLocalFileSystem extends FileSystem {
       (p2f.mkdir() || p2f.isDirectory());
   }
 
-  /** {@inheritDoc} */
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     boolean b = mkdirs(f);
@@ -412,7 +437,6 @@ public class RawLocalFileSystem extends FileSystem {
     return this.makeQualified(new Path(System.getProperty("user.dir")));
   }
 
-  /** {@inheritDoc} */
   @Override
   public FsStatus getStatus(Path p) throws IOException {
     File partition = pathToFile(p == null ? new Path("/") : p);
@@ -424,29 +448,35 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   // In the case of the local filesystem, we can just rename the file.
+  @Override
   public void moveFromLocalFile(Path src, Path dst) throws IOException {
     rename(src, dst);
   }
   
   // We can write output directly to the final location
+  @Override
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile)
     throws IOException {
     return fsOutputFile;
   }
   
   // It's in the right place - nothing to do.
+  @Override
   public void completeLocalOutput(Path fsWorkingFile, Path tmpLocalFile)
     throws IOException {
   }
   
+  @Override
   public void close() throws IOException {
     super.close();
   }
   
+  @Override
   public String toString() {
     return "LocalFS";
   }
   
+  @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     File path = pathToFile(f);
     if (path.exists()) {
@@ -462,7 +492,7 @@ public class RawLocalFileSystem extends FileSystem {
      * onwer.equals("").
      */
     private boolean isPermissionLoaded() {
-      return !super.getOwner().equals(""); 
+      return !super.getOwner().isEmpty(); 
     }
     
     RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {

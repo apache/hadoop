@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -656,6 +657,7 @@ class ClusterJspHelper {
       this.value = v;
     }
 
+    @Override
     public String toString() {
       return value;
     }
@@ -822,7 +824,7 @@ class ClusterJspHelper {
     doc.startTag("item");
     doc.attribute("label", label);
     doc.attribute("value", value);
-    doc.attribute("link", "http://" + url);
+    doc.attribute("link", HttpConfig.getSchemePrefix() + url);
     doc.endTag(); // item
   }
 
@@ -882,7 +884,7 @@ class ClusterJspHelper {
 
   private static String queryMbean(String httpAddress, Configuration conf) 
     throws IOException {
-    URL url = new URL("http://"+httpAddress+JMX_QRY);
+    URL url = new URL(HttpConfig.getSchemePrefix() + httpAddress+JMX_QRY);
     return readOutput(url);
   }
   /**

@@ -26,11 +26,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
-
-import org.junit.Test;
 import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * This tests pipeline recovery related client protocol works correct or not.

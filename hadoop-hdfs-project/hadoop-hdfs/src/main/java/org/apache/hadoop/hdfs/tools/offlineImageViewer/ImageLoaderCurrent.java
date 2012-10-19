@@ -31,13 +31,11 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
-import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.xml.sax.helpers.AttributesImpl;
 
 /**
  * ImageLoaderCurrent processes Hadoop FSImage files and walks over
@@ -167,7 +165,7 @@ class ImageLoaderCurrent implements ImageLoader {
 
       if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imageVersion)) {
         boolean isCompressed = in.readBoolean();
-        v.visit(ImageElement.IS_COMPRESSED, imageVersion);
+        v.visit(ImageElement.IS_COMPRESSED, String.valueOf(isCompressed));
         if (isCompressed) {
           String codecClassName = Text.readString(in);
           v.visit(ImageElement.COMPRESS_CODEC, codecClassName);

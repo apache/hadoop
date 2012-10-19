@@ -17,14 +17,21 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.junit.Test;
 
-public class TestSetrepIncreasing extends TestCase {
+public class TestSetrepIncreasing {
   static void setrep(int fromREP, int toREP, boolean simulatedStorage) throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
@@ -68,9 +75,11 @@ public class TestSetrepIncreasing extends TestCase {
     }
   }
 
+  @Test
   public void testSetrepIncreasing() throws IOException {
     setrep(3, 7, false);
   }
+  @Test
   public void testSetrepIncreasingSimulatedStorage() throws IOException {
     setrep(3, 7, true);
   }

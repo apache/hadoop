@@ -19,7 +19,6 @@
 package org.apache.hadoop.security.token.delegation;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -40,12 +39,14 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -70,9 +71,11 @@ public class TestDelegationToken {
       return KIND;
     }
     
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out); 
     }
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
     }
@@ -171,6 +174,52 @@ public class TestDelegationToken {
   }
 
   @Test
+  public void testGetUserNullOwner() {
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(null, null, null);
+    UserGroupInformation ugi = ident.getUser();
+    assertNull(ugi);
+  }
+  
+  @Test
+  public void testGetUserWithOwner() {
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(new Text("owner"), null, null);
+    UserGroupInformation ugi = ident.getUser();
+    assertNull(ugi.getRealUser());
+    assertEquals("owner", ugi.getUserName());
+    assertEquals(AuthenticationMethod.TOKEN, ugi.getAuthenticationMethod());
+  }
+
+  @Test
+  public void testGetUserWithOwnerEqualsReal() {
+    Text owner = new Text("owner");
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(owner, null, owner);
+    UserGroupInformation ugi = ident.getUser();
+    assertNull(ugi.getRealUser());
+    assertEquals("owner", ugi.getUserName());
+    assertEquals(AuthenticationMethod.TOKEN, ugi.getAuthenticationMethod());
+  }
+
+  @Test
+  public void testGetUserWithOwnerAndReal() {
+    Text owner = new Text("owner");
+    Text realUser = new Text("realUser");
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(owner, null, realUser);
+    UserGroupInformation ugi = ident.getUser();
+    assertNotNull(ugi.getRealUser());
+    assertNull(ugi.getRealUser().getRealUser());
+    assertEquals("owner", ugi.getUserName());
+    assertEquals("realUser", ugi.getRealUser().getUserName());
+    assertEquals(AuthenticationMethod.PROXY,
+                 ugi.getAuthenticationMethod());
+    assertEquals(AuthenticationMethod.TOKEN,
+                 ugi.getRealUser().getAuthenticationMethod());
+  }
+
+  @Test
   public void testDelegationTokenSecretManager() throws Exception {
     final TestDelegationTokenSecretManager dtSecretManager = 
       new TestDelegationTokenSecretManager(24*60*60*1000,
@@ -182,13 +231,14 @@ public class TestDelegationToken {
           dtSecretManager, "SomeUser", "JobTracker");
       // Fake renewer should not be able to renew
       shouldThrow(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws Exception {
           dtSecretManager.renewToken(token, "FakeRenewer");
           return null;
         }
       }, AccessControlException.class);
       long time = dtSecretManager.renewToken(token, "JobTracker");
-      assertTrue("renew time is in future", time > System.currentTimeMillis());
+      assertTrue("renew time is in future", time > Time.now());
       TestDelegationTokenIdentifier identifier = 
         new TestDelegationTokenIdentifier();
       byte[] tokenId = token.getIdentifier();
@@ -210,6 +260,7 @@ public class TestDelegationToken {
       Thread.sleep(2000);
       
       shouldThrow(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws Exception {
           dtSecretManager.renewToken(token, "JobTracker");
           return null;
@@ -231,6 +282,7 @@ public class TestDelegationToken {
         generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
       //Fake renewer should not be able to renew
       shouldThrow(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws Exception {
           dtSecretManager.renewToken(token, "FakeCanceller");
           return null;
@@ -238,6 +290,7 @@ public class TestDelegationToken {
       }, AccessControlException.class);
       dtSecretManager.cancelToken(token, "JobTracker");
       shouldThrow(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws Exception {
           dtSecretManager.renewToken(token, "JobTracker");
           return null;
@@ -330,6 +383,7 @@ public class TestDelegationToken {
       final int numTokensPerThread = 100;
       class tokenIssuerThread implements Runnable {
 
+        @Override
         public void run() {
           for(int i =0;i <numTokensPerThread; i++) {
             generateDelegationToken(dtSecretManager, "auser", "arenewer");

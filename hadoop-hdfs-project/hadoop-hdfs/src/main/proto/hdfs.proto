@@ -126,7 +126,16 @@ message LocatedBlockProto {
                                         // their locations are not part of this object
 
   required BlockTokenIdentifierProto blockToken = 5;
- }
+}
+
+message DataEncryptionKeyProto {
+  required uint32 keyId = 1;
+  required string blockPoolId = 2;
+  required bytes nonce = 3;
+  required bytes encryptionKey = 4;
+  required uint64 expiryDate = 5;
+  optional string encryptionAlgorithm = 6;
+}
 
 
 /**
@@ -170,6 +179,15 @@ message HdfsFileStatusProto {
 } 
 
 /**
+ * Checksum algorithms/types used in HDFS
+ */
+enum ChecksumTypeProto {
+  NULL = 0;
+  CRC32 = 1;
+  CRC32C = 2;
+}
+
+/**
  * HDFS Server Defaults
  */
 message FsServerDefaultsProto {
@@ -178,6 +196,9 @@ message FsServerDefaultsProto {
   required uint32 writePacketSize = 3;
   required uint32 replication = 4; // Actually a short - only 16 bits used
   required uint32 fileBufferSize = 5;
+  optional bool encryptDataTransfer = 6 [default = false];
+  optional uint64 trashInterval = 7 [default = 0];
+  optional ChecksumTypeProto checksumType = 8 [default = CRC32];
 }
 
 
@@ -187,15 +208,6 @@ message FsServerDefaultsProto {
 message DirectoryListingProto {
   repeated HdfsFileStatusProto partialListing = 1;
   required uint32 remainingEntries  = 2;
-}
-
-/**
- * Status of current cluster upgrade from one version to another
- */
-message UpgradeStatusReportProto {
-  required uint32 version = 1;;
-  required uint32 upgradeStatus = 2; // % completed in range 0 & 100
-	required bool finalized = 3;
 }
 
 /**
@@ -290,6 +302,7 @@ message BlocksWithLocationsProto {
 message RemoteEditLogProto {
   required uint64 startTxId = 1;  // Starting available edit log transaction
   required uint64 endTxId = 2;    // Ending available edit log transaction
+  optional bool isInProgress = 3 [default = false];
 }
 
 /**
@@ -304,7 +317,7 @@ message RemoteEditLogManifestProto {
  */
 message NamespaceInfoProto {
   required string buildVersion = 1;         // Software revision version (e.g. an svn or git revision)
-  required uint32 distUpgradeVersion = 2;   // Distributed upgrade version
+  required uint32 unused = 2;               // Retained for backward compatibility
   required string blockPoolID = 3;          // block pool used by the namespace
   required StorageInfoProto storageInfo = 4;// Node information
   required string softwareVersion = 5;      // Software version number (e.g. 2.0.0)

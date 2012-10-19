@@ -60,12 +60,14 @@ public class MetricsServlet extends HttpServlet {
       this.metricMap = metricMap;
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public void fromJSON(Map map) {
       throw new UnsupportedOperationException();
     }
 
     /** Converts to JSON by providing an array. */
+    @Override
     public void toJSON(Output out) {
       out.add(new Object[] { tagMap, metricMap });
     }

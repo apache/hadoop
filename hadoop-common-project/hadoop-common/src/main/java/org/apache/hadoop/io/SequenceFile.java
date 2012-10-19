@@ -47,6 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
+import org.apache.hadoop.util.Time;
 
 /** 
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
@@ -624,15 +625,18 @@ public class SequenceFile {
       dataSize = length;
     }
     
+    @Override
     public int getSize() {
       return dataSize;
     }
     
+    @Override
     public void writeUncompressedBytes(DataOutputStream outStream)
       throws IOException {
       outStream.write(data, 0, dataSize);
     }
 
+    @Override
     public void writeCompressedBytes(DataOutputStream outStream) 
       throws IllegalArgumentException, IOException {
       throw 
@@ -665,10 +669,12 @@ public class SequenceFile {
       dataSize = length;
     }
     
+    @Override
     public int getSize() {
       return dataSize;
     }
     
+    @Override
     public void writeUncompressedBytes(DataOutputStream outStream)
       throws IOException {
       if (decompressedStream == null) {
@@ -686,6 +692,7 @@ public class SequenceFile {
       }
     }
 
+    @Override
     public void writeCompressedBytes(DataOutputStream outStream) 
       throws IllegalArgumentException, IOException {
       outStream.write(data, 0, dataSize);
@@ -727,6 +734,7 @@ public class SequenceFile {
       return new TreeMap<Text, Text>(this.theMetadata);
     }
     
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(this.theMetadata.size());
       Iterator<Map.Entry<Text, Text>> iter =
@@ -738,6 +746,7 @@ public class SequenceFile {
       }
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       int sz = in.readInt();
       if (sz < 0) throw new IOException("Invalid size: " + sz + " for file metadata object");
@@ -751,6 +760,7 @@ public class SequenceFile {
       }    
     }
 
+    @Override
     public boolean equals(Object other) {
       if (other == null) {
         return false;
@@ -787,11 +797,13 @@ public class SequenceFile {
       return true;
     }
 
+    @Override
     public int hashCode() {
       assert false : "hashCode not designed";
       return 42; // any arbitrary constant will do 
     }
     
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("size: ").append(this.theMetadata.size()).append("\n");
@@ -835,7 +847,7 @@ public class SequenceFile {
     {
       try {                                       
         MessageDigest digester = MessageDigest.getInstance("MD5");
-        long time = System.currentTimeMillis();
+        long time = Time.now();
         digester.update((new UID()+"@"+time).getBytes());
         sync = digester.digest();
       } catch (Exception e) {
@@ -1160,8 +1172,26 @@ public class SequenceFile {
       this.metadata = metadata;
       SerializationFactory serializationFactory = new SerializationFactory(conf);
       this.keySerializer = serializationFactory.getSerializer(keyClass);
+      if (this.keySerializer == null) {
+        throw new IOException(
+            "Could not find a serializer for the Key class: '"
+                + keyClass.getCanonicalName() + "'. "
+                + "Please ensure that the configuration '" +
+                CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                + "properly configured, if you're using"
+                + "custom serialization.");
+      }
       this.keySerializer.open(buffer);
       this.uncompressedValSerializer = serializationFactory.getSerializer(valClass);
+      if (this.uncompressedValSerializer == null) {
+        throw new IOException(
+            "Could not find a serializer for the Value class: '"
+                + valClass.getCanonicalName() + "'. "
+                + "Please ensure that the configuration '" +
+                CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                + "properly configured, if you're using"
+                + "custom serialization.");
+      }
       this.uncompressedValSerializer.open(buffer);
       if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
@@ -1170,6 +1200,15 @@ public class SequenceFile {
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
         this.compressedValSerializer = serializationFactory.getSerializer(valClass);
+        if (this.compressedValSerializer == null) {
+          throw new IOException(
+              "Could not find a serializer for the Value class: '"
+                  + valClass.getCanonicalName() + "'. "
+                  + "Please ensure that the configuration '" +
+                  CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                  + "properly configured, if you're using"
+                  + "custom serialization.");
+        }
         this.compressedValSerializer.open(deflateOut);
       }
       writeFileHeader();
@@ -1222,6 +1261,7 @@ public class SequenceFile {
     Configuration getConf() { return conf; }
     
     /** Close the file. */
+    @Override
     public synchronized void close() throws IOException {
       keySerializer.close();
       uncompressedValSerializer.close();
@@ -1332,6 +1372,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1364,6 +1405,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
 
@@ -1421,6 +1463,7 @@ public class SequenceFile {
     }
     
     /** Compress and flush contents to dfs */
+    @Override
     public synchronized void sync() throws IOException {
       if (noBufferedRecords > 0) {
         super.sync();
@@ -1450,6 +1493,7 @@ public class SequenceFile {
     }
     
     /** Close the file. */
+    @Override
     public synchronized void close() throws IOException {
       if (out != null) {
         sync();
@@ -1458,6 +1502,7 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1490,6 +1535,7 @@ public class SequenceFile {
     }
     
     /** Append a key/value pair. */
+    @Override
     public synchronized void appendRaw(byte[] keyData, int keyOffset,
         int keyLength, ValueBytes val) throws IOException {
       
@@ -1897,6 +1943,15 @@ public class SequenceFile {
           new SerializationFactory(conf);
         this.keyDeserializer =
           getDeserializer(serializationFactory, getKeyClass());
+        if (this.keyDeserializer == null) {
+          throw new IOException(
+              "Could not find a deserializer for the Key class: '"
+                  + getKeyClass().getCanonicalName() + "'. "
+                  + "Please ensure that the configuration '" +
+                  CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                  + "properly configured, if you're using "
+                  + "custom serialization.");
+        }
         if (!blockCompressed) {
           this.keyDeserializer.open(valBuffer);
         } else {
@@ -1904,6 +1959,15 @@ public class SequenceFile {
         }
         this.valDeserializer =
           getDeserializer(serializationFactory, getValueClass());
+        if (this.valDeserializer == null) {
+          throw new IOException(
+              "Could not find a deserializer for the Value class: '"
+                  + getValueClass().getCanonicalName() + "'. "
+                  + "Please ensure that the configuration '" +
+                  CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                  + "properly configured, if you're using "
+                  + "custom serialization.");
+        }
         this.valDeserializer.open(valIn);
       }
     }
@@ -1914,6 +1978,7 @@ public class SequenceFile {
     }
     
     /** Close the file. */
+    @Override
     public synchronized void close() throws IOException {
       // Return the decompressors to the pool
       CodecPool.returnDecompressor(keyLenDecompressor);
@@ -2572,6 +2637,7 @@ public class SequenceFile {
     }
 
     /** Returns the name of the file. */
+    @Override
     public String toString() {
       return filename;
     }
@@ -2902,6 +2968,7 @@ public class SequenceFile {
         mergeSort.mergeSort(pointersCopy, pointers, 0, count);
       }
       class SeqFileComparator implements Comparator<IntWritable> {
+        @Override
         public int compare(IntWritable I, IntWritable J) {
           return comparator.compare(rawBuffer, keyOffsets[I.get()], 
                                     keyLengths[I.get()], rawBuffer, 
@@ -3175,6 +3242,7 @@ public class SequenceFile {
         this.tmpDir = tmpDir;
         this.progress = progress;
       }
+      @Override
       protected boolean lessThan(Object a, Object b) {
         // indicate we're making progress
         if (progress != null) {
@@ -3186,6 +3254,7 @@ public class SequenceFile {
                                   msa.getKey().getLength(), msb.getKey().getData(), 0, 
                                   msb.getKey().getLength()) < 0;
       }
+      @Override
       public void close() throws IOException {
         SegmentDescriptor ms;                           // close inputs
         while ((ms = (SegmentDescriptor)pop()) != null) {
@@ -3193,12 +3262,15 @@ public class SequenceFile {
         }
         minSegment = null;
       }
+      @Override
       public DataOutputBuffer getKey() throws IOException {
         return rawKey;
       }
+      @Override
       public ValueBytes getValue() throws IOException {
         return rawValue;
       }
+      @Override
       public boolean next() throws IOException {
         if (size() == 0)
           return false;
@@ -3226,6 +3298,7 @@ public class SequenceFile {
         return true;
       }
       
+      @Override
       public Progress getProgress() {
         return mergeProgress; 
       }
@@ -3423,6 +3496,7 @@ public class SequenceFile {
         return preserveInput;
       }
       
+      @Override
       public int compareTo(Object o) {
         SegmentDescriptor that = (SegmentDescriptor)o;
         if (this.segmentLength != that.segmentLength) {
@@ -3435,6 +3509,7 @@ public class SequenceFile {
           compareTo(that.segmentPathName.toString());
       }
 
+      @Override
       public boolean equals(Object o) {
         if (!(o instanceof SegmentDescriptor)) {
           return false;
@@ -3449,6 +3524,7 @@ public class SequenceFile {
         return false;
       }
 
+      @Override
       public int hashCode() {
         return 37 * 17 + (int) (segmentOffset^(segmentOffset>>>32));
       }
@@ -3538,12 +3614,14 @@ public class SequenceFile {
       /** The default cleanup. Subclasses can override this with a custom 
        * cleanup 
        */
+      @Override
       public void cleanup() throws IOException {
         super.close();
         if (super.shouldPreserveInput()) return;
         parentContainer.cleanup();
       }
       
+      @Override
       public boolean equals(Object o) {
         if (!(o instanceof LinkedSegmentsDescriptor)) {
           return false;

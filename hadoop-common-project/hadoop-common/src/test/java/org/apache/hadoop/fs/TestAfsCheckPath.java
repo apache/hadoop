@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Test;
@@ -76,7 +77,7 @@ public class TestAfsCheckPath {
     @Override
     public FSDataOutputStream createInternal(Path f, EnumSet<CreateFlag> flag,
         FsPermission absolutePermission, int bufferSize, short replication,
-        long blockSize, Progressable progress, int bytesPerChecksum,
+        long blockSize, Progressable progress, ChecksumOpt checksumOpt,
         boolean createParent) throws IOException {
       // deliberately empty
       return null;

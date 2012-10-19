@@ -27,7 +27,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -37,13 +36,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
@@ -318,8 +316,7 @@ public class TestHAStateTransitions {
    * Test that delegation tokens continue to work after the failover.
    */
   @Test
-  public void testDelegationTokensAfterFailover() throws IOException,
-      URISyntaxException {
+  public void testDelegationTokensAfterFailover() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
@@ -473,7 +470,7 @@ public class TestHAStateTransitions {
       assertFalse(isDTRunning(nn));
       
       banner("Transition 1->2. Should not start secret manager");
-      NameNodeAdapter.leaveSafeMode(nn, false);
+      NameNodeAdapter.leaveSafeMode(nn);
       assertTrue(nn.isStandbyState());
       assertFalse(nn.isInSafeMode());
       assertFalse(isDTRunning(nn));
@@ -498,7 +495,7 @@ public class TestHAStateTransitions {
   
       banner("Transition 1->3->4. Should start secret manager.");
       nn.getRpcServer().transitionToActive(REQ_INFO);
-      NameNodeAdapter.leaveSafeMode(nn, false);
+      NameNodeAdapter.leaveSafeMode(nn);
       assertFalse(nn.isStandbyState());
       assertFalse(nn.isInSafeMode());
       assertTrue(isDTRunning(nn));
@@ -510,7 +507,7 @@ public class TestHAStateTransitions {
       assertFalse(isDTRunning(nn));
   
       banner("Transition 3->4. Should start secret manager");
-      NameNodeAdapter.leaveSafeMode(nn, false);
+      NameNodeAdapter.leaveSafeMode(nn);
       assertFalse(nn.isStandbyState());
       assertFalse(nn.isInSafeMode());
       assertTrue(isDTRunning(nn));

@@ -32,6 +32,19 @@ public class PseudoAuthenticator implements Authenticator {
 
   private static final String USER_NAME_EQ = USER_NAME + "=";
 
+  private ConnectionConfigurator connConfigurator;
+
+  /**
+   * Sets a {@link ConnectionConfigurator} instance to use for
+   * configuring connections.
+   *
+   * @param configurator the {@link ConnectionConfigurator} instance.
+   */
+  @Override
+  public void setConnectionConfigurator(ConnectionConfigurator configurator) {
+    connConfigurator = configurator;
+  }
+
   /**
    * Performs simple authentication against the specified URL.
    * <p/>
@@ -56,6 +69,9 @@ public class PseudoAuthenticator implements Authenticator {
     strUrl += paramSeparator + USER_NAME_EQ + getUserName();
     url = new URL(strUrl);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    if (connConfigurator != null) {
+      conn = connConfigurator.configure(conn);
+    }
     conn.setRequestMethod("OPTIONS");
     conn.connect();
     AuthenticatedURL.extractToken(conn, token);

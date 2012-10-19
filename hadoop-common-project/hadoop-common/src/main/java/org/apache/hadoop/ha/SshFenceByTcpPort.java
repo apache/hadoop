@@ -241,7 +241,7 @@ public class SshFenceByTcpPort extends Configured
       sshPort = DEFAULT_SSH_PORT;
 
       // Parse optional user and ssh port
-      if (arg != null && !"".equals(arg)) {
+      if (arg != null && !arg.isEmpty()) {
         Matcher m = USER_PORT_RE.matcher(arg);
         if (!m.matches()) {
           throw new BadFencingConfigurationException(
@@ -274,6 +274,7 @@ public class SshFenceByTcpPort extends Configured
     static final Log LOG = LogFactory.getLog(
         SshFenceByTcpPort.class.getName() + ".jsch");
 
+    @Override
     public boolean isEnabled(int level) {
       switch (level) {
       case com.jcraft.jsch.Logger.DEBUG:
@@ -291,6 +292,7 @@ public class SshFenceByTcpPort extends Configured
       }
     }
       
+    @Override
     public void log(int level, String message) {
       switch (level) {
       case com.jcraft.jsch.Logger.DEBUG:

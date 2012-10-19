@@ -19,6 +19,8 @@ import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -44,6 +46,9 @@ import java.util.Map;
  * sequence.
  */
 public class KerberosAuthenticator implements Authenticator {
+  
+  private static Logger LOG = LoggerFactory.getLogger(
+      KerberosAuthenticator.class);
 
   /**
    * HTTP header used by the SPNEGO server endpoint during an authentication sequence.
@@ -113,6 +118,18 @@ public class KerberosAuthenticator implements Authenticator {
   private URL url;
   private HttpURLConnection conn;
   private Base64 base64;
+  private ConnectionConfigurator connConfigurator;
+
+  /**
+   * Sets a {@link ConnectionConfigurator} instance to use for
+   * configuring connections.
+   *
+   * @param configurator the {@link ConnectionConfigurator} instance.
+   */
+  @Override
+  public void setConnectionConfigurator(ConnectionConfigurator configurator) {
+    connConfigurator = configurator;
+  }
 
   /**
    * Performs SPNEGO authentication against the specified URL.
@@ -135,11 +152,23 @@ public class KerberosAuthenticator implements Authenticator {
       this.url = url;
       base64 = new Base64(0);
       conn = (HttpURLConnection) url.openConnection();
+      if (connConfigurator != null) {
+        conn = connConfigurator.configure(conn);
+      }
       conn.setRequestMethod(AUTH_HTTP_METHOD);
       conn.connect();
-      if (isNegotiate()) {
+      
+      if (conn.getRequestProperty(AUTHORIZATION) != null && conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+        LOG.debug("JDK performed authentication on our behalf.");
+        // If the JDK already did the SPNEGO back-and-forth for
+        // us, just pull out the token.
+        AuthenticatedURL.extractToken(conn, token);
+        return;
+      } else if (isNegotiate()) {
+        LOG.debug("Performing our own SPNEGO sequence.");
         doSpnegoSequence(token);
       } else {
+        LOG.debug("Using fallback authenticator sequence.");
         getFallBackAuthenticator().authenticate(url, token);
       }
     }
@@ -153,7 +182,11 @@ public class KerberosAuthenticator implements Authenticator {
    * @return the fallback {@link Authenticator}.
    */
   protected Authenticator getFallBackAuthenticator() {
-    return new PseudoAuthenticator();
+    Authenticator auth = new PseudoAuthenticator();
+    if (connConfigurator != null) {
+      auth.setConnectionConfigurator(connConfigurator);
+    }
+    return auth;
   }
 
   /*
@@ -182,10 +215,15 @@ public class KerberosAuthenticator implements Authenticator {
       AccessControlContext context = AccessController.getContext();
       Subject subject = Subject.getSubject(context);
       if (subject == null) {
+        LOG.debug("No subject in context, logging in");
         subject = new Subject();
         LoginContext login = new LoginContext("", subject,
             null, new KerberosConfiguration());
         login.login();
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using subject: " + subject);
       }
       Subject.doAs(subject, new PrivilegedExceptionAction<Void>() {
 
@@ -194,7 +232,8 @@ public class KerberosAuthenticator implements Authenticator {
           GSSContext gssContext = null;
           try {
             GSSManager gssManager = GSSManager.getInstance();
-            String servicePrincipal = "HTTP/" + KerberosAuthenticator.this.url.getHost();
+            String servicePrincipal = KerberosUtil.getServicePrincipal("HTTP",
+                KerberosAuthenticator.this.url.getHost());
             Oid oid = KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL");
             GSSName serviceName = gssManager.createName(servicePrincipal,
                                                         oid);
@@ -244,6 +283,9 @@ public class KerberosAuthenticator implements Authenticator {
   private void sendToken(byte[] outToken) throws IOException, AuthenticationException {
     String token = base64.encodeToString(outToken);
     conn = (HttpURLConnection) url.openConnection();
+    if (connConfigurator != null) {
+      conn = connConfigurator.configure(conn);
+    }
     conn.setRequestMethod(AUTH_HTTP_METHOD);
     conn.setRequestProperty(AUTHORIZATION, NEGOTIATE + " " + token);
     conn.connect();

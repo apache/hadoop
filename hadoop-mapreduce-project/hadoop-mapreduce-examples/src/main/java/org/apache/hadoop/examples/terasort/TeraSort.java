@@ -305,8 +305,7 @@ public class TeraSort extends Configured implements Tool {
         LOG.error(e.getMessage());
         return -1;
       }
-      job.addCacheFile(partitionUri);
-      job.createSymlink();    
+      job.addCacheFile(partitionUri);  
       long end = System.currentTimeMillis();
       System.out.println("Spent " + (end - start) + "ms computing partitions.");
       job.setPartitionerClass(TotalOrderPartitioner.class);

@@ -25,7 +25,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 
 
@@ -41,12 +46,13 @@ public class BlockReaderFactory {
       Configuration conf,
       Socket sock, String file,
       ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
-      long startOffset, long len) throws IOException {
+      long startOffset, long len, DataEncryptionKey encryptionKey)
+          throws IOException {
     int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
         DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
     return newBlockReader(new Conf(conf),
         sock, file, block, blockToken, startOffset,
-        len, bufferSize, true, "");
+        len, bufferSize, true, "", encryptionKey, null);
   }
 
   /**
@@ -73,14 +79,32 @@ public class BlockReaderFactory {
                                      Token<BlockTokenIdentifier> blockToken,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum,
-                                     String clientName)
+                                     String clientName,
+                                     DataEncryptionKey encryptionKey,
+                                     IOStreamPair ioStreams)
                                      throws IOException {
+    
     if (conf.useLegacyBlockReader) {
+      if (encryptionKey != null) {
+        throw new RuntimeException("Encryption is not supported with the legacy block reader.");
+      }
       return RemoteBlockReader.newBlockReader(
           sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);
     } else {
+      if (ioStreams == null) {
+        ioStreams = new IOStreamPair(NetUtils.getInputStream(sock),
+            NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT));
+        if (encryptionKey != null) {
+          IOStreamPair encryptedStreams =
+              DataTransferEncryptor.getEncryptedStreams(
+                  ioStreams.out, ioStreams.in, encryptionKey);
+          ioStreams = encryptedStreams;
+        }
+      }
+      
       return RemoteBlockReader2.newBlockReader(
-          sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);      
+          sock, file, block, blockToken, startOffset, len, bufferSize,
+          verifyChecksum, clientName, encryptionKey, ioStreams);
     }
   }
   

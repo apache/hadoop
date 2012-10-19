@@ -28,13 +28,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -46,18 +43,17 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
-import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * NNStorage is responsible for management of the StorageDirectories used by
@@ -66,8 +62,6 @@ import com.google.common.collect.Maps;
 @InterfaceAudience.Private
 public class NNStorage extends Storage implements Closeable,
     StorageErrorReporter {
-  private static final Log LOG = LogFactory.getLog(NNStorage.class.getName());
-
   static final String DEPRECATED_MESSAGE_DIGEST_PROPERTY = "imageMD5Digest";
   static final String LOCAL_URI_SCHEME = "file";
 
@@ -100,10 +94,12 @@ public class NNStorage extends Storage implements Closeable,
     EDITS,
     IMAGE_AND_EDITS;
 
+    @Override
     public StorageDirType getStorageDirType() {
       return this;
     }
 
+    @Override
     public boolean isOfType(StorageDirType type) {
       if ((this == IMAGE_AND_EDITS) && (type == IMAGE || type == EDITS))
         return true;
@@ -111,7 +107,6 @@ public class NNStorage extends Storage implements Closeable,
     }
   }
 
-  private UpgradeManager upgradeManager = null;
   protected String blockpoolID = ""; // id of the block pool
   
   /**
@@ -550,11 +545,8 @@ public class NNStorage extends Storage implements Closeable,
   
   public static NamespaceInfo newNamespaceInfo()
       throws UnknownHostException {
-    return new NamespaceInfo(
-        newNamespaceID(),
-        newClusterID(),
-        newBlockPoolID(),
-        0L, 0);
+    return new NamespaceInfo(newNamespaceID(), newClusterID(),
+        newBlockPoolID(), 0L);
   }
   
   public void format() throws IOException {
@@ -599,13 +591,6 @@ public class NNStorage extends Storage implements Closeable,
       String sbpid = props.getProperty("blockpoolID");
       setBlockPoolID(sd.getRoot(), sbpid);
     }
-    
-    String sDUS, sDUV;
-    sDUS = props.getProperty("distributedUpgradeState");
-    sDUV = props.getProperty("distributedUpgradeVersion");
-    setDistributedUpgradeState(
-        sDUS == null? false : Boolean.parseBoolean(sDUS),
-        sDUV == null? getLayoutVersion() : Integer.parseInt(sDUV));
     setDeprecatedPropertiesForUpgrade(props);
   }
 
@@ -651,13 +636,6 @@ public class NNStorage extends Storage implements Closeable,
     // Set blockpoolID in version with federation support
     if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
       props.setProperty("blockpoolID", blockpoolID);
-    }
-    boolean uState = getDistributedUpgradeState();
-    int uVersion = getDistributedUpgradeVersion();
-    if(uState && uVersion != getLayoutVersion()) {
-      props.setProperty("distributedUpgradeState", Boolean.toString(uState));
-      props.setProperty("distributedUpgradeVersion",
-                        Integer.toString(uVersion));
     }
   }
   
@@ -731,7 +709,7 @@ public class NNStorage extends Storage implements Closeable,
    * Return the first readable image file for the given txid, or null
    * if no such image can be found
    */
-  File findImageFile(long txid) throws IOException {
+  File findImageFile(long txid) {
     return findFile(NameNodeDirType.IMAGE,
         getImageFileName(txid));
   }
@@ -750,76 +728,6 @@ public class NNStorage extends Storage implements Closeable,
       }
     }
     return null;
-  }
-
-  /**
-   * Set the upgrade manager for use in a distributed upgrade.
-   * @param um The upgrade manager
-   */
-  void setUpgradeManager(UpgradeManager um) {
-    upgradeManager = um;
-  }
-
-  /**
-   * @return The current distribued upgrade state.
-   */
-  boolean getDistributedUpgradeState() {
-    return upgradeManager == null ? false : upgradeManager.getUpgradeState();
-  }
-
-  /**
-   * @return The current upgrade version.
-   */
-  int getDistributedUpgradeVersion() {
-    return upgradeManager == null ? 0 : upgradeManager.getUpgradeVersion();
-  }
-
-  /**
-   * Set the upgrade state and version.
-   * @param uState the new state.
-   * @param uVersion the new version.
-   */
-  private void setDistributedUpgradeState(boolean uState, int uVersion) {
-    if (upgradeManager != null) {
-      upgradeManager.setUpgradeState(uState, uVersion);
-    }
-  }
-
-  /**
-   * Verify that the distributed upgrade state is valid.
-   * @param startOpt the option the namenode was started with.
-   */
-  void verifyDistributedUpgradeProgress(StartupOption startOpt
-                                        ) throws IOException {
-    if(startOpt == StartupOption.ROLLBACK || startOpt == StartupOption.IMPORT)
-      return;
-
-    assert upgradeManager != null : "FSNameSystem.upgradeManager is null.";
-    if(startOpt != StartupOption.UPGRADE) {
-      if(upgradeManager.getUpgradeState())
-        throw new IOException(
-                    "\n   Previous distributed upgrade was not completed. "
-                  + "\n   Please restart NameNode with -upgrade option.");
-      if(upgradeManager.getDistributedUpgrades() != null)
-        throw new IOException("\n   Distributed upgrade for NameNode version "
-                              + upgradeManager.getUpgradeVersion()
-                              + " to current LV " + HdfsConstants.LAYOUT_VERSION
-                              + " is required.\n   Please restart NameNode"
-                              + " with -upgrade option.");
-    }
-  }
-
-  /**
-   * Initialize a distributed upgrade.
-   */
-  void initializeDistributedUpgrade() throws IOException {
-    if(! upgradeManager.initializeUpgrade())
-      return;
-    // write new upgrade state into disk
-    writeAll();
-    LOG.info("\n   Distributed upgrade for NameNode version "
-             + upgradeManager.getUpgradeVersion() + " to current LV "
-             + HdfsConstants.LAYOUT_VERSION + " is initialized.");
   }
 
   /**
@@ -996,7 +904,7 @@ public class NNStorage extends Storage implements Closeable,
     }
     
     int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
-    String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
+    String bpid = "BP-" + rand + "-"+ ip + "-" + Time.now();
     return bpid;
   }
 
@@ -1098,7 +1006,6 @@ public class NNStorage extends Storage implements Closeable,
         getNamespaceID(),
         getClusterID(),
         getBlockPoolID(),
-        getCTime(),
-        getDistributedUpgradeVersion());
+        getCTime());
   }
 }

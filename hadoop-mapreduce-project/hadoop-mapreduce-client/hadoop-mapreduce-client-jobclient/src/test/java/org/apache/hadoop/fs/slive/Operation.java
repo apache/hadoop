@@ -41,7 +41,9 @@ abstract class Operation {
     this.config = cfg;
     this.type = type;
     this.rnd = rnd;
-    this.finder = new PathFinder(cfg, rnd);
+    // Use a new Random instance so that the sequence of file names produced is
+    // the same even in case of unsuccessful operations
+    this.finder = new PathFinder(cfg, new Random(rnd.nextInt()));
   }
 
   /**

@@ -18,29 +18,30 @@
 
 package org.apache.hadoop.hdfs.tools;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ZKFCProtocol;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.test.MockitoUtil;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -54,7 +55,9 @@ public class TestDFSHAAdmin {
   
   private DFSHAAdmin tool;
   private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+  private ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
   private String errOutput;
+  private String output;
   private HAServiceProtocol mockProtocol;
   private ZKFCProtocol mockZkfcProtocol;
   
@@ -110,12 +113,14 @@ public class TestDFSHAAdmin {
     };
     tool.setConf(getHAConf());
     tool.setErrOut(new PrintStream(errOutBytes));
+    tool.setOut(new PrintStream(outBytes));
   }
 
   private void assertOutputContains(String string) {
-    if (!errOutput.contains(string)) {
-      fail("Expected output to contain '" + string + "' but was:\n" +
-          errOutput);
+    if (!errOutput.contains(string) && !output.contains(string)) {
+      fail("Expected output to contain '" + string + 
+          "' but err_output was:\n" + errOutput + 
+          "\n and output was: \n" + output);
     }
   }
   
@@ -142,7 +147,7 @@ public class TestDFSHAAdmin {
 
   @Test
   public void testHelp() throws Exception {
-    assertEquals(-1, runTool("-help"));
+    assertEquals(0, runTool("-help"));
     assertEquals(0, runTool("-help", "transitionToActive"));
     assertOutputContains("Transitions the service into Active");
   }
@@ -377,10 +382,12 @@ public class TestDFSHAAdmin {
   
   private Object runTool(String ... args) throws Exception {
     errOutBytes.reset();
+    outBytes.reset();
     LOG.info("Running: DFSHAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
     errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
-    LOG.info("Output:\n" + errOutput);
+    output = new String(outBytes.toByteArray(), Charsets.UTF_8);
+    LOG.info("Err_output:\n" + errOutput + "\nOutput:\n" + output);
     return ret;
   }
   

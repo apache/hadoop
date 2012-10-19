@@ -37,12 +37,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class DatanodeID implements Comparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {};
 
-  protected String ipAddr;     // IP address
-  protected String hostName;   // hostname
-  protected String storageID;  // unique per cluster storageID
-  protected int xferPort;      // data streaming port
-  protected int infoPort;      // info server port
-  protected int ipcPort;       // IPC server port
+  private String ipAddr;     // IP address
+  private String hostName;   // hostname
+  private String storageID;  // unique per cluster storageID
+  private int xferPort;      // data streaming port
+  private int infoPort;      // info server port
+  private int ipcPort;       // IPC server port
 
   public DatanodeID(DatanodeID from) {
     this(from.getIpAddr(),
@@ -104,7 +104,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   /**
    * @return IP:ipcPort string
    */
-  public String getIpcAddr() {
+  private String getIpcAddr() {
     return ipAddr + ":" + ipcPort;
   }
 
@@ -120,6 +120,29 @@ public class DatanodeID implements Comparable<DatanodeID> {
    */
   public String getXferAddrWithHostname() {
     return hostName + ":" + xferPort;
+  }
+
+  /**
+   * @return hostname:ipcPort
+   */
+  private String getIpcAddrWithHostname() {
+    return hostName + ":" + ipcPort;
+  }
+
+  /**
+   * @param useHostname true to use the DN hostname, use the IP otherwise
+   * @return name:xferPort
+   */
+  public String getXferAddr(boolean useHostname) {
+    return useHostname ? getXferAddrWithHostname() : getXferAddr();
+  }
+
+  /**
+   * @param useHostname true to use the DN hostname, use the IP otherwise
+   * @return name:ipcPort
+   */
+  public String getIpcAddr(boolean useHostname) {
+    return useHostname ? getIpcAddrWithHostname() : getIpcAddr();
   }
 
   /**
@@ -150,6 +173,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return ipcPort;
   }
 
+  @Override
   public boolean equals(Object to) {
     if (this == to) {
       return true;
@@ -161,10 +185,12 @@ public class DatanodeID implements Comparable<DatanodeID> {
             storageID.equals(((DatanodeID)to).getStorageID()));
   }
   
+  @Override
   public int hashCode() {
     return getXferAddr().hashCode()^ storageID.hashCode();
   }
   
+  @Override
   public String toString() {
     return getXferAddr();
   }
@@ -187,6 +213,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * @param that
    * @return as specified by Comparable
    */
+  @Override
   public int compareTo(DatanodeID that) {
     return getXferAddr().compareTo(that.getXferAddr());
   }

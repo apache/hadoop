@@ -68,6 +68,7 @@ public class RenewDelegationTokenServlet extends DfsServlet {
     
     try {
       long result = ugi.doAs(new PrivilegedExceptionAction<Long>() {
+        @Override
         public Long run() throws Exception {
           return nn.getRpcServer().renewDelegationToken(token);
         }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.servlet.FileSystemReleaseFilter;
 
@@ -25,6 +26,7 @@ import org.apache.hadoop.lib.servlet.FileSystemReleaseFilter;
  * Filter that releases FileSystemAccess filesystem instances upon HTTP request
  * completion.
  */
+@InterfaceAudience.Private
 public class HttpFSReleaseFilter extends FileSystemReleaseFilter {
 
   /**

@@ -25,10 +25,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -135,10 +136,10 @@ public class TestLargeDirectoryDelete {
     threads[0].start();
     threads[1].start();
     
-    final long start = System.currentTimeMillis();
+    final long start = Time.now();
     FSNamesystem.BLOCK_DELETION_INCREMENT = 1;
     mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
-    final long end = System.currentTimeMillis();
+    final long end = Time.now();
     threads[0].endThread();
     threads[1].endThread();
     LOG.info("Deletion took " + (end - start) + "msecs");

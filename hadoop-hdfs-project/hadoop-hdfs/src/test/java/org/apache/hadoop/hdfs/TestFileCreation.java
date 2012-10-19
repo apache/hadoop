@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -31,6 +30,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
@@ -39,7 +41,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
 import org.apache.commons.logging.LogFactory;
@@ -51,6 +55,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -67,13 +72,19 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * This class tests various cases during file creation.
  */
-public class TestFileCreation extends junit.framework.TestCase {
+public class TestFileCreation {
   static final String DIR = "/" + TestFileCreation.class.getSimpleName() + "/";
 
   {
@@ -88,6 +99,15 @@ public class TestFileCreation extends junit.framework.TestCase {
   static final int numBlocks = 2;
   static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
+  
+  private static final String[] NON_CANONICAL_PATHS = new String[] {
+    "//foo",
+    "///foo2",
+    "//dir//file",
+    "////test2/file",
+    "/dir/./file2",
+    "/dir/../file3"
+  };
 
   // creates a file but does not close it
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
@@ -122,6 +142,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that server default values can be retrieved on the client side
    */
+  @Test
   public void testServerDefaults() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
@@ -147,19 +168,28 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
   }
 
+  @Test
   public void testFileCreation() throws IOException {
-    checkFileCreation(null);
+    checkFileCreation(null, false);
+  }
+
+  /** Same test but the client should use DN hostnames */
+  @Test
+  public void testFileCreationUsingHostname() throws IOException {
+    assumeTrue(System.getProperty("os.name").startsWith("Linux"));
+    checkFileCreation(null, true);
   }
 
   /** Same test but the client should bind to a local interface */
+  @Test
   public void testFileCreationSetLocalInterface() throws IOException {
     assumeTrue(System.getProperty("os.name").startsWith("Linux"));
 
     // The mini cluster listens on the loopback so we can use it here
-    checkFileCreation("lo");
+    checkFileCreation("lo", false);
 
     try {
-      checkFileCreation("bogus-interface");
+      checkFileCreation("bogus-interface", false);
       fail("Able to specify a bogus interface");
     } catch (UnknownHostException e) {
       assertEquals("No such interface bogus-interface", e.getMessage());
@@ -169,16 +199,28 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test if file creation and disk space consumption works right
    * @param netIf the local interface, if any, clients should use to access DNs
+   * @param useDnHostname whether the client should contact DNs by hostname
    */
-  public void checkFileCreation(String netIf) throws IOException {
+  public void checkFileCreation(String netIf, boolean useDnHostname)
+      throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (netIf != null) {
       conf.set(DFSConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
     }
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
+    if (useDnHostname) {
+      // Since the mini cluster only listens on the loopback we have to
+      // ensure the hostname used to access DNs maps to the loopback. We
+      // do this by telling the DN to advertise localhost as its hostname
+      // instead of the default hostname.
+      conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
+    }
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .checkDataNodeHostConfig(true)
+      .build();
     FileSystem fs = cluster.getFileSystem();
     try {
 
@@ -254,6 +296,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test deleteOnExit
    */
+  @Test
   public void testDeleteOnExit() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
@@ -314,8 +357,63 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   /**
+   * Test that a file which is open for write is overwritten by another
+   * client. Regression test for HDFS-3755.
+   */
+  @Test
+  public void testOverwriteOpenForWrite() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    SimulatedFSDataset.setFactory(conf);
+    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    
+    UserGroupInformation otherUgi = UserGroupInformation.createUserForTesting(
+        "testuser", new String[]{"testgroup"});
+    FileSystem fs2 = otherUgi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(cluster.getConfiguration(0));
+      }
+    });
+    
+    try {
+      Path p = new Path("/testfile");
+      FSDataOutputStream stm1 = fs.create(p);
+      stm1.write(1);
+      stm1.hflush();
+
+      // Create file again without overwrite
+      try {
+        fs2.create(p, false);
+        fail("Did not throw!");
+      } catch (IOException abce) {
+        GenericTestUtils.assertExceptionContains("already being created by",
+            abce);
+      }
+      
+      FSDataOutputStream stm2 = fs2.create(p, true);
+      stm2.write(2);
+      stm2.close();
+      
+      try {
+        stm1.close();
+        fail("Should have exception closing stm1 since it was deleted");
+      } catch (IOException ioe) {
+        GenericTestUtils.assertExceptionContains("File is not open for writing", ioe);
+      }
+      
+    } finally {
+      IOUtils.closeStream(fs);
+      IOUtils.closeStream(fs2);
+      cluster.shutdown();
+    }
+  }
+  
+  /**
    * Test that file data does not become corrupted even in the face of errors.
    */
+  @Test
   public void testFileCreationError1() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
@@ -388,6 +486,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Test that the filesystem removes the last block from a file if its
    * lease expires.
    */
+  @Test
   public void testFileCreationError2() throws IOException {
     long leasePeriod = 1000;
     System.out.println("testFileCreationError2 start");
@@ -453,6 +552,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   /** test addBlock(..) when replication<min and excludeNodes==null. */
+  @Test
   public void testFileCreationError3() throws IOException {
     System.out.println("testFileCreationError3 start");
     Configuration conf = new HdfsConfiguration();
@@ -484,10 +584,9 @@ public class TestFileCreation extends junit.framework.TestCase {
 
   /**
    * Test that file leases are persisted across namenode restarts.
-   * This test is currently not triggered because more HDFS work is 
-   * is needed to handle persistent leases.
    */
-  public void xxxtestFileCreationNamenodeRestart() throws IOException {
+  @Test
+  public void testFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -625,6 +724,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that all open files are closed when client dies abnormally.
    */
+  @Test
   public void testDFSClientDeath() throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     System.out.println("Testing adbornal client death.");
@@ -661,6 +761,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test file creation using createNonRecursive().
    */
+  @Test
   public void testFileCreationNonRecursive() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
@@ -668,13 +769,13 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
-    final Path path = new Path("/" + System.currentTimeMillis()
+    final Path path = new Path("/" + Time.now()
         + "-testFileCreationNonRecursive");
     FSDataOutputStream out = null;
 
     try {
       IOException expectedException = null;
-      final String nonExistDir = "/non-exist-" + System.currentTimeMillis();
+      final String nonExistDir = "/non-exist-" + Time.now();
 
       fs.delete(new Path(nonExistDir), true);
       EnumSet<CreateFlag> createFlag = EnumSet.of(CreateFlag.CREATE);
@@ -755,6 +856,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 /**
  * Test that file data becomes available before file is closed.
  */
+  @Test
   public void testFileCreationSimulated() throws IOException {
     simulatedStorage = true;
     testFileCreation();
@@ -764,6 +866,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test creating two files at the same time. 
    */
+  @Test
   public void testConcurrentFileCreation() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -796,6 +899,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test creating a file whose data gets sync when closed
    */
+  @Test
   public void testFileCreationSyncOnClose() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, true);
@@ -831,6 +935,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Then change lease period and wait for lease recovery.
    * Finally, read the block directly from each Datanode and verify the content.
    */
+  @Test
   public void testLeaseExpireHardLimit() throws Exception {
     System.out.println("testLeaseExpireHardLimit start");
     final long leasePeriod = 1000;
@@ -894,6 +999,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   // test closing file system before all file handles are closed.
+  @Test
   public void testFsClose() throws Exception {
     System.out.println("test file system close start");
     final int DATANODE_NUM = 3;
@@ -922,6 +1028,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   // test closing file after cluster is shutdown
+  @Test
   public void testFsCloseAfterClusterShutdown() throws IOException {
     System.out.println("test testFsCloseAfterClusterShutdown start");
     final int DATANODE_NUM = 3;
@@ -966,4 +1073,93 @@ public class TestFileCreation extends junit.framework.TestCase {
       }
     }
   }
+
+  /**
+   * Regression test for HDFS-3626. Creates a file using a non-canonical path
+   * (i.e. with extra slashes between components) and makes sure that the NN
+   * can properly restart.
+   * 
+   * This test RPCs directly to the NN, to ensure that even an old client
+   * which passes an invalid path won't cause corrupt edits.
+   */
+  @Test
+  public void testCreateNonCanonicalPathAndRestartRpc() throws Exception {
+    doCreateTest(CreationMethod.DIRECT_NN_RPC);
+  }
+  
+  /**
+   * Another regression test for HDFS-3626. This one creates files using
+   * a Path instantiated from a string object.
+   */
+  @Test
+  public void testCreateNonCanonicalPathAndRestartFromString()
+      throws Exception {
+    doCreateTest(CreationMethod.PATH_FROM_STRING);
+  }
+
+  /**
+   * Another regression test for HDFS-3626. This one creates files using
+   * a Path instantiated from a URI object.
+   */
+  @Test
+  public void testCreateNonCanonicalPathAndRestartFromUri()
+      throws Exception {
+    doCreateTest(CreationMethod.PATH_FROM_URI);
+  }
+  
+  private static enum CreationMethod {
+    DIRECT_NN_RPC,
+    PATH_FROM_URI,
+    PATH_FROM_STRING
+  };
+  private void doCreateTest(CreationMethod method) throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      NamenodeProtocols nnrpc = cluster.getNameNodeRpc();
+
+      for (String pathStr : NON_CANONICAL_PATHS) {
+        System.out.println("Creating " + pathStr + " by " + method);
+        switch (method) {
+        case DIRECT_NN_RPC:
+          try {
+            nnrpc.create(pathStr, new FsPermission((short)0755), "client",
+                new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
+                true, (short)1, 128*1024*1024L);
+            fail("Should have thrown exception when creating '"
+                + pathStr + "'" + " by " + method);
+          } catch (InvalidPathException ipe) {
+            // When we create by direct NN RPC, the NN just rejects the
+            // non-canonical paths, rather than trying to normalize them.
+            // So, we expect all of them to fail. 
+          }
+          break;
+          
+        case PATH_FROM_URI:
+        case PATH_FROM_STRING:
+          // Unlike the above direct-to-NN case, we expect these to succeed,
+          // since the Path constructor should normalize the path.
+          Path p;
+          if (method == CreationMethod.PATH_FROM_URI) {
+            p = new Path(new URI(fs.getUri() + pathStr));
+          } else {
+            p = new Path(fs.getUri() + pathStr);  
+          }
+          FSDataOutputStream stm = fs.create(p);
+          IOUtils.closeStream(stm);
+          break;
+        default:
+          throw new AssertionError("bad method: " + method);
+        }
+      }
+      
+      cluster.restartNameNode();
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 }

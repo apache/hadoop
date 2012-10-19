@@ -34,6 +34,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -52,7 +54,6 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.compress.snappy.LoadSnappy;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
@@ -101,14 +102,9 @@ public class TestCodec {
   
   @Test
   public void testSnappyCodec() throws IOException {
-    if (LoadSnappy.isAvailable()) {
-      if (LoadSnappy.isLoaded()) {
-        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
-      }
-      else {
-        Assert.fail("Snappy native available but Hadoop native not");
-      }
+    if (SnappyCodec.isNativeCodeLoaded()) {
+      codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
     }
   }
   
@@ -202,6 +198,15 @@ public class TestCodec {
       v2.readFields(inflateIn);
       assertTrue("original and compressed-then-decompressed-output not equal",
                  k1.equals(k2) && v1.equals(v2));
+      
+      // original and compressed-then-decompressed-output have the same hashCode
+      Map<RandomDatum, String> m = new HashMap<RandomDatum, String>();
+      m.put(k1, k1.toString());
+      m.put(v1, v1.toString());
+      String result = m.get(k2);
+      assertEquals("k1 and k2 hashcode not equal", result, k1.toString());
+      result = m.get(v2);
+      assertEquals("v1 and v2 hashcode not equal", result, v1.toString());
     }
 
     // De-compress data byte-at-a-time
@@ -723,6 +728,55 @@ public class TestCodec {
       r.close();
       new File(filename).delete();
     }
+  }
+
+  @Test
+  public void testGzipLongOverflow() throws IOException {
+    LOG.info("testGzipLongOverflow");
+
+    // Don't use native libs for this test.
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, false);
+    assertFalse("ZlibFactory is using native libs against request",
+        ZlibFactory.isNativeZlibLoaded(conf));
+
+    // Ensure that the CodecPool has a BuiltInZlibInflater in it.
+    Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
+    assertNotNull("zlibDecompressor is null!", zlibDecompressor);
+    assertTrue("ZlibFactory returned unexpected inflator",
+        zlibDecompressor instanceof BuiltInZlibInflater);
+    CodecPool.returnDecompressor(zlibDecompressor);
+
+    // Now create a GZip text file.
+    String tmpDir = System.getProperty("test.build.data", "/tmp/");
+    Path f = new Path(new Path(tmpDir), "testGzipLongOverflow.bin.gz");
+    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+      new GZIPOutputStream(new FileOutputStream(f.toString()))));
+
+    final int NBUF = 1024 * 4 + 1;
+    final char[] buf = new char[1024 * 1024];
+    for (int i = 0; i < buf.length; i++) buf[i] = '\0';
+    for (int i = 0; i < NBUF; i++) {
+      bw.write(buf);
+    }
+    bw.close();
+
+    // Now read it back, using the CodecPool to establish the
+    // decompressor to use.
+    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodec codec = ccf.getCodec(f);
+    Decompressor decompressor = CodecPool.getDecompressor(codec);
+    FileSystem fs = FileSystem.getLocal(conf);
+    InputStream is = fs.open(f);
+    is = codec.createInputStream(is, decompressor);
+    BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    for (int j = 0; j < NBUF; j++) {
+      int n = br.read(buf);
+      assertEquals("got wrong read length!", n, buf.length);
+      for (int i = 0; i < buf.length; i++)
+        assertEquals("got wrong byte!", buf[i], '\0');
+    }
+    br.close();
   }
 
   public void testGzipCodecWrite(boolean useNative) throws IOException {

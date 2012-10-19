@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.record.compiler.*;
 import java.util.ArrayList;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileNotFoundException;

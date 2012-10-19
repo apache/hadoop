@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.service.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.lang.XException;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServiceException;
@@ -38,10 +39,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@InterfaceAudience.Private
 public class ProxyUserService extends BaseService implements ProxyUser {
   private static Logger LOG = LoggerFactory.getLogger(ProxyUserService.class);
 
-  public enum ERROR implements XException.ERROR {
+  @InterfaceAudience.Private
+  public static enum ERROR implements XException.ERROR {
     PRXU01("Could not normalize host name [{0}], {1}"),
     PRXU02("Missing [{0}] property");
 

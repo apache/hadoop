@@ -76,8 +76,7 @@ class MethodMetric extends MutableMetric {
             Object ret = method.invoke(obj, (Object[])null);
             if (isInt(type)) rb.addCounter(info, ((Integer) ret).intValue());
             else rb.addCounter(info, ((Long) ret).longValue());
-          }
-          catch (Exception ex) {
+          } catch (Exception ex) {
             LOG.error("Error invoking method "+ method.getName(), ex);
           }
         }
@@ -113,8 +112,7 @@ class MethodMetric extends MutableMetric {
             else if (isLong(t)) rb.addGauge(info, ((Long) ret).longValue());
             else if (isFloat(t)) rb.addGauge(info, ((Float) ret).floatValue());
             else rb.addGauge(info, ((Double) ret).doubleValue());
-          }
-          catch (Exception ex) {
+          } catch (Exception ex) {
             LOG.error("Error invoking method "+ method.getName(), ex);
           }
         }
@@ -130,8 +128,7 @@ class MethodMetric extends MutableMetric {
           try {
             Object ret = method.invoke(obj, (Object[]) null);
             rb.tag(info, (String) ret);
-          }
-          catch (Exception ex) {
+          } catch (Exception ex) {
             LOG.error("Error invoking method "+ method.getName(), ex);
           }
         }

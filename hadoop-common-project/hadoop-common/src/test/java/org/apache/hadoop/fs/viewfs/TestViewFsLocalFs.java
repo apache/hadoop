@@ -26,6 +26,7 @@ import org.junit.Before;
 
 public class TestViewFsLocalFs extends ViewFsBaseTest {
 
+  @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs
@@ -34,6 +35,7 @@ public class TestViewFsLocalFs extends ViewFsBaseTest {
     
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();

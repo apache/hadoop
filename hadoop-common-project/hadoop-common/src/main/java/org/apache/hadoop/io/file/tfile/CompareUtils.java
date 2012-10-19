@@ -68,6 +68,7 @@ class CompareUtils {
       magnitude = m;
     }
 
+    @Override
     public long magnitude() {
       return magnitude;
     }

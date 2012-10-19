@@ -473,5 +473,10 @@
    <!--
      The above 2 fields are accessed locally and only via methods that are synchronized. 
      -->
-  
+ 
+   <Match>
+     <Class name="org.apache.hadoop.mapred.ShuffleHandler" />
+      <Field name="sslFileBufferSize" />
+     <Bug pattern="IS2_INCONSISTENT_SYNC" />
+   </Match> 
  </FindBugsFilter>

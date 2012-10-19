@@ -17,18 +17,20 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.junit.Test;
 
 /** Test NameNode port defaulting code. */
-public class TestDefaultNameNodePort extends TestCase {
+public class TestDefaultNameNodePort {
 
+  @Test
   public void testGetAddressFromString() throws Exception {
     assertEquals(NameNode.getAddress("foo").getPort(),
                  NameNode.DEFAULT_PORT);
@@ -40,6 +42,7 @@ public class TestDefaultNameNodePort extends TestCase {
                  555);
   }
 
+  @Test
   public void testGetAddressFromConf() throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://foo/");
@@ -50,6 +53,7 @@ public class TestDefaultNameNodePort extends TestCase {
     assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
   }
 
+  @Test
   public void testGetUri() {
     assertEquals(NameNode.getUri(new InetSocketAddress("foo", 555)),
                  URI.create("hdfs://foo:555"));

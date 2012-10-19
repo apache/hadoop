@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -187,6 +187,7 @@ public class FSDirectory implements Closeable {
   /**
    * Shutdown the filestore
    */
+  @Override
   public void close() throws IOException {
     fsImage.close();
   }
@@ -212,8 +213,9 @@ public class FSDirectory implements Closeable {
 
   /**
    * Add the given filename to the fs.
-   * @throws QuotaExceededException 
-   * @throws FileAlreadyExistsException 
+   * @throws FileAlreadyExistsException
+   * @throws QuotaExceededException
+   * @throws UnresolvedLinkException
    */
   INodeFileUnderConstruction addFile(String path, 
                 PermissionStatus permissions,
@@ -229,8 +231,15 @@ public class FSDirectory implements Closeable {
 
     // Always do an implicit mkdirs for parent directory tree.
     long modTime = now();
-    if (!mkdirs(new Path(path).getParent().toString(), permissions, true,
-        modTime)) {
+    
+    Path parent = new Path(path).getParent();
+    if (parent == null) {
+      // Trying to add "/" as a file - this path has no
+      // parent -- avoids an NPE below.
+      return null;
+    }
+    
+    if (!mkdirs(parent.toString(), permissions, true, modTime)) {
       return null;
     }
     INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(
@@ -257,8 +266,6 @@ public class FSDirectory implements Closeable {
     return newNode;
   }
 
-  /**
-   */
   INode unprotectedAddFile( String path, 
                             PermissionStatus permissions,
                             short replication,
@@ -267,8 +274,7 @@ public class FSDirectory implements Closeable {
                             long preferredBlockSize,
                             boolean underConstruction,
                             String clientName,
-                            String clientMachine)
-      throws UnresolvedLinkException {
+                            String clientMachine) {
     INode newNode;
     assert hasWriteLock();
     if (underConstruction) {
@@ -284,13 +290,18 @@ public class FSDirectory implements Closeable {
     try {
       newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
     } catch (IOException e) {
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+            "DIR* FSDirectory.unprotectedAddFile: exception when add " + path
+                + " to the file system", e);
+      }
       return null;
     }
     return newNode;
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
-      INode newNode, boolean propagateModTime) throws UnresolvedLinkException {
+      INode newNode, boolean propagateModTime) {
     // NOTE: This does not update space counts for parents
     INodeDirectory newParent = null;
     writeLock();
@@ -337,13 +348,13 @@ public class FSDirectory implements Closeable {
 
       // check quota limits and updated space consumed
       updateCount(inodes, inodes.length-1, 0,
-          fileINode.getPreferredBlockSize()*fileINode.getReplication(), true);
+          fileINode.getPreferredBlockSize()*fileINode.getBlockReplication(), true);
 
       // associate new last block for the file
       BlockInfoUnderConstruction blockInfo =
         new BlockInfoUnderConstruction(
             block,
-            fileINode.getReplication(),
+            fileINode.getBlockReplication(),
             BlockUCState.UNDER_CONSTRUCTION,
             targets);
       getBlockManager().addBlockCollection(blockInfo, fileINode);
@@ -434,7 +445,7 @@ public class FSDirectory implements Closeable {
     // update space consumed
     INode[] pathINodes = getExistingPathINodes(path);
     updateCount(pathINodes, pathINodes.length-1, 0,
-        -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
+        -fileNode.getPreferredBlockSize()*fileNode.getBlockReplication(), true);
   }
 
   /**
@@ -813,7 +824,7 @@ public class FSDirectory implements Closeable {
       return null;
     }
     INodeFile fileNode = (INodeFile)inode;
-    final short oldRepl = fileNode.getReplication();
+    final short oldRepl = fileNode.getBlockReplication();
 
     // check disk quota
     long dsDelta = (replication - oldRepl) * (fileNode.diskspaceConsumed()/oldRepl);
@@ -2053,7 +2064,7 @@ public class FSDirectory implements Closeable {
      if (node instanceof INodeFile) {
        INodeFile fileNode = (INodeFile)node;
        size = fileNode.computeFileSize(true);
-       replication = fileNode.getReplication();
+       replication = fileNode.getBlockReplication();
        blocksize = fileNode.getPreferredBlockSize();
      }
      return new HdfsFileStatus(
@@ -2083,7 +2094,7 @@ public class FSDirectory implements Closeable {
       if (node instanceof INodeFile) {
         INodeFile fileNode = (INodeFile)node;
         size = fileNode.computeFileSize(true);
-        replication = fileNode.getReplication();
+        replication = fileNode.getBlockReplication();
         blocksize = fileNode.getPreferredBlockSize();
         loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
             fileNode.getBlocks(), fileNode.computeFileSize(false),

@@ -27,6 +27,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /** 
  * This class extends the primary identifier of a Datanode with ephemeral
@@ -36,13 +37,13 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeInfo extends DatanodeID implements Node {
-  protected long capacity;
-  protected long dfsUsed;
-  protected long remaining;
-  protected long blockPoolUsed;
-  protected long lastUpdate;
-  protected int xceiverCount;
-  protected String location = NetworkTopology.DEFAULT_RACK;
+  private long capacity;
+  private long dfsUsed;
+  private long remaining;
+  private long blockPoolUsed;
+  private long lastUpdate;
+  private int xceiverCount;
+  private String location = NetworkTopology.DEFAULT_RACK;
   
   // Datanode administrative states
   public enum AdminStates {
@@ -56,6 +57,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.value = v;
     }
 
+    @Override
     public String toString() {
       return value;
     }
@@ -79,8 +81,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
     this.location = from.getNetworkLocation();
-    this.adminState = from.adminState;
-    this.hostName = from.hostName;
+    this.adminState = from.getAdminState();
   }
 
   public DatanodeInfo(DatanodeID nodeID) {
@@ -126,6 +127,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
   
   /** Network location name */
+  @Override
   public String getName() {
     return getXferAddr();
   }
@@ -200,9 +202,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /** network location */
+  @Override
   public synchronized String getNetworkLocation() {return location;}
     
   /** Sets the network location */
+  @Override
   public synchronized void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
@@ -317,7 +321,24 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     return adminState;
   }
-
+ 
+  /**
+   * Check if the datanode is in stale state. Here if 
+   * the namenode has not received heartbeat msg from a 
+   * datanode for more than staleInterval (default value is
+   * {@link DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT}),
+   * the datanode will be treated as stale node.
+   * 
+   * @param staleInterval
+   *          the time interval for marking the node as stale. If the last
+   *          update time is beyond the given time interval, the node will be
+   *          marked as stale.
+   * @return true if the node is stale
+   */
+  public boolean isStale(long staleInterval) {
+    return (Time.now() - lastUpdate) >= staleInterval;
+  }
+  
   /**
    * Sets the admin state of this node.
    */
@@ -334,13 +355,17 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private transient Node parent; //its parent
 
   /** Return this node's parent */
+  @Override
   public Node getParent() { return parent; }
+  @Override
   public void setParent(Node parent) {this.parent = parent;}
    
   /** Return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
+  @Override
   public int getLevel() { return level; }
+  @Override
   public void setLevel(int level) {this.level = level;}
 
   @Override

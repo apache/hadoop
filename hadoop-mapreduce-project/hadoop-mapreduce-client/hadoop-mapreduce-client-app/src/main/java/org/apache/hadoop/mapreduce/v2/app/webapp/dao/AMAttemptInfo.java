@@ -24,6 +24,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -63,8 +64,8 @@ public class AMAttemptInfo {
     ContainerId containerId = amInfo.getContainerId();
     if (containerId != null) {
       this.containerId = containerId.toString();
-      this.logsLink = join("http://" + nodeHttpAddress,
-          ujoin("node", "containerlogs", this.containerId));
+      this.logsLink = join(HttpConfig.getSchemePrefix() + nodeHttpAddress,
+          ujoin("node", "containerlogs", this.containerId, user));
     }
   }
 

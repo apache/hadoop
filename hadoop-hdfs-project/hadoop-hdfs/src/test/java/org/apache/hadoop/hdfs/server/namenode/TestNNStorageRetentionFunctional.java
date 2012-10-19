@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.apache.hadoop.test.GenericTestUtils.assertGlobEquals;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -30,11 +35,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
-
-import static org.apache.hadoop.test.GenericTestUtils.assertGlobEquals;
-import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
-import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
-import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
 
 /**

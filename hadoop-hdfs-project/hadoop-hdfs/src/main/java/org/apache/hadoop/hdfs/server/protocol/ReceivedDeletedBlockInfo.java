@@ -82,6 +82,7 @@ public class ReceivedDeletedBlockInfo {
     return status;
   }
 
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof ReceivedDeletedBlockInfo)) {
       return false;
@@ -93,6 +94,7 @@ public class ReceivedDeletedBlockInfo {
             this.delHints != null && this.delHints.equals(other.delHints));
   }
 
+  @Override
   public int hashCode() {
     assert false : "hashCode not designed";
     return 0; 
@@ -106,6 +108,7 @@ public class ReceivedDeletedBlockInfo {
     return status == BlockStatus.DELETED_BLOCK;
   }
 
+  @Override
   public String toString() {
     return block.toString() + ", status: " + status +
       ", delHint: " + delHints;

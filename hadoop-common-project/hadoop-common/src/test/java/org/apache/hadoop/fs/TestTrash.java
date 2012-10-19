@@ -26,12 +26,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 
 /**
  * This class tests commands from Trash.
@@ -66,6 +69,7 @@ public class TestTrash extends TestCase {
 
     // filter that matches all the files that start with fileName*
     PathFilter pf = new PathFilter() {
+      @Override
       public boolean accept(Path file) {
         return file.getName().startsWith(prefix);
       }
@@ -97,7 +101,6 @@ public class TestTrash extends TestCase {
   }
 
   /**
-   * 
    * Test trash for the shell's delete command for the default file system
    * specified in the paramter conf
    * @param conf 
@@ -110,10 +113,10 @@ public class TestTrash extends TestCase {
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
 
-    conf.set(FS_TRASH_INTERVAL_KEY, "0"); // disabled
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 0); // disabled
     assertFalse(new Trash(conf).isEnabled());
 
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 minute
     assertTrue(new Trash(conf).isEnabled());
 
     FsShell shell = new FsShell();
@@ -427,14 +430,46 @@ public class TestTrash extends TestCase {
       String output = byteStream.toString();
       System.setOut(stdout);
       System.setErr(stderr);
-      assertTrue("skipTrash wasn't suggested as remedy to failed rm command",
-        output.indexOf(("Consider using -skipTrash option")) != -1 );
+      assertTrue("skipTrash wasn't suggested as remedy to failed rm command" +
+          " or we deleted / even though we could not get server defaults",
+          output.indexOf("Consider using -skipTrash option") != -1 ||
+          output.indexOf("Failed to determine server trash configuration") != -1);
+    }
+
+    // Verify old checkpoint format is recognized
+    {
+      // emulate two old trash checkpoint directories, one that is old enough
+      // to be deleted on the next expunge and one that isn't.
+      long trashInterval = conf.getLong(FS_TRASH_INTERVAL_KEY,
+          FS_TRASH_INTERVAL_DEFAULT);
+      long now = Time.now();
+      DateFormat oldCheckpointFormat = new SimpleDateFormat("yyMMddHHmm");
+      Path dirToDelete = new Path(trashRoot.getParent(),
+          oldCheckpointFormat.format(now - (trashInterval * 60 * 1000) - 1));
+      Path dirToKeep = new Path(trashRoot.getParent(),
+          oldCheckpointFormat.format(now));
+      mkdir(trashRootFs, dirToDelete);
+      mkdir(trashRootFs, dirToKeep);
+
+      // Clear out trash
+      int rc = -1;
+      try {
+        rc = shell.run(new String [] { "-expunge" } );
+      } catch (Exception e) {
+        System.err.println("Exception raised from fs expunge " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, rc);
+      assertFalse("old checkpoint format not recognized",
+          trashRootFs.exists(dirToDelete));
+      assertTrue("old checkpoint format directory should not be removed",
+          trashRootFs.exists(dirToKeep));
     }
 
   }
 
   public static void trashNonDefaultFS(Configuration conf) throws IOException {
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 minute
     // attempt non-default FileSystem trash
     {
       final FileSystem lfs = FileSystem.getLocal(conf);
@@ -562,6 +597,7 @@ public class TestTrash extends TestCase {
       super();
       this.home = home;
     }
+    @Override
     public Path getHomeDirectory() {
       return home;
     }
@@ -579,7 +615,7 @@ public class TestTrash extends TestCase {
     FileSystem fs = FileSystem.getLocal(conf);
     
     conf.set("fs.defaultFS", fs.getUri().toString());
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); //minutes..
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); //minutes..
     FsShell shell = new FsShell();
     shell.setConf(conf);
     //Path trashRoot = null;
@@ -600,7 +636,7 @@ public class TestTrash extends TestCase {
       
       writeFile(fs, myFile, 10);
       
-      start = System.currentTimeMillis();
+      start = Time.now();
       
       try {
         retVal = shell.run(args);
@@ -612,7 +648,7 @@ public class TestTrash extends TestCase {
       
       assertTrue(retVal == 0);
       
-      long iterTime = System.currentTimeMillis() - start;
+      long iterTime = Time.now() - start;
       // take median of the first 10 runs
       if(i<10) {
         if(i==0) {

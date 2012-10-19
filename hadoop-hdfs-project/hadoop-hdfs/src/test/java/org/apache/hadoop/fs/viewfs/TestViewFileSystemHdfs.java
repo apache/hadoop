@@ -80,6 +80,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     cluster.shutdown();   
   }
 
+  @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs
@@ -89,6 +90,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     super.setUp();
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();
@@ -115,7 +117,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
   @Override
   int getExpectedDelegationTokenCount() {
-    return 9;
+    return 2; // Mount points to 2 unique hdfs 
   }
 
   @Override

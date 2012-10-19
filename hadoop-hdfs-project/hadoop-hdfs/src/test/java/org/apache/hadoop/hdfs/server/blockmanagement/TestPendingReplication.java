@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import junit.framework.TestCase;
-import java.lang.System;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.junit.Test;
 
 /**
  * This class tests the internals of PendingReplicationBlocks.java
  */
-public class TestPendingReplication extends TestCase {
+public class TestPendingReplication {
   final static int TIMEOUT = 3;     // 3 seconds
 
+  @Test
   public void testPendingReplication() {
     PendingReplicationBlocks pendingReplications;
     pendingReplications = new PendingReplicationBlocks(TIMEOUT * 1000);

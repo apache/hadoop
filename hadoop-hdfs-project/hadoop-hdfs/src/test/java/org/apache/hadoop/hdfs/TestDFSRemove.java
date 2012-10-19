@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -26,8 +28,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.junit.Test;
 
-public class TestDFSRemove extends junit.framework.TestCase {
+public class TestDFSRemove {
   final Path dir = new Path("/test/remove/");
 
   void list(FileSystem fs, String name) throws IOException {
@@ -51,6 +54,7 @@ public class TestDFSRemove extends junit.framework.TestCase {
     return total;
   }
   
+  @Test
   public void testRemove() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
@@ -43,7 +44,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -172,14 +173,24 @@ public class EditLogTailer {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
         "Tailer thread should not be running once failover starts");
-    try {
-      doTailEdits();
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    }
+    // Important to do tailing as the login user, in case the shared
+    // edits storage is implemented by a JournalManager that depends
+    // on security credentials to access the logs (eg QuorumJournalManager).
+    SecurityUtil.doAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        try {
+          doTailEdits();
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+        return null;
+      }
+    });
   }
   
-  private void doTailEdits() throws IOException, InterruptedException {
+  @VisibleForTesting
+  void doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
@@ -316,7 +327,7 @@ public class EditLogTailer {
         } catch (Throwable t) {
           LOG.fatal("Unknown error encountered while tailing edits. " +
               "Shutting down standby NN.", t);
-          terminate(1, t.getMessage());
+          terminate(1, t);
         }
 
         try {

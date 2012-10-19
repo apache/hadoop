@@ -639,6 +639,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
     init();
   }
 
+  @Override
   public void write(final int b) throws IOException {
     if (this.out != null) {
       write0(b);
@@ -704,6 +705,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
   /**
   * Overriden to close the stream.
   */
+  @Override
   protected void finalize() throws Throwable {
     finish();
     super.finalize();
@@ -726,6 +728,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
     }
   }
 
+  @Override
   public void close() throws IOException {
     if (out != null) {
       OutputStream outShadow = this.out;
@@ -739,6 +742,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
     }
   }
   
+  @Override
   public void flush() throws IOException {
     OutputStream outShadow = this.out;
     if (outShadow != null) {
@@ -849,6 +853,7 @@ public class CBZip2OutputStream extends OutputStream implements BZip2Constants {
     return this.blockSize100k;
   }
 
+  @Override
   public void write(final byte[] buf, int offs, final int len)
       throws IOException {
     if (offs < 0) {

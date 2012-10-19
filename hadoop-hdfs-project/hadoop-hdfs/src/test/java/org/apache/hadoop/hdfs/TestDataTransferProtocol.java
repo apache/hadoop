@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -29,13 +33,10 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -67,13 +68,13 @@ import org.mockito.Mockito;
  * This tests data transfer protocol handling in the Datanode. It sends
  * various forms of wrong data and verifies that Datanode handles it well.
  */
-public class TestDataTransferProtocol extends TestCase {
+public class TestDataTransferProtocol {
   
   private static final Log LOG = LogFactory.getLog(
                     "org.apache.hadoop.hdfs.TestDataTransferProtocol");
 
   private static final DataChecksum DEFAULT_CHECKSUM =
-    DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32C, 512);
+    DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 512);
   
   DatanodeID datanode;
   InetSocketAddress dnAddr;
@@ -139,13 +140,6 @@ public class TestDataTransferProtocol extends TestCase {
     }
   }
   
-  void createFile(FileSystem fs, Path path, int fileLen) throws IOException {
-    byte [] arr = new byte[fileLen];
-    FSDataOutputStream out = fs.create(path);
-    out.write(arr);
-    out.close();
-  }
-  
   void readFile(FileSystem fs, Path path, int fileLen) throws IOException {
     byte [] arr = new byte[fileLen];
     FSDataInputStream in = fs.open(path);
@@ -205,7 +199,8 @@ public class TestDataTransferProtocol extends TestCase {
     }
   }
   
-  @Test public void testOpWrite() throws IOException {
+  @Test 
+  public void testOpWrite() throws IOException {
     int numDataNodes = 1;
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
@@ -333,7 +328,8 @@ public class TestDataTransferProtocol extends TestCase {
     }
   }
   
-@Test  public void testDataTransferProtocol() throws IOException {
+  @Test  
+  public void testDataTransferProtocol() throws IOException {
     Random random = new Random();
     int oneMil = 1024*1024;
     Path file = new Path("dataprotocol.dat");
@@ -353,7 +349,9 @@ public class TestDataTransferProtocol extends TestCase {
     
     int fileLen = Math.min(conf.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096), 4096);
     
-    createFile(fileSys, file, fileLen);
+      DFSTestUtil.createFile(fileSys, file, fileLen, fileLen,
+          fileSys.getDefaultBlockSize(file),
+          fileSys.getDefaultReplication(file), 0L);
 
     // get the first blockid for the file
     final ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);

@@ -62,7 +62,6 @@
       <fileset dir="." includes="streaming/build.xml"/> 
       <fileset dir="." includes="gridmix/build.xml"/>
       <fileset dir="." includes="vertica/build.xml"/>
-      <fileset dir="." includes="raid/build.xml"/>
     </subant>
     <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>

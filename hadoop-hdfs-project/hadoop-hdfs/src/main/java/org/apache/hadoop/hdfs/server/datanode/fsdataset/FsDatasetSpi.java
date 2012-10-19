@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
@@ -373,4 +374,16 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b
       ) throws IOException;
+
+  /**
+   * Get a {@link HdfsBlocksMetadata} corresponding to the list of blocks in 
+   * <code>blocks</code>.
+   * 
+   * @param blocks List of blocks for which to return metadata
+   * @return metadata Metadata for the list of blocks
+   * @throws IOException
+   */
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
+      throws IOException;
+
 }

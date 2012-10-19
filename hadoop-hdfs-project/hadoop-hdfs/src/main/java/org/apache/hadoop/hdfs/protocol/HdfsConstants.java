@@ -60,7 +60,7 @@ public class HdfsConstants {
   public static int MAX_PATH_LENGTH = 8000;
   public static int MAX_PATH_DEPTH = 1000;
 
-  // TODO mb@media-style.com: should be conf injected?
+  // TODO should be conf injected?
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
   public static final int IO_FILE_BUFFER_SIZE = new HdfsConfiguration().getInt(
       DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
@@ -83,16 +83,6 @@ public class HdfsConstants {
 
   // An invalid transaction ID that will never be seen in a real namesystem.
   public static final long INVALID_TXID = -12345;
-
-  /**
-   * Distributed upgrade actions:
-   * 
-   * 1. Get upgrade status. 2. Get detailed upgrade status. 3. Proceed with the
-   * upgrade if it is stuck, no matter what the status is.
-   */
-  public static enum UpgradeAction {
-    GET_STATUS, DETAILED_STATUS, FORCE_PROCEED;
-  }
 
   /**
    * URI Scheme for hdfs://namenode/ URIs.

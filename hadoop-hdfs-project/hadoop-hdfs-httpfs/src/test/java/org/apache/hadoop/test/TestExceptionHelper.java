@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.test;
 
-import junit.framework.Assert;
+import static org.junit.Assert.fail;
+
+import java.util.regex.Pattern;
+
 import org.junit.Test;
 import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
-
-import java.util.regex.Pattern;
 
 public class TestExceptionHelper implements MethodRule {
 
@@ -41,7 +42,7 @@ public class TestExceptionHelper implements MethodRule {
           statement.evaluate();
           if (testExceptionAnnotation != null) {
             Class<? extends Throwable> klass = testExceptionAnnotation.exception();
-            Assert.fail("Expected Exception: " + klass.getSimpleName());
+            fail("Expected Exception: " + klass.getSimpleName());
           }
         } catch (Throwable ex) {
           if (testExceptionAnnotation != null) {
@@ -50,10 +51,10 @@ public class TestExceptionHelper implements MethodRule {
               String regExp = testExceptionAnnotation.msgRegExp();
               Pattern pattern = Pattern.compile(regExp);
               if (!pattern.matcher(ex.getMessage()).find()) {
-                Assert.fail("Expected Exception Message pattern: " + regExp + " got message: " + ex.getMessage());
+                fail("Expected Exception Message pattern: " + regExp + " got message: " + ex.getMessage());
               }
             } else {
-              Assert.fail("Expected Exception: " + klass.getSimpleName() + " got: " + ex.getClass().getSimpleName());
+              fail("Expected Exception: " + klass.getSimpleName() + " got: " + ex.getClass().getSimpleName());
             }
           } else {
             throw ex;

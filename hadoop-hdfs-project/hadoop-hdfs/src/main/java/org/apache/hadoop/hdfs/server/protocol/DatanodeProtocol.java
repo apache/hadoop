@@ -72,8 +72,6 @@ public interface DatanodeProtocol {
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
-  final static int DNA_UC_ACTION_REPORT_STATUS = 100; // Report upgrade status
-  final static int DNA_UC_ACTION_START_UPGRADE = 101; // start upgrade
 
   /** 
    * Register Datanode.
@@ -150,18 +148,6 @@ public interface DatanodeProtocol {
     
   public NamespaceInfo versionRequest() throws IOException;
 
-  /**
-   * This is a very general way to send a command to the name-node during
-   * distributed upgrade process.
-   * 
-   * The generosity is because the variety of upgrade commands is unpredictable.
-   * The reply from the name-node is also received in the form of an upgrade 
-   * command. 
-   * 
-   * @return a reply in the form of an upgrade command
-   */
-  UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException;
-  
   /**
    * same as {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#reportBadBlocks(LocatedBlock[])}
    * }

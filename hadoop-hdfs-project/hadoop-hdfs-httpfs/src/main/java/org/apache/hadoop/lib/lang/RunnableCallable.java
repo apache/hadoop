@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.lang;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.util.Check;
 
 import java.util.concurrent.Callable;
@@ -26,6 +27,7 @@ import java.util.concurrent.Callable;
  * Adapter class that allows <code>Runnable</code>s and <code>Callable</code>s to
  * be treated as the other.
  */
+@InterfaceAudience.Private
 public class RunnableCallable implements Callable<Void>, Runnable {
   private Runnable runnable;
   private Callable<?> callable;
@@ -88,6 +90,7 @@ public class RunnableCallable implements Callable<Void>, Runnable {
    *
    * @return the class name of the wrapper callable/runnable.
    */
+  @Override
   public String toString() {
     return (runnable != null) ? runnable.getClass().getSimpleName() : callable.getClass().getSimpleName();
   }

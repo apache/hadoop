@@ -16,6 +16,15 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -32,17 +41,17 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 
 
 /**
  * This class tests the cases of a concurrent reads/writes to a file;
  * ie, one writer and one or more readers can see unfinsihed blocks
  */
-public class TestFileConcurrentReader extends junit.framework.TestCase {
+public class TestFileConcurrentReader {
 
   private enum SyncType {
     SYNC,
@@ -68,18 +77,16 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
   private FileSystem fileSystem;
 
 
-  @Override
-  protected void setUp() throws IOException {
+  @Before
+  public void setUp() throws IOException {
     conf = new Configuration();
     init(conf);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     cluster.shutdown();
     cluster = null;
-    
-    super.tearDown();
   }
 
   private void init(Configuration conf) throws IOException {
@@ -144,6 +151,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
   /**
    * Test that that writes to an incomplete block are available to a reader
    */
+  @Test
   public void testUnfinishedBlockRead()
     throws IOException {
     // create a new file in the root, write data, do no close
@@ -166,6 +174,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
    * would result in too small a buffer to do the buffer-copy needed
    * for partial chunks.
    */
+  @Test
   public void testUnfinishedBlockPacketBufferOverrun() throws IOException {
     // check that / exists
     Path path = new Path("/");
@@ -191,6 +200,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
   // use a small block size and a large write so that DN is busy creating
   // new blocks.  This makes it almost 100% sure we can reproduce
   // case of client getting a DN that hasn't yet created the blocks
+  @Test
   public void testImmediateReadOfNewFile()
     throws IOException {
     final int blockSize = 64 * 1024;
@@ -267,31 +277,39 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
 
   // for some reason, using tranferTo evokes the race condition more often
   // so test separately
+  @Test
   public void testUnfinishedBlockCRCErrorTransferTo() throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, DEFAULT_WRITE_SIZE);
   }
 
+  @Test
   public void testUnfinishedBlockCRCErrorTransferToVerySmallWrite()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
   // fails due to issue w/append, disable 
+  @Ignore
+  @Test
   public void _testUnfinishedBlockCRCErrorTransferToAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }
 
+  @Test
   public void testUnfinishedBlockCRCErrorNormalTransfer() throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, DEFAULT_WRITE_SIZE);
   }
 
+  @Test
   public void testUnfinishedBlockCRCErrorNormalTransferVerySmallWrite()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
   // fails due to issue w/append, disable 
+  @Ignore
+  @Test
   public void _testUnfinishedBlockCRCErrorNormalTransferAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.APPEND, DEFAULT_WRITE_SIZE);

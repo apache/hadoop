@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -49,17 +48,20 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.znerd.xmlenc.XMLOutputter;
+
+import com.google.common.base.Preconditions;
 
 class NamenodeJspHelper {
   static String getSafeModeText(FSNamesystem fsn) {
@@ -118,19 +120,6 @@ class NamenodeJspHelper {
     return str;
   }
 
-  static String getUpgradeStatusText(FSNamesystem fsn) {
-    String statusText = "";
-    try {
-      UpgradeStatusReport status = fsn
-          .distributedUpgradeProgress(UpgradeAction.GET_STATUS);
-      statusText = (status == null ? "There are no upgrades in progress."
-          : status.getStatusText(false));
-    } catch (IOException e) {
-      statusText = "Upgrade status unknown.";
-    }
-    return statusText;
-  }
-
   /** Return a table containing version information. */
   static String getVersionTable(FSNamesystem fsn) {
     return "<div class='dfstable'><table>"
@@ -139,8 +128,6 @@ class NamenodeJspHelper {
         + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
         + "</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate()
         + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "</td></tr>\n  <tr><td class='col1'>Upgrades:</td><td>"
-        + getUpgradeStatusText(fsn)
         + "</td></tr>\n  <tr><td class='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
         + "</td></tr>\n  <tr><td class='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
         + "</td></tr>\n</table></div>";
@@ -227,6 +214,52 @@ class NamenodeJspHelper {
       }
 
       out.print("</table></div>\n");
+    }
+    
+    /**
+     * Generate an HTML report containing the current status of the HDFS
+     * journals.
+     */
+    void generateJournalReport(JspWriter out, NameNode nn,
+        HttpServletRequest request) throws IOException {
+      FSEditLog log = nn.getFSImage().getEditLog();
+      Preconditions.checkArgument(log != null, "no edit log set in %s", nn);
+      
+      out.println("<h3> " + nn.getRole() + " Journal Status: </h3>");
+
+      out.println("<b>Current transaction ID:</b> " +
+          nn.getFSImage().getLastAppliedOrWrittenTxId() + "<br/>");
+      
+      
+      boolean openForWrite = log.isOpenForWrite();
+      
+      out.println("<div class=\"dfstable\">");
+      out.println("<table class=\"storage\" title=\"NameNode Journals\">\n"
+              + "<thead><tr><td><b>Journal Manager</b></td><td><b>State</b></td></tr></thead>");
+      for (JournalAndStream jas : log.getJournals()) {
+        out.print("<tr>");
+        out.print("<td>" + jas.getManager());
+        if (jas.isRequired()) {
+          out.print(" [required]");
+        }
+        out.print("</td><td>");
+        
+        if (jas.isDisabled()) {
+          out.print("<span class=\"failed\">Failed</span>");
+        } else if (openForWrite) {
+          EditLogOutputStream elos = jas.getCurrentStream();
+          if (elos != null) {
+            out.println(elos.generateHtmlReport());
+          } else {
+            out.println("not currently writing");
+          }
+        } else {
+          out.println("open for read");
+        }
+        out.println("</td></tr>");
+      }
+      
+      out.println("</table></div>");
     }
 
     void generateHealthReport(JspWriter out, NameNode nn,
@@ -368,6 +401,7 @@ class NamenodeJspHelper {
       final UserGroupInformation ugi) throws IOException, InterruptedException {
     Token<DelegationTokenIdentifier> token = ugi
         .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+          @Override
           public Token<DelegationTokenIdentifier> run() throws IOException {
             return nn.getDelegationToken(new Text(ugi.getUserName()));
           }
@@ -409,9 +443,9 @@ class NamenodeJspHelper {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();
     }
-    String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+    String addr = nn.getNameNodeAddressHostPortString();
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
-    redirectLocation = "http://" + fqdn + ":" + redirectPort
+    redirectLocation = HttpConfig.getSchemePrefix() + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="
         + nn.getHttpAddress().getPort() + "&dir=/"
         + (tokenString == null ? "" :
@@ -460,7 +494,8 @@ class NamenodeJspHelper {
         String suffix, boolean alive, int nnHttpPort, String nnaddr)
         throws IOException {
       // from nn_browsedfscontent.jsp:
-      String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
+      String url = HttpConfig.getSchemePrefix() + d.getHostName() + ":"
+          + d.getInfoPort()
           + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
           + URLEncoder.encode("/", "UTF-8")
           + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnaddr);
@@ -487,7 +522,7 @@ class NamenodeJspHelper {
 
       long decommRequestTime = d.decommissioningStatus.getStartTime();
       long timestamp = d.getLastUpdate();
-      long currentTime = System.currentTimeMillis();
+      long currentTime = Time.now();
       long hoursSinceDecommStarted = (currentTime - decommRequestTime)/3600000;
       long remainderMinutes = ((currentTime - decommRequestTime)/60000) % 60;
       out.print("<td class=\"lastcontact\"> "
@@ -534,7 +569,7 @@ class NamenodeJspHelper {
       String adminState = d.getAdminState().toString();
 
       long timestamp = d.getLastUpdate();
-      long currentTime = System.currentTimeMillis();
+      long currentTime = Time.now();
       
       long bpUsed = d.getBlockPoolUsed();
       String percentBpUsed = StringUtils.limitDecimalTo2(d
@@ -579,8 +614,9 @@ class NamenodeJspHelper {
       final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
       dm.fetchDatanodes(live, dead, true);
 
-      InetSocketAddress nnSocketAddress = (InetSocketAddress) context
-          .getAttribute(NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+      InetSocketAddress nnSocketAddress =
+          (InetSocketAddress)context.getAttribute(
+              NameNodeHttpServer.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
       String nnaddr = nnSocketAddress.getAddress().getHostAddress() + ":"
           + nnSocketAddress.getPort();
 
@@ -798,7 +834,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("replication");
-          doc.pcdata(""+inode.getReplication());
+          doc.pcdata(""+inode.getBlockReplication());
           doc.endTag();
 
           doc.startTag("disk_space_consumed");

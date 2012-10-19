@@ -29,6 +29,10 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
+import org.apache.hadoop.contrib.bkjournal.BKJournalProtos.CurrentInprogressProto;
+import com.google.protobuf.TextFormat;
+import static com.google.common.base.Charsets.UTF_8;
+
 /**
  * Distributed write permission lock, using ZooKeeper. Read the version number
  * and return the current inprogress node path available in CurrentInprogress
@@ -42,29 +46,28 @@ import org.apache.zookeeper.data.Stat;
  */
 
 class CurrentInprogress {
-  private static final String CONTENT_DELIMITER = ",";
-
   static final Log LOG = LogFactory.getLog(CurrentInprogress.class);
 
   private final ZooKeeper zkc;
   private final String currentInprogressNode;
   private volatile int versionNumberForPermission = -1;
-  private static final int CURRENT_INPROGRESS_LAYOUT_VERSION = -1; 
   private final String hostName = InetAddress.getLocalHost().toString();
 
   CurrentInprogress(ZooKeeper zkc, String lockpath) throws IOException {
     this.currentInprogressNode = lockpath;
     this.zkc = zkc;
     try {
-      Stat isCurrentInprogressNodeExists = zkc.exists(lockpath, false);
+      Stat isCurrentInprogressNodeExists = zkc.exists(currentInprogressNode,
+                                                      false);
       if (isCurrentInprogressNodeExists == null) {
         try {
-          zkc.create(lockpath, null, Ids.OPEN_ACL_UNSAFE,
-                  CreateMode.PERSISTENT);
+          zkc.create(currentInprogressNode, null, Ids.OPEN_ACL_UNSAFE,
+                     CreateMode.PERSISTENT);
         } catch (NodeExistsException e) {
           // Node might created by other process at the same time. Ignore it.
           if (LOG.isDebugEnabled()) {
-            LOG.debug(lockpath + " already created by other process.", e);
+            LOG.debug(currentInprogressNode + " already created by other process.",
+                      e);
           }
         }
       }
@@ -83,10 +86,13 @@ class CurrentInprogress {
    * @throws IOException
    */
   void update(String path) throws IOException {
-    String content = CURRENT_INPROGRESS_LAYOUT_VERSION
-        + CONTENT_DELIMITER + hostName + CONTENT_DELIMITER + path;
+    CurrentInprogressProto.Builder builder = CurrentInprogressProto.newBuilder();
+    builder.setPath(path).setHostname(hostName);
+
+    String content = TextFormat.printToString(builder.build());
+
     try {
-      zkc.setData(this.currentInprogressNode, content.getBytes(),
+      zkc.setData(this.currentInprogressNode, content.getBytes(UTF_8),
           this.versionNumberForPermission);
     } catch (KeeperException e) {
       throw new IOException("Exception when setting the data "
@@ -123,23 +129,12 @@ class CurrentInprogress {
     }
     this.versionNumberForPermission = stat.getVersion();
     if (data != null) {
-      String stringData = new String(data);
-      LOG.info("Read data[layout version number,hostname,inprogressNode path]"
-          + "= [" + stringData + "] from CurrentInprogress");
-      String[] contents = stringData.split(CONTENT_DELIMITER);
-      assert contents.length == 3 : "As per the current data format, "
-          + "CurrentInprogress node data should contain 3 fields. "
-          + "i.e layout version number,hostname,inprogressNode path";
-      String layoutVersion = contents[0];
-      if (Long.valueOf(layoutVersion) > CURRENT_INPROGRESS_LAYOUT_VERSION) {
-        throw new IOException(
-            "Supported layout version of CurrentInprogress node is : "
-                + CURRENT_INPROGRESS_LAYOUT_VERSION
-                + " . Layout version of CurrentInprogress node in ZK is : "
-                + layoutVersion);
+      CurrentInprogressProto.Builder builder = CurrentInprogressProto.newBuilder();
+      TextFormat.merge(new String(data, UTF_8), builder);
+      if (!builder.isInitialized()) {
+        throw new IOException("Invalid/Incomplete data in znode");
       }
-      String inprogressNodePath = contents[2];
-      return inprogressNodePath;
+      return builder.build().getPath();
     } else {
       LOG.info("No data available in CurrentInprogress");
     }

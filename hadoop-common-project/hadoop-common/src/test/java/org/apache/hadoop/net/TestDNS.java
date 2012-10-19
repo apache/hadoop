@@ -25,6 +25,7 @@ import javax.naming.NameNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.Time;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -57,9 +58,9 @@ public class TestDNS {
     String hostname1 = DNS.getDefaultHost(DEFAULT);
     assertNotNull(hostname1);
     String hostname2 = DNS.getDefaultHost(DEFAULT);
-    long t1 = System.currentTimeMillis();
+    long t1 = Time.now();
     String hostname3 = DNS.getDefaultHost(DEFAULT);
-    long t2 = System.currentTimeMillis();
+    long t2 = Time.now();
     assertEquals(hostname3, hostname2);
     assertEquals(hostname2, hostname1);
     long interval = t2 - t1;

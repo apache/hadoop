@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -55,7 +54,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -92,11 +90,19 @@ class YarnChild {
     DefaultMetricsSystem.initialize(
         StringUtils.camelize(firstTaskid.getTaskType().name()) +"Task");
 
-    Token<JobTokenIdentifier> jt = loadCredentials(defaultConf, address);
+    // Security framework already loaded the tokens into current ugi
+    Credentials credentials =
+        UserGroupInformation.getCurrentUser().getCredentials();
+    LOG.info("Executing with tokens:");
+    for (Token<?> token: credentials.getAllTokens()) {
+      LOG.info(token);
+    }
 
     // Create TaskUmbilicalProtocol as actual task owner.
     UserGroupInformation taskOwner =
       UserGroupInformation.createRemoteUser(firstTaskid.getJobID().toString());
+    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
+    SecurityUtil.setTokenService(jt, address);
     taskOwner.addToken(jt);
     final TaskUmbilicalProtocol umbilical =
       taskOwner.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
@@ -132,17 +138,14 @@ class YarnChild {
       YarnChild.taskid = task.getTaskID();
 
       // Create the job-conf and set credentials
-      final JobConf job =
-        configureTask(task, defaultConf.getCredentials(), jt);
+      final JobConf job = configureTask(task, credentials, jt);
 
       // Initiate Java VM metrics
       JvmMetrics.initSingleton(jvmId.toString(), job.getSessionId());
       childUGI = UserGroupInformation.createRemoteUser(System
           .getenv(ApplicationConstants.Environment.USER.toString()));
       // Add tokens to new user so that it may execute its task correctly.
-      for(Token<?> token : UserGroupInformation.getCurrentUser().getTokens()) {
-        childUGI.addToken(token);
-      }
+      childUGI.addCredentials(credentials);
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
@@ -204,30 +207,6 @@ class YarnChild {
       // there is no more logging done.
       LogManager.shutdown();
     }
-  }
-
-  private static Token<JobTokenIdentifier> loadCredentials(JobConf conf,
-      InetSocketAddress address) throws IOException {
-    //load token cache storage
-    String tokenFileLocation =
-        System.getenv(ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME);
-    String jobTokenFile =
-        new Path(tokenFileLocation).makeQualified(FileSystem.getLocal(conf))
-            .toUri().getPath();
-    Credentials credentials =
-      TokenCache.loadTokens(jobTokenFile, conf);
-    LOG.debug("loading token. # keys =" +credentials.numberOfSecretKeys() +
-        "; from file=" + jobTokenFile);
-    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
-    SecurityUtil.setTokenService(jt, address);
-    UserGroupInformation current = UserGroupInformation.getCurrentUser();
-    current.addToken(jt);
-    for (Token<? extends TokenIdentifier> tok : credentials.getAllTokens()) {
-      current.addToken(tok);
-    }
-    // Set the credentials
-    conf.setCredentials(credentials);
-    return jt;
   }
 
   /**

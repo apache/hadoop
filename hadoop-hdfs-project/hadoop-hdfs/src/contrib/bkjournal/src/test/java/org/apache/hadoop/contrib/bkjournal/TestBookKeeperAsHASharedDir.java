@@ -18,6 +18,7 @@
 package org.apache.hadoop.contrib.bkjournal;
 
 import static org.junit.Assert.*;
+
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
@@ -25,6 +26,9 @@ import org.junit.BeforeClass;
 import org.junit.AfterClass;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import org.apache.hadoop.hdfs.HAUtil;
@@ -35,12 +39,16 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 import org.apache.hadoop.ipc.RemoteException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 
 import org.apache.bookkeeper.proto.BookieServer;
@@ -48,7 +56,9 @@ import org.apache.bookkeeper.proto.BookieServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 /**
  * Integration test to ensure that the BookKeeper JournalManager
@@ -66,6 +76,11 @@ public class TestBookKeeperAsHASharedDir {
   public static void setupBookkeeper() throws Exception {
     bkutil = new BKJMUtil(numBookies);
     bkutil.start();
+  }
+  
+  @Before
+  public void clearExitStatus() {
+    ExitUtil.resetFirstExitException();
   }
 
   @AfterClass
@@ -241,6 +256,99 @@ public class TestBookKeeperAsHASharedDir {
     } finally {
       if (cluster != null) {
         cluster.shutdown();
+      }
+    }
+  }
+  
+  /**
+   * Use NameNode INTIALIZESHAREDEDITS to initialize the shared edits. i.e. copy
+   * the edits log segments to new bkjm shared edits.
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testInitializeBKSharedEdits() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      HAUtil.setAllowStandbyReads(conf, true);
+      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
+      MiniDFSNNTopology topology = MiniDFSNNTopology.simpleHATopology();
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topology)
+          .numDataNodes(0).build();
+      cluster.waitActive();
+      // Shutdown and clear the current filebased shared dir.
+      cluster.shutdownNameNodes();
+      File shareddir = new File(cluster.getSharedEditsDir(0, 1));
+      assertTrue("Initial Shared edits dir not fully deleted",
+          FileUtil.fullyDelete(shareddir));
+
+      // Check namenodes should not start without shared dir.
+      assertCanNotStartNamenode(cluster, 0);
+      assertCanNotStartNamenode(cluster, 1);
+
+      // Configure bkjm as new shared edits dir in both namenodes
+      Configuration nn1Conf = cluster.getConfiguration(0);
+      Configuration nn2Conf = cluster.getConfiguration(1);
+      nn1Conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, BKJMUtil
+          .createJournalURI("/initializeSharedEdits").toString());
+      nn2Conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, BKJMUtil
+          .createJournalURI("/initializeSharedEdits").toString());
+      BKJMUtil.addJournalManagerDefinition(nn1Conf);
+      BKJMUtil.addJournalManagerDefinition(nn2Conf);
+
+      // Initialize the BKJM shared edits.
+      assertFalse(NameNode.initializeSharedEdits(nn1Conf));
+
+      // NameNode should be able to start and should be in sync with BKJM as
+      // shared dir
+      assertCanStartHANameNodes(cluster, conf, "/testBKJMInitialize");
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void assertCanNotStartNamenode(MiniDFSCluster cluster, int nnIndex) {
+    try {
+      cluster.restartNameNode(nnIndex, false);
+      fail("Should not have been able to start NN" + (nnIndex)
+          + " without shared dir");
+    } catch (IOException ioe) {
+      LOG.info("Got expected exception", ioe);
+      GenericTestUtils.assertExceptionContains(
+          "Cannot start an HA namenode with name dirs that need recovery", ioe);
+    }
+  }
+
+  private void assertCanStartHANameNodes(MiniDFSCluster cluster,
+      Configuration conf, String path) throws ServiceFailedException,
+      IOException, URISyntaxException, InterruptedException {
+    // Now should be able to start both NNs. Pass "false" here so that we don't
+    // try to waitActive on all NNs, since the second NN doesn't exist yet.
+    cluster.restartNameNode(0, false);
+    cluster.restartNameNode(1, true);
+
+    // Make sure HA is working.
+    cluster
+        .getNameNode(0)
+        .getRpcServer()
+        .transitionToActive(
+            new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER));
+    FileSystem fs = null;
+    try {
+      Path newPath = new Path(path);
+      fs = HATestUtil.configureFailoverFs(cluster, conf);
+      assertTrue(fs.mkdirs(newPath));
+      HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
+          cluster.getNameNode(1));
+      assertTrue(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
+          newPath.toString(), false).isDir());
+    } finally {
+      if (fs != null) {
+        fs.close();
       }
     }
   }

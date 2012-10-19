@@ -23,12 +23,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * This class tests commands from Trash.
+ * Test trash using HDFS
  */
 public class TestHDFSTrash {
   private static MiniDFSCluster cluster = null;
@@ -44,9 +45,6 @@ public class TestHDFSTrash {
     if (cluster != null) { cluster.shutdown(); }
   }
 
-  /**
-   * Tests Trash on HDFS
-   */
   @Test
   public void testTrash() throws IOException {
     TestTrash.trashShell(cluster.getFileSystem(), new Path("/"));
@@ -59,5 +57,4 @@ public class TestHDFSTrash {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, fs.getUri().toString());
     TestTrash.trashNonDefaultFS(conf);
   }
-
 }

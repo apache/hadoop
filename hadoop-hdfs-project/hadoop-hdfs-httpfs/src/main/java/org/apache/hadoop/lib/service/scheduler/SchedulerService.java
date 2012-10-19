@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.service.scheduler;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.lang.RunnableCallable;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.Server;
@@ -25,6 +26,7 @@ import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Instrumentation;
 import org.apache.hadoop.lib.service.Scheduler;
 import org.apache.hadoop.lib.util.Check;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +36,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+@InterfaceAudience.Private
 public class SchedulerService extends BaseService implements Scheduler {
   private static final Logger LOG = LoggerFactory.getLogger(SchedulerService.class);
 
@@ -59,11 +62,11 @@ public class SchedulerService extends BaseService implements Scheduler {
   @Override
   public void destroy() {
     try {
-      long limit = System.currentTimeMillis() + 30 * 1000;
+      long limit = Time.now() + 30 * 1000;
       scheduler.shutdownNow();
       while (!scheduler.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
         LOG.debug("Waiting for scheduler to shutdown");
-        if (System.currentTimeMillis() > limit) {
+        if (Time.now() > limit) {
           LOG.warn("Gave up waiting for scheduler to shutdown");
           break;
         }
@@ -93,6 +96,7 @@ public class SchedulerService extends BaseService implements Scheduler {
       LOG.debug("Scheduling callable [{}], interval [{}] seconds, delay [{}] in [{}]",
                 new Object[]{callable, delay, interval, unit});
       Runnable r = new Runnable() {
+        @Override
         public void run() {
           String instrName = callable.getClass().getSimpleName();
           Instrumentation instr = getServer().get(Instrumentation.class);

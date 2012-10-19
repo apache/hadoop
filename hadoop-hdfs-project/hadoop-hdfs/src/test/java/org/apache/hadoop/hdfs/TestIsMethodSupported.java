@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
-import junit.framework.Assert;
 
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
@@ -78,16 +79,16 @@ public class TestIsMethodSupported {
             nnAddress, NamenodeProtocol.class, UserGroupInformation.getCurrentUser(),
             true).getProxy();
     boolean exists = translator.isMethodSupported("rollEditLog");
-    Assert.assertTrue(exists);
+    assertTrue(exists);
     exists = translator.isMethodSupported("bogusMethod");
-    Assert.assertFalse(exists);
+    assertFalse(exists);
   }
   
   @Test
   public void testDatanodeProtocol() throws IOException {
     DatanodeProtocolClientSideTranslatorPB translator = 
         new DatanodeProtocolClientSideTranslatorPB(nnAddress, conf);
-    Assert.assertTrue(translator.isMethodSupported("sendHeartbeat"));
+    assertTrue(translator.isMethodSupported("sendHeartbeat"));
   }
   
   @Test
@@ -97,12 +98,12 @@ public class TestIsMethodSupported {
             UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getDefaultSocketFactory(conf));
     //Namenode doesn't implement ClientDatanodeProtocol
-    Assert.assertFalse(translator.isMethodSupported("refreshNamenodes"));
+    assertFalse(translator.isMethodSupported("refreshNamenodes"));
     
     translator = new ClientDatanodeProtocolTranslatorPB(
         dnAddress, UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getDefaultSocketFactory(conf));
-    Assert.assertTrue(translator.isMethodSupported("refreshNamenodes"));
+    assertTrue(translator.isMethodSupported("refreshNamenodes"));
   }
   
   @Test
@@ -111,7 +112,7 @@ public class TestIsMethodSupported {
         (ClientNamenodeProtocolTranslatorPB) NameNodeProxies.createNonHAProxy(
             conf, nnAddress, ClientProtocol.class,
             UserGroupInformation.getCurrentUser(), true).getProxy();
-    Assert.assertTrue(translator.isMethodSupported("mkdirs"));
+    assertTrue(translator.isMethodSupported("mkdirs"));
   }
   
   @Test
@@ -120,7 +121,7 @@ public class TestIsMethodSupported {
         NameNodeProxies.createNonHAProxy(conf, nnAddress, JournalProtocol.class,
             UserGroupInformation.getCurrentUser(), true).getProxy();
     //Nameode doesn't implement JournalProtocol
-    Assert.assertFalse(translator.isMethodSupported("startLogSegment"));
+    assertFalse(translator.isMethodSupported("startLogSegment"));
   }
   
   @Test
@@ -130,12 +131,12 @@ public class TestIsMethodSupported {
             nnAddress, UserGroupInformation.getCurrentUser(), conf,
             NetUtils.getDefaultSocketFactory(conf), 0);
     //Not supported at namenode
-    Assert.assertFalse(translator.isMethodSupported("initReplicaRecovery"));
+    assertFalse(translator.isMethodSupported("initReplicaRecovery"));
     
     translator = new InterDatanodeProtocolTranslatorPB(
         dnAddress, UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getDefaultSocketFactory(conf), 0);
-    Assert.assertTrue(translator.isMethodSupported("initReplicaRecovery"));
+    assertTrue(translator.isMethodSupported("initReplicaRecovery"));
   }
   
   @Test
@@ -145,7 +146,7 @@ public class TestIsMethodSupported {
         NameNodeProxies.createNonHAProxy(conf, nnAddress,
             GetUserMappingsProtocol.class, UserGroupInformation.getCurrentUser(),
             true).getProxy();
-    Assert.assertTrue(translator.isMethodSupported("getGroupsForUser"));
+    assertTrue(translator.isMethodSupported("getGroupsForUser"));
   }
   
   @Test
@@ -155,7 +156,7 @@ public class TestIsMethodSupported {
       NameNodeProxies.createNonHAProxy(conf, nnAddress,
           RefreshAuthorizationPolicyProtocol.class,
           UserGroupInformation.getCurrentUser(), true).getProxy();
-    Assert.assertTrue(translator.isMethodSupported("refreshServiceAcl"));
+    assertTrue(translator.isMethodSupported("refreshServiceAcl"));
   }
   
   @Test
@@ -165,7 +166,7 @@ public class TestIsMethodSupported {
         NameNodeProxies.createNonHAProxy(conf, nnAddress,
             RefreshUserMappingsProtocol.class,
             UserGroupInformation.getCurrentUser(), true).getProxy();
-    Assert.assertTrue(
+    assertTrue(
         translator.isMethodSupported("refreshUserToGroupsMappings"));
   }
 }

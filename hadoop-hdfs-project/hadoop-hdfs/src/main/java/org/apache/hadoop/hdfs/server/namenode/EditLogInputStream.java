@@ -22,9 +22,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
  * A generic abstract class to support reading edits log data from 
  * persistent storage.
@@ -57,6 +54,7 @@ public abstract class EditLogInputStream implements Closeable {
    * Close the stream.
    * @throws IOException if an error occurred while closing
    */
+  @Override
   public abstract void close() throws IOException;
 
   /** 

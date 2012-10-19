@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import static org.apache.hadoop.hdfs.server.common.Util.monotonicNow;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 /** 
  * a class to throttle the data transfers.

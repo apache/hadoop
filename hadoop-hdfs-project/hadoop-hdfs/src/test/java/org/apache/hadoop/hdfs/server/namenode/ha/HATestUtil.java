@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Supplier;
 
@@ -64,7 +65,7 @@ public abstract class HATestUtil {
    * @throws CouldNotCatchUpException if the standby doesn't catch up to the
    *         active in NN_LAG_TIMEOUT milliseconds
    */
-  static void waitForStandbyToCatchUp(NameNode active,
+  public static void waitForStandbyToCatchUp(NameNode active,
       NameNode standby) throws InterruptedException, IOException, CouldNotCatchUpException {
     
     long activeTxId = active.getNamesystem().getFSImage().getEditLog()
@@ -72,8 +73,8 @@ public abstract class HATestUtil {
     
     active.getRpcServer().rollEditLog();
     
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < TestEditLogTailer.NN_LAG_TIMEOUT) {
+    long start = Time.now();
+    while (Time.now() - start < TestEditLogTailer.NN_LAG_TIMEOUT) {
       long nn2HighestTxId = standby.getNamesystem().getFSImage()
         .getLastAppliedTxId();
       if (nn2HighestTxId >= activeTxId) {
@@ -206,13 +207,13 @@ public abstract class HATestUtil {
   
   public static void waitForCheckpoint(MiniDFSCluster cluster, int nnIdx,
       List<Integer> txids) throws InterruptedException {
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     while (true) {
       try {
         FSImageTestUtil.assertNNHasCheckpoints(cluster, nnIdx, txids);
         return;
       } catch (AssertionError err) {
-        if (System.currentTimeMillis() - start > 10000) {
+        if (Time.now() - start > 10000) {
           throw err;
         } else {
           Thread.sleep(300);

@@ -24,19 +24,6 @@
   <includeBaseDirectory>false</includeBaseDirectory>
   <fileSets>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/target/native/target/usr/local/bin</directory>
-      <outputDirectory>bin</outputDirectory>
-      <fileMode>0755</fileMode>
-    </fileSet>
-    <fileSet>
-      <directory>hadoop-yarn/bin</directory>
-      <outputDirectory>bin</outputDirectory>
-      <includes>
-        <include>yarn</include>
-      </includes>
-      <fileMode>0755</fileMode>
-    </fileSet>
-    <fileSet>
       <directory>bin</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
@@ -53,25 +40,6 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/bin</directory>
-      <outputDirectory>libexec</outputDirectory>
-      <includes>
-        <include>yarn-config.sh</include>
-      </includes>
-      <fileMode>0755</fileMode>
-    </fileSet>
-    <fileSet>
-      <directory>hadoop-yarn/bin</directory>
-      <outputDirectory>sbin</outputDirectory>
-      <includes>
-        <include>yarn-daemon.sh</include>
-        <include>yarn-daemons.sh</include>
-        <include>start-yarn.sh</include>
-        <include>stop-yarn.sh</include>
-      </includes>
-      <fileMode>0755</fileMode>
-    </fileSet>
-    <fileSet>
       <directory>bin</directory>
       <outputDirectory>sbin</outputDirectory>
       <includes>
@@ -80,7 +48,7 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>hadoop-yarn/conf</directory>
+      <directory>conf</directory>
       <outputDirectory>etc/hadoop</outputDirectory>
       <includes>
         <include>**/*</include>
@@ -126,9 +94,6 @@
   </fileSets>
   <moduleSets>
     <moduleSet>
-      <excludes>
-        <exclude>org.apache.hadoop:hadoop-yarn-server-tests</exclude>
-      </excludes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
         <includeDependencies>false</includeDependencies>
@@ -138,6 +103,7 @@
     <moduleSet>
       <includes>
         <include>org.apache.hadoop:hadoop-mapreduce-client-jobclient</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-tests</include>
       </includes>
       <binaries>
         <attachmentClassifier>tests</attachmentClassifier>
@@ -155,10 +121,18 @@
       <excludes>
         <exclude>org.apache.hadoop:hadoop-common</exclude>
         <exclude>org.apache.hadoop:hadoop-hdfs</exclude>
-	<!-- use slf4j from common to avoid multiple binding warnings -->
-	<exclude>org.slf4j:slf4j-api</exclude>
-	<exclude>org.slf4j:slf4j-log4j12</exclude>
+        <!-- use slf4j from common to avoid multiple binding warnings -->
+        <exclude>org.slf4j:slf4j-api</exclude>
+        <exclude>org.slf4j:slf4j-log4j12</exclude>
+        <exclude>org.hsqldb:hsqldb</exclude>
       </excludes>
+    </dependencySet>
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib-examples</outputDirectory>
+      <includes>
+        <include>org.hsqldb:hsqldb</include>
+      </includes>
     </dependencySet>
   </dependencySets>
 </assembly>

@@ -27,6 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeoutException;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -64,7 +68,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 /**
  * This test simulates a variety of situations when blocks are being
- * intentionally orrupted, unexpectedly modified, and so on before a block
+ * intentionally corrupted, unexpectedly modified, and so on before a block
  * report is happening
  */
 public class TestBlockReport {
@@ -315,7 +319,7 @@ public class TestBlockReport {
    * @throws IOException in case of an error
    */
   @Test
-  public void blockReport_06() throws IOException {
+  public void blockReport_06() throws Exception {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
     final int DN_N1 = DN_N0 + 1;
@@ -352,7 +356,7 @@ public class TestBlockReport {
   @Test
   // Currently this test is failing as expected 'cause the correct behavior is
   // not yet implemented (9/15/09)
-  public void blockReport_07() throws IOException {
+  public void blockReport_07() throws Exception {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
     final int DN_N1 = DN_N0 + 1;
@@ -615,12 +619,12 @@ public class TestBlockReport {
     final DataNode dn1 = cluster.getDataNodes().get(DN_N1);
     String bpid = cluster.getNamesystem().getBlockPoolId();
     Replica r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     int count = 0;
     while (r == null) {
       waitTil(5);
       r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-      long waiting_period = System.currentTimeMillis() - start;
+      long waiting_period = Time.now() - start;
       if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {
           LOG.debug("Has been waiting for " + waiting_period + " ms.");
@@ -634,7 +638,7 @@ public class TestBlockReport {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Replica state before the loop " + state.getValue());
     }
-    start = System.currentTimeMillis();
+    start = Time.now();
     while (state != HdfsServerConstants.ReplicaState.TEMPORARY) {
       waitTil(5);
       state = r.getState();
@@ -642,7 +646,7 @@ public class TestBlockReport {
         LOG.debug("Keep waiting for " + bl.getBlockName() +
             " is in state " + state.getValue());
       }
-      if (System.currentTimeMillis() - start > TIMEOUT)
+      if (Time.now() - start > TIMEOUT)
         assertTrue("Was waiting too long for a replica to become TEMPORARY",
           tooLongWait);
     }
@@ -669,21 +673,24 @@ public class TestBlockReport {
   }
 
   private void startDNandWait(Path filePath, boolean waitReplicas) 
-    throws IOException {
-    if(LOG.isDebugEnabled()) {
+      throws IOException, InterruptedException, TimeoutException {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Before next DN start: " + cluster.getDataNodes().size());
     }
     cluster.startDataNodes(conf, 1, true, null, null);
+    cluster.waitClusterUp();
     ArrayList<DataNode> datanodes = cluster.getDataNodes();
     assertEquals(datanodes.size(), 2);
 
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       int lastDn = datanodes.size() - 1;
       LOG.debug("New datanode "
           + cluster.getDataNodes().get(lastDn).getDisplayName() 
           + " has been started");
     }
-    if (waitReplicas) DFSTestUtil.waitReplication(fs, filePath, REPL_FACTOR);
+    if (waitReplicas) {
+      DFSTestUtil.waitReplication(fs, filePath, REPL_FACTOR);
+    }
   }
 
   private ArrayList<Block> prepareForRide(final Path filePath,
@@ -761,6 +768,7 @@ public class TestBlockReport {
       this.all = all;
     }
 
+    @Override
     public boolean accept(File file, String s) {
       if (all)
         return s != null && s.startsWith(nameToAccept);
@@ -830,11 +838,13 @@ public class TestBlockReport {
       this.filePath = filePath;
     }
     
+    @Override
     public void run() {
       try {
         startDNandWait(filePath, true);
-      } catch (IOException e) {
-        LOG.warn("Shouldn't happen", e);
+      } catch (Exception e) {
+        e.printStackTrace();
+        Assert.fail("Failed to start BlockChecker: " + e);
       }
     }
   }

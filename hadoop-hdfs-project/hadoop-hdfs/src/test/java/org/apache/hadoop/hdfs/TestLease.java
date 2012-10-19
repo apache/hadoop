@@ -17,33 +17,31 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.doNothing;
 
 public class TestLease {
   static boolean hasLease(MiniDFSCluster cluster, Path src) {
@@ -82,7 +80,8 @@ public class TestLease {
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
       // make it look like lease has already expired.
-      dfs.lastLeaseRenewal = System.currentTimeMillis() - 300000;
+      LeaseRenewer originalRenewer = dfs.getLeaseRenewer();
+      dfs.lastLeaseRenewal = Time.now() - 300000;
       dfs.renewLease();
 
       // this should not work.
@@ -93,6 +92,10 @@ public class TestLease {
       } catch (IOException e) {
         LOG.info("Write failed as expected. ", e);
       }
+
+      // If aborted, the renewer should be empty. (no reference to clients)
+      Thread.sleep(1000);
+      Assert.assertTrue(originalRenewer.isEmpty());
 
       // unstub
       doNothing().when(spyNN).renewLease(anyString());
@@ -167,15 +170,20 @@ public class TestLease {
 
     final Configuration conf = new Configuration();
     final DFSClient c1 = createDFSClientAs(ugi[0], conf);
+    FSDataOutputStream out1 = createFsOut(c1, "/out1");
     final DFSClient c2 = createDFSClientAs(ugi[0], conf);
-    Assert.assertEquals(c1.leaserenewer, c2.leaserenewer);
+    FSDataOutputStream out2 = createFsOut(c2, "/out2");
+    Assert.assertEquals(c1.getLeaseRenewer(), c2.getLeaseRenewer());
     final DFSClient c3 = createDFSClientAs(ugi[1], conf);
-    Assert.assertTrue(c1.leaserenewer != c3.leaserenewer);
+    FSDataOutputStream out3 = createFsOut(c3, "/out3");
+    Assert.assertTrue(c1.getLeaseRenewer() != c3.getLeaseRenewer());
     final DFSClient c4 = createDFSClientAs(ugi[1], conf);
-    Assert.assertEquals(c3.leaserenewer, c4.leaserenewer);
+    FSDataOutputStream out4 = createFsOut(c4, "/out4");
+    Assert.assertEquals(c3.getLeaseRenewer(), c4.getLeaseRenewer());
     final DFSClient c5 = createDFSClientAs(ugi[2], conf);
-    Assert.assertTrue(c1.leaserenewer != c5.leaserenewer);
-    Assert.assertTrue(c3.leaserenewer != c5.leaserenewer);
+    FSDataOutputStream out5 = createFsOut(c5, "/out5");
+    Assert.assertTrue(c1.getLeaseRenewer() != c5.getLeaseRenewer());
+    Assert.assertTrue(c3.getLeaseRenewer() != c5.getLeaseRenewer());
   }
   
   private FSDataOutputStream createFsOut(DFSClient dfs, String path) 

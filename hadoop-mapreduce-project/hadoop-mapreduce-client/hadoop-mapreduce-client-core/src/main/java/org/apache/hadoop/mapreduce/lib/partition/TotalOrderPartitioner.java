@@ -47,7 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
+public class TotalOrderPartitioner<K,V>
     extends Partitioner<K,V> implements Configurable {
 
   private Node partitions;
@@ -298,12 +298,13 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
   @SuppressWarnings("unchecked") // map output key class
   private K[] readPartitions(FileSystem fs, Path p, Class<K> keyClass,
       Configuration conf) throws IOException {
-    SequenceFile.Reader reader = new SequenceFile.Reader(fs, p, conf);
+    SequenceFile.Reader reader = new SequenceFile.Reader(
+        conf,
+        SequenceFile.Reader.file(p));
     ArrayList<K> parts = new ArrayList<K>();
     K key = ReflectionUtils.newInstance(keyClass, conf);
-    NullWritable value = NullWritable.get();
     try {
-      while (reader.next(key, value)) {
+      while ((key = (K) reader.next(key)) != null) {
         parts.add(key);
         key = ReflectionUtils.newInstance(keyClass, conf);
       }

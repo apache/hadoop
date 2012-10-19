@@ -44,11 +44,13 @@ public abstract class CompressionOutputStream extends OutputStream {
     this.out = out;
   }
   
+  @Override
   public void close() throws IOException {
     finish();
     out.close();
   }
   
+  @Override
   public void flush() throws IOException {
     out.flush();
   }
@@ -57,6 +59,7 @@ public abstract class CompressionOutputStream extends OutputStream {
    * Write compressed bytes to the stream.
    * Made abstract to prevent leakage to underlying stream.
    */
+  @Override
   public abstract void write(byte[] b, int off, int len) throws IOException;
 
   /**

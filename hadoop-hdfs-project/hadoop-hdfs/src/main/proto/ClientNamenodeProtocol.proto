@@ -276,6 +276,13 @@ message SaveNamespaceRequestProto { // no parameters
 message SaveNamespaceResponseProto { // void response
 }
 
+message RollEditsRequestProto { // no parameters
+}
+
+message RollEditsResponseProto { // response
+  required uint64 newSegmentTxId = 1;
+}
+
 message RestoreFailedStorageRequestProto {
   required string arg = 1;
 }
@@ -294,19 +301,6 @@ message FinalizeUpgradeRequestProto { // no parameters
 }
 
 message FinalizeUpgradeResponseProto { // void response
-}
-
-enum UpgradeActionProto {
-  GET_STATUS = 1;
-  DETAILED_STATUS = 2;
-  FORCE_PROCEED = 3;
-}
-
-message DistributedUpgradeProgressRequestProto {
-  required UpgradeActionProto action = 1;
-}
-message DistributedUpgradeProgressResponseProto {
-  optional UpgradeStatusReportProto report = 1;
 }
 
 message ListCorruptFileBlocksRequestProto {
@@ -441,6 +435,12 @@ message SetBalancerBandwidthRequestProto {
 message SetBalancerBandwidthResponseProto { // void response
 }
 
+message GetDataEncryptionKeyRequestProto { // no parameters
+}
+
+message GetDataEncryptionKeyResponseProto {
+  required DataEncryptionKeyProto dataEncryptionKey = 1;
+}
 
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
@@ -479,13 +479,13 @@ service ClientNamenodeProtocol {
       returns(SetSafeModeResponseProto);
   rpc saveNamespace(SaveNamespaceRequestProto)
       returns(SaveNamespaceResponseProto);
+  rpc rollEdits(RollEditsRequestProto)
+      returns(RollEditsResponseProto);
   rpc restoreFailedStorage(RestoreFailedStorageRequestProto)
       returns(RestoreFailedStorageResponseProto);
   rpc refreshNodes(RefreshNodesRequestProto) returns(RefreshNodesResponseProto);
   rpc finalizeUpgrade(FinalizeUpgradeRequestProto)
       returns(FinalizeUpgradeResponseProto);
-  rpc distributedUpgradeProgress(DistributedUpgradeProgressRequestProto)
-      returns(DistributedUpgradeProgressResponseProto);
   rpc listCorruptFileBlocks(ListCorruptFileBlocksRequestProto)
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
@@ -511,6 +511,8 @@ service ClientNamenodeProtocol {
       returns(RenewDelegationTokenResponseProto);
   rpc cancelDelegationToken(CancelDelegationTokenRequestProto)
       returns(CancelDelegationTokenResponseProto);
-  rpc  setBalancerBandwidth(SetBalancerBandwidthRequestProto)
+  rpc setBalancerBandwidth(SetBalancerBandwidthRequestProto)
       returns(SetBalancerBandwidthResponseProto);
+  rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
+      returns(GetDataEncryptionKeyResponseProto);
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.util.Check;
 import org.apache.hadoop.lib.util.ConfigurationUtils;
@@ -76,6 +77,7 @@ import java.util.Properties;
  * post-initialized (this enables late/conditional service bindings).
  * <p/>
  */
+@InterfaceAudience.Private
 public class Server {
   private Logger log;
 
@@ -97,7 +99,8 @@ public class Server {
   /**
    * Enumeration that defines the server status.
    */
-  public enum Status {
+  @InterfaceAudience.Private
+  public static enum Status {
     UNDEF(false, false),
     BOOTING(false, true),
     HALTED(true, true),

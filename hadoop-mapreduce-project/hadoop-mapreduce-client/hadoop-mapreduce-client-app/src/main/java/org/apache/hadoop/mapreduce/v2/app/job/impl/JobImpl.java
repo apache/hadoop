@@ -582,17 +582,23 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       String jobFile =
           remoteJobConfFile == null ? "" : remoteJobConfFile.toString();
 
+      StringBuilder diagsb = new StringBuilder();
+      for (String s : getDiagnostics()) {
+        diagsb.append(s).append("\n");
+      }
+
       if (getState() == JobState.NEW) {
         return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
             appSubmitTime, startTime, finishTime, setupProgress, 0.0f, 0.0f,
-            cleanupProgress, jobFile, amInfos, isUber);
+            cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
       }
 
       computeProgress();
-      return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-          appSubmitTime, startTime, finishTime, setupProgress,
+      JobReport report = MRBuilderUtils.newJobReport(jobId, jobName, username,
+          state, appSubmitTime, startTime, finishTime, setupProgress,
           this.mapProgress, this.reduceProgress,
-          cleanupProgress, jobFile, amInfos, isUber);
+          cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
+      return report;
     } finally {
       readLock.unlock();
     }
@@ -759,7 +765,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.getCommitter().commitJob(job.getJobContext());
       } catch (IOException e) {
         LOG.error("Could not do commit for Job", e);
-        job.logJobHistoryFinishedEvent();
+        job.addDiagnostic("Job commit failed: " + e.getMessage());
+        job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.FAILED);
         return job.finished(JobState.FAILED);
       }
       job.logJobHistoryFinishedEvent();
@@ -1199,7 +1206,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
-  private void abortJob(
+  protected void abortJob(
       org.apache.hadoop.mapreduce.JobStatus.State finalState) {
     try {
       committer.abortJob(jobContext, finalState);
@@ -1370,7 +1377,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           }
         }
         
-        float failureRate = (float) fetchFailures / runningReduceTasks;
+        float failureRate = runningReduceTasks == 0 ? 1.0f : 
+          (float) fetchFailures / runningReduceTasks;
         // declare faulty if fetch-failures >= max-allowed-failures
         boolean isMapFaulty =
             (failureRate >= MAX_ALLOWED_FETCH_FAILURES_FRACTION);
@@ -1500,7 +1508,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
-  private void addDiagnostic(String diag) {
+  protected void addDiagnostic(String diag) {
     diagnostics.add(diag);
   }
   
@@ -1561,7 +1569,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     Path confPath = getConfFile();
     FileContext fc = FileContext.getFileContext(confPath.toUri(), conf);
     Configuration jobConf = new Configuration(false);
-    jobConf.addResource(fc.open(confPath));
+    jobConf.addResource(fc.open(confPath), confPath.toString());
     return jobConf;
   }
 }

@@ -27,7 +27,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -65,6 +64,16 @@ import org.hsqldb.server.Server;
  * 
  * When called with no arguments the program starts a local HSQLDB server, and 
  * uses this database for storing/retrieving the data. 
+ * <br>
+ * This program requires some additional configuration relating to HSQLDB.  
+ * The the hsqldb jar should be added to the classpath:
+ * <br>
+ * <code>export HADOOP_CLASSPATH=share/hadoop/mapreduce/lib-examples/hsqldb-2.0.0.jar</code>
+ * <br>
+ * And the hsqldb jar should be included with the <code>-libjars</code> 
+ * argument when executing it with hadoop:
+ * <br>
+ * <code>-libjars share/hadoop/mapreduce/lib-examples/hsqldb-2.0.0.jar</code>
  */
 public class DBCountPageView extends Configured implements Tool {
 
@@ -72,6 +81,7 @@ public class DBCountPageView extends Configured implements Tool {
   
   private Connection connection;
   private boolean initialized = false;
+  private boolean isOracle = false;
 
   private static final String[] AccessFieldNames = {"url", "referrer", "time"};
   private static final String[] PageviewFieldNames = {"url", "pageview"};
@@ -92,7 +102,9 @@ public class DBCountPageView extends Configured implements Tool {
   
   private void createConnection(String driverClassName
       , String url) throws Exception {
-    
+    if(driverClassName.toLowerCase().contains("oracle")) {
+      isOracle = true;
+    }
     Class.forName(driverClassName);
     connection = DriverManager.getConnection(url);
     connection.setAutoCommit(false);
@@ -132,7 +144,7 @@ public class DBCountPageView extends Configured implements Tool {
   }
   
   private void dropTables() {
-    String dropAccess = "DROP TABLE Access";
+    String dropAccess = "DROP TABLE HAccess";
     String dropPageview = "DROP TABLE Pageview";
     Statement st = null;
     try {
@@ -147,18 +159,21 @@ public class DBCountPageView extends Configured implements Tool {
   }
   
   private void createTables() throws SQLException {
-
+	String dataType = "BIGINT NOT NULL";
+	if(isOracle) {
+	  dataType = "NUMBER(19) NOT NULL";
+	}
     String createAccess = 
       "CREATE TABLE " +
-      "Access(url      VARCHAR(100) NOT NULL," +
+      "HAccess(url      VARCHAR(100) NOT NULL," +
             " referrer VARCHAR(100)," +
-            " time     BIGINT NOT NULL, " +
+            " time     " + dataType + ", " +
             " PRIMARY KEY (url, time))";
 
     String createPageview = 
       "CREATE TABLE " +
       "Pageview(url      VARCHAR(100) NOT NULL," +
-              " pageview     BIGINT NOT NULL, " +
+              " pageview     " + dataType + ", " +
                " PRIMARY KEY (url))";
     
     Statement st = connection.createStatement();
@@ -179,7 +194,7 @@ public class DBCountPageView extends Configured implements Tool {
     PreparedStatement statement = null ;
     try {
       statement = connection.prepareStatement(
-          "INSERT INTO Access(url, referrer, time)" +
+          "INSERT INTO HAccess(url, referrer, time)" +
           " VALUES (?, ?, ?)");
 
       Random random = new Random();
@@ -238,7 +253,7 @@ public class DBCountPageView extends Configured implements Tool {
   /**Verifies the results are correct */
   private boolean verify() throws SQLException {
     //check total num pageview
-    String countAccessQuery = "SELECT COUNT(*) FROM Access";
+    String countAccessQuery = "SELECT COUNT(*) FROM HAccess";
     String sumPageviewQuery = "SELECT SUM(pageview) FROM Pageview";
     Statement st = null;
     ResultSet rs = null;
@@ -386,7 +401,7 @@ public class DBCountPageView extends Configured implements Tool {
 
     DBConfiguration.configureDB(conf, driverClassName, url);
 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
         
     job.setJobName("Count Pageviews of URLs");
     job.setJarByClass(DBCountPageView.class);
@@ -394,7 +409,7 @@ public class DBCountPageView extends Configured implements Tool {
     job.setCombinerClass(LongSumReducer.class);
     job.setReducerClass(PageviewReducer.class);
 
-    DBInputFormat.setInput(job, AccessRecord.class, "Access"
+    DBInputFormat.setInput(job, AccessRecord.class, "HAccess"
         , null, "url", AccessFieldNames);
 
     DBOutputFormat.setOutput(job, "Pageview", PageviewFieldNames);

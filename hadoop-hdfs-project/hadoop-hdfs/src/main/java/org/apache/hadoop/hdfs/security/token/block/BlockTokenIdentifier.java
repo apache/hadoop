@@ -118,7 +118,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return a == null ? b == null : a.equals(b);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
@@ -134,13 +134,14 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return false;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     return (int) expiryDate ^ keyId ^ (int) blockId ^ modes.hashCode()
         ^ (userId == null ? 0 : userId.hashCode())
         ^ (blockPoolId == null ? 0 : blockPoolId.hashCode());
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     this.cache = null;
     expiryDate = WritableUtils.readVLong(in);
@@ -155,6 +156,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     }
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVLong(out, expiryDate);
     WritableUtils.writeVInt(out, keyId);

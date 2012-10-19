@@ -49,6 +49,8 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   private EditsDoubleBuffer doubleBuf;
   static ByteBuffer fill = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
 
+  private static boolean shouldSkipFsyncForTests = false;
+
   static {
     fill.position(0);
     for (int i = 0; i < fill.capacity(); i++) {
@@ -174,7 +176,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    * accumulates new log records while readyBuffer will be flushed and synced.
    */
   @Override
-  public void flushAndSync() throws IOException {
+  public void flushAndSync(boolean durable) throws IOException {
     if (fp == null) {
       throw new IOException("Trying to use aborted output stream");
     }
@@ -184,7 +186,9 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     }
     preallocate(); // preallocate file if necessay
     doubleBuf.flushTo(fp);
-    fc.force(false); // metadata updates not needed
+    if (durable && !shouldSkipFsyncForTests) {
+      fc.force(false); // metadata updates not needed
+    }
   }
 
   /**
@@ -246,5 +250,16 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   @VisibleForTesting
   public FileChannel getFileChannelForTesting() {
     return fc;
+  }
+  
+  /**
+   * For the purposes of unit tests, we don't need to actually
+   * write durably to disk. So, we can skip the fsync() calls
+   * for a speed improvement.
+   * @param skip true if fsync should <em>not</em> be called
+   */
+  @VisibleForTesting
+  public static void setShouldSkipFsyncForTesting(boolean skip) {
+    shouldSkipFsyncForTests = skip;
   }
 }

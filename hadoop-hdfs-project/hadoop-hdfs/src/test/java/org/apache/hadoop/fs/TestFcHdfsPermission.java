@@ -55,6 +55,7 @@ public class TestFcHdfsPermission extends FileContextPermissionBase {
     cluster.shutdown();   
   }
   
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
@@ -72,6 +73,7 @@ public class TestFcHdfsPermission extends FileContextPermissionBase {
    */
   static final FsPermission FILE_MASK_IGNORE_X_BIT = 
     new FsPermission((short) ~0666);
+  @Override
   FsPermission getFileMask() {
     return FILE_MASK_IGNORE_X_BIT;
   }

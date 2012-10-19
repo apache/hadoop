@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -33,24 +36,22 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
 import org.apache.hadoop.util.DataChecksum;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * this class tests the methods of the  SimulatedFSDataset.
  */
-public class TestSimulatedFSDataset extends TestCase {
+public class TestSimulatedFSDataset {
   Configuration conf = null;
   static final String bpid = "BP-TEST";
   static final int NUMBLOCKS = 20;
   static final int BLOCK_LENGTH_MULTIPLIER = 79;
 
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
-  }
-
-  protected void tearDown() throws Exception {
-    super.tearDown();
   }
   
   long blockIdToLen(long blkid) {
@@ -66,7 +67,7 @@ public class TestSimulatedFSDataset extends TestCase {
       // data written
       ReplicaInPipelineInterface bInfo = fsdataset.createRbw(b);
       ReplicaOutputStreams out = bInfo.createStreams(true,
-          DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512));
+          DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 512));
       try {
         OutputStream dataOut  = out.getDataOut();
         assertEquals(0, fsdataset.getLength(b));
@@ -88,6 +89,7 @@ public class TestSimulatedFSDataset extends TestCase {
     return addSomeBlocks(fsdataset, 1);
   }
   
+  @Test
   public void testFSDatasetFactory() {
     final Configuration conf = new Configuration();
     FsDatasetSpi.Factory<?> f = FsDatasetSpi.Factory.getFactory(conf);
@@ -100,6 +102,7 @@ public class TestSimulatedFSDataset extends TestCase {
     assertTrue(s.isSimulated());
   }
 
+  @Test
   public void testGetMetaData() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     ExtendedBlock b = new ExtendedBlock(bpid, 1, 5, 0);
@@ -116,11 +119,12 @@ public class TestSimulatedFSDataset extends TestCase {
     short version = metaDataInput.readShort();
     assertEquals(BlockMetadataHeader.VERSION, version);
     DataChecksum checksum = DataChecksum.newDataChecksum(metaDataInput);
-    assertEquals(DataChecksum.CHECKSUM_NULL, checksum.getChecksumType());
+    assertEquals(DataChecksum.Type.NULL, checksum.getChecksumType());
     assertEquals(0, checksum.getChecksumSize());  
   }
 
 
+  @Test
   public void testStorageUsage() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     assertEquals(fsdataset.getDfsUsed(), 0);
@@ -144,6 +148,7 @@ public class TestSimulatedFSDataset extends TestCase {
     assertEquals(expectedLen, lengthRead);
   }
   
+  @Test
   public void testWriteRead() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     addSomeBlocks(fsdataset);
@@ -155,6 +160,7 @@ public class TestSimulatedFSDataset extends TestCase {
     }
   }
 
+  @Test
   public void testGetBlockReport() throws IOException {
     SimulatedFSDataset fsdataset = getSimulatedFSDataset(); 
     BlockListAsLongs blockReport = fsdataset.getBlockReport(bpid);
@@ -168,6 +174,7 @@ public class TestSimulatedFSDataset extends TestCase {
     }
   }
   
+  @Test
   public void testInjectionEmpty() throws IOException {
     SimulatedFSDataset fsdataset = getSimulatedFSDataset(); 
     BlockListAsLongs blockReport = fsdataset.getBlockReport(bpid);
@@ -196,6 +203,7 @@ public class TestSimulatedFSDataset extends TestCase {
     assertEquals(sfsdataset.getCapacity()-bytesAdded, sfsdataset.getRemaining());
   }
 
+  @Test
   public void testInjectionNonEmpty() throws IOException {
     SimulatedFSDataset fsdataset = getSimulatedFSDataset(); 
     BlockListAsLongs blockReport = fsdataset.getBlockReport(bpid);
@@ -269,6 +277,7 @@ public class TestSimulatedFSDataset extends TestCase {
     }
   }
   
+  @Test
   public void testInValidBlocks() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     ExtendedBlock b = new ExtendedBlock(bpid, 1, 5, 0);
@@ -280,6 +289,7 @@ public class TestSimulatedFSDataset extends TestCase {
     checkInvalidBlock(b);
   }
 
+  @Test
   public void testInvalidate() throws IOException {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     int bytesAdded = addSomeBlocks(fsdataset);

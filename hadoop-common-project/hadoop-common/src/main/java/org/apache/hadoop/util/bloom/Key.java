@@ -154,12 +154,14 @@ public class Key implements WritableComparable<Key> {
 
   // Writable
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(bytes.length);
     out.write(bytes);
     out.writeDouble(weight);
   }
   
+  @Override
   public void readFields(DataInput in) throws IOException {
     this.bytes = new byte[in.readInt()];
     in.readFully(this.bytes);

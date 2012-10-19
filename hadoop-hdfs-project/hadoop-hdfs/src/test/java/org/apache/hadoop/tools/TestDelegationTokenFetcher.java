@@ -36,18 +36,18 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenRenewer;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import static org.mockito.Matchers.*;
 
 public class TestDelegationTokenFetcher {
   private DistributedFileSystem dfs;
   private Configuration conf;
   private URI uri;
   private static final String SERVICE_VALUE = "localhost:2005";
-  private static final Text KIND = new Text("TESTING-TOKEN-KIND");
   private static String tokenFile = "file.dta";
 
   @Before 
@@ -58,37 +58,6 @@ public class TestDelegationTokenFetcher {
     FileSystemTestHelper.addFileSystemForTesting(uri, conf, dfs);
   }
   
-  public static class FakeRenewer extends TokenRenewer {
-    static Token<?> lastRenewed = null;
-    static Token<?> lastCanceled = null;
-
-    @Override
-    public boolean handleKind(Text kind) {
-      return KIND.equals(kind);
-    }
-
-    @Override
-    public boolean isManaged(Token<?> token) throws IOException {
-      return true;
-    }
-
-    @Override
-    public long renew(Token<?> token, Configuration conf) {
-      lastRenewed = token;
-      return 0;
-    }
-
-    @Override
-    public void cancel(Token<?> token, Configuration conf) {
-      lastCanceled = token;
-    }
-    
-    public static void reset() {
-      lastRenewed = null;
-      lastCanceled = null;
-    }
-  }
-
   /**
    * Verify that when the DelegationTokenFetcher runs, it talks to the Namenode,
    * pulls out the correct user's token and successfully serializes it to disk.
@@ -100,14 +69,20 @@ public class TestDelegationTokenFetcher {
         new Text("renewer"), new Text("realuser")).getBytes();
     final byte[] pw = new byte[] { 42 };
     final Text service = new Text(uri.toString());
-    final String user = 
-        UserGroupInformation.getCurrentUser().getShortUserName();
 
     // Create a token for the fetcher to fetch, wire NN to return it when asked
     // for this particular user.
-    Token<DelegationTokenIdentifier> t = 
-      new Token<DelegationTokenIdentifier>(ident, pw, KIND, service);
-    when(dfs.getDelegationToken(eq((String) null))).thenReturn(t);
+    final Token<DelegationTokenIdentifier> t = 
+      new Token<DelegationTokenIdentifier>(ident, pw, FakeRenewer.KIND, service);
+    when(dfs.addDelegationTokens(eq((String) null), any(Credentials.class))).thenAnswer(
+        new Answer<Token<?>[]>() {
+          @Override
+          public Token<?>[] answer(InvocationOnMock invocation) {
+            Credentials creds = (Credentials)invocation.getArguments()[1];
+            creds.addToken(service, t);
+            return new Token<?>[]{t};
+          }
+        });
     when(dfs.renewDelegationToken(eq(t))).thenReturn(1000L);
     when(dfs.getUri()).thenReturn(uri);
     FakeRenewer.reset();

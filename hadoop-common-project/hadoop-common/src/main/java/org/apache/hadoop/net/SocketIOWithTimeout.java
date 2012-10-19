@@ -33,7 +33,7 @@ import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * This supports input and output streams for a socket channels. 
@@ -194,7 +194,7 @@ abstract class SocketIOWithTimeout {
       }
 
       long timeoutLeft = timeout;
-      long endTime = (timeout > 0) ? (System.currentTimeMillis() + timeout): 0;
+      long endTime = (timeout > 0) ? (Time.now() + timeout): 0;
       
       while (true) {
         // we might have to call finishConnect() more than once
@@ -209,7 +209,7 @@ abstract class SocketIOWithTimeout {
         
         if (ret == 0 ||
             (timeout > 0 &&  
-              (timeoutLeft = (endTime - System.currentTimeMillis())) <= 0)) {
+              (timeoutLeft = (endTime - Time.now())) <= 0)) {
           throw new SocketTimeoutException(
                     timeoutExceptionString(channel, timeout, 
                                            SelectionKey.OP_CONNECT));
@@ -329,7 +329,7 @@ abstract class SocketIOWithTimeout {
       
       try {
         while (true) {
-          long start = (timeout == 0) ? 0 : System.currentTimeMillis();
+          long start = (timeout == 0) ? 0 : Time.now();
 
           key = channel.register(info.selector, ops);
           ret = info.selector.select(timeout);
@@ -342,7 +342,7 @@ abstract class SocketIOWithTimeout {
            * unknown reasons. So select again if required.
            */
           if (timeout > 0) {
-            timeout -= System.currentTimeMillis() - start;
+            timeout -= Time.now() - start;
             if (timeout <= 0) {
               return 0;
             }
@@ -414,7 +414,7 @@ abstract class SocketIOWithTimeout {
         selInfo = queue.removeLast();
       }
       
-      trimIdleSelectors(System.currentTimeMillis());
+      trimIdleSelectors(Time.now());
       return selInfo;
     }
     
@@ -425,7 +425,7 @@ abstract class SocketIOWithTimeout {
      * @param info
      */
     private synchronized void release(SelectorInfo info) {
-      long now = System.currentTimeMillis();
+      long now = Time.now();
       trimIdleSelectors(now);
       info.lastActivityTime = now;
       info.queue.addLast(info);

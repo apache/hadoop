@@ -32,8 +32,10 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.junit.BeforeClass;
@@ -77,6 +79,11 @@ public class TestFilterFileSystem {
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
             EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
             Progressable progress) throws IOException {
+      return null;
+    }
+    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+            EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+            Progressable progress, ChecksumOpt checksumOpt) throws IOException {
       return null;
     }
     public boolean mkdirs(Path f) { return false; }
@@ -137,6 +144,16 @@ public class TestFilterFileSystem {
         Progressable progress) throws IOException {
       return null;
     }
+    public FSDataOutputStream create(Path f,
+        FsPermission permission,
+        EnumSet<CreateFlag> flags,
+        int bufferSize,
+        short replication,
+        long blockSize,
+        Progressable progress,
+        ChecksumOpt checksumOpt) throws IOException {
+      return null;
+    }
     public String getName() { return null; }
     public boolean delete(Path f) { return false; }
     public short getReplication(Path src) { return 0 ; }
@@ -179,7 +196,16 @@ public class TestFilterFileSystem {
     public Token<?> getDelegationToken(String renewer) throws IOException {
       return null;
     }
-
+    public boolean deleteOnExit(Path f) throws IOException {
+      return false;
+    }
+    public boolean cancelDeleteOnExit(Path f) throws IOException {
+      return false;
+    }
+    public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
+        throws IOException {
+      return null;
+    }
     public String getScheme() {
       return "dontcheck";
     }
@@ -279,6 +305,30 @@ public class TestFilterFileSystem {
     checkFsConf(flfs, null, 3);
     flfs.initialize(URI.create("flfs:/"), conf);
     checkFsConf(flfs, conf, 3);
+  }
+
+  @Test
+  public void testVerifyChecksumPassthru() {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+
+    fs.setVerifyChecksum(false);
+    verify(mockFs).setVerifyChecksum(eq(false));
+    reset(mockFs);
+    fs.setVerifyChecksum(true);
+    verify(mockFs).setVerifyChecksum(eq(true));
+  }
+
+  @Test
+  public void testWriteChecksumPassthru() {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+
+    fs.setWriteChecksum(false);
+    verify(mockFs).setWriteChecksum(eq(false));
+    reset(mockFs);
+    fs.setWriteChecksum(true);
+    verify(mockFs).setWriteChecksum(eq(true));
   }
 
   private void checkInit(FilterFileSystem fs, boolean expectInit)

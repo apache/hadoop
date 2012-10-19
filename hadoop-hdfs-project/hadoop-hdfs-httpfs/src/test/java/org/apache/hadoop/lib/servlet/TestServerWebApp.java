@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.lib.servlet;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.InetSocketAddress;
 
 public class TestServerWebApp extends HTestCase {
 
@@ -35,10 +39,10 @@ public class TestServerWebApp extends HTestCase {
   @Test
   public void getHomeDir() {
     System.setProperty("TestServerWebApp0.home.dir", "/tmp");
-    Assert.assertEquals(ServerWebApp.getHomeDir("TestServerWebApp0"), "/tmp");
-    Assert.assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmp/log");
+    assertEquals(ServerWebApp.getHomeDir("TestServerWebApp0"), "/tmp");
+    assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmp/log");
     System.setProperty("TestServerWebApp0.log.dir", "/tmplog");
-    Assert.assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmplog");
+    assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmplog");
   }
 
   @Test
@@ -52,11 +56,11 @@ public class TestServerWebApp extends HTestCase {
     ServerWebApp server = new ServerWebApp("TestServerWebApp1") {
     };
 
-    Assert.assertEquals(server.getStatus(), Server.Status.UNDEF);
+    assertEquals(server.getStatus(), Server.Status.UNDEF);
     server.contextInitialized(null);
-    Assert.assertEquals(server.getStatus(), Server.Status.NORMAL);
+    assertEquals(server.getStatus(), Server.Status.NORMAL);
     server.contextDestroyed(null);
-    Assert.assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
+    assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
   }
 
   @Test(expected = RuntimeException.class)
@@ -73,4 +77,23 @@ public class TestServerWebApp extends HTestCase {
 
     server.contextInitialized(null);
   }
+
+  @Test
+  @TestDir
+  public void testResolveAuthority() throws Exception {
+    String dir = TestDirHelper.getTestDir().getAbsolutePath();
+    System.setProperty("TestServerWebApp3.home.dir", dir);
+    System.setProperty("TestServerWebApp3.config.dir", dir);
+    System.setProperty("TestServerWebApp3.log.dir", dir);
+    System.setProperty("TestServerWebApp3.temp.dir", dir);
+    System.setProperty("testserverwebapp3.http.hostname", "localhost");
+    System.setProperty("testserverwebapp3.http.port", "14000");
+    ServerWebApp server = new ServerWebApp("TestServerWebApp3") {
+    };
+
+    InetSocketAddress address = server.resolveAuthority();
+    Assert.assertEquals("localhost", address.getHostName());
+    Assert.assertEquals(14000, address.getPort());
+  }
+
 }

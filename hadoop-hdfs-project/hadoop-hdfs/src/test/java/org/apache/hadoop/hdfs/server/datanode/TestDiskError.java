@@ -142,7 +142,7 @@ public class TestDiskError {
     DataOutputStream out = new DataOutputStream(s.getOutputStream());
 
     DataChecksum checksum = DataChecksum.newDataChecksum(
-        DataChecksum.CHECKSUM_CRC32, 512);
+        DataChecksum.Type.CRC32, 512);
     new Sender(out).writeBlock(block.getBlock(),
         BlockTokenSecretManager.DUMMY_TOKEN, "",
         new DatanodeInfo[0], null,

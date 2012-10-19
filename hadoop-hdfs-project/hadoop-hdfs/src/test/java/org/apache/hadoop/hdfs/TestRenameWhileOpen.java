@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
@@ -29,8 +30,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
-public class TestRenameWhileOpen extends junit.framework.TestCase {
+public class TestRenameWhileOpen {
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -47,6 +49,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * mkdir /user/dir3
    * move /user/dir1 /user/dir3
    */
+  @Test
   public void testWhileOpenRenameParent() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
@@ -132,6 +135,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * open /user/dir1/file1 /user/dir2/file2
    * move /user/dir1 /user/dir3
    */
+  @Test
   public void testWhileOpenRenameParentToNonexistentDir() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
@@ -206,6 +210,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * mkdir /user/dir2
    * move /user/dir1/file1 /user/dir2/
    */
+  @Test
   public void testWhileOpenRenameToExistentDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
@@ -270,6 +275,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
    * open /user/dir1/file1 
    * move /user/dir1/file1 /user/dir2/
    */
+  @Test
   public void testWhileOpenRenameToNonExistentDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s

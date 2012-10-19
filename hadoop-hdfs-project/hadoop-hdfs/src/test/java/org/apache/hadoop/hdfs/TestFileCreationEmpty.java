@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+import static org.junit.Assert.assertFalse;
 
 import java.util.ConcurrentModificationException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.junit.Test;
 
 /**
  * Test empty file creation.
  */
-public class TestFileCreationEmpty extends junit.framework.TestCase {
+public class TestFileCreationEmpty {
   private boolean isConcurrentModificationException = false;
 
   /**
@@ -35,9 +37,11 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
    * The empty files are supposed to be closed by that 
    * without causing ConcurrentModificationException.
    */
+  @Test
   public void testLeaseExpireEmptyFiles() throws Exception {
     final Thread.UncaughtExceptionHandler oldUEH = Thread.getDefaultUncaughtExceptionHandler();
     Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+      @Override
       public void uncaughtException(Thread t, Throwable e) {
         if (e instanceof ConcurrentModificationException) {
           LeaseManager.LOG.error("t=" + t, e);

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ChRootedFileSystem;
@@ -33,6 +34,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 public class TestChRootedFileSystem {
   FileSystem fSys; // The ChRoootedFs
@@ -313,5 +315,48 @@ public class TestChRootedFileSystem {
   @Test(expected=FileNotFoundException.class) 
   public void testResolvePathNonExisting() throws IOException {
       fSys.resolvePath(new Path("/nonExisting"));
+  }
+  
+  @Test
+  public void testDeleteOnExitPathHandling() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+        
+    URI chrootUri = URI.create("mockfs://foo/a/b");
+    ChRootedFileSystem chrootFs = new ChRootedFileSystem(chrootUri, conf);
+    FileSystem mockFs = ((FilterFileSystem)chrootFs.getRawFileSystem())
+        .getRawFileSystem();
+    
+    // ensure delete propagates the correct path
+    Path chrootPath = new Path("/c");
+    Path rawPath = new Path("/a/b/c");
+    chrootFs.delete(chrootPath, false);
+    verify(mockFs).delete(eq(rawPath), eq(false));
+    reset(mockFs);
+ 
+    // fake that the path exists for deleteOnExit
+    FileStatus stat = mock(FileStatus.class);
+    when(mockFs.getFileStatus(eq(rawPath))).thenReturn(stat);
+    // ensure deleteOnExit propagates the correct path
+    chrootFs.deleteOnExit(chrootPath);
+    chrootFs.close();
+    verify(mockFs).delete(eq(rawPath), eq(true));
+  }
+  
+  @Test
+  public void testURIEmptyPath() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+
+    URI chrootUri = URI.create("mockfs://foo");
+    new ChRootedFileSystem(chrootUri, conf);
+  }
+
+  static class MockFileSystem extends FilterFileSystem {
+    MockFileSystem() {
+      super(mock(FileSystem.class));
+    }
+    @Override
+    public void initialize(URI name, Configuration conf) throws IOException {}
   }
 }

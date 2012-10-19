@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -40,6 +41,7 @@ import java.util.Map;
 /**
  * FileSystem operation executors used by {@link HttpFSServer}.
  */
+@InterfaceAudience.Private
 public class FSOperations {
 
   @SuppressWarnings({"unchecked", "deprecation"})
@@ -160,6 +162,7 @@ public class FSOperations {
   /**
    * Executor that performs an append FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSAppend implements FileSystemAccess.FileSystemExecutor<Void> {
     private InputStream is;
     private Path path;
@@ -198,6 +201,7 @@ public class FSOperations {
   /**
    * Executor that performs a content-summary FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSContentSummary implements FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 
@@ -230,6 +234,7 @@ public class FSOperations {
   /**
    * Executor that performs a create FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSCreate implements FileSystemAccess.FileSystemExecutor<Void> {
     private InputStream is;
     private Path path;
@@ -288,6 +293,7 @@ public class FSOperations {
   /**
    * Executor that performs a delete FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSDelete implements FileSystemAccess.FileSystemExecutor<JSONObject> {
     private Path path;
     private boolean recursive;
@@ -324,6 +330,7 @@ public class FSOperations {
   /**
    * Executor that performs a file-checksum FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSFileChecksum implements FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 
@@ -356,6 +363,7 @@ public class FSOperations {
   /**
    * Executor that performs a file-status FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSFileStatus implements FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 
@@ -388,6 +396,7 @@ public class FSOperations {
   /**
    * Executor that performs a home-dir FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSHomeDir implements FileSystemAccess.FileSystemExecutor<JSONObject> {
 
     /**
@@ -413,6 +422,7 @@ public class FSOperations {
   /**
    * Executor that performs a list-status FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSListStatus implements FileSystemAccess.FileSystemExecutor<Map>, PathFilter {
     private Path path;
     private PathFilter filter;
@@ -456,6 +466,7 @@ public class FSOperations {
   /**
    * Executor that performs a mkdirs FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSMkdirs implements FileSystemAccess.FileSystemExecutor<JSONObject> {
 
     private Path path;
@@ -494,6 +505,7 @@ public class FSOperations {
   /**
    * Executor that performs a open FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSOpen implements FileSystemAccess.FileSystemExecutor<InputStream> {
     private Path path;
 
@@ -526,6 +538,7 @@ public class FSOperations {
   /**
    * Executor that performs a rename FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSRename implements FileSystemAccess.FileSystemExecutor<JSONObject> {
     private Path path;
     private Path toPath;
@@ -562,6 +575,7 @@ public class FSOperations {
   /**
    * Executor that performs a set-owner FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSSetOwner implements FileSystemAccess.FileSystemExecutor<Void> {
     private Path path;
     private String owner;
@@ -600,6 +614,7 @@ public class FSOperations {
   /**
    * Executor that performs a set-permission FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSSetPermission implements FileSystemAccess.FileSystemExecutor<Void> {
 
     private Path path;
@@ -637,6 +652,7 @@ public class FSOperations {
   /**
    * Executor that performs a set-replication FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSSetReplication implements FileSystemAccess.FileSystemExecutor<JSONObject> {
     private Path path;
     private short replication;
@@ -676,6 +692,7 @@ public class FSOperations {
   /**
    * Executor that performs a set-times FileSystemAccess files system operation.
    */
+  @InterfaceAudience.Private
   public static class FSSetTimes implements FileSystemAccess.FileSystemExecutor<Void> {
     private Path path;
     private long mTime;

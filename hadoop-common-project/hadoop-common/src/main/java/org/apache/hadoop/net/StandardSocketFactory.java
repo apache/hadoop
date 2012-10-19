@@ -42,7 +42,6 @@ public class StandardSocketFactory extends SocketFactory {
   public StandardSocketFactory() {
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket() throws IOException {
     /*
@@ -63,7 +62,6 @@ public class StandardSocketFactory extends SocketFactory {
     return SocketChannel.open().socket();
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(InetAddress addr, int port) throws IOException {
 
@@ -72,7 +70,6 @@ public class StandardSocketFactory extends SocketFactory {
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(InetAddress addr, int port,
       InetAddress localHostAddr, int localPort) throws IOException {
@@ -83,7 +80,6 @@ public class StandardSocketFactory extends SocketFactory {
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(String host, int port) throws IOException,
       UnknownHostException {
@@ -93,7 +89,6 @@ public class StandardSocketFactory extends SocketFactory {
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(String host, int port,
       InetAddress localHostAddr, int localPort) throws IOException,
@@ -105,7 +100,6 @@ public class StandardSocketFactory extends SocketFactory {
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public boolean equals(Object obj) {
     if (this == obj)
@@ -115,7 +109,6 @@ public class StandardSocketFactory extends SocketFactory {
     return obj.getClass().equals(this.getClass());
   }
 
-  /* @inheritDoc */
   @Override
   public int hashCode() {
     return this.getClass().hashCode();

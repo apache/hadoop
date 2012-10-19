@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -121,7 +122,7 @@ public class LoadGenerator extends Configured implements Tool {
   private double [] writeProbs = {0.3333};
   private volatile int currentIndex = 0;
   long totalTime = 0;
-  private long startTime = System.currentTimeMillis()+10000;
+  private long startTime = Time.now()+10000;
   final static private int BLOCK_SIZE = 10;
   private ArrayList<String> files = new ArrayList<String>();  // a table of file names
   private ArrayList<String> dirs = new ArrayList<String>(); // a table of directory names
@@ -185,6 +186,7 @@ public class LoadGenerator extends Configured implements Tool {
     /** Main loop
      * Each iteration decides what's the next operation and then pauses.
      */
+    @Override
     public void run() {
       try {
         while (shouldRun) {
@@ -232,9 +234,9 @@ public class LoadGenerator extends Configured implements Tool {
      * the entire file */
     private void read() throws IOException {
       String fileName = files.get(r.nextInt(files.size()));
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.now();
       InputStream in = fc.open(new Path(fileName));
-      executionTime[OPEN] += (System.currentTimeMillis()-startTime);
+      executionTime[OPEN] += (Time.now()-startTime);
       totalNumOfOps[OPEN]++;
       while (in.read(buffer) != -1) {}
       in.close();
@@ -254,9 +256,9 @@ public class LoadGenerator extends Configured implements Tool {
       double fileSize = 0;
       while ((fileSize = r.nextGaussian()+2)<=0) {}
       genFile(file, (long)(fileSize*BLOCK_SIZE));
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.now();
       fc.delete(file, true);
-      executionTime[DELETE] += (System.currentTimeMillis()-startTime);
+      executionTime[DELETE] += (Time.now()-startTime);
       totalNumOfOps[DELETE]++;
     }
     
@@ -265,9 +267,9 @@ public class LoadGenerator extends Configured implements Tool {
      */
     private void list() throws IOException {
       String dirName = dirs.get(r.nextInt(dirs.size()));
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.now();
       fc.listStatus(new Path(dirName));
-      executionTime[LIST] += (System.currentTimeMillis()-startTime);
+      executionTime[LIST] += (Time.now()-startTime);
       totalNumOfOps[LIST]++;
     }
   }
@@ -280,6 +282,7 @@ public class LoadGenerator extends Configured implements Tool {
    * Before exiting, it prints the average execution for 
    * each operation and operation throughput.
    */
+  @Override
   public int run(String[] args) throws Exception {
     int exitCode = init(args);
     if (exitCode != 0) {
@@ -435,7 +438,7 @@ public class LoadGenerator extends Configured implements Tool {
     }
     
     if (r==null) {
-      r = new Random(System.currentTimeMillis()+hostHashCode);
+      r = new Random(Time.now()+hostHashCode);
     }
     
     return initFileDirTables();
@@ -571,7 +574,7 @@ public class LoadGenerator extends Configured implements Tool {
    */
   private void barrier() {
     long sleepTime;
-    while ((sleepTime = startTime - System.currentTimeMillis()) > 0) {
+    while ((sleepTime = startTime - Time.now()) > 0) {
       try {
         Thread.sleep(sleepTime);
       } catch (InterruptedException ex) {
@@ -583,20 +586,20 @@ public class LoadGenerator extends Configured implements Tool {
    * The file is filled with 'a'.
    */
   private void genFile(Path file, long fileSize) throws IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     FSDataOutputStream out = fc.create(file,
         EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
         CreateOpts.createParent(), CreateOpts.bufferSize(4096),
         CreateOpts.repFac((short) 3));
-    executionTime[CREATE] += (System.currentTimeMillis()-startTime);
+    executionTime[CREATE] += (Time.now()-startTime);
     totalNumOfOps[CREATE]++;
 
     for (long i=0; i<fileSize; i++) {
       out.writeByte('a');
     }
-    startTime = System.currentTimeMillis();
+    startTime = Time.now();
     out.close();
-    executionTime[WRITE_CLOSE] += (System.currentTimeMillis()-startTime);
+    executionTime[WRITE_CLOSE] += (Time.now()-startTime);
     totalNumOfOps[WRITE_CLOSE]++;
   }
   

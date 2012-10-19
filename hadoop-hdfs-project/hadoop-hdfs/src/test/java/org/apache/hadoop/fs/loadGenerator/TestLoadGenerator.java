@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.loadGenerator;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -27,9 +29,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
-import static org.junit.Assert.*;
-
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
@@ -171,7 +171,7 @@ public class TestLoadGenerator extends Configured implements Tool {
       args = new String[] {"-readProbability", "0.3", "-writeProbability", "0.3",
           "-root", TEST_SPACE_ROOT, "-maxDelayBetweenOps", "0",
           "-numOfThreads", "1", "-startTime", 
-          Long.toString(System.currentTimeMillis()), "-elapsedTime", "10"};
+          Long.toString(Time.now()), "-elapsedTime", "10"};
       
       assertEquals(0, lg.run(args));
 
@@ -227,7 +227,7 @@ public class TestLoadGenerator extends Configured implements Tool {
       String[] scriptArgs = new String[] {
           "-root", TEST_SPACE_ROOT, "-maxDelayBetweenOps", "0",
           "-numOfThreads", "10", "-startTime", 
-          Long.toString(System.currentTimeMillis()), "-scriptFile", script};
+          Long.toString(Time.now()), "-scriptFile", script};
       
       assertEquals(0, lg.run(scriptArgs));
       

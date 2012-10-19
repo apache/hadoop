@@ -43,6 +43,7 @@ public class VectorTypeID extends TypeID {
     return this.typeIDElement;
   }
   
+  @Override
   void write(RecordOutput rout, String tag) throws IOException {
     rout.writeByte(typeVal, tag);
     typeIDElement.write(rout, tag);
@@ -52,6 +53,7 @@ public class VectorTypeID extends TypeID {
    * Two vector typeIDs are equal if their constituent elements have the 
    * same type
    */
+  @Override
   public boolean equals(Object o) {
     if (!super.equals (o))
       return false;
@@ -64,6 +66,7 @@ public class VectorTypeID extends TypeID {
    * We use a basic hashcode implementation, since this class will likely not
    * be used as a hashmap key 
    */
+  @Override
   public int hashCode() {
     return 37*17+typeIDElement.hashCode();
   }

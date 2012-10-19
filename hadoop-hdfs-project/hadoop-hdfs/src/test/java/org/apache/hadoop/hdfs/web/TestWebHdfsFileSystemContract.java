@@ -26,6 +26,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Random;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
@@ -205,15 +206,20 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       assertEquals(0, count);
     }
 
-    final Path p = new Path(dir, "file");
-    createFile(p);
+    final byte[] mydata = new byte[1 << 20];
+    new Random().nextBytes(mydata);
 
-    final int one_third = data.length/3;
+    final Path p = new Path(dir, "file");
+    FSDataOutputStream out = fs.create(p, false, 4096, (short)3, 1L << 17);
+    out.write(mydata, 0, mydata.length);
+    out.close();
+
+    final int one_third = mydata.length/3;
     final int two_third = one_third*2;
 
     { //test seek
       final int offset = one_third; 
-      final int len = data.length - offset;
+      final int len = mydata.length - offset;
       final byte[] buf = new byte[len];
 
       final FSDataInputStream in = fs.open(p);
@@ -225,13 +231,13 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   
       for (int i = 0; i < buf.length; i++) {
         assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
-            data[i + offset], buf[i]);
+            mydata[i + offset], buf[i]);
       }
     }
 
     { //test position read (read the data after the two_third location)
       final int offset = two_third; 
-      final int len = data.length - offset;
+      final int len = mydata.length - offset;
       final byte[] buf = new byte[len];
 
       final FSDataInputStream in = fs.open(p);
@@ -240,7 +246,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   
       for (int i = 0; i < buf.length; i++) {
         assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
-            data[i + offset], buf[i]);
+            mydata[i + offset], buf[i]);
       }
     }
   }

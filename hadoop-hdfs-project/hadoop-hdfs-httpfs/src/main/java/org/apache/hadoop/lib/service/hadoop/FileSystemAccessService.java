@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.service.hadoop;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,6 +28,7 @@ import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.Instrumentation;
+import org.apache.hadoop.lib.service.Scheduler;
 import org.apache.hadoop.lib.util.Check;
 import org.apache.hadoop.lib.util.ConfigurationUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -42,8 +44,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@InterfaceAudience.Private
 public class FileSystemAccessService extends BaseService implements FileSystemAccess {
   private static final Logger LOG = LoggerFactory.getLogger(FileSystemAccessService.class);
 
@@ -54,6 +59,8 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   public static final String AUTHENTICATION_TYPE = "authentication.type";
   public static final String KERBEROS_KEYTAB = "authentication.kerberos.keytab";
   public static final String KERBEROS_PRINCIPAL = "authentication.kerberos.principal";
+  public static final String FS_CACHE_PURGE_FREQUENCY = "filesystem.cache.purge.frequency";
+  public static final String FS_CACHE_PURGE_TIMEOUT = "filesystem.cache.purge.timeout";
 
   public static final String NAME_NODE_WHITELIST = "name.node.whitelist";
 
@@ -62,6 +69,61 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   private static final String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml"};
 
   private static final String FILE_SYSTEM_SERVICE_CREATED = "FileSystemAccessService.created";
+
+  private static class CachedFileSystem {
+    private FileSystem fs;
+    private long lastUse;
+    private long timeout;
+    private int count;
+
+    public CachedFileSystem(long timeout) {
+      this.timeout = timeout;
+      lastUse = -1;
+      count = 0;
+    }
+
+    synchronized FileSystem getFileSytem(Configuration conf)
+      throws IOException {
+      if (fs == null) {
+        fs = FileSystem.get(conf);
+      }
+      lastUse = -1;
+      count++;
+      return fs;
+    }
+
+    synchronized void release() throws IOException {
+      count--;
+      if (count == 0) {
+        if (timeout == 0) {
+          fs.close();
+          fs = null;
+          lastUse = -1;
+        }
+        else {
+          lastUse = System.currentTimeMillis();
+        }
+      }
+    }
+
+    // to avoid race conditions in the map cache adding removing entries
+    // an entry in the cache remains forever, it just closes/opens filesystems
+    // based on their utilization. Worse case scenario, the penalty we'll
+    // pay is that the amount of entries in the cache will be the total
+    // number of users in HDFS (which seems a resonable overhead).
+    synchronized boolean purgeIfIdle() throws IOException {
+      boolean ret = false;
+      if (count == 0 && lastUse != -1 &&
+          (System.currentTimeMillis() - lastUse) > timeout) {
+        fs.close();
+        fs = null;
+        lastUse = -1;
+        ret = true;
+      }
+      return ret;
+    }
+
+  }
 
   public FileSystemAccessService() {
     super(PREFIX);
@@ -72,6 +134,11 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   Configuration serviceHadoopConf;
 
   private AtomicInteger unmanagedFileSystems = new AtomicInteger();
+
+  private ConcurrentHashMap<String, CachedFileSystem> fsCache =
+    new ConcurrentHashMap<String, CachedFileSystem>();
+
+  private long purgeTimeout;
 
   @Override
   protected void init() throws ServiceException {
@@ -157,6 +224,30 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
         return (long) unmanagedFileSystems.get();
       }
     });
+    Scheduler scheduler = getServer().get(Scheduler.class);
+    int purgeInterval = getServiceConfig().getInt(FS_CACHE_PURGE_FREQUENCY, 60);
+    purgeTimeout = getServiceConfig().getLong(FS_CACHE_PURGE_TIMEOUT, 60);
+    purgeTimeout = (purgeTimeout > 0) ? purgeTimeout : 0;
+    if (purgeTimeout > 0) {
+      scheduler.schedule(new FileSystemCachePurger(),
+                         purgeInterval, purgeInterval, TimeUnit.SECONDS);
+    }
+  }
+
+  private class FileSystemCachePurger implements Runnable {
+
+    @Override
+    public void run() {
+      int count = 0;
+      for (CachedFileSystem cacheFs : fsCache.values()) {
+        try {
+          count += cacheFs.purgeIfIdle() ? 1 : 0;
+        } catch (Throwable ex) {
+          LOG.warn("Error while purging filesystem, " + ex.toString(), ex);
+        }
+      }
+      LOG.debug("Purged [{}} filesystem instances", count);
+    }
   }
 
   private Set<String> toLowerCase(Collection<String> collection) {
@@ -174,7 +265,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
 
   @Override
   public Class[] getServiceDependencies() {
-    return new Class[]{Instrumentation.class};
+    return new Class[]{Instrumentation.class, Scheduler.class};
   }
 
   protected UserGroupInformation getUGI(String user) throws IOException {
@@ -185,12 +276,25 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     conf.set("fs.hdfs.impl.disable.cache", "true");
   }
 
-  protected FileSystem createFileSystem(Configuration namenodeConf) throws IOException {
-    return FileSystem.get(namenodeConf);
+  private static final String HTTPFS_FS_USER = "httpfs.fs.user";
+
+  protected FileSystem createFileSystem(Configuration namenodeConf)
+    throws IOException {
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    CachedFileSystem newCachedFS = new CachedFileSystem(purgeTimeout);
+    CachedFileSystem cachedFS = fsCache.putIfAbsent(user, newCachedFS);
+    if (cachedFS == null) {
+      cachedFS = newCachedFS;
+    }
+    Configuration conf = new Configuration(namenodeConf);
+    conf.set(HTTPFS_FS_USER, user);
+    return cachedFS.getFileSytem(conf);
   }
 
   protected void closeFileSystem(FileSystem fs) throws IOException {
-    fs.close();
+    if (fsCache.containsKey(fs.getConf().get(HTTPFS_FS_USER))) {
+      fsCache.get(fs.getConf().get(HTTPFS_FS_USER)).release();
+    }
   }
 
   protected void validateNamenode(String namenode) throws FileSystemAccessException {
@@ -224,6 +328,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
           getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<T>() {
+        @Override
         public T run() throws Exception {
           FileSystem fs = createFileSystem(conf);
           Instrumentation instrumentation = getServer().get(Instrumentation.class);
@@ -258,6 +363,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
         new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        @Override
         public FileSystem run() throws Exception {
           return createFileSystem(conf);
         }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.lang;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.util.Check;
 
 import java.text.MessageFormat;
@@ -26,6 +27,7 @@ import java.text.MessageFormat;
  * Generic exception that requires error codes and uses the a message
  * template from the error code.
  */
+@InterfaceAudience.Private
 public class XException extends Exception {
 
   /**

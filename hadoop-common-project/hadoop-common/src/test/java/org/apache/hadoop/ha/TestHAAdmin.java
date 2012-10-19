@@ -40,7 +40,9 @@ public class TestHAAdmin {
   
   private HAAdmin tool;
   private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+  private ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
   private String errOutput;
+  private String output;
 
   @Before
   public void setup() throws IOException {
@@ -53,12 +55,14 @@ public class TestHAAdmin {
     };
     tool.setConf(new Configuration());
     tool.errOut = new PrintStream(errOutBytes);
+    tool.out = new PrintStream(outBytes);
   }
   
   private void assertOutputContains(String string) {
-    if (!errOutput.contains(string)) {
-      fail("Expected output to contain '" + string + "' but was:\n" +
-          errOutput);
+    if (!errOutput.contains(string) && !output.contains(string)) {
+      fail("Expected output to contain '" + string + 
+          "' but err_output was:\n" + errOutput + 
+          "\n and output was: \n" + output);
     }
   }
   
@@ -88,17 +92,19 @@ public class TestHAAdmin {
 
   @Test
   public void testHelp() throws Exception {
-    assertEquals(-1, runTool("-help"));
+    assertEquals(0, runTool("-help"));
     assertEquals(0, runTool("-help", "transitionToActive"));
     assertOutputContains("Transitions the service into Active");
   }
 
   private Object runTool(String ... args) throws Exception {
     errOutBytes.reset();
+    outBytes.reset();
     LOG.info("Running: HAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
     errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
-    LOG.info("Output:\n" + errOutput);
+    output = new String(outBytes.toByteArray(), Charsets.UTF_8);
+    LOG.info("Err_output:\n" + errOutput + "\nOutput:\n" + output);
     return ret;
   }
 }

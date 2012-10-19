@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
-import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -74,7 +73,6 @@ class BPOfferService {
    */
   DatanodeRegistration bpRegistration;
   
-  UpgradeManagerDatanode upgradeManager = null;
   private final DataNode dn;
 
   /**
@@ -260,33 +258,6 @@ class BPOfferService {
     }
   }
 
-  synchronized UpgradeManagerDatanode getUpgradeManager() {
-    if(upgradeManager == null)
-      upgradeManager = 
-        new UpgradeManagerDatanode(dn, getBlockPoolId());
-    
-    return upgradeManager;
-  }
-  
-  void processDistributedUpgradeCommand(UpgradeCommand comm)
-  throws IOException {
-    UpgradeManagerDatanode upgradeManager = getUpgradeManager();
-    upgradeManager.processUpgradeCommand(comm);
-  }
-
-  /**
-   * Start distributed upgrade if it should be initiated by the data-node.
-   */
-  synchronized void startDistributedUpgradeIfNeeded() throws IOException {
-    UpgradeManagerDatanode um = getUpgradeManager();
-    
-    if(!um.getUpgradeState())
-      return;
-    um.setUpgradeState(false, um.getUpgradeVersion());
-    um.startUpgrade();
-    return;
-  }
-  
   DataNode getDataNode() {
     return dn;
   }
@@ -374,9 +345,6 @@ class BPOfferService {
 
     if (bpServices.isEmpty()) {
       dn.shutdownBlockPool(this);
-      
-      if(upgradeManager != null)
-        upgradeManager.shutdownUpgrade();
     }
   }
 
@@ -590,10 +558,6 @@ class BPOfferService {
         "for other block pool " + bp;
 
       dn.finalizeUpgradeForPool(bp);
-      break;
-    case UpgradeCommand.UC_ACTION_START_UPGRADE:
-      // start distributed upgrade here
-      processDistributedUpgradeCommand((UpgradeCommand)cmd);
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
       String who = "NameNode at " + actor.getNNSocketAddress();

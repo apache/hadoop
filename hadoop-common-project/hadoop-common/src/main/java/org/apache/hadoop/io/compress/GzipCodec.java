@@ -20,15 +20,11 @@ package org.apache.hadoop.io.compress;
 
 import java.io.*;
 import java.util.zip.GZIPOutputStream;
-import java.util.zip.GZIPInputStream;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.zlib.*;
-import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
-import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 
 /**
  * This class creates gzip compressors/decompressors. 
@@ -66,32 +62,39 @@ public class GzipCodec extends DefaultCodec {
       super(out);
     }
     
+    @Override
     public void close() throws IOException {
       out.close();
     }
     
+    @Override
     public void flush() throws IOException {
       out.flush();
     }
     
+    @Override
     public void write(int b) throws IOException {
       out.write(b);
     }
     
+    @Override
     public void write(byte[] data, int offset, int length) 
       throws IOException {
       out.write(data, offset, length);
     }
     
+    @Override
     public void finish() throws IOException {
       ((ResetableGZIPOutputStream) out).finish();
     }
 
+    @Override
     public void resetState() throws IOException {
       ((ResetableGZIPOutputStream) out).resetState();
     }
   }
 
+  @Override
   public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
     return (ZlibFactory.isNativeZlibLoaded(conf)) ?
@@ -100,6 +103,7 @@ public class GzipCodec extends DefaultCodec {
                new GzipOutputStream(out);
   }
   
+  @Override
   public CompressionOutputStream createOutputStream(OutputStream out, 
                                                     Compressor compressor) 
   throws IOException {
@@ -110,23 +114,27 @@ public class GzipCodec extends DefaultCodec {
                createOutputStream(out);
   }
 
+  @Override
   public Compressor createCompressor() {
     return (ZlibFactory.isNativeZlibLoaded(conf))
       ? new GzipZlibCompressor(conf)
       : null;
   }
 
+  @Override
   public Class<? extends Compressor> getCompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibCompressor.class
       : null;
   }
 
+  @Override
   public CompressionInputStream createInputStream(InputStream in)
   throws IOException {
     return createInputStream(in, null);
   }
 
+  @Override
   public CompressionInputStream createInputStream(InputStream in,
                                                   Decompressor decompressor)
   throws IOException {
@@ -137,18 +145,21 @@ public class GzipCodec extends DefaultCodec {
                                   conf.getInt("io.file.buffer.size", 4*1024));
   }
 
+  @Override
   public Decompressor createDecompressor() {
     return (ZlibFactory.isNativeZlibLoaded(conf))
       ? new GzipZlibDecompressor()
       : new BuiltInGzipDecompressor();
   }
 
+  @Override
   public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibDecompressor.class
       : BuiltInGzipDecompressor.class;
   }
 
+  @Override
   public String getDefaultExtension() {
     return ".gz";
   }

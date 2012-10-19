@@ -22,6 +22,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.Time;
 
 /**
  * A utility to easily test threaded/synchronized code.
@@ -109,10 +110,10 @@ public abstract class MultithreadedTestUtil {
      * have thrown up an error.
      */
     public synchronized void waitFor(long millis) throws Exception {
-      long endTime = System.currentTimeMillis() + millis;
+      long endTime = Time.now() + millis;
       while (shouldRun() &&
              finishedThreads.size() < testThreads.size()) {
-        long left = endTime - System.currentTimeMillis();
+        long left = endTime - Time.now();
         if (left <= 0) break;
         checkException();
         wait(left);
@@ -182,6 +183,7 @@ public abstract class MultithreadedTestUtil {
       this.ctx = ctx;
     }
 
+    @Override
     public void run() {
       try {
         doWork();
@@ -214,6 +216,7 @@ public abstract class MultithreadedTestUtil {
      * Repeats a given user action until the context is asked to stop
      * or meets an error.
      */
+    @Override
     public final void doWork() throws Exception {
       while (ctx.shouldRun() && !stopped) {
         doAnAction();

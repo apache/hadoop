@@ -54,6 +54,7 @@ public interface Stringifier<T> extends java.io.Closeable {
    * Closes this object. 
    * @throws IOException if an I/O error occurs 
    * */
+  @Override
   public void close() throws IOException;
   
 }

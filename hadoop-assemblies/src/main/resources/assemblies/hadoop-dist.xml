@@ -111,9 +111,9 @@
       <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
     </fileSet>
     <fileSet>
-      <directory>${basedir}/src/main/native</directory>
+      <directory>${basedir}/src/main/native/libhdfs</directory>
       <includes>
-        <include>*.h</include>
+        <include>hdfs.h</include>
       </includes>
       <outputDirectory>/include</outputDirectory>
     </fileSet>

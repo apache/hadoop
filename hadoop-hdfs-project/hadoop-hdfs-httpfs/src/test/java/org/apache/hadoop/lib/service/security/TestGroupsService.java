@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.lib.service.security;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.service.Groups;
@@ -27,9 +32,6 @@ import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class TestGroupsService extends HTestCase {
 
@@ -42,9 +44,9 @@ public class TestGroupsService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     Groups groups = server.get(Groups.class);
-    Assert.assertNotNull(groups);
+    assertNotNull(groups);
     List<String> g = groups.getGroups(System.getProperty("user.name"));
-    Assert.assertNotSame(g.size(), 0);
+    assertNotSame(g.size(), 0);
     server.destroy();
   }
 

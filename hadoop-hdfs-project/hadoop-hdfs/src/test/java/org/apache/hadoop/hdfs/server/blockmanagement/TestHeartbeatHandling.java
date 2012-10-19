@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.util.ArrayList;
+import static org.junit.Assert.assertEquals;
 
-import junit.framework.TestCase;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -34,17 +34,19 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.junit.Test;
 
 /**
  * Test if FSNamesystem handles heartbeat right
  */
-public class TestHeartbeatHandling extends TestCase {
+public class TestHeartbeatHandling {
   /**
    * Test if
    * {@link FSNamesystem#handleHeartbeat}
    * can pick up replication and/or invalidate requests and observes the max
    * limit
    */
+  @Test
   public void testHeartbeat() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

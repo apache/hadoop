@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -151,7 +152,7 @@ public class TestCounters {
     Counters counters = new Counters();
     counters.incrCounter(Task.Counter.MAP_INPUT_RECORDS, 1);
     counters.incrCounter(JobInProgress.Counter.DATA_LOCAL_MAPS, 1);
-    counters.findCounter("FileSystemCounter", "FILE_BYTES_READ").increment(1);
+    counters.findCounter("FileSystemCounters", "FILE_BYTES_READ").increment(1);
     
     checkLegacyNames(counters);
   }
@@ -179,7 +180,7 @@ public class TestCounters {
     assertEquals("New name and method", 1, counters.findCounter("file",
         FileSystemCounter.BYTES_READ).getValue());
     assertEquals("Legacy name", 1, counters.findCounter(
-        "FileSystemCounter",
+        "FileSystemCounters",
         "FILE_BYTES_READ").getValue());
   }
   
@@ -222,6 +223,23 @@ public class TestCounters {
     counters.findCounter("fs3", FileSystemCounter.BYTES_READ).increment(1);
     assertTrue(iterator.hasNext());
     iterator.next();
+  }
+  
+  @Test
+  public void testLegacyGetGroupNames() {
+    Counters counters = new Counters();
+    // create 2 filesystem counter groups
+    counters.findCounter("fs1", FileSystemCounter.BYTES_READ).increment(1);
+    counters.findCounter("fs2", FileSystemCounter.BYTES_READ).increment(1);
+    counters.incrCounter("group1", "counter1", 1);
+    
+    HashSet<String> groups = new HashSet<String>(counters.getGroupNames());
+    HashSet<String> expectedGroups = new HashSet<String>();
+    expectedGroups.add("group1");
+    expectedGroups.add("FileSystemCounters"); //Legacy Name
+    expectedGroups.add("org.apache.hadoop.mapreduce.FileSystemCounter");
+
+    assertEquals(expectedGroups, groups);
   }
   
   @Test

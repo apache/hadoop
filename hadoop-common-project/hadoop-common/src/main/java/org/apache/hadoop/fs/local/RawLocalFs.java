@@ -128,7 +128,7 @@ public class RawLocalFs extends DelegateToFileSystem {
     try {
       FileStatus fs = getFileStatus(f);
       // If f refers to a regular file or directory      
-      if ("".equals(target)) {
+      if (target.isEmpty()) {
         return fs;
       }
       // Otherwise f refers to a symlink
@@ -150,7 +150,7 @@ public class RawLocalFs extends DelegateToFileSystem {
        * the readBasicFileAttributes method in java.nio.file.attributes 
        * when available.
        */
-      if (!"".equals(target)) {
+      if (!target.isEmpty()) {
         return new FileStatus(0, false, 0, 0, 0, 0, FsPermission.getDefault(), 
             "", "", new Path(target), f);        
       }

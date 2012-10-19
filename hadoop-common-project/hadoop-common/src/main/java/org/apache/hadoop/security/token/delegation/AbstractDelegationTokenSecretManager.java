@@ -39,6 +39,7 @@ import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 
@@ -112,6 +113,16 @@ extends AbstractDelegationTokenIdentifier>
     }
   }
   
+  /**
+   * Reset all data structures and mutable state.
+   */
+  public synchronized void reset() {
+    currentId = 0;
+    allKeys.clear();
+    delegationTokenSequenceNumber = 0;
+    currentTokens.clear();
+  }
+  
   /** 
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate().
@@ -165,7 +176,7 @@ extends AbstractDelegationTokenIdentifier>
     synchronized (this) {
       removeExpiredKeys();
       /* set final expiry date for retiring currentKey */
-      currentKey.setExpiryDate(System.currentTimeMillis() + tokenMaxLifetime);
+      currentKey.setExpiryDate(Time.now() + tokenMaxLifetime);
       /*
        * currentKey might have been removed by removeExpiredKeys(), if
        * updateMasterKey() isn't called at expected interval. Add it back to
@@ -177,7 +188,7 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   private synchronized void removeExpiredKeys() {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     for (Iterator<Map.Entry<Integer, DelegationKey>> it = allKeys.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, DelegationKey> e = it.next();
@@ -189,14 +200,14 @@ extends AbstractDelegationTokenIdentifier>
   
   @Override
   protected synchronized byte[] createPassword(TokenIdent identifier) {
-    LOG.info("Creating password for identifier: "+identifier);
     int sequenceNum;
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     sequenceNum = ++delegationTokenSequenceNumber;
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
     identifier.setMasterKeyId(currentId);
     identifier.setSequenceNumber(sequenceNum);
+    LOG.info("Creating password for identifier: " + identifier);
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
     currentTokens.put(identifier, new DelegationTokenInformation(now
         + tokenRenewInterval, password));
@@ -211,7 +222,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("token (" + identifier.toString()
           + ") can't be found in cache");
     }
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     if (info.getRenewDate() < now) {
       throw new InvalidToken("token (" + identifier.toString() + ") is expired");
     }
@@ -243,7 +254,7 @@ extends AbstractDelegationTokenIdentifier>
    */
   public synchronized long renewToken(Token<TokenIdent> token,
                          String renewer) throws InvalidToken, IOException {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
@@ -254,7 +265,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("User " + renewer + 
                              " tried to renew an expired token");
     }
-    if ((id.getRenewer() == null) || ("".equals(id.getRenewer().toString()))) {
+    if ((id.getRenewer() == null) || (id.getRenewer().toString().isEmpty())) {
       throw new AccessControlException("User " + renewer + 
                                        " tried to renew a token without " +
                                        "a renewer");
@@ -310,7 +321,7 @@ extends AbstractDelegationTokenIdentifier>
     HadoopKerberosName cancelerKrbName = new HadoopKerberosName(canceller);
     String cancelerShortName = cancelerKrbName.getShortName();
     if (!canceller.equals(owner)
-        && (renewer == null || "".equals(renewer.toString()) || !cancelerShortName
+        && (renewer == null || renewer.toString().isEmpty() || !cancelerShortName
             .equals(renewer.toString()))) {
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token");
@@ -353,7 +364,7 @@ extends AbstractDelegationTokenIdentifier>
   
   /** Remove expired delegation tokens from cache */
   private synchronized void removeExpiredToken() {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     Iterator<DelegationTokenInformation> i = currentTokens.values().iterator();
     while (i.hasNext()) {
       long renewDate = i.next().getRenewDate();
@@ -393,13 +404,14 @@ extends AbstractDelegationTokenIdentifier>
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
 
+    @Override
     public void run() {
       LOG.info("Starting expired delegation token remover thread, "
           + "tokenRemoverScanInterval=" + tokenRemoverScanInterval
           / (60 * 1000) + " min(s)");
       try {
         while (running) {
-          long now = System.currentTimeMillis();
+          long now = Time.now();
           if (lastMasterKeyUpdate + keyUpdateInterval < now) {
             try {
               rollMasterKey();

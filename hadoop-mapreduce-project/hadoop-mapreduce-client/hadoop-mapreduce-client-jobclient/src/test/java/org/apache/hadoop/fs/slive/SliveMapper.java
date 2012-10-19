@@ -32,6 +32,8 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -50,8 +52,7 @@ public class SliveMapper extends MapReduceBase implements
 
   private FileSystem filesystem;
   private ConfigExtractor config;
-  private WeightSelector selector;
-  private Random rnd;
+  private int taskId;
 
   /*
    * (non-Javadoc)
@@ -70,19 +71,19 @@ public class SliveMapper extends MapReduceBase implements
     }
     try {
       config = new ConfigExtractor(conf);
-      Long rndSeed = config.getRandomSeed();
-      if (rndSeed != null) {
-        rnd = new Random(rndSeed);
-      } else {
-        rnd = new Random();
-      }
-      selector = new WeightSelector(config, rnd);
       ConfigExtractor.dumpOptions(config);
     } catch (Exception e) {
       LOG.error("Unable to setup slive " + StringUtils.stringifyException(e));
       throw new RuntimeException("Unable to setup slive configuration", e);
     }
-
+    if(conf.get(MRJobConfig.TASK_ATTEMPT_ID) != null ) {
+      this.taskId = TaskAttemptID.forName(conf.get(MRJobConfig.TASK_ATTEMPT_ID))
+        .getTaskID().getId();
+    } else {
+      // So that branch-1/0.20 can run this same code as well
+      this.taskId = TaskAttemptID.forName(conf.get("mapred.task.id"))
+          .getTaskID().getId();
+    }
   }
 
   /**
@@ -92,15 +93,6 @@ public class SliveMapper extends MapReduceBase implements
    */
   private ConfigExtractor getConfig() {
     return config;
-  }
-
-  /**
-   * Gets the operation selector to use for this object
-   * 
-   * @return WeightSelector
-   */
-  private WeightSelector getSelector() {
-    return selector;
   }
 
   /**
@@ -154,6 +146,10 @@ public class SliveMapper extends MapReduceBase implements
       Reporter reporter) throws IOException {
     logAndSetStatus(reporter, "Running slive mapper for dummy key " + key
         + " and dummy value " + value);
+    //Add taskID to randomSeed to deterministically seed rnd.
+    Random rnd = config.getRandomSeed() != null ?
+      new Random(this.taskId + config.getRandomSeed()) : new Random();
+    WeightSelector selector = new WeightSelector(config, rnd);
     long startTime = Timer.now();
     long opAm = 0;
     long sleepOps = 0;
@@ -163,7 +159,6 @@ public class SliveMapper extends MapReduceBase implements
     if (sleepRange != null) {
       sleeper = new SleepOp(getConfig(), rnd);
     }
-    WeightSelector selector = getSelector();
     while (Timer.elapsed(startTime) < duration) {
       try {
         logAndSetStatus(reporter, "Attempting to select operation #"

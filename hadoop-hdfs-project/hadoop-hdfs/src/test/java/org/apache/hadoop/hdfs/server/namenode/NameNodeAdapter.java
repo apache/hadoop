@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -61,7 +66,7 @@ public class NameNodeAdapter {
   
   public static HdfsFileStatus getFileInfo(NameNode namenode, String src,
       boolean resolveLink) throws AccessControlException, UnresolvedLinkException,
-        StandbyException {
+        StandbyException, IOException {
     return namenode.getNamesystem().getFileInfo(src, resolveLink);
   }
   
@@ -81,9 +86,8 @@ public class NameNodeAdapter {
     namenode.getNamesystem().enterSafeMode(resourcesLow);
   }
   
-  public static void leaveSafeMode(NameNode namenode, boolean checkForUpgrades)
-      throws SafeModeException {
-    namenode.getNamesystem().leaveSafeMode(checkForUpgrades);
+  public static void leaveSafeMode(NameNode namenode) {
+    namenode.getNamesystem().leaveSafeMode();
   }
   
   public static void abortEditLogs(NameNode nn) {
@@ -181,6 +185,15 @@ public class NameNodeAdapter {
     } else {
       return null;
     }
+  }
+  
+  public static FSEditLogOp createMkdirOp(String path) {
+    MkdirOp op = MkdirOp.getInstance(new FSEditLogOp.OpInstanceCache())
+      .setPath(path)
+      .setTimestamp(0)
+      .setPermissionStatus(new PermissionStatus(
+              "testuser", "testgroup", FsPermission.getDefault()));
+    return op;
   }
   
   /**

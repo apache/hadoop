@@ -57,6 +57,7 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
   /**
    * Loads edits file, uses visitor to process all elements
    */
+  @Override
   public void loadEdits() throws IOException {
     visitor.start(inputStream.getVersion());
     while (true) {

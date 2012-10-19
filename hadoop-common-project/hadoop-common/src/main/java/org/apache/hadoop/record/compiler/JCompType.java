@@ -35,18 +35,22 @@ abstract class JCompType extends JType {
       super(type, suffix, wrapper, typeIDByteString);
     }
     
+    @Override
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       cb.append(Consts.RIO_PREFIX + "ret = "+fname+".compareTo("+other+");\n");
     }
     
+    @Override
     void genEquals(CodeBuffer cb, String fname, String peer) {
       cb.append(Consts.RIO_PREFIX + "ret = "+fname+".equals("+peer+");\n");
     }
     
+    @Override
     void genHashCode(CodeBuffer cb, String fname) {
       cb.append(Consts.RIO_PREFIX + "ret = "+fname+".hashCode();\n");
     }
     
+    @Override
     void genClone(CodeBuffer cb, String fname) {
       cb.append(Consts.RIO_PREFIX + "other."+fname+" = ("+getType()+") this."+
           fname+".clone();\n");
@@ -59,6 +63,7 @@ abstract class JCompType extends JType {
       super(type);
     }
     
+    @Override
     void genGetSet(CodeBuffer cb, String fname) {
       cb.append("virtual const "+getType()+"& get"+toCamelCase(fname)+"() const {\n");
       cb.append("return "+fname+";\n");

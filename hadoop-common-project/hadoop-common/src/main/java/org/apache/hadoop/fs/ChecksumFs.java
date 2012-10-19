@@ -28,10 +28,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.PureJavaCrc32;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Abstract Checksumed Fs.
@@ -60,6 +60,7 @@ public abstract class ChecksumFs extends FilterFs {
   /**
    * Set whether to verify checksum.
    */
+  @Override
   public void setVerifyChecksum(boolean inVerifyChecksum) {
     this.verifyChecksum = inVerifyChecksum;
   }
@@ -151,14 +152,17 @@ public abstract class ChecksumFs extends FilterFs {
       return HEADER_LENGTH + 4*(dataPos/bytesPerSum);
     }
     
+    @Override
     protected long getChunkPosition(long dataPos) {
       return dataPos/bytesPerSum*bytesPerSum;
     }
     
+    @Override
     public int available() throws IOException {
       return datas.available() + super.available();
     }
     
+    @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException, UnresolvedLinkException {
       // parameter check
@@ -179,6 +183,7 @@ public abstract class ChecksumFs extends FilterFs {
       return nread;
     }
     
+    @Override
     public void close() throws IOException {
       datas.close();
       if (sums != null) {
@@ -257,6 +262,7 @@ public abstract class ChecksumFs extends FilterFs {
      * @exception  IOException  if an I/O error occurs.
      *             ChecksumException if the chunk to skip to is corrupted
      */
+    @Override
     public synchronized long skip(long n) throws IOException { 
       final long curPos = getPos();
       final long fileLength = getFileLength();
@@ -278,6 +284,7 @@ public abstract class ChecksumFs extends FilterFs {
      *             ChecksumException if the chunk to seek to is corrupted
      */
 
+    @Override
     public synchronized void seek(long pos) throws IOException { 
       if (pos>getFileLength()) {
         throw new IOException("Cannot seek after EOF");
@@ -324,13 +331,17 @@ public abstract class ChecksumFs extends FilterFs {
       final EnumSet<CreateFlag> createFlag,
       final FsPermission absolutePermission, final int bufferSize,
       final short replication, final long blockSize, 
-      final Progressable progress, final int bytesPerChecksum,
+      final Progressable progress, final ChecksumOpt checksumOpt,
       final boolean createParent) throws IOException {
       super(new PureJavaCrc32(), fs.getBytesPerSum(), 4);
 
+      // checksumOpt is passed down to the raw fs. Unless it implements
+      // checksum impelemts internally, checksumOpt will be ignored.
+      // If the raw fs does checksum internally, we will end up with
+      // two layers of checksumming. i.e. checksumming checksum file.
       this.datas = fs.getRawFs().createInternal(file, createFlag,
           absolutePermission, bufferSize, replication, blockSize, progress,
-           bytesPerChecksum,  createParent);
+           checksumOpt,  createParent);
       
       // Now create the chekcsumfile; adjust the buffsize
       int bytesPerSum = fs.getBytesPerSum();
@@ -338,11 +349,12 @@ public abstract class ChecksumFs extends FilterFs {
       this.sums = fs.getRawFs().createInternal(fs.getChecksumFile(file),
           EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
           absolutePermission, sumBufferSize, replication, blockSize, progress,
-          bytesPerChecksum, createParent);
+          checksumOpt, createParent);
       sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
       sums.writeInt(bytesPerSum);
     }
     
+    @Override
     public void close() throws IOException {
       flushBuffer();
       sums.close();
@@ -361,12 +373,11 @@ public abstract class ChecksumFs extends FilterFs {
   public FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> createFlag, FsPermission absolutePermission,
       int bufferSize, short replication, long blockSize, Progressable progress,
-      int bytesPerChecksum, boolean createParent) throws IOException {
-
+      ChecksumOpt checksumOpt, boolean createParent) throws IOException {
     final FSDataOutputStream out = new FSDataOutputStream(
         new ChecksumFSOutputSummer(this, f, createFlag, absolutePermission,
             bufferSize, replication, blockSize, progress,
-            bytesPerChecksum,  createParent), null);
+            checksumOpt,  createParent), null);
     return out;
   }
 
@@ -443,6 +454,7 @@ public abstract class ChecksumFs extends FilterFs {
    * Implement the delete(Path, boolean) in checksum
    * file system.
    */
+  @Override
   public boolean delete(Path f, boolean recursive) 
     throws IOException, UnresolvedLinkException {
     FileStatus fstatus = null;

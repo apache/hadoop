@@ -25,6 +25,7 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -40,10 +41,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
@@ -65,12 +68,23 @@ public class SecurityUtil {
   static boolean useIpForTokenService;
   @VisibleForTesting
   static HostResolver hostResolver;
-  
+
+  private static SSLFactory sslFactory;
+
   static {
-    boolean useIp = new Configuration().getBoolean(
+    Configuration conf = new Configuration();
+    boolean useIp = conf.getBoolean(
       CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
       CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
+    if (HttpConfig.isSecure()) {
+      sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+      try {
+        sslFactory.init();
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
+    }
   }
   
   /**
@@ -199,7 +213,7 @@ public class SecurityUtil {
   private static String replacePattern(String[] components, String hostname)
       throws IOException {
     String fqdn = hostname;
-    if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
+    if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
     return components[0] + "/" + fqdn.toLowerCase() + "@" + components[2];
@@ -438,6 +452,41 @@ public class SecurityUtil {
       return action.run();
     }
   }
+  
+  /**
+   * Perform the given action as the daemon's login user. If an
+   * InterruptedException is thrown, it is converted to an IOException.
+   *
+   * @param action the action to perform
+   * @return the result of the action
+   * @throws IOException in the event of error
+   */
+  public static <T> T doAsLoginUser(PrivilegedExceptionAction<T> action)
+      throws IOException {
+    return doAsUser(UserGroupInformation.getLoginUser(), action);
+  }
+
+  /**
+   * Perform the given action as the daemon's current user. If an
+   * InterruptedException is thrown, it is converted to an IOException.
+   *
+   * @param action the action to perform
+   * @return the result of the action
+   * @throws IOException in the event of error
+   */
+  public static <T> T doAsCurrentUser(PrivilegedExceptionAction<T> action)
+      throws IOException {
+    return doAsUser(UserGroupInformation.getCurrentUser(), action);
+  }
+
+  private static <T> T doAsUser(UserGroupInformation ugi,
+      PrivilegedExceptionAction<T> action) throws IOException {
+    try {
+      return ugi.doAs(action);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
+    }
+  }
 
   /**
    * Open a (if need be) secure connection to a URL in a secure environment
@@ -450,13 +499,13 @@ public class SecurityUtil {
    * @throws IOException If unable to authenticate via SPNEGO
    */
   public static URLConnection openSecureHttpConnection(URL url) throws IOException {
-    if(!UserGroupInformation.isSecurityEnabled()) {
+    if (!HttpConfig.isSecure() && !UserGroupInformation.isSecurityEnabled()) {
       return url.openConnection();
     }
 
     AuthenticatedURL.Token token = new AuthenticatedURL.Token();
     try {
-      return new AuthenticatedURL().openConnection(url, token);
+      return new AuthenticatedURL(null, sslFactory).openConnection(url, token);
     } catch (AuthenticationException e) {
       throw new IOException("Exception trying to open authenticated connection to "
               + url, e);
@@ -485,6 +534,7 @@ public class SecurityUtil {
    * Uses standard java host resolution
    */
   static class StandardHostResolver implements HostResolver {
+    @Override
     public InetAddress getByName(String host) throws UnknownHostException {
       return InetAddress.getByName(host);
     }
@@ -529,6 +579,7 @@ public class SecurityUtil {
      * @return InetAddress with the fully qualified hostname or ip
      * @throws UnknownHostException if host does not exist
      */
+    @Override
     public InetAddress getByName(String host) throws UnknownHostException {
       InetAddress addr = null;
 

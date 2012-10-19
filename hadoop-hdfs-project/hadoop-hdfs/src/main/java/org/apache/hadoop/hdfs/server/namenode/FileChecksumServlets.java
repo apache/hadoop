@@ -71,7 +71,7 @@ public class FileChecksumServlets {
         String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
         dtParam = JspHelper.getDelegationTokenUrlParam(tokenString);
       }
-      String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+      String addr = nn.getNameNodeAddressHostPortString();
       String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
 
       return new URL(scheme, hostname, port, 
@@ -127,7 +127,7 @@ public class FileChecksumServlets {
             datanode, conf, getUGI(request, conf));
         final ClientProtocol nnproxy = dfs.getNamenode();
         final MD5MD5CRC32FileChecksum checksum = DFSClient.getFileChecksum(
-            path, nnproxy, socketFactory, socketTimeout);
+            path, nnproxy, socketFactory, socketTimeout, dfs.getDataEncryptionKey(), false);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
       } catch(IOException ioe) {
         writeXml(ioe, path, xml);

@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 
 /**
  * An output format that writes the key and value appended together.
@@ -85,6 +86,10 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
     if (outDir == null) {
       throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
+
+    // get delegation token for outDir's file system
+    TokenCache.obtainTokensForNamenodes(job.getCredentials(),
+        new Path[] { outDir }, job.getConfiguration());
   }
 
   public RecordWriter<Text,Text> getRecordWriter(TaskAttemptContext job

@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_ACCESS_TOKEN;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SUCCESS;
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
 
 import java.io.BufferedInputStream;
@@ -29,6 +29,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -43,7 +44,10 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor.InvalidMagicNumberException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -82,9 +86,10 @@ class DataXceiver extends Receiver implements Runnable {
   private final DataNode datanode;
   private final DNConf dnConf;
   private final DataXceiverServer dataXceiverServer;
-
+  private final boolean connectToDnViaHostname;
   private long opStartTime; //the start time of receiving an Op
-  private final SocketInputWrapper socketInputWrapper;
+  private final SocketInputWrapper socketIn;
+  private OutputStream socketOut;
 
   /**
    * Client Name used in previous operation. Not available on first request
@@ -94,24 +99,21 @@ class DataXceiver extends Receiver implements Runnable {
   
   public static DataXceiver create(Socket s, DataNode dn,
       DataXceiverServer dataXceiverServer) throws IOException {
-    
-    SocketInputWrapper iw = NetUtils.getInputStream(s);
-    return new DataXceiver(s, iw, dn, dataXceiverServer);
+    return new DataXceiver(s, dn, dataXceiverServer);
   }
   
   private DataXceiver(Socket s, 
-      SocketInputWrapper socketInput,
       DataNode datanode, 
       DataXceiverServer dataXceiverServer) throws IOException {
-    super(new DataInputStream(new BufferedInputStream(
-        socketInput, HdfsConstants.SMALL_BUFFER_SIZE)));
 
     this.s = s;
-    this.socketInputWrapper = socketInput;
+    this.dnConf = datanode.getDnConf();
+    this.socketIn = NetUtils.getInputStream(s);
+    this.socketOut = NetUtils.getOutputStream(s, dnConf.socketWriteTimeout);
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
-    this.dnConf = datanode.getDnConf();
     this.dataXceiverServer = dataXceiverServer;
+    this.connectToDnViaHostname = datanode.getDnConf().connectToDnViaHostname;
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
 
@@ -141,15 +143,43 @@ class DataXceiver extends Receiver implements Runnable {
 
   /** Return the datanode object. */
   DataNode getDataNode() {return datanode;}
+  
+  private OutputStream getOutputStream() throws IOException {
+    return socketOut;
+  }
 
   /**
    * Read/write data from/to the DataXceiverServer.
    */
+  @Override
   public void run() {
     int opsProcessed = 0;
     Op op = null;
+    
     dataXceiverServer.childSockets.add(s);
+    
     try {
+      
+      InputStream input = socketIn;
+      if (dnConf.encryptDataTransfer) {
+        IOStreamPair encryptedStreams = null;
+        try {
+          encryptedStreams = DataTransferEncryptor.getEncryptedStreams(socketOut,
+              socketIn, datanode.blockPoolTokenSecretManager,
+              dnConf.encryptionAlgorithm);
+        } catch (InvalidMagicNumberException imne) {
+          LOG.info("Failed to read expected encryption handshake from client " +
+              "at " + s.getInetAddress() + ". Perhaps the client is running an " +
+              "older version of Hadoop which does not support encryption.");
+          return;
+        }
+        input = encryptedStreams.in;
+        socketOut = encryptedStreams.out;
+      }
+      input = new BufferedInputStream(input, HdfsConstants.SMALL_BUFFER_SIZE);
+      
+      super.initialize(new DataInputStream(input));
+      
       // We process requests in a loop, and stay around for a short timeout.
       // This optimistic behaviour allows the other end to reuse connections.
       // Setting keepalive timeout to 0 disable this behavior.
@@ -159,9 +189,9 @@ class DataXceiver extends Receiver implements Runnable {
         try {
           if (opsProcessed != 0) {
             assert dnConf.socketKeepaliveTimeout > 0;
-            socketInputWrapper.setTimeout(dnConf.socketKeepaliveTimeout);
+            socketIn.setTimeout(dnConf.socketKeepaliveTimeout);
           } else {
-            socketInputWrapper.setTimeout(dnConf.socketTimeout);
+            socketIn.setTimeout(dnConf.socketTimeout);
           }
           op = readOp();
         } catch (InterruptedIOException ignored) {
@@ -214,8 +244,7 @@ class DataXceiver extends Receiver implements Runnable {
       final long length) throws IOException {
     previousOpClientName = clientName;
 
-    OutputStream baseStream = NetUtils.getOutputStream(s, 
-        dnConf.socketWriteTimeout);
+    OutputStream baseStream = getOutputStream();
     DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
         baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
     checkAccess(out, true, block, blockToken,
@@ -241,13 +270,12 @@ class DataXceiver extends Receiver implements Runnable {
       } catch(IOException e) {
         String msg = "opReadBlock " + block + " received exception " + e; 
         LOG.info(msg);
-        sendResponse(s, ERROR, msg, dnConf.socketWriteTimeout);
+        sendResponse(ERROR, msg);
         throw e;
       }
       
       // send op status
-      writeSuccessWithChecksumInfo(blockSender,
-          getStreamWithTimeout(s, dnConf.socketWriteTimeout));
+      writeSuccessWithChecksumInfo(blockSender, new DataOutputStream(getOutputStream()));
 
       long read = blockSender.sendBlock(out, baseStream, null); // send data
 
@@ -346,7 +374,7 @@ class DataXceiver extends Receiver implements Runnable {
     // reply to upstream datanode or client 
     final DataOutputStream replyOut = new DataOutputStream(
         new BufferedOutputStream(
-            NetUtils.getOutputStream(s, dnConf.socketWriteTimeout),
+            getOutputStream(),
             HdfsConstants.SMALL_BUFFER_SIZE));
     checkAccess(replyOut, isClient, block, blockToken,
         Op.WRITE_BLOCK, BlockTokenSecretManager.AccessMode.WRITE);
@@ -377,7 +405,10 @@ class DataXceiver extends Receiver implements Runnable {
       if (targets.length > 0) {
         InetSocketAddress mirrorTarget = null;
         // Connect to backup machine
-        mirrorNode = targets[0].getXferAddr();
+        mirrorNode = targets[0].getXferAddr(connectToDnViaHostname);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Connecting to datanode " + mirrorNode);
+        }
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
@@ -388,11 +419,23 @@ class DataXceiver extends Receiver implements Runnable {
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
-          mirrorOut = new DataOutputStream(
-             new BufferedOutputStream(
-                         NetUtils.getOutputStream(mirrorSock, writeTimeout),
-                         HdfsConstants.SMALL_BUFFER_SIZE));
-          mirrorIn = new DataInputStream(NetUtils.getInputStream(mirrorSock));
+          
+          OutputStream unbufMirrorOut = NetUtils.getOutputStream(mirrorSock,
+              writeTimeout);
+          InputStream unbufMirrorIn = NetUtils.getInputStream(mirrorSock);
+          if (dnConf.encryptDataTransfer) {
+            IOStreamPair encryptedStreams =
+                DataTransferEncryptor.getEncryptedStreams(
+                    unbufMirrorOut, unbufMirrorIn,
+                    datanode.blockPoolTokenSecretManager
+                        .generateDataEncryptionKey(block.getBlockPoolId()));
+            
+            unbufMirrorOut = encryptedStreams.out;
+            unbufMirrorIn = encryptedStreams.in;
+          }
+          mirrorOut = new DataOutputStream(new BufferedOutputStream(unbufMirrorOut,
+              HdfsConstants.SMALL_BUFFER_SIZE));
+          mirrorIn = new DataInputStream(unbufMirrorIn);
 
           new Sender(mirrorOut).writeBlock(originalBlock, blockToken,
               clientname, targets, srcDataNode, stage, pipelineSize,
@@ -418,7 +461,8 @@ class DataXceiver extends Receiver implements Runnable {
           if (isClient) {
             BlockOpResponseProto.newBuilder()
               .setStatus(ERROR)
-              .setFirstBadLink(mirrorNode)
+               // NB: Unconditionally using the xfer addr w/o hostname
+              .setFirstBadLink(targets[0].getXferAddr())
               .build()
               .writeDelimitedTo(replyOut);
             replyOut.flush();
@@ -519,7 +563,7 @@ class DataXceiver extends Receiver implements Runnable {
     updateCurrentThreadName(Op.TRANSFER_BLOCK + " " + blk);
 
     final DataOutputStream out = new DataOutputStream(
-        NetUtils.getOutputStream(s, dnConf.socketWriteTimeout));
+        getOutputStream());
     try {
       datanode.transferReplicaForPipelineRecovery(blk, targets, clientName);
       writeResponse(Status.SUCCESS, null, out);
@@ -532,7 +576,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void blockChecksum(final ExtendedBlock block,
       final Token<BlockTokenIdentifier> blockToken) throws IOException {
     final DataOutputStream out = new DataOutputStream(
-        NetUtils.getOutputStream(s, dnConf.socketWriteTimeout));
+        getOutputStream());
     checkAccess(out, true, block, blockToken,
         Op.BLOCK_CHECKSUM, BlockTokenSecretManager.AccessMode.READ);
     updateCurrentThreadName("Reading metadata for block " + block);
@@ -565,6 +609,7 @@ class DataXceiver extends Receiver implements Runnable {
           .setBytesPerCrc(bytesPerCRC)
           .setCrcPerBlock(crcPerBlock)
           .setMd5(ByteString.copyFrom(md5.getDigest()))
+          .setCrcType(HdfsProtoUtil.toProto(checksum.getChecksumType()))
           )
         .build()
         .writeDelimitedTo(out);
@@ -592,7 +637,7 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.warn("Invalid access token in request from " + remoteAddress
             + " for OP_COPY_BLOCK for block " + block + " : "
             + e.getLocalizedMessage());
-        sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token", dnConf.socketWriteTimeout);
+        sendResponse(ERROR_ACCESS_TOKEN, "Invalid access token");
         return;
       }
 
@@ -602,7 +647,7 @@ class DataXceiver extends Receiver implements Runnable {
       String msg = "Not able to copy block " + block.getBlockId() + " to " 
       + s.getRemoteSocketAddress() + " because threads quota is exceeded."; 
       LOG.info(msg);
-      sendResponse(s, ERROR, msg, dnConf.socketWriteTimeout);
+      sendResponse(ERROR, msg);
       return;
     }
 
@@ -616,8 +661,7 @@ class DataXceiver extends Receiver implements Runnable {
           null);
 
       // set up response stream
-      OutputStream baseStream = NetUtils.getOutputStream(
-          s, dnConf.socketWriteTimeout);
+      OutputStream baseStream = getOutputStream();
       reply = new DataOutputStream(new BufferedOutputStream(
           baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
 
@@ -669,8 +713,7 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.warn("Invalid access token in request from " + remoteAddress
             + " for OP_REPLACE_BLOCK for block " + block + " : "
             + e.getLocalizedMessage());
-        sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token",
-            dnConf.socketWriteTimeout);
+        sendResponse(ERROR_ACCESS_TOKEN, "Invalid access token");
         return;
       }
     }
@@ -679,7 +722,7 @@ class DataXceiver extends Receiver implements Runnable {
       String msg = "Not able to receive block " + block.getBlockId() + " from " 
           + s.getRemoteSocketAddress() + " because threads quota is exceeded."; 
       LOG.warn(msg);
-      sendResponse(s, ERROR, msg, dnConf.socketWriteTimeout);
+      sendResponse(ERROR, msg);
       return;
     }
 
@@ -692,23 +735,38 @@ class DataXceiver extends Receiver implements Runnable {
     
     try {
       // get the output stream to the proxy
-      InetSocketAddress proxyAddr =
-        NetUtils.createSocketAddr(proxySource.getXferAddr());
+      final String dnAddr = proxySource.getXferAddr(connectToDnViaHostname);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Connecting to datanode " + dnAddr);
+      }
+      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(dnAddr);
       proxySock = datanode.newSocket();
       NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
       proxySock.setSoTimeout(dnConf.socketTimeout);
 
-      OutputStream baseStream = NetUtils.getOutputStream(proxySock, 
+      OutputStream unbufProxyOut = NetUtils.getOutputStream(proxySock,
           dnConf.socketWriteTimeout);
-      proxyOut = new DataOutputStream(new BufferedOutputStream(baseStream,
+      InputStream unbufProxyIn = NetUtils.getInputStream(proxySock);
+      if (dnConf.encryptDataTransfer) {
+        IOStreamPair encryptedStreams =
+            DataTransferEncryptor.getEncryptedStreams(
+                unbufProxyOut, unbufProxyIn,
+                datanode.blockPoolTokenSecretManager
+                    .generateDataEncryptionKey(block.getBlockPoolId()));
+        unbufProxyOut = encryptedStreams.out;
+        unbufProxyIn = encryptedStreams.in;
+      }
+      
+      proxyOut = new DataOutputStream(new BufferedOutputStream(unbufProxyOut, 
           HdfsConstants.SMALL_BUFFER_SIZE));
+      proxyReply = new DataInputStream(new BufferedInputStream(unbufProxyIn,
+          HdfsConstants.IO_FILE_BUFFER_SIZE));
 
       /* send request to the proxy */
       new Sender(proxyOut).copyBlock(block, blockToken);
 
       // receive the response from the proxy
-      proxyReply = new DataInputStream(new BufferedInputStream(
-          NetUtils.getInputStream(proxySock), HdfsConstants.IO_FILE_BUFFER_SIZE));
+      
       BlockOpResponseProto copyResponse = BlockOpResponseProto.parseFrom(
           HdfsProtoUtil.vintPrefixed(proxyReply));
 
@@ -761,7 +819,7 @@ class DataXceiver extends Receiver implements Runnable {
       
       // send response back
       try {
-        sendResponse(s, opStatus, errMsg, dnConf.socketWriteTimeout);
+        sendResponse(opStatus, errMsg);
       } catch (IOException ioe) {
         LOG.warn("Error writing reply back to " + s.getRemoteSocketAddress());
       }
@@ -780,20 +838,13 @@ class DataXceiver extends Receiver implements Runnable {
 
   /**
    * Utility function for sending a response.
-   * @param s socket to write to
+   * 
    * @param opStatus status message to write
-   * @param timeout send timeout
-   **/
-  private static void sendResponse(Socket s, Status status, String message,
-      long timeout) throws IOException {
-    DataOutputStream reply = getStreamWithTimeout(s, timeout);
-    
-    writeResponse(status, message, reply);
-  }
-  
-  private static DataOutputStream getStreamWithTimeout(Socket s, long timeout)
-      throws IOException {
-    return new DataOutputStream(NetUtils.getOutputStream(s, timeout));
+   * @param message message to send to the client or other DN
+   */
+  private void sendResponse(Status status,
+      String message) throws IOException {
+    writeResponse(status, message, getOutputStream());
   }
 
   private static void writeResponse(Status status, String message, OutputStream out)
@@ -849,6 +900,7 @@ class DataXceiver extends Receiver implements Runnable {
             if (mode == BlockTokenSecretManager.AccessMode.WRITE) {
               DatanodeRegistration dnR = 
                 datanode.getDNRegistrationForBP(blk.getBlockPoolId());
+              // NB: Unconditionally using the xfer addr w/o hostname
               resp.setFirstBadLink(dnR.getXferAddr());
             }
             resp.build().writeDelimitedTo(out);

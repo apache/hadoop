@@ -70,9 +70,11 @@ import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -85,14 +87,6 @@ import com.google.protobuf.ServiceException;
 public class TestBlockToken {
   public static final Log LOG = LogFactory.getLog(TestBlockToken.class);
   private static final String ADDRESS = "0.0.0.0";
-
-  static final String SERVER_PRINCIPAL_KEY = "test.ipc.server.principal";
-  private static Configuration conf;
-  static {
-    conf = new Configuration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(conf);
-  }
 
   static {
     ((Log4JLogger) Client.LOG).getLogger().setLevel(Level.ALL);
@@ -110,6 +104,13 @@ public class TestBlockToken {
   ExtendedBlock block1 = new ExtendedBlock("0", 0L);
   ExtendedBlock block2 = new ExtendedBlock("10", 10L);
   ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
+  
+  @Before
+  public void disableKerberos() {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(conf);
+  }
 
   private static class GetLengthAnswer implements
       Answer<GetReplicaVisibleLengthResponseProto> {
@@ -161,7 +162,7 @@ public class TestBlockToken {
   public void testWritable() throws Exception {
     TestWritable.testWritable(new BlockTokenIdentifier());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     TestWritable.testWritable(generateTokenId(sm, block1,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class)));
     TestWritable.testWritable(generateTokenId(sm, block2,
@@ -200,9 +201,9 @@ public class TestBlockToken {
   @Test
   public void testBlockTokenSecretManager() throws Exception {
     BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime);
+        blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null);
     ExportedBlockKeys keys = masterHandler.exportKeys();
     slaveHandler.addKeys(keys);
     tokenGenerationAndVerification(masterHandler, slaveHandler);
@@ -214,8 +215,9 @@ public class TestBlockToken {
     tokenGenerationAndVerification(masterHandler, slaveHandler);
   }
 
-  private Server createMockDatanode(BlockTokenSecretManager sm,
-      Token<BlockTokenIdentifier> token) throws IOException, ServiceException {
+  private static Server createMockDatanode(BlockTokenSecretManager sm,
+      Token<BlockTokenIdentifier> token, Configuration conf)
+      throws IOException, ServiceException {
     ClientDatanodeProtocolPB mockDN = mock(ClientDatanodeProtocolPB.class);
 
     BlockTokenIdentifier id = sm.createIdentifier();
@@ -230,18 +232,23 @@ public class TestBlockToken {
         ProtobufRpcEngine.class);
     BlockingService service = ClientDatanodeProtocolService
         .newReflectiveBlockingService(mockDN);
-    return RPC.getServer(ClientDatanodeProtocolPB.class, service, ADDRESS, 0, 5,
-        true, conf, sm);
+    return new RPC.Builder(conf).setProtocol(ClientDatanodeProtocolPB.class)
+        .setInstance(service).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();
   }
 
   @Test
   public void testBlockTokenRpc() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
 
-    final Server server = createMockDatanode(sm, token);
+    final Server server = createMockDatanode(sm, token, conf);
 
     server.start();
 
@@ -270,13 +277,17 @@ public class TestBlockToken {
    */
   @Test
   public void testBlockTokenRpcLeak() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    
     Assume.assumeTrue(FD_DIR.exists());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
 
-    final Server server = createMockDatanode(sm, token);
+    final Server server = createMockDatanode(sm, token, conf);
     server.start();
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -300,10 +311,10 @@ public class TestBlockToken {
 
     int fdsAtStart = countOpenFileDescriptors();
     try {
-      long endTime = System.currentTimeMillis() + 3000;
-      while (System.currentTimeMillis() < endTime) {
+      long endTime = Time.now() + 3000;
+      while (Time.now() < endTime) {
         proxy = DFSUtil.createClientDatanodeProtocolProxy(fakeDnId, conf, 1000,
-            fakeBlock);
+            false, fakeBlock);
         assertEquals(block3.getBlockId(), proxy.getReplicaVisibleLength(block3));
         if (proxy != null) {
           RPC.stopProxy(proxy);
@@ -341,9 +352,9 @@ public class TestBlockToken {
     for (int i = 0; i < 10; i++) {
       String bpid = Integer.toString(i);
       BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(
-          blockKeyUpdateInterval, blockTokenLifetime, 0);
+          blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
       BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(
-          blockKeyUpdateInterval, blockTokenLifetime);
+          blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null);
       bpMgr.addBlockPool(bpid, slaveHandler);
 
       ExportedBlockKeys keys = masterHandler.exportKeys();

@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -96,7 +95,7 @@ public class TestHAFsck {
         new String[]{"/", "-files"});
     String result = bStream.toString();
     System.out.println("output from fsck:\n" + result);
-    Assert.assertEquals(0, errCode);
+    assertEquals(0, errCode);
     assertTrue(result.contains("/test1"));
     assertTrue(result.contains("/test2"));
   }

@@ -181,6 +181,24 @@ public class MetricsRegistry {
   }
 
   /**
+   * Create a mutable metric that estimates quantiles of a stream of values
+   * @param name of the metric
+   * @param desc metric description
+   * @param sampleName of the metric (e.g., "Ops")
+   * @param valueName of the metric (e.g., "Time" or "Latency")
+   * @param interval rollover interval of estimator in seconds
+   * @return a new quantile estimator object
+   */
+  public synchronized MutableQuantiles newQuantiles(String name, String desc,
+      String sampleName, String valueName, int interval) {
+    checkMetricName(name);
+    MutableQuantiles ret = 
+        new MutableQuantiles(name, desc, sampleName, valueName, interval);
+    metricsMap.put(name, ret);
+    return ret;
+  }
+  
+  /**
    * Create a mutable metric with stats
    * @param name  of the metric
    * @param desc  metric description

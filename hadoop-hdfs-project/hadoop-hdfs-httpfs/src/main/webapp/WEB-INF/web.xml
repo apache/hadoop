@@ -47,7 +47,7 @@
 
   <filter>
     <filter-name>authFilter</filter-name>
-    <filter-class>org.apache.hadoop.fs.http.server.AuthFilter</filter-class>
+    <filter-class>org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter</filter-class>
   </filter>
 
   <filter>

@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
@@ -49,6 +48,7 @@ public class CompositeContext extends AbstractMetricsContext {
   public CompositeContext() {
   }
 
+  @Override
   @InterfaceAudience.Private
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
@@ -186,6 +186,7 @@ public class CompositeContext extends AbstractMetricsContext {
       }
     }
 
+    @Override
     public Object invoke(Object p, Method m, Object[] args) throws Throwable {
       if (m_getRecordName.equals(m)) {
         return recordName;

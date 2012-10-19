@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.Random;
 
 import org.apache.bookkeeper.util.LocalBookKeeper;
 import org.apache.commons.logging.Log;
@@ -41,6 +42,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
 public class TestBookKeeperConfiguration {
   private static final Log LOG = LogFactory
@@ -71,6 +74,11 @@ public class TestBookKeeperConfiguration {
       throw new IOException("Zookeeper took too long to connect");
     }
     return zkc;
+  }
+
+  private NamespaceInfo newNSInfo() {
+    Random r = new Random();
+    return new NamespaceInfo(r.nextInt(), "testCluster", "TestBPID", -1);
   }
 
   @BeforeClass
@@ -137,8 +145,10 @@ public class TestBookKeeperConfiguration {
         bkAvailablePath);
     Assert.assertNull(bkAvailablePath + " already exists", zkc.exists(
         bkAvailablePath, false));
-    bkjm = new BookKeeperJournalManager(conf, URI.create("bookkeeper://"
-        + HOSTPORT + "/hdfsjournal-WithBKPath"));
+    NamespaceInfo nsi = newNSInfo();
+    bkjm = new BookKeeperJournalManager(conf,
+        URI.create("bookkeeper://" + HOSTPORT + "/hdfsjournal-WithBKPath"),
+        nsi);
     Assert.assertNotNull("Bookie available path : " + bkAvailablePath
         + " doesn't exists", zkc.exists(bkAvailablePath, false));
   }
@@ -152,8 +162,10 @@ public class TestBookKeeperConfiguration {
     Configuration conf = new Configuration();
     Assert.assertNull(BK_ROOT_PATH + " already exists", zkc.exists(
         BK_ROOT_PATH, false));
-    new BookKeeperJournalManager(conf, URI.create("bookkeeper://" + HOSTPORT
-        + "/hdfsjournal-DefaultBKPath"));
+    NamespaceInfo nsi = newNSInfo();
+    bkjm = new BookKeeperJournalManager(conf,
+        URI.create("bookkeeper://" + HOSTPORT + "/hdfsjournal-DefaultBKPath"),
+        nsi);
     Assert.assertNotNull("Bookie available path : " + BK_ROOT_PATH
         + " doesn't exists", zkc.exists(BK_ROOT_PATH, false));
   }

@@ -71,6 +71,7 @@ public class AsyncDiskService {
   public AsyncDiskService(String[] volumes) throws IOException {
     
     threadFactory = new ThreadFactory() {
+      @Override
       public Thread newThread(Runnable r) {
         return new Thread(threadGroup, r);
       }
@@ -126,12 +127,12 @@ public class AsyncDiskService {
   public synchronized boolean awaitTermination(long milliseconds) 
       throws InterruptedException {
 
-    long end = System.currentTimeMillis() + milliseconds;
+    long end = Time.now() + milliseconds;
     for (Map.Entry<String, ThreadPoolExecutor> e:
         executors.entrySet()) {
       ThreadPoolExecutor executor = e.getValue();
       if (!executor.awaitTermination(
-          Math.max(end - System.currentTimeMillis(), 0),
+          Math.max(end - Time.now(), 0),
           TimeUnit.MILLISECONDS)) {
         LOG.warn("AsyncDiskService awaitTermination timeout.");
         return false;

@@ -50,7 +50,7 @@ public class TestResourceMgrDelegate {
    */
   @Test
   public void testGetRootQueues() throws IOException, InterruptedException {
-    ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
+    final ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
     GetQueueInfoResponse response = Mockito.mock(GetQueueInfoResponse.class);
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
       Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
@@ -59,12 +59,17 @@ public class TestResourceMgrDelegate {
       GetQueueInfoRequest.class))).thenReturn(response);
 
     ResourceMgrDelegate delegate = new ResourceMgrDelegate(
-      new YarnConfiguration(), applicationsManager);
+      new YarnConfiguration()) {
+      @Override
+      public synchronized void start() {
+        this.rmClient = applicationsManager;
+      }
+    };
     delegate.getRootQueues();
 
     ArgumentCaptor<GetQueueInfoRequest> argument =
       ArgumentCaptor.forClass(GetQueueInfoRequest.class);
-    Mockito.verify(delegate.applicationsManager).getQueueInfo(
+    Mockito.verify(applicationsManager).getQueueInfo(
       argument.capture());
 
     Assert.assertTrue("Children of root queue not requested",
@@ -75,7 +80,7 @@ public class TestResourceMgrDelegate {
 
   @Test
   public void tesAllJobs() throws Exception {
-    ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
+    final ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
     GetAllApplicationsResponse allApplicationsResponse = Records
         .newRecord(GetAllApplicationsResponse.class);
     List<ApplicationReport> applications = new ArrayList<ApplicationReport>();
@@ -93,7 +98,12 @@ public class TestResourceMgrDelegate {
             .any(GetAllApplicationsRequest.class))).thenReturn(
         allApplicationsResponse);
     ResourceMgrDelegate resourceMgrDelegate = new ResourceMgrDelegate(
-        new YarnConfiguration(), applicationsManager);
+      new YarnConfiguration()) {
+      @Override
+      public synchronized void start() {
+        this.rmClient = applicationsManager;
+      }
+    };
     JobStatus[] allJobs = resourceMgrDelegate.getAllJobs();
 
     Assert.assertEquals(State.FAILED, allJobs[0].getState());

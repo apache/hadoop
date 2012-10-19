@@ -38,10 +38,12 @@ public class JInt extends JType {
       super("int", "Int", "Integer", "TypeID.RIOType.INT");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.IntTypeID";
     }
 
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
@@ -50,6 +52,7 @@ public class JInt extends JType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("int i1 = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
@@ -70,6 +73,7 @@ public class JInt extends JType {
       super("int32_t");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_INT)";
     }
@@ -82,6 +86,7 @@ public class JInt extends JType {
     setCType(new CType());
   }
   
+  @Override
   String getSignature() {
     return "i";
   }

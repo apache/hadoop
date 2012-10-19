@@ -39,7 +39,10 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
+
+import com.google.common.base.Preconditions;
 
 
 
@@ -75,7 +78,7 @@ public abstract class Storage extends StorageInfo {
   /** Layout versions of 0.20.203 release */
   public static final int[] LAYOUT_VERSIONS_203 = {-19, -31};
 
-  private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
+  public    static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
   public    static final String STORAGE_DIR_CURRENT   = "current";
   public    static final String STORAGE_DIR_PREVIOUS  = "previous";
@@ -84,6 +87,12 @@ public abstract class Storage extends StorageInfo {
   public    static final String STORAGE_TMP_FINALIZED = "finalized.tmp";
   public    static final String STORAGE_TMP_LAST_CKPT = "lastcheckpoint.tmp";
   public    static final String STORAGE_PREVIOUS_CKPT = "previous.checkpoint";
+  
+  /**
+   * The blocksBeingWritten directory which was used in some 1.x and earlier
+   * releases.
+   */
+  public static final String STORAGE_1_BBW = "blocksBeingWritten";
   
   public enum StorageState {
     NON_EXISTENT,
@@ -123,6 +132,7 @@ public abstract class Storage extends StorageInfo {
       this.prevIndex = 0;
     }
     
+    @Override
     public boolean hasNext() {
       if (storageDirs.isEmpty() || nextIndex >= storageDirs.size())
         return false;
@@ -138,6 +148,7 @@ public abstract class Storage extends StorageInfo {
       return true;
     }
     
+    @Override
     public StorageDirectory next() {
       StorageDirectory sd = getStorageDir(nextIndex);
       prevIndex = nextIndex;
@@ -152,6 +163,7 @@ public abstract class Storage extends StorageInfo {
       return sd;
     }
     
+    @Override
     public void remove() {
       nextIndex = prevIndex; // restore previous state
       storageDirs.remove(prevIndex); // remove last returned element
@@ -216,7 +228,7 @@ public abstract class Storage extends StorageInfo {
    * One of the storage directories.
    */
   @InterfaceAudience.Private
-  public static class StorageDirectory {
+  public static class StorageDirectory implements FormatConfirmable {
     final File root;              // root directory
     final boolean useLock;        // flag to enable storage lock
     final StorageDirType dirType; // storage dir type
@@ -571,6 +583,32 @@ public abstract class Storage extends StorageInfo {
         throw new IOException("Unexpected FS state: " + curState);
       }
     }
+    
+    /**
+     * @return true if the storage directory should prompt the user prior
+     * to formatting (i.e if the directory appears to contain some data)
+     * @throws IOException if the SD cannot be accessed due to an IO error
+     */
+    @Override
+    public boolean hasSomeData() throws IOException {
+      // Its alright for a dir not to exist, or to exist (properly accessible)
+      // and be completely empty.
+      if (!root.exists()) return false;
+      
+      if (!root.isDirectory()) {
+        // a file where you expect a directory should not cause silent
+        // formatting
+        return true;
+      }
+      
+      if (FileUtil.listFiles(root).length == 0) {
+        // Empty dir can format without prompt.
+        return false;
+      }
+      
+      return true;
+    }
+
 
     /**
      * Lock storage to provide exclusive access.
@@ -716,6 +754,15 @@ public abstract class Storage extends StorageInfo {
     return storageDirs.get(idx);
   }
   
+  /**
+   * @return the storage directory, with the precondition that this storage
+   * has exactly one storage directory
+   */
+  public StorageDirectory getSingularStorageDir() {
+    Preconditions.checkState(storageDirs.size() == 1);
+    return storageDirs.get(0);
+  }
+  
   protected void addStorageDir(StorageDirectory sd) {
     storageDirs.add(sd);
   }
@@ -762,6 +809,69 @@ public abstract class Storage extends StorageInfo {
       throw new IOException(msg); 
     }
     
+  }
+  
+  /**
+   * Iterate over each of the {@link FormatConfirmable} objects,
+   * potentially checking with the user whether it should be formatted.
+   * 
+   * If running in interactive mode, will prompt the user for each
+   * directory to allow them to format anyway. Otherwise, returns
+   * false, unless 'force' is specified.
+   * 
+   * @param force format regardless of whether dirs exist
+   * @param interactive prompt the user when a dir exists
+   * @return true if formatting should proceed
+   * @throws IOException if some storage cannot be accessed
+   */
+  public static boolean confirmFormat(
+      Iterable<? extends FormatConfirmable> items,
+      boolean force, boolean interactive) throws IOException {
+    for (FormatConfirmable item : items) {
+      if (!item.hasSomeData())
+        continue;
+      if (force) { // Don't confirm, always format.
+        System.err.println(
+            "Data exists in " + item + ". Formatting anyway.");
+        continue;
+      }
+      if (!interactive) { // Don't ask - always don't format
+        System.err.println(
+            "Running in non-interactive mode, and data appears to exist in " +
+            item + ". Not formatting.");
+        return false;
+      }
+      if (!ToolRunner.confirmPrompt("Re-format filesystem in " + item + " ?")) {
+        System.err.println("Format aborted in " + item);
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Interface for classes which need to have the user confirm their
+   * formatting during NameNode -format and other similar operations.
+   * 
+   * This is currently a storage directory or journal manager.
+   */
+  @InterfaceAudience.Private
+  public interface FormatConfirmable {
+    /**
+     * @return true if the storage seems to have some valid data in it,
+     * and the user should be required to confirm the format. Otherwise,
+     * false.
+     * @throws IOException if the storage cannot be accessed at all.
+     */
+    public boolean hasSomeData() throws IOException;
+    
+    /**
+     * @return a string representation of the formattable item, suitable
+     * for display to the user inside a prompt
+     */
+    @Override
+    public String toString();
   }
   
   /**

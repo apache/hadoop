@@ -29,6 +29,8 @@ import java.util.TreeMap;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
+import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
 
@@ -512,7 +515,21 @@ public class JsonUtil {
     final byte[] bytes = StringUtils.hexStringToByte((String)m.get("bytes"));
 
     final DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-    final MD5MD5CRC32FileChecksum checksum = new MD5MD5CRC32FileChecksum();
+    final DataChecksum.Type crcType = 
+        MD5MD5CRC32FileChecksum.getCrcTypeFromAlgorithmName(algorithm);
+    final MD5MD5CRC32FileChecksum checksum;
+
+    // Recreate what DFSClient would have returned.
+    switch(crcType) {
+      case CRC32:
+        checksum = new MD5MD5CRC32GzipFileChecksum();
+        break;
+      case CRC32C:
+        checksum = new MD5MD5CRC32CastagnoliFileChecksum();
+        break;
+      default:
+        throw new IOException("Unknown algorithm: " + algorithm);
+    }
     checksum.readFields(in);
 
     //check algorithm name

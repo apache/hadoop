@@ -18,16 +18,20 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import com.sun.jersey.api.core.HttpContext;
-import com.sun.jersey.api.core.HttpRequestContext;
-import com.sun.jersey.core.spi.component.ComponentScope;
-import junit.framework.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+import java.security.Principal;
+
+import javax.ws.rs.core.MultivaluedMap;
+
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.slf4j.MDC;
 
-import javax.ws.rs.core.MultivaluedMap;
-import java.security.Principal;
+import com.sun.jersey.api.core.HttpContext;
+import com.sun.jersey.api.core.HttpRequestContext;
+import com.sun.jersey.core.spi.component.ComponentScope;
 
 public class TestUserProvider {
 
@@ -43,8 +47,8 @@ public class TestUserProvider {
     HttpContext context = Mockito.mock(HttpContext.class);
     Mockito.when(context.getRequest()).thenReturn(request);
     UserProvider up = new UserProvider();
-    Assert.assertNull(up.getValue(context));
-    Assert.assertNull(MDC.get("user"));
+    assertNull(up.getValue(context));
+    assertNull(MDC.get("user"));
   }
 
   @Test
@@ -59,8 +63,8 @@ public class TestUserProvider {
     HttpContext context = Mockito.mock(HttpContext.class);
     Mockito.when(context.getRequest()).thenReturn(request);
     UserProvider up = new UserProvider();
-    Assert.assertEquals(up.getValue(context).getName(), "foo");
-    Assert.assertEquals(MDC.get("user"), "foo");
+    assertEquals(up.getValue(context).getName(), "foo");
+    assertEquals(MDC.get("user"), "foo");
   }
 
   @Test
@@ -77,15 +81,15 @@ public class TestUserProvider {
     HttpContext context = Mockito.mock(HttpContext.class);
     Mockito.when(context.getRequest()).thenReturn(request);
     UserProvider up = new UserProvider();
-    Assert.assertEquals(up.getValue(context).getName(), "bar");
-    Assert.assertEquals(MDC.get("user"), "bar");
+    assertEquals(up.getValue(context).getName(), "bar");
+    assertEquals(MDC.get("user"), "bar");
   }
 
   @Test
   public void getters() {
     UserProvider up = new UserProvider();
-    Assert.assertEquals(up.getScope(), ComponentScope.PerRequest);
-    Assert.assertEquals(up.getInjectable(null, null, Principal.class), up);
-    Assert.assertNull(up.getInjectable(null, null, String.class));
+    assertEquals(up.getScope(), ComponentScope.PerRequest);
+    assertEquals(up.getInjectable(null, null, Principal.class), up);
+    assertNull(up.getInjectable(null, null, String.class));
   }
 }

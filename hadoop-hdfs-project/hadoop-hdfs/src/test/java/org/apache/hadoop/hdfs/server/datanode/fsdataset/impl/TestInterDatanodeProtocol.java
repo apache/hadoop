@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,6 +29,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClientAdapter;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -56,6 +59,8 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * This tests InterDataNodeProtocol for block handling. 
@@ -123,17 +128,42 @@ public class TestInterDatanodeProtocol {
     return blocks.get(blocks.size() - 1);
   }
 
+  /** Test block MD access via a DN */
+  @Test
+  public void testBlockMetaDataInfo() throws Exception {
+    checkBlockMetaDataInfo(false);
+  }
+
+  /** The same as above, but use hostnames for DN<->DN communication */
+  @Test
+  public void testBlockMetaDataInfoWithHostname() throws Exception {
+    assumeTrue(System.getProperty("os.name").startsWith("Linux"));
+    checkBlockMetaDataInfo(true);
+  }
+
   /**
    * The following test first creates a file.
    * It verifies the block information from a datanode.
-   * Then, it updates the block with new information and verifies again. 
+   * Then, it updates the block with new information and verifies again.
+   * @param useDnHostname whether DNs should connect to other DNs by hostname
    */
-  @Test
-  public void testBlockMetaDataInfo() throws Exception {
+  private void checkBlockMetaDataInfo(boolean useDnHostname) throws Exception {
     MiniDFSCluster cluster = null;
 
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, useDnHostname);
+    if (useDnHostname) {
+      // Since the mini cluster only listens on the loopback we have to
+      // ensure the hostname used to access DNs maps to the loopback. We
+      // do this by telling the DN to advertise localhost as its hostname
+      // instead of the default hostname.
+      conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
+    }
+
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .checkDataNodeHostConfig(true)
+        .build();
       cluster.waitActive();
 
       //create a file
@@ -152,7 +182,7 @@ public class TestInterDatanodeProtocol {
       //connect to a data node
       DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
       InterDatanodeProtocol idp = DataNodeTestUtils.createInterDatanodeProtocolProxy(
-          datanode, datanodeinfo[0], conf);
+          datanode, datanodeinfo[0], conf, useDnHostname);
       
       //stop block scanner, so we could compare lastScanTime
       DataNodeTestUtils.shutdownBlockScanner(datanode);
@@ -362,7 +392,7 @@ public class TestInterDatanodeProtocol {
 
     try {
       proxy = DataNode.createInterDataNodeProtocolProxy(
-          dInfo, conf, 500);
+          dInfo, conf, 500, false);
       proxy.initReplicaRecovery(new RecoveringBlock(
           new ExtendedBlock("bpid", 1), null, 100));
       fail ("Expected SocketTimeoutException exception, but did not get.");

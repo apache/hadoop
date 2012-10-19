@@ -19,6 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption.IMPORT;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,8 +32,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +43,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -56,13 +57,15 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Startup and checkpoint tests
  * 
  */
-public class TestStartup extends TestCase {
+public class TestStartup {
   public static final String NAME_NODE_HOST = "localhost:";
   public static final String WILDCARD_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
@@ -74,21 +77,8 @@ public class TestStartup extends TestCase {
   static final int fileSize = 8192;
   private long editsLength=0, fsimageLength=0;
 
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-
-
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     config = new HdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory());
 
@@ -114,6 +104,7 @@ public class TestStartup extends TestCase {
   /**
    * clean up
    */
+  @After
   public void tearDown() throws Exception {
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
       throw new IOException("Could not delete hdfs directory in tearDown '" + hdfsDir + "'");
@@ -145,7 +136,8 @@ public class TestStartup extends TestCase {
       // create a file
       FileSystem fileSys = cluster.getFileSystem();
       Path file1 = new Path("t1");
-      this.writeFile(fileSys, file1, 1);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize, 
+          (short) 1, seed);
 
       LOG.info("--doing checkpoint");
       sn.doCheckpoint();  // this shouldn't fail
@@ -256,6 +248,7 @@ public class TestStartup extends TestCase {
    * checkpoint for edits and image is the same directory
    * @throws IOException
    */
+  @Test
   public void testChkpointStartup2() throws IOException{
     LOG.info("--starting checkpointStartup2 - same directory for checkpoint");
     // different name dirs
@@ -281,6 +274,7 @@ public class TestStartup extends TestCase {
    * checkpoint for edits and image are different directories 
    * @throws IOException
    */
+  @Test
   public void testChkpointStartup1() throws IOException{
     //setUpConfig();
     LOG.info("--starting testStartup Recovery");
@@ -305,6 +299,7 @@ public class TestStartup extends TestCase {
    * secondary node copies fsimage and edits into correct separate directories.
    * @throws IOException
    */
+  @Test
   public void testSNNStartup() throws IOException{
     //setUpConfig();
     LOG.info("--starting SecondNN startup test");
@@ -368,6 +363,7 @@ public class TestStartup extends TestCase {
     }
   }
   
+  @Test
   public void testCompression() throws IOException {
     LOG.info("Test compressing image.");
     Configuration conf = new Configuration();
@@ -424,6 +420,7 @@ public class TestStartup extends TestCase {
     namenode.join();
   }
   
+  @Test
   public void testImageChecksum() throws Exception {
     LOG.info("Test uncompressed image checksum");
     testImageChecksum(false);
@@ -433,16 +430,15 @@ public class TestStartup extends TestCase {
 
   private void testImageChecksum(boolean compress) throws Exception {
     MiniDFSCluster cluster = null;
-    Configuration conf = new HdfsConfiguration();
     if (compress) {
-      conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY, true);
+      config.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY, true);
     }
 
     try {
         LOG.info("\n===========================================\n" +
                  "Starting empty cluster");
         
-        cluster = new MiniDFSCluster.Builder(conf)
+        cluster = new MiniDFSCluster.Builder(config)
           .numDataNodes(0)
           .format(true)
           .build();
@@ -469,7 +465,7 @@ public class TestStartup extends TestCase {
         LOG.info("\n===========================================\n" +
         "Starting same cluster after simulated crash");
         try {
-          cluster = new MiniDFSCluster.Builder(conf)
+          cluster = new MiniDFSCluster.Builder(config)
             .numDataNodes(0)
             .format(false)
             .build();
@@ -491,24 +487,24 @@ public class TestStartup extends TestCase {
    * restarts, the still alive datanodes should not have any trouble in getting
    * registrant again.
    */
+  @Test
   public void testNNRestart() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
     FileSystem localFileSys;
     Path hostsFile;
     Path excludeFile;
-    Configuration conf = new HdfsConfiguration();
     int HEARTBEAT_INTERVAL = 1; // heartbeat interval in seconds
     // Set up the hosts/exclude files.
-    localFileSys = FileSystem.getLocal(conf);
+    localFileSys = FileSystem.getLocal(config);
     Path workingDir = localFileSys.getWorkingDirectory();
     Path dir = new Path(workingDir, "build/test/data/work-dir/restartnn");
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
 
     // Setup conf
-    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
+    config.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
     writeConfigFile(localFileSys, excludeFile, null);
-    conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
+    config.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     // write into hosts file
     ArrayList<String>list = new ArrayList<String>();
     byte b[] = {127, 0, 0, 1};
@@ -518,14 +514,14 @@ public class TestStartup extends TestCase {
     int numDatanodes = 1;
     
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(config)
       .numDataNodes(numDatanodes).setupHostsFile(true).build();
       cluster.waitActive();
   
       cluster.restartNameNode();
       NamenodeProtocols nn = cluster.getNameNodeRpc();
       assertNotNull(nn);
-      Assert.assertTrue(cluster.isDataNodeUp());
+      assertTrue(cluster.isDataNodeUp());
       
       DatanodeInfo[] info = nn.getDatanodeReport(DatanodeReportType.LIVE);
       for (int i = 0 ; i < 5 && info.length != numDatanodes; i++) {

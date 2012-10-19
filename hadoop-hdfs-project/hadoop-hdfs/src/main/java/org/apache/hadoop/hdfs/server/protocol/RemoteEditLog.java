@@ -17,18 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ComparisonChain;
 
-public class RemoteEditLog implements Writable, Comparable<RemoteEditLog> {
+public class RemoteEditLog implements Comparable<RemoteEditLog> {
   private long startTxId = HdfsConstants.INVALID_TXID;
   private long endTxId = HdfsConstants.INVALID_TXID;
+  private boolean isInProgress = false;
   
   public RemoteEditLog() {
   }
@@ -36,6 +33,13 @@ public class RemoteEditLog implements Writable, Comparable<RemoteEditLog> {
   public RemoteEditLog(long startTxId, long endTxId) {
     this.startTxId = startTxId;
     this.endTxId = endTxId;
+    this.isInProgress = (endTxId == HdfsConstants.INVALID_TXID);
+  }
+  
+  public RemoteEditLog(long startTxId, long endTxId, boolean inProgress) {
+    this.startTxId = startTxId;
+    this.endTxId = endTxId;
+    this.isInProgress = inProgress;
   }
 
   public long getStartTxId() {
@@ -45,22 +49,18 @@ public class RemoteEditLog implements Writable, Comparable<RemoteEditLog> {
   public long getEndTxId() {
     return endTxId;
   }
-    
+
+  public boolean isInProgress() {
+    return isInProgress;
+  }
+
   @Override
   public String toString() {
-    return "[" + startTxId + "," + endTxId + "]";
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeLong(startTxId);
-    out.writeLong(endTxId);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    startTxId = in.readLong();
-    endTxId = in.readLong();
+    if (!isInProgress) {
+      return "[" + startTxId + "," + endTxId + "]";
+    } else {
+      return "[" + startTxId + "-? (in-progress)]";
+    }
   }
   
   @Override

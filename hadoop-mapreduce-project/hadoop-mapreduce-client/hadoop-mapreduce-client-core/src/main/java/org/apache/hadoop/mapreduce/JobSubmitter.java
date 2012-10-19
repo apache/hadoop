@@ -135,8 +135,9 @@ class JobSubmitter {
       short replication) throws IOException {
     Configuration conf = job.getConfiguration();
     if (!(conf.getBoolean(Job.USED_GENERIC_PARSER, false))) {
-      LOG.warn("Use GenericOptionsParser for parsing the arguments. " +
-               "Applications should implement Tool for the same.");
+      LOG.warn("Hadoop command-line option parsing not performed. " +
+               "Implement the Tool interface and execute your application " +
+               "with ToolRunner to remedy this.");
     }
 
     // get all the command line arguments passed in by the user conf
@@ -189,7 +190,6 @@ class JobSubmitter {
           //should not throw a uri exception 
           throw new IOException("Failed to create uri for " + tmpFile, ue);
         }
-        DistributedCache.createSymlink(conf);
       }
     }
       
@@ -224,7 +224,6 @@ class JobSubmitter {
           //should not throw an uri excpetion
           throw new IOException("Failed to create uri for " + tmpArchives, ue);
         }
-        DistributedCache.createSymlink(conf);
       }
     }
 
@@ -233,9 +232,17 @@ class JobSubmitter {
       if ("".equals(job.getJobName())){
         job.setJobName(new Path(jobJar).getName());
       }
-      copyJar(new Path(jobJar), JobSubmissionFiles.getJobJar(submitJobDir), 
-          replication);
-      job.setJar(JobSubmissionFiles.getJobJar(submitJobDir).toString());
+      Path jobJarPath = new Path(jobJar);
+      URI jobJarURI = jobJarPath.toUri();
+      // If the job jar is already in fs, we don't need to copy it from local fs
+      if (jobJarURI.getScheme() == null || jobJarURI.getAuthority() == null
+              || !(jobJarURI.getScheme().equals(jtFs.getUri().getScheme()) 
+                  && jobJarURI.getAuthority().equals(
+                                            jtFs.getUri().getAuthority()))) {
+        copyJar(jobJarPath, JobSubmissionFiles.getJobJar(submitJobDir), 
+            replication);
+        job.setJar(JobSubmissionFiles.getJobJar(submitJobDir).toString());
+      }
     } else {
       LOG.warn("No job jar file set.  User classes may not be found. "+
       "See Job or Job#setJar(String).");
@@ -428,13 +435,9 @@ class JobSubmitter {
   
   private void printTokens(JobID jobId,
       Credentials credentials) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Printing tokens for job: " + jobId);
-      for(Token<?> token: credentials.getAllTokens()) {
-        if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
-          LOG.debug("Submitting with " + token);
-        }
-      }
+    LOG.info("Submitting tokens for job: " + jobId);
+    for (Token<?> token: credentials.getAllTokens()) {
+      LOG.info(token);
     }
   }
 

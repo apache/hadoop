@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
@@ -84,6 +85,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
+import com.google.common.base.Preconditions;
 
 /** 
  * Provides access to configuration parameters.
@@ -218,8 +220,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static final CopyOnWriteArrayList<String> defaultResources =
     new CopyOnWriteArrayList<String>();
 
-  private static final Map<ClassLoader, Map<String, Class<?>>>
-    CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
+  private static final Map<ClassLoader, Map<String, WeakReference<Class<?>>>>
+    CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, WeakReference<Class<?>>>>();
 
   /**
    * Sentinel value to store negative cache results in {@link #CACHE_CLASSES}.
@@ -781,8 +783,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param value property value.
    * @param source the place that this configuration value came from 
    * (For debugging).
+   * @throws IllegalArgumentException when the value or name is null.
    */
   public void set(String name, String value, String source) {
+    Preconditions.checkArgument(
+        name != null,
+        "Property name must not be null");
+    Preconditions.checkArgument(
+        value != null,
+        "Property value must not be null");
     if (deprecatedKeyMap.isEmpty()) {
       getProps();
     }
@@ -890,6 +899,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return Integer.parseInt(hexString, 16);
     }
     return Integer.parseInt(valueString);
+  }
+  
+  /**
+   * Get the value of the <code>name</code> property as a set of comma-delimited
+   * <code>int</code> values.
+   * 
+   * If no such property exists, an empty array is returned.
+   * 
+   * @param name property name
+   * @return property value interpreted as an array of comma-delimited
+   *         <code>int</code> values
+   */
+  public int[] getInts(String name) {
+    String[] strings = getTrimmedStrings(name);
+    int[] ints = new int[strings.length];
+    for (int i = 0; i < strings.length; i++) {
+      ints[i] = Integer.parseInt(strings[i]);
+    }
+    return ints;
   }
 
   /** 
@@ -1045,7 +1073,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public boolean getBoolean(String name, boolean defaultValue) {
     String valueString = getTrimmed(name);
-    if (null == valueString || "".equals(valueString)) {
+    if (null == valueString || valueString.isEmpty()) {
       return defaultValue;
     }
 
@@ -1112,7 +1140,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Pattern getPattern(String name, Pattern defaultValue) {
     String valString = get(name);
-    if (null == valString || "".equals(valString)) {
+    if (null == valString || valString.isEmpty()) {
       return defaultValue;
     }
     try {
@@ -1504,28 +1532,33 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return the class object, or null if it could not be found.
    */
   public Class<?> getClassByNameOrNull(String name) {
-    Map<String, Class<?>> map;
+    Map<String, WeakReference<Class<?>>> map;
     
     synchronized (CACHE_CLASSES) {
       map = CACHE_CLASSES.get(classLoader);
       if (map == null) {
         map = Collections.synchronizedMap(
-          new WeakHashMap<String, Class<?>>());
+          new WeakHashMap<String, WeakReference<Class<?>>>());
         CACHE_CLASSES.put(classLoader, map);
       }
     }
 
-    Class<?> clazz = map.get(name);
+    Class<?> clazz = null;
+    WeakReference<Class<?>> ref = map.get(name); 
+    if (ref != null) {
+       clazz = ref.get();
+    }
+     
     if (clazz == null) {
       try {
         clazz = Class.forName(name, true, classLoader);
       } catch (ClassNotFoundException e) {
         // Leave a marker that the class isn't found
-        map.put(name, NEGATIVE_CACHE_SENTINEL);
+        map.put(name, new WeakReference<Class<?>>(NEGATIVE_CACHE_SENTINEL));
         return null;
       }
       // two putters can race here, but they'll put the same class
-      map.put(name, clazz);
+      map.put(name, new WeakReference<Class<?>>(clazz));
       return clazz;
     } else if (clazz == NEGATIVE_CACHE_SENTINEL) {
       return null; // not found
@@ -1814,6 +1847,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * 
    * @return an iterator over the entries.
    */
+  @Override
   public Iterator<Map.Entry<String, String>> iterator() {
     // Get a copy of just the string to string pairs. After the old object
     // methods that allow non-strings to be put into configurations are removed,
@@ -1827,6 +1861,33 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return result.entrySet().iterator();
+  }
+
+  private Document parse(DocumentBuilder builder, URL url)
+      throws IOException, SAXException {
+    if (!quietmode) {
+      LOG.info("parsing URL " + url);
+    }
+    if (url == null) {
+      return null;
+    }
+    return parse(builder, url.openStream(), url.toString());
+  }
+
+  private Document parse(DocumentBuilder builder, InputStream is,
+      String systemId) throws IOException, SAXException {
+    if (!quietmode) {
+      LOG.info("parsing input stream " + is);
+    }
+    if (is == null) {
+      return null;
+    }
+    try {
+      return (systemId == null) ? builder.parse(is) : builder.parse(is,
+          systemId);
+    } finally {
+      is.close();
+    }
   }
 
   private void loadResources(Properties properties,
@@ -1878,21 +1939,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       boolean returnCachedProperties = false;
       
       if (resource instanceof URL) {                  // an URL resource
-        URL url = (URL)resource;
-        if (url != null) {
-          if (!quiet) {
-            LOG.info("parsing " + url);
-          }
-          doc = builder.parse(url.toString());
-        }
+        doc = parse(builder, (URL)resource);
       } else if (resource instanceof String) {        // a CLASSPATH resource
         URL url = getResource((String)resource);
-        if (url != null) {
-          if (!quiet) {
-            LOG.info("parsing " + url);
-          }
-          doc = builder.parse(url.toString());
-        }
+        doc = parse(builder, url);
       } else if (resource instanceof Path) {          // a file resource
         // Can't use FileSystem API or we get an infinite loop
         // since FileSystem uses Configuration API.  Use java.io.File instead.
@@ -1900,22 +1950,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing " + file);
+            LOG.info("parsing File " + file);
           }
-          InputStream in = new BufferedInputStream(new FileInputStream(file));
-          try {
-            doc = builder.parse(in);
-          } finally {
-            in.close();
-          }
+          doc = parse(builder, new BufferedInputStream(
+              new FileInputStream(file)), ((Path)resource).toString());
         }
       } else if (resource instanceof InputStream) {
-        try {
-          doc = builder.parse((InputStream)resource);
-          returnCachedProperties = true;
-        } finally {
-          ((InputStream)resource).close();
-        }
+        doc = parse(builder, (InputStream) resource, null);
+        returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
       } else if (resource instanceof Element) {
@@ -2233,6 +2275,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   //@Override
+  @Override
   public void write(DataOutput out) throws IOException {
     Properties props = getProps();
     WritableUtils.writeVInt(out, props.size());
@@ -2283,11 +2326,23 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
     Configuration.addDeprecation("fs.default.name", 
                new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
+    Configuration.addDeprecation("dfs.umaskmode",
+        new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY});
   }
   
   /**
    * A unique class which is used as a sentinel value in the caching
-   * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
+   * for getClassByName. {@link Configuration#getClassByNameOrNull(String)}
    */
   private static abstract class NegativeCacheSentinel {}
+
+  public static void dumpDeprecatedKeys() {
+    for (Map.Entry<String, DeprecatedKeyInfo> entry : deprecatedKeyMap.entrySet()) {
+      StringBuilder newKeys = new StringBuilder();
+      for (String newKey : entry.getValue().newKeys) {
+        newKeys.append(newKey).append("\t");
+      }
+      System.out.println(entry.getKey() + "\t" + newKeys.toString());
+    }
+  }
 }

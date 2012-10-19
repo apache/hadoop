@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * DataBlockScanner manages block scanning for all the block pools. For each
  * block pool a {@link BlockPoolSliceScanner} is created which runs in a separate
@@ -47,6 +49,8 @@ public class DataBlockScanner implements Runnable {
   private final FsDatasetSpi<? extends FsVolumeSpi> dataset;
   private final Configuration conf;
   
+  static final int SLEEP_PERIOD_MS = 5 * 1000;
+
   /**
    * Map to find the BlockPoolScanner for a given block pool id. This is updated
    * when a BPOfferService becomes alive or dies.
@@ -63,14 +67,15 @@ public class DataBlockScanner implements Runnable {
     this.conf = conf;
   }
   
+  @Override
   public void run() {
     String currentBpId = "";
     boolean firstRun = true;
     while (datanode.shouldRun && !Thread.interrupted()) {
-      //Sleep everytime except in the first interation.
+      //Sleep everytime except in the first iteration.
       if (!firstRun) {
         try {
-          Thread.sleep(5000);
+          Thread.sleep(SLEEP_PERIOD_MS);
         } catch (InterruptedException ex) {
           // Interrupt itself again to set the interrupt status
           blockScannerThread.interrupt();
@@ -98,16 +103,11 @@ public class DataBlockScanner implements Runnable {
   }
 
   // Wait for at least one block pool to be up
-  private void waitForInit(String bpid) {
-    UpgradeManagerDatanode um = null;
-    if(bpid != null && !bpid.equals(""))
-      um = datanode.getUpgradeManagerDatanode(bpid);
-    
-    while ((um != null && ! um.isUpgradeCompleted())
-        || (getBlockPoolSetSize() < datanode.getAllBpOs().length)
+  private void waitForInit() {
+    while ((getBlockPoolSetSize() < datanode.getAllBpOs().length)
         || (getBlockPoolSetSize() < 1)) {
       try {
-        Thread.sleep(5000);
+        Thread.sleep(SLEEP_PERIOD_MS);
       } catch (InterruptedException e) {
         blockScannerThread.interrupt();
         return;
@@ -128,7 +128,7 @@ public class DataBlockScanner implements Runnable {
     String nextBpId = null;
     while ((nextBpId == null) && datanode.shouldRun
         && !blockScannerThread.isInterrupted()) {
-      waitForInit(currentBpId);
+      waitForInit();
       synchronized (this) {
         if (getBlockPoolSetSize() > 0) {          
           // Find nextBpId by the minimum of the last scan time
@@ -172,7 +172,8 @@ public class DataBlockScanner implements Runnable {
     return blockPoolScannerMap.size();
   }
   
-  private synchronized BlockPoolSliceScanner getBPScanner(String bpid) {
+  @VisibleForTesting
+  synchronized BlockPoolSliceScanner getBPScanner(String bpid) {
     return blockPoolScannerMap.get(bpid);
   }
   
@@ -253,13 +254,23 @@ public class DataBlockScanner implements Runnable {
     LOG.info("Removed bpid="+blockPoolId+" from blockPoolScannerMap");
   }
   
-  // This method is used for testing
+  @VisibleForTesting
   long getBlocksScannedInLastRun(String bpid) throws IOException {
     BlockPoolSliceScanner bpScanner = getBPScanner(bpid);
     if (bpScanner == null) {
       throw new IOException("Block Pool: "+bpid+" is not running");
     } else {
       return bpScanner.getBlocksScannedInLastRun();
+    }
+  }
+
+  @VisibleForTesting
+  long getTotalScans(String bpid) throws IOException {
+    BlockPoolSliceScanner bpScanner = getBPScanner(bpid);
+    if (bpScanner == null) {
+      throw new IOException("Block Pool: "+bpid+" is not running");
+    } else {
+      return bpScanner.getTotalScans();
     }
   }
 
@@ -273,6 +284,7 @@ public class DataBlockScanner implements Runnable {
   public static class Servlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
+    @Override
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response) throws IOException {
       response.setContentType("text/plain");

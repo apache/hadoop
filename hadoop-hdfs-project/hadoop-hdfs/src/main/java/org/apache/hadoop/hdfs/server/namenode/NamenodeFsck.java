@@ -55,6 +55,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -182,7 +183,7 @@ public class NamenodeFsck {
    * Check files on DFS, starting from the indicated path.
    */
   public void fsck() {
-    final long startTime = System.currentTimeMillis();
+    final long startTime = Time.now();
     try {
       String msg = "FSCK started by " + UserGroupInformation.getCurrentUser()
           + " from " + remoteAddress + " for path " + path + " at " + new Date();
@@ -207,7 +208,7 @@ public class NamenodeFsck {
         out.println(" Number of racks:\t\t" + networktopology.getNumOfRacks());
 
         out.println("FSCK ended at " + new Date() + " in "
-            + (System.currentTimeMillis() - startTime + " milliseconds"));
+            + (Time.now() - startTime + " milliseconds"));
 
         // If there were internal errors during the fsck operation, we want to
         // return FAILURE_STATUS, even if those errors were not immediately
@@ -233,7 +234,7 @@ public class NamenodeFsck {
       String errMsg = "Fsck on path '" + path + "' " + FAILURE_STATUS;
       LOG.warn(errMsg, e);
       out.println("FSCK ended at " + new Date() + " in "
-          + (System.currentTimeMillis() - startTime + " milliseconds"));
+          + (Time.now() - startTime + " milliseconds"));
       out.println(e.getMessage());
       out.print("\n\n" + errMsg);
     } finally {
@@ -559,7 +560,8 @@ public class NamenodeFsck {
             block.getBlockId());
         blockReader = BlockReaderFactory.newBlockReader(
             conf, s, file, block, lblock
-            .getBlockToken(), 0, -1);
+            .getBlockToken(), 0, -1,
+            namenode.getRpcServer().getDataEncryptionKey());
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue

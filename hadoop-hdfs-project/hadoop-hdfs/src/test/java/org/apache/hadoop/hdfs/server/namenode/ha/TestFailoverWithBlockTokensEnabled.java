@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -124,7 +125,7 @@ public class TestFailoverWithBlockTokensEnabled {
               BlockTokenIdentifier id = lb.getBlockToken().decodeIdentifier();
               // This will make the token invalid, since the password
               // won't match anymore
-              id.setExpiryDate(System.currentTimeMillis() + 10);
+              id.setExpiryDate(Time.now() + 10);
               Token<BlockTokenIdentifier> newToken =
                   new Token<BlockTokenIdentifier>(id.getBytes(),
                       token.getPassword(), token.getKind(), token.getService());

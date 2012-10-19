@@ -82,6 +82,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     this.rpcProxy = rpcProxy;
   }
 
+  @Override
   public void close() {
     RPC.stopProxy(rpcProxy);
   }

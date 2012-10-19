@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -30,7 +32,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -44,19 +45,13 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.spy;
 
 public class TestFSEditLogLoader {
   
@@ -121,7 +116,7 @@ public class TestFSEditLogLoader {
    * automatically bumped up to the new minimum upon restart.
    */
   @Test
-  public void testReplicationAdjusted() throws IOException {
+  public void testReplicationAdjusted() throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
     // Replicate and heartbeat fast to shave a few seconds off test

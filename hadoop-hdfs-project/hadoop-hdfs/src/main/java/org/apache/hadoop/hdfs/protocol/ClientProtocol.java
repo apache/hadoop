@@ -33,8 +33,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -44,6 +42,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 
@@ -668,6 +667,18 @@ public interface ClientProtocol {
    */
   public void saveNamespace() throws AccessControlException, IOException;
 
+  
+  /**
+   * Roll the edit log.
+   * Requires superuser privileges.
+   * 
+   * @throws AccessControlException if the superuser privilege is violated
+   * @throws IOException if log roll fails
+   * @return the txid of the new segment
+   */
+  @Idempotent
+  public long rollEdits() throws AccessControlException, IOException;
+
   /**
    * Enable/Disable restore failed storage.
    * <p>
@@ -692,16 +703,6 @@ public interface ClientProtocol {
    * @throws IOException
    */
   public void finalizeUpgrade() throws IOException;
-
-  /**
-   * Report distributed upgrade progress or force current upgrade to proceed.
-   * 
-   * @param action {@link HdfsConstants.UpgradeAction} to perform
-   * @return upgrade status information or null if no upgrades are in progress
-   * @throws IOException
-   */
-  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
-      throws IOException;
 
   /**
    * @return CorruptFileBlocks, containing a list of corrupt files (with
@@ -941,4 +942,11 @@ public interface ClientProtocol {
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
+  
+  /**
+   * @return encryption key so a client can encrypt data sent via the
+   *         DataTransferProtocol to/from DataNodes.
+   * @throws IOException
+   */
+  public DataEncryptionKey getDataEncryptionKey() throws IOException;
 }

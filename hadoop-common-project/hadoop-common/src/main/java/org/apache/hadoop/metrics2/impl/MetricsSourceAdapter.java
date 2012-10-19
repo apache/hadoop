@@ -40,6 +40,8 @@ import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
 import static org.apache.hadoop.metrics2.impl.MetricsConfig.*;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.Time;
+
 import static org.apache.hadoop.metrics2.util.Contracts.*;
 
 /**
@@ -152,9 +154,9 @@ class MetricsSourceAdapter implements DynamicMBean {
   private void updateJmxCache() {
     boolean getAllMetrics = false;
     synchronized(this) {
-      if (System.currentTimeMillis() - jmxCacheTS >= jmxCacheTTL) {
+      if (Time.now() - jmxCacheTS >= jmxCacheTTL) {
         // temporarilly advance the expiry while updating the cache
-        jmxCacheTS = System.currentTimeMillis() + jmxCacheTTL;
+        jmxCacheTS = Time.now() + jmxCacheTTL;
         if (lastRecs == null) {
           getAllMetrics = true;
         }
@@ -175,7 +177,7 @@ class MetricsSourceAdapter implements DynamicMBean {
       if (oldCacheSize < newCacheSize) {
         updateInfoCache();
       }
-      jmxCacheTS = System.currentTimeMillis();
+      jmxCacheTS = Time.now();
       lastRecs = null;  // in case regular interval update is not running
     }
   }
@@ -190,8 +192,7 @@ class MetricsSourceAdapter implements DynamicMBean {
     }
     try {
       source.getMetrics(builder, all);
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.error("Error getting metrics from source "+ name, e);
     }
     for (MetricsRecordBuilderImpl rb : builder) {

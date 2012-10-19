@@ -55,6 +55,7 @@ abstract public class FSOutputSummer extends OutputStream {
   throws IOException;
 
   /** Write one byte */
+  @Override
   public synchronized void write(int b) throws IOException {
     sum.update(b);
     buf[count++] = (byte)b;
@@ -81,6 +82,7 @@ abstract public class FSOutputSummer extends OutputStream {
    * @param      len   the number of bytes to write.
    * @exception  IOException  if an I/O error occurs.
    */
+  @Override
   public synchronized void write(byte b[], int off, int len)
   throws IOException {
     if (off < 0 || len < 0 || off > b.length - len) {

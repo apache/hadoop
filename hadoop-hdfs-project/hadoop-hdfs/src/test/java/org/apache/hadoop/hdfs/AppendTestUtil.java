@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
-
-import junit.framework.Assert;
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,6 +52,7 @@ public class AppendTestUtil {
   }
 
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
+    @Override
     protected Random initialValue() {
       final Random r =  new Random();
       synchronized(SEED) { 
@@ -120,16 +120,16 @@ public class AppendTestUtil {
       FSDataInputStream in = fs.open(p);
       if (in.getWrappedStream() instanceof DFSInputStream) {
         long len = ((DFSInputStream)in.getWrappedStream()).getFileLength();
-        TestCase.assertEquals(length, len);
+        assertEquals(length, len);
       } else {
-        TestCase.assertEquals(length, status.getLen());
+        assertEquals(length, status.getLen());
       }
       
       for(i++; i < length; i++) {
-        TestCase.assertEquals((byte)i, (byte)in.read());  
+        assertEquals((byte)i, (byte)in.read());  
       }
       i = -(int)length;
-      TestCase.assertEquals(-1, in.read()); //EOF  
+      assertEquals(-1, in.read()); //EOF  
       in.close();
     } catch(IOException ioe) {
       throw new IOException("p=" + p + ", length=" + length + ", i=" + i, ioe);
@@ -174,7 +174,7 @@ public class AppendTestUtil {
   private static void checkData(final byte[] actual, int from,
                                 final byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      Assert.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
+      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                    expected[from+idx]+" actual "+actual[idx],
                    expected[from+idx], actual[idx]);
       actual[idx] = 0;
@@ -188,7 +188,7 @@ public class AppendTestUtil {
       final FSDataOutputStream out = fs.create(p, (short)1);
       out.write(bytes);
       out.close();
-      Assert.assertEquals(bytes.length, fs.getFileStatus(p).getLen());
+      assertEquals(bytes.length, fs.getFileStatus(p).getLen());
     }
 
     for(int i = 2; i < 500; i++) {
@@ -196,7 +196,7 @@ public class AppendTestUtil {
       final FSDataOutputStream out = fs.append(p);
       out.write(bytes);
       out.close();
-      Assert.assertEquals(i*bytes.length, fs.getFileStatus(p).getLen());
+      assertEquals(i*bytes.length, fs.getFileStatus(p).getLen());
     }
   }
 }

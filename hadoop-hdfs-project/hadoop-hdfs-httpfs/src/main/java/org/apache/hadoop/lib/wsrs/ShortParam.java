@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.lib.wsrs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public abstract class ShortParam extends Param<Short> {
 
   private int radix;
@@ -31,6 +34,7 @@ public abstract class ShortParam extends Param<Short> {
     this(name, defaultValue, 10);
   }
 
+  @Override
   protected Short parse(String str) throws Exception {
     return Short.parseShort(str, radix);
   }

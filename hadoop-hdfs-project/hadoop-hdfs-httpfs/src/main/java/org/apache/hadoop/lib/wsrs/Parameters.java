@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.lib.wsrs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import java.util.Map;
 
 /**
@@ -24,6 +26,7 @@ import java.util.Map;
  * <p/>
  * Instances are created by the {@link ParametersProvider} class.
  */
+@InterfaceAudience.Private
 public class Parameters {
   private Map<String, Param<?>> params;
 

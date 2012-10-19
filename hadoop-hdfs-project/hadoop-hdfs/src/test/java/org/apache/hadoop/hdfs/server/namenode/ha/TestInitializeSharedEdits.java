@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -41,8 +47,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class TestInitializeSharedEdits {
 
@@ -155,13 +159,20 @@ public class TestInitializeSharedEdits {
   }
   
   @Test
-  public void testDontOverWriteExistingDir() {
+  public void testFailWhenNoSharedEditsSpecified() throws Exception {
+    Configuration confNoShared = new Configuration(conf);
+    confNoShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+    assertFalse(NameNode.initializeSharedEdits(confNoShared, true));
+  }
+  
+  @Test
+  public void testDontOverWriteExistingDir() throws IOException {
     assertFalse(NameNode.initializeSharedEdits(conf, false));
     assertTrue(NameNode.initializeSharedEdits(conf, false));
   }
   
   @Test
-  public void testInitializeSharedEditsConfiguresGenericConfKeys() {
+  public void testInitializeSharedEditsConfiguresGenericConfKeys() throws IOException {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,

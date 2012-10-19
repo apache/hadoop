@@ -18,18 +18,20 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
+import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
-
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.spy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,11 +47,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
-
-import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
-import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
-import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;

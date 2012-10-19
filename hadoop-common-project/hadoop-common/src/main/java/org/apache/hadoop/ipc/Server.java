@@ -46,11 +46,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -62,6 +64,7 @@ import javax.security.sasl.SaslServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -84,7 +87,6 @@ import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -95,6 +97,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -104,9 +107,47 @@ import com.google.common.annotations.VisibleForTesting;
  * 
  * @see Client
  */
+@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@InterfaceStability.Evolving
 public abstract class Server {
   private final boolean authorize;
   private boolean isSecurityEnabled;
+  private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
+  
+  public void addTerseExceptions(Class<?>... exceptionClass) {
+    exceptionsHandler.addTerseExceptions(exceptionClass);
+  }
+
+  /**
+   * ExceptionsHandler manages Exception groups for special handling
+   * e.g., terse exception group for concise logging messages
+   */
+  static class ExceptionsHandler {
+    private volatile Set<String> terseExceptions = new HashSet<String>();
+
+    /**
+     * Add exception class so server won't log its stack trace.
+     * Modifying the terseException through this method is thread safe.
+     *
+     * @param exceptionClass exception classes 
+     */
+    void addTerseExceptions(Class<?>... exceptionClass) {
+
+      // Make a copy of terseException for performing modification
+      final HashSet<String> newSet = new HashSet<String>(terseExceptions);
+
+      // Add all class names into the HashSet
+      for (Class<?> name : exceptionClass) {
+        newSet.add(name.toString());
+      }
+      // Replace terseException set
+      terseExceptions = Collections.unmodifiableSet(newSet);
+    }
+
+    boolean isTerse(Class<?> t) {
+      return terseExceptions.contains(t.toString());
+    }
+  }
   
   /**
    * The first four bytes of Hadoop RPC connections
@@ -411,7 +452,7 @@ public abstract class Server {
       this.callId = id;
       this.rpcRequest = param;
       this.connection = connection;
-      this.timestamp = System.currentTimeMillis();
+      this.timestamp = Time.now();
       this.rpcResponse = null;
       this.rpcKind = kind;
     }
@@ -478,6 +519,7 @@ public abstract class Server {
         this.readSelector = Selector.open();
       }
       
+      @Override
       public void run() {
         LOG.info("Starting " + getName());
         try {
@@ -561,7 +603,7 @@ public abstract class Server {
      */
     private void cleanupConnections(boolean force) {
       if (force || numConnections > thresholdIdleConnections) {
-        long currentTime = System.currentTimeMillis();
+        long currentTime = Time.now();
         if (!force && (currentTime - lastCleanupRunTime) < cleanupInterval) {
           return;
         }
@@ -597,7 +639,7 @@ public abstract class Server {
           }
           else i++;
         }
-        lastCleanupRunTime = System.currentTimeMillis();
+        lastCleanupRunTime = Time.now();
       }
     }
 
@@ -682,7 +724,7 @@ public abstract class Server {
         try {
           reader.startAdd();
           SelectionKey readKey = reader.registerChannel(channel);
-          c = new Connection(readKey, channel, System.currentTimeMillis());
+          c = new Connection(readKey, channel, Time.now());
           readKey.attach(c);
           synchronized (connectionList) {
             connectionList.add(numConnections, c);
@@ -704,7 +746,7 @@ public abstract class Server {
       if (c == null) {
         return;  
       }
-      c.setLastContact(System.currentTimeMillis());
+      c.setLastContact(Time.now());
       
       try {
         count = c.readAndProcess();
@@ -726,7 +768,7 @@ public abstract class Server {
         c = null;
       }
       else {
-        c.setLastContact(System.currentTimeMillis());
+        c.setLastContact(Time.now());
       }
     }   
 
@@ -805,7 +847,7 @@ public abstract class Server {
               LOG.info(getName() + ": doAsyncWrite threw exception " + e);
             }
           }
-          long now = System.currentTimeMillis();
+          long now = Time.now();
           if (now < lastPurgeTime + PURGE_INTERVAL) {
             continue;
           }
@@ -951,7 +993,7 @@ public abstract class Server {
             
             if (inHandler) {
               // set the serve time when the response has to be sent later
-              call.timestamp = System.currentTimeMillis();
+              call.timestamp = Time.now();
               
               incPending();
               try {
@@ -1331,20 +1373,38 @@ public abstract class Server {
           dataLengthBuffer.clear();
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
-          }
-          if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-            AccessControlException ae = new AccessControlException("Authorization ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
-              + ") is enabled but authentication ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
-              + ") is configured as simple. Please configure another method "
-              + "like kerberos or digest.");
-            setupResponse(authFailedResponse, authFailedCall, RpcStatusProto.FATAL,
-                null, ae.getClass().getName(), ae.getMessage());
-            responder.doRespond(authFailedCall);
-            throw ae;
-          }
-          if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+          }          
+          final boolean clientUsingSasl;
+          switch (authMethod) {
+            case SIMPLE: { // no sasl for simple
+              if (isSecurityEnabled) {
+                AccessControlException ae = new AccessControlException("Authorization ("
+                    + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
+                    + ") is enabled but authentication ("
+                    + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
+                    + ") is configured as simple. Please configure another method "
+                    + "like kerberos or digest.");
+                setupResponse(authFailedResponse, authFailedCall, RpcStatusProto.FATAL,
+                    null, ae.getClass().getName(), ae.getMessage());
+                responder.doRespond(authFailedCall);
+                throw ae;
+              }
+              clientUsingSasl = false;
+              useSasl = false; 
+              break;
+            }
+            case DIGEST: {
+              clientUsingSasl = true;
+              useSasl = (secretManager != null);
+              break;
+            }
+            default: {
+              clientUsingSasl = true;
+              useSasl = isSecurityEnabled; 
+              break;
+            }
+          }          
+          if (clientUsingSasl && !useSasl) {
             doSaslReply(SaslStatus.SUCCESS, new IntWritable(
                 SaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
             authMethod = AuthMethod.SIMPLE;
@@ -1352,9 +1412,6 @@ public abstract class Server {
             // should ignore it. Both client and server should fall back
             // to simple auth from now on.
             skipInitialSaslHandshake = true;
-          }
-          if (authMethod != AuthMethod.SIMPLE) {
-            useSasl = true;
           }
           
           connectionHeaderBuf = null;
@@ -1489,8 +1546,6 @@ public abstract class Server {
             UserGroupInformation realUser = user;
             user = UserGroupInformation.createProxyUser(protocolUser
                 .getUserName(), realUser);
-            // Now the user is a proxy user, set Authentication method Proxy.
-            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
       }
@@ -1642,7 +1697,7 @@ public abstract class Server {
       if (!channel.isOpen())
         return;
       try {socket.shutdownOutput();} catch(Exception e) {
-        LOG.warn("Ignoring socket shutdown exception");
+        LOG.debug("Ignoring socket shutdown exception", e);
       }
       if (channel.isOpen()) {
         try {channel.close();} catch(Exception e) {}
@@ -1703,8 +1758,8 @@ public abstract class Server {
               // on the server side, as opposed to just a normal exceptional
               // result.
               LOG.warn(logMsg, e);
-            } else if (e instanceof StandbyException) {
-              // Don't log the whole stack trace of these exceptions.
+            } else if (exceptionsHandler.isTerse(e.getClass())) {
+             // Don't log the whole stack trace of these exceptions.
               // Way too noisy!
               LOG.info(logMsg);
             } else {
@@ -1840,9 +1895,11 @@ public abstract class Server {
     // Create the responder here
     responder = new Responder();
     
-    if (isSecurityEnabled) {
+    if (secretManager != null) {
       SaslRpcServer.init(conf);
     }
+    
+    this.exceptionsHandler.addTerseExceptions(StandbyException.class);
   }
 
   private void closeConnection(Connection connection) {

@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -61,6 +65,10 @@ public class TestBackupNode {
   }
   
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
+  
+  static final long seed = 0xDEADBEEFL;
+  static final int blockSize = 4096;
+  static final int fileSize = 8192;
 
   @Before
   public void setUp() throws Exception {
@@ -347,14 +355,17 @@ public class TestBackupNode {
           + NetUtils.getHostPortString(add)).toUri(), conf);
       boolean canWrite = true;
       try {
-        TestCheckpoint.writeFile(bnFS, file3, replication);
+        DFSTestUtil.createFile(bnFS, file3, fileSize, fileSize, blockSize,
+            replication, seed);
       } catch (IOException eio) {
         LOG.info("Write to BN failed as expected: ", eio);
         canWrite = false;
       }
       assertFalse("Write to BackupNode must be prohibited.", canWrite);
 
-      TestCheckpoint.writeFile(fileSys, file3, replication);
+      DFSTestUtil.createFile(fileSys, file3, fileSize, fileSize, blockSize,
+          replication, seed);
+      
       TestCheckpoint.checkFile(fileSys, file3, replication);
       // should also be on BN right away
       assertTrue("file3 does not exist on BackupNode",

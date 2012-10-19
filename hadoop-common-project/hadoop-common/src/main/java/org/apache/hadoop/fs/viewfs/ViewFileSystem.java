@@ -23,7 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -49,12 +49,10 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Time;
 
 /**
  * ViewFileSystem (extends the FileSystem interface) implements a client-side
@@ -146,7 +144,7 @@ public class ViewFileSystem extends FileSystem {
    */
   public ViewFileSystem() throws IOException {
     ugi = UserGroupInformation.getCurrentUser();
-    creationTime = System.currentTimeMillis();
+    creationTime = Time.now();
   }
 
   /**
@@ -166,6 +164,7 @@ public class ViewFileSystem extends FileSystem {
    *          this FileSystem
    * @param conf the configuration
    */
+  @Override
   public void initialize(final URI theUri, final Configuration conf)
       throws IOException {
     super.initialize(theUri, conf);
@@ -234,11 +233,6 @@ public class ViewFileSystem extends FileSystem {
     return res.isInternalDir() ? null : res.targetFileSystem.getHomeDirectory();
   }
   
-  @Override
-  public String getCanonicalServiceName() {
-    return null;
-  }
-
   @Override
   public URI getUri() {
     return myUri;
@@ -548,6 +542,18 @@ public class ViewFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public FileSystem[] getChildFileSystems() {
+    List<InodeTree.MountPoint<FileSystem>> mountPoints =
+        fsState.getMountPoints();
+    Set<FileSystem> children = new HashSet<FileSystem>();
+    for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
+      FileSystem targetFs = mountPoint.target.targetFileSystem;
+      children.addAll(Arrays.asList(targetFs.getChildFileSystems()));
+    }
+    return children.toArray(new FileSystem[]{});
+  }
+  
   public MountPoint[] getMountPoints() {
     List<InodeTree.MountPoint<FileSystem>> mountPoints = 
                   fsState.getMountPoints();
@@ -560,59 +566,6 @@ public class ViewFileSystem extends FileSystem {
     return result;
   }
   
- 
-  @Override
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
-                fsState.getMountPoints();
-    int initialListSize  = 0;
-    for (InodeTree.MountPoint<FileSystem> im : mountPoints) {
-      initialListSize += im.target.targetDirLinkList.length; 
-    }
-    List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
-    for ( int i = 0; i < mountPoints.size(); ++i ) {
-      List<Token<?>> tokens = 
-        mountPoints.get(i).target.targetFileSystem.getDelegationTokens(renewer);
-      if (tokens != null) {
-        result.addAll(tokens);
-      }
-    }
-    return result;
-  }
-
-  @Override
-  public List<Token<?>> getDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    List<InodeTree.MountPoint<FileSystem>> mountPoints =
-        fsState.getMountPoints();
-    int initialListSize = 0;
-    for (InodeTree.MountPoint<FileSystem> im : mountPoints) {
-      initialListSize += im.target.targetDirLinkList.length;
-    }
-    Set<String> seenServiceNames = new HashSet<String>();
-    List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
-    for (int i = 0; i < mountPoints.size(); ++i) {
-      String serviceName =
-          mountPoints.get(i).target.targetFileSystem.getCanonicalServiceName();
-      if (serviceName == null || seenServiceNames.contains(serviceName)) {
-        continue;
-      }
-      seenServiceNames.add(serviceName);
-      Token<?> knownToken = credentials.getToken(new Text(serviceName));
-      if (knownToken != null) {
-        result.add(knownToken);
-      } else {
-        List<Token<?>> tokens =
-            mountPoints.get(i).target.targetFileSystem
-                .getDelegationTokens(renewer);
-        if (tokens != null) {
-          result.addAll(tokens);
-        }
-      }
-    }
-    return result;
-  }
-
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * that is internal dir of the mount table.
@@ -754,7 +707,7 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
         throws AccessControlException, FileAlreadyExistsException {
-      if (theInternalDir.isRoot & dir == null) {
+      if (theInternalDir.isRoot && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       // Note dir starts with /

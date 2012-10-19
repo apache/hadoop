@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import junit.framework.TestCase;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -32,8 +35,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Test;
 
-public class TestStickyBit extends TestCase {
+public class TestStickyBit {
 
   static UserGroupInformation user1 = 
     UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
@@ -158,6 +162,7 @@ public class TestStickyBit extends TestCase {
     assertFalse(hdfs.getFileStatus(f).getPermission().getStickyBit());
   }
 
+  @Test
   public void testGeneralSBBehavior() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
     try {
@@ -195,6 +200,7 @@ public class TestStickyBit extends TestCase {
    * Test that one user can't rename/move another user's file when the sticky
    * bit is set.
    */
+  @Test
   public void testMovingFiles() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
 
@@ -243,6 +249,7 @@ public class TestStickyBit extends TestCase {
    * the sticky bit back on re-start, and that no extra sticky bits appear after
    * re-start.
    */
+  @Test
   public void testStickyBitPersistence() throws IOException {
     MiniDFSCluster cluster = null;
     try {

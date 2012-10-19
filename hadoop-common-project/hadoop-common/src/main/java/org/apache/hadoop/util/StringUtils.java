@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import com.google.common.net.InetAddresses;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -77,6 +78,9 @@ public class StringUtils {
    * @return the hostname to the first dot
    */
   public static String simpleHostname(String fullHostname) {
+    if (InetAddresses.isInetAddress(fullHostname)) {
+      return fullHostname;
+    }
     int offset = fullHostname.indexOf('.');
     if (offset != -1) {
       return fullHostname.substring(0, offset);
@@ -202,8 +206,12 @@ public class StringUtils {
   }
   
   /**
-   * 
    * @param str
+   *          The string array to be parsed into an URI array.
+   * @return <tt>null</tt> if str is <tt>null</tt>, else the URI array
+   *         equivalent to str.
+   * @throws IllegalArgumentException
+   *           If any string in str violates RFC&nbsp;2396.
    */
   public static URI[] stringToURI(String[] str){
     if (str == null) 
@@ -213,9 +221,8 @@ public class StringUtils {
       try{
         uris[i] = new URI(str[i]);
       }catch(URISyntaxException ur){
-        System.out.println("Exception in specified URI's " + StringUtils.stringifyException(ur));
-        //making sure its asssigned to null in case of an error
-        uris[i] = null;
+        throw new IllegalArgumentException(
+            "Failed to create uri for " + str[i], ur);
       }
     }
     return uris;
@@ -345,7 +352,7 @@ public class StringUtils {
    * @return an array of <code>String</code> values
    */
   public static String[] getTrimmedStrings(String str){
-    if (null == str || "".equals(str.trim())) {
+    if (null == str || str.trim().isEmpty()) {
       return emptyStringArray;
     }
 
@@ -405,7 +412,7 @@ public class StringUtils {
       String str, char separator) {
     // String.split returns a single empty result for splitting the empty
     // string.
-    if ("".equals(str)) {
+    if (str.isEmpty()) {
       return new String[]{""};
     }
     ArrayList<String> strList = new ArrayList<String>();
@@ -601,7 +608,8 @@ public class StringUtils {
             "  build = " + VersionInfo.getUrl() + " -r "
                          + VersionInfo.getRevision()  
                          + "; compiled by '" + VersionInfo.getUser()
-                         + "' on " + VersionInfo.getDate()}
+                         + "' on " + VersionInfo.getDate(),
+            "  java = " + System.getProperty("java.version") }
         )
       );
 

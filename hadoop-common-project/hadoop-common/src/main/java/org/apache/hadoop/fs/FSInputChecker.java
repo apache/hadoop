@@ -140,6 +140,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * @exception  IOException  if an I/O error occurs.
    */
 
+  @Override
   public synchronized int read() throws IOException {
     if (pos >= count) {
       fill();
@@ -180,6 +181,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * @exception  IOException  if an I/O error occurs.
    *             ChecksumException if any checksum error occurs
    */
+  @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     // parameter check
     if ((off | len | (off + len) | (b.length - (off + len))) < 0) {
@@ -367,6 +369,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * @exception  IOException  if an I/O error occurs.
    *             ChecksumException if the chunk to skip to is corrupted
    */
+  @Override
   public synchronized long skip(long n) throws IOException {
     if (n <= 0) {
       return 0;
@@ -389,6 +392,7 @@ abstract public class FSInputChecker extends FSInputStream {
    *             ChecksumException if the chunk to seek to is corrupted
    */
 
+  @Override
   public synchronized void seek(long pos) throws IOException {
     if( pos<0 ) {
       return;
@@ -462,13 +466,16 @@ abstract public class FSInputChecker extends FSInputStream {
     this.pos = 0;
   }
 
+  @Override
   final public boolean markSupported() {
     return false;
   }
   
+  @Override
   final public void mark(int readlimit) {
   }
   
+  @Override
   final public void reset() throws IOException {
     throw new IOException("mark/reset not supported");
   }

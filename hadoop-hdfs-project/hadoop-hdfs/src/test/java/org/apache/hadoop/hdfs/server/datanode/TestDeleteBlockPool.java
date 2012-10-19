@@ -19,11 +19,12 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-
-import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -74,7 +75,7 @@ public class TestDeleteBlockPool {
       // Although namenode is shutdown, the bp offerservice is still running
       try {
         dn1.deleteBlockPool(bpid1, true);
-        Assert.fail("Must not delete a running block pool");
+        fail("Must not delete a running block pool");
       } catch (IOException expected) {
       }
 
@@ -85,7 +86,7 @@ public class TestDeleteBlockPool {
 
       try {
         dn1.deleteBlockPool(bpid1, false);
-        Assert.fail("Must not delete if any block files exist unless "
+        fail("Must not delete if any block files exist unless "
             + "force is true");
       } catch (IOException expected) {
       }
@@ -115,7 +116,7 @@ public class TestDeleteBlockPool {
       // on dn2
       try {
         dn2.deleteBlockPool(bpid1, true);
-        Assert.fail("Must not delete a running block pool");
+        fail("Must not delete a running block pool");
       } catch (IOException expected) {
       }
       
@@ -180,21 +181,21 @@ public class TestDeleteBlockPool {
       Configuration nn1Conf = cluster.getConfiguration(0);
       nn1Conf.set(DFSConfigKeys.DFS_NAMESERVICES, "namesServerId1");
       dn1.refreshNamenodes(nn1Conf);
-      Assert.assertEquals(1, dn1.getAllBpOs().length);
+      assertEquals(1, dn1.getAllBpOs().length);
       
       DFSAdmin admin = new DFSAdmin(nn1Conf);
       String dn1Address = dn1.getDatanodeId().getIpAddr() + ":" + dn1.getIpcPort();
       String[] args = { "-deleteBlockPool", dn1Address, bpid2 };
       
       int ret = admin.run(args);
-      Assert.assertFalse(0 == ret);
+      assertFalse(0 == ret);
 
       verifyBlockPoolDirectories(true, dn1StorageDir1, bpid2);
       verifyBlockPoolDirectories(true, dn1StorageDir2, bpid2);
       
       String[] forceArgs = { "-deleteBlockPool", dn1Address, bpid2, "force" };
       ret = admin.run(forceArgs);
-      Assert.assertEquals(0, ret);
+      assertEquals(0, ret);
       
       verifyBlockPoolDirectories(false, dn1StorageDir1, bpid2);
       verifyBlockPoolDirectories(false, dn1StorageDir2, bpid2);
@@ -216,7 +217,7 @@ public class TestDeleteBlockPool {
         + bpid);
 
     if (shouldExist == false) {
-      Assert.assertFalse(bpDir.exists());
+      assertFalse(bpDir.exists());
     } else {
       File bpCurrentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT);
       File finalizedDir = new File(bpCurrentDir,
@@ -224,9 +225,9 @@ public class TestDeleteBlockPool {
       File rbwDir = new File(bpCurrentDir, DataStorage.STORAGE_DIR_RBW);
       File versionFile = new File(bpCurrentDir, "VERSION");
 
-      Assert.assertTrue(finalizedDir.isDirectory());
-      Assert.assertTrue(rbwDir.isDirectory());
-      Assert.assertTrue(versionFile.exists());
+      assertTrue(finalizedDir.isDirectory());
+      assertTrue(rbwDir.isDirectory());
+      assertTrue(versionFile.exists());
     }
   }
 }

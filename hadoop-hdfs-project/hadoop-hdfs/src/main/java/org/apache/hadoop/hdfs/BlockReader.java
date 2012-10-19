@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.Socket;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 
 /**
  * A BlockReader is responsible for reading a single block
@@ -71,4 +72,8 @@ public interface BlockReader extends ByteBufferReadable {
    */
   boolean hasSentStatusCode();
 
+  /**
+   * @return a reference to the streams this block reader is using.
+   */
+  IOStreamPair getStreams();
 }

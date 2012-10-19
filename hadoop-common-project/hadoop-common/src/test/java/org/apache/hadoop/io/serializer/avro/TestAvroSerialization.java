@@ -70,10 +70,12 @@ public class TestAvroSerialization extends TestCase {
   public static class InnerRecord {
     public int x = 7;
 
+    @Override
     public int hashCode() {
       return x;
     }
 
+    @Override
     public boolean equals(Object obj) {
       if (this == obj)
         return true;
@@ -91,10 +93,12 @@ public class TestAvroSerialization extends TestCase {
   public static class RefSerializable implements AvroReflectSerializable {
     public int x = 7;
 
+    @Override
     public int hashCode() {
       return x;
     }
 
+    @Override
     public boolean equals(Object obj) {
       if (this == obj)
         return true;

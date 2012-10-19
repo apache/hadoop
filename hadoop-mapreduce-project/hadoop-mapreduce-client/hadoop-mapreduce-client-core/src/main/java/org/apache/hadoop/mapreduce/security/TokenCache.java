@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -110,7 +109,6 @@ public class TokenCache {
    * @param conf
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   static void obtainTokensForNamenodesInternal(FileSystem fs, 
       Credentials credentials, Configuration conf) throws IOException {
     String delegTokenRenewer = Master.getMasterPrincipal(conf);
@@ -120,26 +118,11 @@ public class TokenCache {
     }
     mergeBinaryTokens(credentials, conf);
 
-    String fsName = fs.getCanonicalServiceName();
-    if (TokenCache.getDelegationToken(credentials, fsName) == null) {
-      List<Token<?>> tokens =
-          fs.getDelegationTokens(delegTokenRenewer, credentials);
-      if (tokens != null) {
-        for (Token<?> token : tokens) {
-          credentials.addToken(token.getService(), token);
-          LOG.info("Got dt for " + fs.getUri() + ";uri="+ fsName + 
-              ";t.service="+token.getService());
-        }
-      }
-      //Call getDelegationToken as well for now - for FS implementations
-      // which may not have implmented getDelegationTokens (hftp)
-      if (tokens == null || tokens.size() == 0) {
-        Token<?> token = fs.getDelegationToken(delegTokenRenewer);
-        if (token != null) {
-          credentials.addToken(token.getService(), token);
-          LOG.info("Got dt for " + fs.getUri() + ";uri=" + fsName
-              + ";t.service=" + token.getService());
-        }
+    final Token<?> tokens[] = fs.addDelegationTokens(delegTokenRenewer,
+                                                     credentials);
+    if (tokens != null) {
+      for (Token<?> token : tokens) {
+        LOG.info("Got dt for " + fs.getUri() + "; "+token);
       }
     }
   }
@@ -173,21 +156,6 @@ public class TokenCache {
   public static final String JOB_TOKENS_FILENAME = "mapreduce.job.jobTokenFile";
   private static final Text JOB_TOKEN = new Text("ShuffleAndJobToken");
   
-  /**
-   * 
-   * @param namenode
-   * @return delegation token
-   */
-  @InterfaceAudience.Private
-  public static Token<?> getDelegationToken(
-      Credentials credentials, String namenode) {
-    //No fs specific tokens issues by this fs. It may however issue tokens
-    // for other filesystems - which would be keyed by that filesystems name.
-    if (namenode == null)  
-      return null;
-    return (Token<?>) credentials.getToken(new Text(namenode));
-  }
-
   /**
    * load job token from a file
    * @param conf

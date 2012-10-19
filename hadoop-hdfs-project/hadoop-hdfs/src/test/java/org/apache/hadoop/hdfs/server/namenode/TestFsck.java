@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -57,7 +61,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
-import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -91,6 +94,12 @@ public class TestFsck {
       "ugi=.*?\\s" + 
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
       "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
+      "perm=null");
+  static final Pattern getfileinfoPattern = Pattern.compile(
+      "allowed=.*?\\s" +
+      "ugi=.*?\\s" + 
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" + 
       "perm=null");
   
   static final Pattern numCorruptBlocksPattern = Pattern.compile(
@@ -177,9 +186,13 @@ public class TestFsck {
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     logger.setLevel(Level.OFF);
     
-    // Ensure audit log has only one for FSCK
+    // Audit log should contain one getfileinfo and one fsck
     BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
     String line = reader.readLine();
+    assertNotNull(line);
+    assertTrue("Expected getfileinfo event not found in audit log",
+        getfileinfoPattern.matcher(line).matches());
+    line = reader.readLine();
     assertNotNull(line);
     assertTrue("Expected fsck event not found in audit log",
         fsckPattern.matcher(line).matches());

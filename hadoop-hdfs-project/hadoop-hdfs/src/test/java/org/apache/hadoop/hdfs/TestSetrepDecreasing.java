@@ -19,9 +19,10 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class TestSetrepDecreasing extends TestCase {
+public class TestSetrepDecreasing {
+  @Test
   public void testSetrepDecreasing() throws IOException {
     TestSetrepIncreasing.setrep(5, 3, false);
   }

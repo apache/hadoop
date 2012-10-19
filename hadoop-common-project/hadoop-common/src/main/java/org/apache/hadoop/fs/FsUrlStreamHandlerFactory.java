@@ -59,6 +59,7 @@ public class FsUrlStreamHandlerFactory implements
     this.handler = new FsUrlStreamHandler(this.conf);
   }
 
+  @Override
   public java.net.URLStreamHandler createURLStreamHandler(String protocol) {
     if (!protocols.containsKey(protocol)) {
       boolean known = true;

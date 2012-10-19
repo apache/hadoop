@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.tools;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -30,17 +32,20 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.JMXGet;
-import static org.apache.hadoop.test.MetricsAsserts.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 
 /**
  * Startup and checkpoint tests
  * 
  */
-public class TestJMXGet extends TestCase {
+public class TestJMXGet {
 
   private Configuration config;
   private MiniDFSCluster cluster;
@@ -49,26 +54,15 @@ public class TestJMXGet extends TestCase {
   static final int blockSize = 4096;
   static final int fileSize = 8192;
 
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true,
-        fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short)repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-
-
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     config = new HdfsConfiguration();
   }
 
   /**
    * clean up
    */
+  @After
   public void tearDown() throws Exception {
     if(cluster.isClusterUp())
       cluster.shutdown();
@@ -84,12 +78,14 @@ public class TestJMXGet extends TestCase {
    * test JMX connection to NameNode..
    * @throws Exception 
    */
+  @Test
   public void testNameNode() throws Exception {
     int numDatanodes = 2;
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getFileSystem(), new Path("/test1"), 2);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/test1"),
+        fileSize, fileSize, blockSize, (short) 2, seed);
 
     JMXGet jmx = new JMXGet();
     //jmx.setService("*"); // list all hadoop services
@@ -112,12 +108,14 @@ public class TestJMXGet extends TestCase {
    * test JMX connection to DataNode..
    * @throws Exception 
    */
+  @Test
   public void testDataNode() throws Exception {
     int numDatanodes = 2;
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getFileSystem(), new Path("/test"), 2);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/test"),
+        fileSize, fileSize, blockSize, (short) 2, seed);
 
     JMXGet jmx = new JMXGet();
     //jmx.setService("*"); // list all hadoop services

@@ -18,29 +18,25 @@
 
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Map;
-import java.util.HashMap;
-
-import org.junit.Test;
-import org.junit.Before;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
+import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestOfflineEditsViewer {
   private static final Log LOG = LogFactory.getLog(TestOfflineEditsViewer.class);

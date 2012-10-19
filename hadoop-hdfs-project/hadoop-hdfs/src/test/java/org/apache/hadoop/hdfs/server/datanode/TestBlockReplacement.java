@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -47,14 +51,10 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.net.NetUtils;
-
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * This class tests if block replacement request to data nodes work correctly.
@@ -71,7 +71,7 @@ public class TestBlockReplacement {
     long bandwidthPerSec = 1024*1024L;
     final long TOTAL_BYTES =6*bandwidthPerSec; 
     long bytesToSend = TOTAL_BYTES; 
-    long start = Util.now();
+    long start = Time.now();
     DataTransferThrottler throttler = new DataTransferThrottler(bandwidthPerSec);
     long totalBytes = 0L;
     long bytesSent = 1024*512L; // 0.5MB
@@ -84,12 +84,12 @@ public class TestBlockReplacement {
       Thread.sleep(1000);
     } catch (InterruptedException ignored) {}
     throttler.throttle(bytesToSend);
-    long end = Util.now();
+    long end = Time.now();
     assertTrue(totalBytes*1000/(end-start)<=bandwidthPerSec);
   }
   
   @Test
-  public void testBlockReplacement() throws IOException, TimeoutException {
+  public void testBlockReplacement() throws Exception {
     final Configuration CONF = new HdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};
@@ -208,7 +208,7 @@ public class TestBlockReplacement {
       throws IOException, TimeoutException {
     boolean notDone;
     final long TIMEOUT = 20000L;
-    long starttime = System.currentTimeMillis();
+    long starttime = Time.now();
     long failtime = starttime + TIMEOUT;
     do {
       try {
@@ -233,7 +233,7 @@ public class TestBlockReplacement {
           }
         }
       }
-      if (System.currentTimeMillis() > failtime) {
+      if (Time.now() > failtime) {
         String expectedNodesList = "";
         String currentNodesList = "";
         for (DatanodeInfo dn : includeNodes) 
@@ -248,7 +248,7 @@ public class TestBlockReplacement {
       }
     } while(notDone);
     LOG.info("Achieved expected replication values in "
-        + (System.currentTimeMillis() - starttime) + " msec.");
+        + (Time.now() - starttime) + " msec.");
   }
 
   /* Copy a block from sourceProxy to destination. If the block becomes

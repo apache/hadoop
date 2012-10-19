@@ -512,7 +512,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
-      LOG.warn("The process " + pinfo.getPid()
+      LOG.info("The process " + pinfo.getPid()
           + " may have finished in the interim.");
       return ret;
     }

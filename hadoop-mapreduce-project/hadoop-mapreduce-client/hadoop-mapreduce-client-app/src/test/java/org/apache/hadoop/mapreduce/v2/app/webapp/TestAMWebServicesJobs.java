@@ -972,7 +972,8 @@ public class TestAMWebServicesJobs extends JerseyTest {
         WebServicesTestUtils.checkStringMatch("containerId", amInfo
             .getContainerId().toString(), containerId);
 
-        String localLogsLink = ujoin("node", "containerlogs", containerId);
+        String localLogsLink =ujoin("node", "containerlogs", containerId,
+            job.getUserName());
 
         assertTrue("logsLink", logsLink.contains(localLogsLink));
       }

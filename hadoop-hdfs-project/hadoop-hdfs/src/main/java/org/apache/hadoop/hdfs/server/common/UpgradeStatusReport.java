@@ -82,6 +82,7 @@ public class UpgradeStatusReport {
   /**
    * Print basic upgradeStatus details.
    */
+  @Override
   public String toString() {
     return getStatusText(false);
   }

@@ -48,9 +48,11 @@ public class TestGenericWritable extends TestCase {
   /** Dummy class for testing {@link GenericWritable} */
   public static class Foo implements Writable {
     private String foo = "foo";
+    @Override
     public void readFields(DataInput in) throws IOException {
       foo = Text.readString(in);
     }
+    @Override
     public void write(DataOutput out) throws IOException {
       Text.writeString(out, foo);
     }
@@ -65,15 +67,19 @@ public class TestGenericWritable extends TestCase {
   public static class Bar implements Writable, Configurable {
     private int bar = 42; //The Answer to The Ultimate Question Of Life, the Universe and Everything
     private Configuration conf = null;
+    @Override
     public void readFields(DataInput in) throws IOException {
       bar = in.readInt();
     }
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(bar);
     }
+    @Override
     public Configuration getConf() {
       return conf;
     }
+    @Override
     public void setConf(Configuration conf) {
       this.conf = conf;
     }

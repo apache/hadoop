@@ -58,6 +58,7 @@ public class QuotaExceededException extends IOException {
     this.pathName = path;
   }
   
+  @Override
   public String getMessage() {
     return super.getMessage();
   }

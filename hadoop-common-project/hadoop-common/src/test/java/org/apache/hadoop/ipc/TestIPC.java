@@ -130,6 +130,7 @@ public class TestIPC {
       this.count = count;
     }
 
+    @Override
     public void run() {
       for (int i = 0; i < count; i++) {
         try {
@@ -219,6 +220,7 @@ public class TestIPC {
   private static class IOEOnReadWritable extends LongWritable {
     public IOEOnReadWritable() {}
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       maybeThrowIOE();
@@ -229,6 +231,7 @@ public class TestIPC {
   private static class RTEOnReadWritable extends LongWritable {
     public RTEOnReadWritable() {}
     
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       maybeThrowRTE();

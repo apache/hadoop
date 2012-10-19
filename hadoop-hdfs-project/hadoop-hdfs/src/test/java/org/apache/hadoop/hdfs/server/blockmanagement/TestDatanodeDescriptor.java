@@ -17,21 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-
-import junit.framework.TestCase;
+import org.junit.Test;
 
 /**
  * This class tests that methods in DatanodeDescriptor
  */
-public class TestDatanodeDescriptor extends TestCase {
+public class TestDatanodeDescriptor {
   /**
    * Test that getInvalidateBlocks observes the maxlimit.
    */
+  @Test
   public void testGetInvalidateBlocks() throws Exception {
     final int MAX_BLOCKS = 10;
     final int REMAINING_BLOCKS = 2;
@@ -49,6 +53,7 @@ public class TestDatanodeDescriptor extends TestCase {
     assertEquals(bc.length, REMAINING_BLOCKS);
   }
   
+  @Test
   public void testBlocksCounter() throws Exception {
     DatanodeDescriptor dd = DFSTestUtil.getLocalDatanodeDescriptor();
     assertEquals(0, dd.numBlocks());

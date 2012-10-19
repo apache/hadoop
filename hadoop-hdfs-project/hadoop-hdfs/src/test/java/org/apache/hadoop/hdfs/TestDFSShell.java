@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -31,9 +35,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,14 +53,20 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.BZip2Codec;
+import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
 /**
  * This class tests commands from DFSShell.
  */
-public class TestDFSShell extends TestCase {
+public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
   
   static final String TEST_ROOT_DIR =
@@ -94,6 +103,7 @@ public class TestDFSShell extends TestCase {
     System.out.println(Thread.currentThread().getStackTrace()[2] + " " + s);
   }
 
+  @Test
   public void testZeroSizeFile() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -136,6 +146,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testRecrusiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -161,6 +172,7 @@ public class TestDFSShell extends TestCase {
     }
   }
     
+  @Test
   public void testDu() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -210,6 +222,7 @@ public class TestDFSShell extends TestCase {
     }
                                   
   }
+  @Test
   public void testPut() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -231,6 +244,7 @@ public class TestDFSShell extends TestCase {
       show("begin");
       
       final Thread copy2ndFileThread = new Thread() {
+        @Override
         public void run() {
           try {
             show("copy local " + f2 + " to remote " + dst);
@@ -250,6 +264,7 @@ public class TestDFSShell extends TestCase {
       System.setSecurityManager(new SecurityManager() {
         private boolean firstTime = true;
   
+        @Override
         public void checkPermission(Permission perm) {
           if (firstTime) {
             Thread t = Thread.currentThread();
@@ -306,6 +321,7 @@ public class TestDFSShell extends TestCase {
 
 
   /** check command error outputs and exit statuses. */
+  @Test
   public void testErrOutPut() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -446,6 +462,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testURIPaths() throws Exception {
     Configuration srcConf = new HdfsConfiguration();
     Configuration dstConf = new HdfsConfiguration();
@@ -538,6 +555,7 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+  @Test
   public void testText() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -563,6 +581,8 @@ public class TestDFSShell extends TestCase {
     try {
       final FileSystem fs = root.getFileSystem(conf);
       fs.mkdirs(root);
+
+      // Test the gzip type of files. Magic detection.
       OutputStream zout = new GZIPOutputStream(
           fs.create(new Path(root, "file.gz")));
       Random r = new Random();
@@ -587,7 +607,7 @@ public class TestDFSShell extends TestCase {
           Arrays.equals(file.toByteArray(), out.toByteArray()));
 
       // Create a sequence file with a gz extension, to test proper
-      // container detection
+      // container detection. Magic detection.
       SequenceFile.Writer writer = SequenceFile.createWriter(
           conf,
           SequenceFile.Writer.file(new Path(root, "file.gz")),
@@ -605,6 +625,45 @@ public class TestDFSShell extends TestCase {
       assertTrue("Output doesn't match input",
           Arrays.equals("Foo\tBar\n".getBytes(), out.toByteArray()));
       out.reset();
+
+      // Test deflate. Extension-based detection.
+      OutputStream dout = new DeflaterOutputStream(
+          fs.create(new Path(root, "file.deflate")));
+      byte[] outbytes = "foo".getBytes();
+      dout.write(outbytes);
+      dout.close();
+      out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+      argv = new String[2];
+      argv[0] = "-text";
+      argv[1] = new Path(root, "file.deflate").toString();
+      ret = ToolRunner.run(new FsShell(conf), argv);
+      assertEquals("'-text " + argv[1] + " returned " + ret, 0, ret);
+      assertTrue("Output doesn't match input",
+          Arrays.equals(outbytes, out.toByteArray()));
+      out.reset();
+
+      // Test a simple codec. Extension based detection. We use
+      // Bzip2 cause its non-native.
+      CompressionCodec codec = (CompressionCodec)
+          ReflectionUtils.newInstance(BZip2Codec.class, conf);
+      String extension = codec.getDefaultExtension();
+      Path p = new Path(root, "file." + extension);
+      OutputStream fout = new DataOutputStream(codec.createOutputStream(
+          fs.create(p, true)));
+      byte[] writebytes = "foo".getBytes();
+      fout.write(writebytes);
+      fout.close();
+      out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+      argv = new String[2];
+      argv[0] = "-text";
+      argv[1] = new Path(root, p).toString();
+      ret = ToolRunner.run(new FsShell(conf), argv);
+      assertEquals("'-text " + argv[1] + " returned " + ret, 0, ret);
+      assertTrue("Output doesn't match input",
+          Arrays.equals(writebytes, out.toByteArray()));
+      out.reset();
     } finally {
       if (null != bak) {
         System.setOut(bak);
@@ -612,6 +671,7 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+  @Test
   public void testCopyToLocal() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -709,6 +769,7 @@ public class TestDFSShell extends TestCase {
     return path;
   }
 
+  @Test
   public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -875,6 +936,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
     
@@ -940,6 +1002,7 @@ public class TestDFSShell extends TestCase {
   /**
    * Tests various options of DFSShell.
    */
+  @Test
   public void testDFSShell() throws IOException {
     Configuration conf = new HdfsConfiguration();
     /* This tests some properties of ChecksumFileSystem as well.
@@ -1092,6 +1155,19 @@ public class TestDFSShell extends TestCase {
         }
         assertEquals(0, val);
 
+        args = new String[2];
+        args[0] = "-touchz";
+        args[1] = "/test/mkdirs/thisDirNotExists/noFileHere";
+        val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(1, val);
+
+
         args = new String[3];
         args[0] = "-test";
         args[1] = "-e";
@@ -1207,6 +1283,7 @@ public class TestDFSShell extends TestCase {
     String run(int exitcode, String... options) throws IOException;
   }
 
+  @Test
   public void testRemoteException() throws Exception {
     UserGroupInformation tmpUGI = 
       UserGroupInformation.createUserForTesting("tmpname", new String[] {"mygroup"});
@@ -1250,9 +1327,15 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
     final Configuration conf = new HdfsConfiguration();
+    // Race can happen here: block scanner is reading the file when test tries
+    // to corrupt the test file, which will fail the test on Windows platform.
+    // Disable block scanner to avoid this race.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
+    
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
 
@@ -1269,6 +1352,7 @@ public class TestDFSShell extends TestCase {
       TestGetRunner runner = new TestGetRunner() {
         private int count = 0;
 
+        @Override
         public String run(int exitcode, String... options) throws IOException {
           String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
           String[] args = new String[options.length + 3];
@@ -1309,6 +1393,7 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+  @Test
   public void testLsr() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -1366,6 +1451,7 @@ public class TestDFSShell extends TestCase {
    * and return -1 exit code.
    * @throws Exception
    */
+  @Test
   public void testInvalidShell() throws Exception {
     Configuration conf = new Configuration(); // default FS (non-DFS)
     DFSAdmin admin = new DFSAdmin();
@@ -1375,6 +1461,7 @@ public class TestDFSShell extends TestCase {
   }
 
   // force Copy Option is -f
+  @Test
   public void testCopyCommandsWithForceOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -1440,4 +1527,95 @@ public class TestDFSShell extends TestCase {
 
   }
 
+  /**
+   * Delete a file optionally configuring trash on the server and client.
+   */
+  private void deleteFileUsingTrash(
+      boolean serverTrash, boolean clientTrash) throws Exception {
+    // Run a cluster, optionally with trash enabled on the server
+    Configuration serverConf = new HdfsConfiguration();
+    if (serverTrash) {
+      serverConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    }
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(serverConf)
+      .numDataNodes(1).format(true).build();
+    Configuration clientConf = new Configuration(serverConf);
+
+    // Create a client, optionally with trash enabled
+    if (clientTrash) {
+      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    } else {
+      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 0);
+    }
+
+    FsShell shell = new FsShell(clientConf);
+    FileSystem fs = null;
+
+    try {
+      // Create and delete a file
+      fs = cluster.getFileSystem();
+      writeFile(fs, new Path(TEST_ROOT_DIR, "foo"));
+      final String testFile = TEST_ROOT_DIR + "/foo";
+      final String trashFile = shell.getCurrentTrashDir() + "/" + testFile;
+      String[] argv = new String[] { "-rm", testFile };
+      int res = ToolRunner.run(shell, argv);
+      assertEquals("rm failed", 0, res);
+
+      if (serverTrash) {
+        // If the server config was set we should use it unconditionally
+        assertTrue("File not in trash", fs.exists(new Path(trashFile)));
+      } else if (clientTrash) {
+        // If the server config was not set but the client config was
+        // set then we should use it
+        assertTrue("File not in trashed", fs.exists(new Path(trashFile)));
+      } else {
+        // If neither was set then we should not have trashed the file
+        assertFalse("File was not removed", fs.exists(new Path(testFile)));
+        assertFalse("File was trashed", fs.exists(new Path(trashFile)));
+      }
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test that the server trash configuration is respected when
+   * the client configuration is not set.
+   */
+  @Test
+  public void testServerConfigRespected() throws Exception {
+    deleteFileUsingTrash(true, false);
+  }
+
+  /**
+   * Test that server trash configuration is respected even when the
+   * client configuration is set.
+   */
+  @Test
+  public void testServerConfigRespectedWithClient() throws Exception {
+    deleteFileUsingTrash(true, true);
+  }
+
+  /**
+   * Test that the client trash configuration is respected when
+   * the server configuration is not set.
+   */
+  @Test
+  public void testClientConfigRespected() throws Exception {
+    deleteFileUsingTrash(false, true);
+  }
+
+  /**
+   * Test that trash is disabled by default.
+   */
+  @Test
+  public void testNoTrashConfig() throws Exception {
+    deleteFileUsingTrash(false, false);
+  }
 }

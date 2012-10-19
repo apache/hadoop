@@ -26,17 +26,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -O2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_REENTRANT -D_FILE_OFFSET_BITS=64")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_REENTRANT -D_FILE_OFFSET_BITS=64")
 
-if (JVM_ARCH_DATA_MODEL EQUAL 32)
-    # force 32-bit code generation on amd64/x86_64, ppc64, sparc64
-    if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_SYSTEM_PROCESSOR MATCHES ".*64")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-        set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -m32")
-    endif ()
-    if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
-        set(CMAKE_SYSTEM_PROCESSOR "i686")
-    endif ()
-endif (JVM_ARCH_DATA_MODEL EQUAL 32)
+include(../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
 
 function(output_directory TGT DIR)
     SET_TARGET_PROPERTIES(${TGT} PROPERTIES
@@ -80,7 +70,6 @@ add_library(hadooppipes STATIC
     main/native/pipes/impl/HadoopPipes.cc
 )
 target_link_libraries(hadooppipes
-    ${JAVA_JVM_LIBRARY}
     ${OPENSSL_LIBRARIES}
     pthread
 )

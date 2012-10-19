@@ -124,4 +124,53 @@ public class TestDiskChecker {
     }
     System.out.println("checkDir success: "+ success);
   }
+
+  /**
+   * These test cases test to test the creation of a local folder with correct
+   * permission for result of mapper.
+   */
+
+  @Test
+  public void testCheckDir_normal_local() throws Throwable {
+    _checkDirs(true, "755", true);
+  }
+
+  @Test
+  public void testCheckDir_notDir_local() throws Throwable {
+    _checkDirs(false, "000", false);
+  }
+
+  @Test
+  public void testCheckDir_notReadable_local() throws Throwable {
+    _checkDirs(true, "000", false);
+  }
+
+  @Test
+  public void testCheckDir_notWritable_local() throws Throwable {
+    _checkDirs(true, "444", false);
+  }
+
+  @Test
+  public void testCheckDir_notListable_local() throws Throwable {
+    _checkDirs(true, "666", false);
+  }
+
+  private void _checkDirs(boolean isDir, String perm, boolean success)
+      throws Throwable {
+    File localDir = File.createTempFile("test", "tmp");
+    localDir.delete();
+    localDir.mkdir();
+    Runtime.getRuntime().exec(
+	"chmod " + perm + "  " + localDir.getAbsolutePath()).waitFor();
+    try {
+      DiskChecker.checkDir(localDir);
+      assertTrue("checkDir success", success);
+    } catch (DiskErrorException e) {
+      e.printStackTrace();
+      assertFalse("checkDir success", success);
+    }
+    localDir.delete();
+    System.out.println("checkDir success: " + success);
+
+  }
 }

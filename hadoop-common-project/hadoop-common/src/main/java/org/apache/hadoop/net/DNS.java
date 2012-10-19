@@ -30,7 +30,6 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.Vector;
 
 import javax.naming.NamingException;

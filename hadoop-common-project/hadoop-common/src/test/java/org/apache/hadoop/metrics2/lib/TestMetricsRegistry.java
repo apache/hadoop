@@ -51,6 +51,7 @@ public class TestMetricsRegistry {
     assertTrue("s1 found", r.get("s1") instanceof MutableStat);
 
     expectMetricsException("Metric name c1 already exists", new Runnable() {
+      @Override
       public void run() { r.newCounter("c1", "test dup", 0); }
     });
   }
@@ -70,10 +71,12 @@ public class TestMetricsRegistry {
     r.newGauge("g1", "test add", 1);
 
     expectMetricsException("Unsupported add", new Runnable() {
+      @Override
       public void run() { r.add("c1", 42); }
     });
 
     expectMetricsException("Unsupported add", new Runnable() {
+      @Override
       public void run() { r.add("g1", 42); }
     });
   }

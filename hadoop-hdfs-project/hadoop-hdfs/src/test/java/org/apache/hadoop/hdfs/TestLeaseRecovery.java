@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
@@ -31,8 +33,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.junit.Test;
 
-public class TestLeaseRecovery extends junit.framework.TestCase {
+public class TestLeaseRecovery {
   static final int BLOCK_SIZE = 1024;
   static final short REPLICATION_NUM = (short)3;
   private static final long LEASE_PERIOD = 300L;
@@ -66,6 +69,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
    * It randomly truncates the replica of the last block stored in each datanode.
    * Finally, it triggers block synchronization to synchronize all stored block.
    */
+  @Test
   public void testBlockSynchronization() throws Exception {
     final int ORG_FILE_SIZE = 3000; 
     Configuration conf = new HdfsConfiguration();

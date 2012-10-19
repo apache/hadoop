@@ -21,6 +21,7 @@ package org.apache.hadoop.log;
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Category;
 import org.apache.log4j.Level;
@@ -63,7 +64,7 @@ public class TestLog4Json extends TestCase {
         new NoRouteToHostException("that box caught fire 3 years ago");
     ThrowableInformation ti = new ThrowableInformation(e);
     Log4Json l4j = new Log4Json();
-    long timeStamp = System.currentTimeMillis();
+    long timeStamp = Time.now();
     String outcome = l4j.toJson(new StringWriter(),
         "testException",
         timeStamp,
@@ -82,7 +83,7 @@ public class TestLog4Json extends TestCase {
     Exception ioe = new IOException("Datacenter problems", e);
     ThrowableInformation ti = new ThrowableInformation(ioe);
     Log4Json l4j = new Log4Json();
-    long timeStamp = System.currentTimeMillis();
+    long timeStamp = Time.now();
     String outcome = l4j.toJson(new StringWriter(),
         "testNestedException",
         timeStamp,

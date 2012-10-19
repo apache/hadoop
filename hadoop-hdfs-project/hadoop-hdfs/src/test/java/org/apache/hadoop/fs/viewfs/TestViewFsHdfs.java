@@ -60,6 +60,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     cluster.shutdown();   
   }
 
+  @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs

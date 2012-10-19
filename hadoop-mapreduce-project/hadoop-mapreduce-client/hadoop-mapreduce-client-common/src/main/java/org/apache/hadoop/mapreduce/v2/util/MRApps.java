@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Helper class for MR applications
@@ -171,8 +173,15 @@ public class MRApps extends Apps {
       }
 
       // Add standard Hadoop classes
-      for (String c : conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH)
-          .split(",")) {
+      for (String c : conf.getStrings(
+          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
+            .trim());
+      }
+      for (String c : conf.getStrings(
+          MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
+          MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
         Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
             .trim());
       }
@@ -201,7 +210,15 @@ public class MRApps extends Apps {
     Apps.addToEnvironment(
         environment,
         Environment.CLASSPATH.name(),
-        MRJobConfig.JOB_JAR);
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR);
+    Apps.addToEnvironment(
+        environment,
+        Environment.CLASSPATH.name(),
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "classes" + Path.SEPARATOR);
+    Apps.addToEnvironment(
+        environment,
+        Environment.CLASSPATH.name(),
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "lib" + Path.SEPARATOR + "*");
     Apps.addToEnvironment(
         environment,
         Environment.CLASSPATH.name(),
@@ -263,6 +280,13 @@ public class MRApps extends Apps {
         DistributedCache.getFileClassPaths(conf));
   }
 
+  private static String getResourceDescription(LocalResourceType type) {
+    if(type == LocalResourceType.ARCHIVE || type == LocalResourceType.PATTERN) {
+      return "cache archive (" + MRJobConfig.CACHE_ARCHIVES + ") ";
+    }
+    return "cache file (" + MRJobConfig.CACHE_FILES + ") ";
+  }
+  
   // TODO - Move this to MR!
   // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], 
   // long[], boolean[], Path[], FileType)
@@ -308,6 +332,13 @@ public class MRApps extends Apps {
           throw new IllegalArgumentException("Resource name must be relative");
         }
         String linkName = name.toUri().getPath();
+        LocalResource orig = localResources.get(linkName);
+        if(orig != null && !orig.getResource().equals(
+            ConverterUtils.getYarnUrlFromURI(p.toUri()))) {
+          throw new InvalidJobConfException(
+              getResourceDescription(orig.getType()) + orig.getResource() + 
+              " conflicts with " + getResourceDescription(type) + u);
+        }
         localResources.put(
             linkName,
             BuilderUtils.newLocalResource(

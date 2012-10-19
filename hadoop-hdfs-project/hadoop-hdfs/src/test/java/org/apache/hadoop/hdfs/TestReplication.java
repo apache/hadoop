@@ -17,37 +17,38 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
-import java.util.Random;
-
-import junit.framework.TestCase;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
  * This class tests the replication of a DFS file.
  */
-public class TestReplication extends TestCase {
+public class TestReplication {
   private static final long seed = 0xDEADBEEFL;
   private static final int blockSize = 8192;
   private static final int fileSize = 16384;
@@ -57,19 +58,6 @@ public class TestReplication extends TestCase {
   private static final int numDatanodes = racks.length;
   private static final Log LOG = LogFactory.getLog(
                                        "org.apache.hadoop.hdfs.TestReplication");
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-    throws IOException {
-    // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
   
   /* check if there are at least two nodes are on the same rack */
   private void checkFile(FileSystem fileSys, Path name, int repl)
@@ -148,6 +136,7 @@ public class TestReplication extends TestCase {
   /* 
    * Test if Datanode reports bad blocks during replication request
    */
+  @Test
   public void testBadBlockReportOnTransfer() throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem fs = null;
@@ -217,19 +206,25 @@ public class TestReplication extends TestCase {
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("/smallblocktest.dat");
-      writeFile(fileSys, file1, 3);
+      //writeFile(fileSys, file1, 3);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 3, seed);
       checkFile(fileSys, file1, 3);
       cleanupFile(fileSys, file1);
-      writeFile(fileSys, file1, 10);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 10, seed);
       checkFile(fileSys, file1, 10);
       cleanupFile(fileSys, file1);
-      writeFile(fileSys, file1, 4);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 4, seed);
       checkFile(fileSys, file1, 4);
       cleanupFile(fileSys, file1);
-      writeFile(fileSys, file1, 1);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 1, seed);
       checkFile(fileSys, file1, 1);
       cleanupFile(fileSys, file1);
-      writeFile(fileSys, file1, 2);
+      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize,
+          (short) 2, seed);
       checkFile(fileSys, file1, 2);
       cleanupFile(fileSys, file1);
     } finally {
@@ -239,11 +234,13 @@ public class TestReplication extends TestCase {
   }
 
 
+  @Test
   public void testReplicationSimulatedStorag() throws IOException {
     runReplication(true);
   }
   
   
+  @Test
   public void testReplication() throws IOException {
     runReplication(false);
   }
@@ -253,7 +250,7 @@ public class TestReplication extends TestCase {
                                        ClientProtocol namenode,
                                        int expected, long maxWaitSec) 
                                        throws IOException {
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     
     //wait for all the blocks to be replicated;
     LOG.info("Checking for block replication for " + filename);
@@ -279,7 +276,7 @@ public class TestReplication extends TestCase {
       }
       
       if (maxWaitSec > 0 && 
-          (System.currentTimeMillis() - start) > (maxWaitSec * 1000)) {
+          (Time.now() - start) > (maxWaitSec * 1000)) {
         throw new IOException("Timedout while waiting for all blocks to " +
                               " be replicated for " + filename);
       }
@@ -297,6 +294,7 @@ public class TestReplication extends TestCase {
    * two of the blocks and removes one of the replicas. Expected behavior is
    * that missing replica will be copied from one valid source.
    */
+  @Test
   public void testPendingReplicationRetry() throws IOException {
     
     MiniDFSCluster cluster = null;
@@ -399,6 +397,7 @@ public class TestReplication extends TestCase {
    * Test if replication can detect mismatched length on-disk blocks
    * @throws Exception
    */
+  @Test
   public void testReplicateLenMismatchedBlock() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).numDataNodes(2).build();
     try {
@@ -412,8 +411,8 @@ public class TestReplication extends TestCase {
     }
   }
   
-  private void changeBlockLen(MiniDFSCluster cluster, 
-      int lenDelta) throws IOException, InterruptedException {
+  private void changeBlockLen(MiniDFSCluster cluster, int lenDelta)
+      throws IOException, InterruptedException, TimeoutException {
     final Path fileName = new Path("/file1");
     final short REPLICATION_FACTOR = (short)1;
     final FileSystem fs = cluster.getFileSystem();

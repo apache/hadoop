@@ -205,7 +205,7 @@ public class ReflectionUtils {
     boolean dumpStack = false;
     if (log.isInfoEnabled()) {
       synchronized (ReflectionUtils.class) {
-        long now = System.currentTimeMillis();
+        long now = Time.now();
         if (now - previousLogTime >= minInterval * 1000) {
           previousLogTime = now;
           dumpStack = true;
@@ -257,6 +257,7 @@ public class ReflectionUtils {
    */
   private static ThreadLocal<CopyInCopyOutBuffer> cloneBuffers
       = new ThreadLocal<CopyInCopyOutBuffer>() {
+      @Override
       protected synchronized CopyInCopyOutBuffer initialValue() {
         return new CopyInCopyOutBuffer();
       }

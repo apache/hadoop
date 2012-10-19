@@ -46,7 +46,8 @@ public class ConfInfo {
     Configuration jobConf = job.loadConfFile();
     this.path = job.getConfFile().toString();
     for (Map.Entry<String, String> entry : jobConf) {
-      this.property.add(new ConfEntryInfo(entry.getKey(), entry.getValue()));
+      this.property.add(new ConfEntryInfo(entry.getKey(), entry.getValue(), 
+          jobConf.getPropertySources(entry.getKey())));
     }
 
   }

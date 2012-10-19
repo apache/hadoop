@@ -66,14 +66,6 @@ public class TaskLog {
   
   // localFS is set in (and used by) writeToIndexFile()
   static LocalFileSystem localFS = null;
-  static {
-    if (!LOG_DIR.exists()) {
-      boolean b = LOG_DIR.mkdirs();
-      if (!b) {
-        LOG.debug("mkdirs failed. Ignoring.");
-      }
-    }
-  }
   
   public static String getMRv2LogDir() {
     return System.getProperty(MRJobConfig.TASK_LOG_DIR);
@@ -638,6 +630,12 @@ public class TaskLog {
    * @return base log directory
    */
   static File getUserLogDir() {
+    if (!LOG_DIR.exists()) {
+      boolean b = LOG_DIR.mkdirs();
+      if (!b) {
+        LOG.debug("mkdirs failed. Ignoring.");
+      }
+    }
     return LOG_DIR;
   }
   

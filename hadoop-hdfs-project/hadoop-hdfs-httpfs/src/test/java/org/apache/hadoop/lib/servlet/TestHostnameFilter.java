@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.lib.servlet;
 
-import junit.framework.Assert;
-import org.apache.hadoop.test.HTestCase;
-import org.junit.Test;
-import org.mockito.Mockito;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.test.HTestCase;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 
 public class TestHostnameFilter extends HTestCase {
@@ -47,17 +50,17 @@ public class TestHostnameFilter extends HTestCase {
       @Override
       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
         throws IOException, ServletException {
-        Assert.assertTrue(HostnameFilter.get().contains("localhost"));
+        assertTrue(HostnameFilter.get().contains("localhost"));
         invoked.set(true);
       }
     };
 
     Filter filter = new HostnameFilter();
     filter.init(null);
-    Assert.assertNull(HostnameFilter.get());
+    assertNull(HostnameFilter.get());
     filter.doFilter(request, response, chain);
-    Assert.assertTrue(invoked.get());
-    Assert.assertNull(HostnameFilter.get());
+    assertTrue(invoked.get());
+    assertNull(HostnameFilter.get());
     filter.destroy();
   }
 

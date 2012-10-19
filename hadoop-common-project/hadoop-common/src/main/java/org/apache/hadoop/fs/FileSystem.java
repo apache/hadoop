@@ -24,6 +24,7 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,17 +46,22 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -142,6 +148,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     UserGroupInformation ugi =
         UserGroupInformation.getBestUGI(ticketCachePath, user);
     return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws IOException {
         return get(uri, conf);
       }
@@ -222,15 +229,25 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Get a canonical service name for this file system.  The token cache is
-   * the only user of this value, and uses it to lookup this filesystem's
-   * service tokens.  The token cache will not attempt to acquire tokens if the
-   * service is null.
+   * the only user of the canonical service name, and uses it to lookup this
+   * filesystem's service tokens.
+   * If file system provides a token of its own then it must have a canonical
+   * name, otherwise canonical name can be null.
+   * 
+   * Default Impl: If the file system has child file systems 
+   * (such as an embedded file system) then it is assumed that the fs has no
+   * tokens of its own and hence returns a null name; otherwise a service
+   * name is built using Uri and port.
+   * 
    * @return a service string that uniquely identifies this file system, null
    *         if the filesystem does not implement tokens
    * @see SecurityUtil#buildDTServiceName(URI, int) 
    */
+  @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
   public String getCanonicalServiceName() {
-    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
+    return (getChildFileSystems() == null)
+      ? SecurityUtil.buildDTServiceName(getUri(), getDefaultPort())
+      : null;
   }
 
   /** @deprecated call #getUri() instead.*/
@@ -280,11 +297,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     String scheme = uri.getScheme();
     String authority = uri.getAuthority();
 
-    if (scheme == null) {                       // no scheme: use default FS
+    if (scheme == null && authority == null) {     // use default FS
       return get(conf);
     }
 
-    if (authority == null) {                       // no authority
+    if (scheme != null && authority == null) {     // no authority
       URI defaultUri = getDefaultUri(conf);
       if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
           && defaultUri.getAuthority() != null) {  // & default has authority
@@ -317,6 +334,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     UserGroupInformation ugi =
         UserGroupInformation.getBestUGI(ticketCachePath, user);
     return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws IOException {
         return newInstance(uri,conf); 
       }
@@ -396,68 +414,95 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
     
   /**
-   * Deprecated  - use @link {@link #getDelegationTokens(String)}
    * Get a new delegation token for this file system.
+   * This is an internal method that should have been declared protected
+   * but wasn't historically.
+   * Callers should use {@link #addDelegationTokens(String, Credentials)}
+   * 
    * @param renewer the account name that is allowed to renew the token.
    * @return a new delegation token
    * @throws IOException
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-  @Deprecated
+  @InterfaceAudience.Private()
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return null;
   }
   
   /**
-   * Get one or more delegation tokens associated with the filesystem. Normally
-   * a file system returns a single delegation token. A file system that manages
-   * multiple file systems underneath, could return set of delegation tokens for
-   * all the file systems it manages.
+   * Obtain all delegation tokens used by this FileSystem that are not
+   * already present in the given Credentials.  Existing tokens will neither
+   * be verified as valid nor having the given renewer.  Missing tokens will
+   * be acquired and added to the given Credentials.
    * 
-   * @param renewer the account name that is allowed to renew the token.
+   * Default Impl: works for simple fs with its own token
+   * and also for an embedded fs whose tokens are those of its
+   * children file system (i.e. the embedded fs has not tokens of its
+   * own).
+   * 
+   * @param renewer the user allowed to renew the delegation tokens
+   * @param credentials cache in which to add new delegation tokens
    * @return list of new delegation tokens
-   *    If delegation tokens not supported then return a list of size zero.
-   * @throws IOException
-   */
-  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return new ArrayList<Token<?>>(0);
-  }
-  
-  /**
-   * @see #getDelegationTokens(String)
-   * This is similar to getDelegationTokens, with the added restriction that if
-   * a token is already present in the passed Credentials object - that token
-   * is returned instead of a new delegation token. 
-   * 
-   * If the token is found to be cached in the Credentials object, this API does
-   * not verify the token validity or the passed in renewer. 
-   * 
-   * 
-   * @param renewer the account name that is allowed to renew the token.
-   * @param credentials a Credentials object containing already knowing 
-   *   delegationTokens.
-   * @return a list of delegation tokens.
    * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
-  public List<Token<?>> getDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    List<Token<?>> allTokens = getDelegationTokens(renewer);
-    List<Token<?>> newTokens = new ArrayList<Token<?>>();
-    if (allTokens != null) {
-      for (Token<?> token : allTokens) {
-        Token<?> knownToken = credentials.getToken(token.getService());
-        if (knownToken == null) {
-          newTokens.add(token);
-        } else {
-          newTokens.add(knownToken);
+  public Token<?>[] addDelegationTokens(
+      final String renewer, Credentials credentials) throws IOException {
+    if (credentials == null) {
+      credentials = new Credentials();
+    }
+    final List<Token<?>> tokens = new ArrayList<Token<?>>();
+    collectDelegationTokens(renewer, credentials, tokens);
+    return tokens.toArray(new Token<?>[tokens.size()]);
+  }
+  
+  /**
+   * Recursively obtain the tokens for this FileSystem and all descended
+   * FileSystems as determined by getChildFileSystems().
+   * @param renewer the user allowed to renew the delegation tokens
+   * @param credentials cache in which to add the new delegation tokens
+   * @param tokens list in which to add acquired tokens
+   * @throws IOException
+   */
+  private void collectDelegationTokens(final String renewer,
+                                       final Credentials credentials,
+                                       final List<Token<?>> tokens)
+                                           throws IOException {
+    final String serviceName = getCanonicalServiceName();
+    // Collect token of the this filesystem and then of its embedded children
+    if (serviceName != null) { // fs has token, grab it
+      final Text service = new Text(serviceName);
+      Token<?> token = credentials.getToken(service);
+      if (token == null) {
+        token = getDelegationToken(renewer);
+        if (token != null) {
+          tokens.add(token);
+          credentials.addToken(service, token);
         }
       }
     }
-    return newTokens;
+    // Now collect the tokens from the children
+    final FileSystem[] children = getChildFileSystems();
+    if (children != null) {
+      for (final FileSystem fs : children) {
+        fs.collectDelegationTokens(renewer, credentials, tokens);
+      }
+    }
   }
 
+  /**
+   * Get all the immediate child FileSystems embedded in this FileSystem.
+   * It does not recurse and get grand children.  If a FileSystem
+   * has multiple child FileSystems, then it should return a unique list
+   * of those FileSystems.  Default is to return null to signify no children.
+   * 
+   * @return FileSystems used by this FileSystem
+   */
+  @InterfaceAudience.LimitedPrivate({ "HDFS" })
+  @VisibleForTesting
+  public FileSystem[] getChildFileSystems() {
+    return null;
+  }
+  
   /** create a file with the provided permission
    * The permission of the file is set to be the provided permission as in
    * setPermission, not permission&~umask
@@ -572,7 +617,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       throw new IllegalArgumentException("Invalid start or len parameter");
     }
 
-    if (file.getLen() < start) {
+    if (file.getLen() <= start) {
       return new BlockLocation[0];
 
     }
@@ -616,11 +661,17 @@ public abstract class FileSystem extends Configured implements Closeable {
   @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     Configuration conf = getConf();
+    // CRC32 is chosen as default as it is available in all 
+    // releases that support checksum.
+    // The client trash configuration is ignored.
     return new FsServerDefaults(getDefaultBlockSize(), 
         conf.getInt("io.bytes.per.checksum", 512), 
         64 * 1024, 
         getDefaultReplication(),
-        conf.getInt("io.file.buffer.size", 4096));
+        conf.getInt("io.file.buffer.size", 4096),
+        false,
+        CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT,
+        DataChecksum.Type.CRC32);
   }
 
   /**
@@ -846,11 +897,40 @@ public abstract class FileSystem extends Configured implements Closeable {
       short replication,
       long blockSize,
       Progressable progress) throws IOException {
-    // only DFS support this
-    return create(f, permission, flags.contains(CreateFlag.OVERWRITE), bufferSize, replication, blockSize, progress);
+    return create(f, permission, flags, bufferSize, replication,
+        blockSize, progress, null);
   }
   
-  
+  /**
+   * Create an FSDataOutputStream at the indicated Path with a custom
+   * checksum option
+   * @param f the file name to open
+   * @param permission
+   * @param flags {@link CreateFlag}s to use for this stream.
+   * @param bufferSize the size of the buffer to be used.
+   * @param replication required block replication for the file.
+   * @param blockSize
+   * @param progress
+   * @param checksumOpt checksum parameter. If null, the values
+   *        found in conf will be used.
+   * @throws IOException
+   * @see #setPermission(Path, FsPermission)
+   */
+  public FSDataOutputStream create(Path f,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress,
+      ChecksumOpt checksumOpt) throws IOException {
+    // Checksum options are ignored by default. The file systems that
+    // implement checksum need to override this method. The full
+    // support is currently only available in DFS.
+    return create(f, permission, flags.contains(CreateFlag.OVERWRITE), 
+        bufferSize, replication, blockSize, progress);
+  }
+
   /*.
    * This create has been added to support the FileContext that processes
    * the permission
@@ -862,7 +942,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   protected FSDataOutputStream primitiveCreate(Path f,
      FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
      short replication, long blockSize, Progressable progress,
-     int bytesPerChecksum) throws IOException {
+     ChecksumOpt checksumOpt) throws IOException {
 
     boolean pathExists = exists(f);
     CreateFlag.validate(f, pathExists, flag);
@@ -1214,6 +1294,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     return true;
   }
+  
+  /**
+   * Cancel the deletion of the path when the FileSystem is closed
+   * @param f the path to cancel deletion
+   */
+  public boolean cancelDeleteOnExit(Path f) {
+    synchronized (deleteOnExit) {
+      return deleteOnExit.remove(f);
+    }
+  }
 
   /**
    * Delete all files that were marked as delete-on-exit. This recursively
@@ -1224,7 +1314,9 @@ public abstract class FileSystem extends Configured implements Closeable {
       for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
         Path path = iter.next();
         try {
-          delete(path, true);
+          if (exists(path)) {
+            delete(path, true);
+          }
         }
         catch (IOException e) {
           LOG.info("Ignoring failure to deleteOnExit for path " + path);
@@ -1300,10 +1392,11 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
-      public boolean accept(Path file) {
-        return true;
-      }     
-    };
+    @Override
+    public boolean accept(Path file) {
+      return true;
+    }
+  };
     
   /**
    * List the statuses of the files/directories in the given path if the path is
@@ -1467,128 +1560,128 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
   
   /**
-   * Return an array of FileStatus objects whose path names match pathPattern
-   * and is accepted by the user-supplied path filter. Results are sorted by
-   * their path names.
-   * Return null if pathPattern has no glob and the path does not exist.
-   * Return an empty array if pathPattern has a glob and no path matches it. 
+   * Return an array of FileStatus objects whose path names match
+   * {@code pathPattern} and is accepted by the user-supplied path filter.
+   * Results are sorted by their path names.
    * 
-   * @param pathPattern
-   *          a regular expression specifying the path pattern
-   * @param filter
-   *          a user-supplied path filter
-   * @return an array of FileStatus objects
+   * @param pathPattern a regular expression specifying the path pattern
+   * @param filter a user-supplied path filter
+   * @return null if {@code pathPattern} has no glob and the path does not exist
+   *         an empty array if {@code pathPattern} has a glob and no path
+   *         matches it else an array of {@link FileStatus} objects matching the
+   *         pattern
    * @throws IOException if any I/O error occurs when fetching file status
    */
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
       throws IOException {
     String filename = pathPattern.toUri().getPath();
-    List<String> filePatterns = GlobExpander.expand(filename);
-    if (filePatterns.size() == 1) {
-      return globStatusInternal(pathPattern, filter);
-    } else {
-      List<FileStatus> results = new ArrayList<FileStatus>();
-      for (String filePattern : filePatterns) {
-        FileStatus[] files = globStatusInternal(new Path(filePattern), filter);
-        for (FileStatus file : files) {
-          results.add(file);
-        }
-      }
-      return results.toArray(new FileStatus[results.size()]);
-    }
-  }
-
-  private FileStatus[] globStatusInternal(Path pathPattern, PathFilter filter)
-      throws IOException {
-    Path[] parents = new Path[1];
-    int level = 0;
-    String filename = pathPattern.toUri().getPath();
+    List<FileStatus> allMatches = null;
     
-    // path has only zero component
-    if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
-      return getFileStatus(new Path[]{pathPattern});
-    }
-
-    // path has at least one component
-    String[] components = filename.split(Path.SEPARATOR);
-    // get the first component
-    if (pathPattern.isAbsolute()) {
-      parents[0] = new Path(Path.SEPARATOR);
-      level = 1;
-    } else {
-      parents[0] = new Path(Path.CUR_DIR);
-    }
-
-    // glob the paths that match the parent path, i.e., [0, components.length-1]
-    boolean[] hasGlob = new boolean[]{false};
-    Path[] parentPaths = globPathsLevel(parents, components, level, hasGlob);
-    FileStatus[] results;
-    if (parentPaths == null || parentPaths.length == 0) {
-      results = null;
-    } else {
-      // Now work on the last component of the path
-      GlobFilter fp = new GlobFilter(components[components.length - 1], filter);
-      if (fp.hasPattern()) { // last component has a pattern
-        // list parent directories and then glob the results
-        results = listStatus(parentPaths, fp);
-        hasGlob[0] = true;
-      } else { // last component does not have a pattern
-        // remove the quoting of metachars in a non-regexp expansion
-        String name = unquotePathComponent(components[components.length - 1]);
-        // get all the path names
-        ArrayList<Path> filteredPaths = new ArrayList<Path>(parentPaths.length);
-        for (int i = 0; i < parentPaths.length; i++) {
-          parentPaths[i] = new Path(parentPaths[i], name);
-          if (fp.accept(parentPaths[i])) {
-            filteredPaths.add(parentPaths[i]);
-          }
+    List<String> filePatterns = GlobExpander.expand(filename);
+    for (String filePattern : filePatterns) {
+      Path path = new Path(filePattern.isEmpty() ? Path.CUR_DIR : filePattern);
+      List<FileStatus> matches = globStatusInternal(path, filter);
+      if (matches != null) {
+        if (allMatches == null) {
+          allMatches = matches;
+        } else {
+          allMatches.addAll(matches);
         }
-        // get all their statuses
-        results = getFileStatus(
-            filteredPaths.toArray(new Path[filteredPaths.size()]));
       }
     }
-
-    // Decide if the pathPattern contains a glob or not
-    if (results == null) {
-      if (hasGlob[0]) {
-        results = new FileStatus[0];
-      }
-    } else {
-      if (results.length == 0 ) {
-        if (!hasGlob[0]) {
-          results = null;
-        }
-      } else {
-        Arrays.sort(results);
-      }
+    
+    FileStatus[] results = null;
+    if (allMatches != null) {
+      results = allMatches.toArray(new FileStatus[allMatches.size()]);
+    } else if (filePatterns.size() > 1) {
+      // no matches with multiple expansions is a non-matching glob 
+      results = new FileStatus[0];
     }
     return results;
   }
 
-  /*
-   * For a path of N components, return a list of paths that match the
-   * components [<code>level</code>, <code>N-1</code>].
-   */
-  private Path[] globPathsLevel(Path[] parents, String[] filePattern,
-      int level, boolean[] hasGlob) throws IOException {
-    if (level == filePattern.length - 1)
-      return parents;
-    if (parents == null || parents.length == 0) {
-      return null;
+  // sort gripes because FileStatus Comparable isn't parameterized...
+  @SuppressWarnings("unchecked") 
+  private List<FileStatus> globStatusInternal(Path pathPattern,
+      PathFilter filter) throws IOException {
+    boolean patternHasGlob = false;       // pathPattern has any globs
+    List<FileStatus> matches = new ArrayList<FileStatus>();
+
+    // determine starting point
+    int level = 0;
+    String baseDir = Path.CUR_DIR;
+    if (pathPattern.isAbsolute()) {
+      level = 1; // need to skip empty item at beginning of split list
+      baseDir = Path.SEPARATOR;
     }
-    GlobFilter fp = new GlobFilter(filePattern[level]);
-    if (fp.hasPattern()) {
-      parents = FileUtil.stat2Paths(listStatus(parents, fp));
-      hasGlob[0] = true;
-    } else { // the component does not have a pattern
-      // remove the quoting of metachars in a non-regexp expansion
-      String name = unquotePathComponent(filePattern[level]);
-      for (int i = 0; i < parents.length; i++) {
-        parents[i] = new Path(parents[i], name);
+    
+    // parse components and determine if it's a glob
+    String[] components = null;
+    GlobFilter[] filters = null;
+    String filename = pathPattern.toUri().getPath();
+    if (!filename.isEmpty() && !Path.SEPARATOR.equals(filename)) {
+      components = filename.split(Path.SEPARATOR);
+      filters = new GlobFilter[components.length];
+      for (int i=level; i < components.length; i++) {
+        filters[i] = new GlobFilter(components[i]);
+        patternHasGlob |= filters[i].hasPattern();
+      }
+      if (!patternHasGlob) {
+        baseDir = unquotePathComponent(filename);
+        components = null; // short through to filter check
       }
     }
-    return globPathsLevel(parents, filePattern, level + 1, hasGlob);
+    
+    // seed the parent directory path, return if it doesn't exist
+    try {
+      matches.add(getFileStatus(new Path(baseDir)));
+    } catch (FileNotFoundException e) {
+      return patternHasGlob ? matches : null;
+    }
+    
+    // skip if there are no components other than the basedir
+    if (components != null) {
+      // iterate through each path component
+      for (int i=level; (i < components.length) && !matches.isEmpty(); i++) {
+        List<FileStatus> children = new ArrayList<FileStatus>();
+        for (FileStatus match : matches) {
+          // don't look for children in a file matched by a glob
+          if (!match.isDirectory()) {
+            continue;
+          }
+          try {
+            if (filters[i].hasPattern()) {
+              // get all children matching the filter
+              FileStatus[] statuses = listStatus(match.getPath(), filters[i]);
+              children.addAll(Arrays.asList(statuses));
+            } else {
+              // the component does not have a pattern
+              String component = unquotePathComponent(components[i]);
+              Path child = new Path(match.getPath(), component);
+              children.add(getFileStatus(child));
+            }
+          } catch (FileNotFoundException e) {
+            // don't care
+          }
+        }
+        matches = children;
+      }
+    }
+    // remove anything that didn't match the filter
+    if (!matches.isEmpty()) {
+      Iterator<FileStatus> iter = matches.iterator();
+      while (iter.hasNext()) {
+        if (!filter.accept(iter.next().getPath())) {
+          iter.remove();
+        }
+      }
+    }
+    // no final paths, if there were any globs return empty list
+    if (matches.isEmpty()) {
+      return patternHasGlob ? matches : null;
+    }
+    Collections.sort(matches);
+    return matches;
   }
 
   /**
@@ -1959,6 +2052,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * No more filesystem operations are needed.  Will
    * release any held locks.
    */
+  @Override
   public void close() throws IOException {
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
@@ -2063,30 +2157,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     //doesn't do anything
   }
 
-  /**
-   * Return a list of file status objects that corresponds to the list of paths
-   * excluding those non-existent paths.
-   * 
-   * @param paths
-   *          the list of paths we want information from
-   * @return a list of FileStatus objects
-   * @throws IOException
-   *           see specific implementation
-   */
-  private FileStatus[] getFileStatus(Path[] paths) throws IOException {
-    if (paths == null) {
-      return null;
-    }
-    ArrayList<FileStatus> results = new ArrayList<FileStatus>(paths.length);
-    for (int i = 0; i < paths.length; i++) {
-      try {
-        results.add(getFileStatus(paths[i]));
-      } catch (FileNotFoundException e) { // do nothing
-      }
-    }
-    return results.toArray(new FileStatus[results.size()]);
-  }
-  
   /**
    * Returns a status object describing the use and capacity of the
    * file system. If the file system has multiple partitions, the
@@ -2296,6 +2366,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     private class ClientFinalizer implements Runnable {
+      @Override
       public synchronized void run() {
         try {
           closeAll(true);
@@ -2350,7 +2421,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         this.ugi = UserGroupInformation.getCurrentUser();
       }
 
-      /** {@inheritDoc} */
+      @Override
       public int hashCode() {
         return (scheme + authority).hashCode() + ugi.hashCode() + (int)unique;
       }
@@ -2359,7 +2430,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         return a == b || (a != null && a.equals(b));        
       }
 
-      /** {@inheritDoc} */
+      @Override
       public boolean equals(Object obj) {
         if (obj == this) {
           return true;
@@ -2374,7 +2445,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         return false;        
       }
 
-      /** {@inheritDoc} */
+      @Override
       public String toString() {
         return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
       }
@@ -2487,6 +2558,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       return writeOps.get();
     }
 
+    @Override
     public String toString() {
       return bytesRead + " bytes read, " + bytesWritten + " bytes written, "
           + readOps + " read ops, " + largeReadOps + " large read ops, "

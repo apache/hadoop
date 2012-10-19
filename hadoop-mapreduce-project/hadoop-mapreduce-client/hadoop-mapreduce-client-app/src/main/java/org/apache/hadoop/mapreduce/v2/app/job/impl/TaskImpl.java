@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -43,6 +44,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.jobhistory.TaskFailedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
@@ -108,7 +110,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private long scheduledTime;
   
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  
+
+  protected boolean encryptedShuffle;
   protected Credentials credentials;
   protected Token<JobTokenIdentifier> jobToken;
   
@@ -188,12 +191,12 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
             TaskEventType.T_ADD_SPEC_ATTEMPT))
 
     // Transitions from SUCCEEDED state
-    .addTransition(TaskState.SUCCEEDED, //only possible for map tasks
+    .addTransition(TaskState.SUCCEEDED,
         EnumSet.of(TaskState.SCHEDULED, TaskState.SUCCEEDED, TaskState.FAILED),
-        TaskEventType.T_ATTEMPT_FAILED, new MapRetroactiveFailureTransition())
-    .addTransition(TaskState.SUCCEEDED, //only possible for map tasks
+        TaskEventType.T_ATTEMPT_FAILED, new RetroactiveFailureTransition())
+    .addTransition(TaskState.SUCCEEDED,
         EnumSet.of(TaskState.SCHEDULED, TaskState.SUCCEEDED),
-        TaskEventType.T_ATTEMPT_KILLED, new MapRetroactiveKilledTransition())
+        TaskEventType.T_ATTEMPT_KILLED, new RetroactiveKilledTransition())
     // Ignore-able transitions.
     .addTransition(
         TaskState.SUCCEEDED, TaskState.SUCCEEDED,
@@ -274,6 +277,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     this.jobToken = jobToken;
     this.metrics = metrics;
     this.appContext = appContext;
+    this.encryptedShuffle = conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
+                                            MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT);
 
     // See if this is from a previous generation.
     if (completedTasksFromPreviousRun != null
@@ -637,9 +642,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       TaskAttemptCompletionEvent tce = recordFactory
           .newRecordInstance(TaskAttemptCompletionEvent.class);
       tce.setEventId(-1);
-      tce.setMapOutputServerAddress("http://"
-          + attempt.getNodeHttpAddress().split(":")[0] + ":"
-          + attempt.getShufflePort());
+      String scheme = (encryptedShuffle) ? "https://" : "http://";
+      tce.setMapOutputServerAddress(scheme
+         + attempt.getNodeHttpAddress().split(":")[0] + ":"
+         + attempt.getShufflePort());
       tce.setStatus(status);
       tce.setAttemptId(attempt.getID());
       int runTime = 0;
@@ -891,7 +897,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     }
   }
 
-  private static class MapRetroactiveFailureTransition
+  private static class RetroactiveFailureTransition
       extends AttemptFailedTransition {
 
     @Override
@@ -905,8 +911,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           return TaskState.SUCCEEDED;
         }
       }
-      
-      //verify that this occurs only for map task
+
+      // a successful REDUCE task should not be overridden
       //TODO: consider moving it to MapTaskImpl
       if (!TaskType.MAP.equals(task.getType())) {
         LOG.error("Unexpected event for REDUCE task " + event.getType());
@@ -932,42 +938,46 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     }
   }
 
-  private static class MapRetroactiveKilledTransition implements
+  private static class RetroactiveKilledTransition implements
     MultipleArcTransition<TaskImpl, TaskEvent, TaskState> {
 
     @Override
     public TaskState transition(TaskImpl task, TaskEvent event) {
-      // verify that this occurs only for map task
+      TaskAttemptId attemptId = null;
+      if (event instanceof TaskTAttemptEvent) {
+        TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+        attemptId = castEvent.getTaskAttemptID(); 
+        if (task.getState() == TaskState.SUCCEEDED &&
+            !attemptId.equals(task.successfulAttempt)) {
+          // don't allow a different task attempt to override a previous
+          // succeeded state
+          return TaskState.SUCCEEDED;
+        }
+      }
+
+      // a successful REDUCE task should not be overridden
       // TODO: consider moving it to MapTaskImpl
       if (!TaskType.MAP.equals(task.getType())) {
         LOG.error("Unexpected event for REDUCE task " + event.getType());
         task.internalError(event.getType());
       }
 
-      TaskTAttemptEvent attemptEvent = (TaskTAttemptEvent) event;
-      TaskAttemptId attemptId = attemptEvent.getTaskAttemptID();
-      if(task.successfulAttempt == attemptId) {
-        // successful attempt is now killed. reschedule
-        // tell the job about the rescheduling
-        unSucceed(task);
-        task.handleTaskAttemptCompletion(
-            attemptId, 
-            TaskAttemptCompletionEventStatus.KILLED);
-        task.eventHandler.handle(new JobMapTaskRescheduledEvent(task.taskId));
-        // typically we are here because this map task was run on a bad node and 
-        // we want to reschedule it on a different node.
-        // Depending on whether there are previous failed attempts or not this 
-        // can SCHEDULE or RESCHEDULE the container allocate request. If this
-        // SCHEDULE's then the dataLocal hosts of this taskAttempt will be used
-        // from the map splitInfo. So the bad node might be sent as a location 
-        // to the RM. But the RM would ignore that just like it would ignore 
-        // currently pending container requests affinitized to bad nodes.
-        task.addAndScheduleAttempt();
-        return TaskState.SCHEDULED;
-      } else {
-        // nothing to do
-        return TaskState.SUCCEEDED;
-      }
+      // successful attempt is now killed. reschedule
+      // tell the job about the rescheduling
+      unSucceed(task);
+      task.handleTaskAttemptCompletion(attemptId,
+          TaskAttemptCompletionEventStatus.KILLED);
+      task.eventHandler.handle(new JobMapTaskRescheduledEvent(task.taskId));
+      // typically we are here because this map task was run on a bad node and
+      // we want to reschedule it on a different node.
+      // Depending on whether there are previous failed attempts or not this
+      // can SCHEDULE or RESCHEDULE the container allocate request. If this
+      // SCHEDULE's then the dataLocal hosts of this taskAttempt will be used
+      // from the map splitInfo. So the bad node might be sent as a location
+      // to the RM. But the RM would ignore that just like it would ignore
+      // currently pending container requests affinitized to bad nodes.
+      task.addAndScheduleAttempt();
+      return TaskState.SCHEDULED;
     }
   }
 

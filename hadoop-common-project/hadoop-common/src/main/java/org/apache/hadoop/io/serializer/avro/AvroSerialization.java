@@ -47,11 +47,13 @@ public abstract class AvroSerialization<T> extends Configured
   @InterfaceAudience.Private
   public static final String AVRO_SCHEMA_KEY = "Avro-Schema";
 
+  @Override
   @InterfaceAudience.Private
   public Deserializer<T> getDeserializer(Class<T> c) {
     return new AvroDeserializer(c);
   }
 
+  @Override
   @InterfaceAudience.Private
   public Serializer<T> getSerializer(Class<T> c) {
     return new AvroSerializer(c);

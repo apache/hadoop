@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.util.Records;
 
 public class CompletedTask implements Task {
 
+  private static final Counters EMPTY_COUNTERS = new Counters();
+
   private final TaskId taskId;
   private final TaskInfo taskInfo;
   private TaskReport report;
@@ -120,11 +122,20 @@ public class CompletedTask implements Task {
     loadAllTaskAttempts();
     this.report = Records.newRecord(TaskReport.class);
     report.setTaskId(taskId);
-    report.setStartTime(taskInfo.getStartTime());
+    long minLaunchTime = Long.MAX_VALUE;
+    for(TaskAttempt attempt: attempts.values()) {
+      minLaunchTime = Math.min(minLaunchTime, attempt.getLaunchTime());
+    }
+    minLaunchTime = minLaunchTime == Long.MAX_VALUE ? -1 : minLaunchTime;
+    report.setStartTime(minLaunchTime);
     report.setFinishTime(taskInfo.getFinishTime());
     report.setTaskState(getState());
     report.setProgress(getProgress());
-    report.setCounters(TypeConverter.toYarn(getCounters()));
+    Counters counters = getCounters();
+    if (counters == null) {
+      counters = EMPTY_COUNTERS;
+    }
+    report.setCounters(TypeConverter.toYarn(counters));
     if (successfulAttempt != null) {
       report.setSuccessfulAttempt(successfulAttempt);
     }

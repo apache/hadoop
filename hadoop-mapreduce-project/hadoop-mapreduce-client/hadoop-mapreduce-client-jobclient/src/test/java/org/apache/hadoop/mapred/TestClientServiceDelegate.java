@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -218,7 +219,8 @@ public class TestClientServiceDelegate {
     GetJobReportResponse jobReportResponse1 = mock(GetJobReportResponse.class);
     when(jobReportResponse1.getJobReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "jobName-firstGen", "user",
-            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null, false));
+            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null,
+            false, ""));
 
     // First AM returns a report with jobName firstGen and simulates AM shutdown
     // on second invocation.
@@ -230,7 +232,8 @@ public class TestClientServiceDelegate {
     GetJobReportResponse jobReportResponse2 = mock(GetJobReportResponse.class);
     when(jobReportResponse2.getJobReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "jobName-secondGen", "user",
-            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null, false));
+            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null,
+            false, ""));
 
     // Second AM generation returns a report with jobName secondGen
     MRClientProtocol secondGenAMProxy = mock(MRClientProtocol.class);
@@ -404,17 +407,23 @@ public class TestClientServiceDelegate {
   }
 
   private ApplicationReport getFinishedApplicationReport() {
-    return BuilderUtils.newApplicationReport(BuilderUtils.newApplicationId(
-        1234, 5), "user", "queue", "appname", "host", 124, null,
-        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A");
+    ApplicationId appId = BuilderUtils.newApplicationId(1234, 5);
+    ApplicationAttemptId attemptId = BuilderUtils.newApplicationAttemptId(
+        appId, 0);
+    return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
+        "appname", "host", 124, null, YarnApplicationState.FINISHED,
+        "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
+        "N/A");
   }
 
   private ApplicationReport getRunningApplicationReport(String host, int port) {
-    return BuilderUtils.newApplicationReport(BuilderUtils.newApplicationId(
-        1234, 5), "user", "queue", "appname", host, port, null,
-        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.UNDEFINED, null, "N/A");
+    ApplicationId appId = BuilderUtils.newApplicationId(1234, 5);
+    ApplicationAttemptId attemptId = BuilderUtils.newApplicationAttemptId(
+        appId, 0);
+    return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
+        "appname", host, port, null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
+        "N/A");
   }
 
   private ResourceMgrDelegate getRMDelegate() throws YarnRemoteException {

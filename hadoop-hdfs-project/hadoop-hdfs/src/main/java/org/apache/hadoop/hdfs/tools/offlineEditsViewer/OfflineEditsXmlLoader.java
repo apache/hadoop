@@ -77,6 +77,7 @@ class OfflineEditsXmlLoader
   /**
    * Loads edits file, uses visitor to process all elements
    */
+  @Override
   public void loadEdits() throws IOException {
     try {
       XMLReader xr = XMLReaderFactory.createXMLReader();
@@ -120,6 +121,7 @@ class OfflineEditsXmlLoader
     }
   }
   
+  @Override
   public void startElement (String uri, String name,
       String qName, Attributes atts) {
     switch (state) {
@@ -168,6 +170,7 @@ class OfflineEditsXmlLoader
     }
   }
   
+  @Override
   public void endElement (String uri, String name, String qName) {
     String str = cbuf.toString().trim();
     cbuf = new StringBuffer();
@@ -248,6 +251,7 @@ class OfflineEditsXmlLoader
     }
   }
   
+  @Override
   public void characters (char ch[], int start, int length) {
     cbuf.append(ch, start, length);
   }

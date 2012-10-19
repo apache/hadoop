@@ -44,6 +44,7 @@ public class JavaSerializationComparator<T extends Serializable&Comparable<T>>
     super(new JavaSerialization.JavaSerializationDeserializer<T>());
   }
 
+  @Override
   @InterfaceAudience.Private
   public int compare(T o1, T o2) {
     return o1.compareTo(o2);

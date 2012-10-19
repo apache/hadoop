@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -37,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
 import org.apache.bookkeeper.proto.BookieServer;
 import org.apache.zookeeper.CreateMode;
@@ -78,10 +80,17 @@ public class TestBookKeeperJournalManager {
     zkc.close();
   }
 
+  private NamespaceInfo newNSInfo() {
+    Random r = new Random();
+    return new NamespaceInfo(r.nextInt(), "testCluster", "TestBPID", -1);
+  }
+
   @Test
   public void testSimpleWrite() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-simplewrite"));
+        BKJMUtil.createJournalURI("/hdfsjournal-simplewrite"), nsi);
+
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -99,8 +108,10 @@ public class TestBookKeeperJournalManager {
 
   @Test
   public void testNumberOfTransactions() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
+
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-txncount"));
+        BKJMUtil.createJournalURI("/hdfsjournal-txncount"), nsi);
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -116,8 +127,10 @@ public class TestBookKeeperJournalManager {
 
   @Test 
   public void testNumberOfTransactionsWithGaps() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-gaps"));
+        BKJMUtil.createJournalURI("/hdfsjournal-gaps"), nsi);
+
     long txid = 1;
     for (long i = 0; i < 3; i++) {
       long start = txid;
@@ -151,8 +164,10 @@ public class TestBookKeeperJournalManager {
 
   @Test
   public void testNumberOfTransactionsWithInprogressAtEnd() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-inprogressAtEnd"));
+        BKJMUtil.createJournalURI("/hdfsjournal-inprogressAtEnd"), nsi);
+
     long txid = 1;
     for (long i = 0; i < 3; i++) {
       long start = txid;
@@ -190,8 +205,10 @@ public class TestBookKeeperJournalManager {
    */
   @Test
   public void testWriteRestartFrom1() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-restartFrom1"));
+        BKJMUtil.createJournalURI("/hdfsjournal-restartFrom1"), nsi);
+
     long txid = 1;
     long start = txid;
     EditLogOutputStream out = bkjm.startLogSegment(txid);
@@ -245,11 +262,15 @@ public class TestBookKeeperJournalManager {
   @Test
   public void testTwoWriters() throws Exception {
     long start = 1;
+    NamespaceInfo nsi = newNSInfo();
+
     BookKeeperJournalManager bkjm1 = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"));
+        BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"), nsi);
+
     BookKeeperJournalManager bkjm2 = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"));
-    
+        BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"), nsi);
+
+
     EditLogOutputStream out1 = bkjm1.startLogSegment(start);
     try {
       bkjm2.startLogSegment(start);
@@ -263,8 +284,11 @@ public class TestBookKeeperJournalManager {
 
   @Test
   public void testSimpleRead() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-simpleread"));
+        BKJMUtil.createJournalURI("/hdfsjournal-simpleread"),
+        nsi);
+
     final long numTransactions = 10000;
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= numTransactions; i++) {
@@ -287,8 +311,11 @@ public class TestBookKeeperJournalManager {
 
   @Test
   public void testSimpleRecovery() throws Exception {
+    NamespaceInfo nsi = newNSInfo();
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        BKJMUtil.createJournalURI("/hdfsjournal-simplerecovery"));
+        BKJMUtil.createJournalURI("/hdfsjournal-simplerecovery"),
+        nsi);
+
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -334,8 +361,10 @@ public class TestBookKeeperJournalManager {
       conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_QUORUM_SIZE,
                   ensembleSize);
       long txid = 1;
+      NamespaceInfo nsi = newNSInfo();
       BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-          BKJMUtil.createJournalURI("/hdfsjournal-allbookiefailure"));
+          BKJMUtil.createJournalURI("/hdfsjournal-allbookiefailure"),
+          nsi);
       EditLogOutputStream out = bkjm.startLogSegment(txid);
 
       for (long i = 1 ; i <= 3; i++) {
@@ -416,8 +445,12 @@ public class TestBookKeeperJournalManager {
       conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_QUORUM_SIZE,
                   ensembleSize);
       long txid = 1;
+
+      NamespaceInfo nsi = newNSInfo();
       BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-          BKJMUtil.createJournalURI("/hdfsjournal-onebookiefailure"));
+          BKJMUtil.createJournalURI("/hdfsjournal-onebookiefailure"),
+          nsi);
+
       EditLogOutputStream out = bkjm.startLogSegment(txid);
       for (long i = 1 ; i <= 3; i++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -464,7 +497,9 @@ public class TestBookKeeperJournalManager {
   @Test
   public void testEmptyInprogressNode() throws Exception {
     URI uri = BKJMUtil.createJournalURI("/hdfsjournal-emptyInprogress");
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    NamespaceInfo nsi = newNSInfo();
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri,
+                                                                 nsi);
 
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1; i <= 100; i++) {
@@ -481,7 +516,7 @@ public class TestBookKeeperJournalManager {
     String inprogressZNode = bkjm.inprogressZNode(101);
     zkc.setData(inprogressZNode, new byte[0], -1);
 
-    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm = new BookKeeperJournalManager(conf, uri, nsi);
     try {
       bkjm.recoverUnfinalizedSegments();
       fail("Should have failed. There should be no way of creating"
@@ -489,7 +524,7 @@ public class TestBookKeeperJournalManager {
     } catch (IOException e) {
       // correct behaviour
       assertTrue("Exception different than expected", e.getMessage().contains(
-          "Invalid ledger entry,"));
+          "Invalid/Incomplete data in znode"));
     } finally {
       bkjm.close();
     }
@@ -503,7 +538,9 @@ public class TestBookKeeperJournalManager {
   @Test
   public void testCorruptInprogressNode() throws Exception {
     URI uri = BKJMUtil.createJournalURI("/hdfsjournal-corruptInprogress");
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    NamespaceInfo nsi = newNSInfo();
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri,
+                                                                 nsi);
 
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1; i <= 100; i++) {
@@ -521,7 +558,7 @@ public class TestBookKeeperJournalManager {
     String inprogressZNode = bkjm.inprogressZNode(101);
     zkc.setData(inprogressZNode, "WholeLottaJunk".getBytes(), -1);
 
-    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm = new BookKeeperJournalManager(conf, uri, nsi);
     try {
       bkjm.recoverUnfinalizedSegments();
       fail("Should have failed. There should be no way of creating"
@@ -529,8 +566,7 @@ public class TestBookKeeperJournalManager {
     } catch (IOException e) {
       // correct behaviour
       assertTrue("Exception different than expected", e.getMessage().contains(
-          "Invalid ledger entry,"));
-
+          "has no field named"));
     } finally {
       bkjm.close();
     }
@@ -544,7 +580,9 @@ public class TestBookKeeperJournalManager {
   @Test
   public void testEmptyInprogressLedger() throws Exception {
     URI uri = BKJMUtil.createJournalURI("/hdfsjournal-emptyInprogressLedger");
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    NamespaceInfo nsi = newNSInfo();
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri,
+                                                                 nsi);
 
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1; i <= 100; i++) {
@@ -559,7 +597,7 @@ public class TestBookKeeperJournalManager {
     out.close();
     bkjm.close();
 
-    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm = new BookKeeperJournalManager(conf, uri, nsi);
     bkjm.recoverUnfinalizedSegments();
     out = bkjm.startLogSegment(101);
     for (long i = 1; i <= 100; i++) {
@@ -581,7 +619,9 @@ public class TestBookKeeperJournalManager {
   public void testRefinalizeAlreadyFinalizedInprogress() throws Exception {
     URI uri = BKJMUtil
         .createJournalURI("/hdfsjournal-refinalizeInprogressLedger");
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    NamespaceInfo nsi = newNSInfo();
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri,
+                                                                 nsi);
 
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1; i <= 100; i++) {
@@ -601,7 +641,7 @@ public class TestBookKeeperJournalManager {
     byte[] inprogressData = zkc.getData(inprogressZNode, false, null);
 
     // finalize
-    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm = new BookKeeperJournalManager(conf, uri, nsi);
     bkjm.recoverUnfinalizedSegments();
     bkjm.close();
 
@@ -613,7 +653,7 @@ public class TestBookKeeperJournalManager {
         CreateMode.PERSISTENT);
 
     // should work fine
-    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm = new BookKeeperJournalManager(conf, uri, nsi);
     bkjm.recoverUnfinalizedSegments();
     bkjm.close();
   }
@@ -626,7 +666,10 @@ public class TestBookKeeperJournalManager {
   @Test
   public void testEditLogFileNotExistsWhenReadingMetadata() throws Exception {
     URI uri = BKJMUtil.createJournalURI("/hdfsjournal-editlogfile");
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    NamespaceInfo nsi = newNSInfo();
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri,
+                                                                 nsi);
+
     try {
       // start new inprogress log segment with txid=1
       // and write transactions till txid=50

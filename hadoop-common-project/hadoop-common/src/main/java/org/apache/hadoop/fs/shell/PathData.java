@@ -60,7 +60,7 @@ public class PathData implements Comparable<PathData> {
    * @throws IOException if anything goes wrong...
    */
   public PathData(String pathString, Configuration conf) throws IOException {
-    this(FileSystem.get(URI.create(pathString), conf), pathString);
+    this(FileSystem.get(stringToUri(pathString), conf), pathString);
   }
   
   /**
@@ -170,16 +170,13 @@ public class PathData implements Comparable<PathData> {
   }
   
   /**
-   * Returns a temporary file for this PathData with the given extension.
-   * The file will be deleted on exit.
-   * @param extension for the temporary file
+   * Returns a new PathData with the given extension.
+   * @param extension for the suffix
    * @return PathData
    * @throws IOException shouldn't happen
    */
-  public PathData createTempFile(String extension) throws IOException {
-    PathData tmpFile = new PathData(fs, uri+"._COPYING_");
-    fs.deleteOnExit(tmpFile.path);
-    return tmpFile;
+  public PathData suffix(String extension) throws IOException {
+    return new PathData(fs, this+extension);
   }
 
   /**
@@ -383,6 +380,7 @@ public class PathData implements Comparable<PathData> {
    * as given on the commandline, or the full path
    * @return String of the path
    */
+  @Override
   public String toString() {
     String scheme = uri.getScheme();
     // No interpretation of symbols. Just decode % escaped chars.

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.wsrs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.json.simple.JSONObject;
 
 import javax.ws.rs.Produces;
@@ -36,6 +37,7 @@ import java.util.Map;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
+@InterfaceAudience.Private
 public class JSONMapProvider implements MessageBodyWriter<Map> {
   private static final String ENTER = System.getProperty("line.separator");
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem.Operation;
 import org.apache.hadoop.lib.wsrs.BooleanParam;
@@ -32,12 +33,12 @@ import org.slf4j.MDC;
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * HttpFS ParametersProvider.
  */
 @Provider
+@InterfaceAudience.Private
 public class HttpFSParametersProvider extends ParametersProvider {
 
   private static final Map<Enum, Class<Param<?>>[]> PARAMS_DEF =
@@ -85,6 +86,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for access-time parameter.
    */
+  @InterfaceAudience.Private
   public static class AccessTimeParam extends LongParam {
 
     /**
@@ -102,6 +104,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for block-size parameter.
    */
+  @InterfaceAudience.Private
   public static class BlockSizeParam extends LongParam {
 
     /**
@@ -120,6 +123,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for data parameter.
    */
+  @InterfaceAudience.Private
   public static class DataParam extends BooleanParam {
 
     /**
@@ -138,6 +142,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for operation parameter.
    */
+  @InterfaceAudience.Private
   public static class OperationParam extends EnumParam<HttpFSFileSystem.Operation> {
 
     /**
@@ -156,6 +161,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for delete's recursive parameter.
    */
+  @InterfaceAudience.Private
   public static class RecursiveParam extends BooleanParam {
 
     /**
@@ -174,6 +180,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for do-as parameter.
    */
+  @InterfaceAudience.Private
   public static class DoAsParam extends StringParam {
 
     /**
@@ -208,6 +215,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for filter parameter.
    */
+  @InterfaceAudience.Private
   public static class FilterParam extends StringParam {
 
     /**
@@ -227,6 +235,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for group parameter.
    */
+  @InterfaceAudience.Private
   public static class GroupParam extends StringParam {
 
     /**
@@ -246,12 +255,13 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for len parameter.
    */
+  @InterfaceAudience.Private
   public static class LenParam extends LongParam {
 
     /**
      * Parameter name.
      */
-    public static final String NAME = "len";
+    public static final String NAME = "length";
 
     /**
      * Constructor.
@@ -264,6 +274,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for modified-time parameter.
    */
+  @InterfaceAudience.Private
   public static class ModifiedTimeParam extends LongParam {
 
     /**
@@ -282,6 +293,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for offset parameter.
    */
+  @InterfaceAudience.Private
   public static class OffsetParam extends LongParam {
 
     /**
@@ -300,6 +312,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for overwrite parameter.
    */
+  @InterfaceAudience.Private
   public static class OverwriteParam extends BooleanParam {
 
     /**
@@ -318,6 +331,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for owner parameter.
    */
+  @InterfaceAudience.Private
   public static class OwnerParam extends StringParam {
 
     /**
@@ -337,6 +351,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for permission parameter.
    */
+  @InterfaceAudience.Private
   public static class PermissionParam extends ShortParam {
 
     /**
@@ -357,6 +372,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for replication parameter.
    */
+  @InterfaceAudience.Private
   public static class ReplicationParam extends ShortParam {
 
     /**
@@ -375,6 +391,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for to-path parameter.
    */
+  @InterfaceAudience.Private
   public static class DestinationParam extends StringParam {
 
     /**

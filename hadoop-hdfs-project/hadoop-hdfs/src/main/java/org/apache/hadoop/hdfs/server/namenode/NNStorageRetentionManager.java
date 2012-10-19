@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -32,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -48,16 +51,17 @@ public class NNStorageRetentionManager {
   
   private final int numCheckpointsToRetain;
   private final long numExtraEditsToRetain;
+  private final int maxExtraEditsSegmentsToRetain;
   private static final Log LOG = LogFactory.getLog(
       NNStorageRetentionManager.class);
   private final NNStorage storage;
   private final StoragePurger purger;
-  private final FSEditLog editLog;
+  private final LogsPurgeable purgeableLogs;
   
   public NNStorageRetentionManager(
       Configuration conf,
       NNStorage storage,
-      FSEditLog editLog,
+      LogsPurgeable purgeableLogs,
       StoragePurger purger) {
     this.numCheckpointsToRetain = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
@@ -65,6 +69,9 @@ public class NNStorageRetentionManager {
     this.numExtraEditsToRetain = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY,
         DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_DEFAULT);
+    this.maxExtraEditsSegmentsToRetain = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_MAX_EXTRA_EDITS_SEGMENTS_RETAINED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_EXTRA_EDITS_SEGMENTS_RETAINED_DEFAULT);
     Preconditions.checkArgument(numCheckpointsToRetain > 0,
         "Must retain at least one checkpoint");
     Preconditions.checkArgument(numExtraEditsToRetain >= 0,
@@ -72,13 +79,13 @@ public class NNStorageRetentionManager {
         " must not be negative");
     
     this.storage = storage;
-    this.editLog = editLog;
+    this.purgeableLogs = purgeableLogs;
     this.purger = purger;
   }
   
   public NNStorageRetentionManager(Configuration conf, NNStorage storage,
-      FSEditLog editLog) {
-    this(conf, storage, editLog, new DeletionStoragePurger());
+      LogsPurgeable purgeableLogs) {
+    this(conf, storage, purgeableLogs, new DeletionStoragePurger());
   }
 
   public void purgeOldStorage() throws IOException {
@@ -94,8 +101,40 @@ public class NNStorageRetentionManager {
     // provide a "cushion" of older txns that we keep, which is
     // handy for HA, where a remote node may not have as many
     // new images.
-    long purgeLogsFrom = Math.max(0, minImageTxId + 1 - numExtraEditsToRetain);
-    editLog.purgeLogsOlderThan(purgeLogsFrom);
+    //
+    // First, determine the target number of extra transactions to retain based
+    // on the configured amount.
+    long minimumRequiredTxId = minImageTxId + 1;
+    long purgeLogsFrom = Math.max(0, minimumRequiredTxId - numExtraEditsToRetain);
+    
+    ArrayList<EditLogInputStream> editLogs = new ArrayList<EditLogInputStream>();
+    purgeableLogs.selectInputStreams(editLogs, purgeLogsFrom, false);
+    Collections.sort(editLogs, new Comparator<EditLogInputStream>() {
+      @Override
+      public int compare(EditLogInputStream a, EditLogInputStream b) {
+        return ComparisonChain.start()
+            .compare(a.getFirstTxId(), b.getFirstTxId())
+            .compare(a.getLastTxId(), b.getLastTxId())
+            .result();
+      }
+    });
+    
+    // Next, adjust the number of transactions to retain if doing so would mean
+    // keeping too many segments around.
+    while (editLogs.size() > maxExtraEditsSegmentsToRetain) {
+      purgeLogsFrom = editLogs.get(0).getFirstTxId();
+      editLogs.remove(0);
+    }
+    
+    // Finally, ensure that we're not trying to purge any transactions that we
+    // actually need.
+    if (purgeLogsFrom > minimumRequiredTxId) {
+      throw new AssertionError("Should not purge more edits than required to "
+          + "restore: " + purgeLogsFrom + " should be <= "
+          + minimumRequiredTxId);
+    }
+    
+    purgeableLogs.purgeLogsOlderThan(purgeLogsFrom);
   }
   
   private void purgeCheckpointsOlderThan(
@@ -103,7 +142,6 @@ public class NNStorageRetentionManager {
       long minTxId) {
     for (FSImageFile image : inspector.getFoundImages()) {
       if (image.getCheckpointTxId() < minTxId) {
-        LOG.info("Purging old image " + image);
         purger.purgeImage(image);
       }
     }
@@ -146,11 +184,13 @@ public class NNStorageRetentionManager {
   static class DeletionStoragePurger implements StoragePurger {
     @Override
     public void purgeLog(EditLogFile log) {
+      LOG.info("Purging old edit log " + log);
       deleteOrWarn(log.getFile());
     }
 
     @Override
     public void purgeImage(FSImageFile image) {
+      LOG.info("Purging old image " + image);
       deleteOrWarn(image.getFile());
       deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
     }

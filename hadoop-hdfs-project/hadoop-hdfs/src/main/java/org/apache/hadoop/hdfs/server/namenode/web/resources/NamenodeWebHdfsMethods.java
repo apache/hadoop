@@ -21,9 +21,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.EnumSet;
 
 import javax.servlet.ServletContext;
@@ -92,6 +94,7 @@ import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -116,9 +119,20 @@ public class NamenodeWebHdfsMethods {
     return REMOTE_ADDRESS.get();
   }
 
-  /** Set the remote client address. */
-  static void setRemoteAddress(String remoteAddress) {
-    REMOTE_ADDRESS.set(remoteAddress);
+  public static InetAddress getRemoteIp() {
+    try {
+      return InetAddress.getByName(getRemoteAddress());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  /**
+   * Returns true if a WebHdfs request is in progress.  Akin to
+   * {@link Server#isRpcInvocation()}.
+   */
+  public static boolean isWebHdfsInvocation() {
+    return getRemoteAddress() != null;
   }
 
   private @Context ServletContext context;
@@ -150,8 +164,9 @@ public class NamenodeWebHdfsMethods {
       final DatanodeDescriptor clientNode = bm.getDatanodeManager(
           ).getDatanodeByHost(getRemoteAddress());
       if (clientNode != null) {
-        final DatanodeDescriptor[] datanodes = bm.getBlockPlacementPolicy(
-            ).chooseTarget(path, 1, clientNode, null, blocksize);
+        final DatanodeDescriptor[] datanodes = bm.getBlockPlacementPolicy()
+            .chooseTarget(path, 1, clientNode,
+                new ArrayList<DatanodeDescriptor>(), false, null, blocksize);
         if (datanodes.length > 0) {
           return datanodes[0];
         }
@@ -667,17 +682,6 @@ public class NamenodeWebHdfsMethods {
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
           namenode, ugi, renewer.getValue());
       final String js = JsonUtil.toJsonString(token);
-      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-    }
-    case GETDELEGATIONTOKENS:
-    {
-      if (delegation.getValue() != null) {
-        throw new IllegalArgumentException(delegation.getName()
-            + " parameter is not null.");
-      }
-      final Token<? extends TokenIdentifier>[] tokens = new Token<?>[1];
-      tokens[0] = generateDelegationToken(namenode, ugi, renewer.getValue());
-      final String js = JsonUtil.toJsonString(tokens);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY:

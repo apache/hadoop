@@ -73,6 +73,7 @@ abstract public class FsCommand extends Command {
   
   // abstract method that normally is invoked by runall() which is
   // overridden below
+  @Override
   protected void run(Path path) throws IOException {
     throw new RuntimeException("not supposed to get here");
   }

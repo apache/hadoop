@@ -104,7 +104,7 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
       "non-complete blocks! Blocks are: " + blocksAsString();
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
-                                  getReplication(),
+                                  getBlockReplication(),
                                   getModificationTime(),
                                   getModificationTime(),
                                   getPreferredBlockSize());
@@ -147,6 +147,7 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
    * Convert the last block of the file to an under-construction block.
    * Set its locations.
    */
+  @Override
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
                                           DatanodeDescriptor[] targets)
   throws IOException {

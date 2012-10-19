@@ -20,8 +20,11 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,7 +34,13 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceScanner;
+import static org.apache.hadoop.hdfs.server.datanode.DataBlockScanner.SLEEP_PERIOD_MS;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Test;
+import org.junit.Ignore;
+import static org.junit.Assert.fail;
 
 
 public class TestMultipleNNDataBlockScanner {
@@ -65,7 +74,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void testDataBlockScanner() throws IOException, InterruptedException {
     setUp();
     try {
@@ -88,7 +97,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void testBlockScannerAfterRefresh() throws IOException,
       InterruptedException {
     setUp();
@@ -140,7 +149,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void testBlockScannerAfterRestart() throws IOException,
       InterruptedException {
     setUp();
@@ -165,5 +174,76 @@ public class TestMultipleNNDataBlockScanner {
     } finally {
       cluster.shutdown();
     }
+  }
+  
+  @Test(timeout=120000)
+  public void test2NNBlockRescanInterval() throws IOException {
+    ((Log4JLogger)BlockPoolSliceScanner.LOG).getLogger().setLevel(Level.ALL);
+    Configuration conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
+        .build();
+
+    try {
+      FileSystem fs = cluster.getFileSystem(1);
+      Path file2 = new Path("/test/testBlockScanInterval");
+      DFSTestUtil.createFile(fs, file2, 30, (short) 1, 0);
+
+      fs = cluster.getFileSystem(0);
+      Path file1 = new Path("/test/testBlockScanInterval");
+      DFSTestUtil.createFile(fs, file1, 30, (short) 1, 0);
+      for (int i = 0; i < 8; i++) {
+        LOG.info("Verifying that the blockscanner scans exactly once");
+        waitAndScanBlocks(1, 1);
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * HDFS-3828: DN rescans blocks too frequently
+   * 
+   * @throws Exception
+   */
+  @Test(timeout=120000)
+  public void testBlockRescanInterval() throws IOException {
+    ((Log4JLogger)BlockPoolSliceScanner.LOG).getLogger().setLevel(Level.ALL);
+    Configuration conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).build();
+
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      Path file1 = new Path("/test/testBlockScanInterval");
+      DFSTestUtil.createFile(fs, file1, 30, (short) 1, 0);
+      for (int i = 0; i < 4; i++) {
+        LOG.info("Verifying that the blockscanner scans exactly once");
+        waitAndScanBlocks(1, 1);
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  void waitAndScanBlocks(long scansLastRun, long scansTotal)
+      throws IOException {
+    // DataBlockScanner will run for every 5 seconds so we are checking for
+    // every 5 seconds
+    int n = 5;
+    String bpid = cluster.getNamesystem(0).getBlockPoolId();
+    DataNode dn = cluster.getDataNodes().get(0);
+    long blocksScanned, total;
+    do {
+      try {
+        Thread.sleep(SLEEP_PERIOD_MS);
+      } catch (InterruptedException e) {
+        fail("Interrupted: " + e);
+      }
+      blocksScanned = dn.blockScanner.getBlocksScannedInLastRun(bpid);
+      total = dn.blockScanner.getTotalScans(bpid);
+      LOG.info("bpid = " + bpid + " blocksScanned = " + blocksScanned + " total=" + total);
+    } while (n-- > 0 && (blocksScanned != scansLastRun || scansTotal != total));
+    Assert.assertEquals(scansTotal, total);
+    Assert.assertEquals(scansLastRun, blocksScanned);
   }
 }

@@ -42,6 +42,7 @@ public class FsckServlet extends DfsServlet {
   private static final long serialVersionUID = 1L;
 
   /** Handle fsck request */
+  @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response
       ) throws IOException {
     @SuppressWarnings("unchecked")

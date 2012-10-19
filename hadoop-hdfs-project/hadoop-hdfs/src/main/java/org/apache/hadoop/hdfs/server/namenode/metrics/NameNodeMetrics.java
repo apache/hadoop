@@ -17,17 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import static org.apache.hadoop.metrics2.impl.MsInfo.ProcessName;
+import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
-import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
@@ -57,15 +60,31 @@ public class NameNodeMetrics {
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
+  MutableQuantiles[] syncsQuantiles;
   @Metric("Journal transactions batched in sync")
   MutableCounterLong transactionsBatchedInSync;
   @Metric("Block report") MutableRate blockReport;
+  MutableQuantiles[] blockReportQuantiles;
 
   @Metric("Duration in SafeMode at startup") MutableGaugeInt safeModeTime;
   @Metric("Time loading FS Image at startup") MutableGaugeInt fsImageLoadTime;
 
-  NameNodeMetrics(String processName, String sessionId) {
+  NameNodeMetrics(String processName, String sessionId, int[] intervals) {
     registry.tag(ProcessName, processName).tag(SessionId, sessionId);
+    
+    final int len = intervals.length;
+    syncsQuantiles = new MutableQuantiles[len];
+    blockReportQuantiles = new MutableQuantiles[len];
+    
+    for (int i = 0; i < len; i++) {
+      int interval = intervals[i];
+      syncsQuantiles[i] = registry.newQuantiles(
+          "syncs" + interval + "s",
+          "Journal syncs", "ops", "latency", interval);
+      blockReportQuantiles[i] = registry.newQuantiles(
+          "blockReport" + interval + "s", 
+          "Block report", "ops", "latency", interval);
+    }
   }
 
   public static NameNodeMetrics create(Configuration conf, NamenodeRole r) {
@@ -73,7 +92,11 @@ public class NameNodeMetrics {
     String processName = r.toString();
     MetricsSystem ms = DefaultMetricsSystem.instance();
     JvmMetrics.create(processName, sessionId, ms);
-    return ms.register(new NameNodeMetrics(processName, sessionId));
+    
+    // Percentile measurement is off by default, by watching no intervals
+    int[] intervals = 
+        conf.getInts(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY);
+    return ms.register(new NameNodeMetrics(processName, sessionId, intervals));
   }
 
   public void shutdown() {
@@ -146,6 +169,9 @@ public class NameNodeMetrics {
 
   public void addSync(long elapsed) {
     syncs.add(elapsed);
+    for (MutableQuantiles q : syncsQuantiles) {
+      q.add(elapsed);
+    }
   }
 
   public void setFsImageLoadTime(long elapsed) {
@@ -154,6 +180,9 @@ public class NameNodeMetrics {
 
   public void addBlockReport(long latency) {
     blockReport.add(latency);
+    for (MutableQuantiles q : blockReportQuantiles) {
+      q.add(latency);
+    }
   }
 
   public void setSafeModeTime(long elapsed) {

@@ -34,22 +34,19 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <hadoop.component>hdfs</hadoop.component>
     <kdc.resource.dir>../../hadoop-common-project/hadoop-common/src/test/resources/kdc</kdc.resource.dir>
     <is.hadoop.component>true</is.hadoop.component>
+    <require.fuse>false</require.fuse>
+    <require.libwebhdfs>false</require.libwebhdfs>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>org.aspectj</groupId>
-      <artifactId>aspectjtools</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.aspectj</groupId>
-      <artifactId>aspectjrt</artifactId>
-      <scope>test</scope>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-annotations</artifactId>
+      <artifactId>hadoop-auth</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -64,6 +61,58 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <type>test-jar</type>
     </dependency>
     <dependency>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+      <version>3.4.2</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-cli</groupId>
+      <artifactId>commons-cli</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
       <scope>compile</scope>
@@ -71,6 +120,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>commons-daemon</groupId>
       <artifactId>commons-daemon</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>jsp-api</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -84,8 +138,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -99,27 +153,29 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.ant</groupId>
-      <artifactId>ant</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-      <version>3.4.2</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-      <version>3.4.2</version>
-      <type>test-jar</type>
-      <scope>test</scope>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>tomcat</groupId>
+      <artifactId>jasper-runtime</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>xmlenc</groupId>
+      <artifactId>xmlenc</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 
@@ -133,6 +189,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <startKdc>${startKdc}</startKdc>
             <kdc.resource.dir>${kdc.resource.dir}</kdc.resource.dir>
           </systemPropertyVariables>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+            </property>
+          </properties>
         </configuration>
       </plugin>
       <plugin>
@@ -171,6 +233,25 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
               <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
               <sources>
                 <directory>${basedir}/src/main/webapps/secondary</directory>
+                <includes>
+                  <include>*.jsp</include>
+                </includes>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>journal</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <compile>false</compile>
+              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <webFragmentFile>${project.build.directory}/journal-jsp-servlet-definitions.xml</webFragmentFile>
+              <packageName>org.apache.hadoop.hdfs.server.journalservice</packageName>
+              <sources>
+                <directory>${basedir}/src/main/webapps/journal</directory>
                 <includes>
                   <include>*.jsp</include>
                 </includes>
@@ -239,37 +320,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-proto</id>
-            <phase>generate-sources</phase>
+            <id>create-protobuf-generated-sources-directory</id>
+            <phase>initialize</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <target>
-                <echo file="target/compile-proto.sh">
-                    PROTO_DIR=src/main/proto
-                    JAVA_DIR=target/generated-sources/java
-                    which cygpath 2&gt; /dev/null
-                    if [ $? = 1 ]; then
-                      IS_WIN=false
-                    else
-                      IS_WIN=true
-                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
-                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
-                    fi
-                    mkdir -p $JAVA_DIR 2&gt; /dev/null
-                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
-                    do
-                        if [ "$IS_WIN" = "true" ]; then
-                          protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
-                        else
-                          protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
-                        fi
-                    done
-                </echo>
-                <exec executable="sh" dir="${basedir}" failonerror="true">
-                  <arg line="target/compile-proto.sh"/>
-                </exec>
+                <mkdir dir="target/generated-sources/java" />
               </target>
             </configuration>
           </execution>
@@ -284,6 +342,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <loadfile property="hdfs.servlet.definitions" srcFile="${project.build.directory}/hdfs-jsp-servlet-definitions.xml"/>
                 <loadfile property="secondary.servlet.definitions" srcFile="${project.build.directory}/secondary-jsp-servlet-definitions.xml"/>
                 <loadfile property="datanode.servlet.definitions" srcFile="${project.build.directory}/datanode-jsp-servlet-definitions.xml"/>
+                <loadfile property="journal.servlet.definitions" srcFile="${project.build.directory}/journal-jsp-servlet-definitions.xml"/>               
                 <echoproperties destfile="${project.build.directory}/webxml.properties">
                   <propertyset>
                     <propertyref regex=".*.servlet.definitions"/>
@@ -298,6 +357,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                       filtering="true"/>
                 <copy file="${basedir}/src/main/webapps/proto-datanode-web.xml"
                       tofile="${project.build.directory}/webapps/datanode/WEB-INF/web.xml"
+                      filtering="true"/>
+                <copy file="${basedir}/src/main/webapps/proto-journal-web.xml"
+                      tofile="${project.build.directory}/webapps/journal/WEB-INF/web.xml"
                       filtering="true"/>
                 <copy toDir="${project.build.directory}/webapps">
                   <fileset dir="${basedir}/src/main/webapps">
@@ -338,6 +400,81 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
               </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-proto</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/GetUserMappingsProtocol.proto</argument>
+                <argument>src/main/proto/HAZKInfo.proto</argument>
+                <argument>src/main/proto/InterDatanodeProtocol.proto</argument>
+                <argument>src/main/proto/JournalProtocol.proto</argument>
+                <argument>src/main/proto/RefreshAuthorizationPolicyProtocol.proto</argument>
+                <argument>src/main/proto/RefreshUserMappingsProtocol.proto</argument>
+                <argument>src/main/proto/datatransfer.proto</argument>
+                <argument>src/main/proto/hdfs.proto</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto-datanode</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/ClientDatanodeProtocol.proto</argument>
+                <argument>src/main/proto/DatanodeProtocol.proto</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto-namenode</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/ClientNamenodeProtocol.proto</argument>
+                <argument>src/main/proto/NamenodeProtocol.proto</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-proto-qjournal</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/QJournalProtocol.proto</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
@@ -402,38 +539,60 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.7</version>
             <executions>
               <execution>
-                <id>make</id>
-                <phase>compile</phase>
+                <id>define-classpath</id>
+                <phase>process-resources</phase>
                 <goals><goal>run</goal></goals>
                 <configuration>
-                  <target>
-                    <mkdir dir="${project.build.directory}/native"/>
-                    <exec executable="cmake" dir="${project.build.directory}/native" 
-                        failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
-                    </exec>
-                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="VERBOSE=1"/>
-                    </exec>
-                  </target>
+                  <exportAntProperties>true</exportAntProperties>
+                  <tests>
+                    <property name="test.classpath" refid="maven.test.classpath"/>
+                  </tests>
                 </configuration>
               </execution>
-              <!-- TODO wire here native testcases
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.hadoop.cmake.maven.ng</groupId>
+            <artifactId>cmake-ng</artifactId>
+            <executions>
               <execution>
-                <id>test</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>test</goal>
-                </goals>
+                <id>cmake-compile</id>
+                <goals><goal>compile</goal></goals>
                 <configuration>
-                  <destDir>${project.build.directory}/native/target</destDir>
+                  <target>all</target>
+                  <source>${basedir}/src</source>
+                  <vars>
+                    <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
+                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
+                    <REQUIRE_FUSE>${require.fuse}</REQUIRE_FUSE>
+                    <REQUIRE_LIBWEBHDFS>${require.libwebhdfs}</REQUIRE_LIBWEBHDFS>
+                  </vars>
                 </configuration>
               </execution>
-              -->
+              <execution>
+                <id>test_libhdfs_threaded</id>
+                <goals><goal>test</goal></goals>
+                <configuration>
+                  <binary>${project.build.directory}/native/test_libhdfs_threaded</binary>
+                  <env><CLASSPATH>${test.classpath}</CLASSPATH></env>
+                  <timeout>300</timeout>
+                  <results>${project.build.directory}/results</results>
+                </configuration>
+              </execution>
+              <execution>
+                <id>test_native_mini_dfs</id>
+                <goals><goal>test</goal></goals>
+                <configuration>
+                  <binary>${project.build.directory}/native/test_native_mini_dfs</binary>
+                  <env><CLASSPATH>${test.classpath}</CLASSPATH></env>
+                  <timeout>300</timeout>
+                  <results>${project.build.directory}/results</results>
+                </configuration>
+              </execution>
             </executions>
           </plugin>
         </plugins>

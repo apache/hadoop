@@ -184,6 +184,7 @@ public class NodeFencer {
       this.arg = arg;
     }
     
+    @Override
     public String toString() {
       return method.getClass().getCanonicalName() + "(" + arg + ")";
     }

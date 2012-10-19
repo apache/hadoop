@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthMonitor.Callback;
 import org.apache.hadoop.ha.HealthMonitor.State;
+import org.apache.hadoop.util.Time;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -136,8 +137,8 @@ public class TestHealthMonitor {
 
   private void waitForState(HealthMonitor hm, State state)
       throws InterruptedException {
-    long st = System.currentTimeMillis();
-    while (System.currentTimeMillis() - st < 2000) {
+    long st = Time.now();
+    while (Time.now() - st < 2000) {
       if (hm.getHealthState() == state) {
         return;
       }

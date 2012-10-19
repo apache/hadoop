@@ -35,7 +35,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.hadoop.metrics.spi.Util;
@@ -91,6 +90,7 @@ public class GangliaContext extends AbstractMetricsContext {
   public GangliaContext() {
   }
     
+  @Override
   @InterfaceAudience.Private
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
@@ -106,8 +106,7 @@ public class GangliaContext extends AbstractMetricsContext {
         
     try {
       datagramSocket = new DatagramSocket();
-    }
-    catch (SocketException se) {
+    } catch (SocketException se) {
       se.printStackTrace();
     }
   }
@@ -123,6 +122,7 @@ public class GangliaContext extends AbstractMetricsContext {
     }
   }
   
+  @Override
   @InterfaceAudience.Private
   public void emitRecord(String contextName, String recordName,
     OutputRecord outRec) 

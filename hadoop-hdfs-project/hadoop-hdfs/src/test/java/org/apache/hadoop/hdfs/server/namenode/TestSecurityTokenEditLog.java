@@ -17,28 +17,30 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.junit.Assert.assertEquals;
+
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.junit.Test;
 
 /**
  * This class tests the creation and validation of a checkpoint.
  */
-public class TestSecurityTokenEditLog extends TestCase {
+public class TestSecurityTokenEditLog {
   static final int NUM_DATA_NODES = 1;
 
   // This test creates NUM_THREADS threads and each thread does
@@ -46,6 +48,12 @@ public class TestSecurityTokenEditLog extends TestCase {
   static final int NUM_TRANSACTIONS = 100;
   static final int NUM_THREADS = 100;
   static final int opsPerTrans = 3;
+
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
 
   //
   // an object that does a bunch of transactions
@@ -62,6 +70,7 @@ public class TestSecurityTokenEditLog extends TestCase {
     }
 
     // add a bunch of transactions.
+    @Override
     public void run() {
       FSEditLog editLog = namesystem.getEditLog();
 
@@ -84,6 +93,7 @@ public class TestSecurityTokenEditLog extends TestCase {
   /**
    * Tests transaction logging in dfs.
    */
+  @Test
   public void testEditLog() throws IOException {
 
     // start a cluster 

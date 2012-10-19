@@ -62,6 +62,7 @@ public class FileContext extends AbstractMetricsContext {
   @InterfaceAudience.Private
   public FileContext() {}
     
+  @Override
   @InterfaceAudience.Private
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
@@ -92,6 +93,7 @@ public class FileContext extends AbstractMetricsContext {
    * if specified. Otherwise the data will be written to standard
    * output.
    */
+  @Override
   @InterfaceAudience.Private
   public void startMonitoring()
     throws IOException 
@@ -108,6 +110,7 @@ public class FileContext extends AbstractMetricsContext {
    * Stops monitoring, closing the file.
    * @see #close()
    */
+  @Override
   @InterfaceAudience.Private
   public void stopMonitoring() {
     super.stopMonitoring();
@@ -121,6 +124,7 @@ public class FileContext extends AbstractMetricsContext {
   /**
    * Emits a metrics record to a file.
    */
+  @Override
   @InterfaceAudience.Private
   public void emitRecord(String contextName, String recordName, OutputRecord outRec) {
     writer.print(contextName);
@@ -147,6 +151,7 @@ public class FileContext extends AbstractMetricsContext {
   /**
    * Flushes the output writer, forcing updates to disk.
    */
+  @Override
   @InterfaceAudience.Private
   public void flush() {
     writer.flush();

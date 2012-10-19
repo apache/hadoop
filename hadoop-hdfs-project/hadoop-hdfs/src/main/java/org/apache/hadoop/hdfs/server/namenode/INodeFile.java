@@ -59,17 +59,19 @@ public class INodeFile extends INode implements BlockCollection {
    * Since this is a file,
    * the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
+  @Override
   void setPermission(FsPermission permission) {
     super.setPermission(permission.applyUMask(UMASK));
   }
 
+  @Override
   boolean isDirectory() {
     return false;
   }
 
   /** @return the replication factor of the file. */
   @Override
-  public short getReplication() {
+  public short getBlockReplication() {
     return (short) ((header & HEADERMASK) >> BLOCKBITS);
   }
 
@@ -138,6 +140,7 @@ public class INodeFile extends INode implements BlockCollection {
     this.blocks[idx] = blk;
   }
 
+  @Override
   int collectSubtreeBlocksAndClear(List<Block> v) {
     parent = null;
     if(blocks != null && v != null) {
@@ -212,7 +215,7 @@ public class INodeFile extends INode implements BlockCollection {
         isUnderConstruction()) {
       size += getPreferredBlockSize() - blkArr[blkArr.length-1].getNumBytes();
     }
-    return size * getReplication();
+    return size * getBlockReplication();
   }
   
   /**

@@ -51,9 +51,6 @@ public class PipelinesTestUtil extends DataTransferTestUtil {
      this.name = name;
    }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void run(NodeBytes nb) throws IOException {
       synchronized (rcv) {

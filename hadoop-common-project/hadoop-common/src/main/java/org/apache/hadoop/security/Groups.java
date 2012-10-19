@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -75,7 +76,7 @@ public class Groups {
   public List<String> getGroups(String user) throws IOException {
     // Return cached value if available
     CachedGroups groups = userToGroupsMap.get(user);
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     // if cache has a value and it hasn't expired
     if (groups != null && (groups.getTimestamp() + cacheTimeout > now)) {
       if(LOG.isDebugEnabled()) {
@@ -134,7 +135,7 @@ public class Groups {
      */
     CachedGroups(List<String> groups) {
       this.groups = groups;
-      this.timestamp = System.currentTimeMillis();
+      this.timestamp = Time.now();
     }
 
     /**

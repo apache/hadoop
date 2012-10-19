@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.lib.wsrs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public abstract class IntegerParam extends Param<Integer> {
 
   public IntegerParam(String name, Integer defaultValue) {
     super(name, defaultValue);
   }
 
+  @Override
   protected Integer parse(String str) throws Exception {
     return Integer.parseInt(str);
   }

@@ -78,6 +78,7 @@ public class ExportedBlockKeys implements Writable {
   static { // register a ctor
     WritableFactories.setFactory(ExportedBlockKeys.class,
         new WritableFactory() {
+          @Override
           public Writable newInstance() {
             return new ExportedBlockKeys();
           }
@@ -86,6 +87,7 @@ public class ExportedBlockKeys implements Writable {
 
   /**
    */
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeBoolean(isBlockTokenEnabled);
     out.writeLong(keyUpdateInterval);
@@ -99,6 +101,7 @@ public class ExportedBlockKeys implements Writable {
 
   /**
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     isBlockTokenEnabled = in.readBoolean();
     keyUpdateInterval = in.readLong();

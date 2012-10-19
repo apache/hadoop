@@ -18,27 +18,29 @@
 
 package org.apache.hadoop.lib.util;
 
-import junit.framework.Assert;
-import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
 
 public class TestConfigurationUtils {
 
   @Test
   public void constructors() throws Exception {
     Configuration conf = new Configuration(false);
-    Assert.assertEquals(conf.size(), 0);
+    assertEquals(conf.size(), 0);
 
     byte[] bytes = "<configuration><property><name>a</name><value>A</value></property></configuration>".getBytes();
     InputStream is = new ByteArrayInputStream(bytes);
     conf = new Configuration(false);
     ConfigurationUtils.load(conf, is);
-    Assert.assertEquals(conf.size(), 1);
-    Assert.assertEquals(conf.get("a"), "A");
+    assertEquals(conf.size(), 1);
+    assertEquals(conf.get("a"), "A");
   }
 
 
@@ -62,9 +64,9 @@ public class TestConfigurationUtils {
 
     ConfigurationUtils.copy(srcConf, targetConf);
 
-    Assert.assertEquals("valueFromSource", targetConf.get("testParameter1"));
-    Assert.assertEquals("valueFromSource", targetConf.get("testParameter2"));
-    Assert.assertEquals("valueFromTarget", targetConf.get("testParameter3"));
+    assertEquals("valueFromSource", targetConf.get("testParameter1"));
+    assertEquals("valueFromSource", targetConf.get("testParameter2"));
+    assertEquals("valueFromTarget", targetConf.get("testParameter3"));
   }
 
   @Test
@@ -80,13 +82,13 @@ public class TestConfigurationUtils {
 
     ConfigurationUtils.injectDefaults(srcConf, targetConf);
 
-    Assert.assertEquals("valueFromSource", targetConf.get("testParameter1"));
-    Assert.assertEquals("originalValueFromTarget", targetConf.get("testParameter2"));
-    Assert.assertEquals("originalValueFromTarget", targetConf.get("testParameter3"));
+    assertEquals("valueFromSource", targetConf.get("testParameter1"));
+    assertEquals("originalValueFromTarget", targetConf.get("testParameter2"));
+    assertEquals("originalValueFromTarget", targetConf.get("testParameter3"));
 
-    Assert.assertEquals("valueFromSource", srcConf.get("testParameter1"));
-    Assert.assertEquals("valueFromSource", srcConf.get("testParameter2"));
-    Assert.assertNull(srcConf.get("testParameter3"));
+    assertEquals("valueFromSource", srcConf.get("testParameter1"));
+    assertEquals("valueFromSource", srcConf.get("testParameter2"));
+    assertNull(srcConf.get("testParameter3"));
   }
 
 
@@ -95,11 +97,11 @@ public class TestConfigurationUtils {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
     conf.set("b", "${a}");
-    Assert.assertEquals(conf.getRaw("a"), "A");
-    Assert.assertEquals(conf.getRaw("b"), "${a}");
+    assertEquals(conf.getRaw("a"), "A");
+    assertEquals(conf.getRaw("b"), "${a}");
     conf = ConfigurationUtils.resolve(conf);
-    Assert.assertEquals(conf.getRaw("a"), "A");
-    Assert.assertEquals(conf.getRaw("b"), "A");
+    assertEquals(conf.getRaw("a"), "A");
+    assertEquals(conf.getRaw("b"), "A");
   }
 
   @Test
@@ -110,16 +112,16 @@ public class TestConfigurationUtils {
     conf.set("b", "${a}");
     conf.set("c", "${user.name}");
     conf.set("d", "${aaa}");
-    Assert.assertEquals(conf.getRaw("a"), "A");
-    Assert.assertEquals(conf.getRaw("b"), "${a}");
-    Assert.assertEquals(conf.getRaw("c"), "${user.name}");
-    Assert.assertEquals(conf.get("a"), "A");
-    Assert.assertEquals(conf.get("b"), "A");
-    Assert.assertEquals(conf.get("c"), userName);
-    Assert.assertEquals(conf.get("d"), "${aaa}");
+    assertEquals(conf.getRaw("a"), "A");
+    assertEquals(conf.getRaw("b"), "${a}");
+    assertEquals(conf.getRaw("c"), "${user.name}");
+    assertEquals(conf.get("a"), "A");
+    assertEquals(conf.get("b"), "A");
+    assertEquals(conf.get("c"), userName);
+    assertEquals(conf.get("d"), "${aaa}");
 
     conf.set("user.name", "foo");
-    Assert.assertEquals(conf.get("user.name"), "foo");
+    assertEquals(conf.get("user.name"), "foo");
   }
 
 }

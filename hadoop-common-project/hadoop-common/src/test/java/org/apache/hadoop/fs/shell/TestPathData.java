@@ -26,23 +26,17 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestPathData {
-  protected static Configuration conf;
-  protected static FileSystem fs;
-  protected static String dirString;
-  protected static Path testDir;
-  protected static PathData item;
-  
-  protected static String[] d1Paths =
-    new String[] { "d1/f1", "d1/f1.1", "d1/f2" };
-  protected static String[] d2Paths =
-    new String[] { "d2/f3" };
-        
-  @BeforeClass
-  public static void initialize() throws Exception {
+  protected Configuration conf;
+  protected FileSystem fs;
+  protected Path testDir;
+
+  @Before
+  public void initialize() throws Exception {
     conf = new Configuration();
     fs = FileSystem.getLocal(conf);
     testDir = new Path(
@@ -60,23 +54,28 @@ public class TestPathData {
     fs.create(new Path("d2","f3"));
   }
 
+  @After
+  public void cleanup() throws Exception {
+    fs.close();
+  }
+
   @Test
   public void testWithDirStringAndConf() throws Exception {
-    dirString = "d1";
-    item = new PathData(dirString, conf);
-    checkPathData();
+    String dirString = "d1";
+    PathData item = new PathData(dirString, conf);
+    checkPathData(dirString, item);
 
     // properly implementing symlink support in various commands will require
     // trailing slashes to be retained
     dirString = "d1/";
     item = new PathData(dirString, conf);
-    checkPathData();
+    checkPathData(dirString, item);
   }
 
   @Test
   public void testUnqualifiedUriContents() throws Exception {
-    dirString = "d1";
-    item = new PathData(dirString, conf);
+    String dirString = "d1";
+    PathData item = new PathData(dirString, conf);
     PathData[] items = item.getDirectoryContents();
     assertEquals(
         sortedString("d1/f1", "d1/f1.1", "d1/f2"),
@@ -86,8 +85,8 @@ public class TestPathData {
 
   @Test
   public void testQualifiedUriContents() throws Exception {
-    dirString = fs.makeQualified(new Path("d1")).toString();
-    item = new PathData(dirString, conf);
+    String dirString = fs.makeQualified(new Path("d1")).toString();
+    PathData item = new PathData(dirString, conf);
     PathData[] items = item.getDirectoryContents();
     assertEquals(
         sortedString(dirString+"/f1", dirString+"/f1.1", dirString+"/f2"),
@@ -97,8 +96,8 @@ public class TestPathData {
 
   @Test
   public void testCwdContents() throws Exception {
-    dirString = Path.CUR_DIR;
-    item = new PathData(dirString, conf);
+    String dirString = Path.CUR_DIR;
+    PathData item = new PathData(dirString, conf);
     PathData[] items = item.getDirectoryContents();
     assertEquals(
         sortedString("d1", "d2"),
@@ -106,17 +105,16 @@ public class TestPathData {
     );
   }
 
-
-	@Test
-	public void testToFile() throws Exception {
-    item = new PathData(".", conf);
+  @Test
+  public void testToFile() throws Exception {
+    PathData item = new PathData(".", conf);
     assertEquals(new File(testDir.toString()), item.toFile());
-	  item = new PathData("d1/f1", conf);
-	  assertEquals(new File(testDir+"/d1/f1"), item.toFile());
-    item = new PathData(testDir+"/d1/f1", conf);
-    assertEquals(new File(testDir+"/d1/f1"), item.toFile());
-	}
-	
+    item = new PathData("d1/f1", conf);
+    assertEquals(new File(testDir + "/d1/f1"), item.toFile());
+    item = new PathData(testDir + "/d1/f1", conf);
+    assertEquals(new File(testDir + "/d1/f1"), item.toFile());
+  }
+
   @Test
   public void testAbsoluteGlob() throws Exception {
     PathData[] items = PathData.expandAsGlob(testDir+"/d1/f1*", conf);
@@ -147,18 +145,18 @@ public class TestPathData {
 
   @Test
   public void testWithStringAndConfForBuggyPath() throws Exception {
-    dirString = "file:///tmp";
-    testDir = new Path(dirString);
-    item = new PathData(dirString, conf);
+    String dirString = "file:///tmp";
+    Path tmpDir = new Path(dirString);
+    PathData item = new PathData(dirString, conf);
     // this may fail some day if Path is fixed to not crunch the uri
     // if the authority is null, however we need to test that the PathData
     // toString() returns the given string, while Path toString() does
     // the crunching
-    assertEquals("file:/tmp", testDir.toString());
-    checkPathData();
+    assertEquals("file:/tmp", tmpDir.toString());
+    checkPathData(dirString, item);
   }
 
-  public void checkPathData() throws Exception {
+  public void checkPathData(String dirString, PathData item) throws Exception {
     assertEquals("checking fs", fs, item.fs);
     assertEquals("checking string", dirString, item.toString());
     assertEquals("checking path",

@@ -238,7 +238,7 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
       stat.getSetupProgress(), stat.getMapProgress(), stat.getReduceProgress(),
       stat.getCleanupProgress(), stat.getState().getValue(), 
       JobPriority.valueOf(stat.getPriority().name()),
-      stat.getUsername(), stat.getJobName(), stat.getJobFile(),
+      stat.getUsername(), stat.getJobName(), stat.getQueue(), stat.getJobFile(),
       stat.getTrackingUrl(), stat.isUber());
     old.setStartTime(stat.getStartTime());
     old.setFinishTime(stat.getFinishTime());

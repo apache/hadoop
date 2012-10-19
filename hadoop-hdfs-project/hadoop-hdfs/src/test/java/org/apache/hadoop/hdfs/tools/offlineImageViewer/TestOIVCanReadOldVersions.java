@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.SpotCheckImageVisitor.ImageInfo;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-
-public class TestOIVCanReadOldVersions extends TestCase {
+public class TestOIVCanReadOldVersions {
   // Location of fsimage files during testing.
   public static final String TEST_CACHE_DATA_DIR =
     System.getProperty("test.cache.data", "build/test/cache");
@@ -35,6 +37,7 @@ public class TestOIVCanReadOldVersions extends TestCase {
   // layout versions.  These fsimages were previously generated and stored
   // with the test.  Test success indicates that no changes have been made
   // to the OIV that causes older fsimages to be incorrectly processed.
+  @Test
   public void testOldFSImages() {
     // Define the expected values from the prior versions, as they were created
     // and verified at time of creation

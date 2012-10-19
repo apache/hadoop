@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.util.Time;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -275,11 +276,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public void resetBlocks() {
-    this.capacity = 0;
-    this.remaining = 0;
-    this.blockPoolUsed = 0;
-    this.dfsUsed = 0;
-    this.xceiverCount = 0;
+    setCapacity(0);
+    setRemaining(0);
+    setBlockPoolUsed(0);
+    setDfsUsed(0);
+    setXceiverCount(0);
     this.blockList = null;
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
@@ -302,15 +303,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public void updateHeartbeat(long capacity, long dfsUsed, long remaining,
       long blockPoolUsed, int xceiverCount, int volFailures) {
-    this.capacity = capacity;
-    this.dfsUsed = dfsUsed;
-    this.remaining = remaining;
-    this.blockPoolUsed = blockPoolUsed;
-    this.lastUpdate = System.currentTimeMillis();
-    this.xceiverCount = xceiverCount;
+    setCapacity(capacity);
+    setRemaining(remaining);
+    setBlockPoolUsed(blockPoolUsed);
+    setDfsUsed(dfsUsed);
+    setXceiverCount(xceiverCount);
+    setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
     this.heartbeatedSinceFailover = true;
-    rollBlocksScheduled(lastUpdate);
+    rollBlocksScheduled(getLastUpdate());
   }
 
   /**
@@ -325,16 +326,19 @@ public class DatanodeDescriptor extends DatanodeInfo {
       this.node = dn;
     }
 
+    @Override
     public boolean hasNext() {
       return current != null;
     }
 
+    @Override
     public BlockInfo next() {
       BlockInfo res = current;
       current = current.getNext(current.findDatanode(node));
       return res;
     }
 
+    @Override
     public void remove()  {
       throw new UnsupportedOperationException("Sorry. can't remove.");
     }
@@ -541,6 +545,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * @param nodeReg DatanodeID to update registration for.
    */
+  @Override
   public void updateRegInfo(DatanodeID nodeReg) {
     super.updateRegInfo(nodeReg);
   }

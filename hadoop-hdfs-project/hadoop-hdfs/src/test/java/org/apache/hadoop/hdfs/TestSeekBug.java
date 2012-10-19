@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumFileSystem;
@@ -29,24 +30,15 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.junit.Test;
 
 /**
  * This class tests the presence of seek bug as described
  * in HADOOP-508 
  */
-public class TestSeekBug extends TestCase {
+public class TestSeekBug {
   static final long seed = 0xDEADBEEFL;
   static final int ONEMB = 1 << 20;
-  
-  private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    // create and write a file that contains 1MB
-    DataOutputStream stm = fileSys.create(name);
-    byte[] buffer = new byte[ONEMB];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
@@ -123,13 +115,16 @@ public class TestSeekBug extends TestCase {
   /**
    * Test if the seek bug exists in FSDataInputStream in DFS.
    */
+  @Test
   public void testSeekBugDFS() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("seektest.dat");
-      writeFile(fileSys, file1);
+      DFSTestUtil.createFile(fileSys, file1, ONEMB, ONEMB,
+          fileSys.getDefaultBlockSize(file1),
+          fileSys.getDefaultReplication(file1), seed);
       seekReadFile(fileSys, file1);
       smallReadSeek(fileSys, file1);
       cleanupFile(fileSys, file1);
@@ -142,12 +137,15 @@ public class TestSeekBug extends TestCase {
   /**
    * Tests if the seek bug exists in FSDataInputStream in LocalFS.
    */
+  @Test
   public void testSeekBugLocalFS() throws IOException {
     Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path("build/test/data", "seektest.dat");
-      writeFile(fileSys, file1);
+      DFSTestUtil.createFile(fileSys, file1, ONEMB, ONEMB,
+          fileSys.getDefaultBlockSize(file1),
+          fileSys.getDefaultReplication(file1), seed);
       seekReadFile(fileSys, file1);
       cleanupFile(fileSys, file1);
     } finally {

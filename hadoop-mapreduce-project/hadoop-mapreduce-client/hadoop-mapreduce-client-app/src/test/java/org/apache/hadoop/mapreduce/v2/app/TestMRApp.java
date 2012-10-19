@@ -180,7 +180,7 @@ public class TestMRApp {
   @Test
   public void testUpdatedNodes() throws Exception {
     int runCount = 0;
-    MRApp app = new MRAppWithHistory(2, 1, false, this.getClass().getName(),
+    MRApp app = new MRAppWithHistory(2, 2, false, this.getClass().getName(),
         true, ++runCount);
     Configuration conf = new Configuration();
     // after half of the map completion, reduce will start
@@ -189,7 +189,7 @@ public class TestMRApp {
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("Num tasks not correct", 3, job.getTasks().size());
+    Assert.assertEquals("Num tasks not correct", 4, job.getTasks().size());
     Iterator<Task> it = job.getTasks().values().iterator();
     Task mapTask1 = it.next();
     Task mapTask2 = it.next();
@@ -272,18 +272,19 @@ public class TestMRApp {
 
     // rerun
     // in rerun the 1st map will be recovered from previous run
-    app = new MRAppWithHistory(2, 1, false, this.getClass().getName(), false,
+    app = new MRAppWithHistory(2, 2, false, this.getClass().getName(), false,
         ++runCount);
     conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals("No of tasks not correct", 3, job.getTasks().size());
+    Assert.assertEquals("No of tasks not correct", 4, job.getTasks().size());
     it = job.getTasks().values().iterator();
     mapTask1 = it.next();
     mapTask2 = it.next();
-    Task reduceTask = it.next();
+    Task reduceTask1 = it.next();
+    Task reduceTask2 = it.next();
 
     // map 1 will be recovered, no need to send done
     app.waitForState(mapTask1, TaskState.SUCCEEDED);
@@ -306,19 +307,36 @@ public class TestMRApp {
     Assert.assertEquals("Expecting 1 more completion events for success", 3,
         events.length);
 
-    app.waitForState(reduceTask, TaskState.RUNNING);
-    TaskAttempt task3Attempt = reduceTask.getAttempts().values().iterator()
+    app.waitForState(reduceTask1, TaskState.RUNNING);
+    app.waitForState(reduceTask2, TaskState.RUNNING);
+
+    TaskAttempt task3Attempt = reduceTask1.getAttempts().values().iterator()
         .next();
     app.getContext()
         .getEventHandler()
         .handle(
             new TaskAttemptEvent(task3Attempt.getID(),
                 TaskAttemptEventType.TA_DONE));
-    app.waitForState(reduceTask, TaskState.SUCCEEDED);
+    app.waitForState(reduceTask1, TaskState.SUCCEEDED);
+    app.getContext()
+    .getEventHandler()
+    .handle(
+        new TaskAttemptEvent(task3Attempt.getID(),
+            TaskAttemptEventType.TA_KILL));
+    app.waitForState(reduceTask1, TaskState.SUCCEEDED);
+    
+    TaskAttempt task4Attempt = reduceTask2.getAttempts().values().iterator()
+        .next();
+    app.getContext()
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task4Attempt.getID(),
+                TaskAttemptEventType.TA_DONE));
+    app.waitForState(reduceTask2, TaskState.SUCCEEDED);    
 
     events = job.getTaskAttemptCompletionEvents(0, 100);
-    Assert.assertEquals("Expecting 1 more completion events for success", 4,
-        events.length);
+    Assert.assertEquals("Expecting 2 more completion events for reduce success",
+        5, events.length);
 
     // job succeeds
     app.waitForState(job, JobState.SUCCEEDED);

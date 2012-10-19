@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
@@ -226,7 +227,7 @@ class BPServiceActor implements Runnable {
    */
   void scheduleBlockReport(long delay) {
     if (delay > 0) { // send BR after random delay
-      lastBlockReport = System.currentTimeMillis()
+      lastBlockReport = Time.now()
       - ( dnConf.blockReportInterval - DFSUtil.getRandom().nextInt((int)(delay)));
     } else { // send at next heartbeat
       lastBlockReport = lastHeartbeat - dnConf.blockReportInterval;
@@ -323,7 +324,7 @@ class BPServiceActor implements Runnable {
    * Run an immediate block report on this thread. Used by tests.
    */
   @VisibleForTesting
-  void triggerBlockReportForTests() throws IOException {
+  void triggerBlockReportForTests() {
     synchronized (pendingIncrementalBR) {
       lastBlockReport = 0;
       lastHeartbeat = 0;
@@ -339,7 +340,7 @@ class BPServiceActor implements Runnable {
   }
   
   @VisibleForTesting
-  void triggerHeartbeatForTests() throws IOException {
+  void triggerHeartbeatForTests() {
     synchronized (pendingIncrementalBR) {
       lastHeartbeat = 0;
       pendingIncrementalBR.notifyAll();
@@ -354,7 +355,7 @@ class BPServiceActor implements Runnable {
   }
 
   @VisibleForTesting
-  void triggerDeletionReportForTests() throws IOException {
+  void triggerDeletionReportForTests() {
     synchronized (pendingIncrementalBR) {
       lastDeletedReport = 0;
       pendingIncrementalBR.notifyAll();
@@ -561,7 +562,7 @@ class BPServiceActor implements Runnable {
         // or work arrives, and then iterate again.
         //
         long waitTime = dnConf.heartBeatInterval - 
-        (System.currentTimeMillis() - lastHeartbeat);
+        (Time.now() - lastHeartbeat);
         synchronized(pendingIncrementalBR) {
           if (waitTime > 0 && pendingReceivedRequests == 0) {
             try {
@@ -669,7 +670,6 @@ class BPServiceActor implements Runnable {
       
       while (shouldRun()) {
         try {
-          bpos.startDistributedUpgradeIfNeeded();
           offerService();
         } catch (Exception ex) {
           LOG.error("Exception in BPOfferService for " + this, ex);

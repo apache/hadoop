@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -43,6 +44,8 @@ import org.apache.hadoop.util.ToolRunner;
 public class GetGroups extends GetGroupsBase {
   
   private static final Log LOG = LogFactory.getLog(GetGroups.class);
+  
+  static final String USAGE = "Usage: hdfs groups [username ...]";
 
   static{
     HdfsConfiguration.init();
@@ -86,6 +89,10 @@ public class GetGroups extends GetGroupsBase {
   }
 
   public static void main(String[] argv) throws Exception {
+    if (DFSUtil.parseHelpArgument(argv, USAGE, System.out, true)) {
+      System.exit(0);
+    }
+    
     int res = ToolRunner.run(new GetGroups(new HdfsConfiguration()), argv);
     System.exit(res);
   }

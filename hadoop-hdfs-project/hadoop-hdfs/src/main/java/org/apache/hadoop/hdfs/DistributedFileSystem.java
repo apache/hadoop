@@ -32,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.BlockStorageLocation;
+import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -52,12 +55,11 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
@@ -189,6 +191,36 @@ public class DistributedFileSystem extends FileSystem {
 
   }
 
+  /**
+   * Used to query storage location information for a list of blocks. This list
+   * of blocks is normally constructed via a series of calls to
+   * {@link DistributedFileSystem#getFileBlockLocations(Path, long, long)} to
+   * get the blocks for ranges of a file.
+   * 
+   * The returned array of {@link BlockStorageLocation} augments
+   * {@link BlockLocation} with a {@link VolumeId} per block replica. The
+   * VolumeId specifies the volume on the datanode on which the replica resides.
+   * The VolumeId has to be checked via {@link VolumeId#isValid()} before being
+   * used because volume information can be unavailable if the corresponding
+   * datanode is down or if the requested block is not found.
+   * 
+   * This API is unstable, and datanode-side support is disabled by default. It
+   * can be enabled by setting "dfs.datanode.hdfs-blocks-metadata.enabled" to
+   * true.
+   * 
+   * @param blocks
+   *          List of target BlockLocations to query volume location information
+   * @return volumeBlockLocations Augmented array of
+   *         {@link BlockStorageLocation}s containing additional volume location
+   *         information for each replica of each block.
+   */
+  @InterfaceStability.Unstable
+  public BlockStorageLocation[] getFileBlockStorageLocations(
+      List<BlockLocation> blocks) throws IOException, 
+      UnsupportedOperationException, InvalidBlockTokenException {
+    return dfs.getBlockStorageLocations(blocks);
+  }
+
   @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
     this.verifyChecksum = verifyChecksum;
@@ -225,19 +257,19 @@ public class DistributedFileSystem extends FileSystem {
   public HdfsDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
-    return create(f, permission,
+    return this.create(f, permission,
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), bufferSize, replication,
-        blockSize, progress);
+        blockSize, progress, null);
   }
   
   @Override
   public HdfsDataOutputStream create(Path f, FsPermission permission,
     EnumSet<CreateFlag> cflags, int bufferSize, short replication, long blockSize,
-    Progressable progress) throws IOException {
+    Progressable progress, ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
     final DFSOutputStream out = dfs.create(getPathName(f), permission, cflags,
-        replication, blockSize, progress, bufferSize);
+        replication, blockSize, progress, bufferSize, checksumOpt);
     return new HdfsDataOutputStream(out, statistics);
   }
   
@@ -246,11 +278,11 @@ public class DistributedFileSystem extends FileSystem {
   protected HdfsDataOutputStream primitiveCreate(Path f,
     FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
     short replication, long blockSize, Progressable progress,
-    int bytesPerChecksum) throws IOException {
-    statistics.incrementReadOps(1);
+    ChecksumOpt checksumOpt) throws IOException {
+    statistics.incrementWriteOps(1);
     return new HdfsDataOutputStream(dfs.primitiveCreate(getPathName(f),
         absolutePermission, flag, true, replication, blockSize,
-        progress, bufferSize, bytesPerChecksum),statistics);
+        progress, bufferSize, checksumOpt),statistics);
    } 
 
   /**
@@ -265,7 +297,8 @@ public class DistributedFileSystem extends FileSystem {
       flag.add(CreateFlag.CREATE);
     }
     return new HdfsDataOutputStream(dfs.create(getPathName(f), permission, flag,
-        false, replication, blockSize, progress, bufferSize), statistics);
+        false, replication, blockSize, progress, 
+        bufferSize, null), statistics);
   }
 
   @Override
@@ -502,10 +535,10 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public void close() throws IOException {
     try {
-      super.processDeleteOnExit();
-      dfs.close();
-    } finally {
+      dfs.closeOutputStreams(false);
       super.close();
+    } finally {
+      dfs.close();
     }
   }
 
@@ -591,6 +624,16 @@ public class DistributedFileSystem extends FileSystem {
   public void saveNamespace() throws AccessControlException, IOException {
     dfs.saveNamespace();
   }
+  
+  /**
+   * Rolls the edit log on the active NameNode.
+   * Requires super-user privileges.
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#rollEdits()
+   * @return the transaction ID of the newly created segment
+   */
+  public long rollEdits() throws AccessControlException, IOException {
+    return dfs.rollEdits();
+  }
 
   /**
    * enable/disable/check restoreFaileStorage
@@ -617,11 +660,6 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void finalizeUpgrade() throws IOException {
     dfs.finalizeUpgrade();
-  }
-
-  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action
-  ) throws IOException {
-    return dfs.distributedUpgradeProgress(action);
   }
 
   /*
@@ -765,14 +803,6 @@ public class DistributedFileSystem extends FileSystem {
     return getDelegationToken(renewer.toString());
   }
   
-  @Override // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    List<Token<?>> tokenList = new ArrayList<Token<?>>();
-    Token<DelegationTokenIdentifier> token = this.getDelegationToken(renewer);
-    tokenList.add(token);
-    return tokenList;
-  }
-
   /**
    * Renew an existing delegation token.
    * 

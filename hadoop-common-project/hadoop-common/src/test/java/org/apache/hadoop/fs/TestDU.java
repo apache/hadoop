@@ -29,11 +29,13 @@ public class TestDU extends TestCase {
   final static private File DU_DIR = new File(
       System.getProperty("test.build.data","/tmp"), "dutmp");
 
+  @Override
   public void setUp() {
       FileUtil.fullyDelete(DU_DIR);
       assertTrue(DU_DIR.mkdirs());
   }
 
+  @Override
   public void tearDown() throws IOException {
       FileUtil.fullyDelete(DU_DIR);
   }

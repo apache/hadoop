@@ -296,6 +296,7 @@ public class MapFile {
     }
 
     /** Close the map. */
+    @Override
     public synchronized void close() throws IOException {
       data.close();
       index.close();
@@ -723,6 +724,7 @@ public class MapFile {
     }
 
     /** Close the map. */
+    @Override
     public synchronized void close() throws IOException {
       if (!indexClosed) {
         index.close();
