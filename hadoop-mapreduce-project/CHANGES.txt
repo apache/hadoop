@@ -146,9 +146,6 @@ Trunk (Unreleased)
     MAPREDUCE-4574. Fix TotalOrderParitioner to work with
     non-WritableComparable key types. (harsh)
 
-    MAPREDUCE-4736. Remove obsolete option [-rootDir] from TestDFSIO.
-    (Brandon Li via suresh)
-
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -188,6 +185,9 @@ Release 2.0.3-alpha - Unreleased
     (Vinod Kumar Vavilapalli via tgraves)
 
     MAPREDUCE-4654. TestDistCp is ignored. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4736. Remove obsolete option [-rootDir] from TestDFSIO.
+    (Brandon Li via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
