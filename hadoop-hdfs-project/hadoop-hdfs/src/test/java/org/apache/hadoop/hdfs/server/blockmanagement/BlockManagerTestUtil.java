@@ -191,4 +191,12 @@ public class BlockManagerTestUtil {
         "Must use default policy, got %s", bpp.getClass());
     ((BlockPlacementPolicyDefault)bpp).setPreferLocalNode(prefer);
   }
+  
+  /**
+   * Call heartbeat check function of HeartbeatManager
+   * @param bm the BlockManager to manipulate
+   */
+  public static void checkHeartbeat(BlockManager bm) {
+    bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
+  }
 }

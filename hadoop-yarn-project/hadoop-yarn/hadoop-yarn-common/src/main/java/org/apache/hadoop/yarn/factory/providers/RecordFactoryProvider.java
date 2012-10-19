@@ -58,7 +58,7 @@ public class RecordFactoryProvider {
   
   private static Object getFactoryClassInstance(String factoryClassName) {
     try {
-      Class clazz = Class.forName(factoryClassName);
+      Class<?> clazz = Class.forName(factoryClassName);
       Method method = clazz.getMethod("get", null);
       method.setAccessible(true);
       return method.invoke(null, null);

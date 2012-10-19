@@ -130,6 +130,10 @@ public class MutableMetricsFactory {
     return Interns.info(name2, about.isEmpty() ? name2 : about);
   }
 
+  /**
+   * Remove the prefix "get", if any, from the method name. Return the
+   * capacitalized method name."
+   */
   protected String getName(Method method) {
     String methodName = method.getName();
     if (methodName.startsWith("get")) {
@@ -140,12 +144,15 @@ public class MutableMetricsFactory {
 
   protected MetricsInfo getInfo(Metric annotation, String defaultName) {
     String[] value = annotation.value();
-     if (value.length == 2) {
+    if (value.length == 2) {
+      // Use name and description from the annotation
       return Interns.info(value[0], value[1]);
     }
     if (value.length == 1) {
+      // Use description from the annotation and method name as metric name
       return Interns.info(defaultName, value[0]);
     }
+    // Use method name as metric name and description
     return Interns.info(defaultName, defaultName);
   }
 }

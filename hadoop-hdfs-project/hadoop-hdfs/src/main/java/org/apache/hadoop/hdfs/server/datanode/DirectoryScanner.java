@@ -431,16 +431,16 @@ public class DirectoryScanner implements Runnable {
   private Map<String, ScanInfo[]> getDiskReport() {
     // First get list of data directories
     final List<? extends FsVolumeSpi> volumes = dataset.getVolumes();
-    ArrayList<ScanInfoPerBlockPool> dirReports =
-      new ArrayList<ScanInfoPerBlockPool>(volumes.size());
-    
+
+    // Use an array since the threads may return out of order and
+    // compilersInProgress#keySet may return out of order as well.
+    ScanInfoPerBlockPool[] dirReports = new ScanInfoPerBlockPool[volumes.size()];
+
     Map<Integer, Future<ScanInfoPerBlockPool>> compilersInProgress =
       new HashMap<Integer, Future<ScanInfoPerBlockPool>>();
+
     for (int i = 0; i < volumes.size(); i++) {
-      if (!isValid(dataset, volumes.get(i))) {
-        // volume is invalid
-        dirReports.add(i, null);
-      } else {
+      if (isValid(dataset, volumes.get(i))) {
         ReportCompiler reportCompiler =
           new ReportCompiler(volumes.get(i));
         Future<ScanInfoPerBlockPool> result = 
@@ -452,7 +452,7 @@ public class DirectoryScanner implements Runnable {
     for (Entry<Integer, Future<ScanInfoPerBlockPool>> report :
         compilersInProgress.entrySet()) {
       try {
-        dirReports.add(report.getKey(), report.getValue().get());
+        dirReports[report.getKey()] = report.getValue().get();
       } catch (Exception ex) {
         LOG.error("Error compiling report", ex);
         // Propagate ex to DataBlockScanner to deal with
@@ -465,7 +465,7 @@ public class DirectoryScanner implements Runnable {
     for (int i = 0; i < volumes.size(); i++) {
       if (isValid(dataset, volumes.get(i))) {
         // volume is still valid
-        list.addAll(dirReports.get(i));
+        list.addAll(dirReports[i]);
       }
     }
 

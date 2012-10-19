@@ -288,7 +288,7 @@ public class BlockManager {
   }
 
   private static BlockTokenSecretManager createBlockTokenSecretManager(
-      final Configuration conf) throws IOException {
+      final Configuration conf) {
     final boolean isEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT);
@@ -1260,7 +1260,7 @@ public class BlockManager {
           // Move the block-replication into a "pending" state.
           // The reason we use 'pending' is so we can retry
           // replications that fail after an appropriate amount of time.
-          pendingReplications.add(block, targets.length);
+          pendingReplications.increment(block, targets.length);
           if(NameNode.stateChangeLog.isDebugEnabled()) {
             NameNode.stateChangeLog.debug(
                 "BLOCK* block " + block
@@ -1306,8 +1306,11 @@ public class BlockManager {
 
   /**
    * Choose target datanodes according to the replication policy.
-   * @throws IOException if the number of targets < minimum replication.
-   * @see BlockPlacementPolicy#chooseTarget(String, int, DatanodeDescriptor, HashMap, long)
+   * 
+   * @throws IOException
+   *           if the number of targets < minimum replication.
+   * @see BlockPlacementPolicy#chooseTarget(String, int, DatanodeDescriptor,
+   *      List, boolean, HashMap, long)
    */
   public DatanodeDescriptor[] chooseTarget(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
@@ -1811,7 +1814,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
   /**
    * Queue the given reported block for later processing in the
-   * standby node. {@see PendingDataNodeMessages}.
+   * standby node. @see PendingDataNodeMessages.
    * @param reason a textual reason to report in the debug logs
    */
   private void queueReportedBlock(DatanodeDescriptor dn, Block block,
@@ -1976,14 +1979,15 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   }
   
   /**
-   * Faster version of {@link addStoredBlock()}, intended for use with 
-   * initial block report at startup.  If not in startup safe mode, will
-   * call standard addStoredBlock().
-   * Assumes this method is called "immediately" so there is no need to
-   * refresh the storedBlock from blocksMap.
-   * Doesn't handle underReplication/overReplication, or worry about
+   * Faster version of
+   * {@link #addStoredBlock(BlockInfo, DatanodeDescriptor, DatanodeDescriptor, boolean)}
+   * , intended for use with initial block report at startup. If not in startup
+   * safe mode, will call standard addStoredBlock(). Assumes this method is
+   * called "immediately" so there is no need to refresh the storedBlock from
+   * blocksMap. Doesn't handle underReplication/overReplication, or worry about
    * pendingReplications or corruptReplicas, because it's in startup safe mode.
    * Doesn't log every block, because there are typically millions of them.
+   * 
    * @throws IOException
    */
   private void addStoredBlockImmediate(BlockInfo storedBlock,
@@ -2505,7 +2509,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     //
     // Modify the blocks->datanode map and node's map.
     //
-    pendingReplications.remove(block);
+    pendingReplications.decrement(block);
     processAndHandleReportedBlock(node, block, ReplicaState.FINALIZED,
         delHintNode);
   }
@@ -2641,7 +2645,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   }
 
   /** 
-   * Simpler, faster form of {@link countNodes()} that only returns the number
+   * Simpler, faster form of {@link #countNodes(Block)} that only returns the number
    * of live nodes.  If in startup safemode (or its 30-sec extension period),
    * then it gains speed by ignoring issues of excess replicas or nodes
    * that are decommissioned or in process of becoming decommissioned.
@@ -2790,6 +2794,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block);
+    // Remove the block from pendingReplications
+    pendingReplications.remove(block);
     if (postponedMisreplicatedBlocks.remove(block)) {
       postponedMisreplicatedBlocksCount--;
     }
@@ -2856,6 +2862,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * @return number of blocks scheduled for removal during this iteration.
    */
   private int invalidateWorkForOneNode(String nodeId) {
+    final List<Block> toInvalidate;
+    final DatanodeDescriptor dn;
+    
     namesystem.writeLock();
     try {
       // blocks should not be replicated or removed if safe mode is on
@@ -2865,10 +2874,23 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       }
       // get blocks to invalidate for the nodeId
       assert nodeId != null;
-      return invalidateBlocks.invalidateWork(nodeId);
+      dn = datanodeManager.getDatanode(nodeId);
+      if (dn == null) {
+        invalidateBlocks.remove(nodeId);
+        return 0;
+      }
+      toInvalidate = invalidateBlocks.invalidateWork(nodeId, dn);
+      if (toInvalidate == null) {
+        return 0;
+      }
     } finally {
       namesystem.writeUnlock();
     }
+    if (NameNode.stateChangeLog.isInfoEnabled()) {
+      NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
+          + ": ask " + dn + " to delete " + toInvalidate);
+    }
+    return toInvalidate.size();
   }
 
   boolean blockHasEnoughRacks(Block b) {

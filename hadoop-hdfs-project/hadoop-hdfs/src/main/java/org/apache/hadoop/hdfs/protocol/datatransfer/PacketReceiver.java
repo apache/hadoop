@@ -53,14 +53,8 @@ public class PacketReceiver implements Closeable {
   private final boolean useDirectBuffers;
 
   /**
-   * Internal buffer for reading the length prefixes at the start of
-   * the packet.
-   */
-  private final ByteBuffer lengthPrefixBuf = ByteBuffer.allocate(
-      PacketHeader.PKT_LENGTHS_LEN);
-
-  /**
-   * The entirety of the most recently read packet, excepting the
+   * The entirety of the most recently read packet.
+   * The first PKT_LENGTHS_LEN bytes of this buffer are the
    * length prefixes.
    */
   private ByteBuffer curPacketBuf = null;
@@ -82,6 +76,7 @@ public class PacketReceiver implements Closeable {
   
   public PacketReceiver(boolean useDirectBuffers) {
     this.useDirectBuffers = useDirectBuffers;
+    reallocPacketBuf(PacketHeader.PKT_LENGTHS_LEN);
   }
 
   public PacketHeader getHeader() {
@@ -133,11 +128,12 @@ public class PacketReceiver implements Closeable {
     //            checksums were not requested
     // DATA       the actual block data
     Preconditions.checkState(curHeader == null || !curHeader.isLastPacketInBlock());
-    
-    lengthPrefixBuf.clear();
-    doReadFully(ch, in, lengthPrefixBuf);
-    lengthPrefixBuf.flip();
-    int payloadLen = lengthPrefixBuf.getInt();
+
+    curPacketBuf.clear();
+    curPacketBuf.limit(PacketHeader.PKT_LENGTHS_LEN);
+    doReadFully(ch, in, curPacketBuf);
+    curPacketBuf.flip();
+    int payloadLen = curPacketBuf.getInt();
     
     if (payloadLen < Ints.BYTES) {
       // The "payload length" includes its own length. Therefore it
@@ -146,7 +142,7 @@ public class PacketReceiver implements Closeable {
           payloadLen);
     }
     int dataPlusChecksumLen = payloadLen - Ints.BYTES;
-    int headerLen = lengthPrefixBuf.getShort();
+    int headerLen = curPacketBuf.getShort();
     if (headerLen < 0) {
       throw new IOException("Invalid header length " + headerLen);
     }
@@ -166,13 +162,17 @@ public class PacketReceiver implements Closeable {
 
     // Make sure we have space for the whole packet, and
     // read it.
-    reallocPacketBuf(dataPlusChecksumLen + headerLen);
+    reallocPacketBuf(PacketHeader.PKT_LENGTHS_LEN +
+        dataPlusChecksumLen + headerLen);
     curPacketBuf.clear();
-    curPacketBuf.limit(dataPlusChecksumLen + headerLen);
+    curPacketBuf.position(PacketHeader.PKT_LENGTHS_LEN);
+    curPacketBuf.limit(PacketHeader.PKT_LENGTHS_LEN +
+        dataPlusChecksumLen + headerLen);
     doReadFully(ch, in, curPacketBuf);
     curPacketBuf.flip();
+    curPacketBuf.position(PacketHeader.PKT_LENGTHS_LEN);
 
-    // Extract the header from the front of the buffer.
+    // Extract the header from the front of the buffer (after the length prefixes)
     byte[] headerBuf = new byte[headerLen];
     curPacketBuf.get(headerBuf);
     if (curHeader == null) {
@@ -197,10 +197,6 @@ public class PacketReceiver implements Closeable {
   public void mirrorPacketTo(DataOutputStream mirrorOut) throws IOException {
     Preconditions.checkState(!useDirectBuffers,
         "Currently only supported for non-direct buffers");
-    assert lengthPrefixBuf.capacity() == PacketHeader.PKT_LENGTHS_LEN;
-    mirrorOut.write(lengthPrefixBuf.array(),
-        lengthPrefixBuf.arrayOffset(),
-        lengthPrefixBuf.capacity());
     mirrorOut.write(curPacketBuf.array(),
         curPacketBuf.arrayOffset(),
         curPacketBuf.remaining());
@@ -223,23 +219,36 @@ public class PacketReceiver implements Closeable {
 
   private void reslicePacket(
       int headerLen, int checksumsLen, int dataLen) {
+    // Packet structure (refer to doRead() for details):
+    //   PLEN    HLEN      HEADER     CHECKSUMS  DATA
+    //   32-bit  16-bit   <protobuf>  <variable length>
+    //   |--- lenThroughHeader ----|
+    //   |----------- lenThroughChecksums   ----|
+    //   |------------------- lenThroughData    ------| 
+    int lenThroughHeader = PacketHeader.PKT_LENGTHS_LEN + headerLen;
+    int lenThroughChecksums = lenThroughHeader + checksumsLen;
+    int lenThroughData = lenThroughChecksums + dataLen;
+
     assert dataLen >= 0 : "invalid datalen: " + dataLen;
-    
-    assert curPacketBuf.position() == headerLen;
-    assert checksumsLen + dataLen == curPacketBuf.remaining() :
+    assert curPacketBuf.position() == lenThroughHeader;
+    assert curPacketBuf.limit() == lenThroughData :
       "headerLen= " + headerLen + " clen=" + checksumsLen + " dlen=" + dataLen +
       " rem=" + curPacketBuf.remaining();
-    
-    curPacketBuf.position(headerLen);
-    curPacketBuf.limit(headerLen + checksumsLen);
+
+    // Slice the checksums.
+    curPacketBuf.position(lenThroughHeader);
+    curPacketBuf.limit(lenThroughChecksums);
     curChecksumSlice = curPacketBuf.slice();
 
-    curPacketBuf.position(headerLen + checksumsLen);
-    curPacketBuf.limit(headerLen + checksumsLen + dataLen);
+    // Slice the data.
+    curPacketBuf.position(lenThroughChecksums);
+    curPacketBuf.limit(lenThroughData);
     curDataSlice = curPacketBuf.slice();
     
+    // Reset buffer to point to the entirety of the packet (including
+    // length prefixes)
     curPacketBuf.position(0);
-    curPacketBuf.limit(headerLen + checksumsLen + dataLen);
+    curPacketBuf.limit(lenThroughData);
   }
 
   
@@ -258,12 +267,21 @@ public class PacketReceiver implements Closeable {
     // one.
     if (curPacketBuf == null ||
         curPacketBuf.capacity() < atLeastCapacity) {
-      returnPacketBufToPool();
+      ByteBuffer newBuf;
       if (useDirectBuffers) {
-        curPacketBuf = bufferPool.getBuffer(atLeastCapacity);
+        newBuf = bufferPool.getBuffer(atLeastCapacity);
       } else {
-        curPacketBuf = ByteBuffer.allocate(atLeastCapacity);
+        newBuf = ByteBuffer.allocate(atLeastCapacity);
       }
+      // If reallocing an existing buffer, copy the old packet length
+      // prefixes over
+      if (curPacketBuf != null) {
+        curPacketBuf.flip();
+        newBuf.put(curPacketBuf);
+      }
+      
+      returnPacketBufToPool();
+      curPacketBuf = newBuf;
     }
   }
   

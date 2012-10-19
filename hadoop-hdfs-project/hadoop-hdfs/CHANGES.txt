@@ -147,6 +147,9 @@ Trunk (Unreleased)
     Block Pool Used, Block Pool Used(%) and Failed Volumes.
     (Brahma Reddy Battula via suresh)
 
+    HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
+    (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -223,8 +226,6 @@ Trunk (Unreleased)
 
     HDFS-3834. Remove unused static fields NAME, DESCRIPTION and Usage from
     Command. (Jing Zhao via suresh)
-
-    HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
@@ -343,6 +344,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3912. Detect and avoid stale datanodes for writes.
     (Jing Zhao via suresh)
 
+    HDFS-4059. Add number of stale DataNodes to metrics. (Jing Zhao via suresh)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log
@@ -387,6 +390,20 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4036. Remove "throw UnresolvedLinkException" from
     FSDirectory.unprotectedAddFile(..). (Jing Zhao via szetszwo)
+
+    HDFS-2946. HA: Put a cap on the number of completed edits files retained
+    by the NN. (atm)
+
+    HDFS-4029. GenerationStamp should use an AtomicLong. (eli)
+
+    HDFS-4068. DatanodeID and DatanodeInfo member should be private. (eli)
+
+    HDFS-4073. Two minor improvements to FSDirectory.  (Jing Zhao via szetszwo)
+
+    HDFS-4074. Remove the unused default constructor from INode.  (Brandon Li
+    via szetszwo)
+
+    HDFS-4053. Increase the default block size. (eli)
 
   OPTIMIZATIONS
 
@@ -439,6 +456,26 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4044. Duplicate ChecksumType definition in HDFS .proto files.
     (Binglin Chang via suresh)
+
+    HDFS-4049. Fix hflush performance regression due to nagling delays
+    (todd)
+
+    HDFS-3678. Edit log files are never being purged from 2NN. (atm)
+
+    HDFS-4058. DirectoryScanner may fail with IOOB if the directory
+    scanning threads return out of volume order. (eli)
+
+    HDFS-3985. Add timeouts to TestMulitipleNNDataBlockScanner. (todd via eli)
+
+    HDFS-4061. TestBalancer and TestUnderReplicatedBlocks need timeouts. (eli)
+
+    HDFS-3997. OfflineImageViewer incorrectly passes value of imageVersion when
+    visiting IS_COMPRESSED element. (Mithun Radhakrishnan via atm)
+
+    HDFS-4055. TestAuditLogs is flaky. (Binglin Chang via eli)
+
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 

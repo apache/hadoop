@@ -48,7 +48,7 @@ public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
       throw new RuntimeException("Bailing out since native library couldn't " +
         "be loaded");
     }
-    LOG.info("Using JniBasedUnixGroupsMapping for Group resolution");
+    LOG.debug("Using JniBasedUnixGroupsMapping for Group resolution");
   }
 
   @Override
@@ -57,7 +57,11 @@ public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
     try {
       groups = getGroupForUser(user);
     } catch (Exception e) {
-      LOG.warn("Error getting groups for " + user, e);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error getting groups for " + user, e);
+      } else {
+        LOG.info("Error getting groups for " + user + ": " + e.getMessage());
+      }
     }
     return Arrays.asList(groups);
   }

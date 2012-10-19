@@ -672,37 +672,38 @@ public class TestDFSIO implements Tool {
       return -1;
     }
 
-    for (int i = 0; i < args.length; i++) {       // parse command line
-      if (args[i].startsWith("-read")) {
+    for (int i = 0; i < args.length; i++) { // parse command line
+      if (args[i].toLowerCase().startsWith("-read")) {
         testType = TestType.TEST_TYPE_READ;
-      } else if (args[i].equals("-write")) {
+      } else if (args[i].equalsIgnoreCase("-write")) {
         testType = TestType.TEST_TYPE_WRITE;
-      } else if (args[i].equals("-append")) {
+      } else if (args[i].equalsIgnoreCase("-append")) {
         testType = TestType.TEST_TYPE_APPEND;
-      } else if (args[i].equals("-random")) {
-        if(testType != TestType.TEST_TYPE_READ) return -1;
+      } else if (args[i].equalsIgnoreCase("-random")) {
+        if (testType != TestType.TEST_TYPE_READ) return -1;
         testType = TestType.TEST_TYPE_READ_RANDOM;
-      } else if (args[i].equals("-backward")) {
-        if(testType != TestType.TEST_TYPE_READ) return -1;
+      } else if (args[i].equalsIgnoreCase("-backward")) {
+        if (testType != TestType.TEST_TYPE_READ) return -1;
         testType = TestType.TEST_TYPE_READ_BACKWARD;
-      } else if (args[i].equals("-skip")) {
-        if(testType != TestType.TEST_TYPE_READ) return -1;
+      } else if (args[i].equalsIgnoreCase("-skip")) {
+        if (testType != TestType.TEST_TYPE_READ) return -1;
         testType = TestType.TEST_TYPE_READ_SKIP;
-      } else if (args[i].equals("-clean")) {
+      } else if (args[i].equalsIgnoreCase("-clean")) {
         testType = TestType.TEST_TYPE_CLEANUP;
-      } else if (args[i].startsWith("-seq")) {
+      } else if (args[i].toLowerCase().startsWith("-seq")) {
         isSequential = true;
-      } else if (args[i].startsWith("-compression")) {
+      } else if (args[i].toLowerCase().startsWith("-compression")) {
         compressionClass = args[++i];
-      } else if (args[i].equals("-nrFiles")) {
+      } else if (args[i].equalsIgnoreCase("-nrfiles")) {
         nrFiles = Integer.parseInt(args[++i]);
-      } else if (args[i].equals("-fileSize") || args[i].equals("-size")) {
+      } else if (args[i].equalsIgnoreCase("-filesize")
+          || args[i].equalsIgnoreCase("-size")) {
         nrBytes = parseSize(args[++i]);
-      } else if (args[i].equals("-skipSize")) {
+      } else if (args[i].equalsIgnoreCase("-skipsize")) {
         skipSize = parseSize(args[++i]);
-      } else if (args[i].equals("-bufferSize")) {
+      } else if (args[i].equalsIgnoreCase("-buffersize")) {
         bufferSize = Integer.parseInt(args[++i]);
-      } else if (args[i].equals("-resFile")) {
+      } else if (args[i].equalsIgnoreCase("-resfile")) {
         resFileName = args[++i];
       } else {
         System.err.println("Illegal argument: " + args[i]);

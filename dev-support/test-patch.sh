@@ -32,7 +32,7 @@ JENKINS=false
 PATCH_DIR=/tmp
 SUPPORT_DIR=/tmp
 BASEDIR=$(pwd)
-
+BUILD_NATIVE=true
 PS=${PS:-ps}
 AWK=${AWK:-awk}
 WGET=${WGET:-wget}
@@ -67,6 +67,7 @@ printUsage() {
   echo "--forrest-home=<path>  Forrest home directory (default FORREST_HOME environment variable)"
   echo "--dirty-workspace      Allow the local SVN workspace to have uncommitted changes"
   echo "--run-tests            Run all tests below the base directory"
+  echo "--build-native=<bool>  If true, then build native components (default 'true')"
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
@@ -139,11 +140,18 @@ parseArgs() {
     --run-tests)
       RUN_TESTS=true
       ;;
+    --build-native=*)
+      BUILD_NATIVE=${i#*=}
+      ;;
     *)
       PATCH_OR_DEFECT=$i
       ;;
     esac
   done
+  if [[ $BUILD_NATIVE == "true" ]] ; then
+    NATIVE_PROFILE=-Pnative
+    REQUIRE_TEST_LIB_HADOOP=-Drequire.test.libhadoop
+  fi
   if [ -z "$PATCH_OR_DEFECT" ]; then
     printUsage
     exit 1
@@ -437,8 +445,8 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Pnative -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
-  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Pnative -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1
+  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess $NATIVE_PROFILE -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess $NATIVE_PROFILE -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -707,8 +715,8 @@ runTests () {
       if [[ $building_common -eq 0 ]]; then
           echo "  Building hadoop-common with -Pnative in order to provide \
 libhadoop.so to the hadoop-hdfs unit tests."
-          echo "  $MVN compile -Pnative -D${PROJECT_NAME}PatchProcess"
-          if ! $MVN compile -Pnative -D${PROJECT_NAME}PatchProcess; then
+          echo "  $MVN compile $NATIVE_PROFILE -D${PROJECT_NAME}PatchProcess"
+          if ! $MVN compile $NATIVE_PROFILE -D${PROJECT_NAME}PatchProcess; then
               JIRA_COMMENT="$JIRA_COMMENT
         {color:red}-1 core tests{color}.  Failed to build the native portion \
 of hadoop-common prior to running the unit tests in $ordered_modules"
@@ -719,8 +727,8 @@ of hadoop-common prior to running the unit tests in $ordered_modules"
   for module in $ordered_modules; do
     cd $module
     echo "  Running tests in $module"
-    echo "  $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess"
-    $MVN clean install -fn -Pnative -Drequire.test.libhadoop -D${PROJECT_NAME}PatchProcess
+    echo "  $MVN clean install -fn $NATIVE_PROFILE $REQUIRE_TEST_LIB_HADOOP -D${PROJECT_NAME}PatchProcess"
+    $MVN clean install -fn $NATIVE_PROFILE $REQUIRE_TEST_LIB_HADOOP -D${PROJECT_NAME}PatchProcess
     module_failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
     # With -fn mvn always exits with a 0 exit code.  Because of this we need to
     # find the errors instead of using the exit code.  We assume that if the build

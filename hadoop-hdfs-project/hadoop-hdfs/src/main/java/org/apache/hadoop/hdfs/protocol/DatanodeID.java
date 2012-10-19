@@ -37,12 +37,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class DatanodeID implements Comparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {};
 
-  protected String ipAddr;     // IP address
-  protected String hostName;   // hostname
-  protected String storageID;  // unique per cluster storageID
-  protected int xferPort;      // data streaming port
-  protected int infoPort;      // info server port
-  protected int ipcPort;       // IPC server port
+  private String ipAddr;     // IP address
+  private String hostName;   // hostname
+  private String storageID;  // unique per cluster storageID
+  private int xferPort;      // data streaming port
+  private int infoPort;      // info server port
+  private int ipcPort;       // IPC server port
 
   public DatanodeID(DatanodeID from) {
     this(from.getIpAddr(),

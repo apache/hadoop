@@ -50,8 +50,10 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
@@ -60,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunched
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
@@ -238,6 +241,24 @@ public class MRApp extends MRAppMaster {
     conf.writeXml(new FileOutputStream(jobFile));
 
     return job;
+  }
+
+  public void waitForInternalState(TaskAttemptImpl attempt,
+      TaskAttemptStateInternal finalState) throws Exception {
+    int timeoutSecs = 0;
+    TaskAttemptReport report = attempt.getReport();
+    TaskAttemptStateInternal iState = attempt.getInternalState();
+    while (!finalState.equals(iState) && timeoutSecs++ < 20) {
+      System.out.println("TaskAttempt Internal State is : " + iState
+          + " Waiting for Internal state : " + finalState + "   progress : "
+          + report.getProgress());
+      Thread.sleep(500);
+      report = attempt.getReport();
+      iState = attempt.getInternalState();
+    }
+    System.out.println("TaskAttempt Internal State is : " + iState);
+    Assert.assertEquals("TaskAttempt Internal state is not correct (timedout)",
+        finalState, iState);
   }
 
   public void waitForState(TaskAttempt attempt, 
@@ -501,18 +522,18 @@ public class MRApp extends MRAppMaster {
     //override the init transition
     private final TestInitTransition initTransition = new TestInitTransition(
         maps, reduces);
-    StateMachineFactory<JobImpl, JobState, JobEventType, JobEvent> localFactory
-        = stateMachineFactory.addTransition(JobState.NEW,
-            EnumSet.of(JobState.INITED, JobState.FAILED),
+    StateMachineFactory<JobImpl, JobStateInternal, JobEventType, JobEvent> localFactory
+        = stateMachineFactory.addTransition(JobStateInternal.NEW,
+            EnumSet.of(JobStateInternal.INITED, JobStateInternal.FAILED),
             JobEventType.JOB_INIT,
             // This is abusive.
             initTransition);
 
-    private final StateMachine<JobState, JobEventType, JobEvent>
+    private final StateMachine<JobStateInternal, JobEventType, JobEvent>
         localStateMachine;
 
     @Override
-    protected StateMachine<JobState, JobEventType, JobEvent> getStateMachine() {
+    protected StateMachine<JobStateInternal, JobEventType, JobEvent> getStateMachine() {
       return localStateMachine;
     }
 

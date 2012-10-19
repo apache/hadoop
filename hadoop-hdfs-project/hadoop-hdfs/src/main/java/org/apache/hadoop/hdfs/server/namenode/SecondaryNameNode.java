@@ -751,6 +751,24 @@ public class SecondaryNameNode implements Runnable {
           }
         }
       }
+
+      @Override
+      public void selectInputStreams(Collection<EditLogInputStream> streams,
+          long fromTxId, boolean inProgressOk) {
+        Iterator<StorageDirectory> iter = storage.dirIterator();
+        while (iter.hasNext()) {
+          StorageDirectory dir = iter.next();
+          List<EditLogFile> editFiles;
+          try {
+            editFiles = FileJournalManager.matchEditLogs(
+                dir.getCurrentDir());
+          } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+          }
+          FileJournalManager.addStreamsToCollectionFromFiles(editFiles, streams,
+              fromTxId, inProgressOk);
+        }
+      }
       
     }
     

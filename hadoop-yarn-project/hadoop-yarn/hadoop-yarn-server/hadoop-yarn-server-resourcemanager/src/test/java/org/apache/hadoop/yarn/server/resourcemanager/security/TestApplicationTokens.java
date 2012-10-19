@@ -64,6 +64,10 @@ public class TestApplicationTokens {
     final MockRM rm = new MockRMWithAMS(new Configuration(), containerManager);
     rm.start();
 
+    final Configuration conf = rm.getConfig();
+    final YarnRPC rpc = YarnRPC.create(conf);
+    AMRMProtocol rmClient = null;
+
     try {
       MockNM nm1 = rm.registerNode("localhost:1234", 5120);
 
@@ -82,9 +86,6 @@ public class TestApplicationTokens {
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
 
       // Create a client to the RM.
-      final Configuration conf = rm.getConfig();
-      final YarnRPC rpc = YarnRPC.create(conf);
-
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
@@ -96,7 +97,7 @@ public class TestApplicationTokens {
       token.decodeFromUrlString(tokenURLEncodedStr);
       currentUser.addToken(token);
 
-      AMRMProtocol rmClient = createRMClient(rm, conf, rpc, currentUser);
+      rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =
           Records.newRecord(RegisterApplicationMasterRequest.class);
@@ -136,6 +137,9 @@ public class TestApplicationTokens {
 
     } finally {
       rm.stop();
+      if (rmClient != null) {
+        rpc.stopProxy(rmClient, conf); // To avoid using cached client
+      }
     }
   }
 
@@ -152,6 +156,10 @@ public class TestApplicationTokens {
     MyContainerManager containerManager = new MyContainerManager();
     final MockRM rm = new MockRMWithAMS(config, containerManager);
     rm.start();
+
+    final Configuration conf = rm.getConfig();
+    final YarnRPC rpc = YarnRPC.create(conf);
+    AMRMProtocol rmClient = null;
 
     try {
       MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -171,9 +179,6 @@ public class TestApplicationTokens {
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
 
       // Create a client to the RM.
-      final Configuration conf = rm.getConfig();
-      final YarnRPC rpc = YarnRPC.create(conf);
-
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
@@ -185,7 +190,7 @@ public class TestApplicationTokens {
       token.decodeFromUrlString(tokenURLEncodedStr);
       currentUser.addToken(token);
 
-      AMRMProtocol rmClient = createRMClient(rm, conf, rpc, currentUser);
+      rmClient = createRMClient(rm, conf, rpc, currentUser);
 
       RegisterApplicationMasterRequest request =
           Records.newRecord(RegisterApplicationMasterRequest.class);
@@ -217,6 +222,9 @@ public class TestApplicationTokens {
         .getReboot());
     } finally {
       rm.stop();
+      if (rmClient != null) {
+        rpc.stopProxy(rmClient, conf); // To avoid using cached client
+      }
     }
   }
 

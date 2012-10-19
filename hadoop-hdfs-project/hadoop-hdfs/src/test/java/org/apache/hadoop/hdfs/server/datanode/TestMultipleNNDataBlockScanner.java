@@ -74,7 +74,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void testDataBlockScanner() throws IOException, InterruptedException {
     setUp();
     try {
@@ -97,7 +97,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void testBlockScannerAfterRefresh() throws IOException,
       InterruptedException {
     setUp();
@@ -149,7 +149,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void testBlockScannerAfterRestart() throws IOException,
       InterruptedException {
     setUp();
@@ -176,7 +176,7 @@ public class TestMultipleNNDataBlockScanner {
     }
   }
   
-  @Test
+  @Test(timeout=120000)
   public void test2NNBlockRescanInterval() throws IOException {
     ((Log4JLogger)BlockPoolSliceScanner.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = new HdfsConfiguration();
@@ -206,7 +206,7 @@ public class TestMultipleNNDataBlockScanner {
    * 
    * @throws Exception
    */
-  @Test
+  @Test(timeout=120000)
   public void testBlockRescanInterval() throws IOException {
     ((Log4JLogger)BlockPoolSliceScanner.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = new HdfsConfiguration();

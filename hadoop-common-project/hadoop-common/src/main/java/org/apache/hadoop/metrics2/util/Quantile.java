@@ -20,12 +20,14 @@ package org.apache.hadoop.metrics2.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import com.google.common.collect.ComparisonChain;
+
 /**
  * Specifies a quantile (with error bounds) to be watched by a
  * {@link SampleQuantiles} object.
  */
 @InterfaceAudience.Private
-public class Quantile {
+public class Quantile implements Comparable<Quantile> {
   public final double quantile;
   public final double error;
 
@@ -57,4 +59,19 @@ public class Quantile {
     return (int) (Double.doubleToLongBits(quantile) ^ Double
         .doubleToLongBits(error));
   }
+
+  @Override
+  public int compareTo(Quantile other) {
+    return ComparisonChain.start()
+        .compare(quantile, other.quantile)
+        .compare(error, other.error)
+        .result();
+  }
+  
+  @Override
+  public String toString() {
+    return String.format("%.2f %%ile +/- %.2f%%",
+        quantile * 100, error * 100);
+  }
+
 }

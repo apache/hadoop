@@ -358,7 +358,7 @@
 
 <property>
   <name>dfs.blocksize</name>
-  <value>67108864</value>
+  <value>134217728</value>
   <description>
       The default block size for new files, in bytes.
       You can use the following suffix (case insensitive):
@@ -660,6 +660,20 @@
   edits in order to start again.
   Typically each edit is on the order of a few hundred bytes, so the default
   of 1 million edits should be on the order of hundreds of MBs or low GBs.
+
+  NOTE: Fewer extra edits may be retained than value specified for this setting
+  if doing so would mean that more segments would be retained than the number
+  configured by dfs.namenode.max.extra.edits.segments.retained.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.max.extra.edits.segments.retained</name>
+  <value>10000</value>
+  <description>The maximum number of extra edit log segments which should be retained
+  beyond what is minimally necessary for a NN restart. When used in conjunction with
+  dfs.namenode.num.extra.edits.retained, this configuration property serves to cap
+  the number of extra edits files to a reasonable value.
   </description>
 </property>
 
