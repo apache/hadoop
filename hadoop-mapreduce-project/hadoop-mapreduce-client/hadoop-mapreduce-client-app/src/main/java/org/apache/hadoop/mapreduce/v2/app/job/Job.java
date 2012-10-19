@@ -88,6 +88,9 @@ public interface Job {
   TaskAttemptCompletionEvent[]
       getTaskAttemptCompletionEvents(int fromEventId, int maxEvents);
 
+  TaskAttemptCompletionEvent[]
+      getMapAttemptCompletionEvents(int startIndex, int maxEvents);
+
   /**
    * @return information for MR AppMasters (previously failed and current)
    */
