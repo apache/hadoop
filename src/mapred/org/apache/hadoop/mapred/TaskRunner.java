@@ -78,8 +78,6 @@ abstract class TaskRunner extends Thread {
   
   static final String HADOOP_WORK_DIR = "HADOOP_WORK_DIR";
   
-  static final String JAVA_CLASSPATH = "CLASSPATH";
-  
   static final String MAPRED_ADMIN_USER_ENV =
     "mapreduce.admin.user.env";
 
@@ -219,8 +217,6 @@ abstract class TaskRunner extends Thread {
       // Accumulates class paths for child.
       List<String> classPathsList = getClassPaths(conf, workDir,
                                                   taskDistributedCacheManager);
-      String classPaths = StringUtils.join(SYSTEM_PATH_SEPARATOR,
-                                           classPathsList);
 
       long logSize = TaskLog.getTaskLogLength(conf);
       
@@ -239,8 +235,8 @@ abstract class TaskRunner extends Thread {
                  stderr);
       
       Map<String, String> env = new HashMap<String, String>();
-      errorInfo = getVMEnvironment(errorInfo, user, workDir, classPaths,
-                                   conf, env, taskid, logSize);
+      errorInfo = getVMEnvironment(errorInfo, user, workDir, conf, env,  
+                                   taskid, logSize);
       
       // flatten the env as a set of export commands
       List <String> setupCmds = new ArrayList<String>();
@@ -255,7 +251,7 @@ abstract class TaskRunner extends Thread {
       }
       setupCmds.add(setup);
       
-      launchJvmAndWait(setupCmds, vargs, stdout, stderr, logSize, workDir);
+      launchJvmAndWait(setupCmds, vargs, classPathsList, stdout, stderr, logSize, workDir);
       tracker.getTaskTrackerInstrumentation().reportTaskEnd(t.getTaskID());
       if (exitCodeSet) {
         if (!killed && exitCode != 0) {
@@ -293,11 +289,12 @@ abstract class TaskRunner extends Thread {
     }
   }
 
-  void launchJvmAndWait(List <String> setup, Vector<String> vargs, File stdout,
-      File stderr, long logSize, File workDir)
+  void launchJvmAndWait(List <String> setup, Vector<String> vargs, 
+	  List<String> classPathsList, File stdout, File stderr, long logSize, 
+	  File workDir)
       throws InterruptedException, IOException {
-    jvmManager.launchJvm(this, jvmManager.constructJvmEnv(setup, vargs, stdout,
-        stderr, logSize, workDir, conf));
+    jvmManager.launchJvm(this, jvmManager.constructJvmEnv(setup, vargs, classPathsList,
+        stdout, stderr, logSize, workDir, conf));
     synchronized (lock) {
       while (!done) {
         lock.wait();
@@ -305,6 +302,12 @@ abstract class TaskRunner extends Thread {
     }
   }
 
+  void launchJvmAndWait(List <String> setup, Vector<String> vargs, File stdout,
+      File stderr, long logSize, File workDir)
+      throws InterruptedException, IOException {
+    launchJvmAndWait(setup, vargs, null, stdout, stderr, logSize, workDir);
+  }
+  
   /**
    * Prepare the log files for the task
    * 
@@ -568,9 +571,8 @@ abstract class TaskRunner extends Thread {
   }
 
   private String getVMEnvironment(String errorInfo, String user, File workDir,
-                                  String classPaths, JobConf conf,
-                                  Map<String, String> env, TaskAttemptID taskid,
-                                  long logSize
+                                  JobConf conf, Map<String, String> env, 
+                                  TaskAttemptID taskid, long logSize
                                   ) throws Throwable {
     StringBuffer ldLibraryPath = new StringBuffer();
     ldLibraryPath.append(workDir.toString());
@@ -582,7 +584,6 @@ abstract class TaskRunner extends Thread {
     }
     env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
     env.put(HADOOP_WORK_DIR, workDir.toString());
-    env.put(JAVA_CLASSPATH, classPaths.toString());
     //update user configured login-shell properties
     updateUserLoginEnv(errorInfo, user, conf, env);
     // put jobTokenFile name into env

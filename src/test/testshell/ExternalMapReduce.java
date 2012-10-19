@@ -19,8 +19,13 @@
 package testshell;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.jar.Attributes;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -101,6 +106,44 @@ public class ExternalMapReduce extends Configured implements Tool {
     }
   }
 
+  // Check if the given item exists in classpath
+  private static boolean itemInClasspath(String elementName) 
+    throws FileNotFoundException, IOException {
+    boolean found = false;
+    String classpath = System.getProperty("java.class.path");
+
+    // Check if the element exists in the classpath
+    if (classpath.indexOf(elementName) >= 0) {
+      found = true;
+    } else {
+      // In case of Windows, classpath is embedded in a referencing jar
+      if (Shell.WINDOWS) {
+        String[] cpFiles = classpath.split(File.pathSeparator);
+        if (cpFiles != null && cpFiles.length == 1 && 
+            cpFiles[0].endsWith(".jar")) {
+          // Search for the element in the jar manifest
+          found = itemInJarClasspath(elementName, cpFiles[0]);
+        }
+      }
+    }
+    return found;
+  }
+  
+  // Check if the given item exists as a classpath element in a jar file
+  private static boolean itemInJarClasspath(String elementName, 
+                                            String jarFileName) 
+    throws FileNotFoundException, IOException{
+    // Load the Jar manifest
+    JarInputStream jarStream = new JarInputStream(
+        new FileInputStream(jarFileName));
+    Manifest jarManifest = jarStream.getManifest();
+    String classpath = jarManifest.getMainAttributes().getValue(
+        Attributes.Name.CLASS_PATH.toString());
+    
+    // Check for the element in the classpath list
+    return (classpath.indexOf(elementName) >= 0);
+  }
+  
   public static class MapClass extends MapReduceBase 
     implements Mapper<WritableComparable, Writable,
                       WritableComparable, IntWritable> {
@@ -110,10 +153,10 @@ public class ExternalMapReduce extends Configured implements Tool {
       throws IOException {
       //check for classpath
       String classpath = System.getProperty("java.class.path");
-      if (classpath.indexOf("testjob.jar") == -1) {
+      if (!itemInClasspath("testjob.jar")) {
         throw new IOException("failed to find in the library " + classpath);
       }
-      if (classpath.indexOf("test.jar") == -1) {
+      if (!itemInClasspath("test.jar")) {
         throw new IOException("failed to find the library test.jar in" 
             + classpath);
       }

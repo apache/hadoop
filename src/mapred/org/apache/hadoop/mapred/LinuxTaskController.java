@@ -204,9 +204,31 @@ class LinuxTaskController extends TaskController {
                                   File currentWorkDirectory,
                                   String stdout,
                                   String stderr) throws IOException {
+	return launchTask(user, jobId, attemptId, setup, jvmArguments,
+                      null, currentWorkDirectory, stdout, stderr);
+  }
 
+  @Override
+  public int launchTask(String user, 
+                                  String jobId,
+                                  String attemptId,
+                                  List<String> setup,
+                                  List<String> jvmArguments,
+                                  List<String> classPaths,
+                                  File currentWorkDirectory,
+                                  String stdout,
+                                  String stderr) throws IOException {
     ShellCommandExecutor shExec = null;
     try {
+      if (classPaths != null && classPaths.size() > 0) {
+        // Get the classpath string
+        String clsPaths = StringUtils.join(File.pathSeparator, classPaths);
+
+        // Add the classpath as the first Java argument
+        jvmArguments.add(1, "-classpath");
+        jvmArguments.add(2, clsPaths);
+      }
+
       FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
       long logSize = 0; //TODO MAPREDUCE-1100
       // get the JVM command line.
@@ -259,7 +281,7 @@ class LinuxTaskController extends TaskController {
     }
     return 0;
   }
-
+  
   @Override
   public void createLogDir(TaskAttemptID taskID,
                            boolean isCleanup) throws IOException {

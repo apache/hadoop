@@ -52,9 +52,16 @@ class JvmManager {
   private JvmManagerForType reduceJvmManager;
   
   public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
+      List<String> classPathsList, File stdout, File stderr, long logSize, 
+      File workDir, JobConf conf) {
+    return new JvmEnv(setup,vargs,classPathsList,stdout,stderr,logSize,
+        workDir,conf);
+  }
+  
+  public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
       File stdout,File stderr,long logSize, File workDir, 
       JobConf conf) {
-    return new JvmEnv(setup,vargs,stdout,stderr,logSize,workDir,conf);
+    return constructJvmEnv(setup,vargs,null,stdout,stderr,logSize,workDir,conf);
   }
   
   public JvmManager(TaskTracker tracker) {
@@ -497,7 +504,7 @@ class JvmManager {
                   taskAttemptId.toString(); 
                 exitCode = tracker.getTaskController().launchTask(user,
                     jvmId.jobId.toString(), taskAttemptIdStr, env.setup,
-                    env.vargs, env.workDir, env.stdout.toString(),
+                    env.vargs, env.classpaths, env.workDir, env.stdout.toString(),
                     env.stderr.toString());
           }
         } catch (IOException ioe) {
@@ -592,6 +599,7 @@ class JvmManager {
   static class JvmEnv { //Helper class
     List<String> vargs;
     List<String> setup;
+    List<String> classpaths;
     File stdout;
     File stderr;
     File workDir;
@@ -601,12 +609,19 @@ class JvmManager {
 
     public JvmEnv(List <String> setup, Vector<String> vargs, File stdout, 
         File stderr, long logSize, File workDir, JobConf conf) {
+      this(setup, vargs, null, stdout, stderr, logSize, workDir, conf);
+    }
+        
+    // Construct JvmEnv with classpaths to use
+    public JvmEnv(List <String> setup, Vector<String> vargs, List <String> classpaths, 
+        File stdout, File stderr, long logSize, File workDir, JobConf conf) {
       this.setup = setup;
       this.vargs = vargs;
       this.stdout = stdout;
       this.stderr = stderr;
       this.workDir = workDir;
       this.conf = conf;
+      this.classpaths = classpaths;
     }
   }
 }

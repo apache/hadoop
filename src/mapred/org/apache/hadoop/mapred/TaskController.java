@@ -63,7 +63,7 @@ public abstract class TaskController implements Configurable {
 
   final public static FsPermission TASK_LAUNCH_SCRIPT_PERMISSION =
   FsPermission.createImmutable((short) 0700); // rwx--------
-  
+
   public Configuration getConf() {
     return conf;
   }
@@ -122,6 +122,34 @@ public abstract class TaskController implements Configurable {
                  String attemptId,
                  List<String> setup,
                  List<String> jvmArguments,
+                 File currentWorkDirectory,
+                 String stdout,
+                 String stderr) throws IOException;
+  
+  /**
+   * Create all of the directories for the task and launches the child jvm.
+   * Uses all items in the classpaths list as the classpath for the task to start
+   * If classPaths is not provided, then it is assumed it is already set as one
+   * of the setup steps, or in jvmArguments
+   * @param user the user name
+   * @param jobId the jobId in question
+   * @param attemptId the attempt id (cleanup attempts have .cleanup suffix)
+   * @param setup list of shell commands to execute before the jvm
+   * @param jvmArguments list of jvm arguments
+   * @param classpaths list of classpath items
+   * @param currentWorkDirectory the full path of the cwd for the task
+   * @param stdout the file to redirect stdout to
+   * @param stderr the file to redirect stderr to
+   * @return the exit code for the task
+   * @throws IOException
+   */
+  public abstract
+  int launchTask(String user, 
+                 String jobId,
+                 String attemptId,
+                 List<String> setup,
+                 List<String> jvmArguments,
+                 List<String> classPaths,
                  File currentWorkDirectory,
                  String stdout,
                  String stderr) throws IOException;

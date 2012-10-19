@@ -172,3 +172,6 @@ Branch-hadoop-1-win - unreleased
 
     HDFS-4065. TestDFSShell.testGet sporadically fails attempting to corrupt 
     block files due to race condition. (Chris Nauroth via suresh)
+
+    HADOOP-8899. Classpath exceeds maximum Windows command limit.
+    (Ahmed El Baz via suresh)

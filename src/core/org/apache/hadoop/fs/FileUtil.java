@@ -19,7 +19,12 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.net.URL;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.commons.logging.Log;
@@ -818,4 +823,37 @@ public class FileUtil {
     }
     return fileNames;
   }  
+  
+  /**
+   * Create a JAR file under at the given path, referencing all entries in the classpath list.
+   * @param jarFile file to create with classpath entries in its manifest
+   * @param classPaths entries to be added in the manifest of the created Jar 
+   * @return jarFile created with classpath entries
+   */
+  public static File createJarWithClassPath(File jarFile, List<String> classPaths) 
+      throws IOException {
+    StringBuffer jarClsPath = new StringBuffer();
+
+    // Append all entries in classpath list to the Jar
+    for (String clsEntry : classPaths) {
+      URL fileUrl = new URL(new File(clsEntry).toURI().toString());
+      jarClsPath.append(fileUrl.toExternalForm());
+      jarClsPath.append(" ");
+    }
+
+    // Create the manifest
+    Manifest jarManifest = new Manifest();
+    jarManifest.getMainAttributes().putValue(
+        Attributes.Name.MANIFEST_VERSION.toString(), "1.0");
+    
+    jarManifest.getMainAttributes().putValue(
+        Attributes.Name.CLASS_PATH.toString(), jarClsPath.toString().trim());
+
+    // Write the manifest to output JAR file
+    JarOutputStream jarStream = new JarOutputStream(
+        new FileOutputStream(jarFile), jarManifest);
+    
+    jarStream.close();
+    return jarFile;
+  }
 }
