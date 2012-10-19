@@ -426,6 +426,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol
+    for Job, Task and TaskAttempt. (Siddarth Seth via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES

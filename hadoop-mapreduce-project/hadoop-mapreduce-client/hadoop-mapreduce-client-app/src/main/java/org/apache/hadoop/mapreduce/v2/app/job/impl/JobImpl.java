@@ -76,6 +76,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
@@ -210,163 +211,163 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       new UpdatedNodesTransition();
 
   protected static final
-    StateMachineFactory<JobImpl, JobState, JobEventType, JobEvent> 
+    StateMachineFactory<JobImpl, JobStateInternal, JobEventType, JobEvent> 
        stateMachineFactory
-     = new StateMachineFactory<JobImpl, JobState, JobEventType, JobEvent>
-              (JobState.NEW)
+     = new StateMachineFactory<JobImpl, JobStateInternal, JobEventType, JobEvent>
+              (JobStateInternal.NEW)
 
           // Transitions from NEW state
-          .addTransition(JobState.NEW, JobState.NEW,
+          .addTransition(JobStateInternal.NEW, JobStateInternal.NEW,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.NEW, JobState.NEW,
+          .addTransition(JobStateInternal.NEW, JobStateInternal.NEW,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition
-              (JobState.NEW,
-              EnumSet.of(JobState.INITED, JobState.FAILED),
+              (JobStateInternal.NEW,
+              EnumSet.of(JobStateInternal.INITED, JobStateInternal.FAILED),
               JobEventType.JOB_INIT,
               new InitTransition())
-          .addTransition(JobState.NEW, JobState.KILLED,
+          .addTransition(JobStateInternal.NEW, JobStateInternal.KILLED,
               JobEventType.JOB_KILL,
               new KillNewJobTransition())
-          .addTransition(JobState.NEW, JobState.ERROR,
+          .addTransition(JobStateInternal.NEW, JobStateInternal.ERROR,
               JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
-          .addTransition(JobState.NEW, JobState.NEW,
+          .addTransition(JobStateInternal.NEW, JobStateInternal.NEW,
               JobEventType.JOB_UPDATED_NODES)
               
           // Transitions from INITED state
-          .addTransition(JobState.INITED, JobState.INITED,
+          .addTransition(JobStateInternal.INITED, JobStateInternal.INITED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.INITED, JobState.INITED,
+          .addTransition(JobStateInternal.INITED, JobStateInternal.INITED,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
-          .addTransition(JobState.INITED, JobState.RUNNING,
+          .addTransition(JobStateInternal.INITED, JobStateInternal.RUNNING,
               JobEventType.JOB_START,
               new StartTransition())
-          .addTransition(JobState.INITED, JobState.KILLED,
+          .addTransition(JobStateInternal.INITED, JobStateInternal.KILLED,
               JobEventType.JOB_KILL,
               new KillInitedJobTransition())
-          .addTransition(JobState.INITED, JobState.ERROR,
+          .addTransition(JobStateInternal.INITED, JobStateInternal.ERROR,
               JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
-          .addTransition(JobState.INITED, JobState.INITED,
+          .addTransition(JobStateInternal.INITED, JobStateInternal.INITED,
               JobEventType.JOB_UPDATED_NODES)
               
           // Transitions from RUNNING state
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
               TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION)
           .addTransition
-              (JobState.RUNNING,
-              EnumSet.of(JobState.RUNNING, JobState.SUCCEEDED, JobState.FAILED),
+              (JobStateInternal.RUNNING,
+              EnumSet.of(JobStateInternal.RUNNING, JobStateInternal.SUCCEEDED, JobStateInternal.FAILED),
               JobEventType.JOB_TASK_COMPLETED,
               new TaskCompletedTransition())
           .addTransition
-              (JobState.RUNNING,
-              EnumSet.of(JobState.RUNNING, JobState.SUCCEEDED, JobState.FAILED),
+              (JobStateInternal.RUNNING,
+              EnumSet.of(JobStateInternal.RUNNING, JobStateInternal.SUCCEEDED, JobStateInternal.FAILED),
               JobEventType.JOB_COMPLETED,
               new JobNoTasksCompletedTransition())
-          .addTransition(JobState.RUNNING, JobState.KILL_WAIT,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.KILL_WAIT,
               JobEventType.JOB_KILL, new KillTasksTransition())
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_UPDATED_NODES,
               UPDATED_NODES_TRANSITION)
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_MAP_TASK_RESCHEDULED,
               new MapTaskRescheduledTransition())
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
               new TaskAttemptFetchFailureTransition())
           .addTransition(
-              JobState.RUNNING,
-              JobState.ERROR, JobEventType.INTERNAL_ERROR,
+              JobStateInternal.RUNNING,
+              JobStateInternal.ERROR, JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
 
           // Transitions from KILL_WAIT state.
           .addTransition
-              (JobState.KILL_WAIT,
-              EnumSet.of(JobState.KILL_WAIT, JobState.KILLED),
+              (JobStateInternal.KILL_WAIT,
+              EnumSet.of(JobStateInternal.KILL_WAIT, JobStateInternal.KILLED),
               JobEventType.JOB_TASK_COMPLETED,
               new KillWaitTaskCompletedTransition())
-          .addTransition(JobState.KILL_WAIT, JobState.KILL_WAIT,
+          .addTransition(JobStateInternal.KILL_WAIT, JobStateInternal.KILL_WAIT,
               JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
               TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION)
-          .addTransition(JobState.KILL_WAIT, JobState.KILL_WAIT,
+          .addTransition(JobStateInternal.KILL_WAIT, JobStateInternal.KILL_WAIT,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.KILL_WAIT, JobState.KILL_WAIT,
+          .addTransition(JobStateInternal.KILL_WAIT, JobStateInternal.KILL_WAIT,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
-              JobState.KILL_WAIT,
-              JobState.ERROR, JobEventType.INTERNAL_ERROR,
+              JobStateInternal.KILL_WAIT,
+              JobStateInternal.ERROR, JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
-          .addTransition(JobState.KILL_WAIT, JobState.KILL_WAIT,
+          .addTransition(JobStateInternal.KILL_WAIT, JobStateInternal.KILL_WAIT,
               EnumSet.of(JobEventType.JOB_KILL,
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_MAP_TASK_RESCHEDULED,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
 
           // Transitions from SUCCEEDED state
-          .addTransition(JobState.SUCCEEDED, JobState.SUCCEEDED,
+          .addTransition(JobStateInternal.SUCCEEDED, JobStateInternal.SUCCEEDED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.SUCCEEDED, JobState.SUCCEEDED,
+          .addTransition(JobStateInternal.SUCCEEDED, JobStateInternal.SUCCEEDED,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
-              JobState.SUCCEEDED,
-              JobState.ERROR, JobEventType.INTERNAL_ERROR,
+              JobStateInternal.SUCCEEDED,
+              JobStateInternal.ERROR, JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
-          .addTransition(JobState.SUCCEEDED, JobState.SUCCEEDED,
+          .addTransition(JobStateInternal.SUCCEEDED, JobStateInternal.SUCCEEDED,
               EnumSet.of(JobEventType.JOB_KILL, 
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
 
           // Transitions from FAILED state
-          .addTransition(JobState.FAILED, JobState.FAILED,
+          .addTransition(JobStateInternal.FAILED, JobStateInternal.FAILED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.FAILED, JobState.FAILED,
+          .addTransition(JobStateInternal.FAILED, JobStateInternal.FAILED,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
-              JobState.FAILED,
-              JobState.ERROR, JobEventType.INTERNAL_ERROR,
+              JobStateInternal.FAILED,
+              JobStateInternal.ERROR, JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
-          .addTransition(JobState.FAILED, JobState.FAILED,
+          .addTransition(JobStateInternal.FAILED, JobStateInternal.FAILED,
               EnumSet.of(JobEventType.JOB_KILL, 
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
 
           // Transitions from KILLED state
-          .addTransition(JobState.KILLED, JobState.KILLED,
+          .addTransition(JobStateInternal.KILLED, JobStateInternal.KILLED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
-          .addTransition(JobState.KILLED, JobState.KILLED,
+          .addTransition(JobStateInternal.KILLED, JobStateInternal.KILLED,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
-              JobState.KILLED,
-              JobState.ERROR, JobEventType.INTERNAL_ERROR,
+              JobStateInternal.KILLED,
+              JobStateInternal.ERROR, JobEventType.INTERNAL_ERROR,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
-          .addTransition(JobState.KILLED, JobState.KILLED,
+          .addTransition(JobStateInternal.KILLED, JobStateInternal.KILLED,
               EnumSet.of(JobEventType.JOB_KILL, 
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
 
           // No transitions from INTERNAL_ERROR state. Ignore all.
           .addTransition(
-              JobState.ERROR,
-              JobState.ERROR,
+              JobStateInternal.ERROR,
+              JobStateInternal.ERROR,
               EnumSet.of(JobEventType.JOB_INIT,
                   JobEventType.JOB_KILL,
                   JobEventType.JOB_TASK_COMPLETED,
@@ -376,12 +377,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
                   JobEventType.INTERNAL_ERROR))
-          .addTransition(JobState.ERROR, JobState.ERROR,
+          .addTransition(JobStateInternal.ERROR, JobStateInternal.ERROR,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           // create the topology tables
           .installTopology();
  
-  private final StateMachine<JobState, JobEventType, JobEvent> stateMachine;
+  private final StateMachine<JobStateInternal, JobEventType, JobEvent> stateMachine;
 
   //changing fields while the job is running
   private int numMapTasks;
@@ -446,7 +447,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     stateMachine = stateMachineFactory.make(this);
   }
 
-  protected StateMachine<JobState, JobEventType, JobEvent> getStateMachine() {
+  protected StateMachine<JobStateInternal, JobEventType, JobEvent> getStateMachine() {
     return stateMachine;
   }
 
@@ -520,9 +521,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     readLock.lock();
 
     try {
-      JobState state = getState();
-      if (state == JobState.ERROR || state == JobState.FAILED
-          || state == JobState.KILLED || state == JobState.SUCCEEDED) {
+      JobStateInternal state = getInternalState();
+      if (state == JobStateInternal.ERROR || state == JobStateInternal.FAILED
+          || state == JobStateInternal.KILLED || state == JobStateInternal.SUCCEEDED) {
         this.mayBeConstructFinalFullCounters();
         return fullCounters;
       }
@@ -587,7 +588,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         diagsb.append(s).append("\n");
       }
 
-      if (getState() == JobState.NEW) {
+      if (getInternalState() == JobStateInternal.NEW) {
         return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
             appSubmitTime, startTime, finishTime, setupProgress, 0.0f, 0.0f,
             cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
@@ -674,7 +675,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobState getState() {
     readLock.lock();
     try {
-     return getStateMachine().getCurrentState();
+      return getExternalState(getStateMachine().getCurrentState());
     } finally {
       readLock.unlock();
     }
@@ -695,7 +696,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     LOG.debug("Processing " + event.getJobId() + " of type " + event.getType());
     try {
       writeLock.lock();
-      JobState oldState = getState();
+      JobStateInternal oldState = getInternalState();
       try {
          getStateMachine().doTransition(event.getType(), event);
       } catch (InvalidStateTransitonException e) {
@@ -706,9 +707,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             JobEventType.INTERNAL_ERROR));
       }
       //notify the eventhandler of state change
-      if (oldState != getState()) {
+      if (oldState != getInternalState()) {
         LOG.info(jobId + "Job Transitioned from " + oldState + " to "
-                 + getState());
+                 + getInternalState());
       }
     }
     
@@ -717,6 +718,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
+  @Private
+  public JobStateInternal getInternalState() {
+    readLock.lock();
+    try {
+     return getStateMachine().getCurrentState();
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
+  private static JobState getExternalState(JobStateInternal smState) {
+    if (smState == JobStateInternal.KILL_WAIT) {
+      return JobState.KILLED;
+    } else {
+      return JobState.valueOf(smState.name());
+    }
+  }
+  
+  
   //helpful in testing
   protected void addTask(Task task) {
     synchronized (tasksSyncHandle) {
@@ -757,7 +777,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return FileSystem.get(conf);
   }
   
-  static JobState checkJobCompleteSuccess(JobImpl job) {
+  static JobStateInternal checkJobCompleteSuccess(JobImpl job) {
     // check for Job success
     if (job.completedTaskCount == job.tasks.size()) {
       try {
@@ -767,16 +787,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         LOG.error("Could not do commit for Job", e);
         job.addDiagnostic("Job commit failed: " + e.getMessage());
         job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.FAILED);
-        return job.finished(JobState.FAILED);
+        return job.finished(JobStateInternal.FAILED);
       }
       job.logJobHistoryFinishedEvent();
-      return job.finished(JobState.SUCCEEDED);
+      return job.finished(JobStateInternal.SUCCEEDED);
     }
     return null;
   }
 
-  JobState finished(JobState finalState) {
-    if (getState() == JobState.RUNNING) {
+  JobStateInternal finished(JobStateInternal finalState) {
+    if (getInternalState() == JobStateInternal.RUNNING) {
       metrics.endRunningJob(this);
     }
     if (finishTime == 0) setFinishTime();
@@ -989,7 +1009,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   */
 
   public static class InitTransition 
-      implements MultipleArcTransition<JobImpl, JobEvent, JobState> {
+      implements MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
 
     /**
      * Note that this transition method is called directly (and synchronously)
@@ -999,7 +1019,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
      * way; MR version is).
      */
     @Override
-    public JobState transition(JobImpl job, JobEvent event) {
+    public JobStateInternal transition(JobImpl job, JobEvent event) {
       job.metrics.submittedJob(job);
       job.metrics.preparingJob(job);
       try {
@@ -1065,7 +1085,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         createReduceTasks(job);
 
         job.metrics.endPreparingJob(job);
-        return JobState.INITED;
+        return JobStateInternal.INITED;
         //TODO XXX Should JobInitedEvent be generated here (instead of in StartTransition)
 
       } catch (IOException e) {
@@ -1074,7 +1094,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             + StringUtils.stringifyException(e));
         job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.FAILED);
         job.metrics.endPreparingJob(job);
-        return job.finished(JobState.FAILED);
+        return job.finished(JobStateInternal.FAILED);
       }
     }
 
@@ -1282,9 +1302,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       JobUnsuccessfulCompletionEvent failedEvent =
           new JobUnsuccessfulCompletionEvent(job.oldJobId,
               job.finishTime, 0, 0,
-              JobState.KILLED.toString());
+              JobStateInternal.KILLED.toString());
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
-      job.finished(JobState.KILLED);
+      job.finished(JobStateInternal.KILLED);
     }
   }
 
@@ -1294,7 +1314,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     public void transition(JobImpl job, JobEvent event) {
       job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.KILLED);
       job.addDiagnostic("Job received Kill in INITED state.");
-      job.finished(JobState.KILLED);
+      job.finished(JobStateInternal.KILLED);
     }
   }
 
@@ -1394,10 +1414,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   private static class TaskCompletedTransition implements
-      MultipleArcTransition<JobImpl, JobEvent, JobState> {
+      MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
 
     @Override
-    public JobState transition(JobImpl job, JobEvent event) {
+    public JobStateInternal transition(JobImpl job, JobEvent event) {
       job.completedTaskCount++;
       LOG.info("Num completed Tasks: " + job.completedTaskCount);
       JobTaskEvent taskEvent = (JobTaskEvent) event;
@@ -1413,7 +1433,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       return checkJobForCompletion(job);
     }
 
-    protected JobState checkJobForCompletion(JobImpl job) {
+    protected JobStateInternal checkJobForCompletion(JobImpl job) {
       //check for Job failure
       if (job.failedMapTaskCount*100 > 
         job.allowedMapFailuresPercent*job.numMapTasks ||
@@ -1427,16 +1447,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         LOG.info(diagnosticMsg);
         job.addDiagnostic(diagnosticMsg);
         job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.FAILED);
-        return job.finished(JobState.FAILED);
+        return job.finished(JobStateInternal.FAILED);
       }
       
-      JobState jobCompleteSuccess = JobImpl.checkJobCompleteSuccess(job);
+      JobStateInternal jobCompleteSuccess = JobImpl.checkJobCompleteSuccess(job);
       if (jobCompleteSuccess != null) {
         return jobCompleteSuccess;
       }
       
       //return the current state, Job not finished yet
-      return job.getState();
+      return job.getInternalState();
     }
 
     private void taskSucceeded(JobImpl job, Task task) {
@@ -1470,17 +1490,17 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   // Transition class for handling jobs with no tasks
   static class JobNoTasksCompletedTransition implements
-  MultipleArcTransition<JobImpl, JobEvent, JobState> {
+  MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
 
     @Override
-    public JobState transition(JobImpl job, JobEvent event) {
-      JobState jobCompleteSuccess = JobImpl.checkJobCompleteSuccess(job);
+    public JobStateInternal transition(JobImpl job, JobEvent event) {
+      JobStateInternal jobCompleteSuccess = JobImpl.checkJobCompleteSuccess(job);
       if (jobCompleteSuccess != null) {
         return jobCompleteSuccess;
       }
       
       // Return the current state, Job not finished yet
-      return job.getState();
+      return job.getInternalState();
     }
   }
 
@@ -1497,14 +1517,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private static class KillWaitTaskCompletedTransition extends  
       TaskCompletedTransition {
     @Override
-    protected JobState checkJobForCompletion(JobImpl job) {
+    protected JobStateInternal checkJobForCompletion(JobImpl job) {
       if (job.completedTaskCount == job.tasks.size()) {
         job.setFinishTime();
         job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.KILLED);
-        return job.finished(JobState.KILLED);
+        return job.finished(JobStateInternal.KILLED);
       }
       //return the current state, Job not finished yet
-      return job.getState();
+      return job.getInternalState();
     }
   }
 
@@ -1558,9 +1578,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       JobUnsuccessfulCompletionEvent failedEvent =
           new JobUnsuccessfulCompletionEvent(job.oldJobId,
               job.finishTime, 0, 0,
-              JobState.ERROR.toString());
+              JobStateInternal.ERROR.toString());
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
-      job.finished(JobState.ERROR);
+      job.finished(JobStateInternal.ERROR);
     }
   }
 
