@@ -143,7 +143,8 @@ public class RMContainerRequestor extends RMCommunicator implements ContainerReq
     super.stop();
   }
 
-  protected Resource getAvailableResources() {
+  @Override
+  public Resource getAvailableResources() {
     return availableResources;
   }
 

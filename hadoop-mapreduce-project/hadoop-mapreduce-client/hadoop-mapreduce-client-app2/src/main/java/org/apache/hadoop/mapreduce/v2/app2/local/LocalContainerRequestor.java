@@ -31,11 +31,13 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicatorEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerRequestor.ContainerRequest;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -124,5 +126,20 @@ public class LocalContainerRequestor extends RMCommunicator implements
     default:
       break;
     }
+  }
+
+  @Override
+  public Resource getAvailableResources() {
+    throw new YarnException("Unexpected call to getAvailableResource");
+  }
+
+  @Override
+  public void addContainerReq(ContainerRequest req) {
+    throw new YarnException("Unexpected call to addContainerReq");
+  }
+
+  @Override
+  public void decContainerReq(ContainerRequest req) {
+    throw new YarnException("Unexpected call to decContainerReq");
   }
 }

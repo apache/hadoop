@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.v2.app2;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;

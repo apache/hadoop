@@ -29,8 +29,8 @@ public class TaskAttemptEventFailRequest extends TaskAttemptEvent {
     this.message = message;
   }
 
+  // TODO: This is not used at the moment.
   public String getMessage() {
     return this.message;
   }
-
 }

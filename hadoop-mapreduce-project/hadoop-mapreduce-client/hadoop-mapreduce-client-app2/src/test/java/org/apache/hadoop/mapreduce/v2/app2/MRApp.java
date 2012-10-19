@@ -65,6 +65,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventFailRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventKillRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptRemoteStartEvent;
@@ -516,8 +517,8 @@ public class MRApp extends MRAppMaster {
   }
 
   // appAcls and attemptToContainerIdMap shared between various mocks.
-  private Map<ApplicationAccessType, String> appAcls = new HashMap<ApplicationAccessType, String>();
-  private Map<TaskAttemptId, ContainerId> attemptToContainerIdMap = new HashMap<TaskAttemptId, ContainerId>();
+  protected Map<ApplicationAccessType, String> appAcls = new HashMap<ApplicationAccessType, String>();
+  protected Map<TaskAttemptId, ContainerId> attemptToContainerIdMap = new HashMap<TaskAttemptId, ContainerId>();
   
   protected class MockContainerLauncher implements ContainerLauncher {
 
@@ -620,7 +621,8 @@ public class MRApp extends MRAppMaster {
     return new MRAppAMScheduler();
   }
 
-  protected class MRAppAMScheduler extends AbstractService implements ContainerAllocator{
+  protected class MRAppAMScheduler extends AbstractService implements
+      ContainerAllocator {
     private int containerCount;
     
     MRAppAMScheduler() {
@@ -845,8 +847,7 @@ public class MRApp extends MRAppMaster {
                   "Kill requested"));
     } else if (finalState == TaskAttemptState.FAILED) {
       getContext().getEventHandler().handle(
-          new TaskAttemptEvent(taskAttemptId,
-              TaskAttemptEventType.TA_FAIL_REQUEST));
+          new TaskAttemptEventFailRequest(taskAttemptId, null));
     }
   }
 }

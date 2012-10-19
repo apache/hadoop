@@ -109,7 +109,7 @@ public class RMContainerAllocator extends AbstractService
   protected final Clock clock;
   protected Job job;
   protected final JobId jobId;
-  private final RMContainerRequestor requestor;
+  private final ContainerRequestor requestor;
   @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
   private final AMContainerMap containerMap;
@@ -180,7 +180,7 @@ public class RMContainerAllocator extends AbstractService
   BlockingQueue<AMSchedulerEvent> eventQueue
     = new LinkedBlockingQueue<AMSchedulerEvent>();
 
-  public RMContainerAllocator(RMContainerRequestor requestor,
+  public RMContainerAllocator(ContainerRequestor requestor,
       AppContext appContext) {
     super("RMContainerAllocator");
     this.requestor = requestor;
@@ -188,12 +188,13 @@ public class RMContainerAllocator extends AbstractService
     this.clock = appContext.getClock();
     this.eventHandler = appContext.getEventHandler();
     ApplicationId appId = appContext.getApplicationID();
-    // JobId should not be required here. 
-    // Currently used for error notification, clc construction, etc. Should not be  
+    // JobId should not be required here.
+    // Currently used for error notification, clc construction, etc. Should not
+    // be
     JobID id = TypeConverter.fromYarn(appId);
     JobId jobId = TypeConverter.toYarn(id);
     this.jobId = jobId;
-    
+
     this.containerMap = appContext.getAllContainers();
   }
 
@@ -531,10 +532,11 @@ public class RMContainerAllocator extends AbstractService
       AMSchedulerTALaunchRequestEvent event, TaskType taskType,
       int prevComputedSize) {
     if (prevComputedSize == 0) {
-      int supportedMaxContainerCapability = requestor
+      int supportedMaxContainerCapability = appContext.getClusterInfo()
           .getMaxContainerCapability().getMemory();
       prevComputedSize = event.getCapability().getMemory();
-      int minSlotMemSize = requestor.getMinContainerCapability().getMemory();
+      int minSlotMemSize = appContext.getClusterInfo()
+          .getMinContainerCapability().getMemory();
       prevComputedSize = (int) Math.ceil((float) prevComputedSize
           / minSlotMemSize)
           * minSlotMemSize;

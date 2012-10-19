@@ -60,6 +60,8 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class AMContainerHelpers {
 
   private static final Log LOG = LogFactory.getLog(AMContainerHelpers.class);
@@ -221,7 +223,8 @@ public class AMContainerHelpers {
     return container;
   }
 
-  static ContainerLaunchContext createContainerLaunchContext(
+  @VisibleForTesting
+  public static ContainerLaunchContext createContainerLaunchContext(
       Map<ApplicationAccessType, String> applicationACLs,
       ContainerId containerID, JobConf jobConf, TaskType taskType,
       Token<JobTokenIdentifier> jobToken,

@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.Job;
 import org.apache.hadoop.mapreduce.v2.app2.job.Task;
 import org.apache.hadoop.mapreduce.v2.app2.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventFailRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
@@ -123,10 +124,8 @@ public class TestRecovery {
 
     /////////// Play some games with the TaskAttempts of the first task //////
     //send the fail signal to the 1st map task attempt
-    app.getContext().getEventHandler().handle(
-        new TaskAttemptEvent(
-            task1Attempt1.getID(),
-            TaskAttemptEventType.TA_FAIL_REQUEST));
+    app.getContext().getEventHandler()
+        .handle(new TaskAttemptEventFailRequest(task1Attempt1.getID(), null));
     
     app.waitForState(task1Attempt1, TaskAttemptState.FAILED);
 

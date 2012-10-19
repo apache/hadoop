@@ -67,7 +67,6 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.JobMapTaskRescheduledEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventKillRequest;
-import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptScheduleEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEventType;
@@ -615,7 +614,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     ++numberUncompletedAttempts;
     //schedule the nextAttemptNumber
     eventHandler.handle(new TaskAttemptScheduleEvent(attempt.getID(),
-        TaskAttemptEventType.TA_SCHEDULE, failedAttempts > 0));
+        failedAttempts > 0));
     
   }
 

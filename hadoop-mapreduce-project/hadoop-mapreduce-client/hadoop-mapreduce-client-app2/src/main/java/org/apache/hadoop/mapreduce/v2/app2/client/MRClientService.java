@@ -68,6 +68,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventFailRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEventType;
@@ -346,8 +347,7 @@ public class MRClientService extends AbstractService
       appContext.getEventHandler().handle(
           new TaskAttemptDiagnosticsUpdateEvent(taskAttemptId, message));
       appContext.getEventHandler().handle(
-          new TaskAttemptEvent(taskAttemptId, 
-              TaskAttemptEventType.TA_FAIL_REQUEST));
+          new TaskAttemptEventFailRequest(taskAttemptId, message));
       FailTaskAttemptResponse response = recordFactory.
         newRecordInstance(FailTaskAttemptResponse.class);
       return response;

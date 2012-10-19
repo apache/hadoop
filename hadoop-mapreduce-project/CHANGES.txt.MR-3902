@@ -30,3 +30,5 @@ Branch MR-3902
   MAPREDUCE-4727. Handle successful NM stop requests. (sseth)
 
   MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol for Job, Task and TaskAttempt. (sseth)
+
+  MAPREDUCE-4738. fix and re-enable disabled unit tests in the mr-app2 module. (sseth)

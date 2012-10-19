@@ -24,14 +24,26 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app2.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app2.job.Job;
-import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptContainerAssignedEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventTAEnded;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
-import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerRequestor;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerAssignTAEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventType;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerLaunchRequestEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerState;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -46,8 +58,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -57,8 +67,6 @@ import org.apache.log4j.Logger;
 import org.junit.Test;
 
 public class MRAppBenchmark {
-
-  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   /**
    * Runs memory and time benchmark with Mock MRApp.
@@ -108,8 +116,8 @@ public class MRAppBenchmark {
     }
     
     @Override
-    protected ContainerAllocator createContainerAllocator(
-        ClientService clientService, AppContext context) {
+    protected ContainerAllocator createAMScheduler(ContainerRequestor requestor,
+        AppContext appContext) {
       return new ThrottledContainerAllocator();
     }
     
@@ -117,13 +125,13 @@ public class MRAppBenchmark {
         implements ContainerAllocator {
       private int containerCount;
       private Thread thread;
-      private BlockingQueue<ContainerAllocatorEvent> eventQueue =
-        new LinkedBlockingQueue<ContainerAllocatorEvent>();
+      private BlockingQueue<AMSchedulerEvent> eventQueue =
+        new LinkedBlockingQueue<AMSchedulerEvent>();
       public ThrottledContainerAllocator() {
         super("ThrottledContainerAllocator");
       }
       @Override
-      public void handle(ContainerAllocatorEvent event) {
+      public void handle(AMSchedulerEvent event) {
         try {
           eventQueue.put(event);
         } catch (InterruptedException e) {
@@ -133,34 +141,72 @@ public class MRAppBenchmark {
       @Override
       public void start() {
         thread = new Thread(new Runnable() {
+          @SuppressWarnings("unchecked")
           @Override
           public void run() {
-            ContainerAllocatorEvent event = null;
+            AMSchedulerEvent event = null;
             while (!Thread.currentThread().isInterrupted()) {
               try {
                 if (concurrentRunningTasks < maxConcurrentRunningTasks) {
                   event = eventQueue.take();
-                  ContainerId cId = 
-                      recordFactory.newRecordInstance(ContainerId.class);
-                  cId.setApplicationAttemptId(
-                      getContext().getApplicationAttemptId());
-                  cId.setId(containerCount++);
-                  //System.out.println("Allocating " + containerCount);
-                  
-                  Container container = 
-                      recordFactory.newRecordInstance(Container.class);
-                  container.setId(cId);
-                  NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
-                  nodeId.setHost("dummy");
-                  nodeId.setPort(1234);
-                  container.setNodeId(nodeId);
-                  container.setContainerToken(null);
-                  container.setNodeHttpAddress("localhost:8042");
-                  getContext().getEventHandler()
-                      .handle(
-                      new TaskAttemptContainerAssignedEvent(event
-                          .getAttemptID(), container, null));
-                  concurrentRunningTasks++;
+                  switch(event.getType()) {
+                  case S_TA_LAUNCH_REQUEST:
+                    AMSchedulerTALaunchRequestEvent lEvent = (AMSchedulerTALaunchRequestEvent)event;
+                    ContainerId cId = Records.newRecord(ContainerId.class);
+                    cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
+                    cId.setId(containerCount++);
+                    NodeId nodeId = BuilderUtils.newNodeId(NM_HOST, NM_PORT);
+                    Container container = BuilderUtils.newContainer(cId, nodeId,
+                        NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
+                    
+                    getContext().getAllContainers().addContainerIfNew(container);
+                    getContext().getAllNodes().nodeSeen(nodeId);
+                    
+                    JobID id = TypeConverter.fromYarn(getContext().getApplicationID());
+                    JobId jobId = TypeConverter.toYarn(id);
+                    
+                    attemptToContainerIdMap.put(lEvent.getAttemptID(), cId);
+                    if (getContext().getAllContainers().get(cId).getState() == AMContainerState.ALLOCATED) {
+                    
+                      AMContainerLaunchRequestEvent lrEvent = new AMContainerLaunchRequestEvent(
+                          cId, jobId, lEvent.getAttemptID().getTaskId().getTaskType(),
+                          lEvent.getJobToken(), lEvent.getCredentials(), false,
+                          new JobConf(getContext().getJob(jobId).getConf()));
+                      getContext().getEventHandler().handle(lrEvent);
+                    }
+                    
+                    getContext().getEventHandler().handle(
+                        new AMContainerAssignTAEvent(cId, lEvent.getAttemptID(), lEvent
+                            .getRemoteTask()));
+                    concurrentRunningTasks++;
+                    break;
+                    
+                  case S_TA_ENDED:
+                    // Send out a Container_stop_request.
+                    AMSchedulerEventTAEnded sEvent = (AMSchedulerEventTAEnded) event;
+                    switch (sEvent.getState()) {
+                    case FAILED:
+                    case KILLED:
+                      getContext().getEventHandler().handle(
+                          new AMContainerEvent(attemptToContainerIdMap.remove(sEvent
+                              .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
+                      break;
+                    case SUCCEEDED:
+                      // No re-use in MRApp. Stop the container.
+                      getContext().getEventHandler().handle(
+                          new AMContainerEvent(attemptToContainerIdMap.remove(sEvent
+                              .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
+                      break;
+                    default:
+                      throw new YarnException("Unexpected state: " + sEvent.getState());
+                    }
+                  case S_CONTAINERS_ALLOCATED:
+                    break;
+                  case S_CONTAINER_COMPLETED:
+                    break;
+                  default:
+                      break;
+                  }
                 } else {
                   Thread.sleep(1000);
                 }
@@ -192,9 +238,16 @@ public class MRAppBenchmark {
     run(new MRApp(maps, reduces, true, this.getClass().getName(), true) {
 
       @Override
-      protected ContainerAllocator createContainerAllocator(
-          ClientService clientService, AppContext context) {
-        return new RMContainerAllocator(clientService, context) {
+      protected ContainerAllocator createAMScheduler(
+          ContainerRequestor requestor, AppContext appContext) {
+        return new RMContainerAllocator((RMContainerRequestor) requestor,
+            appContext);
+      }
+
+      @Override
+      protected ContainerRequestor createContainerRequestor(
+          ClientService clientService, AppContext appContext) {
+        return new RMContainerRequestor(clientService, appContext) {
           @Override
           protected AMRMProtocol createSchedulerProxy() {
             return new AMRMProtocol() {

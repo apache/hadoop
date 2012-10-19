@@ -71,6 +71,7 @@ import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeMap;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -801,7 +802,7 @@ public class TestRMContainerAllocator {
   
   static class RMContainerAllocatorForTest extends RMContainerAllocator {
 
-    public RMContainerAllocatorForTest(RMContainerRequestor requestor,
+    public RMContainerAllocatorForTest(ContainerRequestor requestor,
         AppContext appContext) {
       super(requestor, appContext);
     }
@@ -840,7 +841,7 @@ public class TestRMContainerAllocator {
 
     boolean recalculatedReduceSchedule = false;
 
-    public RecalculateContainerAllocator(RMContainerRequestor requestor,
+    public RecalculateContainerAllocator(ContainerRequestor requestor,
         AppContext appContext) {
       super(requestor, appContext);
     }
@@ -899,7 +900,7 @@ public class TestRMContainerAllocator {
     }
     
     @Override
-    protected Resource getAvailableResources() {
+    public Resource getAvailableResources() {
       return BuilderUtils.newResource(0);
     }
     
@@ -995,7 +996,13 @@ public class TestRMContainerAllocator {
     when(appContext.getJob(jobId)).thenReturn(mockJob);
     when(appContext.getClock()).thenReturn(clock);
     when(appContext.getAllNodes()).thenReturn(amNodeMap);
+    when(appContext.getClusterInfo()).thenReturn(
+        new ClusterInfo(BuilderUtils.newResource(1024), BuilderUtils
+            .newResource(10240)));
 
     return appContext;
   }
+  
+  // TODO Add a unit test to verify a correct launchContainer invocation with
+  // security.
 }
