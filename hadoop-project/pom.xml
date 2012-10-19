@@ -836,6 +836,8 @@
           <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
           <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
           <environmentVariables>
+            <!-- HADOOP_HOME required for tests on Windows to find winutils -->
+            <HADOOP_HOME>${basedir}/../../hadoop-common-project/hadoop-common/target</HADOOP_HOME>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${basedir}/../../hadoop-common-project/hadoop-common/target/native/target/usr/local/lib/</LD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>

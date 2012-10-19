@@ -5,5 +5,7 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8945. Merge winutils from branch-1-win to branch-trunk-win.
   (Bikas Saha, Chuan Liu, Giridharan Kesavan, Ivan Mitic, and Steve Maine
-  ported by Chris Nauroth)
+  ported by Chris Nauroth via suresh)
 
+  HADOOP-8946. winutils: compile codebase during Maven build on 
+  branch-trunk-win. (Chris Nauroth via suresh)
