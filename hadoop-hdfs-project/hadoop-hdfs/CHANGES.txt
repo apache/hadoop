@@ -6,6 +6,9 @@ Branch-2802 Snapshot (Unreleased)
 
     HDFS-4076. Support snapshot of single files.  (szetszwo)
 
+    HDFS-4082. Add editlog opcodes for snapshot create and delete operations.
+    (suresh via szetszwo)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

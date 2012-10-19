@@ -94,7 +94,8 @@ public class LayoutVersion {
         "Use LongWritable and ShortWritable directly instead of ArrayWritable of UTF8"),
     OPTIMIZE_PERSIST_BLOCKS(-40,
         "Serialize block lists with delta-encoded variable length ints, " +
-        "add OP_UPDATE_BLOCKS");
+        "add OP_UPDATE_BLOCKS"),
+    SNAPSHOT(-41, "Support for snapshot feature");
     
     final int lv;
     final int ancestorLV;
