@@ -459,7 +459,8 @@ public class FSEditLog {
     }
     for (int idx = 0; idx < editStreams.size(); idx++) {
       File parentDir = getStorageDirForStream(idx);
-      if (parentDir.getName().equals(sd.getRoot().getName())) {
+      if (parentDir.getAbsolutePath().equals(
+            sd.getRoot().getAbsolutePath())) {
         EditLogOutputStream s = editStreams.remove(idx);
         try {
           s.close();
@@ -467,6 +468,7 @@ public class FSEditLog {
         } catch (IOException e) {
           LOG.warn("Failed to close the stream or unlock storage dir");
         }
+        idx--;
       }
     }
     exitIfNoStreams();
