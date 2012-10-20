@@ -16,8 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.api.records;
+package org.apache.hadoop.mapreduce.v2.app.job;
 
-public enum TaskState {
-  NEW, SCHEDULED, RUNNING, SUCCEEDED, FAILED, KILLED
+public enum JobStateInternal {
+  NEW,
+  INITED,
+  RUNNING,
+  SUCCEEDED,
+  FAILED,
+  KILL_WAIT,
+  KILLED,
+  ERROR
 }

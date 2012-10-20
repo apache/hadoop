@@ -172,7 +172,8 @@ public class CapacitySchedulerConfiguration extends Configuration {
   }
   
   public float getCapacity(String queue) {
-    float capacity = getFloat(getQueuePrefix(queue) + CAPACITY, UNDEFINED);
+    float capacity = queue.equals("root") ? 100.0f : getFloat(
+        getQueuePrefix(queue) + CAPACITY, UNDEFINED);
     if (capacity < MINIMUM_CAPACITY_VALUE || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal " +
       		"capacity of " + capacity + " for queue " + queue);
@@ -183,6 +184,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
   }
   
   public void setCapacity(String queue, float capacity) {
+    if (queue.equals("root")) {
+      throw new IllegalArgumentException(
+          "Cannot set capacity, root queue has a fixed capacity of 100.0f");
+    }
     setFloat(getQueuePrefix(queue) + CAPACITY, capacity);
     LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue) + 
         ", capacity=" + capacity);

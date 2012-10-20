@@ -42,16 +42,14 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     super(other);
     INode.DirCounts counts = new INode.DirCounts();
     other.spaceConsumedInTree(counts);
-    this.nsCount= counts.getNsCount();
+    this.nsCount = counts.getNsCount();
     this.diskspace = counts.getDsCount();
     setQuota(nsQuota, dsQuota);
   }
   
   /** constructor with no quota verification */
-  INodeDirectoryWithQuota(
-      PermissionStatus permissions, long modificationTime, 
-      long nsQuota, long dsQuota)
-  {
+  INodeDirectoryWithQuota(PermissionStatus permissions, long modificationTime,
+      long nsQuota, long dsQuota) {
     super(permissions, modificationTime);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
@@ -59,9 +57,8 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   }
   
   /** constructor with no quota verification */
-  INodeDirectoryWithQuota(String name, PermissionStatus permissions, 
-                          long nsQuota, long dsQuota)
-  {
+  INodeDirectoryWithQuota(String name, PermissionStatus permissions,
+      long nsQuota, long dsQuota) {
     super(name, permissions);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;

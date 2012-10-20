@@ -71,7 +71,7 @@ public class TestNMExpiry {
     // Dispatcher that processes events inline
     Dispatcher dispatcher = new InlineDispatcher();
     RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
-        null, null, null, null, null);
+        null, null, null, null, null, null);
     dispatcher.register(SchedulerEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     dispatcher.register(RMNodeEventType.class,

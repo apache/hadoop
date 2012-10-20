@@ -40,23 +40,38 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.hadoop.cmake.maven.ng</groupId>
-            <artifactId>cmake-ng</artifactId>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
             <executions>
               <execution>
-                <id>cmake-compile</id>
-                <goals><goal>compile</goal></goals>
+                <id>make</id>
+                <phase>compile</phase>
+                <goals><goal>run</goal></goals>
                 <configuration>
-                  <target>all</target>
-                  <source>${basedir}/src</source>
-                  <vars>
-                    <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
-                  </vars>
-                  <env>
-                    <CFLAGS>${container-executor.additional_cflags}</CFLAGS>
-                  </env>
+                  <target>
+                    <mkdir dir="${project.build.directory}/native"/>
+                    <exec executable="cmake" dir="${project.build.directory}/native" 
+                        failonerror="true">
+                      <arg line="${basedir}/src/ -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                      <arg line="VERBOSE=1"/>
+                    </exec>
+                  </target>
                 </configuration>
               </execution>
+              <!-- TODO wire here native testcases
+              <execution>
+                <id>test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <destDir>${project.build.directory}/native/target</destDir>
+                </configuration>
+              </execution>
+              -->
             </executions>
           </plugin>
         </plugins>

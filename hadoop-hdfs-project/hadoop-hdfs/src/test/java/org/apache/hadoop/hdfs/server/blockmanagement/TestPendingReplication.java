@@ -20,14 +20,30 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.Test;
 
 /**
- * This class tests the internals of PendingReplicationBlocks.java
+ * This class tests the internals of PendingReplicationBlocks.java,
+ * as well as how PendingReplicationBlocks acts in BlockManager
  */
 public class TestPendingReplication {
   final static int TIMEOUT = 3;     // 3 seconds
+  private static final int DFS_REPLICATION_INTERVAL = 1;
+  // Number of datanodes in the cluster
+  private static final int DATANODE_COUNT = 5;
 
   @Test
   public void testPendingReplication() {
@@ -40,7 +56,7 @@ public class TestPendingReplication {
     //
     for (int i = 0; i < 10; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.add(block, i);
+      pendingReplications.increment(block, i);
     }
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
@@ -50,15 +66,15 @@ public class TestPendingReplication {
     // remove one item and reinsert it
     //
     Block blk = new Block(8, 8, 0);
-    pendingReplications.remove(blk);             // removes one replica
+    pendingReplications.decrement(blk);             // removes one replica
     assertEquals("pendingReplications.getNumReplicas ",
                  7, pendingReplications.getNumReplicas(blk));
 
     for (int i = 0; i < 7; i++) {
-      pendingReplications.remove(blk);           // removes all replicas
+      pendingReplications.decrement(blk);           // removes all replicas
     }
     assertTrue(pendingReplications.size() == 9);
-    pendingReplications.add(blk, 8);
+    pendingReplications.increment(blk, 8);
     assertTrue(pendingReplications.size() == 10);
 
     //
@@ -86,7 +102,7 @@ public class TestPendingReplication {
 
     for (int i = 10; i < 15; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.add(block, i);
+      pendingReplications.increment(block, i);
     }
     assertTrue(pendingReplications.size() == 15);
 
@@ -115,5 +131,71 @@ public class TestPendingReplication {
       assertTrue(timedOut[i].getBlockId() < 15);
     }
     pendingReplications.stop();
+  }
+  
+  /**
+   * Test if BlockManager can correctly remove corresponding pending records
+   * when a file is deleted
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testPendingAndInvalidate() throws Exception {
+    final Configuration CONF = new HdfsConfiguration();
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFS_REPLICATION_INTERVAL);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
+        DFS_REPLICATION_INTERVAL);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
+        DATANODE_COUNT).build();
+    cluster.waitActive();
+    
+    FSNamesystem namesystem = cluster.getNamesystem();
+    BlockManager bm = namesystem.getBlockManager();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      // 1. create a file
+      Path filePath = new Path("/tmp.txt");
+      DFSTestUtil.createFile(fs, filePath, 1024, (short) 3, 0L);
+      
+      // 2. disable the heartbeats
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+      }
+      
+      // 3. mark a couple of blocks as corrupt
+      LocatedBlock block = NameNodeAdapter.getBlockLocations(
+          cluster.getNameNode(), filePath.toString(), 0, 1).get(0);
+      cluster.getNamesystem().writeLock();
+      try {
+        bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+            "TEST");
+        bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[1],
+            "TEST");
+      } finally {
+        cluster.getNamesystem().writeUnlock();
+      }
+      BlockManagerTestUtil.computeAllPendingWork(bm);
+      BlockManagerTestUtil.updateState(bm);
+      assertEquals(bm.getPendingReplicationBlocksCount(), 1L);
+      assertEquals(bm.pendingReplications.getNumReplicas(block.getBlock()
+          .getLocalBlock()), 2);
+      
+      // 4. delete the file
+      fs.delete(filePath, true);
+      // retry at most 10 times, each time sleep for 1s. Note that 10s is much
+      // less than the default pending record timeout (5~10min)
+      int retries = 10; 
+      long pendingNum = bm.getPendingReplicationBlocksCount();
+      while (pendingNum != 0 && retries-- > 0) {
+        Thread.sleep(1000);  // let NN do the deletion
+        BlockManagerTestUtil.updateState(bm);
+        pendingNum = bm.getPendingReplicationBlocksCount();
+      }
+      assertEquals(pendingNum, 0L);
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

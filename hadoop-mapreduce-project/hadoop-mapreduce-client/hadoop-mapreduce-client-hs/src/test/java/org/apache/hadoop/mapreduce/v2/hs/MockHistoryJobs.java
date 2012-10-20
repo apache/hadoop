@@ -126,6 +126,12 @@ public class MockHistoryJobs extends MockJobs {
     }
 
     @Override
+    public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+        int startIndex, int maxEvents) {
+      return job.getMapAttemptCompletionEvents(startIndex, maxEvents);
+    }
+
+    @Override
     public Map<TaskId, Task> getTasks() {
       return job.getTasks();
     }

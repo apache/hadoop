@@ -95,7 +95,7 @@ public class TestAppManager{
         rmDispatcher);
     return new RMContextImpl(new MemStore(), rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, null, null) {
+        null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -135,7 +135,7 @@ public class TestAppManager{
   public class TestRMAppManager extends RMAppManager {
 
     public TestRMAppManager(RMContext context, Configuration conf) {
-      super(context, null, null, null, new ApplicationACLsManager(conf), conf);
+      super(context, null, null, new ApplicationACLsManager(conf), conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
@@ -143,8 +143,7 @@ public class TestAppManager{
         ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
         YarnScheduler scheduler, ApplicationMasterService masterService,
         ApplicationACLsManager applicationACLsManager, Configuration conf) {
-      super(context, clientToAMSecretManager, scheduler, masterService,
-          applicationACLsManager, conf);
+      super(context, scheduler, masterService, applicationACLsManager, conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
