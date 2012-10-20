@@ -56,7 +56,7 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4037. Rename the getReplication() method in BlockCollection to
     getBlockReplication(). (szetszwo)
 
-    HDFS-4036. Remove "throw UnresolvedLinkException" from
+    HDFS-4036. Remove "throws UnresolvedLinkException" from
     FSDirectory.unprotectedAddFile(..). (Jing Zhao via szetszwo)
 
     HDFS-2946. HA: Put a cap on the number of completed edits files retained
@@ -70,6 +70,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4074. Remove the unused default constructor from INode.  (Brandon Li
     via szetszwo)
+
+    HDFS-4088. Remove "throws QuotaExceededException" from an
+    INodeDirectoryWithQuota constructor. (szetszwo)
 
   OPTIMIZATIONS
 
