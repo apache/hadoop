@@ -287,7 +287,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
  */
   private UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
   // We also store pending replication-orders.
-  private PendingReplicationBlocks pendingReplications;
+  PendingReplicationBlocks pendingReplications;
 
   public LeaseManager leaseManager = new LeaseManager(this); 
 
@@ -2212,6 +2212,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           Block b = blocks.get(i);
           blocksMap.removeINode(b);
           corruptReplicas.removeFromCorruptReplicasMap(b);
+          // Remove the block from pendingReplications
+          pendingReplications.remove(b);
           addToInvalidates(b);
         }
       }
@@ -3274,7 +3276,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         // Move the block-replication into a "pending" state.
         // The reason we use 'pending' is so we can retry
         // replications that fail after an appropriate amount of time.
-        pendingReplications.add(block, targets.length);
+        pendingReplications.increment(block, targets.length);
         NameNode.stateChangeLog.debug(
             "BLOCK* block " + block
             + " is moved from neededReplications to pendingReplications");
@@ -4302,7 +4304,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     //
     // Modify the blocks->datanode map and node's map.
     // 
-    pendingReplications.remove(block);
+    pendingReplications.decrement(block);
     addStoredBlock(block, node, delHintNode );
     
     // decrement number of blocks scheduled to this datanode.

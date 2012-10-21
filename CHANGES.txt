@@ -270,6 +270,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3402. Fix failure to start secure datanodes. (Benoy Antony via suresh)
 
+    HDFS-4072. On file deletion remove corresponding blocks pending
+    replications. (Jing Zhao via suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
