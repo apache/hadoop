@@ -156,7 +156,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
-  public FSNamesystem namesystem; // TODO: This should private. Use getNamesystem() instead. 
+  private FSNamesystem namesystem;
   /** RPC server */
   private Server server;
   /** RPC server for HDFS Services communication.
@@ -190,6 +190,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   static NameNodeInstrumentation myMetrics;
 
+  /* Should only be used for test */
+  public void setNamesystem(FSNamesystem ns) {
+    namesystem = ns;
+  }
+  
   public FSNamesystem getNamesystem() {
     return namesystem;
   }

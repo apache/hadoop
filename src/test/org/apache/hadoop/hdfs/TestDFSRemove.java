@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
 public class TestDFSRemove extends junit.framework.TestCase {
   static int countLease(MiniDFSCluster cluster) {
-    return cluster.getNameNode().namesystem.leaseManager.countLease();
+    return cluster.getNameNode().getNamesystem().leaseManager.countLease();
   }
   
   final Path dir = new Path("/test/remove/");

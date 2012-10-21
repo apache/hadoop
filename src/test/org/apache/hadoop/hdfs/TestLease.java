@@ -25,7 +25,8 @@ import org.apache.hadoop.fs.Path;
 
 public class TestLease extends junit.framework.TestCase {
   static boolean hasLease(MiniDFSCluster cluster, Path src) {
-    return cluster.getNameNode().namesystem.leaseManager.getLeaseByPath(src.toString()) != null;
+    return cluster.getNameNode().getNamesystem().leaseManager
+        .getLeaseByPath(src.toString()) != null;
   }
   
   final Path dir = new Path("/test/lease/");

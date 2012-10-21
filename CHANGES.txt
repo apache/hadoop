@@ -95,6 +95,8 @@ Release 1.2.0 - unreleased
     HDFS-4071. Add number of stale datanodes to metrics (port of HDFS-4059).
     (Jing Zhao via suresh)
 
+    HDFS-4057. NameNode.namesystem should be private. (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

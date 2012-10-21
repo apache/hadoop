@@ -55,8 +55,8 @@ public class FsckServlet extends DfsServlet {
         @Override
         public Object run() throws Exception {
           final NameNode nn = (NameNode) context.getAttribute("name.node");
-          final int totalDatanodes = nn.namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
-          final short minReplication = nn.namesystem.getMinReplication();
+          final int totalDatanodes = nn.getNamesystem().getNumberOfDatanodes(DatanodeReportType.LIVE); 
+          final short minReplication = nn.getNamesystem().getMinReplication();
 
           new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
               totalDatanodes, minReplication, remoteAddress).fsck();

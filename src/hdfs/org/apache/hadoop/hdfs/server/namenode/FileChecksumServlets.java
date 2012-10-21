@@ -57,7 +57,7 @@ public class FileChecksumServlets {
       final UserGroupInformation ugi = getUGI(request, conf);
       String tokenString = request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
-      final DatanodeID datanode = namenode.namesystem.getRandomDatanode();
+      final DatanodeID datanode = namenode.getNamesystem().getRandomDatanode();
       try {
         final URI uri = 
           createRedirectUri("/getFileChecksum", ugi, datanode, request, tokenString);

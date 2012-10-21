@@ -138,7 +138,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
 
       BlockMetaDataInfo[] updatedmetainfo = new BlockMetaDataInfo[REPLICATION_NUM];
       int minsize = min(newblocksizes);
-      long currentGS = cluster.getNameNode().namesystem.getGenerationStamp();
+      long currentGS = cluster.getNameNode().getNamesystem().getGenerationStamp();
       lastblock.setGenerationStamp(currentGS);
       for(int i = 0; i < REPLICATION_NUM; i++) {
         updatedmetainfo[i] = datanodes[i].getBlockMetaDataInfo(lastblock);
