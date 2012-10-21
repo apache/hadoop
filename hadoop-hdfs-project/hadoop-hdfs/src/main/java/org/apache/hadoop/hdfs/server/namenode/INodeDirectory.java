@@ -50,7 +50,7 @@ public class INodeDirectory extends INode {
 
   private List<INode> children;
 
-  INodeDirectory(String name, PermissionStatus permissions) {
+  protected INodeDirectory(String name, PermissionStatus permissions) {
     super(name, permissions);
     this.children = null;
   }

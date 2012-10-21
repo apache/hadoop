@@ -38,7 +38,7 @@ import com.google.common.primitives.SignedBytes;
  * directory inodes.
  */
 @InterfaceAudience.Private
-abstract class INode implements Comparable<byte[]> {
+public abstract class INode implements Comparable<byte[]> {
   /*
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.
@@ -135,7 +135,7 @@ abstract class INode implements Comparable<byte[]> {
     setPermission(ps.getPermission());
   }
   /** Get the {@link PermissionStatus} */
-  protected PermissionStatus getPermissionStatus() {
+  public PermissionStatus getPermissionStatus() {
     return new PermissionStatus(getUserName(),getGroupName(),getFsPermission());
   }
   private void updatePermissionStatus(PermissionStatusFormat f, long n) {
@@ -246,7 +246,7 @@ abstract class INode implements Comparable<byte[]> {
   /**
    * Set local file name
    */
-  void setLocalName(String name) {
+  protected void setLocalName(String name) {
     this.name = DFSUtil.string2Bytes(name);
   }
 
@@ -288,7 +288,7 @@ abstract class INode implements Comparable<byte[]> {
   /**
    * Set last modification time of inode.
    */
-  void setModificationTime(long modtime) {
+  public void setModificationTime(long modtime) {
     assert isDirectory();
     if (this.modificationTime <= modtime) {
       this.modificationTime = modtime;

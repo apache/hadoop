@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.util.Time;
 
 /** Directories where taking snapshots is allowed. */
 @InterfaceAudience.Private
@@ -36,6 +42,20 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
     return new INodeDirectorySnapshottable(nsq, dsq, dir);
   }
 
+  /** Cast INode to INodeDirectorySnapshottable. */
+  static public INodeDirectorySnapshottable valueOf(
+      INode inode, String src) throws IOException {
+    final INodeDirectory dir = INodeDirectory.valueOf(inode, src);
+    if (!dir.isSnapshottable()) {
+      throw new SnapshotException(src + " is not a snapshottable directory.");
+    }
+    return (INodeDirectorySnapshottable)dir;
+  }
+
+  /** A list of snapshots of this directory. */
+  private final List<INodeDirectorySnapshotRoot> snapshots
+      = new ArrayList<INodeDirectorySnapshotRoot>();
+
   private INodeDirectorySnapshottable(long nsQuota, long dsQuota,
       INodeDirectory dir) {
     super(nsQuota, dsQuota, dir);
@@ -44,5 +64,17 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
   @Override
   public boolean isSnapshottable() {
     return true;
+  }
+
+  /** Add a snapshot root under this directory. */
+  INodeDirectorySnapshotRoot addSnapshotRoot(final String name) {
+    final INodeDirectorySnapshotRoot r = new INodeDirectorySnapshotRoot(name, this);
+    snapshots.add(r);
+
+    //set modification time
+    final long timestamp = Time.now();
+    r.setModificationTime(timestamp);
+    setModificationTime(timestamp);
+    return r;
   }
 }
