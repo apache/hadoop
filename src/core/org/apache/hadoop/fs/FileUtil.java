@@ -740,7 +740,7 @@ public class FileUtil {
                                         FsPermission permission
                                        )  throws IOException {
     if (NativeIO.isAvailable()) {
-      NativeIO.chmod(f.getCanonicalPath(), permission.toShort());
+      NativeIO.POSIX.chmod(f.getCanonicalPath(), permission.toShort());
     } else {
       execCommand(f, Shell.getSetPermissionCommand(
                   String.format("%04o", permission.toShort()), false));

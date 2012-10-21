@@ -178,3 +178,9 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8763. Implement set-group-owner for Windows correctly. (Chuan Liu via
     vinodkv)
+
+    HADOOP-8902. Enable Gridmix v1 & v2 benchmarks on Windows platform.
+    (Mike Liddell via suresh)
+
+    HADOOP-8564. Port and extend Hadoop native libraries for Windows to address
+    datanode concurrent reading and writing issue. (Chuan Liu via suresh)

@@ -23,6 +23,8 @@
 
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
+  <property environment="env" />
+
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
@@ -84,12 +86,19 @@
         outputproperty="nonspace.os">
      <arg value="s/ /_/g"/>
   </exec>
-  <property name="build.platform" 
-            value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
+  <condition property="build.platform"
+    value="${env.OS}-${os.arch}-${sun.arch.data.model}"
+    else="${nonspace.os}-${os.arch}-${sun.arch.data.model}">
+    <os family="windows" />
+  </condition>
   <property name="jvm.arch" 
             value="${sun.arch.data.model}"/>
-  <property name="build.winutils" value="${build.dir}/winutils/${os.arch}"/>
+  <property name="build.winutils" value="${build.dir}/winutils/${env.OS}-${env.Platform}"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
+  <!-- 'build.native.win' is the path under which Hadoop native libraries for Windows are built -->
+  <!-- We need a special path on Windows because we need a path that can be referenced from MSBuild -->
+  <!-- 'sun.arch.data.model' in build.platform make it fail to satisfy the above requirement -->
+  <property name="build.native.win" value="${build.dir}/native/${env.OS}-${env.Platform}"/>
   <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
   <property name="build.c++.utils" value="${build.c++}/utils"/>
   <property name="build.c++.pipes" value="${build.c++}/pipes"/>
@@ -641,7 +650,42 @@
   <target name="compile-native">
     <antcall target="compile-core-native">
       <param name="compile.native" value="true"/>
-    </antcall> 
+    </antcall>
+  </target>
+
+  <target name="compile-win-core-native" depends="compile-core-classes"
+    if="windows">
+
+    <mkdir dir="${build.native}/lib"/>
+    <mkdir dir="${build.native.win}/src/org/apache/hadoop/io/compress/zlib"/>
+    <mkdir dir="${build.native.win}/src/org/apache/hadoop/io/nativeio"/>
+
+    <javah
+      classpath="${build.classes}"
+      destdir="${build.native.win}/src/org/apache/hadoop/io/compress/zlib"
+      force="yes"
+      verbose="yes"
+      >
+      <class name="org.apache.hadoop.io.compress.zlib.ZlibCompressor" />
+      <class name="org.apache.hadoop.io.compress.zlib.ZlibDecompressor" />
+    </javah>
+
+    <javah
+      classpath="${build.classes}"
+      destdir="${build.native.win}/src/org/apache/hadoop/io/nativeio"
+      force="yes"
+      verbose="yes"
+      >
+      <class name="org.apache.hadoop.io.nativeio.NativeIO" />
+      <class name="org.apache.hadoop.io.nativeio.NativeIO$POSIX" />
+      <class name="org.apache.hadoop.io.nativeio.NativeIO$Windows" />
+    </javah>
+
+    <exec dir="${build.native.win}" executable="${msbuild.cmd}" failonerror="true">
+      <arg line="${native.src.dir}/native.sln /p:Configuration=Release;OutDir=${build.native.win}/"/>
+    </exec>
+
+    <copy file="${build.native.win}/hadoop.dll" todir="${build.native}/lib"/>
   </target>
 
   <target name="create-native-configure">
@@ -651,7 +695,7 @@
     </exec>
   </target>
 
-  <target name="compile-core-native" if="compile.native">
+  <target name="compile-core-native" if="compile.native" unless="windows">
     <antcall target="compile-core-classes"/>
     <antcall target="create-native-configure"/>
     <mkdir dir="${build.native}/lib"/>
@@ -687,6 +731,8 @@
           verbose="yes"
           >
           <class name="org.apache.hadoop.io.nativeio.NativeIO" />
+          <class name="org.apache.hadoop.io.nativeio.NativeIO$POSIX" />
+          <class name="org.apache.hadoop.io.nativeio.NativeIO$Windows" />
         </javah>
   	<javah
   	  classpath="${build.classes}"
@@ -717,7 +763,7 @@
     <exec dir="${build.native}" executable="${make.cmd}" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
-  	  <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
+      <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
   	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
     </exec>
 
@@ -729,7 +775,8 @@
 
   <target name="compile-core"
           depends="clover,compile-core-classes,compile-mapred-classes,
-  	compile-hdfs-classes,compile-core-native,compile-c++,compile-ms-winutils" 
+          compile-hdfs-classes,compile-core-native,compile-c++,compile-ms-winutils,
+          compile-win-core-native"
   	description="Compile core only">
   </target>
 
@@ -1108,7 +1155,7 @@
                      value="@{test.krb5.conf.filename}"/>
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
         <sysproperty key="java.library.path"
-                     value="${build.native}/lib:${lib.dir}/native/${build.platform}:${lib.file.path}:${snappy.lib}" />
+          value="${build.native}/lib${path.separator}${lib.dir}/native/${build.platform}${path.separator}${lib.file.path}${path.separator}${snappy.lib}" />
         <sysproperty key="install.c++.examples"
                      value="${install.c++.examples}" />
         <sysproperty key="testjar"

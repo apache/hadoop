@@ -198,8 +198,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
-  // fails due to issue w/append, disable 
-  public void _testUnfinishedBlockCRCErrorTransferToAppend() throws IOException {
+  public void testUnfinishedBlockCRCErrorTransferToAppend() throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }
   
@@ -211,9 +210,8 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
-  
-  // fails due to issue w/append, disable 
-  public void _testUnfinishedBlockCRCErrorNormalTransferAppend() 
+   
+  public void testUnfinishedBlockCRCErrorNormalTransferAppend() 
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }
@@ -242,34 +240,35 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
       final AtomicBoolean writerDone = new AtomicBoolean(false);
       final AtomicBoolean writerStarted = new AtomicBoolean(false);
       final AtomicBoolean error = new AtomicBoolean(false);
-      final FSDataOutputStream initialOutputStream = fileSystem.create(file);
-      Thread writer = new Thread(new Runnable() {
-        private FSDataOutputStream outputStream = initialOutputStream;
 
+      Thread writer = new Thread(new Runnable() {
         @Override
         public void run() {
           try {
-            for (int i = 0; !error.get() && i < numWrites; i++) {
-              try {
-                final byte[] writeBuf = 
-                  generateSequentialBytes(i * writeSize, writeSize);              
+            FSDataOutputStream outputStream = fileSystem.create(file);
+            if (syncType == SyncType.APPEND) {
+              outputStream.close();
+              outputStream = fileSystem.append(file);
+            }
+            try {
+              for (int i = 0; !error.get() && i < numWrites; i++) {
+                final byte[] writeBuf = generateSequentialBytes(i * writeSize,
+                    writeSize);
                 outputStream.write(writeBuf);
                 if (syncType == SyncType.SYNC) {
                   outputStream.sync();
-                } else { // append
-                  outputStream.close();
-                  outputStream = fileSystem.append(file);
                 }
                 writerStarted.set(true);
-              } catch (IOException e) {
-                error.set(true);
-                LOG.error(String.format("error writing to file"));
-              } 
+              }
+            } catch (IOException e) {
+              error.set(true);
+              LOG.error(String.format("error writing to file"));
+            } finally {
+              outputStream.close();
             }
-            
-            outputStream.close();
             writerDone.set(true);
           } catch (Exception e) {
+            error.set(true);
             LOG.error("error in writer", e);
             
             throw new RuntimeException(e);
@@ -318,7 +317,6 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
         
         Thread.currentThread().interrupt();
       }
-      initialOutputStream.close();
     } finally {
       cluster.shutdown();
     }
