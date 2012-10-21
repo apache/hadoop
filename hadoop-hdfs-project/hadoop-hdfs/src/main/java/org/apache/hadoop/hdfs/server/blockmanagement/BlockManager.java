@@ -625,7 +625,10 @@ public class BlockManager {
     blocksMap.replaceBlock(ucBlock);
 
     // Remove block from replication queue.
-    updateNeededReplications(oldBlock, 0, 0);
+    NumberReplicas replicas = countNodes(ucBlock);
+    neededReplications.remove(ucBlock, replicas.liveReplicas(),
+        replicas.decommissionedReplicas(), getReplication(ucBlock));
+    pendingReplications.remove(ucBlock);
 
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeDescriptor dd : targets) {

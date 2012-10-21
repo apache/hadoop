@@ -291,4 +291,39 @@ public class TestFileAppend4 {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Test the updation of NeededReplications for the Appended Block
+   */
+  @Test(timeout = 60000)
+  public void testUpdateNeededReplicationsForAppendedFile() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .build();
+    DistributedFileSystem fileSystem = null;
+    try {
+      // create a file.
+      fileSystem = cluster.getFileSystem();
+      Path f = new Path("/testAppend");
+      FSDataOutputStream create = fileSystem.create(f, (short) 2);
+      create.write("/testAppend".getBytes());
+      create.close();
+
+      // Append to the file.
+      FSDataOutputStream append = fileSystem.append(f);
+      append.write("/testAppend".getBytes());
+      append.close();
+
+      // Start a new datanode
+      cluster.startDataNodes(conf, 1, true, null, null);
+
+      // Check for replications
+      DFSTestUtil.waitReplication(fileSystem, f, (short) 2);
+    } finally {
+      if (null != fileSystem) {
+        fileSystem.close();
+      }
+      cluster.shutdown();
+    }
+  }
 }
