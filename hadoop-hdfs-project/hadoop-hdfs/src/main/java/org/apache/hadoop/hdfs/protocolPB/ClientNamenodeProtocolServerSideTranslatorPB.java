@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProt
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.io.Text;
 
@@ -881,7 +883,25 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   @Override
   public ListSnapshotsResponseProto listSnapshots(RpcController controller,
       ListSnapshotsRequestProto request) throws ServiceException {
-    // TODO Auto-generated method stub
-    return null;
+    SnapshotInfo[] result;
+
+    try {
+      result = server.listSnapshots(request.getSnapshotRoot());
+      ListSnapshotsResponseProto.Builder builder = ListSnapshotsResponseProto
+          .newBuilder();
+      for (SnapshotInfo si : result) {
+        SnapshotInfoProto.Builder infobuilder = SnapshotInfoProto.newBuilder();
+        infobuilder.setSnapshotName(si.getSnapshotName());
+        infobuilder.setSnapshotRoot(si.getSnapshotRoot());
+        infobuilder.setCreateTime(si.getCreateTime());
+        infobuilder.setPermission(si.getPermission());
+        infobuilder.setOwner(si.getOwner());
+        infobuilder.setGroup(si.getGroup());
+        builder.addSnapshots(infobuilder);
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 }

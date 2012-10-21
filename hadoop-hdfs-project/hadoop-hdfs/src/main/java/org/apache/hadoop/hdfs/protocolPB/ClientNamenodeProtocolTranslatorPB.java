@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -79,6 +80,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLis
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListSnapshotsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListSnapshotsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MkdirsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseRequestProto;
@@ -101,6 +104,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetSaf
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetTimesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -852,6 +856,27 @@ public class ClientNamenodeProtocolTranslatorPB implements
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
-    
+  }
+
+  @Override
+  public SnapshotInfo[] listSnapshots(String snapshotRoot) throws IOException {
+    SnapshotInfo[] sinfo = null;
+    ListSnapshotsRequestProto req = null;
+
+    req = ListSnapshotsRequestProto.newBuilder().setSnapshotRoot(snapshotRoot)
+        .build();
+    try {
+      ListSnapshotsResponseProto resp = rpcProxy.listSnapshots(null, req);
+      sinfo = new SnapshotInfo[resp.getSnapshotsCount()];
+      for (int i = 0; i < resp.getSnapshotsCount(); i++) {
+        SnapshotInfoProto siProto = resp.getSnapshots(i);
+        sinfo[i] = new SnapshotInfo(siProto.getSnapshotName(), resp
+            .getSnapshots(i).getSnapshotRoot(), siProto.getCreateTime(),
+            siProto.getPermission(), siProto.getOwner(), siProto.getGroup());
+      }
+      return sinfo;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 }

@@ -381,9 +381,11 @@ message VersionResponseProto {
  */
 message SnapshotInfoProto {
   required string snapshotName = 1;
-  required FsPermissionProto permission = 2;
-  required string owner = 3;
-  required string group = 4;
+  required string snapshotRoot = 2;
+  required FsPermissionProto permission = 3;
+  required string owner = 4;
+  required string group = 5;
+  required string createTime = 6;
   // TODO: do we need access time?
 }
 
