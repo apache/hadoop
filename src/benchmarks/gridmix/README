@@ -85,13 +85,21 @@ spills.
 
 1.0 Build
 
+Windows does not support C++ build or pipes.
+
+Non-windows:
 1) Compile the examples, including the C++ sources:
   > ant -Dcompile.c++=yes examples
+ 
 2) Copy the pipe sort example to a location in the default filesystem
    (usually HDFS, default /gridmix/programs)
   > $HADOOP_HOME/hadoop dfs -mkdir $GRID_MIX_PROG
   > $HADOOP_HOME/hadoop dfs -put build/c++-examples/$PLATFORM_STR/bin/pipes-sort $GRID_MIX_PROG
 
+Windows:
+1) Compile the examples:
+    > ant examples
+  
 1.1 Configure
 
 One must modify hadoop-env to supply the following information:
@@ -115,10 +123,10 @@ cluster on which the benchmarks will be run. The default assumes a large
 
 1.2 Generate test data
 
-Test data is generated using the generateData.sh script. While one may
-modify the structure and size of the data generated here, note that many of
-the scripts- particularly for medium and small sized jobs- rely not only on
-specific InputFormats and key/value types, but also on a particular
+Test data is generated using the generateData.sh / generateData.cmd script. 
+While one may modify the structure and size of the data generated here, note 
+that many of the scripts particularly for medium and small sized jobs rely 
+not only on specific InputFormats and key/value types, but also on a particular
 structure to the input data. Changing these values will likely be necessary
 to run on small and medium-sized clusters, but any modifications must be
 informed by an explicit familiarity with the underlying scripts.
