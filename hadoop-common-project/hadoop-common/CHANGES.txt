@@ -17,7 +17,7 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8851. Use -XX:+HeapDumpOnOutOfMemoryError JVM option in the forked
     tests. (Ivan A. Veselovsky via atm)
 
-    HADOOP-8923. JNI-based user-group mapping modules can be too chatty on 
+    HADOOP-8932. JNI-based user-group mapping modules can be too chatty on 
     lookup failures. (Kihwal Lee via suresh)
 
     HADOOP-8930. Cumulative code coverage calculation (Andrey Klochkov via 
