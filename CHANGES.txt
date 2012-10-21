@@ -266,6 +266,8 @@ Release 1.2.0 - unreleased
     HADOOP-8861. FSDataOutputStream.sync should call flush() if the underlying 
     wrapped stream is not Syncable. (Amareshwari via umamahesh)
 
+    HDFS-3402. Fix failure to start secure datanodes. (Benoy Antony via suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
