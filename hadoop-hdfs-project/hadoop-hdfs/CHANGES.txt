@@ -408,6 +408,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4088. Remove "throws QuotaExceededException" from an
     INodeDirectoryWithQuota constructor. (szetszwo)
 
+    HDFS-4099. Clean up replication code and add more javadoc. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

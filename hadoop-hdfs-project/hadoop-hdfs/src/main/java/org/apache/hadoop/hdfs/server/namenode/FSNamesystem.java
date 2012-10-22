@@ -2428,21 +2428,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  /** 
-   * Check all blocks of a file. If any blocks are lower than their intended
-   * replication factor, then insert them into neededReplication and if 
-   * the blocks are more than the intended replication factor then insert 
-   * them into invalidateBlocks.
-   */
-  private void checkReplicationFactor(INodeFile file) {
-    short numExpectedReplicas = file.getBlockReplication();
-    Block[] pendingBlocks = file.getBlocks();
-    int nrBlocks = pendingBlocks.length;
-    for (int i = 0; i < nrBlocks; i++) {
-      blockManager.checkReplication(pendingBlocks[i], numExpectedReplicas);
-    }
-  }
-    
   /**
    * Allocate a block at the given pending filename
    * 
@@ -3175,7 +3160,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);
 
-    checkReplicationFactor(newFile);
+    blockManager.checkReplication(newFile);
   }
 
   void commitBlockSynchronization(ExtendedBlock lastblock,
