@@ -26,7 +26,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.THEMESWITCHER_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -54,6 +55,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.PRE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.mortbay.log.Log;
 
@@ -226,7 +229,7 @@ public class ContainerLogsPage extends NMView {
               + ", end[" + end + "]");
           return;
         } else {
-          InputStreamReader reader = null;
+          FileInputStream logByteStream = null;
           try {
             long toRead = end - start;
             if (toRead < logFile.length()) {
@@ -237,38 +240,34 @@ public class ContainerLogsPage extends NMView {
             }
             // TODO: Use secure IO Utils to avoid symlink attacks.
             // TODO Fix findBugs close warning along with IOUtils change
-            reader = new FileReader(logFile);
+            logByteStream = new FileInputStream(logFile);
+            IOUtils.skipFully(logByteStream, start);
+
+            InputStreamReader reader = new InputStreamReader(logByteStream);
             int bufferSize = 65536;
             char[] cbuf = new char[bufferSize];
 
-            long skipped = 0;
-            long totalSkipped = 0;
-            while (totalSkipped < start) {
-              skipped = reader.skip(start - totalSkipped);
-              totalSkipped += skipped;
-            }
-
             int len = 0;
             int currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
-            writer().write("<pre>");
+            PRE<Hamlet> pre = html.pre();
 
             while ((len = reader.read(cbuf, 0, currentToRead)) > 0
                 && toRead > 0) {
-              writer().write(cbuf, 0, len); // TODO: HTMl Quoting?
+              pre._(new String(cbuf, 0, len));
               toRead = toRead - len;
               currentToRead = toRead > bufferSize ? bufferSize : (int) toRead;
             }
 
+            pre._();
             reader.close();
-            writer().write("</pre>");
 
           } catch (IOException e) {
             html.h1("Exception reading log-file. Log file was likely aggregated. "
                 + StringUtils.stringifyException(e));
           } finally {
-            if (reader != null) {
+            if (logByteStream != null) {
               try {
-                reader.close();
+                logByteStream.close();
               } catch (IOException e) {
                 // Ignore
               }

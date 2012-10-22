@@ -37,13 +37,13 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeInfo extends DatanodeID implements Node {
-  protected long capacity;
-  protected long dfsUsed;
-  protected long remaining;
-  protected long blockPoolUsed;
-  protected long lastUpdate;
-  protected int xceiverCount;
-  protected String location = NetworkTopology.DEFAULT_RACK;
+  private long capacity;
+  private long dfsUsed;
+  private long remaining;
+  private long blockPoolUsed;
+  private long lastUpdate;
+  private int xceiverCount;
+  private String location = NetworkTopology.DEFAULT_RACK;
   
   // Datanode administrative states
   public enum AdminStates {
@@ -81,8 +81,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
     this.location = from.getNetworkLocation();
-    this.adminState = from.adminState;
-    this.hostName = from.hostName;
+    this.adminState = from.getAdminState();
   }
 
   public DatanodeInfo(DatanodeID nodeID) {

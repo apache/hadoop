@@ -48,7 +48,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -56,11 +55,13 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
@@ -411,8 +412,8 @@ public class TestRMContainerAllocator {
     // Wait till all map-attempts request for containers
     for (Task t : job.getTasks().values()) {
       if (t.getType() == TaskType.MAP) {
-        mrApp.waitForState(t.getAttempts().values().iterator().next(),
-          TaskAttemptState.UNASSIGNED);
+        mrApp.waitForInternalState((TaskAttemptImpl) t.getAttempts().values()
+            .iterator().next(), TaskAttemptStateInternal.UNASSIGNED);
       }
     }
     amDispatcher.await();
@@ -562,8 +563,8 @@ public class TestRMContainerAllocator {
     amDispatcher.await();
     // Wait till all map-attempts request for containers
     for (Task t : job.getTasks().values()) {
-      mrApp.waitForState(t.getAttempts().values().iterator().next(),
-        TaskAttemptState.UNASSIGNED);
+      mrApp.waitForInternalState((TaskAttemptImpl) t.getAttempts().values()
+          .iterator().next(), TaskAttemptStateInternal.UNASSIGNED);
     }
     amDispatcher.await();
 

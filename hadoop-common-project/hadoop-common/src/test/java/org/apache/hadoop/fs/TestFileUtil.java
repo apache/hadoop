@@ -472,7 +472,9 @@ public class TestFileUtil {
     setupDirs();
 
     long du = FileUtil.getDU(TEST_DIR);
-    //Only two files (in partitioned) have 4 bytes each
-    Assert.assertEquals(du, 8);
+    // Only two files (in partitioned).  Each has 3 characters + system-specific
+    // line separator.
+    long expected = 2 * (3 + System.getProperty("line.separator").length());
+    Assert.assertEquals(expected, du);
   }
 }

@@ -657,7 +657,7 @@ public class FSEditLog implements LogsPurgeable {
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
     AddOp op = AddOp.getInstance(cache.get())
       .setPath(path)
-      .setReplication(newNode.getReplication())
+      .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
@@ -675,7 +675,7 @@ public class FSEditLog implements LogsPurgeable {
   public void logCloseFile(String path, INodeFile newNode) {
     CloseOp op = CloseOp.getInstance(cache.get())
       .setPath(path)
-      .setReplication(newNode.getReplication())
+      .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
@@ -1174,6 +1174,11 @@ public class FSEditLog implements LogsPurgeable {
       // TODO: are we sure this is OK?
     }
   }
+  
+  public void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxId, boolean inProgressOk) {
+    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
+  }
 
   public Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId) throws IOException {
@@ -1191,7 +1196,7 @@ public class FSEditLog implements LogsPurgeable {
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
       boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
+    selectInputStreams(streams, fromTxId, inProgressOk);
 
     try {
       checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);

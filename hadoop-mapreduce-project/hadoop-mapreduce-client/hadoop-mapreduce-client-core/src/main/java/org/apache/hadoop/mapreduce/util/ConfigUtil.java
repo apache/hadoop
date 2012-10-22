@@ -519,6 +519,8 @@ public class ConfigUtil {
         new String[] {
         MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT   
     });
+    Configuration.addDeprecation("mapreduce.user.classpath.first",
+      MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST);
   }
 
   public static void main(String[] args) {

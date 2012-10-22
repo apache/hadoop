@@ -592,13 +592,13 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           newBI = new BlockInfoUnderConstruction(
-              newBlock, file.getReplication());
+              newBlock, file.getBlockReplication());
         } else {
           // OP_CLOSE should add finalized blocks. This code path
           // is only executed when loading edits written by prior
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
-          newBI = new BlockInfo(newBlock, file.getReplication());
+          newBI = new BlockInfo(newBlock, file.getBlockReplication());
         }
         fsNamesys.getBlockManager().addBlockCollection(newBI, file);
         file.addBlock(newBI);

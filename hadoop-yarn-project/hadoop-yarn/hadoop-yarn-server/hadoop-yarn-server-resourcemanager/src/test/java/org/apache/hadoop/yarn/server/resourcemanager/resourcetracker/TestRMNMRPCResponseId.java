@@ -65,9 +65,9 @@ public class TestRMNMRPCResponseId {
         ; // ignore
       }
     });
-    RMContext context = 
-        new RMContextImpl(new MemStore(), dispatcher, null, null, null,
-            null, null, null);
+    RMContext context =
+        new RMContextImpl(new MemStore(), dispatcher, null, null, null, null,
+          null, null, null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
     NodesListManager nodesListManager = new NodesListManager(context);

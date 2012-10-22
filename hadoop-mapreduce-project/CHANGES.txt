@@ -42,7 +42,8 @@ Trunk (Unreleased)
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides
     client APIs cross MR1 and MR2 (Ahmed via tucu)
 
-    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
+    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks()
+    (XieXianshan via harsh)
 
     MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
     TeraOutputFormat in the terasort example.  (szetszwo)
@@ -61,7 +62,11 @@ Trunk (Unreleased)
     MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
     (madhukara phatak via bobby)
 
-    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse due to missing Avro-generated classes (Chris Nauroth via harsh)
+    MAPREDUCE-4686. hadoop-mapreduce-client-core fails compilation in Eclipse 
+    due to missing Avro-generated classes (Chris Nauroth via harsh)
+
+    MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
+    (Brandon Li via suresh)
 
   BUG FIXES
 
@@ -158,6 +163,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4616. Improve javadoc for MultipleOutputs. (Tony Burton via
     acmurthy) 
 
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -177,6 +185,9 @@ Release 2.0.3-alpha - Unreleased
     (Vinod Kumar Vavilapalli via tgraves)
 
     MAPREDUCE-4654. TestDistCp is ignored. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4736. Remove obsolete option [-rootDir] from TestDFSIO.
+    (Brandon Li via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -562,6 +573,9 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol
+    for Job, Task and TaskAttempt. (Siddarth Seth via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -572,6 +586,21 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4705. Fix a bug in job history lookup, which makes older jobs
     inaccessible despite the presence of a valid history file. (Jason Lowe
     via sseth)
+
+    MAPREDUCE-4521. mapreduce.user.classpath.first incompatibility with 0.20/1.x
+    (Ravi Prakash via bobby)
+
+    MAPREDUCE-4721. Task startup time in JHS is same as job startup time.
+    (Ravi Prakash via bobby)
+
+    MAPREDUCE-4479. Fix parameter order in assertEquals() in 
+    TestCombineInputFileFormat.java (Mariappan Asokan via bobby)
+
+    MAPREDUCE-4733. Reducer can fail to make progress during shuffle if too many
+    reducers complete consecutively. (Jason Lowe via vinodkv)
+
+    MAPREDUCE-4740. only .jars can be added to the Distributed Cache
+    classpath. (Robert Joseph Evans via jlowe)
 
 Release 0.23.4 - UNRELEASED
 

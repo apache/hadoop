@@ -72,8 +72,8 @@ Trunk (Unreleased)
     HADOOP-8360. empty-configuration.xml fails xml validation
     (Radim Kolar via harsh)
 
-    HADOOP-8367 Improve documentation of declaringClassProtocolName in rpc headers 
-                (Sanjay Radia)
+    HADOOP-8367 Improve documentation of declaringClassProtocolName in 
+    rpc headers. (Sanjay Radia)
 
     HADOOP-8415. Add getDouble() and setDouble() in
     org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
@@ -121,6 +121,13 @@ Trunk (Unreleased)
 
     HADOOP-8864. Addendum to HADOOP-8840: Add a coloring case for +0 results
     too. (harsh)
+
+    HADOOP-8910. Add examples to GlobExpander#expand method. (suresh)
+
+    HADOOP-8920. Add more javadoc to metrics2 related classes. (suresh)
+
+    HADOOP-8776. Provide an option in test-patch that can enable/disable
+    compiling native code. (Chris Nauroth via suresh)
 
   BUG FIXES
 
@@ -259,6 +266,9 @@ Trunk (Unreleased)
     HADOOP-8839. test-patch's -1 on @author tag presence doesn't cause
     a -1 to the overall result (harsh)
 
+    HADOOP-8918. test-patch.sh is parsing modified files wrong.
+    (Raja Aluri via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -303,10 +313,30 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8909. Hadoop Common Maven protoc calls must not depend on external
     sh script. (Chris Nauroth via suresh)
 
+    HADOOP-8911. CRLF characters in source and text files.
+    (Raja Aluri via suresh)
+
+    HADOOP-8912. Add .gitattributes file to prevent CRLF and LF mismatches
+    for source and text files. (Raja Aluri via suresh)
+
+    HADOOP-8784. Improve IPC.Client's token use (daryn)
+
+    HADOOP-8929. Add toString, other improvements for SampleQuantiles (todd)
+
+    HADOOP-8922. Provide alternate JSONP output for JMXJsonServlet to allow
+    javascript in browser dashboard (Damien Hardy via bobby)
+
+    HADOOP-8931. Add Java version to startup message. (eli)
+
+    HADOOP-8925. Remove the packaging. (eli)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
     via atm)
+
+    HADOOP-8926. hadoop.util.PureJavaCrc32 cache hit-ratio is low for static
+    data (Gopal V via bobby)
 
   BUG FIXES
 
@@ -338,6 +368,20 @@ Release 2.0.3-alpha - Unreleased
     webhdfs filesystem and fsck to fail when security is on.
     (Arpit Gupta via suresh)
 
+    HADOOP-8901. GZip and Snappy support may not work without unversioned
+    libraries (Colin Patrick McCabe via todd)
+
+    HADOOP-8883. Anonymous fallback in KerberosAuthenticator is broken.
+    (rkanter via tucu)
+
+    HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
+    doesn't match decompressed size. (Slavik Krassovsky via suresh)
+
+    HADOOP-8948. TestFileUtil.testGetDU fails on Windows due to incorrect
+    assumption of line separator. (Chris Nauroth via suresh)
+
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1037,9 +1081,18 @@ Release 0.23.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8932. JNI-based user-group mapping modules can be too chatty on 
+    lookup failures. (Kihwal Lee via suresh)
+
+    HADOOP-8930. Cumulative code coverage calculation (Andrey Klochkov via
+    bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
+    jlowe)
 
 Release 0.23.4 - UNRELEASED
 

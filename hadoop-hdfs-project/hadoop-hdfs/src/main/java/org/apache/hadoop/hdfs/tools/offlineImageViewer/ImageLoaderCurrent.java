@@ -165,7 +165,7 @@ class ImageLoaderCurrent implements ImageLoader {
 
       if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imageVersion)) {
         boolean isCompressed = in.readBoolean();
-        v.visit(ImageElement.IS_COMPRESSED, imageVersion);
+        v.visit(ImageElement.IS_COMPRESSED, String.valueOf(isCompressed));
         if (isCompressed) {
           String codecClassName = Text.readString(in);
           v.visit(ImageElement.COMPRESS_CODEC, codecClassName);

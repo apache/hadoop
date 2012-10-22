@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.metrics2.util;
 
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 
 /**
  * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm
@@ -202,10 +203,8 @@ public class SampleQuantiles {
    * @param quantile Queried quantile, e.g. 0.50 or 0.99.
    * @return Estimated value at that quantile.
    */
-  private long query(double quantile) throws IOException {
-    if (samples.size() == 0) {
-      throw new IOException("No samples present");
-    }
+  private long query(double quantile) {
+    Preconditions.checkState(!samples.isEmpty(), "no data in estimator");
 
     int rankMin = 0;
     int desired = (int) (quantile * count);
@@ -231,14 +230,18 @@ public class SampleQuantiles {
   /**
    * Get a snapshot of the current values of all the tracked quantiles.
    * 
-   * @return snapshot of the tracked quantiles
-   * @throws IOException
-   *           if no items have been added to the estimator
+   * @return snapshot of the tracked quantiles. If no items are added
+   * to the estimator, returns null.
    */
-  synchronized public Map<Quantile, Long> snapshot() throws IOException {
+  synchronized public Map<Quantile, Long> snapshot() {
     // flush the buffer first for best results
     insertBatch();
-    Map<Quantile, Long> values = new HashMap<Quantile, Long>(quantiles.length);
+    
+    if (samples.isEmpty()) {
+      return null;
+    }
+    
+    Map<Quantile, Long> values = new TreeMap<Quantile, Long>();
     for (int i = 0; i < quantiles.length; i++) {
       values.put(quantiles[i], query(quantiles[i].quantile));
     }
@@ -272,6 +275,16 @@ public class SampleQuantiles {
     count = 0;
     bufferCount = 0;
     samples.clear();
+  }
+  
+  @Override
+  synchronized public String toString() {
+    Map<Quantile, Long> data = snapshot();
+    if (data == null) {
+      return "[no samples]";
+    } else {
+      return Joiner.on("\n").withKeyValueSeparator(": ").join(data);
+    }
   }
 
   /**

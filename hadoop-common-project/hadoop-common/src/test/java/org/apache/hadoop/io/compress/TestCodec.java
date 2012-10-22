@@ -730,6 +730,55 @@ public class TestCodec {
     }
   }
 
+  @Test
+  public void testGzipLongOverflow() throws IOException {
+    LOG.info("testGzipLongOverflow");
+
+    // Don't use native libs for this test.
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, false);
+    assertFalse("ZlibFactory is using native libs against request",
+        ZlibFactory.isNativeZlibLoaded(conf));
+
+    // Ensure that the CodecPool has a BuiltInZlibInflater in it.
+    Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
+    assertNotNull("zlibDecompressor is null!", zlibDecompressor);
+    assertTrue("ZlibFactory returned unexpected inflator",
+        zlibDecompressor instanceof BuiltInZlibInflater);
+    CodecPool.returnDecompressor(zlibDecompressor);
+
+    // Now create a GZip text file.
+    String tmpDir = System.getProperty("test.build.data", "/tmp/");
+    Path f = new Path(new Path(tmpDir), "testGzipLongOverflow.bin.gz");
+    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+      new GZIPOutputStream(new FileOutputStream(f.toString()))));
+
+    final int NBUF = 1024 * 4 + 1;
+    final char[] buf = new char[1024 * 1024];
+    for (int i = 0; i < buf.length; i++) buf[i] = '\0';
+    for (int i = 0; i < NBUF; i++) {
+      bw.write(buf);
+    }
+    bw.close();
+
+    // Now read it back, using the CodecPool to establish the
+    // decompressor to use.
+    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodec codec = ccf.getCodec(f);
+    Decompressor decompressor = CodecPool.getDecompressor(codec);
+    FileSystem fs = FileSystem.getLocal(conf);
+    InputStream is = fs.open(f);
+    is = codec.createInputStream(is, decompressor);
+    BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    for (int j = 0; j < NBUF; j++) {
+      int n = br.read(buf);
+      assertEquals("got wrong read length!", n, buf.length);
+      for (int i = 0; i < buf.length; i++)
+        assertEquals("got wrong byte!", buf[i], '\0');
+    }
+    br.close();
+  }
+
   public void testGzipCodecWrite(boolean useNative) throws IOException {
     // Create a gzipped file using a compressor from the CodecPool,
     // and try to read it back via the regular GZIPInputStream.

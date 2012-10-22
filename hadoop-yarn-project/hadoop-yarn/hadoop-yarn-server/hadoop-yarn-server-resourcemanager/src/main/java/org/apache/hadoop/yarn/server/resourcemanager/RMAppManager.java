@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
@@ -58,19 +57,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
-  private final ClientToAMTokenSecretManagerInRM clientToAMSecretManager;
   private final ApplicationMasterService masterService;
   private final YarnScheduler scheduler;
   private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
 
   public RMAppManager(RMContext context,
-      ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
       YarnScheduler scheduler, ApplicationMasterService masterService,
       ApplicationACLsManager applicationACLsManager, Configuration conf) {
     this.rmContext = context;
     this.scheduler = scheduler;
-    this.clientToAMSecretManager = clientToAMSecretManager;
     this.masterService = masterService;
     this.applicationACLsManager = applicationACLsManager;
     this.conf = conf;
@@ -230,14 +226,18 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
-      // TODO: This needs to move to per-AppAttempt
-      this.clientToAMSecretManager.registerApplication(applicationId);
+
       String clientTokenStr = null;
       if (UserGroupInformation.isSecurityEnabled()) {
+
+        // TODO: This needs to move to per-AppAttempt
+        this.rmContext.getClientToAMTokenSecretManager().registerApplication(
+          applicationId);
+
         Token<ClientTokenIdentifier> clientToken = new 
             Token<ClientTokenIdentifier>(
             new ClientTokenIdentifier(applicationId),
-            this.clientToAMSecretManager);
+            this.rmContext.getClientToAMTokenSecretManager());
         clientTokenStr = clientToken.encodeToUrlString();
         LOG.debug("Sending client token as " + clientTokenStr);
       }

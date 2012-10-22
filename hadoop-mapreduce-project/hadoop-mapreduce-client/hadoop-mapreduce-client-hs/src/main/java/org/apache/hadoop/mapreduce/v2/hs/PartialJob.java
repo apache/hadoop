@@ -154,6 +154,12 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   }
 
   @Override
+  public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+      int startIndex, int maxEvents) {
+    return null;
+  }
+
+  @Override
   public boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation) {
     return true;
   }

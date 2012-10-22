@@ -52,7 +52,7 @@ public class JniBasedUnixGroupsNetgroupMapping
       throw new RuntimeException("Bailing out since native library couldn't " +
         "be loaded");
     }
-    LOG.info("Using JniBasedUnixGroupsNetgroupMapping for Netgroup resolution");
+    LOG.debug("Using JniBasedUnixGroupsNetgroupMapping for Netgroup resolution");
   }
 
   /**
@@ -115,7 +115,12 @@ public class JniBasedUnixGroupsNetgroupMapping
       // JNI code does not expect '@' at the begining of the group name
       users = getUsersForNetgroupJNI(netgroup.substring(1));
     } catch (Exception e) {
-      LOG.warn("error getting users for netgroup " + netgroup, e);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error getting users for netgroup " + netgroup, e);
+      } else {
+        LOG.info("Error getting users for netgroup " + netgroup + 
+            ": " + e.getMessage());
+      }
     }
     if (users != null && users.length != 0) {
       return Arrays.asList(users);

@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -55,21 +54,6 @@ public interface JournalManager extends Closeable, FormatConfirmable,
    * as finalized and complete.
    */
   void finalizeLogSegment(long firstTxId, long lastTxId) throws IOException;
-
-   /**
-   * Get a list of edit log input streams.  The list will start with the
-   * stream that contains fromTxnId, and continue until the end of the journal
-   * being managed.
-   * 
-   * @param fromTxnId the first transaction id we want to read
-   * @param inProgressOk whether or not in-progress streams should be returned
-   *
-   * @return a list of streams
-   * @throws IOException if the underlying storage has an error or is otherwise
-   * inaccessible
-   */
-  void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxnId, boolean inProgressOk) throws IOException;
 
   /**
    * Set the amount of memory that this stream should use to buffer edits

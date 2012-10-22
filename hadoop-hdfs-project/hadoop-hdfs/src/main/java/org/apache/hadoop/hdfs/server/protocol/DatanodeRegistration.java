@@ -82,9 +82,9 @@ public class DatanodeRegistration extends DatanodeID
   public String toString() {
     return getClass().getSimpleName()
       + "(" + getIpAddr()
-      + ", storageID=" + storageID
-      + ", infoPort=" + infoPort
-      + ", ipcPort=" + ipcPort
+      + ", storageID=" + getStorageID()
+      + ", infoPort=" + getInfoPort()
+      + ", ipcPort=" + getIpcPort()
       + ", storageInfo=" + storageInfo
       + ")";
   }

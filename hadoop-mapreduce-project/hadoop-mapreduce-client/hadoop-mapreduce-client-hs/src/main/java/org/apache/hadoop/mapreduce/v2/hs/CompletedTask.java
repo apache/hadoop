@@ -122,7 +122,12 @@ public class CompletedTask implements Task {
     loadAllTaskAttempts();
     this.report = Records.newRecord(TaskReport.class);
     report.setTaskId(taskId);
-    report.setStartTime(taskInfo.getStartTime());
+    long minLaunchTime = Long.MAX_VALUE;
+    for(TaskAttempt attempt: attempts.values()) {
+      minLaunchTime = Math.min(minLaunchTime, attempt.getLaunchTime());
+    }
+    minLaunchTime = minLaunchTime == Long.MAX_VALUE ? -1 : minLaunchTime;
+    report.setStartTime(minLaunchTime);
     report.setFinishTime(taskInfo.getFinishTime());
     report.setTaskState(getState());
     report.setProgress(getProgress());
