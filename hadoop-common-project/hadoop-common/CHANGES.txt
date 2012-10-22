@@ -110,6 +110,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8948. TestFileUtil.testGetDU fails on Windows due to incorrect
     assumption of line separator. (Chris Nauroth via suresh)
 
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
