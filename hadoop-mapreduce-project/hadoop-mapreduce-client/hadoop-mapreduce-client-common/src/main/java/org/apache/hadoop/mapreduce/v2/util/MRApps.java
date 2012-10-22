@@ -191,6 +191,7 @@ public class MRApps extends Apps {
     // TODO: Remove duplicates.
   }
   
+  @SuppressWarnings("deprecation")
   public static void setClasspath(Map<String, String> environment,
       Configuration conf) throws IOException {
     boolean userClassesTakesPrecedence = 
@@ -218,11 +219,66 @@ public class MRApps extends Apps {
         environment,
         Environment.CLASSPATH.name(),
         Environment.PWD.$() + Path.SEPARATOR + "*");
+    // a * in the classpath will only find a .jar, so we need to filter out
+    // all .jars and add everything else
+    addToClasspathIfNotJar(DistributedCache.getFileClassPaths(conf),
+        DistributedCache.getCacheFiles(conf),
+        conf,
+        environment);
+    addToClasspathIfNotJar(DistributedCache.getArchiveClassPaths(conf),
+        DistributedCache.getCacheArchives(conf),
+        conf,
+        environment);
     if (userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
   }
   
+  /**
+   * Add the paths to the classpath if they are not jars
+   * @param paths the paths to add to the classpath
+   * @param withLinks the corresponding paths that may have a link name in them
+   * @param conf used to resolve the paths
+   * @param environment the environment to update CLASSPATH in
+   * @throws IOException if there is an error resolving any of the paths.
+   */
+  private static void addToClasspathIfNotJar(Path[] paths,
+      URI[] withLinks, Configuration conf,
+      Map<String, String> environment) throws IOException {
+    if (paths != null) {
+      HashMap<Path, String> linkLookup = new HashMap<Path, String>();
+      if (withLinks != null) {
+        for (URI u: withLinks) {
+          Path p = new Path(u);
+          FileSystem remoteFS = p.getFileSystem(conf);
+          p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
+              remoteFS.getWorkingDirectory()));
+          String name = (null == u.getFragment())
+              ? p.getName() : u.getFragment();
+          if (!name.toLowerCase().endsWith(".jar")) {
+            linkLookup.put(p, name);
+          }
+        }
+      }
+      
+      for (Path p : paths) {
+        FileSystem remoteFS = p.getFileSystem(conf);
+        p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
+            remoteFS.getWorkingDirectory()));
+        String name = linkLookup.get(p);
+        if (name == null) {
+          name = p.getName();
+        }
+        if(!name.toLowerCase().endsWith(".jar")) {
+          Apps.addToEnvironment(
+              environment,
+              Environment.CLASSPATH.name(),
+              Environment.PWD.$() + Path.SEPARATOR + name);
+        }
+      }
+    }
+  }
+
   private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
     return new Path(conf.get(MRJobConfig.MR_AM_STAGING_DIR,
@@ -261,8 +317,7 @@ public class MRApps extends Apps {
         DistributedCache.getCacheArchives(conf), 
         parseTimeStamps(DistributedCache.getArchiveTimestamps(conf)), 
         getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES), 
-        DistributedCache.getArchiveVisibilities(conf), 
-        DistributedCache.getArchiveClassPaths(conf));
+        DistributedCache.getArchiveVisibilities(conf));
     
     // Cache files
     parseDistributedCacheArtifacts(conf, 
@@ -271,8 +326,7 @@ public class MRApps extends Apps {
         DistributedCache.getCacheFiles(conf),
         parseTimeStamps(DistributedCache.getFileTimestamps(conf)),
         getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES),
-        DistributedCache.getFileVisibilities(conf),
-        DistributedCache.getFileClassPaths(conf));
+        DistributedCache.getFileVisibilities(conf));
   }
 
   private static String getResourceDescription(LocalResourceType type) {
@@ -289,8 +343,8 @@ public class MRApps extends Apps {
       Configuration conf,
       Map<String, LocalResource> localResources,
       LocalResourceType type,
-      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[], 
-      Path[] pathsToPutOnClasspath) throws IOException {
+      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[])
+  throws IOException {
 
     if (uris != null) {
       // Sanity check
@@ -304,15 +358,6 @@ public class MRApps extends Apps {
             );
       }
       
-      Map<String, Path> classPaths = new HashMap<String, Path>();
-      if (pathsToPutOnClasspath != null) {
-        for (Path p : pathsToPutOnClasspath) {
-          FileSystem remoteFS = p.getFileSystem(conf);
-          p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
-              remoteFS.getWorkingDirectory()));
-          classPaths.put(p.toUri().getPath().toString(), p);
-        }
-      }
       for (int i = 0; i < uris.length; ++i) {
         URI u = uris[i];
         Path p = new Path(u);
