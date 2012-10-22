@@ -33,6 +33,7 @@ public class INodeFileWithLink extends INodeFile {
 
   public INodeFileWithLink(INodeFile f) {
     super(f);
+    next = this;
   }
 
   void setNext(INodeFileWithLink next) {
@@ -41,5 +42,27 @@ public class INodeFileWithLink extends INodeFile {
 
   INodeFileWithLink getNext() {
     return next;
+  }
+  
+  /** Insert inode to the circular linked list. */
+  public void insert(INodeFileWithLink inode) {
+    inode.setNext(this.getNext());
+    this.setNext(inode);
+  }
+
+  /**
+   * @return the max file replication of the elements
+   *         in the circular linked list.
+   */
+  @Override
+  public short getBlockReplication() {
+    short max = getFileReplication();
+    for(INodeFileWithLink i = next; i != this; i = i.getNext()) {
+      final short replication = i.getFileReplication();
+      if (replication > max) {
+        max = replication;
+      }
+    }
+    return max;
   }
 }

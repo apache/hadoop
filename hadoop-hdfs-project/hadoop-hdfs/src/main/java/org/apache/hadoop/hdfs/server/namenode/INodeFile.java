@@ -49,13 +49,13 @@ public class INodeFile extends INode implements BlockCollection {
                       short replication, long modificationTime,
                       long atime, long preferredBlockSize) {
     super(permissions, modificationTime, atime);
-    this.setReplication(replication);
+    this.setFileReplication(replication);
     this.setPreferredBlockSize(preferredBlockSize);
     blocks = blklist;
   }
 
   protected INodeFile(INodeFile f) {
-    this(f.getPermissionStatus(), f.getBlocks(), f.getBlockReplication(),
+    this(f.getPermissionStatus(), f.getBlocks(), f.getFileReplication(),
         f.getModificationTime(), f.getAccessTime(), f.getPreferredBlockSize());
   }
 
@@ -75,12 +75,16 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   /** @return the replication factor of the file. */
-  @Override
-  public short getBlockReplication() {
+  public final short getFileReplication() {
     return (short) ((header & HEADERMASK) >> BLOCKBITS);
   }
 
-  void setReplication(short replication) {
+  @Override
+  public short getBlockReplication() {
+    return getFileReplication();
+  }
+
+  void setFileReplication(short replication) {
     if(replication <= 0)
        throw new IllegalArgumentException("Unexpected value for the replication");
     header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
@@ -220,7 +224,7 @@ public class INodeFile extends INode implements BlockCollection {
         isUnderConstruction()) {
       size += getPreferredBlockSize() - blkArr[blkArr.length-1].getNumBytes();
     }
-    return size * getBlockReplication();
+    return size * getFileReplication();
   }
   
   /**

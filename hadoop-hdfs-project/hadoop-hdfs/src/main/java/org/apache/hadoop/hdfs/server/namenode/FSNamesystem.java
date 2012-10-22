@@ -1414,7 +1414,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     si.add(trgInode);
-    short repl = trgInode.getBlockReplication();
+    final short repl = trgInode.getFileReplication();
 
     // now check the srcs
     boolean endSrc = false; // final src file doesn't have to have full end block
@@ -1434,10 +1434,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       // check replication and blocks size
-      if(repl != srcInode.getBlockReplication()) {
+      if(repl != srcInode.getFileReplication()) {
         throw new IllegalArgumentException(src + " and " + target + " " +
             "should have same replication: "
-            + repl + " vs. " + srcInode.getBlockReplication());
+            + repl + " vs. " + srcInode.getFileReplication());
       }
 
       //boolean endBlock=false;
@@ -1878,9 +1878,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog) throws IOException {
+    //TODO SNAPSHOT: INodeFileUnderConstruction with link
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                                     file.getLocalNameBytes(),
-                                    file.getBlockReplication(),
+                                    file.getFileReplication(),
                                     file.getModificationTime(),
                                     file.getPreferredBlockSize(),
                                     file.getBlocks(),
@@ -2194,7 +2195,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
-      replication = pendingFile.getBlockReplication();
+      replication = pendingFile.getFileReplication();
     } finally {
       writeUnlock();
     }
@@ -3157,7 +3158,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (diff > 0) {
       try {
         String path = leaseManager.findPath(fileINode);
-        dir.updateSpaceConsumed(path, 0, -diff * fileINode.getBlockReplication());
+        dir.updateSpaceConsumed(path, 0, -diff*fileINode.getFileReplication());
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
       }

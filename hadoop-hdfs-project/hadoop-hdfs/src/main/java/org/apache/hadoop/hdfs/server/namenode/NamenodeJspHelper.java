@@ -834,7 +834,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("replication");
-          doc.pcdata(""+inode.getBlockReplication());
+          doc.pcdata(""+inode.getFileReplication());
           doc.endTag();
 
           doc.startTag("disk_space_consumed");

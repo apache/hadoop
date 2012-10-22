@@ -126,7 +126,7 @@ public class FSImageSerialization {
                                            String path) 
                                            throws IOException {
     writeString(path, out);
-    out.writeShort(cons.getBlockReplication());
+    out.writeShort(cons.getFileReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
     int nrBlocks = cons.getBlocks().length;
@@ -175,7 +175,7 @@ public class FSImageSerialization {
                              filePerm);      
     } else {
       INodeFile fileINode = (INodeFile)node;
-      out.writeShort(fileINode.getBlockReplication());
+      out.writeShort(fileINode.getFileReplication());
       out.writeLong(fileINode.getModificationTime());
       out.writeLong(fileINode.getAccessTime());
       out.writeLong(fileINode.getPreferredBlockSize());

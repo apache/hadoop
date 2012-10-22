@@ -18,3 +18,5 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4079. Add SnapshotManager which maintains a list for all the
   snapshottable directories and supports snapshot methods such as setting a
   directory to snapshottable and creating a snapshot.  (szetszwo)
+
+  HDFS-4078. Handle replication in snapshots.  (szetszwo)

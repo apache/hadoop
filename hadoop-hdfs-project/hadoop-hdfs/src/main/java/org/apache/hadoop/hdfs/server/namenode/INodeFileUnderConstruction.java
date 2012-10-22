@@ -102,9 +102,10 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
     assert allBlocksComplete() :
       "Can't finalize inode " + this + " since it contains " +
       "non-complete blocks! Blocks are: " + blocksAsString();
+    //TODO SNAPSHOT: may convert to INodeFileWithLink
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
-                                  getBlockReplication(),
+                                  getFileReplication(),
                                   getModificationTime(),
                                   getModificationTime(),
                                   getPreferredBlockSize());

@@ -48,7 +48,7 @@ public class TestINodeFile {
                                   FsPermission.getDefault()), null, replication,
                                   0L, 0L, preferredBlockSize);
     assertEquals("True has to be returned in this case", replication,
-                 inf.getBlockReplication());
+                 inf.getFileReplication());
   }
 
   /**
