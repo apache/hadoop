@@ -269,6 +269,9 @@ Trunk (Unreleased)
     HADOOP-8918. test-patch.sh is parsing modified files wrong.
     (Raja Aluri via suresh)
 
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
