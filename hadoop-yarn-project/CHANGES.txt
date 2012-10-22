@@ -165,6 +165,9 @@ Release 0.23.5 - UNRELEASED
     YARN-163. Retrieving container log via NM webapp can hang with multibyte
     characters in log (jlowe via bobby)
 
+    YARN-174. Modify NodeManager to pass the user's configuration even when
+    rebooting. (vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
