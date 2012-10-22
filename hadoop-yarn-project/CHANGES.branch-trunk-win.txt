@@ -3,3 +3,5 @@ branch-trunk-win changes - unreleased
   YARN-158. Yarn creating package-info.java must not depend on sh.
   (Chris Nauroth via suresh)
 
+  YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
+
