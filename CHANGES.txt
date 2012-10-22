@@ -273,6 +273,9 @@ Release 1.2.0 - unreleased
     HDFS-4072. On file deletion remove corresponding blocks pending
     replications. (Jing Zhao via suresh)
 
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
