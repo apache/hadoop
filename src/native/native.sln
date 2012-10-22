@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hadoop", "hadoop.vcxproj", "{C4948277-4EC8-49EA-905C-5950E5B76E0B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{12131AA7-902E-4A6D-9CE3-043261D22A12} = {12131AA7-902E-4A6D-9CE3-043261D22A12}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwinutils", "..\winutils\libwinutils.vcxproj", "{12131AA7-902E-4A6D-9CE3-043261D22A12}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Debug|Win32.Build.0 = Debug|Win32
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Debug|x64.ActiveCfg = Debug|x64
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Debug|x64.Build.0 = Debug|x64
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Release|Win32.ActiveCfg = Release|Win32
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Release|Win32.Build.0 = Release|Win32
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Release|x64.ActiveCfg = Release|x64
+		{C4948277-4EC8-49EA-905C-5950E5B76E0B}.Release|x64.Build.0 = Release|x64
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Debug|Win32.ActiveCfg = Debug|Win32
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Debug|Win32.Build.0 = Debug|Win32
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Debug|x64.ActiveCfg = Debug|x64
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Debug|x64.Build.0 = Debug|x64
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Release|Win32.ActiveCfg = Release|Win32
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Release|Win32.Build.0 = Release|Win32
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Release|x64.ActiveCfg = Release|x64
+		{12131AA7-902E-4A6D-9CE3-043261D22A12}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
