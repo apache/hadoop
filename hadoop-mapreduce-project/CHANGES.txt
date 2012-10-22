@@ -452,6 +452,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4733. Reducer can fail to make progress during shuffle if too many
     reducers complete consecutively. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-4740. only .jars can be added to the Distributed Cache
+    classpath. (Robert Joseph Evans via jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
