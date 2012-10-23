@@ -230,6 +230,9 @@ Trunk (Unreleased)
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
 
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
@@ -484,9 +487,6 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4022. Replication not happening for appended block.
     (Vinay via umamahesh)
-
-    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
-    (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
