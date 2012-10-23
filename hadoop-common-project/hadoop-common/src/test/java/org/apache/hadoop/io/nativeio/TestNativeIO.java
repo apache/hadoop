@@ -224,7 +224,10 @@ public class TestNativeIO {
       // we should just skip the unit test on machines where we don't
       // have fadvise support
       assumeTrue(false);
-    } finally {
+    } catch (NativeIOException nioe) {
+      // ignore this error as FreeBSD returns EBADF even if length is zero
+    }
+      finally {
       fis.close();
     }
 

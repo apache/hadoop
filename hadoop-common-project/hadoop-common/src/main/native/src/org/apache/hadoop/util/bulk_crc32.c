@@ -32,7 +32,9 @@
 #include "bulk_crc32.h"
 #include "gcc_optimizations.h"
 
+#ifndef __FreeBSD__
 #define USE_PIPELINED
+#endif
 
 #define CRC_INITIAL_VAL 0xffffffff
 
@@ -260,7 +262,7 @@ static uint32_t crc32_zlib_sb8(
 // Begin code for SSE4.2 specific hardware support of CRC32C
 ///////////////////////////////////////////////////////////////////////////
 
-#if (defined(__amd64__) || defined(__i386)) && defined(__GNUC__)
+#if (defined(__amd64__) || defined(__i386)) && defined(__GNUC__) && !defined(__FreeBSD__)
 #  define SSE42_FEATURE_BIT (1 << 20)
 #  define CPUID_FEATURES 1
 /**

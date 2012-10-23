@@ -364,8 +364,12 @@ public class TestHardLink {
     callCount = createHardLinkMult(src, fileNames, tgt_mult, maxLength);
     //check the request was completed in exactly two "chunks"
     assertEquals(2, callCount);
+    String[] tgt_multNames = tgt_mult.list();
+    //sort directory listings before comparsion
+    Arrays.sort(fileNames);
+    Arrays.sort(tgt_multNames);
     //and check the results were as expected in the dir tree
-    assertTrue(Arrays.deepEquals(fileNames, tgt_mult.list()));
+    assertArrayEquals(fileNames, tgt_multNames);
     
     //Test the case where maxlength is too small even for one filename.
     //It should go ahead and try the single files.
@@ -382,8 +386,12 @@ public class TestHardLink {
         maxLength);
     //should go ahead with each of the three single file names
     assertEquals(3, callCount);
-    //check the results were as expected in the dir tree
-    assertTrue(Arrays.deepEquals(fileNames, tgt_mult.list()));
+    tgt_multNames = tgt_mult.list();
+    //sort directory listings before comparsion
+    Arrays.sort(fileNames);
+    Arrays.sort(tgt_multNames);
+    //and check the results were as expected in the dir tree
+    assertArrayEquals(fileNames, tgt_multNames);
   }
   
   /*

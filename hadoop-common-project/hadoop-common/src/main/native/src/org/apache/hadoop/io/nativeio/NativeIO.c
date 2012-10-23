@@ -254,7 +254,11 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_posix_1fadvise(
 
   int err = 0;
   if ((err = posix_fadvise(fd, (off_t)offset, (off_t)len, flags))) {
+#ifdef __FreeBSD__
+    throw_ioe(env, errno);
+#else
     throw_ioe(env, err);
+#endif
   }
 #endif
 }
@@ -310,6 +314,22 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_sync_1file_1range(
 #endif
 }
 
+#ifdef __FreeBSD__
+static int toFreeBSDFlags(int flags)
+{
+  int rc = flags & 03;
+  if ( flags &  0100 ) rc |= O_CREAT;
+  if ( flags &  0200 ) rc |= O_EXCL;
+  if ( flags &  0400 ) rc |= O_NOCTTY;
+  if ( flags & 01000 ) rc |= O_TRUNC;
+  if ( flags & 02000 ) rc |= O_APPEND;
+  if ( flags & 04000 ) rc |= O_NONBLOCK;
+  if ( flags &010000 ) rc |= O_SYNC;
+  if ( flags &020000 ) rc |= O_ASYNC;
+  return rc;
+}
+#endif
+
 /*
  * public static native FileDescriptor open(String path, int flags, int mode);
  */
@@ -318,6 +338,9 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_open(
   JNIEnv *env, jclass clazz, jstring j_path,
   jint flags, jint mode)
 {
+#ifdef __FreeBSD__
+  flags = toFreeBSDFlags(flags);
+#endif
   jobject ret = NULL;
 
   const char *path = (*env)->GetStringUTFChars(env, j_path, NULL);
@@ -399,7 +422,7 @@ err:
  * Determine how big a buffer we need for reentrant getpwuid_r and getgrnam_r
  */
 ssize_t get_pw_buflen() {
-  size_t ret = 0;
+  long ret = 0;
   #ifdef _SC_GETPW_R_SIZE_MAX
   ret = sysconf(_SC_GETPW_R_SIZE_MAX);
   #endif

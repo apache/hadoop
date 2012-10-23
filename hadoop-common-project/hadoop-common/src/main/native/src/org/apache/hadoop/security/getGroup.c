@@ -78,7 +78,7 @@ int getGroupIDList(const char *user, int *ngroups, gid_t **groups) {
  */
 int getGroupDetails(gid_t group, char **grpBuf) {
   struct group * grp = NULL;
-  size_t currBufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+  long currBufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
   if (currBufferSize < 1024) {
     currBufferSize = 1024;
   }
@@ -123,7 +123,7 @@ int getGroupDetails(gid_t group, char **grpBuf) {
  */
 int getPW(const char *user, char **pwbuf) {
   struct passwd *pwbufp = NULL;
-  size_t currBufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+  long currBufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
   if (currBufferSize < 1024) {
     currBufferSize = 1024;
   }
