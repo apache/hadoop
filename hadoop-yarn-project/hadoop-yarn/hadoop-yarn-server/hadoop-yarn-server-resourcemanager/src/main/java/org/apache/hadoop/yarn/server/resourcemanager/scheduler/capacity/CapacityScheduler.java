@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
@@ -111,21 +110,18 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     }
   };
 
+  @Override
   public void setConf(Configuration conf) {
-    if (conf instanceof YarnConfiguration) {
-      yarnConf = (YarnConfiguration) conf;
-    } else {
-      throw new IllegalArgumentException("Can only configure with " +
-					 "YarnConfiguration");
-    }
+      yarnConf = conf;
   }
 
+  @Override
   public Configuration getConf() {
     return yarnConf;
   }
 
   private CapacitySchedulerConfiguration conf;
-  private YarnConfiguration yarnConf;
+  private Configuration yarnConf;
   private RMContext rmContext;
 
   private Map<String, CSQueue> queues = new ConcurrentHashMap<String, CSQueue>();

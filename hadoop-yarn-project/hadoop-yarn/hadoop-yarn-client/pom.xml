@@ -38,5 +38,12 @@
   		<artifactId>hadoop-yarn-server-resourcemanager</artifactId>
 		<scope>test</scope>
   	</dependency>
+      <dependency>
+  		<groupId>org.apache.hadoop</groupId>
+  		<artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+		<scope>test</scope>
+		<type>test-jar</type>
+      </dependency>
+
   </dependencies>
 </project>
