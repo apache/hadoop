@@ -43,6 +43,8 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4740. only .jars can be added to the Distributed Cache
     classpath. (Robert Joseph Evans via jlowe)
 
+    MAPREDUCE-4229. Intern counter names in the JT (bobby via daryn)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
