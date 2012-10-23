@@ -1616,6 +1616,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-3224. Bug in check for DN re-registration with different storage ID
     (jlowe)
 
+    HDFS-4090. getFileChecksum() result incompatible when called against
+    zero-byte files. (Kihwal Lee via daryn)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
