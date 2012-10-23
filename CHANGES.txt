@@ -97,6 +97,10 @@ Release 1.2.0 - unreleased
 
     HDFS-4057. NameNode.namesystem should be private. (Brandon Li via suresh)
 
+    HDFS-3540. Change the default value of dfs.namenode.edits.toleration.length
+    from -1 to 0, i.e. enable the end of edit log check but do not tolerate
+    any corruption.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

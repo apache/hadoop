@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.io.RandomAccessFile;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
 
@@ -38,6 +40,8 @@ public class TestEditLogLoading {
     // start a cluster
     Configuration conf = new Configuration();
     conf.set("dfs.name.dir", new File(MiniDFSCluster.getBaseDir(), "name").getPath());
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, -1);
+
 
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;

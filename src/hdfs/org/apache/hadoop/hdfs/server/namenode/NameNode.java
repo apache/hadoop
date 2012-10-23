@@ -1357,6 +1357,21 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
         return;
       }
     }
+    final int tolerationLength = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_DEFAULT);
+    if (tolerationLength >= 0) {
+      if (!confirmPrompt("You have selected Metadata Recovery mode and have set "
+          + DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY + " = "
+          + tolerationLength + ".  However, Metadata Recovery mode and the"
+          + " Edit Log Toleration feature cannot be enabled at the same time."
+          + "  Disable Edit Log Toleration? (Y/N)\n")) {
+        System.err.println("Recovery aborted at user request.\n");
+        return;
+      }
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, -1);
+    }
+
     MetaRecoveryContext.LOG.info("starting recovery...");
     Collection<File> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
     Collection<File> editDirs = 
