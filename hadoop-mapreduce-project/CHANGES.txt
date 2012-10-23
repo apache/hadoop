@@ -40,6 +40,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4654. TestDistCp is ignored. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
+    UNASSIGNED states. (Mayank Bansal via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
