@@ -145,6 +145,20 @@ public class DU extends Shell {
   public String getDirPath() {
     return dirPath;
   }
+
+
+  /**
+   * Override to hook in DUHelper class. Maybe this can be used more
+   * generally as well on Unix/Linux based systems
+   */
+  @Override
+  protected void run() throws IOException {
+    if (WINDOWS) {
+      used.set(DUHelper.getFolderUsage(dirPath));
+      return;
+    }
+    super.run();
+  }
   
   /**
    * Start the disk usage checking thread.

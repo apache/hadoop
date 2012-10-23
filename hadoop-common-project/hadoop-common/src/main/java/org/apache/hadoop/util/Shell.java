@@ -44,36 +44,76 @@ abstract public class Shell {
   
   public static final Log LOG = LogFactory.getLog(Shell.class);
   
+  /** a Windows utility to emulate Unix commands */
+  public static final String WINUTILS = System.getenv("HADOOP_HOME")
+                                        + "\\bin\\winutils";
+
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
+
+  /** Windows CreateProcess synchronization object */
+  public static final Object WindowsProcessLaunchLock = new Object();
+
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
-    return new String[]{"bash", "-c", "groups"};
+    return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
+                    : new String[]{"bash", "-c", "groups"};
   }
+
   /** a Unix command to get a given user's groups list */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
-    return new String [] {"bash", "-c", "id -Gn " + user};
+    return (WINDOWS)? new String[] { WINUTILS, "groups", user}
+                    : new String [] {"bash", "-c", "id -Gn " + user};
   }
+
   /** a Unix command to get a given netgroup's user list */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
-    return new String [] {"bash", "-c", "getent netgroup " + netgroup};
+    return (WINDOWS)? new String [] {"cmd", "/c", "getent netgroup " + netgroup}
+                    : new String [] {"bash", "-c", "getent netgroup " + netgroup};
   }
+
+  /** Return a command to get permission information. */
+  public static String[] getGetPermissionCommand() {
+    return (WINDOWS) ? new String[] { WINUTILS, "ls" }
+                     : new String[] { "/bin/ls", "-ld" };
+  }
+
+  /** Return a command to set permission */
+  public static String[] getSetPermissionCommand(String perm, boolean recursive) {
+    if (recursive) {
+      return (WINDOWS) ? new String[] { WINUTILS, "chmod", "-R", perm }
+                         : new String[] { "chmod", "-R", perm };
+    } else {
+      return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
+                       : new String[] { "chmod", perm };
+    }
+  }
+
+  /** Return a command to set owner */
+  public static String[] getSetOwnerCommand(String owner) {
+    return (WINDOWS) ? new String[] { WINUTILS, "chown", owner }
+                     : new String[] { "chown", owner };
+  }
+
+  /** Return a command to create symbolic links */
+  public static String[] getSymlinkCommand(String target, String link) {
+    return WINDOWS ? new String[] { WINUTILS, "symlink", link, target }
+                   : new String[] { "ln", "-s", target, link };
+  }
+
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
   /** a Unix command to set owner */
   public static final String SET_OWNER_COMMAND = "chown";
+
+  /** a Unix command to set the change user's groups list */
   public static final String SET_GROUP_COMMAND = "chgrp";
   /** a Unix command to create a link */
   public static final String LINK_COMMAND = "ln";
   /** a Unix command to get a link target */
   public static final String READ_LINK_COMMAND = "readlink";
-  /** Return a Unix command to get permission information. */
-  public static String[] getGET_PERMISSION_COMMAND() {
-    //force /bin/ls, except on windows.
-    return new String[] {(WINDOWS ? "ls" : "/bin/ls"), "-ld"};
-  }
 
   /**Time after which the executing script would be timedout*/
   protected long timeOutInterval = 0L;
@@ -144,7 +184,19 @@ abstract public class Shell {
       builder.directory(this.dir);
     }
     
-    process = builder.start();
+    if (Shell.WINDOWS) {
+      synchronized (WindowsProcessLaunchLock) {
+        // To workaround the race condition issue with child processes
+        // inheriting unintended handles during process launch that can
+        // lead to hangs on reading output and error streams, we
+        // serialize process creation. More info available at:
+        // http://support.microsoft.com/kb/315939
+        process = builder.start();
+      }
+    } else {
+      process = builder.start();
+    }
+
     if (timeOutInterval > 0) {
       timeOutTimer = new Timer("Shell command timeout");
       timeoutTimerTask = new ShellTimeoutTimerTask(

@@ -36,7 +36,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -529,8 +528,8 @@ public class RawLocalFileSystem extends FileSystem {
       IOException e = null;
       try {
         StringTokenizer t = new StringTokenizer(
-            execCommand(new File(getPath().toUri()), 
-                        Shell.getGET_PERMISSION_COMMAND()));
+            FileUtil.execCommand(new File(getPath().toUri()), 
+                                          Shell.getGetPermissionCommand()));
         //expected format
         //-rw-------    1 username groupname ...
         String permission = t.nextToken();
@@ -539,7 +538,18 @@ public class RawLocalFileSystem extends FileSystem {
         }
         setPermission(FsPermission.valueOf(permission));
         t.nextToken();
-        setOwner(t.nextToken());
+
+        String owner = t.nextToken();
+        // If on windows domain, token format is DOMAIN\\user and we want to
+        // extract only the user name
+        if (Shell.WINDOWS) {
+          int i = owner.indexOf('\\');
+          if (i != -1)
+            owner = owner.substring(i + 1);
+        }
+        setOwner(owner);
+
+        // FIXME: Group names could have spaces on Windows
         setGroup(t.nextToken());
       } catch (Shell.ExitCodeException ioe) {
         if (ioe.getExitCode() != 1) {
@@ -580,11 +590,11 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     if (username == null) {
-      execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
+      FileUtil.execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
     } else {
       //OWNER[:[GROUP]]
       String s = username + (groupname == null? "": ":" + groupname);
-      execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
+      FileUtil.execCommand(pathToFile(p), Shell.getSetOwnerCommand(s));
     }
   }
 
@@ -592,23 +602,7 @@ public class RawLocalFileSystem extends FileSystem {
    * Use the command chmod to set permission.
    */
   @Override
-  public void setPermission(Path p, FsPermission permission)
-    throws IOException {
-    if (NativeIO.isAvailable()) {
-      NativeIO.chmod(pathToFile(p).getCanonicalPath(),
-                     permission.toShort());
-    } else {
-      execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
-          String.format("%05o", permission.toShort()));
-    }
+  public void setPermission(Path p, FsPermission permission) throws IOException {
+    FileUtil.setPermission(pathToFile(p), permission);
   }
-
-  private static String execCommand(File f, String... cmd) throws IOException {
-    String[] args = new String[cmd.length + 1];
-    System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = FileUtil.makeShellPath(f, true);
-    String output = Shell.execCommand(args);
-    return output;
-  }
-
 }

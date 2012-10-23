@@ -19,6 +19,8 @@ package org.apache.hadoop.fs;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -29,6 +31,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -336,6 +339,10 @@ public class TestFileUtil {
 
   @Test
   public void testFailFullyDelete() throws IOException {
+    if(Shell.WINDOWS) {
+      // windows Dir.setWritable(false) does not work for directories
+      return;
+    }
     LOG.info("Running test to verify failure of fullyDelete()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDelete(new MyFile(del));
@@ -402,6 +409,10 @@ public class TestFileUtil {
 
   @Test
   public void testFailFullyDeleteContents() throws IOException {
+    if(Shell.WINDOWS) {
+      // windows Dir.setWritable(false) does not work for directories
+      return;
+    }
     LOG.info("Running test to verify failure of fullyDeleteContents()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
@@ -476,5 +487,37 @@ public class TestFileUtil {
     // line separator.
     long expected = 2 * (3 + System.getProperty("line.separator").length());
     Assert.assertEquals(expected, du);
+  }
+
+  @Test
+  public void testSymlink() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    byte[] data = "testSymLink".getBytes();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    //write some data to the file
+    FileOutputStream os = new FileOutputStream(file);
+    os.write(data);
+    os.close();
+
+    //create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    //ensure that symlink length is correctly reported by Java
+    Assert.assertEquals(data.length, file.length());
+    Assert.assertEquals(Shell.WINDOWS ? 0 : data.length, link.length());
+
+    //ensure that we can read from link.
+    FileInputStream in = new FileInputStream(link);
+    long len = 0;
+    while (in.read() > 0) {
+      len++;
+    }
+    in.close();
+    Assert.assertEquals(data.length, len);
   }
 }

@@ -81,6 +81,10 @@ public class TestShell extends TestCase {
   }
   
   public void testShellCommandTimeout() throws Throwable {
+    if(Shell.WINDOWS) {
+      // setExecutable does not work on Windows
+      return;
+    }
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();
     File shellFile = new File(rootDir, "timeout.sh");

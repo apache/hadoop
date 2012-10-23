@@ -9,3 +9,8 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8946. winutils: compile codebase during Maven build on 
   branch-trunk-win. (Chris Nauroth via suresh)
+
+  HADOOP-8947. Merge FileUtil and Shell changes from branch-1-win to 
+  branch-trunk-win to enable initial test pass. (Raja Aluri, Davio Lao, 
+  Sumadhur Reddy Bolli, Ahmed El Baz, Kanna Karanam, Chuan Liu, 
+  Ivan Mitic, Chris Nauroth, and Bikas Saha via suresh)

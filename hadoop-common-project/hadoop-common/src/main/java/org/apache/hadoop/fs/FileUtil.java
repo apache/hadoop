@@ -27,7 +27,11 @@ import java.util.zip.ZipFile;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
@@ -42,6 +46,13 @@ import org.apache.commons.logging.LogFactory;
 public class FileUtil {
 
   private static final Log LOG = LogFactory.getLog(FileUtil.class);
+
+  /* The error code is defined in winutils to indicate insufficient
+   * privilege to create symbolic links. This value need to keep in
+   * sync with the constant of the same name in:
+   * "src\winutils\common.h"
+   * */
+  public static final int SYMLINK_NO_PRIVILEGE = 2;
 
   /**
    * convert an array of FileStatus to an array of Path
@@ -436,11 +447,7 @@ public class FileUtil {
    * @throws IOException on windows, there can be problems with the subprocess
    */
   public static String makeShellPath(String filename) throws IOException {
-    if (Path.WINDOWS) {
-      return new CygPathCommand(filename).getResult();
-    } else {
-      return filename;
-    }    
+    return filename;
   }
   
   /**
@@ -568,21 +575,24 @@ public class FileUtil {
     StringBuilder untarCommand = new StringBuilder();
     boolean gzipped = inFile.toString().endsWith("gz");
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
+      untarCommand.append((Shell.WINDOWS) ? " gzip -dc \"" : " gzip -dc '");
       untarCommand.append(FileUtil.makeShellPath(inFile));
-      untarCommand.append("' | (");
+      untarCommand.append((Shell.WINDOWS) ? "\" | (" : "' | (");
     } 
-    untarCommand.append("cd '");
+    untarCommand.append((Shell.WINDOWS) ? "cd \"" : "cd '");
     untarCommand.append(FileUtil.makeShellPath(untarDir)); 
-    untarCommand.append("' ; ");
-    untarCommand.append("tar -xf ");
-    
+    untarCommand.append((Shell.WINDOWS) ? "\" & " : "' ; ");
+
+    // Force the archive path as local on Windows as it can have a colon
+    untarCommand.append((Shell.WINDOWS) ? "tar --force-local -xf " : "tar -xf ");
+
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
       untarCommand.append(FileUtil.makeShellPath(inFile));
     }
-    String[] shellCmd = { "bash", "-c", untarCommand.toString() };
+    String[] shellCmd = {(Shell.WINDOWS)?"cmd":"bash", (Shell.WINDOWS)?"/c":"-c",
+      untarCommand.toString() };
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
@@ -606,21 +616,44 @@ public class FileUtil {
 
   /**
    * Create a soft link between a src and destination
-   * only on a local disk. HDFS does not support this
+   * only on a local disk. HDFS does not support this.
+   * On Windows, when symlink creation fails due to security
+   * setting, we will log a warning. The return code in this
+   * case is 2.
    * @param target the target for symlink 
    * @param linkname the symlink
    * @return value returned by the command
    */
   public static int symLink(String target, String linkname) throws IOException{
-    String cmd = "ln -s " + target + " " + linkname;
-    Process p = Runtime.getRuntime().exec(cmd, null);
-    int returnVal = -1;
-    try{
-      returnVal = p.waitFor();
-    } catch(InterruptedException e){
-      //do nothing as of yet
+    // Run the input paths through Java's File so that they are converted to the
+    // native OS form. FIXME: Long term fix is to expose symLink API that
+    // accepts File instead of String, as symlinks can only be created on the
+    // local FS.
+    String[] cmd = Shell.getSymlinkCommand(new File(target).getPath(),
+        new File(linkname).getPath());
+    ShellCommandExecutor shExec = new ShellCommandExecutor(cmd);
+    try {
+      shExec.execute();
+    } catch (Shell.ExitCodeException ec) {
+      int returnVal = ec.getExitCode();
+      if (Shell.WINDOWS && returnVal == SYMLINK_NO_PRIVILEGE) {
+        LOG.warn("Fail to create symbolic links on Windows. "
+            + "The default security settings in Windows disallow non-elevated "
+            + "administrators and all non-administrators from creating symbolic links. "
+            + "This behavior can be changed in the Local Security Policy management console");
+      } else if (returnVal != 0) {
+        LOG.warn("Command '" + StringUtils.join(" ", cmd) + "' failed "
+            + returnVal + " with: " + ec.getMessage());
+      }
+      return returnVal;
+    } catch (IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error while create symlink " + linkname + " to " + target
+            + "." + " Exception: " + StringUtils.stringifyException(e));
+      }
+      throw e;
     }
-    return returnVal;
+    return shExec.getExitCode();
   }
   
   /**
@@ -644,30 +677,101 @@ public class FileUtil {
    * @param recursive true, if permissions should be changed recursively
    * @return the exit code from the command.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static int chmod(String filename, String perm, boolean recursive)
-                            throws IOException, InterruptedException {
-    StringBuilder cmdBuf = new StringBuilder();
-    cmdBuf.append("chmod ");
-    if (recursive) {
-      cmdBuf.append("-R ");
-    }
-    cmdBuf.append(perm).append(" ");
-    cmdBuf.append(filename);
-    String[] shellCmd = {"bash", "-c" ,cmdBuf.toString()};
-    ShellCommandExecutor shExec = new ShellCommandExecutor(shellCmd);
+                            throws IOException {
+    String [] cmd = Shell.getSetPermissionCommand(perm, recursive);
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = new File(filename).getPath();
+    ShellCommandExecutor shExec = new ShellCommandExecutor(args);
     try {
       shExec.execute();
-    }catch(Exception e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error while changing permission : " + filename
-            + " Exception: ", e);
+    }catch(IOException e) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Error while changing permission : " + filename 
+                  +" Exception: " + StringUtils.stringifyException(e));
       }
     }
     return shExec.getExitCode();
   }
+
+  /**
+   * Set permissions to the required value. Uses the java primitives instead
+   * of forking if group == other.
+   * @param f the file to change
+   * @param permission the new permissions
+   * @throws IOException
+   */
+  public static void setPermission(File f, FsPermission permission
+                                   ) throws IOException {
+    FsAction user = permission.getUserAction();
+    FsAction group = permission.getGroupAction();
+    FsAction other = permission.getOtherAction();
+
+    // use the native/fork if the group/other permissions are different
+    // or if the native is available or on Windows
+    if (group != other || NativeIO.isAvailable() || Shell.WINDOWS) {
+      execSetPermission(f, permission);
+      return;
+    }
+    
+    boolean rv = true;
+    
+    // read perms
+    rv = f.setReadable(group.implies(FsAction.READ), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.READ) != user.implies(FsAction.READ)) {
+      f.setReadable(user.implies(FsAction.READ), true);
+      checkReturnValue(rv, f, permission);
+    }
+
+    // write perms
+    rv = f.setWritable(group.implies(FsAction.WRITE), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.WRITE) != user.implies(FsAction.WRITE)) {
+      f.setWritable(user.implies(FsAction.WRITE), true);
+      checkReturnValue(rv, f, permission);
+    }
+
+    // exec perms
+    rv = f.setExecutable(group.implies(FsAction.EXECUTE), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.EXECUTE) != user.implies(FsAction.EXECUTE)) {
+      f.setExecutable(user.implies(FsAction.EXECUTE), true);
+      checkReturnValue(rv, f, permission);
+    }
+  }
+
+  private static void checkReturnValue(boolean rv, File p, 
+                                       FsPermission permission
+                                       ) throws IOException {
+    if (!rv) {
+      throw new IOException("Failed to set permissions of path: " + p + 
+                            " to " + 
+                            String.format("%04o", permission.toShort()));
+    }
+  }
   
+  private static void execSetPermission(File f, 
+                                        FsPermission permission
+                                       )  throws IOException {
+    if (NativeIO.isAvailable()) {
+      NativeIO.chmod(f.getCanonicalPath(), permission.toShort());
+    } else {
+      execCommand(f, Shell.getSetPermissionCommand(
+                  String.format("%04o", permission.toShort()), false));
+    }
+  }
+  
+  static String execCommand(File f, String... cmd) throws IOException {
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = f.getCanonicalPath();
+    String output = Shell.execCommand(args);
+    return output;
+  }
+
   /**
    * Create a tmp file for a base file.
    * @param basefile the base file of the tmp
