@@ -407,6 +407,30 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Allow snapshot on a directory.
+   * Usage: java DFSAdmin -allowSnapshot <snapshotRoot>
+   * @param argv List of of command line parameters.
+   * @exception IOException
+   */
+  public void allowSnapshot(String[] argv) throws IOException {   
+    DistributedFileSystem dfs = getDFS();
+    dfs.allowSnapshot(argv[1]);
+    System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
+  }
+  
+  /**
+   * Allow snapshot on a directory.
+   * Usage: java DFSAdmin -disallowSnapshot <snapshotRoot>
+   * @param argv List of of command line parameters.
+   * @exception IOException
+   */
+  public void disallowSnapshot(String[] argv) throws IOException {  
+    DistributedFileSystem dfs = getDFS();
+    dfs.disallowSnapshot(argv[1]);
+    System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
+  }
+  
+  /**
    * Command to ask the namenode to save the namespace.
    * Usage: java DFSAdmin -saveNamespace
    * @exception IOException 
@@ -879,7 +903,13 @@ public class DFSAdmin extends FsShell {
                          + " [-report]");
     } else if ("-safemode".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
-                         + " [-safemode enter | leave | get | wait]");
+          + " [-safemode enter | leave | get | wait]");
+    } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-allowSnapshot <snapshotRoot>]");
+    } else if ("-disallowsnapshot".equalsIgnoreCase(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-disallowSnapshot <snapshotRoot>]");
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-saveNamespace]");
@@ -938,7 +968,9 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
       System.err.println("           [-report]");
-      System.err.println("           [-safemode enter | leave | get | wait]");
+      System.err.println("           [-safemode enter | leave | get | wait]"); 
+      System.err.println("           [-allowSnapshot <snapshotRoot>]");
+      System.err.println("           [-disallowSnapshot <snapshotRoot>]");
       System.err.println("           [-saveNamespace]");
       System.err.println("           [-rollEdits]");
       System.err.println("           [-restoreFailedStorage true|false|check]");
@@ -984,6 +1016,16 @@ public class DFSAdmin extends FsShell {
     // verify that we have enough command line parameters
     //
     if ("-safemode".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
+      if (argv.length != 3) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
         return exitCode;
@@ -1079,6 +1121,10 @@ public class DFSAdmin extends FsShell {
         report();
       } else if ("-safemode".equals(cmd)) {
         setSafeMode(argv, i);
+      } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
+        allowSnapshot(argv);
+      } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
+        disallowSnapshot(argv);
       } else if ("-saveNamespace".equals(cmd)) {
         exitCode = saveNamespace();
       } else if ("-rollEdits".equals(cmd)) {

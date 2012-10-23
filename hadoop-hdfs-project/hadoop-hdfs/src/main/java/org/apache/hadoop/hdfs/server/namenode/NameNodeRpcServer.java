@@ -1093,4 +1093,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
     si[0] = new SnapshotInfo(null, null, null, null, null, null);
     return si;
   }
+
+  @Override
+  // Client Protocol
+  public void allowSnapshot(String snapshotRoot) throws IOException {
+    namesystem.allowSnapshot(snapshotRoot);
+  }
+
+  @Override
+  // Client Protocol
+  public void disallowSnapshot(String snapshot) throws IOException {
+    namesystem.disallowSnapshot(snapshot);
+  }
 }

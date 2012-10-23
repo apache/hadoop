@@ -140,6 +140,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
@@ -5555,5 +5556,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public boolean isAvoidingStaleDataNodesForWrite() {
     return this.blockManager.getDatanodeManager()
         .isAvoidingStaleDataNodesForWrite();
+  }
+  
+  // Allow snapshot on a directroy.
+  @VisibleForTesting
+  public void allowSnapshot(String snapshotRoot)
+      throws SafeModeException, IOException {
+    // TODO: implement
+  }
+  
+  // Disallow snapshot on a directory.
+  @VisibleForTesting
+  public void disallowSnapshot(String snapshotRoot)
+      throws SafeModeException, IOException {
+    // TODO: implement
   }
 }

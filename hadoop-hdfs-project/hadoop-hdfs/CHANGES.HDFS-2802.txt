@@ -20,3 +20,6 @@ Branch-2802 Snapshot (Unreleased)
   directory to snapshottable and creating a snapshot.  (szetszwo)
 
   HDFS-4078. Handle replication in snapshots.  (szetszwo)
+
+  HDFS-4084. Provide CLI support to allow and disallow snapshot 
+  on a directory. (Brondon Li via suresh)

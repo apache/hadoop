@@ -868,4 +868,26 @@ public class DistributedFileSystem extends FileSystem {
   public boolean isInSafeMode() throws IOException {
     return setSafeMode(SafeModeAction.SAFEMODE_GET);
   }
+
+  /**
+   * Allow snapshot on a directory.
+   * 
+   * @param snapshotRoot the directory to be snapped
+   * @throws IOException
+   */
+  public void allowSnapshot(String snapshotRoot)
+      throws IOException {
+    dfs.allowSnapshot(snapshotRoot);
+  }
+  
+  /**
+   * Disallow snapshot on a directory.
+   * 
+   * @param snapshotRoot the directory to be snapped
+   * @throws IOException
+   */
+  public void disallowSnapshot(String snapshotRoot)
+      throws IOException {
+    dfs.disallowSnapshot(snapshotRoot);
+  }
 }

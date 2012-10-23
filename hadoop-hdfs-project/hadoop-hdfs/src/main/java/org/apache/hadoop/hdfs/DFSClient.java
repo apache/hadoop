@@ -1874,6 +1874,24 @@ public class DFSClient implements java.io.Closeable {
   }
 
   /**
+   * Allow snapshot on a directory.
+   * 
+   * @see ClientProtocol#allowSnapshot(String snapshotRoot)
+   */
+  public void allowSnapshot(String snapshotRoot) throws IOException {
+    namenode.allowSnapshot(snapshotRoot);
+  }
+  
+  /**
+   * Disallow snapshot on a directory.
+   * 
+   * @see ClientProtocol#disallowSnapshot(String snapshotRoot)
+   */
+  public void disallowSnapshot(String snapshotRoot) throws IOException {
+    namenode.disallowSnapshot(snapshotRoot);
+  }
+  
+  /**
    * Save namespace image.
    * 
    * @see ClientProtocol#saveNamespace()
