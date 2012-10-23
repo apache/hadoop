@@ -827,6 +827,9 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8811. Compile hadoop native library in FreeBSD (Radim Kolar via
     bobby)
 
+    HADOOP-8962. RawLocalFileSystem.listStatus fails when a child filename
+    contains a colon (jlowe via bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
