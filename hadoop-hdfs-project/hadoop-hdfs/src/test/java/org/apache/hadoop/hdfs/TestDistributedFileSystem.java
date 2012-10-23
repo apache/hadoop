@@ -507,6 +507,21 @@ public class TestDistributedFileSystem {
       final FileChecksum webhdfs_qfoocs = webhdfs.getFileChecksum(webhdfsqualified);
       System.out.println("webhdfs_qfoocs=" + webhdfs_qfoocs);
 
+      //create a zero byte file
+      final Path zeroByteFile = new Path(dir, "zeroByteFile" + n);
+      {
+        final FSDataOutputStream out = hdfs.create(zeroByteFile, false, buffer_size,
+            (short)2, block_size);
+        out.close();
+      }
+
+      // verify the magic val for zero byte files
+      {
+        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
+        assertEquals(zeroChecksum.toString(),
+            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51");
+      }
+
       //write another file
       final Path bar = new Path(dir, "bar" + n);
       {
