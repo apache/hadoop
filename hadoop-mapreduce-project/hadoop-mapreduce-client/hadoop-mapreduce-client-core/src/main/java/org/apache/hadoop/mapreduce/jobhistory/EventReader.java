@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.util.StringInterner;
 
 import org.apache.avro.Schema;
 import org.apache.avro.io.Decoder;
@@ -170,9 +171,11 @@ public class EventReader implements Closeable {
     Counters result = new Counters();
     for (JhCounterGroup g : counters.groups) {
       CounterGroup group =
-          result.addGroup(g.name.toString(), g.displayName.toString());
+          result.addGroup(StringInterner.weakIntern(g.name.toString()), 
+              StringInterner.weakIntern(g.displayName.toString()));
       for (JhCounter c : g.counts) {
-        group.addCounter(c.name.toString(), c.displayName.toString(), c.value);
+        group.addCounter(StringInterner.weakIntern(c.name.toString()), 
+            StringInterner.weakIntern(c.displayName.toString()), c.value);
       }
     }
     return result;
