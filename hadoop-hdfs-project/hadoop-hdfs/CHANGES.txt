@@ -482,7 +482,11 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4072. On file deletion remove corresponding blocks pending
     replications. (Jing Zhao via suresh)
 
-    HDFS-4022. Replication not happening for appended block. (Vinay via umamahesh)
+    HDFS-4022. Replication not happening for appended block.
+    (Vinay via umamahesh)
+
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
