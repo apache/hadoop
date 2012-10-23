@@ -69,9 +69,13 @@ Release 2.0.3-alpha - Unreleased
     YARN-150. Fixes AppRejectedTransition does not unregister a rejected
     app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
 
-    YARN-140. Add capacity-scheduler-default.xml to provide a default set of configurations for the capacity scheduler. (ahmed via tucu)
+    YARN-140. Add capacity-scheduler-default.xml to provide a default set of
+    configurations for the capacity scheduler. (ahmed via tucu)
 
     YARN-179. Fix some unit test failures. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-181. Fixed eclipse settings broken by capacity-scheduler.xml move via
+    YARN-140. (Siddharth Seth via vinodkv)
 
 Release 2.0.2-alpha - 2012-09-07 
 
