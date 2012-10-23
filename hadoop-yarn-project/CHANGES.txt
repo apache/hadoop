@@ -88,6 +88,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-140. Add capacity-scheduler-default.xml to provide a default set of configurations for the capacity scheduler. (ahmed via tucu)
 
+    YARN-179. Fix some unit test failures. (Vinod Kumar Vavilapalli via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

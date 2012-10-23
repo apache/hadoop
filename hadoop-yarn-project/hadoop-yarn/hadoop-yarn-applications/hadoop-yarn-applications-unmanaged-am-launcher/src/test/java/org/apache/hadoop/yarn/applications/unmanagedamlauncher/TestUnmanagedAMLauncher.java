@@ -141,6 +141,8 @@ public class TestUnmanagedAMLauncher {
     String[] args = {
         "--classpath",
         classpath,
+        "--queue",
+        "default",
         "--cmd",
         javaHome
             + "/bin/java -Xmx512m "
