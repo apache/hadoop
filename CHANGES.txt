@@ -101,6 +101,9 @@ Release 1.2.0 - unreleased
     from -1 to 0, i.e. enable the end of edit log check but do not tolerate
     any corruption.  (szetszwo)
 
+    HDFS-3062. Print logs outside the namesystem lock invalidateWorkForOneNode
+    and computeReplicationWorkForBlock. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
