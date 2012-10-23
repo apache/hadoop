@@ -280,6 +280,9 @@ Release 1.2.0 - unreleased
     HADOOP-8951. RunJar to fail with user-comprehensible error 
     message if jar missing. (stevel via suresh)
 
+    HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
+    doesn't match decompressed size. (Andy Isaacson via suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
