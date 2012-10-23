@@ -47,6 +47,9 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
     jlowe)
 
+    HADOOP-8962. RawLocalFileSystem.listStatus fails when a child filename
+    contains a colon (jlowe via bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

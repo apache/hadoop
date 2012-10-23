@@ -319,7 +319,7 @@ public class RawLocalFileSystem extends FileSystem {
         new RawLocalFileStatus(localf, getDefaultBlockSize(), this) };
     }
 
-    String[] names = localf.list();
+    File[] names = localf.listFiles();
     if (names == null) {
       return null;
     }
@@ -327,7 +327,7 @@ public class RawLocalFileSystem extends FileSystem {
     int j = 0;
     for (int i = 0; i < names.length; i++) {
       try {
-        results[j] = getFileStatus(new Path(f, names[i]));
+        results[j] = getFileStatus(new Path(names[i].getAbsolutePath()));
         j++;
       } catch (FileNotFoundException e) {
         // ignore the files not found since the dir list may have have changed
