@@ -51,6 +51,12 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public CSQueue getParent();
 
   /**
+   * Set the parent <code>Queue</code>.
+   * @param newParentQueue new parent queue
+   */
+  public void setParent(CSQueue newParentQueue);
+
+  /**
    * Get the queue name.
    * @return the queue name
    */
@@ -195,10 +201,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   
   /**
    * Reinitialize the queue.
-   * @param queue new queue to re-initalize from
+   * @param newlyParsedQueue new queue to re-initalize from
    * @param clusterResource resources in the cluster
    */
-  public void reinitialize(CSQueue queue, Resource clusterResource) 
+  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource) 
   throws IOException;
 
    /**
