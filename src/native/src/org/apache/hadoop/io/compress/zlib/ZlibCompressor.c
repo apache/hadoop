@@ -68,6 +68,7 @@ static int (*dlsym_deflateEnd)(z_streamp);
 #endif
 
 #ifdef WINDOWS
+#include <Strsafe.h>
 typedef int (__cdecl *__dlsym_deflateInit2_) (z_streamp, int, int, int, int, int, const char *, int);
 typedef int (__cdecl *__dlsym_deflate) (z_streamp, int);
 typedef int (__cdecl *__dlsym_deflateSetDictionary) (z_streamp, const Bytef *, uInt);
@@ -78,6 +79,45 @@ static __dlsym_deflate dlsym_deflate;
 static __dlsym_deflateSetDictionary dlsym_deflateSetDictionary;
 static __dlsym_deflateReset dlsym_deflateReset;
 static __dlsym_deflateEnd dlsym_deflateEnd;
+
+// Try to load zlib.dll from the dir where hadoop.dll is located.
+HANDLE LoadZlibTryHadoopNativeDir() {
+  HMODULE libz = NULL;
+  PCWSTR HADOOP_DLL = L"hadoop.dll";
+  size_t HADOOP_DLL_LEN = 10;
+  WCHAR path[MAX_PATH] = { 0 };
+  BOOL isPathValid = FALSE;
+
+  // Get hadoop.dll full path
+  HMODULE hModule = GetModuleHandle(HADOOP_DLL);
+  if (hModule != NULL) {
+    if (GetModuleFileName(hModule, path, MAX_PATH) > 0) {
+      size_t size = 0;
+      if (StringCchLength(path, MAX_PATH, &size) == S_OK) {
+
+        // Update path variable to have the full path to the zlib.dll
+        size = size - HADOOP_DLL_LEN;
+        if (size >= 0) {
+          path[size] = L'\0';
+          if (StringCchCat(path, MAX_PATH, HADOOP_ZLIB_LIBRARY) == S_OK) {
+            isPathValid = TRUE;
+          }
+        }
+      }
+    }
+  }
+
+  if (isPathValid) {
+    libz = LoadLibrary(path);
+  }
+
+  // fallback to system paths
+  if (!libz) {
+    libz = LoadLibrary(HADOOP_ZLIB_LIBRARY);
+  }
+
+  return libz;
+}
 #endif
 
 JNIEXPORT void JNICALL
@@ -94,7 +134,8 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_initIDs(
 #endif
 
 #ifdef WINDOWS
-    HMODULE libz = LoadLibrary(HADOOP_ZLIB_LIBRARY);
+  HMODULE libz = LoadZlibTryHadoopNativeDir();
+
   if (!libz) {
 		THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load zlib1.dll");
 	  	return;

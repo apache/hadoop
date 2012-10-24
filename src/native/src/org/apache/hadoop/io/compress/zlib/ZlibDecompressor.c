@@ -68,6 +68,7 @@ static int (*dlsym_inflateEnd)(z_streamp);
 #endif
 
 #ifdef WINDOWS
+#include <Strsafe.h>
 typedef int (__cdecl *__dlsym_inflateInit2_)(z_streamp, int, const char *, int);
 typedef int (__cdecl *__dlsym_inflate)(z_streamp, int);
 typedef int (__cdecl *__dlsym_inflateSetDictionary)(z_streamp, const Bytef *, uInt);
@@ -78,6 +79,7 @@ static __dlsym_inflate dlsym_inflate;
 static __dlsym_inflateSetDictionary dlsym_inflateSetDictionary;
 static __dlsym_inflateReset dlsym_inflateReset;
 static __dlsym_inflateEnd dlsym_inflateEnd;
+extern HANDLE LoadZlibTryHadoopNativeDir();
 #endif
 
 JNIEXPORT void JNICALL
@@ -94,7 +96,8 @@ JNIEnv *env, jclass class
 #endif
 
 #ifdef WINDOWS
-  HMODULE libz = LoadLibrary(HADOOP_ZLIB_LIBRARY);
+  HMODULE libz = LoadZlibTryHadoopNativeDir();
+
 	if (!libz) {
 	  THROW(env, "java/lang/UnsatisfiedLinkError", "Cannot load zlib1.dll");
 	  return;
