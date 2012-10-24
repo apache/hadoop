@@ -188,3 +188,9 @@ Branch-hadoop-1-win - unreleased
     HADOOP-4093. Fix a bug that AzureBlockPlacementPolicy#chooseTarget only
     returns one DN when replication factor is greater than 3.  (Jing Zhao via
     szetszwo)
+
+    HADOOP-8907. Provide means to look for zlib1.dll next to hadoop.dll 
+    on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-8872. FileSystem#length returns zero for symlinks on 
+    windows+java6. (Ivan Mitic via suresh)

@@ -875,4 +875,48 @@ public class FileUtil {
     jarStream.close();
     return jarFile;
   }
+
+  /** Returns the file length. In case of a symbolic link, follows the link
+   *  and returns the target file length. API is used to provide
+   *  transparent behavior between Unix and Windows since on Windows
+   *  {@link File#length()} does not follow symbolic links.
+   * @param file file to extract the length for
+   *
+   * @throws IOException if an error occurred.
+   */
+  public static long getLengthFollowSymlink(File file) {
+    return getLengthFollowSymlink(file, false);
+  }
+
+  /** Package level API used for unit-testing only. */
+  static long getLengthFollowSymlink(File file, boolean disableNativeIO) {
+    if (!Shell.WINDOWS) {
+      return file.length();
+    } else {
+      try {
+        // FIXME: Below logic is not needed On Java 7 under Windows since
+        // File#length returns the correct value.
+        if (!disableNativeIO && NativeIO.isAvailable()) {
+          // Use Windows native API for extracting the file length if NativeIO
+          // is available.
+          return NativeIO.Windows.getLengthFollowSymlink(
+            file.getCanonicalPath());
+        } else {
+          // If NativeIO is not available, we have to provide the fallback
+          // mechanism since downstream Hadoop projects do not want
+          // to worry about adding hadoop.dll to the java library path.
+
+          // Extract the target link size via winutils
+          String output = FileUtil.execCommand(
+            file, new String[] { Shell.WINUTILS, "ls", "-L", "-F" });
+          // Output tokens are separated with a pipe character
+          String[] args = output.split("\\|");
+          return Long.parseLong(args[4]);
+        }
+      } catch (IOException ex) {
+        // In case of an error return zero to be consistent with File#length
+        return 0;
+      }
+    }
+  }
 }

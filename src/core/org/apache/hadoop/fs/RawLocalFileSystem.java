@@ -436,7 +436,9 @@ public class RawLocalFileSystem extends FileSystem {
     }
     
     RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
-      super(f.length(), f.isDirectory(), 1, defaultBlockSize,
+      // Extract File#length thru FileUtil#getLengthFollowSymlink to provide
+      // the same behavior for symbolic links on different platforms. 
+      super(FileUtil.getLengthFollowSymlink(f), f.isDirectory(), 1, defaultBlockSize,
             f.lastModified(), new Path(f.getPath()).makeQualified(fs));
     }
     

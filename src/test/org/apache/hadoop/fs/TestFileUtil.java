@@ -362,4 +362,53 @@ public class TestFileUtil {
     in.close();
     Assert.assertEquals(data.length, len);
   }
+
+  /**
+   * Test the value of File's length extracted using FileUtil.
+   */
+  @Test
+  public void testGetLengthFollowSymlink() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    byte[] data = "testSymLinkData".getBytes();
+
+    File file = new File(del, FILE);
+    File link = new File(del, "_link");
+
+    // write some data to the file
+    FileOutputStream os = new FileOutputStream(file);
+    os.write(data);
+    os.close();
+
+    // ensure that getLengthFollowSymlink returns zero if a file
+    // does not exist
+    Assert.assertEquals(0, FileUtil.getLengthFollowSymlink(link));
+
+    // create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    // ensure that getLengthFollowSymlink returns the target file and link size
+    Assert.assertEquals(data.length, FileUtil.getLengthFollowSymlink(file));
+    Assert.assertEquals(data.length, FileUtil.getLengthFollowSymlink(link));
+
+    // ensure that getLengthFollowSymlink returns the target file and link
+    // size when NativeIO is not used (tests the fallback functionality
+    // on Windows)
+    Assert.assertEquals(
+      data.length, FileUtil.getLengthFollowSymlink(file, true));
+    Assert.assertEquals(
+      data.length, FileUtil.getLengthFollowSymlink(link, true));
+
+    // Make sure that files can be deleted (no remaining open handles)
+    file.delete();
+    Assert.assertFalse(file.exists());
+
+    // Link size should be zero when it's pointing to nothing
+    Assert.assertEquals(0, FileUtil.getLengthFollowSymlink(link));
+
+    link.delete();
+    Assert.assertFalse(link.exists());
+
+  }
 }

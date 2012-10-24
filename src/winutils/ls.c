@@ -76,6 +76,8 @@ static BOOL GetMaskString(INT accessMask, LPWSTR maskString)
 //	None
 //
 // Notes:
+//  if useSeparator is false, separates the output tokens with a space
+//  character, otherwise, with a pipe character
 //
 static BOOL LsPrintLine(
   const INT mask,
@@ -84,7 +86,8 @@ static BOOL LsPrintLine(
   LPCWSTR groupName,
   const FILETIME *lpFileWritetime,
   const LARGE_INTEGER fileSize,
-  LPCWSTR path)
+  LPCWSTR path,
+  BOOL useSeparator)
 {
   // 'd' + 'rwx' for user, group, other
   static const size_t ck_ullMaskLen = 1 + 3 * 3;
@@ -117,10 +120,20 @@ static BOOL LsPrintLine(
     goto LsPrintLineEnd;
   }
 
-  fwprintf(stdout, L"%10s %d %s %s %lld %3s %2d %4d %s\n",
-    maskString, hardlinkCount, ownerName, groupName, fileSize.QuadPart,
-    MONTHS[stFileWriteTime.wMonth], stFileWriteTime.wDay,
-    stFileWriteTime.wYear, path);
+  if (useSeparator)
+  {
+    fwprintf(stdout, L"%10s|%d|%s|%s|%lld|%3s|%2d|%4d|%s\n",
+      maskString, hardlinkCount, ownerName, groupName, fileSize.QuadPart,
+      MONTHS[stFileWriteTime.wMonth], stFileWriteTime.wDay,
+      stFileWriteTime.wYear, path);
+  }
+  else
+  {
+    fwprintf(stdout, L"%10s %d %s %s %lld %3s %2d %4d %s\n",
+      maskString, hardlinkCount, ownerName, groupName, fileSize.QuadPart,
+      MONTHS[stFileWriteTime.wMonth], stFileWriteTime.wDay,
+      stFileWriteTime.wYear, path);
+  }
 
   ret = TRUE;
 
@@ -128,6 +141,88 @@ LsPrintLineEnd:
   LocalFree(maskString);
 
   return ret;
+}
+
+// List of command line options supported by "winutils ls"
+enum CmdLineOption
+{
+  CmdLineOptionFollowSymlink = 0x1,  // "-L"
+  CmdLineOptionSeparator = 0x2  // "-F"
+  // options should be powers of 2 (aka next is 0x4)
+};
+
+static wchar_t* CurrentDir = L".";
+
+//----------------------------------------------------------------------------
+// Function: ParseCommandLine
+//
+// Description:
+//   Parses the command line
+//
+// Returns:
+//   TRUE on the valid command line, FALSE otherwise
+//
+BOOL ParseCommandLine(
+  int argc, wchar_t *argv[], wchar_t** path, int *optionsMask)
+{
+  int MaxOptions = 2; // Should be equal to the number of elems in CmdLineOption
+  int i = 0;
+
+  assert(optionsMask != NULL);
+  assert(argv != NULL);
+  assert(path != NULL);
+
+  *optionsMask = 0;
+
+  if (argc == 1)
+  {
+    // no path specified, assume "."
+    *path = CurrentDir;
+    return TRUE;
+  }
+
+  if (argc == 2)
+  {
+    // only path specified, no other options
+    *path = argv[1];
+    return TRUE;
+  }
+
+  if (argc > 2 + MaxOptions)
+  {
+    // too many parameters
+    return FALSE;
+  }
+
+  for (i = 1; i < argc - 1; ++i)
+  {
+    if (wcscmp(argv[i], L"-L") == 0)
+    {
+      // Check if this option was already specified
+      BOOL alreadySet = *optionsMask & CmdLineOptionFollowSymlink;
+      if (alreadySet)
+        return FALSE;
+
+      *optionsMask |= CmdLineOptionFollowSymlink;
+    }
+    else if (wcscmp(argv[i], L"-F") == 0)
+    {
+      // Check if this option was already specified
+      BOOL alreadySet = *optionsMask & CmdLineOptionSeparator;
+      if (alreadySet)
+        return FALSE;
+
+      *optionsMask |= CmdLineOptionSeparator;
+    }
+    else
+    {
+      return FALSE;
+    }
+  }
+
+  *path = argv[argc - 1];
+
+  return TRUE;
 }
 
 //----------------------------------------------------------------------------
@@ -158,19 +253,16 @@ int Ls(int argc, wchar_t *argv[])
   BOOL isSymlink = FALSE;
 
   int ret = EXIT_FAILURE;
+  int optionsMask = 0;
 
-  if (argc > 2)
+  if (!ParseCommandLine(argc, argv, &pathName, &optionsMask))
   {
     fwprintf(stderr, L"Incorrect command line arguments.\n\n");
     LsUsage(argv[0]);
     return EXIT_FAILURE;
   }
 
-  if (argc == 2)
-    pathName = argv[1];
-
-  if (pathName == NULL || wcslen(pathName) == 0)
-    pathName = L".";
+  assert(pathName != NULL);
 
   if (wcsspn(pathName, L"/?|><:*\"") != 0)
   {
@@ -187,7 +279,8 @@ int Ls(int argc, wchar_t *argv[])
     goto LsEnd;
   }
 
-  dwErrorCode = GetFileInformationByName(longPathName, FALSE, &fileInformation);
+  dwErrorCode = GetFileInformationByName(
+    longPathName, optionsMask & CmdLineOptionFollowSymlink, &fileInformation);
   if (dwErrorCode != ERROR_SUCCESS)
   {
     ReportErrorCode(L"GetFileInformationByName", dwErrorCode);
@@ -224,7 +317,8 @@ int Ls(int argc, wchar_t *argv[])
     ownerName, groupName,
     &fileInformation.ftLastWriteTime,
     fileSize,
-    pathName))
+    pathName,
+    optionsMask & CmdLineOptionSeparator))
     goto LsEnd;
 
   ret = EXIT_SUCCESS;
@@ -240,10 +334,13 @@ LsEnd:
 void LsUsage(LPCWSTR program)
 {
   fwprintf(stdout, L"\
-Usage: %s [FILE]\n\
+Usage: %s [OPTIONS] [FILE]\n\
 List information about the FILE (the current directory by default).\n\
 Using long listing format and list directory entries instead of contents,\n\
 and do not dereference symbolic links.\n\
-Provide equivalent or similar function as 'ls -ld' on GNU/Linux.\n",
+Provides equivalent or similar function as 'ls -ld' on GNU/Linux.\n\
+\n\
+OPTIONS: -L dereference symbolic links\n\
+         -F format the output by separating tokens with a pipe\n",
 program);
 }
