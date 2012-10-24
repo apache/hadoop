@@ -67,7 +67,7 @@ public abstract class RMCommunicator extends AbstractService  {
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
   protected ApplicationAttemptId applicationAttemptId;
-  private AtomicBoolean stopped;
+  private final AtomicBoolean stopped;
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
@@ -239,7 +239,9 @@ public abstract class RMCommunicator extends AbstractService  {
               // TODO: for other exceptions
             }
           } catch (InterruptedException e) {
-            LOG.warn("Allocated thread interrupted. Returning.");
+            if (!stopped.get()) {
+              LOG.warn("Allocated thread interrupted. Returning.");
+            }
             return;
           }
         }
