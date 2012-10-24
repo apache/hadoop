@@ -14,3 +14,6 @@ branch-trunk-win changes - unreleased
   branch-trunk-win to enable initial test pass. (Raja Aluri, Davio Lao, 
   Sumadhur Reddy Bolli, Ahmed El Baz, Kanna Karanam, Chuan Liu, 
   Ivan Mitic, Chris Nauroth, and Bikas Saha via suresh)
+
+  HADOOP-8954. "stat" executable not found on Windows. (Bikas Saha, Ivan Mitic
+  ported by Chris Narouth via suresh)
