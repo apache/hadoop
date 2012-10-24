@@ -30,6 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -81,6 +82,7 @@ public class ContainerLauncherImpl extends AbstractService implements
   protected BlockingQueue<ContainerLauncherEvent> eventQueue =
       new LinkedBlockingQueue<ContainerLauncherEvent>();
   YarnRPC rpc;
+  private final AtomicBoolean stopped;
 
   private Container getContainer(ContainerLauncherEvent event) {
     ContainerId id = event.getContainerID();
@@ -237,6 +239,7 @@ public class ContainerLauncherImpl extends AbstractService implements
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
     this.context = context;
+    this.stopped = new AtomicBoolean(false);
   }
 
   @Override
@@ -271,11 +274,13 @@ public class ContainerLauncherImpl extends AbstractService implements
       @Override
       public void run() {
         ContainerLauncherEvent event = null;
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
-            LOG.error("Returning, interrupted : " + e);
+            if (!stopped.get()) {
+              LOG.error("Returning, interrupted : " + e);
+            }
             return;
           }
           int poolSize = launcherPool.getCorePoolSize();
@@ -324,6 +329,10 @@ public class ContainerLauncherImpl extends AbstractService implements
   }
 
   public void stop() {
+    if (stopped.getAndSet(true)) {
+      // return if already stopped
+      return;
+    }
     // shutdown any containers that might be left running
     shutdownAllContainers();
     eventHandlingThread.interrupt();

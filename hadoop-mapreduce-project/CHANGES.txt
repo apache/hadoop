@@ -607,6 +607,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4229. Intern counter names in the JT (Miomir Boljanovic and bobby via daryn)
 
+    MAPREDUCE-4741. WARN and ERROR messages logged during normal AM shutdown.
+    (Vinod Kumar Vavilapalli via jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
