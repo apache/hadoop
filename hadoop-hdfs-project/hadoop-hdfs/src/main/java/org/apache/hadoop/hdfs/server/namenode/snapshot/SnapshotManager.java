@@ -43,7 +43,7 @@ public class SnapshotManager {
    * Otherwise, the {@link INodeDirectory} of the path is replaced by an 
    * {@link INodeDirectorySnapshottable}.
    */
-  public void setSnapshottable(final String path,
+  public void setSnapshottable(final String path, final int snapshotQuota,
       final FSDirectory fsdir) throws IOException {
     namesystem.writeLock();
     try {
@@ -54,7 +54,7 @@ public class SnapshotManager {
       }
 
       final INodeDirectorySnapshottable s
-          = INodeDirectorySnapshottable.newInstance(d);
+          = INodeDirectorySnapshottable.newInstance(d, snapshotQuota);
       fsdir.replaceINodeDirectory(path, d, s);
       snapshottables.add(s);
     } finally {

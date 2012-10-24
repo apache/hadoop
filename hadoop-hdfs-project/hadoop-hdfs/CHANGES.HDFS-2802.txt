@@ -23,3 +23,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4084. Provide CLI support to allow and disallow snapshot 
   on a directory. (Brondon Li via suresh)
+
+  HDFS-4091. Add snapshot quota to limit the number of snapshots allowed.
+  (szetszwo)
