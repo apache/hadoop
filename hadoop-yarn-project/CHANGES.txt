@@ -160,6 +160,8 @@ Release 0.23.5 - UNRELEASED
     YARN-177. CapacityScheduler - adding a queue while the RM is running has 
     wacky results (acmurthy vai tgraves)
 
+    YARN-178. Fix custom ProcessTree instance creation (Radim Kolar via bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
