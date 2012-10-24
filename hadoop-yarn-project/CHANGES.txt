@@ -165,6 +165,9 @@ Release 0.23.5 - UNRELEASED
     YARN-180. Capacity scheduler - containers that get reserved create 
     container token to early (acmurthy and bobby)
 
+    YARN-139. Interrupted Exception within AsyncDispatcher leads to user
+    confusion. (Vinod Kumar Vavilapalli via jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
