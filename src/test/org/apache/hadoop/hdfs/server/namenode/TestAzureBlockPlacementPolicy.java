@@ -126,6 +126,14 @@ public class TestAzureBlockPlacementPolicy extends TestCase {
     assertEquals(targets[0], NODE1_FD0_UD0);
     assertTrue(replicator.verifyBlockPlacement(filename,
         getLocatedBlock(targets), (short) 4) == 0);
+    
+    // Choose 7 targets. Should be able to return 7 nodes
+    targets = replicator.chooseTarget(filename, NUM_OF_DATANODES,
+        NODE1_FD0_UD0, BLOCK_SIZE);
+    assertEquals(targets.length, NUM_OF_DATANODES);
+    assertEquals(targets[0], NODE1_FD0_UD0);
+    assertTrue(replicator.verifyBlockPlacement(filename,
+        getLocatedBlock(targets), (short) 7) == 0);
 
     NODE1_FD0_UD0.updateHeartbeat(2 * FSConstants.MIN_BLOCKS_FOR_WRITE
         * BLOCK_SIZE, 0L, FSConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0);
@@ -189,6 +197,14 @@ public class TestAzureBlockPlacementPolicy extends TestCase {
     assertFalse(areInvalidNodesSelected(invalidNodes, targets));
     assertTrue(replicator.verifyBlockPlacement(filename,
         getLocatedBlock(targets), (short) 4) == 0);
+    
+    // Choose 7 targets. Should be able to return 6 nodes
+    excludedNodes = getMap(invalidNodes);
+    chosenNodes.clear();
+    targets = repl.chooseTarget(NUM_OF_DATANODES, NODE1_FD0_UD0, chosenNodes,
+        excludedNodes, BLOCK_SIZE);
+    assertEquals(targets.length, NUM_OF_DATANODES - 1);
+    assertEquals(targets[0], NODE1_FD0_UD0);
   }
 
   /**

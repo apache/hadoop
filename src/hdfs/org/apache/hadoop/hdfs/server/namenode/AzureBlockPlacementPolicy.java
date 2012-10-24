@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -45,8 +44,6 @@ import org.apache.hadoop.net.NodeBase;
  * first two replicas.
  */
 public class AzureBlockPlacementPolicy extends BlockPlacementPolicyDefault {
-
-  private static final Random random = new Random();
 
   private static final int DEFAULT_MIN_FAULT_DOMAINS = 2;
 
@@ -69,33 +66,41 @@ public class AzureBlockPlacementPolicy extends BlockPlacementPolicyDefault {
    * @param maxReplicasPerRack
    * @param results
    *          selected nodes so far
+   * @param numOfReplicas the number of replicas required         
    * @throws NotEnoughReplicasException
    */
   private void chooseRack(HashMap<Node, Node> excludedNodes, long blocksize,
-      int maxReplicasPerRack, List<DatanodeDescriptor> results)
-      throws NotEnoughReplicasException {
+      int maxReplicasPerRack, List<DatanodeDescriptor> results,
+      int numOfReplicas) throws NotEnoughReplicasException {
 
     // if results.size is 0, this function chooses a rack randomly.
     // It makes more sense to call chooseLocalNode when there are no results at
     // all.
     assert (results != null);
-
-    ArrayList<DatanodeDescriptor> selectedNodes = selectNodes(excludedNodes,
-        results);
-    int numOfReplicas = 1;
-
-    if (selectedNodes.size() >= numOfReplicas) {
-      for (DatanodeDescriptor result : selectedNodes) {
-        if (isGoodTarget(result, blocksize, maxReplicasPerRack, results)) {
-          numOfReplicas--;
-          results.add(result);
-          break;
-        }
-      }
+    if (numOfReplicas <= 0) {
+      return;
     }
-
-    if (numOfReplicas > 0) {
-      throw new NotEnoughReplicasException("Not able to place enough replicas");
+    while (numOfReplicas > 0) {
+      boolean placedReplica = false;
+      ArrayList<DatanodeDescriptor> selectedNodes = selectNodes(excludedNodes,
+          results);
+      if (selectedNodes.size() > 0) {
+        for (DatanodeDescriptor result : selectedNodes) {
+          if (isGoodTarget(result, blocksize, maxReplicasPerRack, results)) {
+            if (!excludedNodes.containsKey(result)) {
+              numOfReplicas--;
+              results.add(result);
+              excludedNodes.put(result, result);
+              placedReplica = true;
+              break;
+            }
+          }
+        }
+      } 
+      if (!placedReplica) {
+        throw new NotEnoughReplicasException(
+            "Not able to place enough replicas");
+      }
     }
   }
 
@@ -361,6 +366,7 @@ public class AzureBlockPlacementPolicy extends BlockPlacementPolicyDefault {
       return writer;
     }
 
+    int targetNum = numOfReplicas;
     int numOfResults = results.size();
     boolean newBlock = (numOfResults == 0);
     if (writer == null && !newBlock) {
@@ -368,30 +374,18 @@ public class AzureBlockPlacementPolicy extends BlockPlacementPolicyDefault {
     }
 
     try {
-      switch (numOfResults) {
-      case 0:
+      if (numOfResults == 0) {
         writer = chooseLocalNode(writer, excludedNodes, blocksize,
             maxNodesPerRack, results);
         if (--numOfReplicas == 0) {
-          break;
+          return writer;
         }
-      case 1:
-        chooseRack(excludedNodes, blocksize, maxNodesPerRack, results);
-        if (--numOfReplicas == 0) {
-          break;
-        }
-      case 2:
-        chooseRack(excludedNodes, blocksize, maxNodesPerRack, results);
-        if (--numOfReplicas == 0) {
-          break;
-        }
-      default:
-        chooseRack(excludedNodes, blocksize, maxNodesPerRack, results);
-
       }
+      chooseRack(excludedNodes, blocksize, maxNodesPerRack, results,
+          numOfReplicas);
     } catch (NotEnoughReplicasException e) {
       LOG.warn("Not able to place enough replicas, still in need of "
-          + numOfReplicas);
+          + (targetNum - results.size() + numOfResults));
     }
     return writer;
   }
