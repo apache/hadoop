@@ -1188,34 +1188,32 @@ public class LeafQueue implements CSQueue {
     return (rmContainer != null) ? rmContainer.getContainer() :
       createContainer(application, node, capability, priority);
   }
-  
 
-  public Container createContainer(FiCaSchedulerApp application, FiCaSchedulerNode node, 
+  Container createContainer(FiCaSchedulerApp application, FiCaSchedulerNode node, 
       Resource capability, Priority priority) {
-
+  
     NodeId nodeId = node.getRMNode().getNodeID();
     ContainerId containerId = BuilderUtils.newContainerId(application
         .getApplicationAttemptId(), application.getNewContainerId());
-    ContainerToken containerToken = null;
-
-    // If security is enabled, send the container-tokens too.
-    if (UserGroupInformation.isSecurityEnabled()) {
-      containerToken =
-          containerTokenSecretManager.createContainerToken(containerId, nodeId,
-            application.getUser(), capability);
-      if (containerToken == null) {
-        return null; // Try again later.
-      }
-    }
-
+  
     // Create the container
     Container container = BuilderUtils.newContainer(containerId, nodeId,
         node.getRMNode().getHttpAddress(), capability, priority,
-        containerToken);
-
+        null);
+  
     return container;
   }
-  
+
+  /**
+   * Create <code>ContainerToken</code>, only in secure-mode
+   */
+  ContainerToken createContainerToken(
+      FiCaSchedulerApp application, Container container) {
+    return containerTokenSecretManager.createContainerToken(
+        container.getId(), container.getNodeId(),
+        application.getUser(), container.getResource());
+  }
+
   private Resource assignContainer(Resource clusterResource, FiCaSchedulerNode node, 
       FiCaSchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer) {
@@ -1251,6 +1249,17 @@ public class LeafQueue implements CSQueue {
         unreserve(application, priority, node, rmContainer);
       }
 
+      // Create container tokens in secure-mode
+      if (UserGroupInformation.isSecurityEnabled()) {
+        ContainerToken containerToken = 
+            createContainerToken(application, container);
+        if (containerToken == null) {
+          // Something went wrong...
+          return Resources.none();
+        }
+        container.setContainerToken(containerToken);
+      }
+      
       // Inform the application
       RMContainer allocatedContainer = 
           application.allocate(type, node, priority, request, container);
