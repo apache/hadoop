@@ -30,6 +30,9 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
     implementations. (Brandon Li via suresh)
 
+    HADOOP-8926. hadoop.util.PureJavaCrc32 cache hit-ratio is low for static
+    data (Gopal V via bobby)
+
   BUG FIXES
 
     HADOOP-8386. hadoop script doesn't work if 'cd' prints to stdout

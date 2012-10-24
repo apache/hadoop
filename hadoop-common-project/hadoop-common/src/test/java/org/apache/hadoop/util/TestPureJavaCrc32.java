@@ -142,16 +142,14 @@ public class TestPureJavaCrc32 {
       for (int j = 0; j < tables.length; j++) {
         final int[] t = tables[j];
         final StringBuilder b = new StringBuilder();
-        b.append(String.format("  static final int[] " + nameformat
-            + " = new int[] {", j));
+        b.append(String.format("    /* "+ nameformat +" */", j));
         for (int i = 0; i < t.length;) {
           b.append("\n    ");
           for(int k = 0; k < 4; k++) {
             b.append(String.format("0x%08X, ", t[i++]));
           }
         }
-        b.setCharAt(b.length() - 2, '\n');
-        s[j] = b.toString() + " };\n";
+        s[j] = b.toString();
       }
       return s;
     }
@@ -159,10 +157,23 @@ public class TestPureJavaCrc32 {
     /** {@inheritDoc} */
     public String toString() {
       final StringBuilder b = new StringBuilder();
-      for(String s : toStrings(String.format("T%d_",
-          Integer.numberOfTrailingZeros(tables[0].length)) + "%d")) {
+
+      final String tableFormat = String.format("T%d_", 
+        Integer.numberOfTrailingZeros(tables[0].length)) + "%d";
+      final String startFormat = "  private static final int "+tableFormat+"_start = %d*256;";
+
+      for (int j = 0; j < tables.length; j++) {
+        b.append(String.format(startFormat, j, j));
+        b.append("\n");
+      }
+
+      b.append("  private static final int[] T = new int[] {");
+      for(String s : toStrings(tableFormat)) {
+        b.append("\n");
         b.append(s);
       }
+      b.setCharAt(b.length() - 2, '\n');
+      b.append(" };\n");
       return b.toString();
     }
 
