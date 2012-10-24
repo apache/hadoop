@@ -1176,30 +1176,29 @@ public class LeafQueue implements CSQueue {
   }
   
 
-  public Container createContainer(SchedulerApp application, SchedulerNode node, 
+  Container createContainer(SchedulerApp application, SchedulerNode node, 
       Resource capability, Priority priority) {
 
     NodeId nodeId = node.getRMNode().getNodeID();
     ContainerId containerId = BuilderUtils.newContainerId(application
         .getApplicationAttemptId(), application.getNewContainerId());
-    ContainerToken containerToken = null;
-
-    // If security is enabled, send the container-tokens too.
-    if (UserGroupInformation.isSecurityEnabled()) {
-      containerToken =
-          containerTokenSecretManager.createContainerToken(containerId, nodeId,
-            application.getUser(), capability);
-      if (containerToken == null) {
-        return null; // Try again later.
-      }
-    }
 
     // Create the container
     Container container = BuilderUtils.newContainer(containerId, nodeId,
         node.getRMNode().getHttpAddress(), capability, priority,
-        containerToken);
+        null);
 
     return container;
+  }
+
+  /**
+   * Create <code>ContainerToken</code>, only in secure-mode
+   */
+  ContainerToken createContainerToken(
+      SchedulerApp application, Container container) {
+    return containerTokenSecretManager.createContainerToken(
+        container.getId(), container.getNodeId(),
+        application.getUser(), container.getResource());
   }
   
   private Resource assignContainer(Resource clusterResource, SchedulerNode node, 
@@ -1235,6 +1234,17 @@ public class LeafQueue implements CSQueue {
       // Did we previously reserve containers at this 'priority'?
       if (rmContainer != null){
         unreserve(application, priority, node, rmContainer);
+      }
+
+      // Create container tokens in secure-mode
+      if (UserGroupInformation.isSecurityEnabled()) {
+        ContainerToken containerToken = 
+            createContainerToken(application, container);
+        if (containerToken == null) {
+          // Something went wrong...
+          return Resources.none();
+        }
+        container.setContainerToken(containerToken);
       }
 
       // Inform the application
