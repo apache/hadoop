@@ -218,7 +218,7 @@ public class LeafQueue implements CSQueue {
   {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
-    float absCapacity = parent.getAbsoluteCapacity() * capacity;
+    float absCapacity = getParent().getAbsoluteCapacity() * capacity;
     CSQueueUtils.checkAbsoluteCapacities(getQueueName(), absCapacity, absoluteMaxCapacity);
 
     this.capacity = capacity; 
@@ -251,7 +251,7 @@ public class LeafQueue implements CSQueue {
     
     // Update metrics
     CSQueueUtils.updateQueueStatistics(
-        this, parent, clusterResource, minimumAllocation);
+        this, getParent(), clusterResource, minimumAllocation);
 
     LOG.info("Initializing " + queueName + "\n" +
         "capacity = " + capacity +
@@ -334,10 +334,15 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public CSQueue getParent() {
+  public synchronized CSQueue getParent() {
     return parent;
   }
-
+  
+  @Override
+  public synchronized void setParent(CSQueue newParentQueue) {
+    this.parent = (ParentQueue)newParentQueue;
+  }
+  
   @Override
   public String getQueueName() {
     return queueName;
@@ -345,7 +350,7 @@ public class LeafQueue implements CSQueue {
 
   @Override
   public String getQueuePath() {
-    return parent.getQueuePath() + "." + getQueueName();
+    return getParent().getQueuePath() + "." + getQueueName();
   }
 
   /**
@@ -425,7 +430,9 @@ public class LeafQueue implements CSQueue {
   synchronized void setMaxCapacity(float maximumCapacity) {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
-    float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
+    float absMaxCapacity = 
+        CSQueueUtils.computeAbsoluteMaximumCapacity(
+            maximumCapacity, getParent());
     CSQueueUtils.checkAbsoluteCapacities(getQueueName(), absoluteCapacity, absMaxCapacity);
     
     this.maximumCapacity = maximumCapacity;
@@ -448,10 +455,6 @@ public class LeafQueue implements CSQueue {
     this.userLimitFactor = userLimitFactor;
   }
 
-  synchronized void setParentQueue(CSQueue parent) {
-    this.parent = parent;
-  }
-  
   @Override
   public synchronized int getNumApplications() {
     return getNumPendingApplications() + getNumActiveApplications();
@@ -549,26 +552,28 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public synchronized void reinitialize(CSQueue queue, Resource clusterResource) 
+  public synchronized void reinitialize(
+      CSQueue newlyParsedQueue, Resource clusterResource) 
   throws IOException {
     // Sanity check
-    if (!(queue instanceof LeafQueue) || 
-        !queue.getQueuePath().equals(getQueuePath())) {
+    if (!(newlyParsedQueue instanceof LeafQueue) || 
+        !newlyParsedQueue.getQueuePath().equals(getQueuePath())) {
       throw new IOException("Trying to reinitialize " + getQueuePath() + 
-          " from " + queue.getQueuePath());
+          " from " + newlyParsedQueue.getQueuePath());
     }
 
-    LeafQueue leafQueue = (LeafQueue)queue;
+    LeafQueue newlyParsedLeafQueue = (LeafQueue)newlyParsedQueue;
     setupQueueConfigs(
         clusterResource,
-        leafQueue.capacity, leafQueue.absoluteCapacity, 
-        leafQueue.maximumCapacity, leafQueue.absoluteMaxCapacity, 
-        leafQueue.userLimit, leafQueue.userLimitFactor, 
-        leafQueue.maxApplications,
-        leafQueue.getMaxApplicationsPerUser(),
-        leafQueue.getMaximumActiveApplications(), 
-        leafQueue.getMaximumActiveApplicationsPerUser(),
-        leafQueue.state, leafQueue.acls);
+        newlyParsedLeafQueue.capacity, newlyParsedLeafQueue.absoluteCapacity, 
+        newlyParsedLeafQueue.maximumCapacity, 
+        newlyParsedLeafQueue.absoluteMaxCapacity, 
+        newlyParsedLeafQueue.userLimit, newlyParsedLeafQueue.userLimitFactor, 
+        newlyParsedLeafQueue.maxApplications,
+        newlyParsedLeafQueue.getMaxApplicationsPerUser(),
+        newlyParsedLeafQueue.getMaximumActiveApplications(), 
+        newlyParsedLeafQueue.getMaximumActiveApplicationsPerUser(),
+        newlyParsedLeafQueue.state, newlyParsedLeafQueue.acls);
   }
 
   @Override
@@ -581,7 +586,7 @@ public class LeafQueue implements CSQueue {
     }
 
     // Check if parent-queue allows access
-    return parent.hasAccess(acl, user);
+    return getParent().hasAccess(acl, user);
   }
 
   @Override
@@ -639,10 +644,10 @@ public class LeafQueue implements CSQueue {
 
     // Inform the parent queue
     try {
-      parent.submitApplication(application, userName, queue);
+      getParent().submitApplication(application, userName, queue);
     } catch (AccessControlException ace) {
       LOG.info("Failed to submit application to parent-queue: " + 
-          parent.getQueuePath(), ace);
+          getParent().getQueuePath(), ace);
       removeApplication(application, user);
       throw ace;
     }
@@ -698,7 +703,7 @@ public class LeafQueue implements CSQueue {
     }
 
     // Inform the parent queue
-    parent.finishApplication(application, queue);
+    getParent().finishApplication(application, queue);
   }
 
   public synchronized void removeApplication(SchedulerApp application, User user) {
@@ -1337,7 +1342,7 @@ public class LeafQueue implements CSQueue {
       }
 
       // Inform the parent queue
-      parent.completedContainer(clusterResource, application, 
+      getParent().completedContainer(clusterResource, application, 
           node, rmContainer, null, event);
     }
   }
@@ -1347,7 +1352,7 @@ public class LeafQueue implements CSQueue {
     // Update queue metrics
     Resources.addTo(usedResources, resource);
     CSQueueUtils.updateQueueStatistics(
-        this, parent, clusterResource, minimumAllocation);
+        this, getParent(), clusterResource, minimumAllocation);
     ++numContainers;
 
     // Update user metrics
@@ -1372,7 +1377,7 @@ public class LeafQueue implements CSQueue {
     // Update queue metrics
     Resources.subtractFrom(usedResources, resource);
     CSQueueUtils.updateQueueStatistics(
-        this, parent, clusterResource, minimumAllocation);
+        this, getParent(), clusterResource, minimumAllocation);
     --numContainers;
 
     // Update user metrics
@@ -1403,7 +1408,7 @@ public class LeafQueue implements CSQueue {
     
     // Update metrics
     CSQueueUtils.updateQueueStatistics(
-        this, parent, clusterResource, minimumAllocation);
+        this, getParent(), clusterResource, minimumAllocation);
     
     // Update application properties
     for (SchedulerApp application : activeApplications) {
@@ -1474,7 +1479,7 @@ public class LeafQueue implements CSQueue {
     synchronized (this) {
       allocateResource(clusterResource, application, container.getResource());
     }
-    parent.recoverContainer(clusterResource, application, container);
+    getParent().recoverContainer(clusterResource, application, container);
 
   }
   
