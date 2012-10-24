@@ -68,7 +68,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           try {
             event = eventQueue.take();
           } catch(InterruptedException ie) {
-            LOG.warn("AsyncDispatcher thread interrupted", ie);
+            if (!stopped) {
+              LOG.warn("AsyncDispatcher thread interrupted", ie);
+            }
             return;
           }
           if (event != null) {
@@ -180,7 +182,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       try {
         eventQueue.put(event);
       } catch (InterruptedException e) {
-        LOG.warn("AsyncDispatcher thread interrupted", e);
+        if (!stopped) {
+          LOG.warn("AsyncDispatcher thread interrupted", e);
+        }
         throw new YarnException(e);
       }
     };

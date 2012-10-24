@@ -114,6 +114,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
    * @param procfsDir the root of a proc file system - only used for testing.
    */
   public ProcfsBasedProcessTree(String pid, String procfsDir) {
+    super(pid);
     this.pid = getValidPID(pid);
     this.procfsDir = procfsDir;
   }

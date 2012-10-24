@@ -230,6 +230,9 @@ Trunk (Unreleased)
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
 
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
@@ -408,6 +411,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4088. Remove "throws QuotaExceededException" from an
     INodeDirectoryWithQuota constructor. (szetszwo)
 
+    HDFS-4099. Clean up replication code and add more javadoc. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -480,7 +485,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4072. On file deletion remove corresponding blocks pending
     replications. (Jing Zhao via suresh)
 
-    HDFS-4022. Replication not happening for appended block. (Vinay via umamahesh)
+    HDFS-4022. Replication not happening for appended block.
+    (Vinay via umamahesh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1878,6 +1884,9 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-3224. Bug in check for DN re-registration with different storage ID
     (jlowe)
+
+    HDFS-4090. getFileChecksum() result incompatible when called against
+    zero-byte files. (Kihwal Lee via daryn)
 
 Release 0.23.4 - UNRELEASED
 

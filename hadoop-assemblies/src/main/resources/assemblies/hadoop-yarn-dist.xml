@@ -63,6 +63,13 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/conf</directory>
+      <outputDirectory>etc/hadoop</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>${basedir}</directory>
       <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
       <includes>

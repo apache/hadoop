@@ -46,6 +46,7 @@ JNIEXPORT jobjectArray JNICALL
 Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNetgroupJNI
 (JNIEnv *env, jobject jobj, jstring jgroup) {
   UserList *userListHead = NULL;
+  UserList *current = NULL;
   int       userListSize = 0;
 
   // pointers to free at the end
@@ -72,8 +73,10 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
   // was successful or not (as long as it was called we need to call
   // endnetgrent)
   setnetgrentCalledFlag = 1;
+#ifndef __FreeBSD__
   if(setnetgrent(cgroup) == 1) {
-    UserList *current = NULL;
+#endif
+    current = NULL;
     // three pointers are for host, user, domain, we only care
     // about user now
     char *p[3];
@@ -87,7 +90,9 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
         userListSize++;
       }
     }
+#ifndef __FreeBSD__
   }
+#endif
 
   //--------------------------------------------------
   // build return data (java array)
@@ -101,7 +106,7 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
     goto END;
   }
 
-  UserList * current = NULL;
+  current = NULL;
 
   // note that the loop iterates over list but also over array (i)
   int i = 0;

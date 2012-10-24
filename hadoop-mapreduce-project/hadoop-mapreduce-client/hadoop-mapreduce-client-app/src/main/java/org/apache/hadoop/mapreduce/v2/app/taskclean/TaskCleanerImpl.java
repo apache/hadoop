@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,10 +44,12 @@ public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
   private Thread eventHandlingThread;
   private BlockingQueue<TaskCleanupEvent> eventQueue =
       new LinkedBlockingQueue<TaskCleanupEvent>();
+  private final AtomicBoolean stopped;
 
   public TaskCleanerImpl(AppContext context) {
     super("TaskCleaner");
     this.context = context;
+    this.stopped = new AtomicBoolean(false);
   }
 
   public void start() {
@@ -59,11 +62,13 @@ public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
       @Override
       public void run() {
         TaskCleanupEvent event = null;
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
-            LOG.error("Returning, interrupted : " + e);
+            if (!stopped.get()) {
+              LOG.error("Returning, interrupted : " + e);
+            }
             return;
           }
           // the events from the queue are handled in parallel
@@ -77,6 +82,10 @@ public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
   }
 
   public void stop() {
+    if (stopped.getAndSet(true)) {
+      // return if already stopped
+      return;
+    }
     eventHandlingThread.interrupt();
     launcherPool.shutdown();
     super.stop();

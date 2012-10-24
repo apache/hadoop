@@ -189,6 +189,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4736. Remove obsolete option [-rootDir] from TestDFSIO.
     (Brandon Li via suresh)
 
+    MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
+    UNASSIGNED states. (Mayank Bansal via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -598,6 +601,14 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4733. Reducer can fail to make progress during shuffle if too many
     reducers complete consecutively. (Jason Lowe via vinodkv)
+
+    MAPREDUCE-4740. only .jars can be added to the Distributed Cache
+    classpath. (Robert Joseph Evans via jlowe)
+
+    MAPREDUCE-4229. Intern counter names in the JT (Miomir Boljanovic and bobby via daryn)
+
+    MAPREDUCE-4741. WARN and ERROR messages logged during normal AM shutdown.
+    (Vinod Kumar Vavilapalli via jlowe)
 
 Release 0.23.4 - UNRELEASED
 

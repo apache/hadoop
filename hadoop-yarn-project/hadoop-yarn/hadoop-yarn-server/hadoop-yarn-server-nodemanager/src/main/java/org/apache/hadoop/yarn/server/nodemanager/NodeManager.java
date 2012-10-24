@@ -253,12 +253,12 @@ public class NodeManager extends CompositeService implements
       if (hasToReboot) {
         LOG.info("Rebooting the node manager.");
         NodeManager nodeManager = createNewNodeManager();
-        nodeManager.initAndStartNodeManager(hasToReboot);
+        nodeManager.initAndStartNodeManager(this.getConfig(), hasToReboot);
       }
     }
   }
   
-  private void initAndStartNodeManager(boolean hasToReboot) {
+  private void initAndStartNodeManager(Configuration conf, boolean hasToReboot) {
     try {
 
       // Remove the old hook if we are rebooting.
@@ -270,7 +270,6 @@ public class NodeManager extends CompositeService implements
       ShutdownHookManager.get().addShutdownHook(nodeManagerShutdownHook,
                                                 SHUTDOWN_HOOK_PRIORITY);
 
-      YarnConfiguration conf = new YarnConfiguration();
       this.init(conf);
       this.start();
     } catch (Throwable t) {
@@ -288,6 +287,7 @@ public class NodeManager extends CompositeService implements
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
     NodeManager nodeManager = new NodeManager();
-    nodeManager.initAndStartNodeManager(false);
+    Configuration conf = new YarnConfiguration();
+    nodeManager.initAndStartNodeManager(conf, false);
   }
 }

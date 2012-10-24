@@ -375,10 +375,13 @@ Release 2.0.3-alpha - Unreleased
     (rkanter via tucu)
 
     HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
-    doesn't match decompressed size. (Slavik Krassovsky via suresh)
+    doesn't match decompressed size. (Andy Isaacson via suresh)
 
     HADOOP-8948. TestFileUtil.testGetDU fails on Windows due to incorrect
     assumption of line separator. (Chris Nauroth via suresh)
+
+    HADOOP-8951. RunJar to fail with user-comprehensible error 
+    message if jar missing. (stevel via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1090,6 +1093,12 @@ Release 0.23.5 - UNRELEASED
 
     HADOOP-8906. paths with multiple globs are unreliable. (Daryn Sharp via
     jlowe)
+
+    HADOOP-8811. Compile hadoop native library in FreeBSD (Radim Kolar via
+    bobby)
+
+    HADOOP-8962. RawLocalFileSystem.listStatus fails when a child filename
+    contains a colon (jlowe via bobby)
 
 Release 0.23.4 - UNRELEASED
 
