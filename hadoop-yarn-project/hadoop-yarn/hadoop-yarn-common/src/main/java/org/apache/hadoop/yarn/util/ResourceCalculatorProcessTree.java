@@ -21,15 +21,26 @@ package org.apache.hadoop.yarn.util;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.ReflectionUtils;
+import java.lang.reflect.Constructor;
 
 /**
  * Interface class to obtain process resource usage
  *
  */
-public abstract class ResourceCalculatorProcessTree {
+public abstract class ResourceCalculatorProcessTree extends Configured {
   static final Log LOG = LogFactory
       .getLog(ResourceCalculatorProcessTree.class);
+
+  /**
+   * Create process-tree instance with specified root process.
+   *
+   * Subclass must override this.
+   * @param root process-tree root-process
+   */
+  public ResourceCalculatorProcessTree(String root) {
+  }
 
   /**
    * Get the process-tree with latest state. If the root-process is not alive,
@@ -122,10 +133,17 @@ public abstract class ResourceCalculatorProcessTree {
    *         is not available for this system.
    */
   public static ResourceCalculatorProcessTree getResourceCalculatorProcessTree(
-	  String pid, Class<? extends ResourceCalculatorProcessTree> clazz, Configuration conf) {
+    String pid, Class<? extends ResourceCalculatorProcessTree> clazz, Configuration conf) {
 
     if (clazz != null) {
-      return ReflectionUtils.newInstance(clazz, conf);
+      try {
+        Constructor <? extends ResourceCalculatorProcessTree> c = clazz.getConstructor(String.class);
+        ResourceCalculatorProcessTree rctree = c.newInstance(pid);
+        rctree.setConf(conf);
+        return rctree;
+      } catch(Exception e) {
+        throw new RuntimeException(e);
+      }
     }
 
     // No class given, try a os specific class
