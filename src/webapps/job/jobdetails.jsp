@@ -467,7 +467,6 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
   </select> </td><td><input type="submit" value="Submit"> </form></td></tr> </table>
 <% } %>
 
-<table border="0"> <tr>
     
 <% if(JSPUtil.privateActionsAllowed(tracker.conf) 
     	&& runState == JobStatus.RUNNING) { %>
