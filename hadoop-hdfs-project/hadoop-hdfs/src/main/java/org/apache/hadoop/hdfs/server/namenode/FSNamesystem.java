@@ -1266,11 +1266,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
 
         long now = now();
-        INodeFile inode = dir.getFileINode(src);
-        if (inode == null) {
-          throw new FileNotFoundException("File does not exist: " + src);
-        }
-        assert !inode.isLink();
+        final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
         if (doAccessTime && isAccessTimeSupported()) {
           if (now <= inode.getAccessTime() + getAccessTimePrecision()) {
             // if we have to set access time but we only have the readlock, then
@@ -1386,28 +1382,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // we put the following prerequisite for the operation
     // replication and blocks sizes should be the same for ALL the blocks
+
     // check the target
-    INode inode = dir.getFileINode(target);
-
-    if(inode == null) {
-      throw new IllegalArgumentException("concat: trg file doesn't exist");
+    final INodeFile trgInode = INodeFile.valueOf(dir.getINode(target), target);
+    if(trgInode.isUnderConstruction()) {
+      throw new HadoopIllegalArgumentException("concat: target file "
+          + target + " is under construction");
     }
-    if(inode.isUnderConstruction()) {
-      throw new IllegalArgumentException("concat: trg file is uner construction");
-    }
-
-    INodeFile trgInode = (INodeFile) inode;
-
-    // per design trg shouldn't be empty and all the blocks same size
+    // per design target shouldn't be empty and all the blocks same size
     if(trgInode.blocks.length == 0) {
-      throw new IllegalArgumentException("concat: "+ target + " file is empty");
+      throw new HadoopIllegalArgumentException("concat: target file "
+          + target + " is empty");
     }
 
     long blockSize = trgInode.getPreferredBlockSize();
 
     // check the end block to be full
     if(blockSize != trgInode.blocks[trgInode.blocks.length-1].getNumBytes()) {
-      throw new IllegalArgumentException(target + " blocks size should be the same");
+      throw new HadoopIllegalArgumentException("The last block in " + target
+          + " is not full; last block size = "
+          + trgInode.blocks[trgInode.blocks.length-1].getNumBytes()
+          + " but file block size = " + blockSize);
     }
 
     si.add(trgInode);
@@ -1420,21 +1415,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(i==srcs.length-1)
         endSrc=true;
 
-      INodeFile srcInode = dir.getFileINode(src);
-
+      final INodeFile srcInode = INodeFile.valueOf(dir.getINode(src), src);
       if(src.isEmpty() 
-          || srcInode == null
           || srcInode.isUnderConstruction()
           || srcInode.blocks.length == 0) {
-        throw new IllegalArgumentException("concat: file " + src + 
-        " is invalid or empty or underConstruction");
+        throw new HadoopIllegalArgumentException("concat: source file " + src
+            + " is invalid or empty or underConstruction");
       }
 
       // check replication and blocks size
       if(repl != srcInode.getBlockReplication()) {
-        throw new IllegalArgumentException(src + " and " + target + " " +
-            "should have same replication: "
-            + repl + " vs. " + srcInode.getBlockReplication());
+        throw new HadoopIllegalArgumentException("concat: the soruce file "
+            + src + " and the target file " + target
+            + " should have the same replication: source replication is "
+            + srcInode.getBlockReplication()
+            + " but target replication is " + repl);
       }
 
       //boolean endBlock=false;
@@ -1444,8 +1439,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(endSrc)
         idx = srcInode.blocks.length-2; // end block of endSrc is OK not to be full
       if(idx >= 0 && srcInode.blocks[idx].getNumBytes() != blockSize) {
-        throw new IllegalArgumentException("concat: blocks sizes of " + 
-            src + " and " + target + " should all be the same");
+        throw new HadoopIllegalArgumentException("concat: the soruce file "
+            + src + " and the target file " + target
+            + " should have the same blocks sizes: target block size is "
+            + blockSize + " but the size of source block " + idx + " is "
+            + srcInode.blocks[idx].getNumBytes());
       }
 
       si.add(srcInode);
@@ -1454,7 +1452,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // make sure no two files are the same
     if(si.size() < srcs.length+1) { // trg + srcs
       // it means at least two files are the same
-      throw new IllegalArgumentException("at least two files are the same");
+      throw new HadoopIllegalArgumentException(
+          "concat: at least two of the source files are the same");
     }
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1793,13 +1792,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     try {
-      INodeFile myFile = dir.getFileINode(src);
-      try {
-        blockManager.verifyReplication(src, replication, clientMachine);
-      } catch(IOException e) {
-        throw new IOException("failed to create "+e.getMessage());
-      }
+      blockManager.verifyReplication(src, replication, clientMachine);
       boolean create = flag.contains(CreateFlag.CREATE);
+      final INode myFile = dir.getINode(src);
       if (myFile == null) {
         if (!create) {
           throw new FileNotFoundException("failed to overwrite or append to non-existent file "
@@ -1825,8 +1820,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
 
       if (append && myFile != null) {
+        final INodeFile f = INodeFile.valueOf(myFile, src); 
         return prepareFileForWrite(
-            src, myFile, holder, clientMachine, clientNode, true);
+            src, f, holder, clientMachine, clientNode, true);
       } else {
        // Now we can add the name to the filesystem. This file has no
        // blocks associated with it.
@@ -1920,11 +1916,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("Invalid file name: " + src);
       }
   
-      INode inode = dir.getFileINode(src);
-      if (inode == null) {
-        throw new FileNotFoundException("File not found " + src);
-      }
-  
+      final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
       if (!inode.isUnderConstruction()) {
         return true;
       }
@@ -2325,35 +2317,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private INodeFileUnderConstruction checkLease(String src, String holder) 
       throws LeaseExpiredException, UnresolvedLinkException {
     assert hasReadOrWriteLock();
-    INodeFile file = dir.getFileINode(src);
-    checkLease(src, holder, file);
-    return (INodeFileUnderConstruction)file;
+    return checkLease(src, holder, dir.getINode(src));
   }
 
-  private void checkLease(String src, String holder, INode file)
-      throws LeaseExpiredException {
+  private INodeFileUnderConstruction checkLease(String src, String holder,
+      INode file) throws LeaseExpiredException {
     assert hasReadOrWriteLock();
-    if (file == null || file.isDirectory()) {
+    if (file == null || !(file instanceof INodeFile)) {
       Lease lease = leaseManager.getLease(holder);
-      throw new LeaseExpiredException("No lease on " + src +
-                                      " File does not exist. " +
-                                      (lease != null ? lease.toString() :
-                                       "Holder " + holder + 
-                                       " does not have any open files."));
+      throw new LeaseExpiredException(
+          "No lease on " + src + ": File does not exist. "
+          + (lease != null ? lease.toString()
+              : "Holder " + holder + " does not have any open files."));
     }
     if (!file.isUnderConstruction()) {
       Lease lease = leaseManager.getLease(holder);
-      throw new LeaseExpiredException("No lease on " + src + 
-                                      " File is not open for writing. " +
-                                      (lease != null ? lease.toString() :
-                                       "Holder " + holder + 
-                                       " does not have any open files."));
+      throw new LeaseExpiredException(
+          "No lease on " + src + ": File is not open for writing. "
+          + (lease != null ? lease.toString()
+              : "Holder " + holder + " does not have any open files."));
     }
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)file;
     if (holder != null && !pendingFile.getClientName().equals(holder)) {
       throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
           + pendingFile.getClientName() + " but is accessed by " + holder);
     }
+    return pendingFile;
   }
  
   /**
@@ -2395,15 +2384,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       pendingFile = checkLease(src, holder);
     } catch (LeaseExpiredException lee) {
-      INodeFile file = dir.getFileINode(src);
-      if (file != null && !file.isUnderConstruction()) {
+      final INode inode = dir.getINode(src);
+      if (inode != null && inode instanceof INodeFile && !inode.isUnderConstruction()) {
         // This could be a retry RPC - i.e the client tried to close
         // the file, but missed the RPC response. Thus, it is trying
         // again to close the file. If the file still exists and
         // the client's view of the last block matches the actual
         // last block, then we'll treat it as a successful close.
         // See HDFS-3031.
-        Block realLastBlock = file.getLastBlock();
+        final Block realLastBlock = ((INodeFile)inode).getLastBlock();
         if (Block.matchingIdAndGenStamp(last, realLastBlock)) {
           NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: " +
               "received request from " + holder + " to complete file " + src +
@@ -2989,23 +2978,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("Recovering lease=" + lease + ", src=" + src);
     assert !isInSafeMode();
     assert hasWriteLock();
-    INodeFile iFile = dir.getFileINode(src);
-    if (iFile == null) {
-      final String message = "DIR* NameSystem.internalReleaseLease: "
-        + "attempt to release a create lock on "
-        + src + " file does not exist.";
-      NameNode.stateChangeLog.warn(message);
-      throw new IOException(message);
-    }
-    if (!iFile.isUnderConstruction()) {
-      final String message = "DIR* NameSystem.internalReleaseLease: "
-        + "attempt to release a create lock on "
-        + src + " but file is already closed.";
-      NameNode.stateChangeLog.warn(message);
-      throw new IOException(message);
-    }
 
-    INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
+    final INodeFileUnderConstruction pendingFile
+        = INodeFileUnderConstruction.valueOf(dir.getINode(src), src);
     int nrBlocks = pendingFile.numBlocks();
     BlockInfo[] blocks = pendingFile.getBlocks();
 
@@ -4313,17 +4288,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       for (Lease lease : leaseManager.getSortedLeases()) {
         for (String path : lease.getPaths()) {
-          INode node;
+          final INodeFileUnderConstruction cons;
           try {
-            node = dir.getFileINode(path);
+            cons = INodeFileUnderConstruction.valueOf(dir.getINode(path), path);
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
+          } catch (IOException e) {
+            throw new RuntimeException(e);
           }
-          assert node != null : "Found a lease for nonexisting file.";
-          assert node.isUnderConstruction() :
-            "Found a lease for file " + path + " that is not under construction." +
-            " lease=" + lease;
-          INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
           BlockInfo[] blocks = cons.getBlocks();
           if(blocks == null)
             continue;
@@ -4906,21 +4878,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       for (Lease lease : leaseManager.getSortedLeases()) {
         for(String path : lease.getPaths()) {
           // verify that path exists in namespace
-          INode node;
+          final INodeFileUnderConstruction cons;
           try {
-            node = dir.getFileINode(path);
+            cons = INodeFileUnderConstruction.valueOf(dir.getINode(path), path);
           } catch (UnresolvedLinkException e) {
             throw new AssertionError("Lease files should reside on this FS");
           }
-          if (node == null) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but no matching entry in namespace.");
-          }
-          if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but is not under construction.");
-          }
-          INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
           FSImageSerialization.writeINodeUnderConstruction(out, cons, path);
         }
       }

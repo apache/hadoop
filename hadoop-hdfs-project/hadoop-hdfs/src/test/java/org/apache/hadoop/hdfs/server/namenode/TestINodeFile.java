@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-
 import org.junit.Test;
 
 public class TestINodeFile {
@@ -198,5 +202,89 @@ public class TestINodeFile {
     }
     
     return iNodes;
+  }
+
+  /**
+   * Test for the static {@link INodeFile#valueOf(INode, String)}
+   * and {@link INodeFileUnderConstruction#valueOf(INode, String)} methods.
+   * @throws IOException 
+   */
+  @Test
+  public void testValueOf () throws IOException {
+    final String path = "/testValueOf";
+    final PermissionStatus perm = new PermissionStatus(
+        userName, null, FsPermission.getDefault());
+    final short replication = 3;
+
+    {//cast from null
+      final INode from = null;
+
+      //cast to INodeFile, should fail
+      try {
+        INodeFile.valueOf(from, path);
+        fail();
+      } catch(FileNotFoundException fnfe) {
+        assertTrue(fnfe.getMessage().contains("File does not exist"));
+      }
+
+      //cast to INodeFileUnderConstruction, should fail
+      try {
+        INodeFileUnderConstruction.valueOf(from, path);
+        fail();
+      } catch(FileNotFoundException fnfe) {
+        assertTrue(fnfe.getMessage().contains("File does not exist"));
+      }
+    }
+
+    {//cast from INodeFile
+      final INode from = new INodeFile(
+          perm, null, replication, 0L, 0L, preferredBlockSize);
+      
+      //cast to INodeFile, should success
+      final INodeFile f = INodeFile.valueOf(from, path);
+      assertTrue(f == from);
+
+      //cast to INodeFileUnderConstruction, should fail
+      try {
+        INodeFileUnderConstruction.valueOf(from, path);
+        fail();
+      } catch(IOException ioe) {
+        assertTrue(ioe.getMessage().contains("File is not under construction"));
+      }
+    }
+
+    {//cast from INodeFileUnderConstruction
+      final INode from = new INodeFileUnderConstruction(
+          perm, replication, 0L, 0L, "client", "machine", null);
+      
+      //cast to INodeFile, should success
+      final INodeFile f = INodeFile.valueOf(from, path);
+      assertTrue(f == from);
+
+      //cast to INodeFileUnderConstruction, should success
+      final INodeFileUnderConstruction u = INodeFileUnderConstruction.valueOf(
+          from, path);
+      assertTrue(u == from);
+    }
+
+    {//cast from INodeDirectory
+      final INode from = new INodeDirectory(perm, 0L);
+
+      //cast to INodeFile, should fail
+      try {
+        INodeFile.valueOf(from, path);
+        fail();
+      } catch(FileNotFoundException fnfe) {
+        assertTrue(fnfe.getMessage().contains("Path is not a file"));
+      }
+
+      //cast to INodeFileUnderConstruction, should fail
+      try {
+        INodeFileUnderConstruction.valueOf(from, path);
+        fail();
+      } catch(FileNotFoundException fnfe) {
+        assertTrue(fnfe.getMessage().contains("Path is not a file"));
+      }
+    }
   }
 }

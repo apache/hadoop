@@ -966,7 +966,7 @@ public class FSDirectory implements Closeable {
     int i = 0;
     int totalBlocks = 0;
     for(String src : srcs) {
-      INodeFile srcInode = getFileINode(src);
+      INodeFile srcInode = (INodeFile)getINode(src);
       allSrcInodes[i++] = srcInode;
       totalBlocks += srcInode.blocks.length;  
     }
@@ -1231,24 +1231,12 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Get {@link INode} associated with the file.
-   */
-  INodeFile getFileINode(String src) throws UnresolvedLinkException {
-    INode inode = getINode(src);
-    if (inode == null || inode.isDirectory())
-      return null;
-    assert !inode.isLink();
-    return (INodeFile) inode;
-  }
-  
-  /**
    * Get {@link INode} associated with the file / directory.
    */
   INode getINode(String src) throws UnresolvedLinkException {
     readLock();
     try {
-      INode iNode = rootDir.getNode(src, true);
-      return iNode;
+      return rootDir.getNode(src, true);
     } finally {
       readUnlock();
     }
