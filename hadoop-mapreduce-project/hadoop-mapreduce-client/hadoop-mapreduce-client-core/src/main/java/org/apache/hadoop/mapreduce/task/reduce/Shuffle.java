@@ -40,9 +40,12 @@ import org.apache.hadoop.util.Progress;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@SuppressWarnings({"deprecation", "unchecked", "rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class Shuffle<K, V> implements ExceptionReporter {
   private static final int PROGRESS_FREQUENCY = 2000;
+  private static final int MAX_EVENTS_TO_FETCH = 10000;
+  private static final int MIN_EVENTS_TO_FETCH = 100;
+  private static final int MAX_RPC_OUTSTANDING_EVENTS = 3000000;
   
   private final TaskAttemptID reduceId;
   private final JobConf jobConf;
@@ -99,9 +102,17 @@ public class Shuffle<K, V> implements ExceptionReporter {
   }
 
   public RawKeyValueIterator run() throws IOException, InterruptedException {
+    // Scale the maximum events we fetch per RPC call to mitigate OOM issues
+    // on the ApplicationMaster when a thundering herd of reducers fetch events
+    // TODO: This should not be necessary after HADOOP-8942
+    int eventsPerReducer = Math.max(MIN_EVENTS_TO_FETCH,
+        MAX_RPC_OUTSTANDING_EVENTS / jobConf.getNumReduceTasks());
+    int maxEventsToFetch = Math.min(MAX_EVENTS_TO_FETCH, eventsPerReducer);
+
     // Start the map-completion events fetcher thread
     final EventFetcher<K,V> eventFetcher = 
-      new EventFetcher<K,V>(reduceId, umbilical, scheduler, this);
+      new EventFetcher<K,V>(reduceId, umbilical, scheduler, this,
+          maxEventsToFetch);
     eventFetcher.start();
     
     // Start the map-output fetcher threads
