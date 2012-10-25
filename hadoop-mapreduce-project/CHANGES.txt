@@ -610,6 +610,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4741. WARN and ERROR messages logged during normal AM shutdown.
     (Vinod Kumar Vavilapalli via jlowe)
 
+    MAPREDUCE-4730. Fix Reducer's EventFetcher to scale the map-completion
+    requests slowly to avoid HADOOP-8942. (Jason Lowe via vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
