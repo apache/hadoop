@@ -2219,6 +2219,17 @@ public abstract class FileSystem extends Configured implements Closeable {
       ) throws IOException {
   }
 
+  /**
+   * Create a snapshot
+   * @param snapshotName The name of the snapshot
+   * @param snapshotRoot The directory where the snapshot will be taken
+   */
+  public void createSnapshot(String snapshotName, String snapshotRoot)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support createSnapshot");
+  }
+  
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 

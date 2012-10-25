@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsPermissionProto;
 
 /**
- * Interface that represents the over the wire information for a file.
+ * SnapshotInfo maintains information for a snapshot
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

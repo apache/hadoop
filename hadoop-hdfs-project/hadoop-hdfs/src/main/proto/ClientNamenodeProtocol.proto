@@ -450,22 +450,6 @@ message CreateSnapshotRequestProto {
 message CreateSnapshotResponseProto { // void response
 }
 
-message DeleteSnapshotRequestProto {
-  required string snapshotName = 1;
-  required string snapshotRoot = 2;
-}
-
-message DeleteSnapshotResponseProto { // void response
-}
-
-message ListSnapshotsRequestProto {
-  required string snapshotRoot = 1;
-}
-
-message ListSnapshotsResponseProto {
-  repeated SnapshotInfoProto snapshots = 1;
-}
-
 message AllowSnapshotRequestProto {
   required string snapshotRoot = 1;
 }
@@ -555,10 +539,6 @@ service ClientNamenodeProtocol {
       returns(GetDataEncryptionKeyResponseProto);
   rpc createSnapshot(CreateSnapshotRequestProto)
       returns(CreateSnapshotResponseProto);
-  rpc deleteSnapshot(DeleteSnapshotRequestProto)
-      returns(DeleteSnapshotResponseProto);
-  rpc listSnapshots(ListSnapshotsRequestProto)
-      returns(ListSnapshotsResponseProto);
   rpc allowSnapshot(AllowSnapshotRequestProto)
       returns(AllowSnapshotResponseProto);
   rpc disallowSnapshot(DisallowSnapshotRequestProto)

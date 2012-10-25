@@ -79,7 +79,6 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
@@ -1878,6 +1877,17 @@ public class DFSClient implements java.io.Closeable {
    */
   public boolean setSafeMode(SafeModeAction action) throws IOException {
     return namenode.setSafeMode(action);
+  }
+ 
+  /**
+   * Create one snapshot.
+   * 
+   * @see ClientProtocol#createSnapshot(String snapshotName, String
+   *      snapshotRoot)
+   */
+  public void createSnapshot(String snapshotName, String snapshotRoot)
+      throws IOException {
+    namenode.createSnapshot(snapshotName, snapshotRoot);
   }
 
   /**

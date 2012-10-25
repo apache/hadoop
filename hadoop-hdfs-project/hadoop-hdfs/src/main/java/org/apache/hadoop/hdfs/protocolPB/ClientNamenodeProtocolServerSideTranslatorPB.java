@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -55,8 +54,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisallowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisallowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeRequestProto;
@@ -92,8 +89,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSer
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListSnapshotsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListSnapshotsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MkdirsRequestProto;
@@ -141,7 +136,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProt
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.io.Text;
 
@@ -160,8 +154,6 @@ import com.google.protobuf.ServiceException;
 public class ClientNamenodeProtocolServerSideTranslatorPB implements
     ClientNamenodeProtocolPB {
   final private ClientProtocol server;
-  static final DeleteSnapshotResponseProto VOID_DELETE_SNAPSHOT_RESPONSE =
-      DeleteSnapshotResponseProto.newBuilder().build();
   static final CreateSnapshotResponseProto VOID_CREATE_SNAPSHOT_RESPONSE =
       CreateSnapshotResponseProto.newBuilder().build();
   static final AllowSnapshotResponseProto VOID_ALLOW_SNAPSHOT_RESPONSE = 
@@ -874,43 +866,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return VOID_CREATE_SNAPSHOT_RESPONSE;
-  }
-
-  @Override
-  public DeleteSnapshotResponseProto deleteSnapshot(RpcController controller,
-      DeleteSnapshotRequestProto request) throws ServiceException {
-    try {
-      server.deleteSnapshot(request.getSnapshotName(),
-          request.getSnapshotRoot());
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    return VOID_DELETE_SNAPSHOT_RESPONSE;
-  }
-
-  @Override
-  public ListSnapshotsResponseProto listSnapshots(RpcController controller,
-      ListSnapshotsRequestProto request) throws ServiceException {
-    SnapshotInfo[] result;
-
-    try {
-      result = server.listSnapshots(request.getSnapshotRoot());
-      ListSnapshotsResponseProto.Builder builder = ListSnapshotsResponseProto
-          .newBuilder();
-      for (SnapshotInfo si : result) {
-        SnapshotInfoProto.Builder infobuilder = SnapshotInfoProto.newBuilder();
-        infobuilder.setSnapshotName(si.getSnapshotName());
-        infobuilder.setSnapshotRoot(si.getSnapshotRoot());
-        infobuilder.setCreateTime(si.getCreateTime());
-        infobuilder.setPermission(si.getPermission());
-        infobuilder.setOwner(si.getOwner());
-        infobuilder.setGroup(si.getGroup());
-        builder.addSnapshots(infobuilder);
-      }
-      return builder.build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
   }
 
   @Override

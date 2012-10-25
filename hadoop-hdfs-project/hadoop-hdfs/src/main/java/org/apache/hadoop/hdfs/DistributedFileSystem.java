@@ -890,4 +890,10 @@ public class DistributedFileSystem extends FileSystem {
       throws IOException {
     dfs.disallowSnapshot(snapshotRoot);
   }
+  
+  @Override
+  public void createSnapshot(String snapshotName, String snapshotRoot)
+      throws IOException {
+    dfs.createSnapshot(snapshotName, snapshotRoot);
+  }
 }

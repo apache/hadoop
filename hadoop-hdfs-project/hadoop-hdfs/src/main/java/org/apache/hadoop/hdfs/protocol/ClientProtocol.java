@@ -958,21 +958,6 @@ public interface ClientProtocol {
   public void createSnapshot(String snapshotName, String snapshotRoot)
       throws IOException;
   
-  /**
-   * Delete a snapshot
-   * @param snapshotName name of the snapshot to be deleted
-   * @param snapshotRoot the path where the snapshot exists
-   */
-  public void deleteSnapshot(String snapshotName, String snapshotRoot)
-      throws IOException;
-
-  /**
-   * List snapshots of one directory
-   * @param snapshotRoot the path where the snapshot exists
-   */
-  public SnapshotInfo[] listSnapshots(String snapshotRoot)
-      throws IOException;
-  
     /**
      * Allow snapshot on a directory.
      * @param snapshotRoot the directory to be snapped

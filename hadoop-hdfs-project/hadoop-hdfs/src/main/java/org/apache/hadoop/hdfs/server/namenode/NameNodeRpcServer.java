@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -1077,21 +1076,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void createSnapshot(String snapshotName, String snapshotRoot)
       throws IOException {
-    // TODO Auto-generated method stub
-  }
-
-  @Override
-  public void deleteSnapshot(String snapshotName, String snapshotRoot)
-      throws IOException {
-    // TODO Auto-generated method stub
-  }
-
-  @Override
-  public SnapshotInfo[] listSnapshots(String snapshotRoot) throws IOException {
-    // TODO Auto-generated method stub  
-    SnapshotInfo[] si = new SnapshotInfo[1];
-    si[0] = new SnapshotInfo(null, null, null, null, null, null);
-    return si;
+    if (!checkPathLength(snapshotRoot)) {
+      throw new IOException("createSnapshot: Pathname too long.  Limit "
+          + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+    }
+    namesystem.createSnapshot(snapshotName, snapshotRoot);
   }
 
   @Override
