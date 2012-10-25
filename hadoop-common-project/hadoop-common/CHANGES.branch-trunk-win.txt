@@ -25,3 +25,6 @@ branch-trunk-win changes - unreleased
   (Chris Nauroth via suresh)
 
   HADOOP-8960. TestMetricsServlet fails on Windows. (Ivan Mitic via suresh)
+
+  HADOOP-8961. GenericOptionsParser URI parsing failure on Windows.
+  (Ivan Mitic via suresh)
