@@ -116,8 +116,6 @@ public class TestDistributedFileSystem {
       DFSTestUtil.createFile(fileSys, p, 1L, (short)1, 0L);
       DFSTestUtil.readFile(fileSys, p);
       
-      DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-
       fileSys.close();
       
     } finally {
@@ -449,7 +447,7 @@ public class TestDistributedFileSystem {
       fail("Expecting FileNotFoundException");
     } catch (FileNotFoundException e) {
       assertTrue("Not throwing the intended exception message", e.getMessage()
-          .contains("File does not exist: /test/TestExistingDir"));
+          .contains("Path is not a file: /test/TestExistingDir"));
     }
     
     //hftp
@@ -685,7 +683,6 @@ public class TestDistributedFileSystem {
   @Test
   public void testCreateWithCustomChecksum() throws Exception {
     Configuration conf = getTestConfiguration();
-    final long grace = 1000L;
     MiniDFSCluster cluster = null;
     Path testBasePath = new Path("/test/csum");
     // create args 

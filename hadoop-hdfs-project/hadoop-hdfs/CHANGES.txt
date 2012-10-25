@@ -76,6 +76,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4099. Clean up replication code and add more javadoc. (szetszwo)
 
+    HDFS-4107. Add utility methods for casting INode to INodeFile and
+    INodeFileUnderConstruction. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 

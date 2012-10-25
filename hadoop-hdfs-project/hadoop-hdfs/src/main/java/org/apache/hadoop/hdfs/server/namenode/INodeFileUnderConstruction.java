@@ -25,8 +25,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 import com.google.common.base.Joiner;
 
@@ -35,6 +35,16 @@ import com.google.common.base.Joiner;
  */
 @InterfaceAudience.Private
 class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
+  /** Cast INode to INodeFileUnderConstruction. */
+  public static INodeFileUnderConstruction valueOf(INode inode, String path
+      ) throws IOException {
+    final INodeFile file = INodeFile.valueOf(inode, path);
+    if (!file.isUnderConstruction()) {
+      throw new IOException("File is not under construction: " + path);
+    }
+    return (INodeFileUnderConstruction)file;
+  }
+
   private  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.

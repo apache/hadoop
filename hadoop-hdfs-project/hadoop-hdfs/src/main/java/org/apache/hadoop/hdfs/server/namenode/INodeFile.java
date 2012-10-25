@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -32,6 +33,17 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 /** I-node for closed file. */
 @InterfaceAudience.Private
 class INodeFile extends INode implements BlockCollection {
+  /** Cast INode to INodeFile. */
+  public static INodeFile valueOf(INode inode, String path) throws IOException {
+    if (inode == null) {
+      throw new FileNotFoundException("File does not exist: " + path);
+    }
+    if (!(inode instanceof INodeFile)) {
+      throw new FileNotFoundException("Path is not a file: " + path);
+    }
+    return (INodeFile)inode;
+  }
+
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
   //Number of bits for Block size
