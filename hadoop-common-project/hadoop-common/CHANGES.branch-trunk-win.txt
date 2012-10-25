@@ -23,3 +23,5 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8955. "chmod" executable not found on Windows.
   (Chris Nauroth via suresh)
+
+  HADOOP-8960. TestMetricsServlet fails on Windows. (Ivan Mitic via suresh)
