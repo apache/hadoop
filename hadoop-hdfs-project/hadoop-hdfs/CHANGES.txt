@@ -235,6 +235,9 @@ Trunk (Unreleased)
     HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
     (Jing Zhao via suresh)
 
+    HDFS-4067. TestUnderReplicatedBlocks intermittently fails due to 
+    ReplicaAlreadyExistsException. (Jing Zhao via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
