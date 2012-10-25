@@ -824,7 +824,14 @@ public class TestDFSClientRetries {
       new Random().nextBytes(bytes);
       out4.write(bytes);
       out4.write(bytes);
-      out4.hflush();
+      if (isWebHDFS) {
+        // WebHDFS does not support hflush. To avoid DataNode communicating with
+        // NN while we're shutting down NN, we call out4.close() to finish
+        // writing the data
+        out4.close();
+      } else {
+        out4.hflush();
+      }
 
       //shutdown namenode
       assertTrue(HdfsUtils.isHealthy(uri));
@@ -837,10 +844,12 @@ public class TestDFSClientRetries {
         public void run() {
           try {
             //write some more data and then close the file
-            out4.write(bytes);
-            out4.write(bytes);
-            out4.write(bytes);
-            out4.close();
+            if (!isWebHDFS) {
+              out4.write(bytes);
+              out4.write(bytes);
+              out4.write(bytes);
+              out4.close();
+            }
           } catch (Exception e) {
             exceptions.add(e);
           }
@@ -923,7 +932,11 @@ public class TestDFSClientRetries {
           Assert.assertEquals(String.format("count=%d", count),
               bytes[count % bytes.length], (byte)r);
         }
-        Assert.assertEquals(5 * bytes.length, count);
+        if (!isWebHDFS) {
+          Assert.assertEquals(5 * bytes.length, count);
+        } else {
+          Assert.assertEquals(2 * bytes.length, count);
+        }
         in.close();
       }
 

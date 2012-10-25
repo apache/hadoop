@@ -150,6 +150,10 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4022. Replication not happening for appended block. (Vinay via umamahesh)
 
+    HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
+    out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
+    via szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
