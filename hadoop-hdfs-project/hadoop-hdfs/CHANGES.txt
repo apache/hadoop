@@ -150,6 +150,8 @@ Trunk (Unreleased)
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
+    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -232,6 +234,9 @@ Trunk (Unreleased)
 
     HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
     (Jing Zhao via suresh)
+
+    HDFS-4067. TestUnderReplicatedBlocks intermittently fails due to 
+    ReplicaAlreadyExistsException. (Jing Zhao via suresh)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
@@ -413,6 +418,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4099. Clean up replication code and add more javadoc. (szetszwo)
 
+    HDFS-4107. Add utility methods for casting INode to INodeFile and
+    INodeFileUnderConstruction. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -487,6 +495,10 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4022. Replication not happening for appended block.
     (Vinay via umamahesh)
+
+    HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
+    out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
+    via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 

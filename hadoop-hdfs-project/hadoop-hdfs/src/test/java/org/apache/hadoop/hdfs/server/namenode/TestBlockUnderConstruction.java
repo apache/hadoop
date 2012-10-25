@@ -83,8 +83,7 @@ public class TestBlockUnderConstruction {
   private void verifyFileBlocks(String file,
                                 boolean isFileOpen) throws IOException {
     FSNamesystem ns = cluster.getNamesystem();
-    INodeFile inode = ns.dir.getFileINode(file);
-    assertTrue("File does not exist: " + inode.toString(), inode != null);
+    final INodeFile inode = INodeFile.valueOf(ns.dir.getINode(file), file);
     assertTrue("File " + inode.toString() +
         " isUnderConstruction = " + inode.isUnderConstruction() +
         " expected to be " + isFileOpen,
