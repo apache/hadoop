@@ -150,6 +150,8 @@ Trunk (Unreleased)
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
+    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
