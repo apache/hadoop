@@ -109,6 +109,9 @@ Release 1.2.0 - unreleased
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
     methods.  (Brandon Li via szetszwo)
 
+    HADOOP-8971. PureJavaCrc32 cache hit-ratio is low for static data
+    (Backport of HADOOP-8926) (Gopal V via suresh)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and

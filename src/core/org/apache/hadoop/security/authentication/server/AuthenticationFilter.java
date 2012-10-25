@@ -306,8 +306,8 @@ public class AuthenticationFilter implements Filter {
       if (!token.getType().equals(authHandler.getType())) {
         throw new AuthenticationException("Invalid AuthenticationToken type");
       }
-      if (token.isExpired()) {
-        throw new AuthenticationException("AuthenticationToken expired");
+      if (LOG.isDebugEnabled() && token.isExpired ()) {
+        LOG.debug("Authentication Token expired");
       }
     }
     return token;
@@ -341,7 +341,7 @@ public class AuthenticationFilter implements Filter {
         LOG.warn("AuthenticationToken ignored: " + ex.getMessage());
         token = null;
       }
-      if (token == null) {
+      if (token == null || token.isExpired ())  {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
         }
