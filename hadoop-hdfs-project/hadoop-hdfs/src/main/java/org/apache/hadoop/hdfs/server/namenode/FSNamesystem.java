@@ -170,6 +170,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -1397,6 +1398,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if(trgInode.blocks.length == 0) {
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is empty");
+    }
+    if (trgInode instanceof INodeFileWithLink) {
+      throw new HadoopIllegalArgumentException("concat: target file "
+          + target + " is in a snapshot");
     }
 
     long blockSize = trgInode.getPreferredBlockSize();

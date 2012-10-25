@@ -55,7 +55,7 @@ public class INodeFile extends INode implements BlockCollection {
 
   private long header;
 
-  BlockInfo blocks[] = null;
+  protected BlockInfo[] blocks = null;
 
   INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
@@ -162,7 +162,7 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> v) {
+  protected int collectSubtreeBlocksAndClear(List<Block> v) {
     parent = null;
     if(blocks != null && v != null) {
       for (BlockInfo blk : blocks) {
@@ -192,7 +192,7 @@ public class INodeFile extends INode implements BlockCollection {
   /** Compute file size.
    * May or may not include BlockInfoUnderConstruction.
    */
-  long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+  protected long computeFileSize(boolean includesBlockInfoUnderConstruction) {
     if (blocks == null || blocks.length == 0) {
       return 0;
     }

@@ -148,21 +148,6 @@ public class INodeDirectory extends INode {
     return getNode(getPathComponents(path), resolveLink);
   }
 
-  /** @return the INodeFile corresponding to the path. */
-  INodeFile getINodeFile(String path) throws FileNotFoundException,
-      UnresolvedLinkException {
-    final INode inode = getNode(path, false);
-    if (inode == null) {
-      throw new FileNotFoundException("File \"" + path
-          + "\" not found");
-    }
-    if (!(inode instanceof INodeFile)) {
-      throw new FileNotFoundException("Path \"" + path
-          + "\" is not a file");
-    }
-    return (INodeFile)inode;
-  }
-
   /**
    * Retrieve existing INodes from a path. If existing is big enough to store
    * all path components (existing and non-existing), then existing INodes

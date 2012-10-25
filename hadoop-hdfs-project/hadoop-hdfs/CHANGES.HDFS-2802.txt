@@ -28,3 +28,8 @@ Branch-2802 Snapshot (Unreleased)
   (szetszwo)
 
   HDFS-4097. Provide CLI support for createSnapshot. (Brandon Li via suresh)
+
+  HDFS-4092. Update file deletion logic for snapshot so that the current inode
+  is removed from the circular linked list; and if some blocks at the end of the
+  block list no longer belong to any other inode, collect them and update the
+  block list.  (szetszwo)
