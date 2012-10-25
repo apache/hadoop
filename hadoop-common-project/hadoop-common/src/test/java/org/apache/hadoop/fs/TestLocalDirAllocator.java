@@ -138,7 +138,8 @@ public class TestLocalDirAllocator {
       validateTempDirCreation(dir1);
       validateTempDirCreation(dir1);
     } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -159,7 +160,8 @@ public class TestLocalDirAllocator {
       validateTempDirCreation(dir2);
       validateTempDirCreation(dir2);
     } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -288,7 +290,8 @@ public class TestLocalDirAllocator {
         assertEquals(e.getClass(), FileNotFoundException.class);
       }
     } finally {
-      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -327,7 +330,8 @@ public class TestLocalDirAllocator {
       assertTrue(result.getParentFile().delete());
       assertFalse(new File(dir).exists());
     } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -351,7 +355,8 @@ public class TestLocalDirAllocator {
       assertEquals(f1.getName(), p1.getName());
       assertEquals("file", p1.getFileSystem(conf).getUri().getScheme());
     } finally {
-      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
 

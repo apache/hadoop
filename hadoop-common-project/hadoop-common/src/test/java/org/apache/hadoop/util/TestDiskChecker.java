@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Shell;
 
 public class TestDiskChecker {
   final FsPermission defaultPerm = new FsPermission("755");
@@ -160,8 +161,8 @@ public class TestDiskChecker {
     File localDir = File.createTempFile("test", "tmp");
     localDir.delete();
     localDir.mkdir();
-    Runtime.getRuntime().exec(
-	"chmod " + perm + "  " + localDir.getAbsolutePath()).waitFor();
+    Shell.execCommand(Shell.getSetPermissionCommand(perm, false,
+                                                    localDir.getAbsolutePath()));
     try {
       DiskChecker.checkDir(localDir);
       assertTrue("checkDir success", success);

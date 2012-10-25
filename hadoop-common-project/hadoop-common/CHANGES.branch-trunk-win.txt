@@ -20,3 +20,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8959. TestUserGroupInformation fails on Windows due to "id" executable
   not found. (Bikas Saha, Ivan Mitic, ported by Chris Narouth via suresh)
+
+  HADOOP-8955. "chmod" executable not found on Windows.
+  (Chris Nauroth via suresh)

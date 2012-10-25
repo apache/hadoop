@@ -124,8 +124,8 @@ public class TestStreamingTaskLog {
               "echo $HADOOP_ROOT_LOGGER $HADOOP_CLIENT_OPTS").getBytes());
     in.close();
     
-    Shell.execCommand(new String[]{"chmod", "+x",
-                                   scriptFile.getAbsolutePath()});
+    Shell.execCommand(Shell.getSetPermissionCommand("+x", false,
+        scriptFile.getAbsolutePath()));
     return scriptFile;
   }
   
