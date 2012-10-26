@@ -788,7 +788,11 @@ public class FairScheduler implements ResourceScheduler {
     FSSchedulerNode node = nodes.get(nodeId);
     return node == null ? null : new SchedulerNodeReport(node);
   }
-
+  
+  public FSSchedulerApp getSchedulerApp(ApplicationAttemptId appAttemptId) {
+    return applications.get(appAttemptId);
+  }
+  
   @Override
   public SchedulerAppReport getSchedulerAppInfo(
       ApplicationAttemptId appAttemptId) {

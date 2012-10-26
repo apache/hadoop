@@ -6,6 +6,8 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    YARN-145. Add a Web UI to the fair share scheduler. (Sandy Ryza via tomwhite)
+
   IMPROVEMENTS
 
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via

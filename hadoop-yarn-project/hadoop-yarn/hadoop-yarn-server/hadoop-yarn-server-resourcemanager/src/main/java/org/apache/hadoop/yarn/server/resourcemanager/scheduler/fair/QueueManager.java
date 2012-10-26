@@ -446,7 +446,7 @@ public class QueueManager {
    * Get the maximum resource allocation for the given queue.
    * @return the cap set on this queue, or Integer.MAX_VALUE if not set.
    */
-  Resource getMaxResources(String queueName) {
+  public Resource getMaxResources(String queueName) {
     synchronized (maxQueueResourcesMO) {
       if (maxQueueResources.containsKey(queueName)) {
         return maxQueueResources.get(queueName);
