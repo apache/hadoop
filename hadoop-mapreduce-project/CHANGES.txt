@@ -51,6 +51,8 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4730. Fix Reducer's EventFetcher to scale the map-completion
     requests slowly to avoid HADOOP-8942. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-4748. Invalid event: T_ATTEMPT_SUCCEEDED at SUCCEEDED. (jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
