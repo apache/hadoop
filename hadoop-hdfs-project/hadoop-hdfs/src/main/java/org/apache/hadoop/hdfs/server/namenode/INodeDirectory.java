@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +33,18 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
  * Directory INode class.
  */
 class INodeDirectory extends INode {
+  /** Cast INode to INodeDirectory. */
+  public static INodeDirectory valueOf(INode inode, String path
+      ) throws IOException {
+    if (inode == null) {
+      throw new IOException("Directory does not exist: " + path);
+    }
+    if (!inode.isDirectory()) {
+      throw new IOException("Path is not a directory: " + path);
+    }
+    return (INodeDirectory)inode; 
+  }
+
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
@@ -112,11 +125,11 @@ class INodeDirectory extends INode {
   }
 
   /**
-   * Return the INode of the last component in components, or null if the last
+   * @return the INode of the last component in components, or null if the last
    * component does not exist.
    */
-  private INode getNode(byte[][] components, boolean resolveLink) 
-    throws UnresolvedLinkException {
+  private INode getNode(byte[][] components, boolean resolveLink
+      ) throws UnresolvedLinkException {
     INode[] inode  = new INode[1];
     getExistingPathINodes(components, inode, resolveLink);
     return inode[0];
@@ -299,10 +312,7 @@ class INodeDirectory extends INode {
   <T extends INode> T addNode(String path, T newNode
       ) throws FileNotFoundException, UnresolvedLinkException  {
     byte[][] pathComponents = getPathComponents(path);        
-    if(addToParent(pathComponents, newNode,
-                    true) == null)
-      return null;
-    return newNode;
+    return addToParent(pathComponents, newNode, true) == null? null: newNode;
   }
 
   /**
@@ -326,10 +336,9 @@ class INodeDirectory extends INode {
     return parent;
   }
 
-  INodeDirectory getParent(byte[][] pathComponents)
-  throws FileNotFoundException, UnresolvedLinkException {
-    int pathLen = pathComponents.length;
-    if (pathLen < 2)  // add root
+  INodeDirectory getParent(byte[][] pathComponents
+      ) throws FileNotFoundException, UnresolvedLinkException {
+    if (pathComponents.length < 2)  // add root
       return null;
     // Gets the parent INode
     INode[] inodes  = new INode[2];
@@ -355,21 +364,15 @@ class INodeDirectory extends INode {
    * @throws  FileNotFoundException if parent does not exist or 
    *          is not a directory.
    */
-  INodeDirectory addToParent( byte[][] pathComponents,
-                              INode newNode,
-                              boolean propagateModTime
-                            ) throws FileNotFoundException, 
-                                     UnresolvedLinkException {
-              
-    int pathLen = pathComponents.length;
-    if (pathLen < 2)  // add root
+  INodeDirectory addToParent(byte[][] pathComponents, INode newNode,
+      boolean propagateModTime) throws FileNotFoundException, UnresolvedLinkException {
+    if (pathComponents.length < 2) { // add root
       return null;
-    newNode.name = pathComponents[pathLen-1];
+    }
+    newNode.name = pathComponents[pathComponents.length - 1];
     // insert into the parent children list
     INodeDirectory parent = getParent(pathComponents);
-    if(parent.addChild(newNode, propagateModTime) == null)
-      return null;
-    return parent;
+    return parent.addChild(newNode, propagateModTime) == null? null: parent;
   }
 
   @Override
@@ -415,11 +418,15 @@ class INodeDirectory extends INode {
   }
 
   /**
+   * @return an empty list if the children list is null;
+   *         otherwise, return the children list.
+   *         The returned list should not be modified.
    */
-  List<INode> getChildren() {
-    return children==null ? new ArrayList<INode>() : children;
+  public List<INode> getChildrenList() {
+    return children==null ? EMPTY_LIST : children;
   }
-  List<INode> getChildrenRaw() {
+  /** @return the children list which is possibly null. */
+  public List<INode> getChildren() {
     return children;
   }
 

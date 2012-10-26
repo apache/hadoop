@@ -79,6 +79,10 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4107. Add utility methods for casting INode to INodeFile and
     INodeFileUnderConstruction. (szetszwo)
 
+    HDFS-4112. A few improvements on INodeDirectory include adding a utility
+    method for casting; avoiding creation of new empty lists; cleaning up 
+    some code and rewriting some javadoc. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
