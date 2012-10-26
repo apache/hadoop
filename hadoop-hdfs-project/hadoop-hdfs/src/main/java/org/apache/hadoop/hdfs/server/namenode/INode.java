@@ -386,7 +386,7 @@ public abstract class INode implements Comparable<byte[]> {
     return buf.toString();
   }
 
-  boolean removeNode() {
+  public boolean removeNode() {
     if (parent == null) {
       return false;
     } else {

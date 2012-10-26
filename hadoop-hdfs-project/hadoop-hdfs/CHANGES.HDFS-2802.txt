@@ -10,7 +10,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4083. Protocol changes for snapshots. (suresh)
 
-  HDFS-4077. Add support for Snapshottable Directory. (Nicholas via suresh)
+  HDFS-4077. Add support for Snapshottable Directory. (szetszwo via suresh)
 
   HDFS-4087. Protocol changes for listSnapshots functionality.
   (Brandon Li via suresh)
@@ -33,3 +33,5 @@ Branch-2802 Snapshot (Unreleased)
   is removed from the circular linked list; and if some blocks at the end of the
   block list no longer belong to any other inode, collect them and update the
   block list.  (szetszwo)
+
+  HDFS-4111. Support snapshot of subtrees. (szetszwo via suresh)

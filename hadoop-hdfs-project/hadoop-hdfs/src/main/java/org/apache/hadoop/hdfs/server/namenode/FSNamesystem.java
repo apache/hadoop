@@ -140,7 +140,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
-import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
@@ -467,7 +466,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 
       this.blockManager = new BlockManager(this, this, conf);
-      this.snapshotManager = new SnapshotManager(this);
       this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
 
       this.fsOwner = UserGroupInformation.getCurrentUser();
@@ -538,6 +536,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(fsImage, this, conf);
+      this.snapshotManager = new SnapshotManager(this, dir);
       this.safeMode = new SafeModeInfo(conf);
 
     } catch(IOException e) {
@@ -5528,10 +5527,29 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Create a snapshot
    * @param snapshotName The name of the snapshot
-   * @param snapshotRoot The directory where the snapshot will be taken
+   * @param path The directory path where the snapshot is taken
    */
-  public void createSnapshot(String snapshotName, String snapshotRoot)
+  public void createSnapshot(String snapshotName, String path)
       throws SafeModeException, IOException {
-    // TODO: implement
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot create snapshot for " + path, safeMode);
+      }
+      checkOwner(path);
+
+      dir.writeLock();
+      try {
+        snapshotManager.createSnapshot(snapshotName, path);
+      } finally {
+        dir.writeUnlock();
+      }
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    
+    //TODO: audit log
   }
 }

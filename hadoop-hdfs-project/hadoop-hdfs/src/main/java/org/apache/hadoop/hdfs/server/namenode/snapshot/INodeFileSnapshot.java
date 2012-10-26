@@ -34,7 +34,7 @@ public class INodeFileSnapshot extends INodeFileWithLink {
   }
 
   @Override
-  protected long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
     //ignore includesBlockInfoUnderConstruction 
     //since files in a snapshot are considered as closed.
     return size;

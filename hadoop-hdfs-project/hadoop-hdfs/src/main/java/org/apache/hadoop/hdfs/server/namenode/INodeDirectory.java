@@ -48,18 +48,6 @@ public class INodeDirectory extends INode {
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
-  /** Cast INode to INodeDirectory. */
-  public static INodeDirectory valueOf(INode inode, String src
-      ) throws IOException {
-    if (inode == null) {
-      throw new FileNotFoundException(src + " does not exist.");
-    }
-    if (!inode.isDirectory()) {
-      throw new IOException(src + " is not a directory.");
-    }
-    return (INodeDirectory)inode; 
-  }
-
   private List<INode> children;
 
   protected INodeDirectory(String name, PermissionStatus permissions) {
@@ -82,7 +70,7 @@ public class INodeDirectory extends INode {
    * 
    * @param other
    */
-  INodeDirectory(INodeDirectory other) {
+  public INodeDirectory(INodeDirectory other) {
     super(other);
     this.children = other.getChildren();
   }
@@ -297,7 +285,7 @@ public class INodeDirectory extends INode {
    * @return  null if the child with this name already exists; 
    *          node, otherwise
    */
-  <T extends INode> T addChild(final T node, boolean setModTime) {
+  public <T extends INode> T addChild(final T node, boolean setModTime) {
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
@@ -445,6 +433,10 @@ public class INodeDirectory extends INode {
   /** @return the children list which is possibly null. */
   public List<INode> getChildren() {
     return children;
+  }
+  /** Set the children list. */
+  public void setChildren(List<INode> children) {
+    this.children = children;
   }
 
   @Override

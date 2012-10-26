@@ -34,7 +34,7 @@ import com.google.common.base.Joiner;
  * I-node for file being written.
  */
 @InterfaceAudience.Private
-class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
+public class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
   /** Cast INode to INodeFileUnderConstruction. */
   public static INodeFileUnderConstruction valueOf(INode inode, String path
       ) throws IOException {

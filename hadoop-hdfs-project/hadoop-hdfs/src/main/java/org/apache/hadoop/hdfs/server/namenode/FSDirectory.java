@@ -1173,7 +1173,7 @@ public class FSDirectory implements Closeable {
       replaceINodeUnsynced(path, oldnode, newnode);
 
       //update children's parent directory
-      for(INode i : newnode.getChildren()) {
+      for(INode i : newnode.getChildrenList()) {
         i.parent = newnode;
       }
     } finally {

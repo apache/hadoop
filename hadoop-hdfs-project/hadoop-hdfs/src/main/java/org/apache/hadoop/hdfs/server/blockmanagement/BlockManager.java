@@ -2949,6 +2949,12 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     return blocksMap.addBlockCollection(block, bc);
   }
 
+  public void addBlockCollection(BlockCollection bc) {
+    for(BlockInfo block : bc.getBlocks()) {
+      addBlockCollection(block, bc);
+    }
+  }
+
   public BlockCollection getBlockCollection(Block b) {
     return blocksMap.getBlockCollection(b);
   }

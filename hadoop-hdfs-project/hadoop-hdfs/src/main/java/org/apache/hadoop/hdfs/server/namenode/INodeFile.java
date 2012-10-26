@@ -192,7 +192,7 @@ public class INodeFile extends INode implements BlockCollection {
   /** Compute file size.
    * May or may not include BlockInfoUnderConstruction.
    */
-  protected long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
     if (blocks == null || blocks.length == 0) {
       return 0;
     }

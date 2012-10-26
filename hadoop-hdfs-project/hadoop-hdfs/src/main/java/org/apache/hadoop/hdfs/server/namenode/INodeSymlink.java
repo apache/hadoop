@@ -39,6 +39,14 @@ public class INodeSymlink extends INode {
     setModificationTimeForce(modTime);
     setAccessTime(atime);
   }
+  
+  public INodeSymlink(INodeSymlink that) {
+    super(that);
+
+    //copy symlink
+    this.symlink = new byte[that.symlink.length];
+    System.arraycopy(that.symlink, 0, this.symlink, 0, that.symlink.length);
+  }
 
   @Override
   public boolean isLink() {
