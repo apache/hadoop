@@ -113,6 +113,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8951. RunJar to fail with user-comprehensible error 
     message if jar missing. (stevel via suresh)
 
+    HADOOP-8713. TestRPCCompatibility fails intermittently with JDK7
+    (Trevor Robinson via tgraves)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
