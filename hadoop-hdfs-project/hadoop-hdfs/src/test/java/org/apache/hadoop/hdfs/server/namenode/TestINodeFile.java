@@ -234,6 +234,14 @@ public class TestINodeFile {
       } catch(FileNotFoundException fnfe) {
         assertTrue(fnfe.getMessage().contains("File does not exist"));
       }
+
+      //cast to INodeDirectory, should fail
+      try {
+        INodeDirectory.valueOf(from, path);
+        fail();
+      } catch(IOException ioe) {
+        assertTrue(ioe.getMessage().contains("Directory does not exist"));
+      }
     }
 
     {//cast from INodeFile
@@ -251,6 +259,14 @@ public class TestINodeFile {
       } catch(IOException ioe) {
         assertTrue(ioe.getMessage().contains("File is not under construction"));
       }
+
+      //cast to INodeDirectory, should fail
+      try {
+        INodeDirectory.valueOf(from, path);
+        fail();
+      } catch(IOException ioe) {
+        assertTrue(ioe.getMessage().contains("Path is not a directory"));
+      }
     }
 
     {//cast from INodeFileUnderConstruction
@@ -265,6 +281,14 @@ public class TestINodeFile {
       final INodeFileUnderConstruction u = INodeFileUnderConstruction.valueOf(
           from, path);
       assertTrue(u == from);
+
+      //cast to INodeDirectory, should fail
+      try {
+        INodeDirectory.valueOf(from, path);
+        fail();
+      } catch(IOException ioe) {
+        assertTrue(ioe.getMessage().contains("Path is not a directory"));
+      }
     }
 
     {//cast from INodeDirectory
@@ -285,6 +309,10 @@ public class TestINodeFile {
       } catch(FileNotFoundException fnfe) {
         assertTrue(fnfe.getMessage().contains("Path is not a file"));
       }
+
+      //cast to INodeDirectory, should success
+      final INodeDirectory d = INodeDirectory.valueOf(from, path);
+      assertTrue(d == from);
     }
   }
 }
