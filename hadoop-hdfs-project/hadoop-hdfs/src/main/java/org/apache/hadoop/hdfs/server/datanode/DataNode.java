@@ -1095,6 +1095,12 @@ public class DataNode extends Configured
       }
     }
     
+    // We need to make a copy of the original blockPoolManager#offerServices to
+    // make sure blockPoolManager#shutDownAll() can still access all the 
+    // BPOfferServices, since after setting DataNode#shouldRun to false the 
+    // offerServices may be modified.
+    BPOfferService[] bposArray = this.blockPoolManager == null ? null
+        : this.blockPoolManager.getAllNamenodeThreads();
     this.shouldRun = false;
     shutdownPeriodicScanners();
     
@@ -1141,7 +1147,7 @@ public class DataNode extends Configured
     
     if(blockPoolManager != null) {
       try {
-        this.blockPoolManager.shutDownAll();
+        this.blockPoolManager.shutDownAll(bposArray);
       } catch (InterruptedException ie) {
         LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
       }
