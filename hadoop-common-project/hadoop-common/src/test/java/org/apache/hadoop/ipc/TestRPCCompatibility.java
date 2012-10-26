@@ -36,6 +36,7 @@ import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRes
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /** Unit test for supporting method-name based compatible RPCs. */
@@ -113,6 +114,11 @@ public class TestRPCCompatibility {
       return TestProtocol2.versionID;
     }
 
+  }
+
+  @Before
+  public void setUp() {
+    ProtocolSignature.resetCache();
   }
   
   @After
@@ -219,7 +225,6 @@ System.out.println("echo int is NOT supported");
   
   @Test // equal version client and server
   public void testVersion2ClientVersion2Server() throws Exception {
-    ProtocolSignature.resetCache();
     // create a server with two handlers
     TestImpl2 impl = new TestImpl2();
     server = new RPC.Builder(conf).setProtocol(TestProtocol2.class)
