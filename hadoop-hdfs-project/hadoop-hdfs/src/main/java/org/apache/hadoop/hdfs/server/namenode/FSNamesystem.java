@@ -2676,7 +2676,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot delete " + src, safeMode);
       }
-      if (!recursive && !dir.isDirEmpty(src)) {
+      if (!recursive && dir.isNonEmptyDirectory(src)) {
         throw new IOException(src + " is non empty");
       }
       if (enforcePermission && isPermissionEnabled) {

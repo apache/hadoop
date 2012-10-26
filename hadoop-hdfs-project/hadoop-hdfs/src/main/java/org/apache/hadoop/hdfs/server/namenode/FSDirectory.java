@@ -696,7 +696,7 @@ public class FSDirectory implements Closeable {
         throw new FileAlreadyExistsException(error);
       }
       List<INode> children = dstInode.isDirectory() ? 
-          ((INodeDirectory) dstInode).getChildrenRaw() : null;
+          ((INodeDirectory) dstInode).getChildren() : null;
       if (children != null && children.size() != 0) {
         error = "rename cannot overwrite non empty destination directory "
             + dst;
@@ -1019,34 +1019,20 @@ public class FSDirectory implements Closeable {
     return true;
   }
   
-  /** Return if a directory is empty or not **/
-  boolean isDirEmpty(String src) throws UnresolvedLinkException {
-    boolean dirNotEmpty = true;
-    if (!isDir(src)) {
-      return true;
-    }
+  /**
+   * @return true if the path is a non-empty directory; otherwise, return false.
+   */
+  boolean isNonEmptyDirectory(String path) throws UnresolvedLinkException {
     readLock();
     try {
-      INode targetNode = rootDir.getNode(src, false);
-      assert targetNode != null : "should be taken care in isDir() above";
-      if (((INodeDirectory)targetNode).getChildren().size() != 0) {
-        dirNotEmpty = false;
+      final INode inode = rootDir.getNode(path, false);
+      if (inode == null || !inode.isDirectory()) {
+        //not found or not a directory
+        return false;
       }
+      return ((INodeDirectory)inode).getChildrenList().size() != 0;
     } finally {
       readUnlock();
-    }
-    return dirNotEmpty;
-  }
-
-  boolean isEmpty() {
-    try {
-      return isDirEmpty("/");
-    } catch (UnresolvedLinkException e) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("/ cannot be a symlink");
-      }
-      assert false : "/ cannot be a symlink";
-      return true;
     }
   }
 
@@ -1171,7 +1157,7 @@ public class FSDirectory implements Closeable {
                 targetNode, needLocation)}, 0);
       }
       INodeDirectory dirInode = (INodeDirectory)targetNode;
-      List<INode> contents = dirInode.getChildren();
+      List<INode> contents = dirInode.getChildrenList();
       int startChild = dirInode.nextChild(startAfter);
       int totalNumChildren = contents.size();
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
@@ -1683,7 +1669,7 @@ public class FSDirectory implements Closeable {
       }
       if (maxDirItems != 0) {
         INodeDirectory parent = (INodeDirectory)pathComponents[pos-1];
-        int count = parent.getChildren().size();
+        int count = parent.getChildrenList().size();
         if (count >= maxDirItems) {
           throw new MaxDirectoryItemsExceededException(maxDirItems, count);
         }
@@ -1832,7 +1818,7 @@ public class FSDirectory implements Closeable {
      * INode. using 'parent' is not currently recommended. */
     nodesInPath.add(dir);
 
-    for (INode child : dir.getChildren()) {
+    for (INode child : dir.getChildrenList()) {
       if (child.isDirectory()) {
         updateCountForINodeWithQuota((INodeDirectory)child, 
                                      counts, nodesInPath);
