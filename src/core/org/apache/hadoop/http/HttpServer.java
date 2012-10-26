@@ -85,10 +85,10 @@ public class HttpServer implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
- 
+
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
-  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+  static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   static final String ADMINS_ACL = "admins.acl";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
   public static final String KRB5_FILTER = "krb5Filter";
