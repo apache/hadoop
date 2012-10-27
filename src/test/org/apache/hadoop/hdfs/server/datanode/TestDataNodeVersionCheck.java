@@ -116,4 +116,42 @@ public class TestDataNodeVersionCheck {
       }
     }
   }
+
+  /**
+   * Test no DN version checking
+   */
+  @Test
+  public void testNoVersionCheck() throws IOException {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      conf.setBoolean(
+          CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY, true);
+      cluster = new MiniDFSCluster(conf, 1, true, null);
+
+      DataNode dn = cluster.getDataNodes().get(0);
+
+      final NamespaceInfo currInfo = new NamespaceInfo(0, 0, 0);
+      assertTrue(dn.isPermittedVersion(currInfo));
+
+      // Different revisions are permitted
+      NamespaceInfo infoDiffRev = new NamespaceInfo(0, 0, 0) {
+        @Override public String getRevision() { return "bogus"; }
+      };
+      assertTrue("Different revisions should be permitted",
+          dn.isPermittedVersion(infoDiffRev));
+
+      // Different versions are permitted
+      NamespaceInfo infoDiffVersion = new NamespaceInfo(0, 0, 0) {
+        @Override public String getVersion() { return "bogus"; }
+        @Override public String getRevision() { return "bogus"; }
+      };
+      assertTrue("Different versions should be permitted",
+          dn.isPermittedVersion(infoDiffVersion));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

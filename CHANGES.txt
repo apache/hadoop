@@ -107,6 +107,9 @@ Release 1.2.0 - unreleased
     HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
     (Jing Zhao via suresh)
 
+    HADOOP-8968. Add a flag to completely disable the worker version check.
+    (tucu via eli)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

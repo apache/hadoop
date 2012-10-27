@@ -578,6 +578,20 @@
 </property>
 
 <property>
+  <name>hadoop.skip.worker.version.check</name>
+  <value>false</value>
+  <description>
+    By default datanodes refuse to connect to namenodes if their build
+    revision (svn revision) do not match, and tasktrackers refuse to
+    connect to jobtrackers if their build version (version, revision,
+    user, and source checksum) do not match. This option changes the
+    behavior of hadoop workers to skip doing a version check at all.
+    This option supersedes the 'hadoop.relaxed.worker.version.check'
+    option.
+  </description>
+</property>
+
+<property>
   <name>hadoop.jetty.logs.serve.aliases</name>
   <value>true</value>
   <description>

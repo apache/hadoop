@@ -88,4 +88,29 @@ public class TestTaskTrackerVersionCheck {
       }
     }
   }
+
+  /**
+   * Test no TT version checking
+   */
+  @Test
+  public void testNoVersionCheck() throws IOException {
+    MiniMRCluster mr = null;
+    try {
+      JobConf jtConf = new JobConf();
+      jtConf.setBoolean(
+          CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY, true);
+      mr = new MiniMRCluster(1, "file:///", 1, null, null, jtConf);
+      TaskTracker tt = mr.getTaskTrackerRunner(0).getTaskTracker();
+      String currFullVersion = VersionInfo.getBuildVersion();
+      String currVersion = VersionInfo.getVersion();
+
+      assertTrue(tt.isPermittedVersion(currFullVersion, currVersion));
+      assertTrue(tt.isPermittedVersion(currFullVersion+"x", currVersion+"x"));
+      assertTrue(tt.isPermittedVersion(currFullVersion+"x", currVersion));
+    } finally {
+      if (mr != null) {
+        mr.shutdown();
+      }
+    }
+  }
 }

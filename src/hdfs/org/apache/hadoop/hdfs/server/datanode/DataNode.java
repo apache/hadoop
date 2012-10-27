@@ -77,11 +77,9 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeInstrumentation;
@@ -244,6 +242,11 @@ public class DataNode extends Configured
   private boolean relaxedVersionCheck;
 
   /**
+   * Whether the DN completely skips version check with the NN.
+   */
+  private boolean noVersionCheck;
+
+  /**
    * Testing hook that allows tests to delay the sending of blockReceived RPCs
    * to the namenode. This can help find bugs in append.
    */
@@ -364,6 +367,9 @@ public class DataNode extends Configured
     this.relaxedVersionCheck = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY,
         CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_DEFAULT);
+    noVersionCheck = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY,
+        CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_DEFAULT);
 
     InetSocketAddress socAddr = DataNode.getStreamingAddr(conf);
     int tmpPort = socAddr.getPort();
@@ -600,22 +606,31 @@ public class DataNode extends Configured
       nsInfo.getVersion().equals(VersionInfo.getVersion());
     boolean revisionMatch =
       nsInfo.getRevision().equals(VersionInfo.getRevision());
-
     if (revisionMatch && !versionMatch) {
       throw new AssertionError("Invalid build. The revisions match" +
           " but the NN version is " + nsInfo.getVersion() +
           " and the DN version is " + VersionInfo.getVersion());
     }
-    if (relaxedVersionCheck) {
-      if (versionMatch && !revisionMatch) {
-        LOG.info("Permitting datanode revision " + VersionInfo.getRevision() +
-            " to connect to namenode revision " + nsInfo.getRevision() +
-            " because " + CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
-            " is enabled");
-      }
-      return versionMatch;
+    if (noVersionCheck) {
+      LOG.info("Permitting datanode version '" + VersionInfo.getVersion() +
+          "' and revision '" + VersionInfo.getRevision() +
+          "' to connect to namenode version '" + nsInfo.getVersion() +
+          "' and revision '" + nsInfo.getRevision() + "' because " +
+          CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY +
+          " is enabled");
+      return true;
     } else {
-      return revisionMatch;
+      if (relaxedVersionCheck) {
+        if (versionMatch && !revisionMatch) {
+          LOG.info("Permitting datanode revision " + VersionInfo.getRevision() +
+              " to connect to namenode revision " + nsInfo.getRevision() +
+              " because " + CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+              " is enabled");
+        }
+        return versionMatch;
+      } else {
+        return revisionMatch;
+      }
     }
   }
 
@@ -633,12 +648,15 @@ public class DataNode extends Configured
       }
     }
     if (!isPermittedVersion(nsInfo)) {
-      String errorMsg = "Incompatible versions: namenode version " +
-        nsInfo.getVersion() + " revision " + nsInfo.getRevision() +
-        " datanode version " + VersionInfo.getVersion() + " revision " +
-        VersionInfo.getRevision() + " and " +
-        CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
-        " is " + (relaxedVersionCheck ? "enabled" : "not enabled");
+      String errorMsg = "Shutting down. Incompatible version or revision." +
+          "DataNode version '" + VersionInfo.getVersion() +
+          "' and revision '" + VersionInfo.getRevision() +
+          "' and NameNode version '" + nsInfo.getVersion() +
+          "' and revision '" + nsInfo.getRevision() +
+          " and " + CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+          " is " + (relaxedVersionCheck ? "enabled" : "not enabled") +
+          " and " + CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY +
+          " is " + (noVersionCheck ? "enabled" : "not enabled");
       LOG.fatal(errorMsg);
       notifyNamenode(DatanodeProtocol.NOTIFY, errorMsg);  
       throw new IOException( errorMsg );

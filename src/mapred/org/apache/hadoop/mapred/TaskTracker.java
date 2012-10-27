@@ -418,6 +418,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   private boolean relaxedVersionCheck;
 
+  /**
+   * Whether the TT completely skips version check with the JT.
+   */
+  private boolean skipVersionCheck;
+
   /*
    * A list of commitTaskActions for whom commit response has been received 
    */
@@ -1459,6 +1464,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     relaxedVersionCheck = conf.getBoolean(
         CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY,
         CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_DEFAULT);
+    skipVersionCheck = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY,
+        CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_DEFAULT);
     FILE_CACHE_SIZE = conf.getInt("mapred.tasktracker.file.cache.size", 2000);
     maxMapSlots = conf.getInt(
                   "mapred.tasktracker.map.tasks.maximum", 2);
@@ -1623,7 +1631,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private long getHeartbeatInterval(int numFinishedTasks) {
     return (heartbeatInterval / (numFinishedTasks * oobHeartbeatDamper + 1));
   }
-  
+
   /**
    * @return true if this tasktracker is permitted to connect to
    *    the given jobtracker version
@@ -1637,16 +1645,26 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           " but the JT version is " + jtVersion +
           " and the TT version is " + VersionInfo.getVersion());
     }
-    if (relaxedVersionCheck) {
-      if (!buildVersionMatch && versionMatch) {
-        LOG.info("Permitting tasktracker revision " + VersionInfo.getRevision() +
-            " to connect to jobtracker " + jtBuildVersion + " because " +
-            CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
-            " is enabled");
-      }
-      return versionMatch;
+    if (skipVersionCheck) {
+      LOG.info("Permitting tasktracker version '" + VersionInfo.getVersion() +
+          "' and build '" + VersionInfo.getBuildVersion() +
+          "' to connect to jobtracker version '" + jtVersion +
+          "' and build '" + jtBuildVersion + "' because " +
+          CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY +
+          " is enabled");
+      return true;
     } else {
-      return buildVersionMatch;
+      if (relaxedVersionCheck) {
+        if (!buildVersionMatch && versionMatch) {
+          LOG.info("Permitting tasktracker build " + VersionInfo.getBuildVersion() +
+              " to connect to jobtracker build " + jtBuildVersion + " because " +
+              CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+              " is enabled");
+        }
+        return versionMatch;
+      } else {
+        return buildVersionMatch;
+      }
     }
   }
 
@@ -1689,11 +1707,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           String jtBuildVersion = jobClient.getBuildVersion();
           String jtVersion = jobClient.getVIVersion();
           if (!isPermittedVersion(jtBuildVersion, jtVersion)) {
-            String msg = "Shutting down. Incompatible buildVersion." +
-              "\nJobTracker's: " + jtBuildVersion + 
-              "\nTaskTracker's: "+ VersionInfo.getBuildVersion() +
+            String msg = "Shutting down. Incompatible version or build version." +
+              "TaskTracker version '" + VersionInfo.getVersion() +
+              "' and build '" + VersionInfo.getBuildVersion() +
+              "' and JobTracker version '" + jtVersion +
+              "' and build '" + jtBuildVersion +
               " and " + CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
-              " is " + (relaxedVersionCheck ? "enabled" : "not enabled");
+              " is " + (relaxedVersionCheck ? "enabled" : "not enabled") +
+              " and " + CommonConfigurationKeys.HADOOP_SKIP_VERSION_CHECK_KEY +
+              " is " + (skipVersionCheck ? "enabled" : "not enabled");
             LOG.fatal(msg);
             try {
               jobClient.reportTaskTrackerError(taskTrackerName, null, msg);

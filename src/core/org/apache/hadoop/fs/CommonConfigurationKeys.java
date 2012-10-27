@@ -74,6 +74,11 @@ public class CommonConfigurationKeys {
       "hadoop.relaxed.worker.version.check";
   public static final boolean HADOOP_RELAXED_VERSION_CHECK_DEFAULT = false;
 
+  /** See src/core/core-default.xml */
+  public static final String HADOOP_SKIP_VERSION_CHECK_KEY =
+      "hadoop.skip.worker.version.check";
+  public static final boolean HADOOP_SKIP_VERSION_CHECK_DEFAULT = false;
+
   /** Enable/Disable aliases serving from jetty */
   public static final String HADOOP_JETTY_LOGS_SERVE_ALIASES =
     "hadoop.jetty.logs.serve.aliases";
