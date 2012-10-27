@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.jmx.JMXJsonServlet;
@@ -85,10 +86,10 @@ public class HttpServer implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
-
+ 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
-  static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   static final String ADMINS_ACL = "admins.acl";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
   public static final String KRB5_FILTER = "krb5Filter";
@@ -273,6 +274,7 @@ public class HttpServer implements FilterContainer {
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
     addServlet("jmx", "/jmx", JMXJsonServlet.class);
+    addServlet("conf", "/conf", ConfServlet.class);
   }
 
   public void addContext(Context ctxt, boolean isFiltered)

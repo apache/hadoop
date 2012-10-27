@@ -104,6 +104,9 @@ Release 1.2.0 - unreleased
     HDFS-3062. Print logs outside the namesystem lock invalidateWorkForOneNode
     and computeReplicationWorkForBlock. (Jing Zhao via suresh)
 
+    HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
+    (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
