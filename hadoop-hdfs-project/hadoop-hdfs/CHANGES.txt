@@ -1,7 +1,7 @@
 Hadoop HDFS Change Log
 
 Release 2.0.3-alpha - Unreleased
-  
+
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
@@ -82,6 +82,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4112. A few improvements on INodeDirectory include adding a utility
     method for casting; avoiding creation of new empty lists; cleaning up 
     some code and rewriting some javadoc. (szetszwo)
+
+    HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
+    other than java. (Binglin Chang via suresh)
 
   OPTIMIZATIONS
 

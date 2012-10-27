@@ -17,6 +17,7 @@
  */
 option java_package = "org.apache.hadoop.hdfs.server.namenode.ha.proto";
 option java_outer_classname = "HAZKInfoProtos";
+package hadoop.hdfs;
 
 message ActiveNodeInfo {
   required string nameserviceId = 1;
