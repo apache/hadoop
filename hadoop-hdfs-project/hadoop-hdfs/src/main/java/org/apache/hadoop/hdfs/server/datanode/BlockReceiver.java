@@ -357,7 +357,7 @@ class BlockReceiver implements Closeable {
   private void handleMirrorOutError(IOException ioe) throws IOException {
     String bpid = block.getBlockPoolId();
     LOG.info(datanode.getDNRegistrationForBP(bpid)
-        + ":Exception writing block " + block + " to mirror " + mirrorAddr, ioe);
+        + ":Exception writing " + block + " to mirror " + mirrorAddr, ioe);
     if (Thread.interrupted()) { // shut down if the thread is interrupted
       throw ioe;
     } else { // encounter an error while writing to mirror
@@ -379,16 +379,16 @@ class BlockReceiver implements Closeable {
       LOG.warn("Checksum error in block " + block + " from " + inAddr, ce);
       if (srcDataNode != null) {
         try {
-          LOG.info("report corrupt block " + block + " from datanode " +
+          LOG.info("report corrupt " + block + " from datanode " +
                     srcDataNode + " to namenode");
           datanode.reportRemoteBadBlock(srcDataNode, block);
         } catch (IOException e) {
-          LOG.warn("Failed to report bad block " + block + 
+          LOG.warn("Failed to report bad " + block + 
                     " from datanode " + srcDataNode + " to namenode");
         }
       }
-      throw new IOException("Unexpected checksum mismatch " + 
-                            "while writing " + block + " from " + inAddr);
+      throw new IOException("Unexpected checksum mismatch while writing "
+          + block + " from " + inAddr);
     }
   }
   
@@ -518,7 +518,7 @@ class BlockReceiver implements Closeable {
           // If this is a partial chunk, then read in pre-existing checksum
           if (firstByteInBlock % bytesPerChecksum != 0) {
             LOG.info("Packet starts at " + firstByteInBlock +
-                     " for block " + block +
+                     " for " + block +
                      " which is not a multiple of bytesPerChecksum " +
                      bytesPerChecksum);
             long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
@@ -662,7 +662,7 @@ class BlockReceiver implements Closeable {
       }
 
     } catch (IOException ioe) {
-      LOG.info("Exception in receiveBlock for " + block, ioe);
+      LOG.info("Exception for " + block, ioe);
       throw ioe;
     } finally {
       if (!responderClosed) { // Abnormal termination of the flow above
@@ -733,10 +733,9 @@ class BlockReceiver implements Closeable {
     int checksumSize = diskChecksum.getChecksumSize();
     blkoff = blkoff - sizePartialChunk;
     LOG.info("computePartialChunkCrc sizePartialChunk " + 
-              sizePartialChunk +
-              " block " + block +
-              " offset in block " + blkoff +
-              " offset in metafile " + ckoff);
+              sizePartialChunk + " " + block +
+              " block offset " + blkoff +
+              " metafile offset " + ckoff);
 
     // create an input stream from the block file
     // and read in partial crc chunk into temporary buffer
@@ -758,7 +757,7 @@ class BlockReceiver implements Closeable {
     partialCrc = DataChecksum.newDataChecksum(
         diskChecksum.getChecksumType(), diskChecksum.getBytesPerChecksum());
     partialCrc.update(buf, 0, sizePartialChunk);
-    LOG.info("Read in partial CRC chunk from disk for block " + block);
+    LOG.info("Read in partial CRC chunk from disk for " + block);
 
     // paranoia! verify that the pre-computed crc matches what we
     // recalculated just now
@@ -973,7 +972,7 @@ class BlockReceiver implements Closeable {
                       "HDFS_WRITE", clientname, offset,
                       dnR.getStorageID(), block, endTime-startTime));
               } else {
-                LOG.info("Received block " + block + " of size "
+                LOG.info("Received " + block + " size "
                     + block.getNumBytes() + " from " + inAddr);
               }
             }

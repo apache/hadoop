@@ -136,7 +136,7 @@ class FsDatasetAsyncDiskService {
     if (executors == null) {
       LOG.warn("AsyncDiskService has already shut down.");
     } else {
-      LOG.info("Shutting down all async disk service threads...");
+      LOG.info("Shutting down all async disk service threads");
       
       for (Map.Entry<File, ThreadPoolExecutor> e : executors.entrySet()) {
         e.getValue().shutdown();
@@ -144,7 +144,7 @@ class FsDatasetAsyncDiskService {
       // clear the executor map so that calling execute again will fail.
       executors = null;
       
-      LOG.info("All async disk service threads have been shut down.");
+      LOG.info("All async disk service threads have been shut down");
     }
   }
 
@@ -154,7 +154,7 @@ class FsDatasetAsyncDiskService {
    */
   void deleteAsync(FsVolumeImpl volume, File blockFile, File metaFile,
       ExtendedBlock block) {
-    LOG.info("Scheduling block " + block.getLocalBlock()
+    LOG.info("Scheduling " + block.getLocalBlock()
         + " file " + blockFile + " for deletion");
     ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(
         volume, blockFile, metaFile, block);
@@ -198,8 +198,8 @@ class FsDatasetAsyncDiskService {
           datanode.notifyNamenodeDeletedBlock(block);
         }
         volume.decDfsUsed(block.getBlockPoolId(), dfsBytes);
-        LOG.info("Deleted block " + block.getBlockPoolId() + " "
-            + block.getLocalBlock() + " at file " + blockFile);
+        LOG.info("Deleted " + block.getBlockPoolId() + " "
+            + block.getLocalBlock() + " file " + blockFile);
       }
     }
   }

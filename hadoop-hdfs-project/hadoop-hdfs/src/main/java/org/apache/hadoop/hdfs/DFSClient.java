@@ -652,7 +652,7 @@ public class DFSClient implements java.io.Closeable {
       // if there is no more clients under the renewer.
       getLeaseRenewer().closeClient(this);
     } catch (IOException ioe) {
-       LOG.info("Exception occurred while aborting the client. " + ioe);
+       LOG.info("Exception occurred while aborting the client " + ioe);
     }
     closeConnectionToNamenode();
   }
@@ -2111,7 +2111,7 @@ public class DFSClient implements java.io.Closeable {
       reportBadBlocks(lblocks);
     } catch (IOException ie) {
       LOG.info("Found corruption while reading " + file
-          + ".  Error repairing corrupt blocks.  Bad blocks remain.", ie);
+          + ". Error repairing corrupt blocks. Bad blocks remain.", ie);
     }
   }
 

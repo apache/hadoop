@@ -641,8 +641,7 @@ class BPServiceActor implements Runnable {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException ie) {
-      LOG.info("BPOfferService " + this +
-          " interrupted while " + stateString);
+      LOG.info("BPOfferService " + this + " interrupted while " + stateString);
     }
   }
 

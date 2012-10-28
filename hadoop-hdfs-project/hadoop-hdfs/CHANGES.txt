@@ -152,6 +152,9 @@ Trunk (Unreleased)
 
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -900,7 +900,7 @@ public class FSEditLog implements LogsPurgeable {
    * in the new log.
    */
   synchronized long rollEditLog() throws IOException {
-    LOG.info("Rolling edit logs.");
+    LOG.info("Rolling edit logs");
     endCurrentLogSegment(true);
     
     long nextTxId = getLastWrittenTxId() + 1;
@@ -915,7 +915,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public synchronized void startLogSegment(long txid, 
       boolean abortCurrentLogSegment) throws IOException {
-    LOG.info("Namenode started a new log segment at txid " + txid);
+    LOG.info("Started a new log segment at txid " + txid);
     if (isSegmentOpen()) {
       if (getLastWrittenTxId() == txid - 1) {
         //In sync with the NN, so end and finalize the current segment`
