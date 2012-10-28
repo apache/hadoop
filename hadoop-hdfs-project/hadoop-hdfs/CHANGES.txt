@@ -238,6 +238,9 @@ Trunk (Unreleased)
     HDFS-4067. TestUnderReplicatedBlocks intermittently fails due to 
     ReplicaAlreadyExistsException. (Jing Zhao via suresh)
 
+    HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
+    (Trevor Robinson via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
