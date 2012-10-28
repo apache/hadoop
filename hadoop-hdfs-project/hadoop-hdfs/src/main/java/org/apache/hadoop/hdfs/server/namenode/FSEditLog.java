@@ -879,15 +879,15 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  void logAllowSnapshot(String snapName, String snapRoot) {
+  void logAllowSnapshot(String path) {
     AllowSnapshotOp op = AllowSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot);
+        .setSnapshotRoot(path);
     logEdit(op);
   }
 
-  void logDisallowSnapshot(String snapName, String snapRoot) {
+  void logDisallowSnapshot(String path) {
     DisallowSnapshotOp op = DisallowSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot);
+        .setSnapshotRoot(path);
     logEdit(op);
   }
   

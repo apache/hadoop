@@ -114,6 +114,11 @@ public abstract class FSEditLogOp {
       inst.put(OP_END_LOG_SEGMENT,
                     new LogSegmentOp(OP_END_LOG_SEGMENT));
       inst.put(OP_UPDATE_BLOCKS, new UpdateBlocksOp());
+
+      inst.put(OP_ALLOW_SNAPSHOT, new AllowSnapshotOp());
+      inst.put(OP_DISALLOW_SNAPSHOT, new DisallowSnapshotOp());
+      inst.put(OP_CREATE_SNAPSHOT, new CreateSnapshotOp());
+      inst.put(OP_DELETE_SNAPSHOT, new DeleteSnapshotOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {

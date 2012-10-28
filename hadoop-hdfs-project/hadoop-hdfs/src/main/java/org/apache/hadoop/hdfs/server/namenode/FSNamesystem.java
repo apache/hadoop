@@ -5463,6 +5463,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public BlockManager getBlockManager() {
     return blockManager;
   }
+  /** @return the FSDirectory. */
+  public FSDirectory getFSDirectory() {
+    return dir;
+  }
   
   /**
    * Verifies that the given identifier and password are valid and match.
@@ -5510,11 +5514,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         .isAvoidingStaleDataNodesForWrite();
   }
   
-  // Allow snapshot on a directroy.
-  @VisibleForTesting
-  public void allowSnapshot(String snapshotRoot)
-      throws SafeModeException, IOException {
-    // TODO: implement
+  /** Allow snapshot on a directroy. */
+  public void allowSnapshot(String path) throws SafeModeException, IOException {
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot allow snapshot for " + path, safeMode);
+      }
+      checkOwner(path);
+
+      //TODO: do not hardcode snapshot quota value
+      snapshotManager.setSnapshottable(path, 256);
+      getEditLog().logAllowSnapshot(path);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    
+    //TODO: audit log
   }
   
   // Disallow snapshot on a directory.
@@ -5542,6 +5560,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       dir.writeLock();
       try {
         snapshotManager.createSnapshot(snapshotName, path);
+        getEditLog().logCreateSnapshot(snapshotName, path);
       } finally {
         dir.writeUnlock();
       }

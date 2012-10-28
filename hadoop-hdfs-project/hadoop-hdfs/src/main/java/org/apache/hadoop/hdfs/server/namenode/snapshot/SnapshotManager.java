@@ -81,7 +81,7 @@ public class SnapshotManager {
   }
   
   /**
-   * Create a snapshot of subtrees for recursively coping the directory
+   * Create a snapshot of subtrees by recursively coping the directory
    * structure from the source directory to the snapshot destination directory.
    * This creation algorithm requires O(N) running time and O(N) memory,
    * where N = # files + # directories + # symlinks. 
