@@ -424,6 +424,9 @@ Release 2.0.2-alpha - 2012-09-07
     to avoid partial edits case disk out of space. (Colin McCabe via todd)
 
     HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
+    
+    HDFS-3920. libwebdhfs string processing and using strerror consistently
+    to handle all errors. (Jing Zhao via suresh)
 
   OPTIMIZATIONS
 

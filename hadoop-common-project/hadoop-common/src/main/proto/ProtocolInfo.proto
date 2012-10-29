@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "ProtocolInfoProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.common;
 
 /**
  * Request to get protocol versions for all supported rpc kinds.

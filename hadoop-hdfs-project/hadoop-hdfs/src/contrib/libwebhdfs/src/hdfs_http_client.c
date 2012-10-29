@@ -15,28 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
-#include <pthread.h>
+
 #include "hdfs_http_client.h"
 
 static pthread_mutex_t curlInitMutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int curlGlobalInited = 0;
 
-ResponseBuffer initResponseBuffer() {
-    ResponseBuffer info = (ResponseBuffer) calloc(1, sizeof(ResponseBufferInternal));
-    if (!info) {
-        fprintf(stderr, "Cannot allocate memory for responseInfo\n");
-        return NULL;
+const char *hdfs_strerror(int errnoval)
+{
+    const char *msg = NULL;
+    if (errnoval < 0 || errnoval >= sys_nerr) {
+        msg = "Invalid Error Code";
+    } else if (sys_errlist == NULL) {
+        msg = "Unknown Error";
+    } else {
+        msg = sys_errlist[errnoval];
     }
-    info->remaining = 0;
-    info->offset = 0;
-    info->content = NULL;
-    return info;
+    return msg;
 }
 
-void freeResponseBuffer(ResponseBuffer buffer) {
+int initResponseBuffer(struct ResponseBuffer **buffer)
+{
+    struct ResponseBuffer *info = NULL;
+    int ret = 0;
+    info = calloc(1, sizeof(struct ResponseBuffer));
+    if (!info) {
+        ret = ENOMEM;
+    }
+    *buffer = info;
+    return ret;
+}
+
+void freeResponseBuffer(struct ResponseBuffer *buffer)
+{
     if (buffer) {
         if (buffer->content) {
             free(buffer->content);
@@ -46,8 +61,9 @@ void freeResponseBuffer(ResponseBuffer buffer) {
     }
 }
 
-void freeResponse(Response resp)  {
-    if(resp) {
+void freeResponse(struct Response *resp)
+{
+    if (resp) {
         freeResponseBuffer(resp->body);
         freeResponseBuffer(resp->header);
         free(resp);
@@ -55,21 +71,30 @@ void freeResponse(Response resp)  {
     }
 }
 
-/* Callback for allocating local buffer and reading data to local buffer */
-static size_t writefunc(void *ptr, size_t size, size_t nmemb, ResponseBuffer rbuffer) {
+/** 
+ * Callback used by libcurl for allocating local buffer and 
+ * reading data to local buffer
+ */
+static size_t writefunc(void *ptr, size_t size,
+                        size_t nmemb, struct ResponseBuffer *rbuffer)
+{
+    void *temp = NULL;
     if (size * nmemb < 1) {
         return 0;
     }
     if (!rbuffer) {
-        fprintf(stderr, "In writefunc, ResponseBuffer is NULL.\n");
-        return -1;
+        fprintf(stderr,
+                "ERROR: ResponseBuffer is NULL for the callback writefunc.\n");
+        return 0;
     }
     
     if (rbuffer->remaining < size * nmemb) {
-        rbuffer->content = realloc(rbuffer->content, rbuffer->offset + size * nmemb + 1);
-        if (rbuffer->content == NULL) {
-            return -1;
+        temp = realloc(rbuffer->content, rbuffer->offset + size * nmemb + 1);
+        if (temp == NULL) {
+            fprintf(stderr, "ERROR: fail to realloc in callback writefunc.\n");
+            return 0;
         }
+        rbuffer->content = temp;
         rbuffer->remaining = size * nmemb;
     }
     memcpy(rbuffer->content + rbuffer->offset, ptr, size * nmemb);
@@ -80,67 +105,84 @@ static size_t writefunc(void *ptr, size_t size, size_t nmemb, ResponseBuffer rbu
 }
 
 /**
- * Callback for reading data to buffer provided by user, 
+ * Callback used by libcurl for reading data into buffer provided by user,
  * thus no need to reallocate buffer.
  */
-static size_t writefunc_withbuffer(void *ptr, size_t size, size_t nmemb, ResponseBuffer rbuffer) {
+static size_t writeFuncWithUserBuffer(void *ptr, size_t size,
+                                   size_t nmemb, struct ResponseBuffer *rbuffer)
+{
+    size_t toCopy = 0;
     if (size * nmemb < 1) {
         return 0;
     }
     if (!rbuffer || !rbuffer->content) {
-        fprintf(stderr, "In writefunc_withbuffer, the buffer provided by user is NULL.\n");
+        fprintf(stderr,
+                "ERROR: buffer to read is NULL for the "
+                "callback writeFuncWithUserBuffer.\n");
         return 0;
     }
     
-    size_t toCopy = rbuffer->remaining < (size * nmemb) ? rbuffer->remaining : (size * nmemb);
+    toCopy = rbuffer->remaining < (size * nmemb) ?
+                            rbuffer->remaining : (size * nmemb);
     memcpy(rbuffer->content + rbuffer->offset, ptr, toCopy);
     rbuffer->offset += toCopy;
     rbuffer->remaining -= toCopy;
     return toCopy;
 }
 
-//callback for writing data to remote peer
-static size_t readfunc(void *ptr, size_t size, size_t nmemb, void *stream) {
+/**
+ * Callback used by libcurl for writing data to remote peer
+ */
+static size_t readfunc(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+    struct webhdfsBuffer *wbuffer = NULL;
     if (size * nmemb < 1) {
-        fprintf(stderr, "In readfunc callback: size * nmemb == %ld\n", size * nmemb);
         return 0;
     }
-    webhdfsBuffer *wbuffer = (webhdfsBuffer *) stream;
     
+    wbuffer = stream;
     pthread_mutex_lock(&wbuffer->writeMutex);
     while (wbuffer->remaining == 0) {
         /*
-         * the current remainning bytes to write is 0,
-         * check whether need to finish the transfer
+         * The current remainning bytes to write is 0,
+         * check closeFlag to see whether need to finish the transfer.
          * if yes, return 0; else, wait
          */
-        if (wbuffer->closeFlag) {
-            //we can close the transfer now
+        if (wbuffer->closeFlag) { // We can close the transfer now
+            //For debug
             fprintf(stderr, "CloseFlag is set, ready to close the transfer\n");
             pthread_mutex_unlock(&wbuffer->writeMutex);
             return 0;
         } else {
-            // len == 0 indicates that user's buffer has been transferred
+            // remaining == 0 but closeFlag is not set
+            // indicates that user's buffer has been transferred
             pthread_cond_signal(&wbuffer->transfer_finish);
-            pthread_cond_wait(&wbuffer->newwrite_or_close, &wbuffer->writeMutex);
+            pthread_cond_wait(&wbuffer->newwrite_or_close,
+                                    &wbuffer->writeMutex);
         }
     }
     
-    if(wbuffer->remaining > 0 && !wbuffer->closeFlag) {
-        size_t copySize = wbuffer->remaining < size * nmemb ? wbuffer->remaining : size * nmemb;
+    if (wbuffer->remaining > 0 && !wbuffer->closeFlag) {
+        size_t copySize = wbuffer->remaining < size * nmemb ?
+                                wbuffer->remaining : size * nmemb;
         memcpy(ptr, wbuffer->wbuffer + wbuffer->offset, copySize);
         wbuffer->offset += copySize;
         wbuffer->remaining -= copySize;
         pthread_mutex_unlock(&wbuffer->writeMutex);
         return copySize;
     } else {
-        fprintf(stderr, "Webhdfs buffer is %ld, it should be a positive value!\n", wbuffer->remaining);
+        fprintf(stderr, "ERROR: webhdfsBuffer's remaining is %ld, "
+                "it should be a positive value!\n", wbuffer->remaining);
         pthread_mutex_unlock(&wbuffer->writeMutex);
         return 0;
     }
 }
 
-static void initCurlGlobal() {
+/**
+ * Initialize the global libcurl environment
+ */
+static void initCurlGlobal()
+{
     if (!curlGlobalInited) {
         pthread_mutex_lock(&curlInitMutex);
         if (!curlGlobalInited) {
@@ -151,202 +193,297 @@ static void initCurlGlobal() {
     }
 }
 
-static Response launchCmd(char *url, enum HttpHeader method, enum Redirect followloc) {
-    CURL *curl;
-    CURLcode res;
-    Response resp;
+/**
+ * Launch simple commands (commands without file I/O) and return response
+ *
+ * @param url       Target URL
+ * @param method    HTTP method (GET/PUT/POST)
+ * @param followloc Whether or not need to set CURLOPT_FOLLOWLOCATION
+ * @param response  Response from remote service
+ * @return 0 for success and non-zero value to indicate error
+ */
+static int launchCmd(const char *url, enum HttpHeader method,
+                     enum Redirect followloc, struct Response **response)
+{
+    CURL *curl = NULL;
+    CURLcode curlCode;
+    int ret = 0;
+    struct Response *resp = NULL;
     
-    resp = (Response) calloc(1, sizeof(*resp));
+    resp = calloc(1, sizeof(struct Response));
     if (!resp) {
-        return NULL;
+        return ENOMEM;
     }
-    resp->body = initResponseBuffer();
-    resp->header = initResponseBuffer();
-    initCurlGlobal();
-    curl = curl_easy_init();                     /* get a curl handle */
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, resp->body);
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, writefunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEHEADER, resp->header);
-        curl_easy_setopt(curl, CURLOPT_URL, url);       /* specify target URL */
-        switch(method) {
-            case GET:
-                break;
-            case PUT:
-                curl_easy_setopt(curl,CURLOPT_CUSTOMREQUEST,"PUT");
-                break;
-            case POST:
-                curl_easy_setopt(curl,CURLOPT_CUSTOMREQUEST,"POST");
-                break;
-            case DELETE:
-                curl_easy_setopt(curl,CURLOPT_CUSTOMREQUEST,"DELETE");
-                break;
-            default:
-                fprintf(stderr, "\nHTTP method not defined\n");
-                exit(EXIT_FAILURE);
-        }
-        if(followloc == YES) {
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        }
-        
-        res = curl_easy_perform(curl);                 /* Now run the curl handler */
-        if(res != CURLE_OK) {
-            fprintf(stderr, "preform the URL %s failed\n", url);
-            return NULL;
-        }
-        curl_easy_cleanup(curl);
+    ret = initResponseBuffer(&(resp->body));
+    if (ret) {
+        goto done;
     }
-    return resp;
-}
-
-static Response launchRead_internal(char *url, enum HttpHeader method, enum Redirect followloc, Response resp) {
-    if (!resp || !resp->body || !resp->body->content) {
-        fprintf(stderr, "The user provided buffer should not be NULL!\n");
-        return NULL;
-    }
-    
-    CURL *curl;
-    CURLcode res;
-    initCurlGlobal();
-    curl = curl_easy_init();                     /* get a curl handle */
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc_withbuffer);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, resp->body);
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, writefunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEHEADER, resp->header);
-        curl_easy_setopt(curl, CURLOPT_URL, url);       /* specify target URL */
-        if(followloc == YES) {
-            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-        }
-        
-        res = curl_easy_perform(curl);                 /* Now run the curl handler */
-        if(res != CURLE_OK && res != CURLE_PARTIAL_FILE) {
-            fprintf(stderr, "preform the URL %s failed\n", url);
-            return NULL;
-        }
-        curl_easy_cleanup(curl);
-    }
-    return resp;
-
-}
-
-static Response launchWrite(const char *url, enum HttpHeader method, webhdfsBuffer *uploadBuffer) {
-    if (!uploadBuffer) {
-        fprintf(stderr, "upload buffer is NULL!\n");
-        errno = EINVAL;
-        return NULL;
+    ret = initResponseBuffer(&(resp->header));
+    if (ret) {
+        goto done;
     }
     initCurlGlobal();
-    CURLcode res;
-    Response response = (Response) calloc(1, sizeof(*response));
-    if (!response) {
-        fprintf(stderr, "failed to allocate memory for response\n");
-        return NULL;
-    }
-    response->body = initResponseBuffer();
-    response->header = initResponseBuffer();
-    
-    //connect to the datanode in order to create the lease in the namenode
-    CURL *curl = curl_easy_init();
+    curl = curl_easy_init();
     if (!curl) {
-        fprintf(stderr, "Failed to initialize the curl handle.\n");
-        return NULL;
+        ret = ENOMEM;       // curl_easy_init does not return error code,
+                            // and most of its errors are caused by malloc()
+        fprintf(stderr, "ERROR in curl_easy_init.\n");
+        goto done;
+    }
+    /* Set callback function for reading data from remote service */
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, resp->body);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEHEADER, resp->header);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    switch(method) {
+        case GET:
+            break;
+        case PUT:
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+            break;
+        case POST:
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+            break;
+        case DELETE:
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            break;
+        default:
+            ret = EINVAL;
+            fprintf(stderr, "ERROR: Invalid HTTP method\n");
+            goto done;
+    }
+    if (followloc == YES) {
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    }
+    /* Now run the curl handler */
+    curlCode = curl_easy_perform(curl);
+    if (curlCode != CURLE_OK) {
+        ret = EIO;
+        fprintf(stderr, "ERROR: preform the URL %s failed, <%d>: %s\n",
+                url, curlCode, curl_easy_strerror(curlCode));
+    }
+done:
+    if (curl != NULL) {
+        curl_easy_cleanup(curl);
+    }
+    if (ret) {
+        free(resp);
+        resp = NULL;
+    }
+    *response = resp;
+    return ret;
+}
+
+/**
+ * Launch the read request. The request is sent to the NameNode and then 
+ * redirected to corresponding DataNode
+ *
+ * @param url   The URL for the read request
+ * @param resp  The response containing the buffer provided by user
+ * @return 0 for success and non-zero value to indicate error
+ */
+static int launchReadInternal(const char *url, struct Response* resp)
+{
+    CURL *curl;
+    CURLcode curlCode;
+    int ret = 0;
+    
+    if (!resp || !resp->body || !resp->body->content) {
+        fprintf(stderr,
+                "ERROR: invalid user-provided buffer!\n");
+        return EINVAL;
+    }
+    
+    initCurlGlobal();
+    /* get a curl handle */
+    curl = curl_easy_init();
+    if (!curl) {
+        fprintf(stderr, "ERROR in curl_easy_init.\n");
+        return ENOMEM;
+    }
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFuncWithUserBuffer);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, resp->body);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEHEADER, resp->header);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    
+    curlCode = curl_easy_perform(curl);
+    if (curlCode != CURLE_OK && curlCode != CURLE_PARTIAL_FILE) {
+        ret = EIO;
+        fprintf(stderr, "ERROR: preform the URL %s failed, <%d>: %s\n",
+                url, curlCode, curl_easy_strerror(curlCode));
+    }
+    
+    curl_easy_cleanup(curl);
+    return ret;
+}
+
+/**
+ * The function does the write operation by connecting to a DataNode. 
+ * The function keeps the connection with the DataNode until 
+ * the closeFlag is set. Whenever the current data has been sent out, 
+ * the function blocks waiting for further input from user or close.
+ *
+ * @param url           URL of the remote DataNode
+ * @param method        PUT for create and POST for append
+ * @param uploadBuffer  Buffer storing user's data to write
+ * @param response      Response from remote service
+ * @return 0 for success and non-zero value to indicate error
+ */
+static int launchWrite(const char *url, enum HttpHeader method,
+                       struct webhdfsBuffer *uploadBuffer,
+                       struct Response **response)
+{
+    CURLcode curlCode;
+    struct Response* resp = NULL;
+    struct curl_slist *chunk = NULL;
+    CURL *curl = NULL;
+    int ret = 0;
+    
+    if (!uploadBuffer) {
+        fprintf(stderr, "ERROR: upload buffer is NULL!\n");
+        return EINVAL;
+    }
+    
+    initCurlGlobal();
+    resp = calloc(1, sizeof(struct Response));
+    if (!resp) {
+        return ENOMEM;
+    }
+    ret = initResponseBuffer(&(resp->body));
+    if (ret) {
+        goto done;
+    }
+    ret = initResponseBuffer(&(resp->header));
+    if (ret) {
+        goto done;
+    }
+    
+    // Connect to the datanode in order to create the lease in the namenode
+    curl = curl_easy_init();
+    if (!curl) {
+        fprintf(stderr, "ERROR: failed to initialize the curl handle.\n");
+        return ENOMEM;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url);
     
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, response->body);
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, writefunc);
-        curl_easy_setopt(curl, CURLOPT_WRITEHEADER, response->header);
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, readfunc);
-        curl_easy_setopt(curl, CURLOPT_READDATA, uploadBuffer);
-        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-        
-        struct curl_slist *chunk = NULL;
-        chunk = curl_slist_append(chunk, "Transfer-Encoding: chunked");
-        res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-        chunk = curl_slist_append(chunk, "Expect:");
-        res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-        
-        switch(method) {
-            case GET:
-                break;
-            case PUT:
-                curl_easy_setopt(curl,CURLOPT_CUSTOMREQUEST,"PUT");
-                break;
-            case POST:
-                curl_easy_setopt(curl,CURLOPT_CUSTOMREQUEST,"POST");
-                break;
-            case DELETE:
-                curl_easy_setopt(curl,CURLOPT_CUSTOMREQUEST,"DELETE");
-                break;
-            default:
-                fprintf(stderr, "\nHTTP method not defined\n");
-                exit(EXIT_FAILURE);
-        }
-        res = curl_easy_perform(curl);
-        curl_slist_free_all(chunk);
-        curl_easy_cleanup(curl);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, resp->body);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, writefunc);
+    curl_easy_setopt(curl, CURLOPT_WRITEHEADER, resp->header);
+    curl_easy_setopt(curl, CURLOPT_READFUNCTION, readfunc);
+    curl_easy_setopt(curl, CURLOPT_READDATA, uploadBuffer);
+    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+    
+    chunk = curl_slist_append(chunk, "Transfer-Encoding: chunked");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+    chunk = curl_slist_append(chunk, "Expect:");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+    
+    switch(method) {
+        case PUT:
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+            break;
+        case POST:
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+            break;
+        default:
+            ret = EINVAL;
+            fprintf(stderr, "ERROR: Invalid HTTP method\n");
+            goto done;
+    }
+    curlCode = curl_easy_perform(curl);
+    if (curlCode != CURLE_OK) {
+        ret = EIO;
+        fprintf(stderr, "ERROR: preform the URL %s failed, <%d>: %s\n",
+                url, curlCode, curl_easy_strerror(curlCode));
     }
     
-    return response;
+done:
+    if (chunk != NULL) {
+        curl_slist_free_all(chunk);
+    }
+    if (curl != NULL) {
+        curl_easy_cleanup(curl);
+    }
+    if (ret) {
+        free(resp);
+        resp = NULL;
+    }
+    *response = resp;
+    return ret;
 }
 
-Response launchMKDIR(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchMKDIR(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }
 
-Response launchRENAME(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchRENAME(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }
 
-Response launchGFS(char *url) {
-    return launchCmd(url, GET, NO);
+int launchGFS(const char *url, struct Response **resp)
+{
+    return launchCmd(url, GET, NO, resp);
 }
 
-Response launchLS(char *url) {
-    return launchCmd(url, GET, NO);
+int launchLS(const char *url, struct Response **resp)
+{
+    return launchCmd(url, GET, NO, resp);
 }
 
-Response launchCHMOD(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchCHMOD(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }
 
-Response launchCHOWN(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchCHOWN(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }
 
-Response launchDELETE(char *url) {
-    return launchCmd(url, DELETE, NO);
+int launchDELETE(const char *url, struct Response **resp)
+{
+    return launchCmd(url, DELETE, NO, resp);
 }
 
-Response launchOPEN(char *url, Response resp) {
-    return launchRead_internal(url, GET, YES, resp);
+int launchOPEN(const char *url, struct Response* resp)
+{
+    return launchReadInternal(url, resp);
 }
 
-Response launchUTIMES(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchUTIMES(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }
 
-Response launchNnWRITE(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchNnWRITE(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }
 
-Response launchNnAPPEND(char *url) {
-    return launchCmd(url, POST, NO);
+int launchNnAPPEND(const char *url, struct Response **resp)
+{
+    return launchCmd(url, POST, NO, resp);
 }
 
-Response launchDnWRITE(const char *url, webhdfsBuffer *buffer) {
-    return launchWrite(url, PUT, buffer);
+int launchDnWRITE(const char *url, struct webhdfsBuffer *buffer,
+                               struct Response **resp)
+{
+    return launchWrite(url, PUT, buffer, resp);
 }
 
-Response launchDnAPPEND(const char *url, webhdfsBuffer *buffer) {
-    return launchWrite(url, POST, buffer);
+int launchDnAPPEND(const char *url, struct webhdfsBuffer *buffer,
+                                struct Response **resp)
+{
+    return launchWrite(url, POST, buffer, resp);
 }
 
-Response launchSETREPLICATION(char *url) {
-    return launchCmd(url, PUT, NO);
+int launchSETREPLICATION(const char *url, struct Response **resp)
+{
+    return launchCmd(url, PUT, NO, resp);
 }

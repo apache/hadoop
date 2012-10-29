@@ -58,6 +58,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8925. Remove the packaging. (eli)
 
+    HADOOP-8985. Add namespace declarations in .proto files for languages 
+    other than java. (Binglin Chan via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang

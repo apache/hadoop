@@ -22,233 +22,381 @@
 #include <stdio.h>
 #include <errno.h>
 
-#define NUM_OF_PERMISSION_BITS 4
-#define NUM_OF_PORT_BITS 6
-#define NUM_OF_REPLICATION_BITS 6
+#define PERM_STR_LEN 4  // "644" + one byte for NUL
+#define SHORT_STR_LEN 6 // 65535 + NUL
+#define LONG_STR_LEN 21 // 2^64-1 = 18446744073709551615 + NUL
 
-static char *prepareQUERY(const char *host, int nnPort, const char *srcpath, const char *OP, const char *user) {
-    size_t length;
-    char *url;
-    const char *const protocol = "http://";
-    const char *const prefix = "/webhdfs/v1";
-    char *temp;
-    char *port;
-    port= (char*) malloc(NUM_OF_PORT_BITS);
-    if (!port) {
-        return NULL;
-    }
-    sprintf(port,"%d",nnPort);
-    if (user != NULL) {
-        length = strlen(protocol) + strlen(host) + strlen(":") + strlen(port) + strlen(prefix) + strlen(srcpath) + strlen ("?op=") + strlen(OP) + strlen("&user.name=") + strlen(user);
-    } else {
-        length = strlen(protocol) + strlen(host) + strlen(":") + strlen(port) + strlen(prefix) + strlen(srcpath) +  strlen ("?op=") + strlen(OP);
-    }
+/**
+ * Create query based on NameNode hostname,
+ * NameNode port, path, operation and other parameters
+ *
+ * @param host          NameNode hostName
+ * @param nnPort        Port of NameNode
+ * @param path          Absolute path for the corresponding file
+ * @param op            Operations
+ * @param paraNum       Number of remaining parameters
+ * @param paraNames     Names of remaining parameters
+ * @param paraValues    Values of remaining parameters
+ * @param url           Holding the created URL
+ * @return 0 on success and non-zero value to indicate error
+ */
+static int createQueryURL(const char *host, unsigned int nnPort,
+                          const char *path, const char *op, int paraNum,
+                          const char **paraNames, const char **paraValues,
+                          char **queryUrl)
+{
+    size_t length = 0;
+    int i = 0, offset = 0, ret = 0;
+    char *url = NULL;
+    const char *protocol = "http://";
+    const char *prefix = "/webhdfs/v1";
     
-    temp = (char*) malloc(length + 1);
-    if (!temp) {
-        return NULL;
+    if (!paraNames || !paraValues) {
+        return EINVAL;
     }
-    strcpy(temp,protocol);
-    temp = strcat(temp,host);
-    temp = strcat(temp,":");
-    temp = strcat(temp,port);
-    temp = strcat(temp,prefix);
-    temp = strcat(temp,srcpath);
-    temp = strcat(temp,"?op=");
-    temp = strcat(temp,OP);
-    if (user) {
-        temp = strcat(temp,"&user.name=");
-        temp = strcat(temp,user);
-    }
-    url = temp;
-    return url;
-}
-
-
-static int decToOctal(int decNo) {
-    int octNo=0;
-    int expo =0;
-    while (decNo != 0)  {
-        octNo = ((decNo % 8) * pow(10,expo)) + octNo;
-        decNo = decNo / 8;
-        expo++;
-    }
-    return octNo;
-}
-
-
-char *prepareMKDIR(const char *host, int nnPort, const char *dirsubpath, const char *user) {
-    return prepareQUERY(host, nnPort, dirsubpath, "MKDIRS", user);
-}
-
-
-char *prepareMKDIRwithMode(const char *host, int nnPort, const char *dirsubpath, int mode, const char *user) {
-    char *url;
-    char *permission;
-    permission = (char*) malloc(NUM_OF_PERMISSION_BITS);
-    if (!permission) {
-        return NULL;
-    }
-    mode = decToOctal(mode);
-    sprintf(permission,"%d",mode);
-    url = prepareMKDIR(host, nnPort, dirsubpath, user);
-    url = realloc(url,(strlen(url) + strlen("&permission=") + strlen(permission) + 1));
-    if (!url) {
-        return NULL;
-    }
-    url = strcat(url,"&permission=");
-    url = strcat(url,permission);
-    return url;
-}
-
-
-char *prepareRENAME(const char *host, int nnPort, const char *srcpath, const char *destpath, const char *user) {
-    char *url;
-    url = prepareQUERY(host, nnPort, srcpath, "RENAME", user);
-    url = realloc(url,(strlen(url) + strlen("&destination=") + strlen(destpath) + 1));
-    if (!url) {
-        return NULL;
-    }
-    url = strcat(url,"&destination=");
-    url = strcat(url,destpath);
-    return url;
-}
-
-char *prepareGFS(const char *host, int nnPort, const char *dirsubpath, const char *user) {
-    return (prepareQUERY(host, nnPort, dirsubpath, "GETFILESTATUS", user));
-}
-
-char *prepareLS(const char *host, int nnPort, const char *dirsubpath, const char *user) {
-    return (prepareQUERY(host, nnPort, dirsubpath, "LISTSTATUS", user));
-}
-
-char *prepareCHMOD(const char *host, int nnPort, const char *dirsubpath, int mode, const char *user) {
-    char *url;
-    char *permission;
-    permission = (char*) malloc(NUM_OF_PERMISSION_BITS);
-    if (!permission) {
-        return NULL;
-    }
-    mode &= 0x3FFF;
-    mode = decToOctal(mode);
-    sprintf(permission,"%d",mode);
-    url = prepareQUERY(host, nnPort, dirsubpath, "SETPERMISSION", user);
-    url = realloc(url,(strlen(url) + strlen("&permission=") + strlen(permission) + 1));
-    if (!url) {
-        return NULL;
-    }
-    url = strcat(url,"&permission=");
-    url = strcat(url,permission);
-    return url;
-}
-
-char *prepareDELETE(const char *host, int nnPort, const char *dirsubpath, int recursive, const char *user) {
-    char *url = (prepareQUERY(host, nnPort, dirsubpath, "DELETE", user));
-    char *recursiveFlag = (char *)malloc(6);
-    if (!recursive) {
-        strcpy(recursiveFlag, "false");
-    } else {
-        strcpy(recursiveFlag, "true");
-    }
-    url = (char *) realloc(url, strlen(url) + strlen("&recursive=") + strlen(recursiveFlag) + 1);
-    if (!url) {
-        return NULL;
-    }
-    
-    strcat(url, "&recursive=");
-    strcat(url, recursiveFlag);
-    return url;
-}
-
-char *prepareCHOWN(const char *host, int nnPort, const char *dirsubpath, const char *owner, const char *group, const char *user) {
-    char *url;
-    url = prepareQUERY(host, nnPort, dirsubpath, "SETOWNER", user);
-    if (!url) {
-        return NULL;
-    }
-    if(owner != NULL) {
-        url = realloc(url,(strlen(url) + strlen("&owner=") + strlen(owner) + 1));
-        url = strcat(url,"&owner=");
-        url = strcat(url,owner);
-    }
-    if (group != NULL) {
-        url = realloc(url,(strlen(url) + strlen("&group=") + strlen(group) + 1));
-        url = strcat(url,"&group=");
-        url = strcat(url,group);
-    }
-    return url;
-}
-
-char *prepareOPEN(const char *host, int nnPort, const char *dirsubpath, const char *user, size_t offset, size_t length) {
-    char *base_url = prepareQUERY(host, nnPort, dirsubpath, "OPEN", user);
-    char *url = (char *) malloc(strlen(base_url) + strlen("&offset=") + 15 + strlen("&length=") + 15);
-    if (!url) {
-        return NULL;
-    }
-    sprintf(url, "%s&offset=%ld&length=%ld", base_url, offset, length);
-    return url;
-}
-
-char *prepareUTIMES(const char *host, int nnPort, const char *dirsubpath, long unsigned mTime, long unsigned aTime, const char *user) {
-    char *url;
-    char *modTime;
-    char *acsTime;
-    modTime = (char*) malloc(12);
-    acsTime = (char*) malloc(12);
-    url = prepareQUERY(host, nnPort, dirsubpath, "SETTIMES", user);
-    sprintf(modTime,"%lu",mTime);
-    sprintf(acsTime,"%lu",aTime);
-    url = realloc(url,(strlen(url) + strlen("&modificationtime=") + strlen(modTime) + strlen("&accesstime=") + strlen(acsTime) + 1));
-    if (!url) {
-        return NULL;
-    }
-    url = strcat(url, "&modificationtime=");
-    url = strcat(url, modTime);
-    url = strcat(url,"&accesstime=");
-    url = strcat(url, acsTime);
-    return url;
-}
-
-char *prepareNnWRITE(const char *host, int nnPort, const char *dirsubpath, const char *user, int16_t replication, size_t blockSize) {
-    char *url;
-    url = prepareQUERY(host, nnPort, dirsubpath, "CREATE", user);
-    url = realloc(url, (strlen(url) + strlen("&overwrite=true") + 1));
-    if (!url) {
-        return NULL;
-    }
-    url = strcat(url, "&overwrite=true");
-    if (replication > 0) {
-        url = realloc(url, (strlen(url) + strlen("&replication=") + 6));
-        if (!url) {
-            return NULL;
+    length = strlen(protocol) + strlen(host) + strlen(":") +
+                SHORT_STR_LEN + strlen(prefix) + strlen(path) +
+                strlen ("?op=") + strlen(op);
+    for (i = 0; i < paraNum; i++) {
+        if (paraNames[i] && paraValues[i]) {
+            length += 2 + strlen(paraNames[i]) + strlen(paraValues[i]);
         }
-        sprintf(url, "%s&replication=%d", url, replication);
+    }
+    url = malloc(length);   // The '\0' has already been included
+                            // when using SHORT_STR_LEN
+    if (!url) {
+        return ENOMEM;
+    }
+    
+    offset = snprintf(url, length, "%s%s:%d%s%s?op=%s",
+                      protocol, host, nnPort, prefix, path, op);
+    if (offset >= length || offset < 0) {
+        ret = EIO;
+        goto done;
+    }
+    for (i = 0; i < paraNum; i++) {
+        if (!paraNames[i] || !paraValues[i] || paraNames[i][0] == '\0' ||
+            paraValues[i][0] == '\0') {
+            continue;
+        }
+        offset += snprintf(url + offset, length - offset,
+                           "&%s=%s", paraNames[i], paraValues[i]);
+        if (offset >= length || offset < 0) {
+            ret = EIO;
+            goto done;
+        }
+    }
+done:
+    if (ret) {
+        free(url);
+        return ret;
+    }
+    *queryUrl = url;
+    return 0;
+}
+
+int createUrlForMKDIR(const char *host, int nnPort,
+                      const char *path, const char *user, char **url)
+{
+    const char *userPara = "user.name";
+    return createQueryURL(host, nnPort, path, "MKDIRS", 1,
+                          &userPara, &user, url);
+}
+
+int createUrlForGetFileStatus(const char *host, int nnPort, const char *path,
+                              const char *user, char **url)
+{
+    const char *userPara = "user.name";
+    return createQueryURL(host, nnPort, path, "GETFILESTATUS", 1,
+                          &userPara, &user, url);
+}
+
+int createUrlForLS(const char *host, int nnPort, const char *path,
+                   const char *user, char **url)
+{
+    const char *userPara = "user.name";
+    return createQueryURL(host, nnPort, path, "LISTSTATUS",
+                          1, &userPara, &user, url);
+}
+
+int createUrlForNnAPPEND(const char *host, int nnPort, const char *path,
+                         const char *user, char **url)
+{
+    const char *userPara = "user.name";
+    return createQueryURL(host, nnPort, path, "APPEND",
+                          1, &userPara, &user, url);
+}
+
+int createUrlForMKDIRwithMode(const char *host, int nnPort, const char *path,
+                              int mode, const char *user, char **url)
+{
+    int strlength;
+    char permission[PERM_STR_LEN];
+    const char *paraNames[2], *paraValues[2];
+    
+    paraNames[0] = "permission";
+    paraNames[1] = "user.name";
+    memset(permission, 0, PERM_STR_LEN);
+    strlength = snprintf(permission, PERM_STR_LEN, "%o", mode);
+    if (strlength < 0 || strlength >= PERM_STR_LEN) {
+        return EIO;
+    }
+    paraValues[0] = permission;
+    paraValues[1] = user;
+    
+    return createQueryURL(host, nnPort, path, "MKDIRS", 2,
+                          paraNames, paraValues, url);
+}
+
+int createUrlForRENAME(const char *host, int nnPort, const char *srcpath,
+                         const char *destpath, const char *user, char **url)
+{
+    const char *paraNames[2], *paraValues[2];
+    paraNames[0] = "destination";
+    paraNames[1] = "user.name";
+    paraValues[0] = destpath;
+    paraValues[1] = user;
+    
+    return createQueryURL(host, nnPort, srcpath,
+                          "RENAME", 2, paraNames, paraValues, url);
+}
+
+int createUrlForCHMOD(const char *host, int nnPort, const char *path,
+                      int mode, const char *user, char **url)
+{
+    int strlength;
+    char permission[PERM_STR_LEN];
+    const char *paraNames[2], *paraValues[2];
+    
+    paraNames[0] = "permission";
+    paraNames[1] = "user.name";
+    memset(permission, 0, PERM_STR_LEN);
+    strlength = snprintf(permission, PERM_STR_LEN, "%o", mode);
+    if (strlength < 0 || strlength >= PERM_STR_LEN) {
+        return EIO;
+    }
+    paraValues[0] = permission;
+    paraValues[1] = user;
+    
+    return createQueryURL(host, nnPort, path, "SETPERMISSION",
+                          2, paraNames, paraValues, url);
+}
+
+int createUrlForDELETE(const char *host, int nnPort, const char *path,
+                       int recursive, const char *user, char **url)
+{
+    const char *paraNames[2], *paraValues[2];
+    paraNames[0] = "recursive";
+    paraNames[1] = "user.name";
+    if (recursive) {
+        paraValues[0] = "true";
+    } else {
+        paraValues[0] = "false";
+    }
+    paraValues[1] = user;
+    
+    return createQueryURL(host, nnPort, path, "DELETE",
+                          2, paraNames, paraValues, url);
+}
+
+int createUrlForCHOWN(const char *host, int nnPort, const char *path,
+                      const char *owner, const char *group,
+                      const char *user, char **url)
+{
+    const char *paraNames[3], *paraValues[3];
+    paraNames[0] = "owner";
+    paraNames[1] = "group";
+    paraNames[2] = "user.name";
+    paraValues[0] = owner;
+    paraValues[1] = group;
+    paraValues[2] = user;
+    
+    return createQueryURL(host, nnPort, path, "SETOWNER",
+                          3, paraNames, paraValues, url);
+}
+
+int createUrlForOPEN(const char *host, int nnPort, const char *path,
+                     const char *user, size_t offset, size_t length, char **url)
+{
+    int strlength;
+    char offsetStr[LONG_STR_LEN], lengthStr[LONG_STR_LEN];
+    const char *paraNames[3], *paraValues[3];
+    
+    paraNames[0] = "offset";
+    paraNames[1] = "length";
+    paraNames[2] = "user.name";
+    memset(offsetStr, 0, LONG_STR_LEN);
+    memset(lengthStr, 0, LONG_STR_LEN);
+    strlength = snprintf(offsetStr, LONG_STR_LEN, "%lu", offset);
+    if (strlength < 0 || strlength >= LONG_STR_LEN) {
+        return EIO;
+    }
+    strlength = snprintf(lengthStr, LONG_STR_LEN, "%lu", length);
+    if (strlength < 0 || strlength >= LONG_STR_LEN) {
+        return EIO;
+    }
+    paraValues[0] = offsetStr;
+    paraValues[1] = lengthStr;
+    paraValues[2] = user;
+    
+    return createQueryURL(host, nnPort, path, "OPEN",
+                          3, paraNames, paraValues, url);
+}
+
+int createUrlForUTIMES(const char *host, int nnPort, const char *path,
+                       long unsigned mTime, long unsigned aTime,
+                       const char *user, char **url)
+{
+    int strlength;
+    char modTime[LONG_STR_LEN], acsTime[LONG_STR_LEN];
+    const char *paraNames[3], *paraValues[3];
+    
+    memset(modTime, 0, LONG_STR_LEN);
+    memset(acsTime, 0, LONG_STR_LEN);
+    strlength = snprintf(modTime, LONG_STR_LEN, "%lu", mTime);
+    if (strlength < 0 || strlength >= LONG_STR_LEN) {
+        return EIO;
+    }
+    strlength = snprintf(acsTime, LONG_STR_LEN, "%lu", aTime);
+    if (strlength < 0 || strlength >= LONG_STR_LEN) {
+        return EIO;
+    }
+    paraNames[0] = "modificationtime";
+    paraNames[1] = "accesstime";
+    paraNames[2] = "user.name";
+    paraValues[0] = modTime;
+    paraValues[1] = acsTime;
+    paraValues[2] = user;
+    
+    return createQueryURL(host, nnPort, path, "SETTIMES",
+                          3, paraNames, paraValues, url);
+}
+
+int createUrlForNnWRITE(const char *host, int nnPort,
+                        const char *path, const char *user,
+                        int16_t replication, size_t blockSize, char **url)
+{
+    int strlength;
+    char repStr[SHORT_STR_LEN], blockSizeStr[LONG_STR_LEN];
+    const char *paraNames[4], *paraValues[4];
+    
+    memset(repStr, 0, SHORT_STR_LEN);
+    memset(blockSizeStr, 0, LONG_STR_LEN);
+    if (replication > 0) {
+        strlength = snprintf(repStr, SHORT_STR_LEN, "%u", replication);
+        if (strlength < 0 || strlength >= SHORT_STR_LEN) {
+            return EIO;
+        }
     }
     if (blockSize > 0) {
-        url = realloc(url, (strlen(url) + strlen("&blocksize=") + 16));
-        if (!url) {
-            return NULL;
+        strlength = snprintf(blockSizeStr, LONG_STR_LEN, "%lu", blockSize);
+        if (strlength < 0 || strlength >= LONG_STR_LEN) {
+            return EIO;
         }
-        sprintf(url, "%s&blocksize=%ld", url, blockSize);
     }
-    return url;
+    paraNames[0] = "overwrite";
+    paraNames[1] = "replication";
+    paraNames[2] = "blocksize";
+    paraNames[3] = "user.name";
+    paraValues[0] = "true";
+    paraValues[1] = repStr;
+    paraValues[2] = blockSizeStr;
+    paraValues[3] = user;
+    
+    return createQueryURL(host, nnPort, path, "CREATE",
+                          4, paraNames, paraValues, url);
 }
 
-char *prepareNnAPPEND(const char *host, int nnPort, const char *dirsubpath, const char *user) {
-    return (prepareQUERY(host, nnPort, dirsubpath, "APPEND", user));
-}
-
-char *prepareSETREPLICATION(const char *host, int nnPort, const char *path, int16_t replication, const char *user)
+int createUrlForSETREPLICATION(const char *host, int nnPort,
+                               const char *path, int16_t replication,
+                               const char *user, char **url)
 {
-    char *url = prepareQUERY(host, nnPort, path, "SETREPLICATION", user);
-    char *replicationNum = (char *) malloc(NUM_OF_REPLICATION_BITS);
-    sprintf(replicationNum, "%u", replication);
-    url = realloc(url, strlen(url) + strlen("&replication=") + strlen(replicationNum)+ 1);
-    if (!url) {
-        return NULL;
+    char repStr[SHORT_STR_LEN];
+    const char *paraNames[2], *paraValues[2];
+    int strlength;
+
+    memset(repStr, 0, SHORT_STR_LEN);
+    if (replication > 0) {
+        strlength = snprintf(repStr, SHORT_STR_LEN, "%u", replication);
+        if (strlength < 0 || strlength >= SHORT_STR_LEN) {
+            return EIO;
+        }
+    }
+    paraNames[0] = "replication";
+    paraNames[1] = "user.name";
+    paraValues[0] = repStr;
+    paraValues[1] = user;
+    
+    return createQueryURL(host, nnPort, path, "SETREPLICATION",
+                          2, paraNames, paraValues, url);
+}
+
+int createUrlForGetBlockLocations(const char *host, int nnPort,
+                                  const char *path, size_t offset,
+                                  size_t length, const char *user, char **url)
+{
+    char offsetStr[LONG_STR_LEN], lengthStr[LONG_STR_LEN];
+    const char *paraNames[3], *paraValues[3];
+    int strlength;
+    
+    memset(offsetStr, 0, LONG_STR_LEN);
+    memset(lengthStr, 0, LONG_STR_LEN);
+    if (offset > 0) {
+        strlength = snprintf(offsetStr, LONG_STR_LEN, "%lu", offset);
+        if (strlength < 0 || strlength >= LONG_STR_LEN) {
+            return EIO;
+        }
+    }
+    if (length > 0) {
+        strlength = snprintf(lengthStr, LONG_STR_LEN, "%lu", length);
+        if (strlength < 0 || strlength >= LONG_STR_LEN) {
+            return EIO;
+        }
+    }
+    paraNames[0] = "offset";
+    paraNames[1] = "length";
+    paraNames[2] = "user.name";
+    paraValues[0] = offsetStr;
+    paraValues[1] = lengthStr;
+    paraValues[2] = user;
+    
+    return createQueryURL(host, nnPort, path, "GET_BLOCK_LOCATIONS",
+                          3, paraNames, paraValues, url);
+}
+
+int createUrlForReadFromDatanode(const char *dnHost, int dnPort,
+                                 const char *path, size_t offset,
+                                 size_t length, const char *user,
+                                 const char *namenodeRpcAddr, char **url)
+{
+    char offsetStr[LONG_STR_LEN], lengthStr[LONG_STR_LEN];
+    const char *paraNames[4], *paraValues[4];
+    int strlength;
+    
+    memset(offsetStr, 0, LONG_STR_LEN);
+    memset(lengthStr, 0, LONG_STR_LEN);
+    if (offset > 0) {
+        strlength = snprintf(offsetStr, LONG_STR_LEN, "%lu", offset);
+        if (strlength < 0 || strlength >= LONG_STR_LEN) {
+            return EIO;
+        }
+    }
+    if (length > 0) {
+        strlength = snprintf(lengthStr, LONG_STR_LEN, "%lu", length);
+        if (strlength < 0 || strlength >= LONG_STR_LEN) {
+            return EIO;
+        }
     }
     
-    url = strcat(url, "&replication=");
-    url = strcat(url, replicationNum);
-    return url;
+    paraNames[0] = "offset";
+    paraNames[1] = "length";
+    paraNames[2] = "user.name";
+    paraNames[3] = "namenoderpcaddress";
+    paraValues[0] = offsetStr;
+    paraValues[1] = lengthStr;
+    paraValues[2] = user;
+    paraValues[3] = namenodeRpcAddr;
+    
+    return createQueryURL(dnHost, dnPort, path, "OPEN",
+                          4, paraNames, paraValues, url);
 }

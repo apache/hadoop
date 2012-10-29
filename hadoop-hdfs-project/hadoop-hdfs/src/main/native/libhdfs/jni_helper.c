@@ -146,6 +146,7 @@ static int hashTableInit(void)
             if (hcreate(MAX_HASH_TABLE_ELEM) == 0) {
                 fprintf(stderr, "error creating hashtable, <%d>: %s\n",
                         errno, strerror(errno));
+                UNLOCK_HASH_TABLE();
                 return 0;
             } 
             hashTableInited = 1;

@@ -23,6 +23,7 @@
 option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "HadoopRpcProtos";
 option java_generate_equals_and_hash = true;
+package hadoop.common;
 
 /**
  * This message is used for Protobuf Rpc Engine.
