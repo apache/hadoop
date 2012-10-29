@@ -227,9 +227,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
     updatingResource = new HashMap<String, String>();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(StringUtils.stringifyException(new IOException("config()")));
-    }
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -242,11 +239,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(StringUtils.stringifyException
-                (new IOException("config(config)")));
-    }
-
     this.resources = (ArrayList) other.resources.clone();
     synchronized (other) {
       if (other.properties != null) {
