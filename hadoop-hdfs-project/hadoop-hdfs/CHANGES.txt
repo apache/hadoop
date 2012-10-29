@@ -152,9 +152,6 @@ Trunk (Unreleased)
 
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
-    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
-    (suresh)
-
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
     returningmore than INode array. (Jing Zhao via suresh)
 
@@ -355,6 +352,9 @@ Trunk (Unreleased)
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
+
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
 
   NEW FEATURES
 
