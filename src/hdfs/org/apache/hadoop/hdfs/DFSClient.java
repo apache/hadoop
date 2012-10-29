@@ -2036,7 +2036,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             serverSupportsHdfs200 = false;
           } else {
             LOG.info("Failed to get block info from "
-                + datanode.getHostName() + " probably does not have block "
+                + datanode.getHostName() + " probably does not have "
                 + last.getBlock(), e);
           }
         } finally {
@@ -2247,7 +2247,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               fetchBlockAt(target);
               continue;
             } else {
-              LOG.info("Failed to read block " + targetBlock.getBlock()
+              LOG.info("Failed to read " + targetBlock.getBlock()
                   + " on local machine" + StringUtils.stringifyException(ex));
               LOG.info("Try reading via the datanode on " + targetAddr);
             }
@@ -2435,9 +2435,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           }
           
           if (nodes == null || nodes.length == 0) {
-            LOG.info("No node available for block: " + blockInfo);
+            LOG.info("No node available for: " + blockInfo);
           }
-          LOG.info("Could not obtain block " + block.getBlock()
+          LOG.info("Could not obtain " + block.getBlock()
               + " from any node: " + ie
               + ". Will get new block locations from namenode and retry...");
           try {
@@ -3211,12 +3211,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         return false;
       }
       if (response != null) {
-        LOG.info("Error Recovery for block " + block +
+        LOG.info("Error Recovery for " + block +
                  " waiting for responder to exit. ");
         return true;
       }
       if (errorIndex >= 0) {
-        LOG.warn("Error Recovery for block " + block
+        LOG.warn("Error Recovery for " + block
             + " bad datanode[" + errorIndex + "] "
             + (nodes == null? "nodes == null": nodes[errorIndex].getName()));
       }
@@ -3562,7 +3562,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         success = createBlockOutputStream(nodes, clientName, false);
 
         if (!success) {
-          LOG.info("Abandoning block " + block);
+          LOG.info("Abandoning " + block);
           namenode.abandonBlock(block, src, clientName);
 
           if (errorIndex < nodes.length) {
@@ -4083,7 +4083,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             try {
               Thread.sleep(400);
               if (System.currentTimeMillis() - localstart > 5000) {
-                LOG.info("Could not complete file " + src + " retrying...");
+                LOG.info("Could not complete " + src + " retrying...");
               }
             } catch (InterruptedException ie) {
             }

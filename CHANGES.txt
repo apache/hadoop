@@ -110,6 +110,9 @@ Release 1.2.0 - unreleased
     HADOOP-8968. Add a flag to completely disable the worker version check.
     (tucu via eli)
 
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

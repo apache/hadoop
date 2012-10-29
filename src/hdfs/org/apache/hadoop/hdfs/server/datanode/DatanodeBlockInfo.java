@@ -109,15 +109,15 @@ class DatanodeBlockInfo {
       return false;
     }
     if (file == null || volume == null) {
-      throw new IOException("detachBlock:Block not found. " + block);
+      throw new IOException("detachBlock: not found " + block);
     }
     File meta = FSDataset.getMetaFile(file, block);
     if (meta == null) {
-      throw new IOException("Meta file not found for block " + block);
+      throw new IOException("Meta file not found for " + block);
     }
 
     if (HardLink.getLinkCount(file) > numLinks) {
-      DataNode.LOG.info("CopyOnWrite for block " + block);
+      DataNode.LOG.info("CopyOnWrite for " + block);
       detachFile(file, block);
     }
     if (HardLink.getLinkCount(meta) > numLinks) {

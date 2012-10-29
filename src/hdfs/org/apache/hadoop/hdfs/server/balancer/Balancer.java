@@ -338,8 +338,7 @@ public class Balancer implements Tool {
         LOG.info( "Moving block " + block.getBlock().getBlockId() +
               " from "+ source.getName() + " to " +
               target.getName() + " through " +
-              proxySource.getName() +
-              " is succeeded." );
+              proxySource.getName() + " is succeeded." );
       } catch (IOException e) {
         LOG.warn("Error moving block "+block.getBlockId()+
             " from " + source.getName() + " to " +
@@ -1515,8 +1514,8 @@ public class Balancer implements Tool {
           System.out.println("The cluster is balanced. Exiting...");
           return SUCCESS;
         } else {
-          LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
-              +" bytes to make the cluster balanced." );
+          LOG.info("Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
+              +" bytes to make the cluster balanced" );
         }
         
         /* Decide all the nodes that will participate in the block move and

@@ -479,7 +479,7 @@ public class DataNode extends Configured
       blockScanner = new DataBlockScanner(this, (FSDataset)data, conf);
     } else {
       LOG.info("Periodic Block Verification is disabled because " +
-               reason + ".");
+               reason);
     }
 
     readaheadPool = ReadaheadPool.getInstance();
@@ -986,7 +986,6 @@ public class DataNode extends Configured
    * forever calling remote NameNode functions.
    */
   public void offerService() throws Exception {
-     
     LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec" + 
        " Initial delay: " + initialBlockReportDelay + "msec");
 
@@ -1018,7 +1017,6 @@ public class DataNode extends Configured
                                                        xmitsInProgress.get(),
                                                        getXceiverCount());
           myMetrics.addHeartBeat(now() - startTime);
-          //LOG.info("Just sent heartbeat, with name " + localName);
           if (!processCommand(cmds))
             continue;
         }
@@ -1117,7 +1115,7 @@ public class DataNode extends Configured
         // start block scanner
         if (blockScanner != null && blockScannerThread == null &&
             upgradeManager.isUpgradeCompleted()) {
-          LOG.info("Starting Periodic block scanner.");
+          LOG.info("Starting Periodic block scanner");
           blockScannerThread = new Daemon(blockScanner);
           blockScannerThread.start();
         }
@@ -1301,7 +1299,7 @@ public class DataNode extends Configured
                               ) throws IOException {
     if (!data.isValidBlock(block)) {
       // block does not exist or is under-construction
-      String errStr = "Can't send invalid block " + block;
+      String errStr = "Can't send invalid " + block;
       LOG.info(errStr);
       notifyNamenode(DatanodeProtocol.INVALID_BLOCK, errStr);
       return;
@@ -1314,7 +1312,7 @@ public class DataNode extends Configured
       namenode.reportBadBlocks(new LocatedBlock[]{
           new LocatedBlock(block, new DatanodeInfo[] {
               new DatanodeInfo(dnRegistration)})});
-      LOG.info("Can't replicate block " + block
+      LOG.info("Can't replicate " + block
           + " because on-disk length " + onDiskLength 
           + " is shorter than NameNode recorded length " + block.getNumBytes());
       return;
@@ -1328,7 +1326,7 @@ public class DataNode extends Configured
           xfersBuilder.append(xferTargets[i].getName());
           xfersBuilder.append(" ");
         }
-        LOG.info(dnRegistration + " Starting thread to transfer block " + 
+        LOG.info(dnRegistration + " Starting thread to transfer " + 
                  block + " to " + xfersBuilder);                       
       }
 
@@ -1343,7 +1341,7 @@ public class DataNode extends Configured
       try {
         transferBlock(blocks[i], xferTargets[i]);
       } catch (IOException ie) {
-        LOG.warn("Failed to transfer block " + blocks[i], ie);
+        LOG.warn("Failed to transfer " + blocks[i], ie);
       }
     }
   }
@@ -1532,7 +1530,7 @@ public class DataNode extends Configured
         blockSender.sendBlock(out, baseStream, null);
 
         // no response necessary
-        LOG.info(dnRegistration + ":Transmitted block " + b + " to " + curTarget);
+        LOG.info(dnRegistration + ":Transmitted " + b + " to " + curTarget);
 
       } catch (IOException ie) {
         LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
@@ -1853,9 +1851,9 @@ public class DataNode extends Configured
       data.finalizeBlockIfNeeded(newblock);
       myMetrics.incrBlocksWritten();
       notifyNamenodeReceivedBlock(newblock, EMPTY_DEL_HINT);
-      LOG.info("Received block " + newblock +
+      LOG.info("Received " + newblock +
                 " of size " + newblock.getNumBytes() +
-                " as part of lease recovery.");
+                " as part of lease recovery");
     }
   }
 
@@ -1986,7 +1984,7 @@ public class DataNode extends Configured
     // file at the same time.
     synchronized (ongoingRecovery) {
       if (ongoingRecovery.get(block.getWithWildcardGS()) != null) {
-        String msg = "Block " + block + " is already being recovered, " +
+        String msg = block + " is already being recovered, " +
                      " ignoring this request to recover it.";
         LOG.info(msg);
         throw new IOException(msg);
@@ -2013,7 +2011,7 @@ public class DataNode extends Configured
                 id, getConf(), socketTimeout, connectToDnViaHostname);
           BlockRecoveryInfo info = datanode.startBlockRecovery(block);
           if (info == null) {
-            LOG.info("No block metadata found for block " + block + " on datanode "
+            LOG.info("No block metadata found for " + block + " on datanode "
                 + id);
             continue;
           }

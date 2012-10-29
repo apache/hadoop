@@ -160,7 +160,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       if (startOffset < 0 || startOffset > endOffset
           || (length + startOffset) > endOffset) {
         String msg = " Offset " + startOffset + " and length " + length
-        + " don't match block " + block + " ( blockLen " + endOffset + " )";
+        + " don't match " + block + " ( blockLen " + endOffset + " )";
         LOG.warn(datanode.dnRegistration + ":sendBlock() : " + msg);
         throw new IOException(msg);
       }

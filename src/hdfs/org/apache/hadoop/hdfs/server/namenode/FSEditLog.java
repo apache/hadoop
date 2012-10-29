@@ -205,8 +205,7 @@ public class FSEditLog {
       int bufSize = bufCurrent.size();
       if (bufSize != 0) {
         throw new IOException("FSEditStream has " + bufSize +
-                              " bytes still to be flushed and cannot " +
-                              "be closed.");
+           " bytes still to be flushed and cannot be closed.");
       } 
       bufCurrent.close();
       bufReady.close();
