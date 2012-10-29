@@ -155,6 +155,9 @@ Trunk (Unreleased)
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
     (suresh)
 
+    HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
+    returningmore than INode array. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
