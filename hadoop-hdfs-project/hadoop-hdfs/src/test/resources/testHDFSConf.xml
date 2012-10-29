@@ -15797,7 +15797,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Configured Capacity: [0-9]+ \([0-9]+\.[0-9]+ [BKMGT]+\)</expected-output>
+          <expected-output>Configured Capacity: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -15915,7 +15915,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Configured Capacity: [0-9]+ \([0-9]+\.[0-9]+ [BKMGT]+\)</expected-output>
+          <expected-output>Configured Capacity: [0-9]+ \([0-9\.]+ [BKMGT]+\)</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

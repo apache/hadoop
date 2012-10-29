@@ -70,6 +70,7 @@ public class FSSchedulerApp extends SchedulerApplication {
       .getRecordFactory(null);
 
   private final AppSchedulingInfo appSchedulingInfo;
+  private AppSchedulable appSchedulable;
   private final Queue queue;
 
   private final Resource currentConsumption = recordFactory
@@ -117,6 +118,14 @@ public class FSSchedulerApp extends SchedulerApplication {
   @Override
   public ApplicationAttemptId getApplicationAttemptId() {
     return this.appSchedulingInfo.getApplicationAttemptId();
+  }
+  
+  public void setAppSchedulable(AppSchedulable appSchedulable) {
+    this.appSchedulable = appSchedulable;
+  }
+  
+  public AppSchedulable getAppSchedulable() {
+    return appSchedulable;
   }
 
   public String getUser() {

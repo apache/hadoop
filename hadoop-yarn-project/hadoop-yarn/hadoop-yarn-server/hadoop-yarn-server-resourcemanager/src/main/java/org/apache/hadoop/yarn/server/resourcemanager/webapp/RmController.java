@@ -77,8 +77,9 @@ public class RmController extends Controller {
     }
     
     if (rs instanceof FairScheduler) {
-      context().setStatus(404);
-      throw new WebAppException("Fair Scheduler UI not yet supported");
+      setTitle("Fair Scheduler");
+      render(FairSchedulerPage.class);
+      return;
     }
     
     setTitle("Default Scheduler");

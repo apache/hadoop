@@ -152,6 +152,9 @@ Trunk (Unreleased)
 
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -237,6 +240,12 @@ Trunk (Unreleased)
 
     HDFS-4067. TestUnderReplicatedBlocks intermittently fails due to 
     ReplicaAlreadyExistsException. (Jing Zhao via suresh)
+
+    HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
+    (Trevor Robinson via suresh)
+
+    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
+    lastDeletedReport should be volatile. (Jing Zhao via suresh)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
@@ -425,6 +434,9 @@ Release 2.0.3-alpha - Unreleased
     method for casting; avoiding creation of new empty lists; cleaning up 
     some code and rewriting some javadoc. (szetszwo)
 
+    HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
+    other than java. (Binglin Chang via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -503,6 +515,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
     out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
     via szetszwo)
+
+    HDFS-3616. Fix a ConcurrentModificationException bug that BP actor threads
+    may not be shutdown properly in DataNode.  (Jing Zhao via szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -746,6 +761,9 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3907. Allow multiple users for local block readers. (eli)
 
     HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
+    
+    HDFS-3920. libwebdhfs string processing and using strerror consistently
+    to handle all errors. (Jing Zhao via suresh)
 
   OPTIMIZATIONS
 

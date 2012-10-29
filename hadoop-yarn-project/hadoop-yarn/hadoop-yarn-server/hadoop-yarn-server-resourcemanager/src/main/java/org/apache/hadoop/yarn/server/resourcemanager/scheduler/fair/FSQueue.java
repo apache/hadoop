@@ -56,7 +56,9 @@ public class FSQueue {
 
   public void addApp(FSSchedulerApp app) {
     applications.add(app);
-    queueSchedulable.addApp(new AppSchedulable(scheduler, app, this));
+    AppSchedulable appSchedulable = new AppSchedulable(scheduler, app, this);
+    app.setAppSchedulable(appSchedulable);
+    queueSchedulable.addApp(appSchedulable);
   }
 
   public void removeJob(FSSchedulerApp app) {

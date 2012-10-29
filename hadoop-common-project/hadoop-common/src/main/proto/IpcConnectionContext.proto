@@ -18,6 +18,7 @@
 option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "IpcConnectionContextProtos";
 option java_generate_equals_and_hash = true;
+package hadoop.common;
 
 /**
  * Spec for UserInformationProto is specified in ProtoUtil#makeIpcConnectionContext

@@ -22,6 +22,7 @@
 option java_package = "org.apache.hadoop.contrib.bkjournal";
 option java_outer_classname = "BKJournalProtos";
 option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
 
 import "hdfs.proto";
 

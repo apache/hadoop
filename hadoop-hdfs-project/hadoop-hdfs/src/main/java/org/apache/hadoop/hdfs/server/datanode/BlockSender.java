@@ -503,7 +503,7 @@ class BlockSender implements java.io.Closeable {
          * part of a block and then decides not to read the rest (but leaves
          * the socket open).
          */
-          LOG.info("BlockSender.sendChunks() exception: ", e);
+          LOG.info("exception: ", e);
       } else {
         /* Exception while writing to the client. Connection closure from
          * the other end is mostly the case and we do not care much about

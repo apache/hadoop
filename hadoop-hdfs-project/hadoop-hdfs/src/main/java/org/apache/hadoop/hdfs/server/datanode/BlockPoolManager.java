@@ -106,15 +106,15 @@ class BlockPoolManager {
     }
   }
   
-  void shutDownAll() throws InterruptedException {
-    BPOfferService[] bposArray = this.getAllNamenodeThreads();
-    
-    for (BPOfferService bpos : bposArray) {
-      bpos.stop(); //interrupts the threads
-    }
-    //now join
-    for (BPOfferService bpos : bposArray) {
-      bpos.join();
+  void shutDownAll(BPOfferService[] bposArray) throws InterruptedException {
+    if (bposArray != null) {
+      for (BPOfferService bpos : bposArray) {
+        bpos.stop(); //interrupts the threads
+      }
+      //now join
+      for (BPOfferService bpos : bposArray) {
+        bpos.join();
+      }
     }
   }
   

@@ -77,7 +77,7 @@ public class GetDelegationTokenServlet extends DfsServlet {
       });
 
     } catch(Exception e) {
-      LOG.info("Exception while sending token. Re-throwing. ", e);
+      LOG.info("Exception while sending token. Re-throwing ", e);
       resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
     } finally {
       if(dos != null) dos.close();

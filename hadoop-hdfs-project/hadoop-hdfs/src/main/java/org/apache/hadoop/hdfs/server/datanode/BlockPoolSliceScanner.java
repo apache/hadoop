@@ -154,7 +154,7 @@ class BlockPoolSliceScanner {
     }
     this.scanPeriod = hours * 3600 * 1000;
     LOG.info("Periodic Block Verification Scanner initialized with interval "
-        + hours + " hours for block pool " + bpid + ".");
+        + hours + " hours for block pool " + bpid);
 
     // get the list of blocks and arrange them in random order
     List<Block> arr = dataset.getFinalizedBlocks(blockPoolId);
@@ -310,12 +310,12 @@ class BlockPoolSliceScanner {
   }
   
   private void handleScanFailure(ExtendedBlock block) {
-    LOG.info("Reporting bad block " + block);
+    LOG.info("Reporting bad " + block);
     try {
       datanode.reportBadBlocks(block);
     } catch (IOException ie) {
       // it is bad, but not bad enough to shutdown the scanner
-      LOG.warn("Cannot report bad block=" + block.getBlockId());
+      LOG.warn("Cannot report bad " + block.getBlockId());
     }
   }
   
@@ -411,7 +411,7 @@ class BlockPoolSliceScanner {
 
         // If the block does not exists anymore, then its not an error
         if (!dataset.contains(block)) {
-          LOG.info(block + " is no longer in the dataset.");
+          LOG.info(block + " is no longer in the dataset");
           deleteBlock(block.getLocalBlock());
           return;
         }
@@ -424,7 +424,7 @@ class BlockPoolSliceScanner {
         // is a block really deleted by mistake, DirectoryScan should catch it.
         if (e instanceof FileNotFoundException ) {
           LOG.info("Verification failed for " + block +
-              ". It may be due to race with write.");
+              " - may be due to race with write");
           deleteBlock(block.getLocalBlock());
           return;
         }
