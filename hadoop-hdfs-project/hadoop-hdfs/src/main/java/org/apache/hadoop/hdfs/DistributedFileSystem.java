@@ -746,7 +746,7 @@ public class DistributedFileSystem extends FileSystem {
     }
     DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
     lblocks[0] = new LocatedBlock(dataBlock, dataNode);
-    LOG.info("Found checksum error in data stream at block="
+    LOG.info("Found checksum error in data stream at "
         + dataBlock + " on datanode="
         + dataNode[0]);
 
@@ -759,7 +759,7 @@ public class DistributedFileSystem extends FileSystem {
     }
     DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
     lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
-    LOG.info("Found checksum error in checksum stream at block="
+    LOG.info("Found checksum error in checksum stream at "
         + sumsBlock + " on datanode=" + sumsNode[0]);
 
     // Ask client to delete blocks.

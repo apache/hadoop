@@ -4,6 +4,9 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.

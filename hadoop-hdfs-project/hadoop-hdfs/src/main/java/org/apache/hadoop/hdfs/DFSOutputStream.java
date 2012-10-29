@@ -740,7 +740,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     //
     private boolean processDatanodeError() throws IOException {
       if (response != null) {
-        DFSClient.LOG.info("Error Recovery for block " + block +
+        DFSClient.LOG.info("Error Recovery for " + block +
         " waiting for responder to exit. ");
         return true;
       }
@@ -1013,7 +1013,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         success = createBlockOutputStream(nodes, 0L, false);
 
         if (!success) {
-          DFSClient.LOG.info("Abandoning block " + block);
+          DFSClient.LOG.info("Abandoning " + block);
           dfsClient.namenode.abandonBlock(block, src, dfsClient.clientName);
           block = null;
           DFSClient.LOG.info("Excluding datanode " + nodes[errorIndex]);
@@ -1781,7 +1781,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         try {
           Thread.sleep(400);
           if (Time.now() - localstart > 5000) {
-            DFSClient.LOG.info("Could not complete file " + src + " retrying...");
+            DFSClient.LOG.info("Could not complete " + src + " retrying...");
           }
         } catch (InterruptedException ie) {
         }

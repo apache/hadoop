@@ -170,7 +170,7 @@ class DataXceiver extends Receiver implements Runnable {
         } catch (InvalidMagicNumberException imne) {
           LOG.info("Failed to read expected encryption handshake from client " +
               "at " + s.getInetAddress() + ". Perhaps the client is running an " +
-              "older version of Hadoop which does not support encryption.");
+              "older version of Hadoop which does not support encryption");
           return;
         }
         input = encryptedStreams.in;
@@ -367,9 +367,8 @@ class DataXceiver extends Receiver implements Runnable {
     // make a copy here.
     final ExtendedBlock originalBlock = new ExtendedBlock(block);
     block.setNumBytes(dataXceiverServer.estimateBlockSize);
-    LOG.info("Receiving block " + block + 
-             " src: " + remoteAddress +
-             " dest: " + localAddress);
+    LOG.info("Receiving " + block + " src: " + remoteAddress + " dest: "
+        + localAddress);
 
     // reply to upstream datanode or client 
     final DataOutputStream replyOut = new DataOutputStream(
@@ -478,9 +477,9 @@ class DataXceiver extends Receiver implements Runnable {
                       block + " to mirror " + mirrorNode + ": " + e);
             throw e;
           } else {
-            LOG.info(datanode + ":Exception transfering block " +
+            LOG.info(datanode + ":Exception transfering " +
                      block + " to mirror " + mirrorNode +
-                     ". continuing without the mirror.", e);
+                     "- continuing without the mirror", e);
           }
         }
       }
@@ -528,10 +527,8 @@ class DataXceiver extends Receiver implements Runnable {
       if (isDatanode ||
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
-        LOG.info("Received block " + block + 
-                 " src: " + remoteAddress +
-                 " dest: " + localAddress +
-                 " of size " + block.getNumBytes());
+        LOG.info("Received " + block + " src: " + remoteAddress + " dest: "
+            + localAddress + " of size " + block.getNumBytes());
       }
 
       
@@ -674,7 +671,7 @@ class DataXceiver extends Receiver implements Runnable {
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
       
-      LOG.info("Copied block " + block + " to " + s.getRemoteSocketAddress());
+      LOG.info("Copied " + block + " to " + s.getRemoteSocketAddress());
     } catch (IOException ioe) {
       isOpSuccess = false;
       LOG.info("opCopyBlock " + block + " received exception " + ioe);
@@ -797,8 +794,7 @@ class DataXceiver extends Receiver implements Runnable {
       // notify name node
       datanode.notifyNamenodeReceivedBlock(block, delHint);
 
-      LOG.info("Moved block " + block + 
-          " from " + s.getRemoteSocketAddress());
+      LOG.info("Moved " + block + " from " + s.getRemoteSocketAddress());
       
     } catch (IOException ioe) {
       opStatus = ERROR;

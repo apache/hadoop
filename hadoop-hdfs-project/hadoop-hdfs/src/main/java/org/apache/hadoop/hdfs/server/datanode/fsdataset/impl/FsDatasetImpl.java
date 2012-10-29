@@ -425,7 +425,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return;
     }
     if (newlen > oldlen) {
-      throw new IOException("Cannout truncate block to from oldlen (=" + oldlen
+      throw new IOException("Cannot truncate block to from oldlen (=" + oldlen
           + ") to newlen (=" + newlen + ")");
     }
 
@@ -481,7 +481,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           " should be greater than the replica " + b + "'s generation stamp");
     }
     ReplicaInfo replicaInfo = getReplicaInfo(b);
-    LOG.info("Appending to replica " + replicaInfo);
+    LOG.info("Appending to " + replicaInfo);
     if (replicaInfo.getState() != ReplicaState.FINALIZED) {
       throw new ReplicaNotFoundException(
           ReplicaNotFoundException.UNFINALIZED_REPLICA + b);
@@ -689,7 +689,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public synchronized ReplicaInPipeline recoverRbw(ExtendedBlock b,
       long newGS, long minBytesRcvd, long maxBytesRcvd)
       throws IOException {
-    LOG.info("Recover the RBW replica " + b);
+    LOG.info("Recover RBW replica " + b);
 
     ReplicaInfo replicaInfo = getReplicaInfo(b.getBlockPoolId(), b.getBlockId());
     
@@ -700,7 +700,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     ReplicaBeingWritten rbw = (ReplicaBeingWritten)replicaInfo;
     
-    LOG.info("Recovering replica " + rbw);
+    LOG.info("Recovering " + rbw);
 
     // Stop the previous writer
     rbw.stopWriter();
@@ -736,8 +736,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final long blockId = b.getBlockId();
     final long expectedGs = b.getGenerationStamp();
     final long visible = b.getNumBytes();
-    LOG.info("Convert replica " + b
-        + " from Temporary to RBW, visible length=" + visible);
+    LOG.info("Convert " + b + " from Temporary to RBW, visible length="
+        + visible);
 
     final ReplicaInPipeline temp;
     {
@@ -1415,8 +1415,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static ReplicaRecoveryInfo initReplicaRecovery(String bpid,
       ReplicaMap map, Block block, long recoveryId) throws IOException {
     final ReplicaInfo replica = map.get(bpid, block.getBlockId());
-    LOG.info("initReplicaRecovery: block=" + block
-        + ", recoveryId=" + recoveryId
+    LOG.info("initReplicaRecovery: " + block + ", recoveryId=" + recoveryId
         + ", replica=" + replica);
 
     //check replica
@@ -1485,7 +1484,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     //get replica
     final String bpid = oldBlock.getBlockPoolId();
     final ReplicaInfo replica = volumeMap.get(bpid, oldBlock.getBlockId());
-    LOG.info("updateReplica: block=" + oldBlock
+    LOG.info("updateReplica: " + oldBlock
         + ", recoveryId=" + recoveryId
         + ", length=" + newlength
         + ", replica=" + replica);

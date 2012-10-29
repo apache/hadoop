@@ -457,7 +457,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
             buffersize, verifyChecksum, dfsClient.clientName);
         if(connectFailedOnce) {
           DFSClient.LOG.info("Successfully connected to " + targetAddr +
-                             " for block " + blk.getBlockId());
+                             " for " + blk);
         }
         return chosenNode;
       } catch (IOException ex) {
@@ -736,9 +736,9 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         }
         
         if (nodes == null || nodes.length == 0) {
-          DFSClient.LOG.info("No node available for block: " + blockInfo);
+          DFSClient.LOG.info("No node available for " + blockInfo);
         }
-        DFSClient.LOG.info("Could not obtain block " + block.getBlock()
+        DFSClient.LOG.info("Could not obtain " + block.getBlock()
             + " from any node: " + ie
             + ". Will get new block locations from namenode and retry...");
         try {

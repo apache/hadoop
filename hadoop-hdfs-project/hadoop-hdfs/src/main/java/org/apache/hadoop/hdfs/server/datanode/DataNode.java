@@ -481,8 +481,7 @@ public class DataNode extends Configured
       blockScanner = new DataBlockScanner(this, data, conf);
       blockScanner.start();
     } else {
-      LOG.info("Periodic Block Verification scan is disabled because " +
-               reason + ".");
+      LOG.info("Periodic Block Verification scan disabled because " + reason);
     }
   }
   
@@ -511,7 +510,7 @@ public class DataNode extends Configured
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan is disabled because " +
-               reason + ".");
+               reason);
     }
   }
   
@@ -1262,7 +1261,7 @@ public class DataNode extends Configured
           xfersBuilder.append(xferTargets[i]);
           xfersBuilder.append(" ");
         }
-        LOG.info(bpReg + " Starting thread to transfer block " + 
+        LOG.info(bpReg + " Starting thread to transfer " + 
                  block + " to " + xfersBuilder);                       
       }
 
@@ -2049,7 +2048,7 @@ public class DataNode extends Configured
     ExtendedBlock block = rb.getBlock();
     DatanodeInfo[] targets = rb.getLocations();
     
-    LOG.info(who + " calls recoverBlock(block=" + block
+    LOG.info(who + " calls recoverBlock(" + block
         + ", targets=[" + Joiner.on(", ").join(targets) + "]"
         + ", newGenerationStamp=" + rb.getNewGenerationStamp() + ")");
   }

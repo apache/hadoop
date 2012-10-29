@@ -951,8 +951,8 @@ public class BlockManager {
       datanodes.append(node).append(" ");
     }
     if (datanodes.length() != 0) {
-      NameNode.stateChangeLog.info("BLOCK* addToInvalidates: "
-          + b + " to " + datanodes.toString());
+      NameNode.stateChangeLog.info("BLOCK* addToInvalidates: " + b + " "
+          + datanodes);
     }
   }
 
@@ -973,7 +973,7 @@ public class BlockManager {
       // thread of Datanode reports bad block before Block reports are sent
       // by the Datanode on startup
       NameNode.stateChangeLog.info("BLOCK* findAndMarkBlockAsCorrupt: "
-          + blk + " not found.");
+          + blk + " not found");
       return;
     }
     markBlockAsCorrupt(new BlockToMarkCorrupt(storedBlock, reason), dn);
@@ -1027,7 +1027,7 @@ public class BlockManager {
       NameNode.stateChangeLog.info("BLOCK* invalidateBlocks: postponing " +
           "invalidation of " + b + " on " + dn + " because " +
           nr.replicasOnStaleNodes() + " replica(s) are located on nodes " +
-          "with potentially out-of-date block reports.");
+          "with potentially out-of-date block reports");
       postponeBlock(b.corrupted);
 
     } else if (nr.liveReplicas() >= 1) {
@@ -1040,7 +1040,7 @@ public class BlockManager {
       }
     } else {
       NameNode.stateChangeLog.info("BLOCK* invalidateBlocks: " + b
-          + " on " + dn + " is the only copy and was not deleted.");
+          + " on " + dn + " is the only copy and was not deleted");
     }
   }
 
@@ -1161,9 +1161,8 @@ public class BlockManager {
                    (blockHasEnoughRacks(block)) ) {
                 neededReplications.remove(block, priority); // remove from neededReplications
                 neededReplications.decrementReplicationIndex(priority);
-                NameNode.stateChangeLog.info("BLOCK* "
-                    + "Removing block " + block
-                    + " from neededReplications as it has enough replicas.");
+                NameNode.stateChangeLog.info("BLOCK* Removing " + block
+                    + " from neededReplications as it has enough replicas");
                 continue;
               }
             }
@@ -1237,9 +1236,8 @@ public class BlockManager {
               neededReplications.remove(block, priority); // remove from neededReplications
               neededReplications.decrementReplicationIndex(priority);
               rw.targets = null;
-              NameNode.stateChangeLog.info("BLOCK* "
-                  + "Removing block " + block
-                  + " from neededReplications as it has enough replicas.");
+              NameNode.stateChangeLog.info("BLOCK* Removing " + block
+                  + " from neededReplications as it has enough replicas");
               continue;
             }
           }
@@ -1291,10 +1289,8 @@ public class BlockManager {
             targetList.append(' ');
             targetList.append(targets[k]);
           }
-          NameNode.stateChangeLog.info(
-                  "BLOCK* ask "
-                  + rw.srcNode + " to replicate "
-                  + rw.block + " to " + targetList);
+          NameNode.stateChangeLog.info("BLOCK* ask " + rw.srcNode
+              + " to replicate " + rw.block + " to " + targetList);
         }
       }
     }
@@ -1528,10 +1524,9 @@ public class BlockManager {
       boolean staleBefore = node.areBlockContentsStale();
       node.receivedBlockReport();
       if (staleBefore && !node.areBlockContentsStale()) {
-        LOG.info("BLOCK* processReport: " +
-            "Received first block report from " + node +
-            " after becoming active. Its block contents are no longer" +
-            " considered stale.");
+        LOG.info("BLOCK* processReport: Received first block report from "
+            + node + " after becoming active. Its block contents are no longer"
+            + " considered stale");
         rescanPostponedMisreplicatedBlocks();
       }
       
@@ -1602,9 +1597,9 @@ public class BlockManager {
       addStoredBlock(b, node, null, true);
     }
     for (Block b : toInvalidate) {
-      NameNode.stateChangeLog.info("BLOCK* processReport: block "
+      NameNode.stateChangeLog.info("BLOCK* processReport: "
           + b + " on " + node + " size " + b.getNumBytes()
-          + " does not belong to any file.");
+          + " does not belong to any file");
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
@@ -1871,7 +1866,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     int count = pendingDNMessages.count();
     if (count > 0) {
       LOG.info("Processing " + count + " messages from DataNodes " +
-          "that were previously queued during standby state.");
+          "that were previously queued during standby state");
     }
     processQueuedMessages(pendingDNMessages.takeAll());
     assert pendingDNMessages.count() == 0;
@@ -1928,9 +1923,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           // the block report got a little bit delayed after the pipeline
           // closed. So, ignore this report, assuming we will get a
           // FINALIZED replica later. See HDFS-2791
-          LOG.info("Received an RBW replica for block " + storedBlock +
-              " on " + dn + ": ignoring it, since the block is " +
-              "complete with the same generation stamp.");
+          LOG.info("Received an RBW replica for " + storedBlock +
+              " on " + dn + ": ignoring it, since it is " +
+              "complete with the same genstamp");
           return null;
         } else {
           return new BlockToMarkCorrupt(storedBlock,
@@ -2042,7 +2037,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       // If this block does not belong to anyfile, then we are done.
       NameNode.stateChangeLog.info("BLOCK* addStoredBlock: " + block + " on "
           + node + " size " + block.getNumBytes()
-          + " but it does not belong to any file.");
+          + " but it does not belong to any file");
       // we could add this block to invalidate set of this datanode.
       // it will happen in next block report otherwise.
       return block;
@@ -2159,9 +2154,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       try {
         invalidateBlock(new BlockToMarkCorrupt(blk, null), node);
       } catch (IOException e) {
-        NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
-                                      "error in deleting bad block " + blk +
-                                      " on " + node, e);
+        NameNode.stateChangeLog.info("invalidateCorruptReplicas "
+            + "error in deleting bad block " + blk + " on " + node, e);
         gotException = true;
       }
     }
@@ -2309,7 +2303,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       DatanodeDescriptor cur = it.next();
       if (cur.areBlockContentsStale()) {
         LOG.info("BLOCK* processOverReplicatedBlock: " +
-            "Postponing processing of over-replicated block " +
+            "Postponing processing of over-replicated " +
             block + " since datanode " + cur + " does not yet have up-to-date " +
             "block information.");
         postponeBlock(block);
@@ -2427,7 +2421,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       //
       addToInvalidates(b, cur);
       NameNode.stateChangeLog.info("BLOCK* chooseExcessReplicates: "
-                +"("+cur+", "+b+") is added to invalidated blocks set.");
+                +"("+cur+", "+b+") is added to invalidated blocks set");
     }
   }
 
@@ -2569,7 +2563,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     for (Block b : toInvalidate) {
       NameNode.stateChangeLog.info("BLOCK* addBlock: block "
           + b + " on " + node + " size " + b.getNumBytes()
-          + " does not belong to any file.");
+          + " does not belong to any file");
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
@@ -2680,7 +2674,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * of live nodes.  If in startup safemode (or its 30-sec extension period),
    * then it gains speed by ignoring issues of excess replicas or nodes
    * that are decommissioned or in process of becoming decommissioned.
-   * If not in startup, then it calls {@link countNodes()} instead.
+   * If not in startup, then it calls {@link #countNodes(Block)} instead.
    * 
    * @param b - the block being tested
    * @return count of live nodes for this block

@@ -92,7 +92,7 @@ public class FSEditLogLoader {
                                  expectedStartingTxId, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
           + " of size " + edits.length() + " edits # " + numEdits 
-          + " loaded in " + (now()-startTime)/1000 + " seconds.");
+          + " loaded in " + (now()-startTime)/1000 + " seconds");
       return numEdits;
     } finally {
       edits.close();
