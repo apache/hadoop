@@ -29,6 +29,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.contrib.bkjournal.BKJournalProtos.EditLogLedgerProto;
+import com.google.protobuf.TextFormat;
+import static com.google.common.base.Charsets.UTF_8;
+
 /**
  * Utility class for storing the metadata associated 
  * with a single edit log segment, stored in a single ledger
@@ -37,8 +41,8 @@ public class EditLogLedgerMetadata {
   static final Log LOG = LogFactory.getLog(EditLogLedgerMetadata.class);
 
   private String zkPath;
+  private final int dataLayoutVersion;
   private final long ledgerId;
-  private final int version;
   private final long firstTxId;
   private long lastTxId;
   private boolean inprogress;
@@ -57,21 +61,22 @@ public class EditLogLedgerMetadata {
     }
   };
 
-  EditLogLedgerMetadata(String zkPath, int version, 
+  EditLogLedgerMetadata(String zkPath, int dataLayoutVersion,
                         long ledgerId, long firstTxId) {
     this.zkPath = zkPath;
+    this.dataLayoutVersion = dataLayoutVersion;
     this.ledgerId = ledgerId;
-    this.version = version;
     this.firstTxId = firstTxId;
     this.lastTxId = HdfsConstants.INVALID_TXID;
     this.inprogress = true;
   }
   
-  EditLogLedgerMetadata(String zkPath, int version, long ledgerId, 
-                        long firstTxId, long lastTxId) {
+  EditLogLedgerMetadata(String zkPath, int dataLayoutVersion,
+                        long ledgerId, long firstTxId,
+                        long lastTxId) {
     this.zkPath = zkPath;
+    this.dataLayoutVersion = dataLayoutVersion;
     this.ledgerId = ledgerId;
-    this.version = version;
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
     this.inprogress = false;
@@ -93,12 +98,12 @@ public class EditLogLedgerMetadata {
     return ledgerId;
   }
   
-  int getVersion() {
-    return version;
-  }
-
   boolean isInProgress() {
     return this.inprogress;
+  }
+
+  int getDataLayoutVersion() {
+    return this.dataLayoutVersion;
   }
 
   void finalizeLedger(long newLastTxId) {
@@ -111,22 +116,27 @@ public class EditLogLedgerMetadata {
       throws IOException, KeeperException.NoNodeException  {
     try {
       byte[] data = zkc.getData(path, false, null);
-      String[] parts = new String(data).split(";");
-      if (parts.length == 3) {
-        int version = Integer.valueOf(parts[0]);
-        long ledgerId = Long.valueOf(parts[1]);
-        long txId = Long.valueOf(parts[2]);
-        return new EditLogLedgerMetadata(path, version, ledgerId, txId);
-      } else if (parts.length == 4) {
-        int version = Integer.valueOf(parts[0]);
-        long ledgerId = Long.valueOf(parts[1]);
-        long firstTxId = Long.valueOf(parts[2]);
-        long lastTxId = Long.valueOf(parts[3]);
-        return new EditLogLedgerMetadata(path, version, ledgerId,
-                                         firstTxId, lastTxId);
+
+      EditLogLedgerProto.Builder builder = EditLogLedgerProto.newBuilder();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Reading " + path + " data: " + new String(data, UTF_8));
+      }
+      TextFormat.merge(new String(data, UTF_8), builder);
+      if (!builder.isInitialized()) {
+        throw new IOException("Invalid/Incomplete data in znode");
+      }
+      EditLogLedgerProto ledger = builder.build();
+
+      int dataLayoutVersion = ledger.getDataLayoutVersion();
+      long ledgerId = ledger.getLedgerId();
+      long firstTxId = ledger.getFirstTxId();
+      if (ledger.hasLastTxId()) {
+        long lastTxId = ledger.getLastTxId();
+        return new EditLogLedgerMetadata(path, dataLayoutVersion,
+                                         ledgerId, firstTxId, lastTxId);
       } else {
-        throw new IOException("Invalid ledger entry, "
-                              + new String(data));
+        return new EditLogLedgerMetadata(path, dataLayoutVersion,
+                                         ledgerId, firstTxId);
       }
     } catch(KeeperException.NoNodeException nne) {
       throw nne;
@@ -140,17 +150,17 @@ public class EditLogLedgerMetadata {
   void write(ZooKeeper zkc, String path)
       throws IOException, KeeperException.NodeExistsException {
     this.zkPath = path;
-    String finalisedData;
-    if (inprogress) {
-      finalisedData = String.format("%d;%d;%d",
-          version, ledgerId, firstTxId);
-    } else {
-      finalisedData = String.format("%d;%d;%d;%d",
-          version, ledgerId, firstTxId, lastTxId);
+
+    EditLogLedgerProto.Builder builder = EditLogLedgerProto.newBuilder();
+    builder.setDataLayoutVersion(dataLayoutVersion)
+      .setLedgerId(ledgerId).setFirstTxId(firstTxId);
+
+    if (!inprogress) {
+      builder.setLastTxId(lastTxId);
     }
     try {
-      zkc.create(path, finalisedData.getBytes(), Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT);
+      zkc.create(path, TextFormat.printToString(builder.build()).getBytes(UTF_8),
+                 Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
       throw nee;
     } catch (KeeperException e) {
@@ -183,9 +193,9 @@ public class EditLogLedgerMetadata {
     }
     EditLogLedgerMetadata ol = (EditLogLedgerMetadata)o;
     return ledgerId == ol.ledgerId
+      && dataLayoutVersion == ol.dataLayoutVersion
       && firstTxId == ol.firstTxId
-      && lastTxId == ol.lastTxId
-      && version == ol.version;
+      && lastTxId == ol.lastTxId;
   }
 
   public int hashCode() {
@@ -193,15 +203,15 @@ public class EditLogLedgerMetadata {
     hash = hash * 31 + (int) ledgerId;
     hash = hash * 31 + (int) firstTxId;
     hash = hash * 31 + (int) lastTxId;
-    hash = hash * 31 + (int) version;
+    hash = hash * 31 + (int) dataLayoutVersion;
     return hash;
   }
     
   public String toString() {
     return "[LedgerId:"+ledgerId +
       ", firstTxId:" + firstTxId +
-      ", lastTxId:" + lastTxId + 
-      ", version:" + version + "]";
+      ", lastTxId:" + lastTxId +
+      ", dataLayoutVersion:" + dataLayoutVersion + "]";
   }
 
 }
