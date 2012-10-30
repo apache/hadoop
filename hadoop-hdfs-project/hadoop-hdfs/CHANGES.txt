@@ -528,6 +528,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8994. TestDFSShell creates file named "noFileHere", making further
     tests hard to understand (Andy Isaacson via daryn)
 
+    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.
+    (Ivan Kelly via umamahesh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -1053,8 +1056,6 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3828. Block Scanner rescans blocks too frequently.
     (Andy Isaacson via eli)
-
-    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
 
     HDFS-3895. hadoop-client must include commons-cli (tucu)
 
