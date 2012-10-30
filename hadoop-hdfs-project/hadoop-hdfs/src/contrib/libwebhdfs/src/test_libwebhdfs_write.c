@@ -22,97 +22,90 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 int main(int argc, char **argv) {
+    hdfsFS fs;
+    const char* writeFileName;
+    off_t fileTotalSize;
+    long long tmpBufferSize;
+    tSize bufferSize = 0, totalWriteSize = 0, toWrite = 0, written = 0;
+    hdfsFile writeFile = NULL;
+    int append, i = 0;
+    char* buffer = NULL;
     
     if (argc != 6) {
-        fprintf(stderr, "Usage: hdfs_write <filename> <filesize> <buffersize> <username> <append>\n");
-        exit(-1);
+        fprintf(stderr, "Usage: test_libwebhdfs_write <filename> <filesize> "
+                "<buffersize> <username> <append>\n");
+        exit(1);
     }
     
-    hdfsFS fs = hdfsConnectAsUser("0.0.0.0", 50070, argv[4]);
+    fs = hdfsConnectAsUser("default", 50070, argv[4]);
     if (!fs) {
         fprintf(stderr, "Oops! Failed to connect to hdfs!\n");
-        exit(-1);
+        exit(1);
     }
     
-    const char* writeFileName = argv[1];
-    off_t fileTotalSize = strtoul(argv[2], NULL, 10);
-    long long tmpBufferSize = strtoul(argv[3], NULL, 10);
+    writeFileName = argv[1];
+    fileTotalSize = strtoul(argv[2], NULL, 10);
+    tmpBufferSize = strtoul(argv[3], NULL, 10);
     
     // sanity check
     if(fileTotalSize == ULONG_MAX && errno == ERANGE) {
-        fprintf(stderr, "invalid file size %s - must be <= %lu\n", argv[2], ULONG_MAX);
-        exit(-3);
+        fprintf(stderr, "invalid file size %s - must be <= %lu\n",
+                argv[2], ULONG_MAX);
+        exit(1);
     }
     
     // currently libhdfs writes are of tSize which is int32
     if(tmpBufferSize > INT_MAX) {
-        fprintf(stderr, "invalid buffer size libhdfs API write chunks must be <= %d\n",INT_MAX);
-        exit(-3);
+        fprintf(stderr,
+                "invalid buffer size libhdfs API write chunks must be <= %d\n",
+                INT_MAX);
+        exit(1);
     }
     
-    tSize bufferSize = tmpBufferSize;
-    
-    hdfsFile writeFile = NULL;
-    int append = atoi(argv[5]);
+    bufferSize = (tSize) tmpBufferSize;
+    append = atoi(argv[5]);
     if (!append) {
         writeFile = hdfsOpenFile(fs, writeFileName, O_WRONLY, bufferSize, 2, 0);
     } else {
-        writeFile = hdfsOpenFile(fs, writeFileName, O_WRONLY | O_APPEND, bufferSize, 2, 0);
+        writeFile = hdfsOpenFile(fs, writeFileName, O_WRONLY | O_APPEND,
+                                 bufferSize, 2, 0);
     }
     if (!writeFile) {
         fprintf(stderr, "Failed to open %s for writing!\n", writeFileName);
-        exit(-2);
+        exit(1);
     }
     
     // data to be written to the file
-    char* buffer = malloc(sizeof(char) * bufferSize + 1);
+    buffer = malloc(sizeof(char) * bufferSize + 1);
     if(buffer == NULL) {
         fprintf(stderr, "Could not allocate buffer of size %d\n", bufferSize);
-        return -2;
+        exit(1);
     }
-    int i = 0;
-    for (i=0; i < bufferSize; ++i) {
+    for (i = 0; i < bufferSize; ++i) {
         buffer[i] = 'a' + (i%26);
     }
     buffer[bufferSize] = '\0';
 
-    size_t totalWriteSize = 0;
+    // write to the file
+    totalWriteSize = 0;
     for (; totalWriteSize < fileTotalSize; ) {
-        tSize toWrite = bufferSize < (fileTotalSize - totalWriteSize) ? bufferSize : (fileTotalSize - totalWriteSize);
-        size_t written = hdfsWrite(fs, writeFile, (void*)buffer, toWrite);
-        fprintf(stderr, "written size %ld, to write size %d\n", written, toWrite);
+        toWrite = bufferSize < (fileTotalSize - totalWriteSize) ?
+                            bufferSize : (fileTotalSize - totalWriteSize);
+        written = hdfsWrite(fs, writeFile, (void*)buffer, toWrite);
+        fprintf(stderr, "written size %d, to write size %d\n",
+                written, toWrite);
         totalWriteSize += written;
-        //sleep(1);
     }
     
+    // cleanup
     free(buffer);
     hdfsCloseFile(fs, writeFile);
-    
-    fprintf(stderr, "file total size: %lld, total write size: %ld\n", fileTotalSize, totalWriteSize);
-    
-    hdfsFile readFile = hdfsOpenFile(fs, writeFileName, O_RDONLY, 0, 0, 0);
-    //sleep(1);
-    fprintf(stderr, "hdfsAvailable: %d\n", hdfsAvailable(fs, readFile));
-    
-    hdfsFile writeFile2 = hdfsOpenFile(fs, writeFileName, O_WRONLY | O_APPEND, 0, 2, 0);
-    fprintf(stderr, "Opened %s for writing successfully...\n", writeFileName);
-    const char *content = "Hello, World!";
-    size_t num_written_bytes = hdfsWrite(fs, writeFile2, content, strlen(content) + 1);
-    if (num_written_bytes != strlen(content) + 1) {
-        fprintf(stderr, "Failed to write correct number of bytes - expected %d, got %d\n",
-                                    (int)(strlen(content) + 1), (int)num_written_bytes);
-        exit(-1);
-    }
-    fprintf(stderr, "Wrote %zd bytes\n", num_written_bytes);
-    
+    fprintf(stderr, "file total size: %" PRId64 ", total write size: %d\n",
+            fileTotalSize, totalWriteSize);
     hdfsDisconnect(fs);
     
     return 0;
 }
-
-/**
- * vim: ts=4: sw=4: et:
- */
-

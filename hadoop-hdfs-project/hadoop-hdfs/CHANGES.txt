@@ -101,6 +101,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3809. Make BKJM use protobufs for all serialization with ZK. 
     (Ivan Kelly via umamhesh)
 
+    HDFS-3916. libwebhdfs testing code cleanup. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
