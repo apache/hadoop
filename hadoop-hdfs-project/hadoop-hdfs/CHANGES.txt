@@ -95,6 +95,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3695. Genericize format() to non-file JournalManagers. 
     (todd via umamahesh)
 
+    HDFS-3789. JournalManager#format() should be able to throw IOException. 
+    (Ivan Kelly via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES 

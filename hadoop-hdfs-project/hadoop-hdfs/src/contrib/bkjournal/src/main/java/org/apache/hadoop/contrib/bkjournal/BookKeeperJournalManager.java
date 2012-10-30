@@ -272,7 +272,7 @@ public class BookKeeperJournalManager implements JournalManager {
   }
 
   @Override
-  public void format(NamespaceInfo ns) {
+  public void format(NamespaceInfo ns) throws IOException {
     // Currently, BKJM automatically formats itself when first accessed.
     // TODO: change over to explicit formatting so that the admin can
     // clear out the BK storage when reformatting a cluster.
