@@ -108,9 +108,6 @@ Trunk (Unreleased)
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
     (Eli Reisman via jghoman)
 
-    HDFS-3789. JournalManager#format() should be able to throw IOException
-    (Ivan Kelly via todd)
-
     HDFS-3723. Add support -h, -help to all the commands. (Jing Zhao via
     suresh)
 
@@ -439,6 +436,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
 
     HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
+
+    HDFS-3789. JournalManager#format() should be able to throw IOException
+    (Ivan Kelly via todd)
 
   OPTIMIZATIONS
 
