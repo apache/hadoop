@@ -70,7 +70,7 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     this.lh = lh;
     this.firstTxId = metadata.getFirstTxId();
     this.lastTxId = metadata.getLastTxId();
-    this.logVersion = metadata.getVersion();
+    this.logVersion = metadata.getDataLayoutVersion();
     this.inProgress = metadata.isInProgress();
 
     if (firstBookKeeperEntry < 0
