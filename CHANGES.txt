@@ -301,6 +301,9 @@ Release 1.2.0 - unreleased
     HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
     doesn't match decompressed size. (Andy Isaacson via suresh)
 
+    MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on 
+    default FS. (Gera Shegalov via tucu)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
