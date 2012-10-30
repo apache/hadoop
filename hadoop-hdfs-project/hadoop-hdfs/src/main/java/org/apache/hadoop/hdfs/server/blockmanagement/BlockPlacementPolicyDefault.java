@@ -184,7 +184,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return writer;
     }
-    int totalReplicasExpected = numOfReplicas;
+    int totalReplicasExpected = numOfReplicas + results.size();
       
     int numOfResults = results.size();
     boolean newBlock = (numOfResults==0);
@@ -230,7 +230,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           maxNodesPerRack, results, avoidStaleNodes);
     } catch (NotEnoughReplicasException e) {
       LOG.warn("Not able to place enough replicas, still in need of "
-               + numOfReplicas + " to reach " + totalReplicasExpected + "\n"
+               + (totalReplicasExpected - results.size()) + " to reach "
+               + totalReplicasExpected + "\n"
                + e.getMessage());
       if (avoidStaleNodes) {
         // ecxludedNodes now has - initial excludedNodes, any nodes that were
