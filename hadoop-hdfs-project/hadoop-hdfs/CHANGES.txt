@@ -103,8 +103,6 @@ Trunk (Unreleased)
     HDFS-3510.  Editlog pre-allocation is performed prior to writing edits
     to avoid partial edits case disk out of space.(Colin McCabe via suresh)
 
-    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
-
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
@@ -439,6 +437,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
     other than java. (Binglin Chang via suresh)
+
+    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
 
   OPTIMIZATIONS
 
