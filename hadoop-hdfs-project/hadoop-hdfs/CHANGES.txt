@@ -89,6 +89,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
     other than java. (Binglin Chang via suresh)
 
+    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers. 
+    (todd and ivank via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
