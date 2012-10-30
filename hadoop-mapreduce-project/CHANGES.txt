@@ -53,6 +53,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4748. Invalid event: T_ATTEMPT_SUCCEEDED at SUCCEEDED. (jlowe)
 
+    MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on 
+    default FS (Gera Shegalov via tgraves)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
