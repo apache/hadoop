@@ -20,12 +20,14 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -125,6 +127,8 @@ public class TestGenericJournalConf {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       cluster.waitActive();
       
+      assertTrue(DummyJournalManager.shouldPromptCalled);
+      assertTrue(DummyJournalManager.formatCalled);
       assertNotNull(DummyJournalManager.conf);
       assertEquals(new URI(DUMMY_URI), DummyJournalManager.uri);
       assertNotNull(DummyJournalManager.nsInfo);
@@ -141,6 +145,8 @@ public class TestGenericJournalConf {
     static Configuration conf = null;
     static URI uri = null;
     static NamespaceInfo nsInfo = null;
+    static boolean formatCalled = false;
+    static boolean shouldPromptCalled = false;
     
     public DummyJournalManager(Configuration conf, URI u,
         NamespaceInfo nsInfo) {
@@ -148,6 +154,11 @@ public class TestGenericJournalConf {
       DummyJournalManager.conf = conf;
       DummyJournalManager.uri = u;
       DummyJournalManager.nsInfo = nsInfo; 
+    }
+    
+    @Override
+    public void format(NamespaceInfo nsInfo) {
+      formatCalled = true;
     }
     
     @Override
@@ -178,6 +189,12 @@ public class TestGenericJournalConf {
 
     @Override
     public void close() throws IOException {}
+
+    @Override
+    public boolean hasSomeData() throws IOException {
+      shouldPromptCalled = true;
+      return false;
+    }
   }
 
   public static class BadConstructorJournalManager extends DummyJournalManager {

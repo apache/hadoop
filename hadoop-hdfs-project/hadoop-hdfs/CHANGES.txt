@@ -92,6 +92,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers. 
     (todd and ivank via umamahesh)
 
+    HDFS-3695. Genericize format() to non-file JournalManagers. 
+    (todd via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES 

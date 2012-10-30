@@ -29,6 +29,7 @@ import java.util.SortedSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
@@ -169,6 +170,20 @@ public class JournalSet implements JournalManager {
   JournalSet(int minimumRedundantResources) {
     this.minimumRedundantJournals = minimumRedundantResources;
   }
+  
+  @Override
+  public void format(NamespaceInfo nsInfo) {
+    // The iteration is done by FSEditLog itself
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean hasSomeData() throws IOException {
+    // This is called individually on the underlying journals,
+    // not on the JournalSet.
+    throw new UnsupportedOperationException();
+  }
+
   
   @Override
   public EditLogOutputStream startLogSegment(final long txId) throws IOException {

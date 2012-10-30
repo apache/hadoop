@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -138,8 +139,31 @@ public class FSImage implements Closeable {
         fileCount + " files");
     NamespaceInfo ns = NNStorage.newNamespaceInfo();
     ns.clusterID = clusterId;
+    
     storage.format(ns);
+    editLog.formatNonFileJournals(ns);
     saveFSImageInAllDirs(fsn, 0);
+  }
+  
+  /**
+   * Check whether the storage directories and non-file journals exist.
+   * If running in interactive mode, will prompt the user for each
+   * directory to allow them to format anyway. Otherwise, returns
+   * false, unless 'force' is specified.
+   * 
+   * @param force format regardless of whether dirs exist
+   * @param interactive prompt the user when a dir exists
+   * @return true if formatting should proceed
+   * @throws IOException if some storage cannot be accessed
+   */
+  boolean confirmFormat(boolean force, boolean interactive) throws IOException {
+    List<FormatConfirmable> confirms = Lists.newArrayList();
+    for (StorageDirectory sd : storage.dirIterable(null)) {
+      confirms.add(sd);
+    }
+    
+    confirms.addAll(editLog.getFormatConfirmables());
+    return Storage.confirmFormat(confirms, force, interactive);
   }
   
   /**

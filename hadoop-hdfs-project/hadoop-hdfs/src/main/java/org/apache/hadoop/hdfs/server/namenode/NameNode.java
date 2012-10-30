@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -731,9 +732,6 @@ public class NameNode {
     dirsToPrompt.addAll(sharedDirs);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    if (!confirmFormat(dirsToPrompt, force, isInteractive)) {
-      return true; // aborted
-    }
 
     // if clusterID is not provided - see if you can find the current one
     String clusterId = StartupOption.FORMAT.getClusterId();
@@ -745,60 +743,14 @@ public class NameNode {
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    fsImage.getEditLog().initJournalsForWrite();
+    
+    if (!fsImage.confirmFormat(force, isInteractive)) {
+      return true; // aborted
+    }
+    
     fsImage.format(fsn, clusterId);
     return false;
-  }
-
-  /**
-   * Check whether the given storage directories already exist.
-   * If running in interactive mode, will prompt the user for each
-   * directory to allow them to format anyway. Otherwise, returns
-   * false, unless 'force' is specified.
-   * 
-   * @param dirsToFormat the dirs to check
-   * @param force format regardless of whether dirs exist
-   * @param interactive prompt the user when a dir exists
-   * @return true if formatting should proceed
-   * @throws IOException
-   */
-  public static boolean confirmFormat(Collection<URI> dirsToFormat,
-      boolean force, boolean interactive)
-      throws IOException {
-    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
-      URI dirUri = it.next();
-      if (!dirUri.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
-        System.err.println("Skipping format for directory \"" + dirUri
-            + "\". Can only format local directories with scheme \""
-            + NNStorage.LOCAL_URI_SCHEME + "\".");
-        continue;
-      }
-      // To validate only file based schemes are formatted
-      assert dirUri.getScheme().equals(NNStorage.LOCAL_URI_SCHEME) :
-        "formatting is not supported for " + dirUri;
-
-      File curDir = new File(dirUri.getPath());
-      // Its alright for a dir not to exist, or to exist (properly accessible)
-      // and be completely empty.
-      if (!curDir.exists() ||
-          (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
-        continue;
-      if (force) { // Don't confirm, always format.
-        System.err.println(
-            "Storage directory exists in " + curDir + ". Formatting anyway.");
-        continue;
-      }
-      if (!interactive) { // Don't ask - always don't format
-        System.err.println(
-            "Running in non-interactive mode, and image appears to exist in " +
-            curDir + ". Not formatting.");
-        return false;
-      }
-      if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
-        System.err.println("Format aborted in " + curDir);
-        return false;
-      }
-    }
-    return true;
   }
 
   public static void checkAllowFormat(Configuration conf) throws IOException {
@@ -853,17 +805,26 @@ public class NameNode {
           FSNamesystem.getNamespaceEditsDirs(conf, false));
       
       existingStorage = fsns.getFSImage().getStorage();
+      NamespaceInfo nsInfo = existingStorage.getNamespaceInfo();
       
-      Collection<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
-      if (!confirmFormat(sharedEditsDirs, force, interactive)) {
-        return true; // aborted
-      }
-      NNStorage newSharedStorage = new NNStorage(conf,
+      List<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
+      
+      FSImage sharedEditsImage = new FSImage(conf,
           Lists.<URI>newArrayList(),
           sharedEditsDirs);
+      sharedEditsImage.getEditLog().initJournalsForWrite();
       
-      newSharedStorage.format(existingStorage.getNamespaceInfo());
+      if (!sharedEditsImage.confirmFormat(force, interactive)) {
+        return true; // abort
+      }
       
+      NNStorage newSharedStorage = sharedEditsImage.getStorage();
+      // Call Storage.format instead of FSImage.format here, since we don't
+      // actually want to save a checkpoint - just prime the dirs with
+      // the existing namespace info
+      newSharedStorage.format(nsInfo);
+      sharedEditsImage.getEditLog().formatNonFileJournals(nsInfo);
+
       // Need to make sure the edit log segments are in good shape to initialize
       // the shared edits dir.
       fsns.getFSImage().getEditLog().close();
