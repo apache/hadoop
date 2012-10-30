@@ -440,6 +440,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3789. JournalManager#format() should be able to throw IOException
     (Ivan Kelly via todd)
 
+    HDFS-3916. libwebhdfs testing code cleanup. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
