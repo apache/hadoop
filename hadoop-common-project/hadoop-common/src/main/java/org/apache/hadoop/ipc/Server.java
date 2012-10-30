@@ -827,6 +827,8 @@ public abstract class Server {
             return true;
           }
           if (!call.response.hasRemaining()) {
+            //Clear out the response buffer so it can be collected
+            call.response = null;
             call.connection.decRpcCount();
             if (numElements == 1) {    // last call fully processes.
               done = true;             // no more data for this channel.

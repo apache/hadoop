@@ -53,6 +53,8 @@ Release 0.23.5 - UNRELEASED
     HADOOP-8962. RawLocalFileSystem.listStatus fails when a child filename
     contains a colon (jlowe via bobby)
 
+    HADOOP-8986. Server$Call object is never released after it is sent (bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
