@@ -522,6 +522,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3616. Fix a ConcurrentModificationException bug that BP actor threads
     may not be shutdown properly in DataNode.  (Jing Zhao via szetszwo)
 
+    HDFS-4127. Log message is not correct in case of short of replica.
+    (Junping Du via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
