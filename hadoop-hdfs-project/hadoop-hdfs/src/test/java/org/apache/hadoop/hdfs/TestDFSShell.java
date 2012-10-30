@@ -1145,7 +1145,7 @@ public class TestDFSShell {
 
         args = new String[2];
         args[0] = "-touchz";
-        args[1] = "/test/mkdirs/noFileHere";
+        args[1] = "/test/mkdirs/isFileHere";
         val = -1;
         try {
           val = shell.run(args);
@@ -1157,7 +1157,7 @@ public class TestDFSShell {
 
         args = new String[2];
         args[0] = "-touchz";
-        args[1] = "/test/mkdirs/thisDirNotExists/noFileHere";
+        args[1] = "/test/mkdirs/thisDirNotExists/isFileHere";
         val = -1;
         try {
           val = shell.run(args);
@@ -1171,7 +1171,7 @@ public class TestDFSShell {
         args = new String[3];
         args[0] = "-test";
         args[1] = "-e";
-        args[2] = "/test/mkdirs/noFileHere";
+        args[2] = "/test/mkdirs/isFileHere";
         val = -1;
         try {
           val = shell.run(args);

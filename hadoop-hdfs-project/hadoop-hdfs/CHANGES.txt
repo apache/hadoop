@@ -525,6 +525,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4127. Log message is not correct in case of short of replica.
     (Junping Du via suresh)
 
+    HADOOP-8994. TestDFSShell creates file named "noFileHere", making further
+    tests hard to understand (Andy Isaacson via daryn)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
