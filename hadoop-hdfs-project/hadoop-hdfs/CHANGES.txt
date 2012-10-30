@@ -98,9 +98,6 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3789. JournalManager#format() should be able to throw IOException. 
     (Ivan Kelly via umamahesh)
 
-    HDFS-3809. Make BKJM use protobufs for all serialization with ZK. 
-    (Ivan Kelly via umamhesh)
-
   OPTIMIZATIONS
 
   BUG FIXES 
