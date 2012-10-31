@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.util.StringInterner;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -308,7 +309,8 @@ public abstract class AbstractCounters<C extends Counter,
     int numGroups = WritableUtils.readVInt(in);
     while (numGroups-- > 0) {
       limits.checkGroups(groups.size() + 1);
-      G group = groupFactory.newGenericGroup(Text.readString(in), null, limits);
+      G group = groupFactory.newGenericGroup(
+          StringInterner.weakIntern(Text.readString(in)), null, limits);
       group.readFields(in);
       groups.put(group.getName(), group);
     }

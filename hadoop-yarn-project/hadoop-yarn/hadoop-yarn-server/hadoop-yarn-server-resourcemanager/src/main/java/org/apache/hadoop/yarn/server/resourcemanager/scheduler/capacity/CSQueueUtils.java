@@ -84,7 +84,7 @@ class CSQueueUtils {
     if (clusterMemory > 0) {
       queueLimit = clusterMemory * childQueue.getAbsoluteCapacity();
       absoluteUsedCapacity = ((float)usedMemory / (float)clusterMemory);
-      usedCapacity = (usedMemory / queueLimit);
+      usedCapacity = (queueLimit == 0) ? 0 : (usedMemory / queueLimit);
     }
     
     childQueue.setUsedCapacity(usedCapacity);

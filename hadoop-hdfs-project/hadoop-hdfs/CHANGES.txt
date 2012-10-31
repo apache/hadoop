@@ -103,17 +103,10 @@ Trunk (Unreleased)
     HDFS-3510.  Editlog pre-allocation is performed prior to writing edits
     to avoid partial edits case disk out of space.(Colin McCabe via suresh)
 
-    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
-
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
     (Eli Reisman via jghoman)
-
-    HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
-
-    HDFS-3789. JournalManager#format() should be able to throw IOException
-    (Ivan Kelly via todd)
 
     HDFS-3723. Add support -h, -help to all the commands. (Jing Zhao via
     suresh)
@@ -152,11 +145,11 @@ Trunk (Unreleased)
 
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
-    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
-    (suresh)
-
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
     returningmore than INode array. (Jing Zhao via suresh)
+
+    HDFS-4129. Add utility methods to dump NameNode in memory tree for 
+    testing. (szetszwo via suresh)
 
   OPTIMIZATIONS
 
@@ -356,6 +349,9 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
@@ -440,6 +436,15 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
     other than java. (Binglin Chang via suresh)
 
+    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
+
+    HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
+
+    HDFS-3789. JournalManager#format() should be able to throw IOException
+    (Ivan Kelly via todd)
+
+    HDFS-3916. libwebhdfs testing code cleanup. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -521,6 +526,15 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3616. Fix a ConcurrentModificationException bug that BP actor threads
     may not be shutdown properly in DataNode.  (Jing Zhao via szetszwo)
+
+    HDFS-4127. Log message is not correct in case of short of replica.
+    (Junping Du via suresh)
+
+    HADOOP-8994. TestDFSShell creates file named "noFileHere", making further
+    tests hard to understand (Andy Isaacson via daryn)
+
+    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.
+    (Ivan Kelly via umamahesh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1047,8 +1061,6 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3828. Block Scanner rescans blocks too frequently.
     (Andy Isaacson via eli)
-
-    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
 
     HDFS-3895. hadoop-client must include commons-cli (tucu)
 

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.SignedBytes;
 
 /**
@@ -225,11 +228,10 @@ public abstract class INode implements Comparable<byte[]> {
   abstract DirCounts spaceConsumedInTree(DirCounts counts);
   
   /**
-   * Get local file name
-   * @return local file name
+   * @return null if the local name is null; otherwise, return the local name.
    */
   public String getLocalName() {
-    return DFSUtil.bytes2String(name);
+    return name == null? null: DFSUtil.bytes2String(name);
   }
 
 
@@ -239,8 +241,8 @@ public abstract class INode implements Comparable<byte[]> {
   }
 
   /**
-   * Get local file name
-   * @return local file name
+   * @return null if the local name is null;
+   *         otherwise, return the local name byte array.
    */
   byte[] getLocalNameBytes() {
     return name;
@@ -462,5 +464,31 @@ public abstract class INode implements Comparable<byte[]> {
     // file
     return new INodeFile(permissions, blocks, replication,
         modificationTime, atime, preferredBlockSize);
+  }
+
+  /**
+   * Dump the subtree starting from this inode.
+   * @return a text representation of the tree.
+   */
+  @VisibleForTesting
+  public StringBuffer dumpTreeRecursively() {
+    final StringWriter out = new StringWriter(); 
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder());
+    return out.getBuffer();
+  }
+
+  /**
+   * Dump tree recursively.
+   * @param prefix The prefix string that each line should print.
+   */
+  @VisibleForTesting
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix) {
+    out.print(prefix);
+    out.print(" ");
+    out.print(getLocalName());
+    out.print("   (");
+    final String s = super.toString();
+    out.print(s.substring(s.lastIndexOf(getClass().getSimpleName())));
+    out.println(")");
   }
 }

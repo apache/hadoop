@@ -187,6 +187,15 @@ Release 0.23.5 - UNRELEASED
     YARN-139. Interrupted Exception within AsyncDispatcher leads to user
     confusion. (Vinod Kumar Vavilapalli via jlowe)
 
+    YARN-165. RM should point tracking URL to RM web page for app when AM fails
+    (jlowe via bobby)
+
+    YARN-159. RM web ui applications page should be sorted to display last app
+    first (tgraves via bobby)
+
+    YARN-166. capacity scheduler doesn't allow capacity < 1.0 (tgraves via
+    bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

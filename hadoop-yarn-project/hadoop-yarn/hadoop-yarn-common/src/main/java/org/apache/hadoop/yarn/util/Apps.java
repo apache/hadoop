@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.util;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -109,6 +110,7 @@ public class Apps {
     } else {
       val = val + SYSTEM_PATH_SEPARATOR + value;
     }
-    environment.put(variable, val);
+    environment.put(StringInterner.weakIntern(variable), 
+        StringInterner.weakIntern(val));
   }
 }

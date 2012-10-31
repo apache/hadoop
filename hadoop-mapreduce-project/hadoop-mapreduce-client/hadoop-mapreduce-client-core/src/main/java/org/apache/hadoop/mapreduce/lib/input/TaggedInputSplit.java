@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * An {@link InputSplit} that tags another InputSplit with extra data for use
@@ -128,7 +129,7 @@ class TaggedInputSplit extends InputSplit implements Configurable, Writable {
   }
 
   private Class<?> readClass(DataInput in) throws IOException {
-    String className = Text.readString(in);
+    String className = StringInterner.weakIntern(Text.readString(in));
     try {
       return conf.getClassByName(className);
     } catch (ClassNotFoundException e) {

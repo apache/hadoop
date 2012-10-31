@@ -192,6 +192,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
     UNASSIGNED states. (Mayank Bansal via sseth)
 
+    MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on default FS. (Gera Shegalov via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -578,6 +580,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol
     for Job, Task and TaskAttempt. (Siddarth Seth via vinodkv) 
+
+    MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
+    Evans via tgraves)
 
   OPTIMIZATIONS
 

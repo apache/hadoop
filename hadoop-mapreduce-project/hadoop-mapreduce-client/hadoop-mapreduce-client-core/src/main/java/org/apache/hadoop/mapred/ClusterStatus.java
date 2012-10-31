@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * Status information on the current state of the Map-Reduce cluster.
@@ -141,9 +142,9 @@ public class ClusterStatus implements Writable {
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      trackerName = Text.readString(in);
-      reasonForBlackListing = Text.readString(in);
-      blackListReport = Text.readString(in);
+      trackerName = StringInterner.weakIntern(Text.readString(in));
+      reasonForBlackListing = StringInterner.weakIntern(Text.readString(in));
+      blackListReport = StringInterner.weakIntern(Text.readString(in));
     }
 
     @Override
@@ -429,7 +430,7 @@ public class ClusterStatus implements Writable {
     int numTrackerNames = in.readInt();
     if (numTrackerNames > 0) {
       for (int i = 0; i < numTrackerNames; i++) {
-        String name = Text.readString(in);
+        String name = StringInterner.weakIntern(Text.readString(in));
         activeTrackers.add(name);
       }
     }

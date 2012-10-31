@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
+import org.apache.hadoop.util.StringInterner;
 
 import com.google.common.collect.Iterators;
 
@@ -164,7 +165,7 @@ public abstract class AbstractCounterGroup<T extends Counter>
 
   @Override
   public synchronized void readFields(DataInput in) throws IOException {
-    displayName = Text.readString(in);
+    displayName = StringInterner.weakIntern(Text.readString(in));
     counters.clear();
     int size = WritableUtils.readVInt(in);
     for (int i = 0; i < size; i++) {

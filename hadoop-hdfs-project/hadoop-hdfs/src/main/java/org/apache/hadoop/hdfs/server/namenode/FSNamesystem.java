@@ -5466,7 +5466,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public FSDirectory getFSDirectory() {
     return dir;
   }
-  
+
   /**
    * Verifies that the given identifier and password are valid and match.
    * @param identifier Token identifier.

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
+import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -33,6 +35,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -45,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -128,7 +132,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private FinalApplicationStatus finalStatus = null;
   private final StringBuilder diagnostics = new StringBuilder();
 
-  private final String proxy;
+  private Configuration conf;
 
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
@@ -285,9 +289,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       String clientToken, RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
-      String proxy) {
+      Configuration conf) {
 
-    this.proxy = proxy;
+    this.conf = conf;
     this.applicationAttemptId = appAttemptId;
     this.rmContext = rmContext;
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
@@ -397,6 +401,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     try {
       URI trackingUri = trackingUriWithoutScheme == null ? null :
         ProxyUriUtils.getUriFromAMUrl(trackingUriWithoutScheme);
+      String proxy = YarnConfiguration.getProxyHostAndPort(conf);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
       URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
           applicationAttemptId.getApplicationId());
@@ -977,15 +982,13 @@ public class RMAppAttemptImpl implements RMAppAttempt {
             " due to: " +  containerStatus.getDiagnostics() + "." +
             "Failing this attempt.");
 
-        /*
-         * In the case when the AM dies, the trackingUrl is left pointing to the AM's
-         * URL, which shows up in the scheduler UI as a broken link. Setting it here
-         * to empty string will prevent any link from being displayed.
-         * NOTE: don't set trackingUrl to 'null'. That will cause null-pointer exceptions
-         * in the generated proto code.
-         */
-        appAttempt.origTrackingUrl = "";
-        appAttempt.proxiedTrackingUrl = "";
+        // When the AM dies, the trackingUrl is left pointing to the AM's URL,
+        // which shows up in the scheduler UI as a broken link.  Direct the
+        // user to the app page on the RM so they can see the status and logs.
+        appAttempt.origTrackingUrl = pjoin(
+            YarnConfiguration.getRMWebAppHostAndPort(appAttempt.conf),
+            "cluster", "app", appAttempt.getAppAttemptId().getApplicationId());
+        appAttempt.proxiedTrackingUrl = appAttempt.origTrackingUrl;
 
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
