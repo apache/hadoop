@@ -470,7 +470,7 @@ public class RMAppImpl implements RMApp {
 
     RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
         clientTokenStr, rmContext, scheduler, masterService,
-        submissionContext, YarnConfiguration.getProxyHostAndPort(conf));
+        submissionContext, conf);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     handler.handle(
