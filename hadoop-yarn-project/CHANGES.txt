@@ -173,6 +173,9 @@ Release 0.23.5 - UNRELEASED
     YARN-165. RM should point tracking URL to RM web page for app when AM fails
     (jlowe via bobby)
 
+    YARN-159. RM web ui applications page should be sorted to display last app
+    first (tgraves via bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
