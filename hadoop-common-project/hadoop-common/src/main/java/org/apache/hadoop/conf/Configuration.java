@@ -75,6 +75,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
@@ -1964,13 +1965,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             continue;
           Element field = (Element)fieldNode;
           if ("name".equals(field.getTagName()) && field.hasChildNodes())
-            attr = ((Text)field.getFirstChild()).getData().trim();
+            attr = StringInterner.weakIntern(
+                ((Text)field.getFirstChild()).getData().trim());
           if ("value".equals(field.getTagName()) && field.hasChildNodes())
-            value = ((Text)field.getFirstChild()).getData();
+            value = StringInterner.weakIntern(
+                ((Text)field.getFirstChild()).getData());
           if ("final".equals(field.getTagName()) && field.hasChildNodes())
             finalParameter = "true".equals(((Text)field.getFirstChild()).getData());
           if ("source".equals(field.getTagName()) && field.hasChildNodes())
-            source.add(((Text)field.getFirstChild()).getData());
+            source.add(StringInterner.weakIntern(
+                ((Text)field.getFirstChild()).getData()));
         }
         source.add(name);
         

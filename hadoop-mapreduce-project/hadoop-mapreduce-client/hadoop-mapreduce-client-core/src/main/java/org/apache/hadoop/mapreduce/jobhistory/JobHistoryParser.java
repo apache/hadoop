@@ -269,7 +269,7 @@ public class JobHistoryParser {
     TaskAttemptInfo attemptInfo = 
       taskInfo.attemptsMap.get(event.getTaskAttemptId());
     attemptInfo.finishTime = event.getFinishTime();
-    attemptInfo.error = event.getError();
+    attemptInfo.error = StringInterner.weakIntern(event.getError());
     attemptInfo.status = StringInterner.weakIntern(event.getTaskStatus());
     attemptInfo.hostname = StringInterner.weakIntern(event.getHostname());
     attemptInfo.port = event.getPort();
@@ -326,7 +326,7 @@ public class JobHistoryParser {
     TaskInfo taskInfo = info.tasksMap.get(event.getTaskId());
     taskInfo.status = TaskStatus.State.FAILED.toString();
     taskInfo.finishTime = event.getFinishTime();
-    taskInfo.error = event.getError();
+    taskInfo.error = StringInterner.weakIntern(event.getError());
     taskInfo.failedDueToAttemptId = event.getFailedAttemptID();
     info.errorInfo = "Task " + taskInfo.taskId +" failed " +
     taskInfo.attemptsMap.size() + " times ";
