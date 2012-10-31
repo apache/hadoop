@@ -69,7 +69,7 @@ public class RmView extends TwoColumnLayout {
         append("null,{sType:'title-numeric', bSearchable:false}, null]");
 
     // Sort by id upon page load
-    init.append(", aaSorting: [[0, 'asc']]");
+    init.append(", aaSorting: [[0, 'desc']]");
 
     String rows = $("rowlimit");
     int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);
