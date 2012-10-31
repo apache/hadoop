@@ -202,7 +202,9 @@ public class ParentQueue implements CSQueue {
       childCapacities += queue.getCapacity();
     }
     float delta = Math.abs(1.0f - childCapacities);  // crude way to check
-    if (delta > PRECISION) {
+    // allow capacities being set to 0, and enforce child 0 if parent is 0
+    if (((capacity > 0) && (delta > PRECISION)) || 
+        ((capacity == 0) && (childCapacities > 0))) {
       throw new IllegalArgumentException("Illegal" +
       		" capacity of " + childCapacities + 
       		" for children of queue " + queueName);

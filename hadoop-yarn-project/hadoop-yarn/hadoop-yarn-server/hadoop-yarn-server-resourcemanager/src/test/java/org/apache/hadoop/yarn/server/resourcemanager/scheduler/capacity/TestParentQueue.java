@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -495,6 +496,72 @@ public class TestParentQueue {
     verifyQueueMetrics(b, 8*GB, clusterResource);
     verifyQueueMetrics(c, 4*GB, clusterResource);
     reset(a); reset(b); reset(c);
+  }
+  
+  @Test (expected=IllegalArgumentException.class)
+  public void testQueueCapacitySettingChildZero() throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+    
+    // set child queues capacity to 0 when parents not 0
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    csConf.setCapacity(Q_B + "." + B1, 0);
+    csConf.setCapacity(Q_B + "." + B2, 0);
+    csConf.setCapacity(Q_B + "." + B3, 0);
+    
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    CapacityScheduler.parseQueue(csContext, csConf, null, 
+        CapacitySchedulerConfiguration.ROOT, queues, queues, 
+        CapacityScheduler.queueComparator, 
+        CapacityScheduler.applicationComparator,
+        TestUtils.spyHook);
+  }
+  
+  @Test (expected=IllegalArgumentException.class)
+  public void testQueueCapacitySettingParentZero() throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+    
+    // set parent capacity to 0 when child not 0
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    csConf.setCapacity(Q_B, 0);
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
+    csConf.setCapacity(Q_A, 60);
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    CapacityScheduler.parseQueue(csContext, csConf, null, 
+        CapacitySchedulerConfiguration.ROOT, queues, queues, 
+        CapacityScheduler.queueComparator, 
+        CapacityScheduler.applicationComparator,
+        TestUtils.spyHook);
+  }
+  
+  @Test
+  public void testQueueCapacityZero() throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+    
+    // set parent and child capacity to 0
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    csConf.setCapacity(Q_B, 0);
+    csConf.setCapacity(Q_B + "." + B1, 0);
+    csConf.setCapacity(Q_B + "." + B2, 0);
+    csConf.setCapacity(Q_B + "." + B3, 0);
+    
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
+    csConf.setCapacity(Q_A, 60);
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null, 
+          CapacitySchedulerConfiguration.ROOT, queues, queues, 
+          CapacityScheduler.queueComparator, 
+          CapacityScheduler.applicationComparator,
+          TestUtils.spyHook);
+    } catch (IllegalArgumentException e) {
+      fail("Failed to create queues with 0 capacity: " + e);
+    }
+    assertTrue("Failed to create queues with 0 capacity", true);
   }
 
   @Test

@@ -145,11 +145,11 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     final String B2 = B + ".b2";
     final String B3 = B + ".b3";
     conf.setQueues(B, new String[] { "b1", "b2", "b3" });
-    conf.setCapacity(B1, 50);
+    conf.setCapacity(B1, 60);
     conf.setUserLimitFactor(B1, 100.0f);
-    conf.setCapacity(B2, 30);
+    conf.setCapacity(B2, 39.5f);
     conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, 20);
+    conf.setCapacity(B3, 0.5f);
     conf.setUserLimitFactor(B3, 100.0f);
     
     conf.setQueues(A1, new String[] {"a1a", "a1b"});
