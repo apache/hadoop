@@ -91,7 +91,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final float UNDEFINED = -1;
   
   @Private
-  public static final float MINIMUM_CAPACITY_VALUE = 1;
+  public static final float MINIMUM_CAPACITY_VALUE = 0;
   
   @Private
   public static final float MAXIMUM_CAPACITY_VALUE = 100;

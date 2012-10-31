@@ -66,8 +66,8 @@ public class TestCapacityScheduler {
   private static float B_CAPACITY = 89.5f;
   private static float A1_CAPACITY = 30;
   private static float A2_CAPACITY = 70;
-  private static float B1_CAPACITY = 50;
-  private static float B2_CAPACITY = 30;
+  private static float B1_CAPACITY = 79.2f;
+  private static float B2_CAPACITY = 0.8f;
   private static float B3_CAPACITY = 20;
 
   private ResourceManager resourceManager = null;
