@@ -68,6 +68,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -468,7 +469,7 @@ abstract public class Task implements Writable, Configurable {
   }
   
   public void readFields(DataInput in) throws IOException {
-    jobFile = Text.readString(in);
+    jobFile = StringInterner.weakIntern(Text.readString(in));
     taskId = TaskAttemptID.read(in);
     partition = in.readInt();
     numSlotsRequired = in.readInt();
@@ -488,7 +489,7 @@ abstract public class Task implements Writable, Configurable {
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
-    user = Text.readString(in);
+    user = StringInterner.weakIntern(Text.readString(in));
     extraData.readFields(in);
   }
 

@@ -66,6 +66,7 @@ import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 
 /** A Map task. */
@@ -342,7 +343,7 @@ class MapTask extends Task {
    FileSystem fs = file.getFileSystem(conf);
    FSDataInputStream inFile = fs.open(file);
    inFile.seek(offset);
-   String className = Text.readString(inFile);
+   String className = StringInterner.weakIntern(Text.readString(inFile));
    Class<T> cls;
    try {
      cls = (Class<T>) conf.getClassByName(className);

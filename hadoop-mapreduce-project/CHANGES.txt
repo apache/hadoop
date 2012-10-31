@@ -11,6 +11,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol
     for Job, Task and TaskAttempt. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
+    Evans via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
