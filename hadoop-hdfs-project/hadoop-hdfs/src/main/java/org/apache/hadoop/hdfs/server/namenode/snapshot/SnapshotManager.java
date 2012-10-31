@@ -109,7 +109,7 @@ public class SnapshotManager {
       final List<INode> children = srcDir.getChildren();
       if (children != null) {
         final List<INode> inodes = new ArrayList<INode>(children.size());
-        for(final INode c : children) {
+        for(final INode c : new ArrayList<INode>(children)) {
           final INode i;
           if (c == null) {
             i = null;
@@ -127,6 +127,7 @@ public class SnapshotManager {
             throw new AssertionError("Unknow INode type: " + c.getClass()
                 + ", inode = " + c);
           }
+          i.setParent(dstDir);
           inodes.add(i);
         }
         dstDir.setChildren(inodes);

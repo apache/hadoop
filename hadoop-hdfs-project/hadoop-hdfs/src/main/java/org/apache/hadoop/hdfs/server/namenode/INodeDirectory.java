@@ -27,7 +27,10 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshotRoot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 
 /**
  * Directory INode class.
@@ -190,9 +193,8 @@ public class INodeDirectory extends INode {
    *        be thrown when the path refers to a symbolic link.
    * @return the specified number of existing INodes in the path
    */
-  INodesInPath getExistingPathINodes(byte[][] components, int numOfINodes,
-      boolean resolveLink)
-      throws UnresolvedLinkException {
+  INodesInPath getExistingPathINodes(byte[][] components, int numOfINodes, 
+      boolean resolveLink) throws UnresolvedLinkException {
     assert this.compareTo(components[0]) == 0 :
         "Incorrect name " + getLocalName() + " expected "
         + (components[0] == null? null: DFSUtil.bytes2String(components[0]));
@@ -207,7 +209,7 @@ public class INodeDirectory extends INode {
     while (count < components.length && curNode != null) {
       final boolean lastComp = (count == components.length - 1);      
       if (index >= 0) {
-        existing.inodes[index] = curNode;
+        existing.addNode(curNode);
       }
       if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
         final String path = constructPath(components, 0, components.length);
@@ -228,13 +230,45 @@ public class INodeDirectory extends INode {
         break;
       }
       INodeDirectory parentDir = (INodeDirectory)curNode;
-      curNode = parentDir.getChildINode(components[count + 1]);
+      
+      // check if the next byte[] in components is for ".snapshot"
+      if (isDotSnapshotDir(components[count + 1])
+          && (curNode instanceof INodeDirectorySnapshottable)) {
+        // skip the ".snapshot" in components
+        count++;
+        index++;
+        existing.isSnapshot = true;
+        if (index >= 0) { // decrease the capacity by 1 to account for .snapshot
+          existing.capacity--;
+        }
+        // check if ".snapshot" is the last element of components
+        if (count == components.length - 1) {
+          return existing;
+        }
+        // Resolve snapshot root
+        curNode = ((INodeDirectorySnapshottable) parentDir)
+            .getSnapshotINode(components[count + 1]);
+        if (index >= -1) {
+          existing.snapshotRootIndex = existing.size;
+        }
+      } else {
+        // normal case, and also for resolving file/dir under snapshot root
+        curNode = parentDir.getChildINode(components[count + 1]);
+      }
       count++;
       index++;
     }
     return existing;
   }
 
+  /**
+   * @return true if path component is {@link HdfsConstants#DOT_SNAPSHOT_DIR}
+   */
+  private static boolean isDotSnapshotDir(byte[] pathComponent) {
+    return pathComponent == null ? false : HdfsConstants.DOT_SNAPSHOT_DIR
+        .equalsIgnoreCase(DFSUtil.bytes2String(pathComponent));
+  }
+  
   /**
    * Retrieve the existing INodes along the given path. The first INode
    * always exist and is this INode.
@@ -455,18 +489,83 @@ public class INodeDirectory extends INode {
   /**
    * Used by
    * {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)}.
-   * Containing INodes information resolved from a given path.
+   * Contains INodes information resolved from a given path.
    */
   static class INodesInPath {
+    /**
+     * Array with the specified number of INodes resolved for a given path.
+     */
     private INode[] inodes;
-    
-    public INodesInPath(int number) {
+    /**
+     * Indicate the number of non-null elements in {@link #inodes}
+     */
+    private int size;
+    /**
+     * The path for a snapshot file/dir contains the .snapshot thus makes the
+     * length of the path components larger the number of inodes. We use
+     * the capacity to control this special case.
+     */
+    private int capacity;
+    /**
+     * true if this path corresponds to a snapshot
+     */
+    private boolean isSnapshot;
+    /**
+     * Index of {@link INodeDirectorySnapshotRoot} for snapshot path, else -1
+     */
+    private int snapshotRootIndex;
+
+    INodesInPath(int number) {
       assert (number >= 0);
-      this.inodes = new INode[number];
+      inodes = new INode[number];
+      capacity = number;
+      size = 0;
+      isSnapshot = false;
+      snapshotRootIndex = -1;
+    }
+
+    /**
+     * @return the whole inodes array including the null elements.
+     */
+    INode[] getINodes() {
+      if (capacity < inodes.length) {
+        INode[] newNodes = new INode[capacity];
+        for (int i = 0; i < capacity; i++) {
+          newNodes[i] = inodes[i];
+        }
+        inodes = newNodes;
+      }
+      return inodes;
     }
     
-    INode[] getINodes() {
-      return inodes;
+    /**
+     * @return index of the {@link INodeDirectorySnapshotRoot} in
+     *         {@link #inodes} for snapshot path, else -1.
+     */
+    int getSnapshotRootIndex() {
+      return this.snapshotRootIndex;
+    }
+    
+    /**
+     * @return isSnapshot true for a snapshot path
+     */
+    boolean isSnapshot() {
+      return this.isSnapshot;
+    }
+    
+    /**
+     * Add an INode at the end of the array
+     */
+    private void addNode(INode node) {
+      assert size < inodes.length;
+      inodes[size++] = node;
+    }
+    
+    /**
+     * @return The number of non-null elements
+     */
+    int getSize() {
+      return size;
     }
   }
 }

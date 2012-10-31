@@ -300,50 +300,6 @@ public class FSDirectory implements Closeable {
     return newNode;
   }
 
-  /** Add an INodeFileSnapshot to the source file. */
-  INodeFileSnapshot addFileSnapshot(String srcPath, String dstPath
-      ) throws IOException, QuotaExceededException {
-    waitForReady();
-
-    final INodeFile src = INodeFile.valueOf(rootDir.getNode(srcPath, false), srcPath);
-    INodeFileSnapshot snapshot = new INodeFileSnapshot(src, src.computeFileSize(true)); 
-
-    writeLock();
-    try {
-      //add destination snaplink
-      snapshot = addNode(dstPath, snapshot, UNKNOWN_DISK_SPACE);
-
-      final INodeFileWithLink srcWithLink;
-      if (snapshot != null) {
-        //added snapshot node successfully, check source type,
-        if (src instanceof INodeFileWithLink) {
-          srcWithLink = (INodeFileWithLink)src;
-        } else {
-          //source is an INodeFile, replace the source.
-          srcWithLink = new INodeFileWithLink(src);
-          replaceNode(srcPath, src, srcWithLink);
-        }
-        
-        //insert the snapshot to src's linked list.
-        srcWithLink.insert(snapshot);
-      }
-    } finally {
-      writeUnlock();
-
-      if (snapshot == null) {
-        NameNode.stateChangeLog.info(
-            "DIR* FSDirectory.addFileSnapshot: failed to add " + dstPath);
-        return null;
-      }
-    }
-
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFileSnapshot: "
-          + dstPath + " is added to the file system");
-    }
-    return snapshot;
-  }
-
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
       INode newNode, boolean propagateModTime) {
     // NOTE: This does not update space counts for parents

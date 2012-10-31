@@ -102,4 +102,9 @@ public class HdfsConstants {
    */
   public static final int LAYOUT_VERSION = LayoutVersion
       .getCurrentLayoutVersion();
+  
+  /**
+   * A special path component contained in the path for a snapshot file/dir
+   */
+  public static final String DOT_SNAPSHOT_DIR = ".snapshot";
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -57,6 +58,18 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
   /** A list of snapshots of this directory. */
   private final List<INodeDirectorySnapshotRoot> snapshots
       = new ArrayList<INodeDirectorySnapshotRoot>();
+  
+  public INode getSnapshotINode(byte[] name) {
+    if (snapshots == null || snapshots.size() == 0) {
+      return null;
+    }
+    int low = Collections.binarySearch(snapshots, name);
+    if (low >= 0) {
+      return snapshots.get(low);
+    }
+    return null;
+  }
+  
   /** Number of snapshots is allowed. */
   private int snapshotQuota;
 

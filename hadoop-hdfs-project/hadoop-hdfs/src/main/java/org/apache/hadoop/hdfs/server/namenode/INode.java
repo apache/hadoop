@@ -228,7 +228,7 @@ public abstract class INode implements Comparable<byte[]> {
    * Get local file name
    * @return local file name
    */
-  String getLocalName() {
+  public String getLocalName() {
     return DFSUtil.bytes2String(name);
   }
 
@@ -280,6 +280,11 @@ public abstract class INode implements Comparable<byte[]> {
     return this.parent;
   }
 
+  /** Set parent directory */
+  public void setParent(INodeDirectory parent) {
+    this.parent = parent;
+  }
+  
   /** 
    * Get last modification time of inode.
    * @return access time
