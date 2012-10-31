@@ -85,7 +85,7 @@ public class HsView extends TwoColumnLayout {
   private String jobsTableInit() {
     return tableInit().
         // Sort by id upon page load
-        append(", aaSorting: [[2, 'asc']]").
+        append(", aaSorting: [[2, 'desc']]").
         append(", aoColumnDefs:[").
         // Maps Total
         append("{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 7 ] }").
