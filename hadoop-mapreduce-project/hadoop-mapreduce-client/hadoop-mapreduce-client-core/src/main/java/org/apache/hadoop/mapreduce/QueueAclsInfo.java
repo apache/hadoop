@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  *  Class to encapsulate Queue ACLs for a particular
@@ -82,7 +83,7 @@ public class QueueAclsInfo implements Writable {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    queueName = Text.readString(in);
+    queueName = StringInterner.weakIntern(Text.readString(in));
     operations = WritableUtils.readStringArray(in);
   }
 

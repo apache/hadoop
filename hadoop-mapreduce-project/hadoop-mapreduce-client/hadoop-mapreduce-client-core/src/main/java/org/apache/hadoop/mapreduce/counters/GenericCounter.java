@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * A generic counter implementation
@@ -59,8 +60,9 @@ public class GenericCounter extends AbstractCounter {
 
   @Override
   public synchronized void readFields(DataInput in) throws IOException {
-    name = Text.readString(in);
-    displayName = in.readBoolean() ? Text.readString(in) : name;
+    name = StringInterner.weakIntern(Text.readString(in));
+    displayName = in.readBoolean() ? 
+        StringInterner.weakIntern(Text.readString(in)) : name;
     value = WritableUtils.readVLong(in);
   }
 

@@ -75,6 +75,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -667,9 +668,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           .newRecordInstance(TaskAttemptCompletionEvent.class);
       tce.setEventId(-1);
       String scheme = (encryptedShuffle) ? "https://" : "http://";
-      tce.setMapOutputServerAddress(scheme
+      tce.setMapOutputServerAddress(StringInterner.weakIntern(scheme
          + attempt.getNodeHttpAddress().split(":")[0] + ":"
-         + attempt.getShufflePort());
+         + attempt.getShufflePort()));
       tce.setStatus(status);
       tce.setAttemptId(attempt.getID());
       int runTime = 0;

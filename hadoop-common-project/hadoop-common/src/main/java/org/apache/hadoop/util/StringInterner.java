@@ -59,6 +59,9 @@ public class StringInterner {
    * @return strong reference to interned string instance
    */
   public static String strongIntern(String sample) {
+    if (sample == null) {
+      return null;
+    }
     return strongInterner.intern(sample);
   }
   
@@ -72,6 +75,9 @@ public class StringInterner {
    * @return weak reference to interned string instance
    */
   public static String weakIntern(String sample) {
+    if (sample == null) {
+      return null;
+    }
     return weakInterner.intern(sample);
   }
 

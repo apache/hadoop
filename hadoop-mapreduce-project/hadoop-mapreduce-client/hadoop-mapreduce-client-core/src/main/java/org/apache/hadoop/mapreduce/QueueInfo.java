@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * Class that contains the information regarding the Job Queues which are 
@@ -190,9 +191,9 @@ public class QueueInfo implements Writable {
   
   @Override
   public void readFields(DataInput in) throws IOException {
-    queueName = Text.readString(in);
+    queueName = StringInterner.weakIntern(Text.readString(in));
     queueState = WritableUtils.readEnum(in, QueueState.class);
-    schedulingInfo = Text.readString(in);
+    schedulingInfo = StringInterner.weakIntern(Text.readString(in));
     int length = in.readInt();
     stats = new JobStatus[length];
     for (int i = 0; i < length; i++) {

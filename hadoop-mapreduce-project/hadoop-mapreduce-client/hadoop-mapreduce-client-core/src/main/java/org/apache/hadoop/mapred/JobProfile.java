@@ -28,6 +28,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.util.StringInterner;
 
 /**************************************************
  * A JobProfile is a MapReduce primitive.  Tracks a job,
@@ -176,11 +177,11 @@ public class JobProfile implements Writable {
 
   public void readFields(DataInput in) throws IOException {
     jobid.readFields(in);
-    this.jobFile = Text.readString(in);
-    this.url = Text.readString(in);
-    this.user = Text.readString(in);
-    this.name = Text.readString(in);
-    this.queueName = Text.readString(in);
+    this.jobFile = StringInterner.weakIntern(Text.readString(in));
+    this.url = StringInterner.weakIntern(Text.readString(in));
+    this.user = StringInterner.weakIntern(Text.readString(in));
+    this.name = StringInterner.weakIntern(Text.readString(in));
+    this.queueName = StringInterner.weakIntern(Text.readString(in));
   }
 }
 

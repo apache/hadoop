@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.TIPStatus;
+import org.apache.hadoop.util.StringInterner;
 
 /** A report on the state of a task. */
 @InterfaceAudience.Private
@@ -208,7 +209,7 @@ public class TaskReport implements Writable {
   public void readFields(DataInput in) throws IOException {
     this.taskid.readFields(in);
     this.progress = in.readFloat();
-    this.state = Text.readString(in);
+    this.state = StringInterner.weakIntern(Text.readString(in));
     this.startTime = in.readLong(); 
     this.finishTime = in.readLong();
     
