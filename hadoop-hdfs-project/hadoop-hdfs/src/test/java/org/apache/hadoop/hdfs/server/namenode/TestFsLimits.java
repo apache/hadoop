@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -60,16 +59,10 @@ public class TestFsLimits {
     return fsn;
   }
   
-  private static class TestFSDirectory extends FSDirectory {
-    public TestFSDirectory() throws IOException {
+  private static class MockFSDirectory extends FSDirectory {
+    public MockFSDirectory() throws IOException {
       super(new FSImage(conf), getMockNamesystem(), conf);
       setReady(fsIsReady);
-    }
-    
-    @Override
-    public <T extends INode> void verifyFsLimits(INode[] pathComponents,
-        int pos, T child) throws FSLimitException {
-      super.verifyFsLimits(pathComponents, pos, child);
     }
   }
 
@@ -157,7 +150,7 @@ public class TestFsLimits {
   private void addChildWithName(String name, Class<?> expected)
   throws Exception {
     // have to create after the caller has had a chance to set conf values
-    if (fs == null) fs = new TestFSDirectory();
+    if (fs == null) fs = new MockFSDirectory();
 
     INode child = new INodeDirectory(name, perms);
     child.setLocalName(name);
