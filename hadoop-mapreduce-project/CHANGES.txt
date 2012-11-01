@@ -626,6 +626,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4746. The MR Application Master does not have a config to set
     environment variables (Rob Parker via bobby)
 
+    MAPREDUCE-4729. job history UI not showing all job attempts. (Vinod
+    Kumar Vavilapalli via jlowe)
+ 
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
