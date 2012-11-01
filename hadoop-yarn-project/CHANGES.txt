@@ -65,6 +65,9 @@ Release 0.23.5 - UNRELEASED
     YARN-166. capacity scheduler doesn't allow capacity < 1.0 (tgraves via
     bobby)
 
+    YARN-189. Fixed a deadlock between RM's ApplicationMasterService and the
+    dispatcher. (Thomas Graves via vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
