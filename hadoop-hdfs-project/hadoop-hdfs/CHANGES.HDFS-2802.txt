@@ -37,3 +37,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4111. Support snapshot of subtrees. (szetszwo via suresh)
 
   HDFS-4119. Complete the allowSnapshot code and add a test for it. (szetszwo)
+
+  HDFS-4133. Add testcases for testing basic snapshot functionalities.
+  (Jing Zhao via suresh)

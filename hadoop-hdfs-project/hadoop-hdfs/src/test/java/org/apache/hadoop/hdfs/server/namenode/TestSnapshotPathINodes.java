@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /** Test snapshot related operations. */
-public class TestSnapshot {
+public class TestSnapshotPathINodes {
   private static final long seed = 0;
   private static final short REPLICATION = 3;
 

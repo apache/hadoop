@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -114,5 +115,17 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
     r.setModificationTime(timestamp);
     setModificationTime(timestamp);
     return r;
+  }
+  
+  @Override
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix) {
+    super.dumpTreeRecursively(out, prefix);
+
+    out.print(prefix);
+    out.print(snapshots.size());
+    out.print(snapshots.size() <= 1 ? " snapshot of " : " snapshots of ");
+    out.println(getLocalName());
+
+    dumpTreeRecursively(out, prefix, snapshots);
   }
 }
