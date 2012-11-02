@@ -31,3 +31,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8949. Remove FileUtil.CygPathCommand dead code. (Chris Nauroth via 
   suresh)
+
+  HADOOP-8956. FileSystem.primitiveMkdir failures on Windows cause multiple
+  test suites to fail. (Chris Nauroth via suresh)

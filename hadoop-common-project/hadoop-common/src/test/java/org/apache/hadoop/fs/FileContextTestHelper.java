@@ -68,7 +68,7 @@ public final class FileContextTestHelper {
   public static String getAbsoluteTestRootDir(FileContext fc)
       throws IOException {
     if (absTestRootDir == null) {
-      if (TEST_ROOT_DIR.startsWith("/")) {
+      if (new Path(TEST_ROOT_DIR).isAbsolute()) {
         absTestRootDir = TEST_ROOT_DIR;
       } else {
         absTestRootDir = fc.getWorkingDirectory().toString() + "/"

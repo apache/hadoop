@@ -89,9 +89,9 @@ public class RawLocalFs extends DelegateToFileSystem {
     }
     // NB: Use createSymbolicLink in java.nio.file.Path once available
     try {
-      Shell.execCommand(Shell.LINK_COMMAND, "-s",
+      Shell.execCommand(Shell.getSymlinkCommand(
                         new URI(target.toString()).getPath(),
-                        new URI(link.toString()).getPath());
+                        new URI(link.toString()).getPath()));
     } catch (URISyntaxException x) {
       throw new IOException("Invalid symlink path: "+x.getMessage());
     } catch (IOException x) {
