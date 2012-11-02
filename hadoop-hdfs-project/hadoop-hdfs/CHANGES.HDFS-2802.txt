@@ -40,3 +40,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4133. Add testcases for testing basic snapshot functionalities.
   (Jing Zhao via suresh)
+
+  HDFS-4116. Add auditlog for some snapshot operations. (Jing Zhao via suresh)

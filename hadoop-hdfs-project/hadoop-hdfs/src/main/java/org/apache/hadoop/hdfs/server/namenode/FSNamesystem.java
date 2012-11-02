@@ -5519,7 +5519,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
-        throw new SafeModeException("Cannot allow snapshot for " + path, safeMode);
+        throw new SafeModeException("Cannot allow snapshot for " + path,
+            safeMode);
       }
       checkOwner(path);
 
@@ -5531,7 +5532,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     getEditLog().logSync();
     
-    //TODO: audit log
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
+          "allowSnapshot", path, null, null);
+    }
   }
   
   // Disallow snapshot on a directory.
@@ -5539,6 +5543,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public void disallowSnapshot(String snapshotRoot)
       throws SafeModeException, IOException {
     // TODO: implement
+    
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
+          "disallowSnapshot", snapshotRoot, null, null);
+    }
   }
   
   /**
@@ -5552,7 +5561,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
-        throw new SafeModeException("Cannot create snapshot for " + path, safeMode);
+        throw new SafeModeException("Cannot create snapshot for " + path,
+            safeMode);
       }
       checkOwner(path);
 
@@ -5568,6 +5578,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     getEditLog().logSync();
     
-    //TODO: audit log
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      Path snapshotRoot = new Path(path, ".snapshot/" + snapshotName);
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
+          "createSnapshot", path, snapshotRoot.toString(), null);
+    }
   }
 }
