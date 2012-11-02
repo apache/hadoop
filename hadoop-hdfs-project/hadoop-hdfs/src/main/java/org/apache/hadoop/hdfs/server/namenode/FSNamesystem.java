@@ -3578,6 +3578,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public int getTotalLoad() {
     return datanodeStatistics.getXceiverCount();
   }
+  
+  @Metric({ "SnapshottableDirectories", "Number of snapshottable directories" })
+  public long getNumSnapshottableDirs() {
+    return this.snapshotManager.getNumSnapshottableDirs();
+  }
+
+  @Metric({ "Snapshots", "The number of snapshots" })
+  public long getNumSnapshots() {
+    return this.snapshotManager.getNumSnapshots();
+  }
 
   int getNumberOfDatanodes(DatanodeReportType type) {
     readLock();
@@ -5542,7 +5552,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   public void disallowSnapshot(String snapshotRoot)
       throws SafeModeException, IOException {
-    // TODO: implement
+    // TODO: implement, also need to update metrics in corresponding
+    // SnapshotManager method 
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),

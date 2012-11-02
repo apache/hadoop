@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -30,10 +31,12 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 
 /** Manage snapshottable directories and their snapshots. */
-public class SnapshotManager {
+public class SnapshotManager implements SnapshotStats {
   private final FSNamesystem namesystem;
   private final FSDirectory fsdir;
-
+  private AtomicLong numSnapshottableDirs = new AtomicLong();
+  private AtomicLong numSnapshots = new AtomicLong();
+  
   /** All snapshottable directories in the namesystem. */
   private final List<INodeDirectorySnapshottable> snapshottables
       = new ArrayList<INodeDirectorySnapshottable>();
@@ -67,6 +70,7 @@ public class SnapshotManager {
     } finally {
       namesystem.writeUnlock();
     }
+    numSnapshottableDirs.getAndIncrement();
   }
 
   /**
@@ -78,6 +82,7 @@ public class SnapshotManager {
   public void createSnapshot(final String snapshotName, final String path
       ) throws IOException {
     new SnapshotCreation(path).run(snapshotName);
+    numSnapshots.getAndIncrement();
   }
   
   /**
@@ -174,4 +179,15 @@ public class SnapshotManager {
       return snapshot;
     }
   }
+
+  @Override
+  public long getNumSnapshottableDirs() {
+    return numSnapshottableDirs.get();
+  }
+
+  @Override
+  public long getNumSnapshots() {
+    return numSnapshots.get();
+  }
+  
 }

@@ -57,6 +57,12 @@ public class NameNodeMetrics {
   @Metric MutableCounterLong createSymlinkOps;
   @Metric MutableCounterLong getLinkTargetOps;
   @Metric MutableCounterLong filesInGetListingOps;
+  @Metric("Number of allowSnapshot operations")
+  MutableCounterLong allowSnapshotOps;
+  @Metric("Number of disallowSnapshot operations")
+  MutableCounterLong disallowSnapshotOps;
+  @Metric("Number of createSnapshot operations")
+  MutableCounterLong createSnapshotOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -159,6 +165,18 @@ public class NameNodeMetrics {
     getLinkTargetOps.incr();
   }
 
+  public void incrAllowSnapshotOps() {
+    allowSnapshotOps.incr();
+  }
+  
+  public void incrDisAllowSnapshotOps() {
+    disallowSnapshotOps.incr();
+  }
+  
+  public void incrCreateSnapshotOps() {
+    createSnapshotOps.incr();
+  }
+  
   public void addTransaction(long latency) {
     transactions.add(latency);
   }

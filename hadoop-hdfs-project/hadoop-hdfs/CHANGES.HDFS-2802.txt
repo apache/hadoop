@@ -42,3 +42,5 @@ Branch-2802 Snapshot (Unreleased)
   (Jing Zhao via suresh)
 
   HDFS-4116. Add auditlog for some snapshot operations. (Jing Zhao via suresh)
+
+  HDFS-4095. Add some snapshot related metrics. (Jing Zhao via suresh)
