@@ -111,31 +111,31 @@ public class TestDistributedFileSystem {
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.isLeaseRenewerStarted());
   
         //create a file
         FSDataOutputStream out = dfs.create(filepath);
-        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+        assertTrue(dfs.dfs.isLeaseRenewerStarted());
   
         //write something and close
         out.writeLong(millis);
-        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+        assertTrue(dfs.dfs.isLeaseRenewerStarted());
         out.close();
-        assertTrue(dfs.dfs.isLeaseCheckerStarted());
+        assertTrue(dfs.dfs.isLeaseRenewerStarted());
         dfs.close();
       }
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.isLeaseRenewerStarted());
 
         //open and check the file
         FSDataInputStream in = dfs.open(filepath);
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.isLeaseRenewerStarted());
         assertEquals(millis, in.readLong());
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.isLeaseRenewerStarted());
         in.close();
-        assertFalse(dfs.dfs.isLeaseCheckerStarted());
+        assertFalse(dfs.dfs.isLeaseRenewerStarted());
         dfs.close();
       }
     }

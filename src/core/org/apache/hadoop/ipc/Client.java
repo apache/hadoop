@@ -109,7 +109,7 @@ public class Client {
    * @param conf Configuration
    * @return the ping interval
    */
-  final static int getPingInterval(Configuration conf) {
+  public final static int getPingInterval(Configuration conf) {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
   }
   

@@ -86,7 +86,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   volatile boolean clientRunning = true;
   Random r = new Random();
   final String clientName;
-  final LeaseChecker leasechecker = new LeaseChecker();
+  final LeaseRenewer leaserenewer;
   private Configuration conf;
   private long defaultBlockSize;
   private short defaultReplication;
@@ -250,6 +250,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
     this.maxBlockAcquireFailures = getMaxBlockAcquireFailures(conf);
+    
+    // TODO: review this
+    leaserenewer = new LeaseRenewer(this, Client.getPingInterval(conf));
 
     ugi = UserGroupInformation.getCurrentUser();
 
@@ -317,10 +320,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public synchronized void close() throws IOException {
     if(clientRunning) {
-      leasechecker.close();
+      leaserenewer.close();
       clientRunning = false;
       try {
-        leasechecker.interruptAndJoin();
+        leaserenewer.interruptAndJoin();
       } catch (InterruptedException ie) {
       }
   
@@ -760,7 +763,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     OutputStream result = new DFSOutputStream(src, masked,
         overwrite, createParent, replication, blockSize, progress, buffersize,
         conf.getInt("io.bytes.per.checksum", 512));
-    leasechecker.put(src, result);
+    leaserenewer.put(src, result);
     return result;
   }
 
@@ -815,7 +818,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
     final DFSOutputStream result = new DFSOutputStream(src, buffersize, progress,
         lastBlock, stat, conf.getInt("io.bytes.per.checksum", 512));
-    leasechecker.put(src, result);
+    leaserenewer.put(src, result);
     return result;
   }
 
@@ -1392,115 +1395,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     throw new IOException("No live nodes contain current block");
   }
 
-  boolean isLeaseCheckerStarted() {
-    return leasechecker.daemon != null;
-  }
-
-  /** Lease management*/
-  class LeaseChecker implements Runnable {
-    /** A map from src -> DFSOutputStream of files that are currently being
-     * written by this client.
-     */
-    private final SortedMap<String, OutputStream> pendingCreates
-        = new TreeMap<String, OutputStream>();
-
-    private Daemon daemon = null;
-    
-    synchronized void put(String src, OutputStream out) {
-      if (clientRunning) {
-        if (daemon == null) {
-          daemon = new Daemon(this);
-          daemon.start();
-        }
-        pendingCreates.put(src, out);
-      }
-    }
-    
-    synchronized void remove(String src) {
-      pendingCreates.remove(src);
-    }
-    
-    void interruptAndJoin() throws InterruptedException {
-      Daemon daemonCopy = null;
-      synchronized (this) {
-        if (daemon != null) {
-          daemon.interrupt();
-          daemonCopy = daemon;
-        }
-      }
-     
-      if (daemonCopy != null) {
-        LOG.debug("Wait for lease checker to terminate");
-        daemonCopy.join();
-      }
-    }
-
-    void close() {
-      while (true) {
-        String src;
-        OutputStream out;
-        synchronized (this) {
-          if (pendingCreates.isEmpty()) {
-            return;
-          }
-          src = pendingCreates.firstKey();
-          out = pendingCreates.remove(src);
-        }
-        if (out != null) {
-          try {
-            out.close();
-          } catch (IOException ie) {
-            LOG.error("Exception closing file " + src+ " : " + ie, ie);
-          }
-        }
-      }
-    }
-
-    private void renew() throws IOException {
-      synchronized(this) {
-        if (pendingCreates.isEmpty()) {
-          return;
-        }
-      }
-      namenode.renewLease(clientName);
-    }
-
-    /**
-     * Periodically check in with the namenode and renew all the leases
-     * when the lease period is half over.
-     */
-    public void run() {
-      long lastRenewed = 0;
-      while (clientRunning && !Thread.interrupted()) {
-        if (System.currentTimeMillis() - lastRenewed > (LEASE_SOFTLIMIT_PERIOD / 2)) {
-          try {
-            renew();
-            lastRenewed = System.currentTimeMillis();
-          } catch (IOException ie) {
-            LOG.warn("Problem renewing lease for " + clientName, ie);
-          }
-        }
-
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(this + " is interrupted.", ie);
-          }
-          return;
-        }
-      }
-    }
-
-    /** {@inheritDoc} */
-    public String toString() {
-      String s = getClass().getSimpleName();
-      if (LOG.isTraceEnabled()) {
-        return s + "@" + DFSClient.this + ": "
-               + StringUtils.stringifyException(new Throwable("for testing"));
-      }
-      return s;
-    }
+  boolean isLeaseRenewerStarted() {
+    return leaserenewer.isRunning();
   }
 
   /** Utility class to encapsulate data node info and its address. */
@@ -3994,7 +3890,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           throw e;
       }
       closeInternal();
-      leasechecker.remove(src);
+      leaserenewer.remove(src);
       
       if (s != null) {
         s.close();
@@ -4011,7 +3907,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       response.close();
       closed = true;
     }
- 
+    
     // shutdown datastreamer and responseprocessor threads.
     private void closeThreads() throws IOException {
       try {
