@@ -539,6 +539,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3804.  TestHftpFileSystem fails intermittently with JDK7
     (Trevor Robinson via daryn)
 
+    HDFS-4132. When libwebhdfs is not enabled, nativeMiniDfsClient frees
+    uninitialized memory (Colin Patrick McCabe via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
