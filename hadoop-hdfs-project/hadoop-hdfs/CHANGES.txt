@@ -187,6 +187,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8994. TestDFSShell creates file named "noFileHere", making further
     tests hard to understand (Andy Isaacson via daryn)
 
+    HDFS-3804.  TestHftpFileSystem fails intermittently with JDK7
+    (Trevor Robinson via daryn)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
