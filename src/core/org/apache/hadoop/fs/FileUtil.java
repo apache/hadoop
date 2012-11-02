@@ -379,32 +379,6 @@ public class FileUtil {
   }
 
   /**
-   * This class is only used on windows to invoke the cygpath command.
-   */
-  private static class CygPathCommand extends Shell {
-    String[] command;
-    String result;
-    CygPathCommand(String path) throws IOException {
-      command = new String[]{"cygpath", "-u", path};
-      run();
-    }
-    String getResult() throws IOException {
-      return result;
-    }
-    protected String[] getExecString() {
-      return command;
-    }
-    protected void parseExecResult(BufferedReader lines) throws IOException {
-      String line = lines.readLine();
-      if (line == null) {
-        throw new IOException("Can't convert '" + command[2] + 
-                              " to a cygwin path");
-      }
-      result = line;
-    }
-  }
-
-  /**
    * Convert a os-native filename to a path that works for the shell.
    * @param filename The filename to convert
    * @return The unix pathname
@@ -606,18 +580,6 @@ public class FileUtil {
       throw e;
     }
     return shExec.getExitCode();
-  }
-  
-  private static String copyStderr(Process p) throws IOException {
-    InputStream err = p.getErrorStream();
-    StringBuilder result = new StringBuilder();
-    byte[] buff = new byte[4096];
-    int len = err.read(buff);
-    while (len > 0) {
-      result.append(new String(buff, 0 , len));
-      len = err.read(buff);
-    }
-    return result.toString();
   }
 
   /**

@@ -194,3 +194,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8872. FileSystem#length returns zero for symlinks on 
     windows+java6. (Ivan Mitic via suresh)
+
+    HADOOP-8949. Remove FileUtil.CygPathCommand dead code. (Chris Nauroth via 
+    suresh)
