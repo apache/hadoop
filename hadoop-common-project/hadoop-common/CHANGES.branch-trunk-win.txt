@@ -36,3 +36,5 @@ branch-trunk-win changes - unreleased
   test suites to fail. (Chris Nauroth via suresh)
 
   HADOOP-8978. TestTrash fails on Windows. (Chris Nauroth via suresh)
+
+  HADOOP-8978. TestHttpServer fails on Windows. (Chris Nauroth via suresh)
