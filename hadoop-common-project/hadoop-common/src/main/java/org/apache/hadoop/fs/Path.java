@@ -158,6 +158,23 @@ public class Path implements Comparable {
     }
   }
 
+  /**
+   * Merge 2 paths such that the second path is appended relative to the first.
+   * The returned path has the scheme and authority of the first path.  On
+   * Windows, the drive specification in the second path is discarded.
+   * 
+   * @param path1 Path first path
+   * @param path2 Path second path, to be appended relative to path1
+   * @return Path merged path
+   */
+  public static Path mergePaths(Path path1, Path path2) {
+    String path2Str = path2.toUri().getPath();
+    if(path2.hasWindowsDrive(path2Str, path2Str.charAt(0)=='/')) {
+      path2Str = path2Str.substring(path2Str.indexOf(':')+1);
+    }
+    return new Path(path1 + path2Str);
+  }
+
   private String normalizePath(String path) {
     // remove double slashes & backslashes
     path = StringUtils.replace(path, "//", "/");

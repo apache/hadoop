@@ -34,3 +34,5 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8956. FileSystem.primitiveMkdir failures on Windows cause multiple
   test suites to fail. (Chris Nauroth via suresh)
+
+  HADOOP-8978. TestTrash fails on Windows. (Chris Nauroth via suresh)
