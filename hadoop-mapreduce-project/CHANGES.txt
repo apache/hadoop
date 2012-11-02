@@ -67,6 +67,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4729. job history UI not showing all job attempts. (Vinod
     Kumar Vavilapalli via jlowe)
+
+    MAPREDUCE-4763 repair test TestUmbilicalProtocolWithJobToken (Ivan A.
+    Veselovsky via bobby)
  
 Release 0.23.4 - UNRELEASED
 

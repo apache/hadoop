@@ -51,11 +51,14 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.log4j.Level;
-import org.junit.Ignore;
 import org.junit.Test;
 
-/** Unit tests for using Job Token over RPC. */
-@Ignore
+/** Unit tests for using Job Token over RPC. 
+ * 
+ * System properties required:
+ * -Djava.security.krb5.conf=.../hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient/target/test-classes/krb5.conf 
+ * -Djava.net.preferIPv4Stack=true
+ */
 public class TestUmbilicalProtocolWithJobToken {
   private static final String ADDRESS = "0.0.0.0";
 
