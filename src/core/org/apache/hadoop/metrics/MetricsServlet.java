@@ -109,8 +109,8 @@ public class MetricsServlet extends HttpServlet {
       throws ServletException, IOException {
 
     // Do the authorization
-    if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
-        response)) {
+    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+        request, response)) {
       return;
     }
 

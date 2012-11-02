@@ -45,6 +45,15 @@
 </property>
 
 <property>
+  <name>hadoop.security.instrumentation.requires.admin</name>
+  <value>false</value>
+  <description>
+    Indicates if administrator ACLs are required to access
+    instrumentation servlets (JMX, METRICS, CONF, STACKS).
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.authentication</name>
   <value>simple</value>
   <description>Possible values are simple (no authentication), and kerberos

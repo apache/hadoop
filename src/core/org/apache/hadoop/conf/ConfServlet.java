@@ -55,6 +55,10 @@ public class ConfServlet extends HttpServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
+    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+        request, response)) {
+      return;
+    }
     String format = request.getParameter(FORMAT_PARAM);
     if (null == format) {
       format = FORMAT_XML;

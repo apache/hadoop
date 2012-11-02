@@ -693,6 +693,37 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Checks the user has privileges to access to instrumentation servlets.
+   * <p/>
+   * If <code>hadoop.security.instrumentation.requires.admin</code> is set to 
+   * FALSE (default value) it returns always returns TRUE.
+   * <p/>
+   * If <code>hadoop.security.instrumentation.requires.admin</code> is set to 
+   * TRUE it will check that if the current user is in the admin ACLS. If the 
+   * user is in the admin ACLs it returns TRUE, otherwise it returns FALSE.
+   *
+   * @param servletContext the servlet context.
+   * @param request the servlet request.
+   * @param response the servlet response.
+   * @return TRUE/FALSE based on the logic decribed above.
+   */
+  public static boolean isInstrumentationAccessAllowed(
+      ServletContext servletContext, HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    Configuration conf = (Configuration) servletContext
+        .getAttribute(CONF_CONTEXT_ATTRIBUTE);
+
+    boolean access = true;
+    boolean adminAccess = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN,
+        false);
+    if (adminAccess) {
+      access = hasAdministratorAccess(servletContext, request, response);
+    }
+    return access;
+  }
+  
+  /**
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
    * 
@@ -749,8 +780,8 @@ public class HttpServer implements FilterContainer {
       throws ServletException, IOException {
 
       // Do the authorization
-      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
-          response)) {
+      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+          request, response)) {
         return;
       }
 

@@ -40,6 +40,9 @@ public class CommonConfigurationKeys {
   public static final String HADOOP_SECURITY_AUTHORIZATION =
     "hadoop.security.authorization";
   /** See src/core/core-default.xml */
+  public static final String HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN = 
+      "hadoop.security.instrumentation.requires.admin";
+  /** See src/core/core-default.xml */
   public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY = 
     "hadoop.security.service.user.name.key";
   /** See src/core/core-default.xml */

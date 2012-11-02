@@ -29,6 +29,9 @@ Release 1.2.0 - unreleased
     HDFS-3912. Detect and avoid stale datanodes for writes.
     (Jing Zhao via suresh)
 
+    HADOOP-8988. Allow configuration of authorization for JmxJsonServlet and 
+    MetricsServlet. (tucu, Jing Zhao via suresh)
+
   IMPROVEMENTS
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)
