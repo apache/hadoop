@@ -69,6 +69,7 @@ public class INodeFile extends INode implements BlockCollection {
   protected INodeFile(INodeFile f) {
     this(f.getPermissionStatus(), f.getBlocks(), f.getFileReplication(),
         f.getModificationTime(), f.getAccessTime(), f.getPreferredBlockSize());
+    this.name = f.getLocalNameBytes();
   }
 
   /**

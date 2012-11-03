@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshotRoot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -56,7 +56,7 @@ public class INodeDirectory extends INode {
 
   private List<INode> children;
 
-  protected INodeDirectory(String name, PermissionStatus permissions) {
+  public INodeDirectory(String name, PermissionStatus permissions) {
     super(name, permissions);
     this.children = null;
   }
@@ -514,7 +514,7 @@ public class INodeDirectory extends INode {
      */
     private boolean isSnapshot;
     /**
-     * Index of {@link INodeDirectorySnapshotRoot} for snapshot path, else -1
+     * Index of {@link INodeDirectoryWithSnapshot} for snapshot path, else -1
      */
     private int snapshotRootIndex;
 
@@ -542,7 +542,7 @@ public class INodeDirectory extends INode {
     }
     
     /**
-     * @return index of the {@link INodeDirectorySnapshotRoot} in
+     * @return index of the {@link INodeDirectoryWithSnapshot} in
      *         {@link #inodes} for snapshot path, else -1.
      */
     int getSnapshotRootIndex() {

@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshotRoot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
 import org.junit.After;
@@ -163,13 +163,13 @@ public class TestSnapshotPathINodes {
     // SnapshotRootIndex should be 3: {root, Testsnapshot, sub1, s1, file1}
     assertEquals(nodesInPath.getSnapshotRootIndex(), 3);
     assertTrue(inodes[nodesInPath.getSnapshotRootIndex()] instanceof 
-        INodeDirectorySnapshotRoot);
+        INodeDirectoryWithSnapshot);
     // Check the INode for file1 (snapshot file)
     INode snapshotFileNode = inodes[inodes.length - 1]; 
     assertEquals(snapshotFileNode.getLocalName(), file1.getName());
     assertTrue(snapshotFileNode instanceof INodeFileSnapshot);
     assertTrue(snapshotFileNode.getParent() instanceof 
-        INodeDirectorySnapshotRoot);
+        INodeDirectoryWithSnapshot);
     
     // Call getExistingPathINodes and request only one INode.
     nodesInPath = fsdir.rootDir.getExistingPathINodes(components, 1, false);
@@ -266,13 +266,13 @@ public class TestSnapshotPathINodes {
     // SnapshotRootIndex should be 3: {root, Testsnapshot, sub1, s1, file1}
     assertEquals(nodesInPath.getSnapshotRootIndex(), 3);
     assertTrue(inodes[nodesInPath.getSnapshotRootIndex()] instanceof 
-        INodeDirectorySnapshotRoot);
+        INodeDirectoryWithSnapshot);
     // Check the INode for file1 (snapshot file)
     INode snapshotFileNode = inodes[inodes.length - 1]; 
     assertEquals(snapshotFileNode.getLocalName(), file1.getName());
     assertTrue(snapshotFileNode instanceof INodeFileSnapshot);
     assertTrue(snapshotFileNode.getParent() instanceof 
-        INodeDirectorySnapshotRoot);
+        INodeDirectoryWithSnapshot);
   }
   
   /** 
@@ -326,11 +326,11 @@ public class TestSnapshotPathINodes {
     // SnapshotRootIndex should still be 3: {root, Testsnapshot, sub1, s1, null}
     assertEquals(nodesInPath.getSnapshotRootIndex(), 3);
     assertTrue(inodes[nodesInPath.getSnapshotRootIndex()] instanceof 
-        INodeDirectorySnapshotRoot);
+        INodeDirectoryWithSnapshot);
     // Check the last INode in inodes, which should be null
     assertNull(inodes[inodes.length - 1]);
     assertTrue(inodes[inodes.length - 2] instanceof 
-        INodeDirectorySnapshotRoot);
+        INodeDirectoryWithSnapshot);
   }
   
   /** 

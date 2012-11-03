@@ -244,7 +244,7 @@ public abstract class INode implements Comparable<byte[]> {
    * @return null if the local name is null;
    *         otherwise, return the local name byte array.
    */
-  byte[] getLocalNameBytes() {
+  public byte[] getLocalNameBytes() {
     return name;
   }
 

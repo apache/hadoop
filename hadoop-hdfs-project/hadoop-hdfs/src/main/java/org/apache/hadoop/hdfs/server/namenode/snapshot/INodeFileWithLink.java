@@ -37,7 +37,6 @@ public class INodeFileWithLink extends INodeFile {
 
   public INodeFileWithLink(INodeFile f) {
     super(f);
-    setLocalName(f.getLocalName());
     next = this;
   }
 

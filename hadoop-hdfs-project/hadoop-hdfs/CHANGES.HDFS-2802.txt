@@ -44,3 +44,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4116. Add auditlog for some snapshot operations. (Jing Zhao via suresh)
 
   HDFS-4095. Add some snapshot related metrics. (Jing Zhao via suresh)
+
+  HDFS-4141. Support directory diff - the difference between the current state
+  and a previous snapshot of an INodeDirectory. (szetszwo)
