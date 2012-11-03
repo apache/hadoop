@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.Result;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSck;
@@ -678,11 +679,11 @@ public class TestFsck {
       DFSTestUtil.waitReplication(fs, filePath, (short)1);
       
       // intentionally corrupt NN data structure
-      INodeFile node = 
-        (INodeFile)cluster.getNamesystem().dir.rootDir.getNode(fileName,
-                                                               true);
-      assertEquals(node.blocks.length, 1);
-      node.blocks[0].setNumBytes(-1L);  // set the block length to be negative
+      INodeFile node = (INodeFile)cluster.getNamesystem().dir.rootDir.getNode(
+          fileName, true);
+      final BlockInfo[] blocks = node.getBlocks(); 
+      assertEquals(blocks.length, 1);
+      blocks[0].setNumBytes(-1L);  // set the block length to be negative
       
       // run fsck and expect a failure with -1 as the error code
       String outStr = runFsck(conf, -1, true, fileName);

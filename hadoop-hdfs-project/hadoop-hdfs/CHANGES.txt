@@ -445,6 +445,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3916. libwebhdfs testing code cleanup. (Jing Zhao via suresh)
 
+    HDFS-4143. Change blocks to private in INodeFile and renames isLink() to
+    isSymlink() in INode. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

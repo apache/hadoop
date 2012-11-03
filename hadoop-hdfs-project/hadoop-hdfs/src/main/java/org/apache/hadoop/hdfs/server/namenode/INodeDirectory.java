@@ -78,11 +78,9 @@ class INodeDirectory extends INode {
     this.children = other.getChildren();
   }
   
-  /**
-   * Check whether it's a directory
-   */
+  /** @return true unconditionally. */
   @Override
-  public boolean isDirectory() {
+  public final boolean isDirectory() {
     return true;
   }
 
@@ -207,7 +205,7 @@ class INodeDirectory extends INode {
       if (index >= 0) {
         existing.inodes[index] = curNode;
       }
-      if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
+      if (curNode.isSymlink() && (!lastComp || (lastComp && resolveLink))) {
         final String path = constructPath(components, 0, components.length);
         final String preceding = constructPath(components, 0, count);
         final String remainder =
