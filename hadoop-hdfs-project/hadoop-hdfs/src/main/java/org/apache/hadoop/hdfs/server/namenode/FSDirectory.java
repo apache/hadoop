@@ -312,7 +312,7 @@ public class FSDirectory implements Closeable {
       }
       if(newParent == null)
         return null;
-      if(!newNode.isDirectory() && !newNode.isLink()) {
+      if(!newNode.isDirectory() && !newNode.isSymlink()) {
         // Add file->block mapping
         INodeFile newF = (INodeFile)newNode;
         BlockInfo[] blocks = newF.getBlocks();
@@ -532,7 +532,7 @@ public class FSDirectory implements Closeable {
     if (dst.equals(src)) {
       return true;
     }
-    if (srcInode.isLink() && 
+    if (srcInode.isSymlink() && 
         dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
       throw new FileAlreadyExistsException(
           "Cannot rename symlink "+src+" to its target "+dst);
@@ -653,7 +653,7 @@ public class FSDirectory implements Closeable {
       throw new FileAlreadyExistsException(
           "The source "+src+" and destination "+dst+" are the same");
     }
-    if (srcInode.isLink() && 
+    if (srcInode.isSymlink() && 
         dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
       throw new FileAlreadyExistsException(
           "Cannot rename symlink "+src+" to its target "+dst);
@@ -816,7 +816,7 @@ public class FSDirectory implements Closeable {
     if (inode == null) {
       return null;
     }
-    assert !inode.isLink();
+    assert !inode.isSymlink();
     if (inode.isDirectory()) {
       return null;
     }
@@ -848,7 +848,7 @@ public class FSDirectory implements Closeable {
       if (inode == null) {
         throw new FileNotFoundException("File does not exist: " + filename);
       }
-      if (inode.isDirectory() || inode.isLink()) {
+      if (inode.isDirectory() || inode.isSymlink()) {
         throw new IOException("Getting block size of non-file: "+ filename); 
       }
       return ((INodeFile)inode).getPreferredBlockSize();
@@ -865,7 +865,7 @@ public class FSDirectory implements Closeable {
       if (inode == null) {
          return false;
       }
-      return inode.isDirectory() || inode.isLink() 
+      return inode.isDirectory() || inode.isSymlink() 
         ? true 
         : ((INodeFile)inode).getBlocks() != null;
     } finally {
@@ -965,7 +965,7 @@ public class FSDirectory implements Closeable {
     for(String src : srcs) {
       INodeFile srcInode = (INodeFile)getINode(src);
       allSrcInodes[i++] = srcInode;
-      totalBlocks += srcInode.blocks.length;  
+      totalBlocks += srcInode.numBlocks();  
     }
     trgInode.appendBlocks(allSrcInodes, totalBlocks); // copy the blocks
     
@@ -974,7 +974,7 @@ public class FSDirectory implements Closeable {
     for(INodeFile nodeToRemove: allSrcInodes) {
       if(nodeToRemove == null) continue;
       
-      nodeToRemove.blocks = null;
+      nodeToRemove.setBlocks(null);
       trgParent.removeChild(nodeToRemove);
       count++;
     }
@@ -1205,7 +1205,7 @@ public class FSDirectory implements Closeable {
         return null;
       if (targetNode.isDirectory())
         return null;
-      if (targetNode.isLink()) 
+      if (targetNode.isSymlink()) 
         return null;
       return ((INodeFile)targetNode).getBlocks();
     } finally {
@@ -1819,7 +1819,7 @@ public class FSDirectory implements Closeable {
       if (child.isDirectory()) {
         updateCountForINodeWithQuota((INodeDirectory)child, 
                                      counts, nodesInPath);
-      } else if (child.isLink()) {
+      } else if (child.isSymlink()) {
         counts.nsCount += 1;
       } else { // reduce recursive calls
         counts.nsCount += 1;
@@ -2048,7 +2048,7 @@ public class FSDirectory implements Closeable {
         node.getFsPermission(),
         node.getUserName(),
         node.getGroupName(),
-        node.isLink() ? ((INodeSymlink)node).getSymlink() : null,
+        node.isSymlink() ? ((INodeSymlink)node).getSymlink() : null,
         path);
   }
 
@@ -2084,7 +2084,7 @@ public class FSDirectory implements Closeable {
           node.getFsPermission(),
           node.getUserName(),
           node.getGroupName(),
-          node.isLink() ? ((INodeSymlink)node).getSymlink() : null,
+          node.isSymlink() ? ((INodeSymlink)node).getSymlink() : null,
           path,
           loc);
       }
@@ -2155,7 +2155,7 @@ public class FSDirectory implements Closeable {
    */
   void cacheName(INode inode) {
     // Name is cached only for files
-    if (inode.isDirectory() || inode.isLink()) {
+    if (inode.isDirectory() || inode.isSymlink()) {
       return;
     }
     ByteArray name = new ByteArray(inode.getLocalNameBytes());

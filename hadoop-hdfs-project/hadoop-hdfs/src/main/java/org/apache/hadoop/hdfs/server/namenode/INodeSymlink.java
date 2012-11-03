@@ -41,7 +41,7 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  public boolean isLink() {
+  public boolean isSymlink() {
     return true;
   }
   
@@ -72,10 +72,5 @@ public class INodeSymlink extends INode {
   long[] computeContentSummary(long[] summary) {
     summary[1]++; // Increment the file count
     return summary;
-  }
-
-  @Override
-  public boolean isDirectory() {
-    return false;
   }
 }
