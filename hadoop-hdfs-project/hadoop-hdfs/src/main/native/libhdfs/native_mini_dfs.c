@@ -44,11 +44,11 @@ struct NativeMiniDfsCluster {
 struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
 {
     struct NativeMiniDfsCluster* cl = NULL;
-    jobject bld = NULL, bld2 = NULL, cobj = NULL;
+    jobject bld = NULL, cobj = NULL, cluster = NULL;
     jvalue  val;
     JNIEnv *env = getJNIEnv();
     jthrowable jthr;
-    jstring jconfStr;
+    jstring jconfStr = NULL;
 
     if (!env) {
         fprintf(stderr, "nmdCreate: unable to construct JNIEnv.\n");
@@ -63,14 +63,14 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
     if (jthr) {
         printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "nmdCreate: new Configuration");
-        goto error_free_cl;
+        goto error;
     }
     if (conf->webhdfsEnabled) {
         jthr = newJavaStr(env, DFS_WEBHDFS_ENABLED_KEY, &jconfStr);
         if (jthr) {
             printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                                   "nmdCreate: new String");
-            goto error_dlr_cobj;
+            goto error;
         }
         jthr = invokeMethod(env, NULL, INSTANCE, cobj, HADOOP_CONF,
                             "setBoolean", "(Ljava/lang/String;Z)V",
@@ -78,7 +78,7 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
         if (jthr) {
             printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                                   "nmdCreate: Configuration::setBoolean");
-            goto error_dlr_cobj;
+            goto error;
         }
     }
     jthr = constructNewObjectOfClass(env, &bld, MINIDFS_CLUSTER_BUILDER,
@@ -86,58 +86,53 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
     if (jthr) {
         printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "nmdCreate: NativeMiniDfsCluster#Builder#Builder");
-        goto error_dlr_cobj;
+        goto error;
     }
     jthr = invokeMethod(env, &val, INSTANCE, bld, MINIDFS_CLUSTER_BUILDER,
             "format", "(Z)L" MINIDFS_CLUSTER_BUILDER ";", conf->doFormat);
     if (jthr) {
         printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "nmdCreate: "
                               "Builder::format");
-        goto error_dlr_bld;
+        goto error;
     }
-    bld2 = val.l;
+    (*env)->DeleteLocalRef(env, val.l);
     if (conf->webhdfsEnabled) {
-        jthr = invokeMethod(env, &val, INSTANCE, bld2, MINIDFS_CLUSTER_BUILDER,
+        jthr = invokeMethod(env, &val, INSTANCE, bld, MINIDFS_CLUSTER_BUILDER,
                         "nameNodeHttpPort", "(I)L" MINIDFS_CLUSTER_BUILDER ";",
                         conf->namenodeHttpPort);
         if (jthr) {
             printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "nmdCreate: "
                                   "Builder::nameNodeHttpPort");
-            goto error_dlr_bld2;
+            goto error;
         }
+        (*env)->DeleteLocalRef(env, val.l);
     }
     jthr = invokeMethod(env, &val, INSTANCE, bld, MINIDFS_CLUSTER_BUILDER,
             "build", "()L" MINIDFS_CLUSTER ";");
     if (jthr) {
         printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                               "nmdCreate: Builder#build");
-        goto error_dlr_bld2;
+        goto error;
     }
-	cl->obj = (*env)->NewGlobalRef(env, val.l);
+    cluster = val.l;
+	  cl->obj = (*env)->NewGlobalRef(env, val.l);
     if (!cl->obj) {
         printPendingExceptionAndFree(env, PRINT_EXC_ALL,
             "nmdCreate: NewGlobalRef");
-        goto error_dlr_val;
+        goto error;
     }
-    (*env)->DeleteLocalRef(env, val.l);
-    (*env)->DeleteLocalRef(env, bld2);
+    (*env)->DeleteLocalRef(env, cluster);
     (*env)->DeleteLocalRef(env, bld);
     (*env)->DeleteLocalRef(env, cobj);
     (*env)->DeleteLocalRef(env, jconfStr);
     return cl;
 
-error_dlr_val:
-    (*env)->DeleteLocalRef(env, val.l);
-error_dlr_bld2:
-    (*env)->DeleteLocalRef(env, bld2);
-error_dlr_bld:
+error:
+    (*env)->DeleteLocalRef(env, cluster);
     (*env)->DeleteLocalRef(env, bld);
-error_dlr_cobj:
     (*env)->DeleteLocalRef(env, cobj);
     (*env)->DeleteLocalRef(env, jconfStr);
-error_free_cl:
     free(cl);
-error:
     return NULL;
 }
 

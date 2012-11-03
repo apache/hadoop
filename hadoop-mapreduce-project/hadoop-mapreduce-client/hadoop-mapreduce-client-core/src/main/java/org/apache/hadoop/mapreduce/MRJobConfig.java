@@ -486,6 +486,9 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD =
       50;
   
+  public static final String MR_AM_ENV =
+      MR_AM_PREFIX + "env";
+  
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";
 

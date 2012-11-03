@@ -1394,7 +1394,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + target + " is under construction");
     }
     // per design target shouldn't be empty and all the blocks same size
-    if(trgInode.blocks.length == 0) {
+    if(trgInode.numBlocks() == 0) {
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is empty");
     }
@@ -1406,10 +1406,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     long blockSize = trgInode.getPreferredBlockSize();
 
     // check the end block to be full
-    if(blockSize != trgInode.blocks[trgInode.blocks.length-1].getNumBytes()) {
+    final BlockInfo last = trgInode.getLastBlock();
+    if(blockSize != last.getNumBytes()) {
       throw new HadoopIllegalArgumentException("The last block in " + target
-          + " is not full; last block size = "
-          + trgInode.blocks[trgInode.blocks.length-1].getNumBytes()
+          + " is not full; last block size = " + last.getNumBytes()
           + " but file block size = " + blockSize);
     }
 
@@ -1426,7 +1426,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final INodeFile srcInode = INodeFile.valueOf(dir.getINode(src), src);
       if(src.isEmpty() 
           || srcInode.isUnderConstruction()
-          || srcInode.blocks.length == 0) {
+          || srcInode.numBlocks() == 0) {
         throw new HadoopIllegalArgumentException("concat: source file " + src
             + " is invalid or empty or underConstruction");
       }
@@ -1443,15 +1443,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //boolean endBlock=false;
       // verify that all the blocks are of the same length as target
       // should be enough to check the end blocks
-      int idx = srcInode.blocks.length-1;
+      final BlockInfo[] srcBlocks = srcInode.getBlocks();
+      int idx = srcBlocks.length-1;
       if(endSrc)
-        idx = srcInode.blocks.length-2; // end block of endSrc is OK not to be full
-      if(idx >= 0 && srcInode.blocks[idx].getNumBytes() != blockSize) {
+        idx = srcBlocks.length-2; // end block of endSrc is OK not to be full
+      if(idx >= 0 && srcBlocks[idx].getNumBytes() != blockSize) {
         throw new HadoopIllegalArgumentException("concat: the soruce file "
             + src + " and the target file " + target
             + " should have the same blocks sizes: target block size is "
             + blockSize + " but the size of source block " + idx + " is "
-            + srcInode.blocks[idx].getNumBytes());
+            + srcBlocks[idx].getNumBytes());
       }
 
       si.add(srcInode);
@@ -1686,7 +1687,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (parentNode == null) {
         throw new FileNotFoundException("Parent directory doesn't exist: "
             + parent.toString());
-      } else if (!parentNode.isDirectory() && !parentNode.isLink()) {
+      } else if (!parentNode.isDirectory() && !parentNode.isSymlink()) {
         throw new ParentNotDirectoryException("Parent path is not a directory: "
             + parent.toString());
       }

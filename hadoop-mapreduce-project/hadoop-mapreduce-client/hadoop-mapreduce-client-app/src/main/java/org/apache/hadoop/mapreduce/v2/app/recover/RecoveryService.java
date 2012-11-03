@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
@@ -178,26 +177,13 @@ public class RecoveryService extends CompositeService implements Recovery {
   }
 
   private void parse() throws IOException {
-    // TODO: parse history file based on startCount
-    String jobName = 
-        TypeConverter.fromYarn(applicationAttemptId.getApplicationId()).toString();
-    String jobhistoryDir = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(getConfig());
-    FSDataInputStream in = null;
-    Path historyFile = null;
-    Path histDirPath = FileContext.getFileContext(getConfig()).makeQualified(
-        new Path(jobhistoryDir));
-    FileContext fc = FileContext.getFileContext(histDirPath.toUri(),
-        getConfig());
-    //read the previous history file
-    historyFile = fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(
-        histDirPath, jobName, (applicationAttemptId.getAttemptId() - 1)));  
-    LOG.info("History file is at " + historyFile);
-    in = fc.open(historyFile);
+    FSDataInputStream in =
+        getPreviousJobHistoryFileStream(getConfig(), applicationAttemptId);
     JobHistoryParser parser = new JobHistoryParser(in);
     jobInfo = parser.parse();
     Exception parseException = parser.getParseException();
     if (parseException != null) {
-      LOG.info("Got an error parsing job-history file " + historyFile + 
+      LOG.info("Got an error parsing job-history file" + 
           ", ignoring incomplete events.", parseException);
     }
     Map<org.apache.hadoop.mapreduce.TaskID, TaskInfo> taskInfos = jobInfo
@@ -212,6 +198,28 @@ public class RecoveryService extends CompositeService implements Recovery {
     }
     LOG.info("Read completed tasks from history "
         + completedTasks.size());
+  }
+
+  public static FSDataInputStream getPreviousJobHistoryFileStream(
+      Configuration conf, ApplicationAttemptId applicationAttemptId)
+      throws IOException {
+    FSDataInputStream in = null;
+    Path historyFile = null;
+    String jobName =
+        TypeConverter.fromYarn(applicationAttemptId.getApplicationId())
+          .toString();
+    String jobhistoryDir =
+        JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+    Path histDirPath =
+        FileContext.getFileContext(conf).makeQualified(new Path(jobhistoryDir));
+    FileContext fc = FileContext.getFileContext(histDirPath.toUri(), conf);
+    // read the previous history file
+    historyFile =
+        fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(histDirPath,
+          jobName, (applicationAttemptId.getAttemptId() - 1)));
+    LOG.info("History file is at " + historyFile);
+    in = fc.open(historyFile);
+    return in;
   }
   
   protected Dispatcher createRecoveryDispatcher() {

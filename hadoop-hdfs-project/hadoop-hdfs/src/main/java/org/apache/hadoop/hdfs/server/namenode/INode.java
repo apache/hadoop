@@ -183,7 +183,9 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Check whether it's a directory
    */
-  abstract boolean isDirectory();
+  public boolean isDirectory() {
+    return false;
+  }
 
   /**
    * Collect all the blocks in all children of this INode.
@@ -337,7 +339,7 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Check whether it's a symlink
    */
-  public boolean isLink() {
+  public boolean isSymlink() {
     return false;
   }
 

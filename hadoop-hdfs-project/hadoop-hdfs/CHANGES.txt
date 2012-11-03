@@ -445,6 +445,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3916. libwebhdfs testing code cleanup. (Jing Zhao via suresh)
 
+    HDFS-4143. Change blocks to private in INodeFile and renames isLink() to
+    isSymlink() in INode. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -535,6 +538,12 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3809. Make BKJM use protobufs for all serialization with ZK.
     (Ivan Kelly via umamahesh)
+
+    HDFS-3804.  TestHftpFileSystem fails intermittently with JDK7
+    (Trevor Robinson via daryn)
+
+    HDFS-4132. When libwebhdfs is not enabled, nativeMiniDfsClient frees
+    uninitialized memory (Colin Patrick McCabe via todd)
 
 Release 2.0.2-alpha - 2012-09-07 
 
