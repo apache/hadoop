@@ -20,20 +20,29 @@
 # records the user, url, revision and timestamp.
 unset LANG
 unset LC_CTYPE
+if [[ `which md5sum` != "" ]]; then
+  # linux
+  export MD5SUM="md5sum"
+elif [[ `which md5` != "" ]]; then
+  # mac
+  export MD5SUM="md5 -r"
+fi
+
 version=$1
 build_dir=$2
 user=`whoami`
 date=`date`
 if [ -d .git ]; then
   revision=`git log -1 --pretty=format:"%H"`
-  hostname=`hostname`
+  origin=`git config --get remote.origin.url`
   branch=`git branch | sed -n -e 's/^* //p'`
-  url="git://$hostname/$cwd on branch $branch"
+  url="$origin on branch $branch"
 else
   revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
   url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
 fi
-srcChecksum=`find src -name '*.java' | LC_ALL=C sort | xargs md5sum | md5sum | cut -d ' ' -f 1`
+srcChecksum=`find src -name '*.java' | LC_ALL=C sort -f | xargs $MD5SUM | $MD5SUM | cut -d ' ' -f 1`
+file_count=`find src -name '*.java' | LC_ALL=C sort -f | wc -l`
 
 mkdir -p $build_dir/src/org/apache/hadoop
 cat << EOF | \
@@ -48,3 +57,5 @@ cat << EOF | \
                          srcChecksum="SRCCHECKSUM")
 package org.apache.hadoop;
 EOF
+
+echo "Checksummed $file_count src/**.java files"

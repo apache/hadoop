@@ -443,8 +443,8 @@
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
 
-    <exec executable="sh">
-       <arg line="src/saveVersion.sh ${version} ${build.dir}"/>
+    <exec executable="python">
+       <arg line="src/saveVersion.py ${version} ${build.dir}"/>
     </exec>
 	
    <exec executable="sh">
