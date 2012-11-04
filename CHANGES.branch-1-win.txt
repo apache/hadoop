@@ -205,3 +205,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8983. Minor fixes to windows batch scripts to accept alternate 
     config directory location. (Ramya Bharathi Nimmagadda via suresh)
+
+    HADOOP-9007. TestJobStatusPersistency.testJobStoreDisablingWithInvalidPath
+    failure. (Chuan Liu via suresh)
