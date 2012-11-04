@@ -47,3 +47,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4141. Support directory diff - the difference between the current state
   and a previous snapshot of an INodeDirectory. (szetszwo)
+
+  HDFS-4146. Use getter and setter in INodeFileWithLink to access blocks and
+  initialize root directory as snapshottable. (szetszwo)

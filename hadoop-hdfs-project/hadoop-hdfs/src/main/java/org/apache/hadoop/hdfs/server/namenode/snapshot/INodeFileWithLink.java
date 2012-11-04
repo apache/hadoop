@@ -107,35 +107,36 @@ public class INodeFileWithLink extends INodeFile {
   }
 
   private void collectBlocksBeyondMaxAndClear(final long max, final List<Block> v) {
-    if (blocks != null) {
+    final BlockInfo[] oldBlocks = getBlocks();
+    if (oldBlocks != null) {
       //find the minimum n such that the size of the first n blocks > max
       int n = 0;
-      for(long size = 0; n < blocks.length && max > size; n++) {
-        size += blocks[n].getNumBytes();
+      for(long size = 0; n < oldBlocks.length && max > size; n++) {
+        size += oldBlocks[n].getNumBytes();
       }
 
-      //starting from block[n], the data is beyond max.
-      if (n < blocks.length) {
+      //starting from block n, the data is beyond max.
+      if (n < oldBlocks.length) {
         //resize the array.  
         final BlockInfo[] newBlocks;
         if (n == 0) {
           newBlocks = null;
         } else {
           newBlocks = new BlockInfo[n];
-          System.arraycopy(blocks, 0, newBlocks, 0, n);
+          System.arraycopy(oldBlocks, 0, newBlocks, 0, n);
         }
         for(INodeFileWithLink i = next; i != this; i = i.getNext()) {
-          i.blocks = newBlocks;
+          i.setBlocks(newBlocks);
         }
 
         //collect the blocks beyond max.  
         if (v != null) {
-          for(; n < blocks.length; n++) {
-            v.add(blocks[n]);
+          for(; n < oldBlocks.length; n++) {
+            v.add(oldBlocks[n]);
           }
         }
       }
-      blocks = null;
+      setBlocks(null);
     }
   }
 }

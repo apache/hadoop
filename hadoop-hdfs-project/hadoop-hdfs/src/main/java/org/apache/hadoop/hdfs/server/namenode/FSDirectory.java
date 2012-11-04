@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
 import com.google.common.base.Preconditions;
@@ -120,9 +121,10 @@ public class FSDirectory implements Closeable {
   FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.cond = dirLock.writeLock().newCondition();
-    rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-        ns.createFsOwnerPermissions(new FsPermission((short)0755)),
-        Long.MAX_VALUE, UNKNOWN_DISK_SPACE);
+
+    this.namesystem = ns;
+    reset();
+
     this.fsImage = fsImage;
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
@@ -143,7 +145,6 @@ public class FSDirectory implements Closeable {
     NameNode.LOG.info("Caching file names occuring more than " + threshold
         + " times");
     nameCache = new NameCache<ByteArray>(threshold);
-    namesystem = ns;
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -2030,9 +2031,11 @@ public class FSDirectory implements Closeable {
    * Reset the entire namespace tree.
    */
   void reset() {
-    rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
+    final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
+        INodeDirectory.ROOT_NAME,
         getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
-        Integer.MAX_VALUE, -1);
+        Long.MAX_VALUE, UNKNOWN_DISK_SPACE);
+    rootDir = INodeDirectorySnapshottable.newInstance(r, 0);
   }
 
   /**

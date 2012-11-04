@@ -55,7 +55,7 @@ public class INodeFile extends INode implements BlockCollection {
 
   private long header;
 
-  protected BlockInfo[] blocks;
+  private BlockInfo[] blocks;
 
   INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
