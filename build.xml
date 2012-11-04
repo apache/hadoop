@@ -2234,20 +2234,6 @@
     </exec>
   </target>
 
-  <target name="test-ms-winutils" depends="compile-ms-winutils-debug" if="windows">
-    <delete dir="${test.winutils.dir}"/>
-    <mkdir dir="${test.winutils.dir}"/>
-    <copy todir="${test.winutils.dir}">
-      <fileset dir="${winutils.src.dir}\tests" includes="*.bat"/>
-    </copy>
-
-    <exec dir="${test.winutils.dir}"
-      executable="${test.winutils.dir}\test-all.bat"
-      failonerror="true">
-      <env key="HADOOP_HOME" value="${basedir}"/>
-    </exec>
-  </target>
-
 <!-- ================================================================== -->
 <!-- librecordio targets.                                               -->
 <!-- ================================================================== -->		

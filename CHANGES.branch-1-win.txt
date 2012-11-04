@@ -200,3 +200,5 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8420. Hadoop Common creating package-info.java must not depend on sh.
     (Bikas Saha via suresh)
+
+    HADOOP-8972. Move winutils tests from bat to Java. (Ivan Mitic via suresh)
