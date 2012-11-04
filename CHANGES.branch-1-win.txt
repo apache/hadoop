@@ -202,3 +202,6 @@ Branch-hadoop-1-win - unreleased
     (Bikas Saha via suresh)
 
     HADOOP-8972. Move winutils tests from bat to Java. (Ivan Mitic via suresh)
+
+    HADOOP-8983. Minor fixes to windows batch scripts to accept alternate 
+    config directory location. (Ramya Bharathi Nimmagadda via suresh)

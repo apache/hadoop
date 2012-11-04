@@ -55,7 +55,7 @@ if "%1" == "--config" (
 @rem masters file
 @rem
 
-if "%1" == "--host" (
+if "%1" == "--hosts" (
   set HADOOP_SLAVES=%HADOOP_CONF_DIR%\%2
   shift
   shift

@@ -25,7 +25,7 @@ if "%HADOOP_BIN_PATH:~-1%" == "\" (
 
 set HADOOP_LOGFILE=hadoop-%1-%computername%.log
 set mapred-config-script=%HADOOP_BIN_PATH%\hadoop-config.cmd
-call %mapred-config-script%
+call %mapred-config-script% %*
 
 :main
 

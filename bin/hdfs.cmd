@@ -26,7 +26,7 @@ if "%HADOOP_BIN_PATH:~-1%" == "\" (
 
 set HADOOP_LOGFILE=hadoop-%1-%computername%.log
 set hdfs-config-script=%HADOOP_BIN_PATH%\hadoop-config.cmd
-call %hdfs-config-script%
+call %hdfs-config-script% %*
 
 :main
 
