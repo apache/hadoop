@@ -336,6 +336,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9009. Add SecurityUtil methods to get/set authentication method
     (daryn via bobby)
 
+    HADOOP-9010. Map UGI authenticationMethod to RPC authMethod (daryn via
+    bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
