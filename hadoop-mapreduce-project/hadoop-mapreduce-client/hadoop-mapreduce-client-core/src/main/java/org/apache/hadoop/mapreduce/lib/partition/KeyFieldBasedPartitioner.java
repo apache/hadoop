@@ -63,6 +63,7 @@ public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2>
 
   public void setConf(Configuration conf) {
     this.conf = conf;
+    keyFieldHelper = new KeyFieldHelper();
     String keyFieldSeparator = 
       conf.get(MRJobConfig.MAP_OUTPUT_KEY_FIELD_SEPERATOR, "\t");
     keyFieldHelper.setKeyFieldSeparator(keyFieldSeparator);
