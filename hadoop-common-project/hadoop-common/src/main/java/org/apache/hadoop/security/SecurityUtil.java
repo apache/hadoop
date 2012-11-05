@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,6 +46,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -665,4 +668,22 @@ public class SecurityUtil {
     }
   }
 
+  public static AuthenticationMethod getAuthenticationMethod(Configuration conf) {
+    String value = conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    try {
+      return Enum.valueOf(AuthenticationMethod.class, value.toUpperCase());
+    } catch (IllegalArgumentException iae) {
+      throw new IllegalArgumentException("Invalid attribute value for " +
+          HADOOP_SECURITY_AUTHENTICATION + " of " + value);
+    }
+  }
+
+  public static void setAuthenticationMethod(
+      AuthenticationMethod authenticationMethod, Configuration conf) {
+    if (authenticationMethod == null) {
+      authenticationMethod = AuthenticationMethod.SIMPLE;
+    }
+    conf.set(HADOOP_SECURITY_AUTHENTICATION,
+             authenticationMethod.toString().toLowerCase());
+  }
 }

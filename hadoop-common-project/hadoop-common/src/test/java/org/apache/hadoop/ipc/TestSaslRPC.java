@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.*;
 import static org.junit.Assert.*;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -78,7 +79,7 @@ public class TestSaslRPC {
   @BeforeClass
   public static void setup() {
     conf = new Configuration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
   }
 
@@ -263,7 +264,6 @@ public class TestSaslRPC {
     Server server = new RPC.Builder(conf).setProtocol(TestSaslProtocol.class)
         .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true).build();
-    server.disableSecurity();
     TestTokenSecretManager sm = new TestTokenSecretManager();
     doDigestRpc(server, sm);
   }
@@ -345,7 +345,7 @@ public class TestSaslRPC {
           new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
       assertEquals(SERVER_PRINCIPAL_1, remoteId.getServerPrincipal());
       // this following test needs security to be off
-      newConf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+      SecurityUtil.setAuthenticationMethod(SIMPLE, newConf);
       UserGroupInformation.setConfiguration(newConf);
       remoteId = ConnectionId.getConnectionId(new InetSocketAddress(0),
           TestSaslProtocol.class, null, 0, newConf);
@@ -536,15 +536,15 @@ public class TestSaslRPC {
                                              final boolean useToken
                                              
       ) throws Exception {
+    Configuration serverConf = new Configuration(conf);
+    SecurityUtil.setAuthenticationMethod(
+        isSecureServer ? KERBEROS : SIMPLE, serverConf);
+    UserGroupInformation.setConfiguration(serverConf);
+    
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    Server server = new RPC.Builder(conf).setProtocol(TestSaslProtocol.class)
+    Server server = new RPC.Builder(serverConf).setProtocol(TestSaslProtocol.class)
         .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();      
-    if (isSecureServer) {
-      server.enableSecurity();
-    } else {
-      server.disableSecurity();
-    }
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
@@ -558,8 +558,10 @@ public class TestSaslRPC {
       current.addToken(token);
     }
 
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, isSecureClient ? "kerberos" : "simple");
-    UserGroupInformation.setConfiguration(conf);
+    final Configuration clientConf = new Configuration(conf);
+    SecurityUtil.setAuthenticationMethod(
+        isSecureClient ? KERBEROS : SIMPLE, clientConf);
+    UserGroupInformation.setConfiguration(clientConf);
     try {
       return current.doAs(new PrivilegedExceptionAction<AuthenticationMethod>() {
         @Override
@@ -567,7 +569,7 @@ public class TestSaslRPC {
           TestSaslProtocol proxy = null;
           try {
             proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
-                TestSaslProtocol.versionID, addr, conf);
+                TestSaslProtocol.versionID, addr, clientConf);
             return proxy.getAuthMethod();
           } finally {
             if (proxy != null) {

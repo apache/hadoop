@@ -235,15 +235,15 @@ public class UserGroupInformation {
    * @param conf the configuration to use
    */
   private static synchronized void initUGI(Configuration conf) {
-    String value = conf.get(HADOOP_SECURITY_AUTHENTICATION);
-    if (value == null || "simple".equals(value)) {
+    AuthenticationMethod auth = SecurityUtil.getAuthenticationMethod(conf);
+    if (auth == AuthenticationMethod.SIMPLE) {
       useKerberos = false;
-    } else if ("kerberos".equals(value)) {
+    } else if (auth == AuthenticationMethod.KERBEROS) {
       useKerberos = true;
     } else {
       throw new IllegalArgumentException("Invalid attribute value for " +
                                          HADOOP_SECURITY_AUTHENTICATION + 
-                                         " of " + value);
+                                         " of " + auth);
     }
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
