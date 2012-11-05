@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -90,6 +91,85 @@ public class FSDownload implements Callable<Path> {
     }
   }
 
+  /**
+   * Returns a boolean to denote whether a cache file is visible to all(public)
+   * or not
+   * @param conf
+   * @param uri
+   * @return true if the path in the uri is visible to all, false otherwise
+   * @throws IOException
+   */
+  private static boolean isPublic(FileSystem fs, Path current) throws IOException {
+    current = fs.makeQualified(current);
+    //the leaf level file should be readable by others
+    if (!checkPublicPermsForAll(fs, current, FsAction.READ_EXECUTE, FsAction.READ)) {
+      return false;
+    }
+    return ancestorsHaveExecutePermissions(fs, current.getParent());
+  }
+
+  private static boolean checkPublicPermsForAll(FileSystem fs, Path current, 
+      FsAction dir, FsAction file) 
+    throws IOException {
+    return checkPublicPermsForAll(fs, fs.getFileStatus(current), dir, file);
+  }
+    
+  private static boolean checkPublicPermsForAll(FileSystem fs, 
+        FileStatus status, FsAction dir, FsAction file) 
+    throws IOException {
+    FsPermission perms = status.getPermission();
+    FsAction otherAction = perms.getOtherAction();
+    if (status.isDirectory()) {
+      if (!otherAction.implies(dir)) {
+        return false;
+      }
+      
+      for (FileStatus child : fs.listStatus(status.getPath())) {
+        if(!checkPublicPermsForAll(fs, child, dir, file)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return (otherAction.implies(file));
+  }
+
+  /**
+   * Returns true if all ancestors of the specified path have the 'execute'
+   * permission set for all users (i.e. that other users can traverse
+   * the directory heirarchy to the given path)
+   */
+  private static boolean ancestorsHaveExecutePermissions(FileSystem fs, Path path)
+    throws IOException {
+    Path current = path;
+    while (current != null) {
+      //the subdirs in the path should have execute permissions for others
+      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE)) {
+        return false;
+      }
+      current = current.getParent();
+    }
+    return true;
+  }
+
+  /**
+   * Checks for a given path whether the Other permissions on it 
+   * imply the permission in the passed FsAction
+   * @param fs
+   * @param path
+   * @param action
+   * @return true if the path in the uri is visible to all, false otherwise
+   * @throws IOException
+   */
+  private static boolean checkPermissionOfOther(FileSystem fs, Path path,
+      FsAction action) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    FsPermission perms = status.getPermission();
+    FsAction otherAction = perms.getOtherAction();
+    return otherAction.implies(action);
+  }
+
+  
   private Path copy(Path sCopy, Path dstdir) throws IOException {
     FileSystem sourceFs = sCopy.getFileSystem(conf);
     Path dCopy = new Path(dstdir, sCopy.getName() + ".tmp");
@@ -99,7 +179,14 @@ public class FSDownload implements Callable<Path> {
           " changed on src filesystem (expected " + resource.getTimestamp() +
           ", was " + sStat.getModificationTime());
     }
-
+    if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
+      if (!isPublic(sourceFs, sCopy)) {
+        throw new IOException("Resource " + sCopy +
+            " is not publicly accessable and as such cannot be part of the" +
+            " public cache.");
+      }
+    }
+    
     sourceFs.copyToLocalFile(sCopy, dCopy);
     return dCopy;
   }
