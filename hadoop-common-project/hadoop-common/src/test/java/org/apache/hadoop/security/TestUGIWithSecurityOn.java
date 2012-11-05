@@ -21,7 +21,6 @@ import java.io.IOException;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.junit.Assume;
 import org.junit.Before;
@@ -49,8 +48,7 @@ public class TestUGIWithSecurityOn {
     String user1keyTabFilepath = System.getProperty("kdc.resource.dir") 
         + "/keytabs/user1.keytab";
     Configuration conf = new Configuration();
-    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, 
-        "kerberos");
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
     
     UserGroupInformation ugiNn = UserGroupInformation

@@ -30,7 +30,6 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
@@ -380,9 +379,7 @@ public class MiniRPCBenchmark {
       elapsedTime = mb.runMiniBenchmarkWithDelegationToken(
                               conf, count, KEYTAB_FILE_KEY, USER_NAME_KEY);
     } else {
-      String auth = 
-        conf.get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, 
-                        "simple");
+      String auth = SecurityUtil.getAuthenticationMethod(conf).toString();
       System.out.println(
           "Running MiniRPCBenchmark with " + auth + " authentication.");
       elapsedTime = mb.runMiniBenchmark(
