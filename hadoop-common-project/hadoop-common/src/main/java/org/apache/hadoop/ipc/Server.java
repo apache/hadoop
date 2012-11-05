@@ -1485,11 +1485,11 @@ public abstract class Server {
       if (!useSasl) {
         user = protocolUser;
         if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
+          user.setAuthenticationMethod(AuthMethod.SIMPLE);
         }
       } else {
         // user is authenticated
-        user.setAuthenticationMethod(authMethod.authenticationMethod);
+        user.setAuthenticationMethod(authMethod);
         //Now we check if this is a proxy user case. If the protocol user is
         //different from the 'user', it is a proxy user scenario. However, 
         //this is not allowed if user authenticated with DIGEST.

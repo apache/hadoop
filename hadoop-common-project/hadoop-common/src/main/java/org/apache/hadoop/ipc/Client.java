@@ -69,6 +69,7 @@ import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
@@ -293,8 +294,9 @@ public class Client {
       }
       
       if (token != null) {
-        authMethod = AuthMethod.DIGEST;
+        authMethod = AuthenticationMethod.TOKEN.getAuthMethod();
       } else if (UserGroupInformation.isSecurityEnabled()) {
+        // eventually just use the ticket's authMethod
         authMethod = AuthMethod.KERBEROS;
       } else {
         authMethod = AuthMethod.SIMPLE;
