@@ -284,14 +284,12 @@ public class INodeDirectory extends INode {
    *         components in the path, and non existing components will be
    *         filled with null
    *         
-   * @see #getExistingPathINodes(byte[][], INode[])
+   * @see #getExistingPathINodes(byte[][], int, boolean)
    */
-  INode[] getExistingPathINodes(String path, boolean resolveLink) 
+  INodesInPath getExistingPathINodes(String path, boolean resolveLink) 
     throws UnresolvedLinkException {
     byte[][] components = getPathComponents(path);
-    INodesInPath inodes = this.getExistingPathINodes(components,
-        components.length, resolveLink);
-    return inodes.inodes;
+    return getExistingPathINodes(components, components.length, resolveLink);
   }
 
   /**
@@ -561,6 +559,10 @@ public class INodeDirectory extends INode {
     private void addNode(INode node) {
       assert size < inodes.length;
       inodes[size++] = node;
+    }
+    
+    void setINode(int i, INode inode) {
+      inodes[i] = inode;
     }
     
     /**
