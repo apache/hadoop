@@ -997,7 +997,7 @@ public class FSDirectory implements Closeable {
    * @return true on successful deletion; else false
    */
   boolean delete(String src, List<Block>collectedBlocks) 
-    throws UnresolvedLinkException {
+    throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
@@ -1006,7 +1006,22 @@ public class FSDirectory implements Closeable {
     int filesRemoved;
     writeLock();
     try {
-      filesRemoved = unprotectedDelete(src, collectedBlocks, now);
+      INode[] inodes = rootDir.getExistingPathINodes(normalizePath(src), false);
+      if (checkPathINodes(inodes, src) == 0) {
+        filesRemoved = 0;
+      } else {
+        // Before removing the node, first check if the targetNode is for a
+        // snapshottable dir with snapshots, or its descendants have
+        // snapshottable dir with snapshots
+        INode targetNode = inodes[inodes.length-1];
+        INode snapshotNode = hasSnapshot(targetNode);
+        if (snapshotNode != null) {
+          throw new IOException("The direcotry " + targetNode.getFullPathName()
+              + " cannot be deleted since " + snapshotNode.getFullPathName()
+              + " is snapshottable and already has snapshots");
+        }
+        filesRemoved = unprotectedDelete(inodes, collectedBlocks, now);
+      }
     } finally {
       writeUnlock();
     }
@@ -1018,6 +1033,23 @@ public class FSDirectory implements Closeable {
     getFSNamesystem().removePathAndBlocks(src, null);
     fsImage.getEditLog().logDelete(src, now);
     return true;
+  }
+  
+  private int checkPathINodes(INode[] inodes, String src) {
+    if (inodes == null || inodes.length == 0
+        || inodes[inodes.length - 1] == null) {
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+            + "failed to remove " + src + " because it does not exist");
+      }
+      return 0;
+    } else if (inodes.length == 1) { // src is the root
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
+          + "failed to remove " + src
+          + " because the root is not allowed to be deleted");
+      return 0;
+    }
+    return inodes.length;
   }
   
   /**
@@ -1050,7 +1082,14 @@ public class FSDirectory implements Closeable {
     throws UnresolvedLinkException {
     assert hasWriteLock();
     List<Block> collectedBlocks = new ArrayList<Block>();
-    int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime);
+    int filesRemoved = 0;
+
+    INode[] inodes =  rootDir.getExistingPathINodes(normalizePath(src), false);
+    if (checkPathINodes(inodes, src) == 0) {
+      filesRemoved = 0;
+    } else {
+      filesRemoved = unprotectedDelete(inodes, collectedBlocks, mtime);
+    }
     if (filesRemoved > 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
     }
@@ -1059,32 +1098,16 @@ public class FSDirectory implements Closeable {
   /**
    * Delete a path from the name space
    * Update the count at each ancestor directory with quota
-   * @param src a string representation of a path to an inode
+   * @param inodes the INode array resolved from the path
    * @param collectedBlocks blocks collected from the deleted path
    * @param mtime the time the inode is removed
    * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
-  int unprotectedDelete(String src, List<Block> collectedBlocks, 
-      long mtime) throws UnresolvedLinkException {
+  int unprotectedDelete(INode[] inodes, List<Block> collectedBlocks, 
+      long mtime) {
     assert hasWriteLock();
-    src = normalizePath(src);
-
-    INode[] inodes =  rootDir.getExistingPathINodes(src, false);
+    
     INode targetNode = inodes[inodes.length-1];
-
-    if (targetNode == null) { // non-existent src
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-            +"failed to remove "+src+" because it does not exist");
-      }
-      return 0;
-    }
-    if (inodes.length == 1) { // src is the root
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
-          "failed to remove " + src +
-          " because the root is not allowed to be deleted");
-      return 0;
-    }
     int pos = inodes.length - 1;
     // Remove the node from the namespace
     targetNode = removeChild(inodes, pos);
@@ -1096,9 +1119,33 @@ public class FSDirectory implements Closeable {
     int filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-          +src+" is removed");
+          + targetNode.getFullPathName() + " is removed");
     }
     return filesRemoved;
+  }
+  
+  /**
+   * Check if the given INode (or one of its descendants) is snapshottable and
+   * already has snapshots.
+   * 
+   * @param target The given INode
+   * @return The INode which is snapshottable and already has snapshots.
+   */
+  private static INode hasSnapshot(INode target) {
+    if (target instanceof INodeDirectory) {
+      INodeDirectory targetDir = (INodeDirectory) target;
+      if (targetDir.isSnapshottable()
+          && ((INodeDirectorySnapshottable) targetDir).getNumSnapshots() > 0) {
+        return target;
+      }
+      for (INode child : targetDir.getChildren()) {
+        INode snapshotDir = hasSnapshot(child);
+        if (snapshotDir != null) {
+          return snapshotDir;
+        }
+      }
+    }
+    return null;
   }
 
   /**

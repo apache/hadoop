@@ -53,3 +53,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4149. Implement the disallowSnapshot(..) in FSNamesystem and add
   resetSnapshottable(..) to SnapshotManager. (szetszwo)
+
+  HDFS-4147. When there is a snapshot in a subtree, deletion of the subtree
+  should fail. (Jing Zhao via szetszwo)

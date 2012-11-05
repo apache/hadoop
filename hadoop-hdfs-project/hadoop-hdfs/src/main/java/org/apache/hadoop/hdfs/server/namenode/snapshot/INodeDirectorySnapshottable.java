@@ -75,7 +75,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
     setSnapshotQuota(snapshotQuota);
   }
   
-  int getNumSnapshots() {
+  public int getNumSnapshots() {
     return snapshots.size();
   }
   

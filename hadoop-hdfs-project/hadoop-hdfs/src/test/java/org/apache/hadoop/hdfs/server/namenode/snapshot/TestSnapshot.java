@@ -33,9 +33,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  * This class tests snapshot functionality. One or multiple snapshots are
@@ -50,7 +53,8 @@ public class TestSnapshot {
 
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub1 = new Path(dir, "sub1");
-
+  private final Path subsub1 = new Path(sub1, "subsub1");
+  
   protected Configuration conf;
   protected MiniDFSCluster cluster;
   protected FSNamesystem fsn;
@@ -61,6 +65,9 @@ public class TestSnapshot {
    * records a snapshot root.
    */
   protected static ArrayList<Path> snapshotList = new ArrayList<Path>();
+  
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setUp() throws Exception {
@@ -186,6 +193,66 @@ public class TestSnapshot {
     testSnapshot(sub1, mList);
   }
 
+  /**
+   * Creating snapshots for a directory that is not snapshottable must fail.
+   * 
+   * TODO: Listing/Deleting snapshots for a directory that is not snapshottable
+   * should also fail.
+   */
+  @Test
+  public void testSnapshottableDirectory() throws Exception {
+    Path file0 = new Path(sub1, "file0");
+    Path file1 = new Path(sub1, "file1");
+    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+
+    exception.expect(RemoteException.class);
+    hdfs.createSnapshot("s1", sub1.toString());
+  }
+    
+  /**
+   * Deleting snapshottable directory with snapshots must fail.
+   */
+  @Test
+  public void testDeleteDirectoryWithSnapshot() throws Exception {
+    Path file0 = new Path(sub1, "file0");
+    Path file1 = new Path(sub1, "file1");
+    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+
+    // Allow snapshot for sub1, and create snapshot for it
+    hdfs.allowSnapshot(sub1.toString());
+    hdfs.createSnapshot("s1", sub1.toString());
+
+    // Deleting a snapshottable dir with snapshots should fail
+    exception.expect(RemoteException.class);
+    hdfs.delete(sub1, true);
+  }
+  
+  /**
+   * Deleting directory with snapshottable descendant with snapshots must fail.
+   */
+  @Test
+  public void testDeleteDirectoryWithSnapshot2() throws Exception {
+    Path file0 = new Path(sub1, "file0");
+    Path file1 = new Path(sub1, "file1");
+    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    
+    Path subfile1 = new Path(subsub1, "file0");
+    Path subfile2 = new Path(subsub1, "file1");
+    DFSTestUtil.createFile(hdfs, subfile1, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, subfile2, BLOCKSIZE, REPLICATION, seed);
+
+    // Allow snapshot for subsub1, and create snapshot for it
+    hdfs.allowSnapshot(subsub1.toString());
+    hdfs.createSnapshot("s1", subsub1.toString());
+
+    // Deleting dir while its descedant subsub1 having snapshots should fail
+    exception.expect(RemoteException.class);
+    hdfs.delete(dir, true);
+  }  
+  
   /**
    * Base class to present changes applied to current file/dir. A modification
    * can be file creation, deletion, or other modifications such as appending on
