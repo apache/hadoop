@@ -89,8 +89,17 @@ public class TestSnapshotPathINodes {
 
     // After a directory is snapshottable
     hdfs.allowSnapshot(path);
-    final INode after = fsdir.getINode(path);
-    Assert.assertTrue(after instanceof INodeDirectorySnapshottable);
+    {
+      final INode after = fsdir.getINode(path);
+      Assert.assertTrue(after instanceof INodeDirectorySnapshottable);
+    }
+    
+    hdfs.disallowSnapshot(path);
+    {
+      final INode after = fsdir.getINode(path);
+      Assert.assertTrue(after instanceof INodeDirectory);
+      Assert.assertFalse(after instanceof INodeDirectorySnapshottable);
+    }
   }
   
   /** 

@@ -2222,9 +2222,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Create a snapshot
    * @param snapshotName The name of the snapshot
-   * @param snapshotRoot The directory where the snapshot will be taken
+   * @param path The directory where snapshots will be taken.
    */
-  public void createSnapshot(String snapshotName, String snapshotRoot)
+  public void createSnapshot(String snapshotName, String path)
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support createSnapshot");

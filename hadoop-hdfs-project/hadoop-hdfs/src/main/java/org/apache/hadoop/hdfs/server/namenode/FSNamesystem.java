@@ -5543,22 +5543,38 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     getEditLog().logSync();
     
+    //TODO: need to update metrics in corresponding SnapshotManager method 
+
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
           "allowSnapshot", path, null, null);
     }
   }
   
-  // Disallow snapshot on a directory.
-  @VisibleForTesting
-  public void disallowSnapshot(String snapshotRoot)
+  /** Disallow snapshot on a directory. */
+  public void disallowSnapshot(String path)
       throws SafeModeException, IOException {
-    // TODO: implement, also need to update metrics in corresponding
-    // SnapshotManager method 
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot disallow snapshot for " + path,
+            safeMode);
+      }
+      checkOwner(path);
+
+      snapshotManager.resetSnapshottable(path);
+      getEditLog().logDisallowSnapshot(path);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+
+    //TODO: need to update metrics in corresponding SnapshotManager method 
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "disallowSnapshot", snapshotRoot, null, null);
+          "disallowSnapshot", path, null, null);
     }
   }
   

@@ -50,3 +50,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4146. Use getter and setter in INodeFileWithLink to access blocks and
   initialize root directory as snapshottable. (szetszwo)
+
+  HDFS-4149. Implement the disallowSnapshot(..) in FSNamesystem and add
+  resetSnapshottable(..) to SnapshotManager. (szetszwo)

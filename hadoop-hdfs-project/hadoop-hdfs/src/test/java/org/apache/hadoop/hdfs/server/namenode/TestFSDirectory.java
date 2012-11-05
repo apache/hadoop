@@ -107,9 +107,11 @@ public class TestFSDirectory {
 
     for(; (line = in.readLine()) != null; ) {
       line = line.trim();
-      Assert.assertTrue(line.startsWith(INodeDirectory.DUMPTREE_LAST_ITEM)
-          || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM));
-      checkClassName(line);
+      if (!line.contains("snapshot")) {
+        Assert.assertTrue(line.startsWith(INodeDirectory.DUMPTREE_LAST_ITEM)
+            || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM));
+        checkClassName(line);
+      }
     }
 
     LOG.info("Create a new file " + file4);
@@ -134,8 +136,7 @@ public class TestFSDirectory {
     int i = line.lastIndexOf('(');
     int j = line.lastIndexOf('@');
     final String classname = line.substring(i+1, j);
-    Assert.assertTrue(classname.equals(INodeFile.class.getSimpleName())
-        || classname.equals(INodeDirectory.class.getSimpleName())
-        || classname.equals(INodeDirectoryWithQuota.class.getSimpleName()));
+    Assert.assertTrue(classname.startsWith(INodeFile.class.getSimpleName())
+        || classname.startsWith(INodeDirectory.class.getSimpleName()));
   }
 }

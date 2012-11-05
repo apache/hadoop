@@ -872,28 +872,26 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Allow snapshot on a directory.
    * 
-   * @param snapshotRoot the directory to be snapped
+   * @param path the directory to be taken snapshots
    * @throws IOException
    */
-  public void allowSnapshot(String snapshotRoot)
-      throws IOException {
-    dfs.allowSnapshot(snapshotRoot);
+  public void allowSnapshot(String path) throws IOException {
+    dfs.allowSnapshot(path);
   }
   
   /**
    * Disallow snapshot on a directory.
    * 
-   * @param snapshotRoot the directory to be snapped
+   * @param path the snapshottable directory.
    * @throws IOException
    */
-  public void disallowSnapshot(String snapshotRoot)
-      throws IOException {
-    dfs.disallowSnapshot(snapshotRoot);
+  public void disallowSnapshot(String path) throws IOException {
+    dfs.disallowSnapshot(path);
   }
   
   @Override
-  public void createSnapshot(String snapshotName, String snapshotRoot)
+  public void createSnapshot(String snapshotName, String path)
       throws IOException {
-    dfs.createSnapshot(snapshotName, snapshotRoot);
+    dfs.createSnapshot(snapshotName, path);
   }
 }

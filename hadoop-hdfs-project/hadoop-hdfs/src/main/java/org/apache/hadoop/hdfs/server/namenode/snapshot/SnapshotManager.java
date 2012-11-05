@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -34,8 +34,11 @@ import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 public class SnapshotManager implements SnapshotStats {
   private final FSNamesystem namesystem;
   private final FSDirectory fsdir;
-  private AtomicLong numSnapshottableDirs = new AtomicLong();
-  private AtomicLong numSnapshots = new AtomicLong();
+
+  private final AtomicInteger numSnapshottableDirs = new AtomicInteger();
+  private final AtomicInteger numSnapshots = new AtomicInteger();
+
+  private int snapshotID = 0;
   
   /** All snapshottable directories in the namesystem. */
   private final List<INodeDirectorySnapshottable> snapshottables
@@ -49,28 +52,44 @@ public class SnapshotManager implements SnapshotStats {
 
   /**
    * Set the given directory as a snapshottable directory.
-   * If the path is already a snapshottable directory, this is a no-op.
-   * Otherwise, the {@link INodeDirectory} of the path is replaced by an 
-   * {@link INodeDirectorySnapshottable}.
+   * If the path is already a snapshottable directory, update the quota.
    */
   public void setSnapshottable(final String path, final int snapshotQuota
       ) throws IOException {
-    namesystem.writeLock();
-    try {
-      final INodeDirectory d = INodeDirectory.valueOf(fsdir.getINode(path), path);
-      if (d.isSnapshottable()) {
-        //The directory is already a snapshottable directory. 
-        return;
-      }
-
-      final INodeDirectorySnapshottable s
-          = INodeDirectorySnapshottable.newInstance(d, snapshotQuota);
-      fsdir.replaceINodeDirectory(path, d, s);
-      snapshottables.add(s);
-    } finally {
-      namesystem.writeUnlock();
+    final INodeDirectory d = INodeDirectory.valueOf(fsdir.getINode(path), path);
+    if (d.isSnapshottable()) {
+      //The directory is already a snapshottable directory.
+      ((INodeDirectorySnapshottable)d).setSnapshotQuota(snapshotQuota);
+      return;
     }
+
+    final INodeDirectorySnapshottable s
+        = INodeDirectorySnapshottable.newInstance(d, snapshotQuota);
+    fsdir.replaceINodeDirectory(path, d, s);
+    snapshottables.add(s);
+
     numSnapshottableDirs.getAndIncrement();
+  }
+
+  /**
+   * Set the given snapshottable directory to non-snapshottable.
+   * 
+   * @throws SnapshotException if there are snapshots in the directory.
+   */
+  public void resetSnapshottable(final String path
+      ) throws IOException {
+    final INodeDirectorySnapshottable s = INodeDirectorySnapshottable.valueOf(
+        fsdir.getINode(path), path);
+    if (s.getNumSnapshots() > 0) {
+      throw new SnapshotException("The directory " + path + " has snapshot(s). "
+          + "Please redo the operation after removing all the snapshots.");
+    }
+
+    final INodeDirectory d = new INodeDirectory(s);
+    fsdir.replaceINodeDirectory(path, s, d);
+    snapshottables.remove(s);
+
+    numSnapshottableDirs.getAndDecrement();
   }
 
   /**
@@ -81,7 +100,18 @@ public class SnapshotManager implements SnapshotStats {
    */
   public void createSnapshot(final String snapshotName, final String path
       ) throws IOException {
-    new SnapshotCreation(path).run(snapshotName);
+    // Find the source root directory path where the snapshot is taken.
+    final INodeDirectorySnapshottable srcRoot
+        = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
+
+    synchronized(this) {
+      final Snapshot s = new Snapshot(snapshotID, snapshotName, srcRoot); 
+      srcRoot.addSnapshot(s);
+      new SnapshotCreation().processRecursively(srcRoot, s.getRoot());
+      
+      //create success, update id
+      snapshotID++;
+    }
     numSnapshots.getAndIncrement();
   }
   
@@ -92,22 +122,6 @@ public class SnapshotManager implements SnapshotStats {
    * where N = # files + # directories + # symlinks. 
    */
   class SnapshotCreation {
-    /** The source root directory path where the snapshot is taken. */
-    final INodeDirectorySnapshottable srcRoot;
-    
-    /** 
-     * Constructor.
-     * @param path The path must be a snapshottable directory.
-     */
-    private SnapshotCreation(final String path) throws IOException {
-      srcRoot = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
-    }
-    
-    void run(final String name) throws IOException {
-      final INodeDirectoryWithSnapshot root = srcRoot.addSnapshotRoot(name);
-      processRecursively(srcRoot, root);
-    }
-
     /** Process snapshot creation recursively. */
     private void processRecursively(final INodeDirectory srcDir,
         final INodeDirectory dstDir) throws IOException {
