@@ -395,6 +395,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8713. TestRPCCompatibility fails intermittently with JDK7
     (Trevor Robinson via tgraves)
 
+    HADOOP-9012. IPC Client sends wrong connection context (daryn via bobby)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
