@@ -263,7 +263,6 @@ public class AggregatedLogFormat {
       out = this.writer.prepareAppendValue(-1);
       logValue.write(out);
       out.close();
-      this.fsDataOStream.hflush();
     }
 
     public void closeWriter() {
