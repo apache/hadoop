@@ -154,6 +154,9 @@ Trunk (Unreleased)
     HDFS-4151. Change the methods in FSDirectory to pass INodesInPath instead
     of INode[] as a parameter. (szetszwo)
 
+    HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
+    INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
