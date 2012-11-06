@@ -558,6 +558,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-1331. dfs -test should work like /bin/test (Andy Isaacson via daryn)
 
+    HDFS-3979. For hsync, datanode should wait for the local sync to complete
+    before sending ack. (Lars Hofhansl via szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
