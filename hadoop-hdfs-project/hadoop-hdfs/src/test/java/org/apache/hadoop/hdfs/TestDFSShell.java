@@ -1243,7 +1243,106 @@ public class TestDFSShell {
         }
         assertEquals(0, val);
       }
-        
+
+      // Verify -test -f negative case (missing file)
+      {
+        String[] args = new String[3];
+        args[0] = "-test";
+        args[1] = "-f";
+        args[2] = "/test/mkdirs/noFileHere";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(1, val);
+      }
+
+      // Verify -test -f negative case (directory rather than file)
+      {
+        String[] args = new String[3];
+        args[0] = "-test";
+        args[1] = "-f";
+        args[2] = "/test/mkdirs";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(1, val);
+      }
+
+      // Verify -test -f positive case
+      {
+        writeFile(fileSys, myFile);
+        assertTrue(fileSys.exists(myFile));
+
+        String[] args = new String[3];
+        args[0] = "-test";
+        args[1] = "-f";
+        args[2] = myFile.toString();
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(0, val);
+      }
+
+      // Verify -test -s negative case (missing file)
+      {
+        String[] args = new String[3];
+        args[0] = "-test";
+        args[1] = "-s";
+        args[2] = "/test/mkdirs/noFileHere";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(1, val);
+      }
+
+      // Verify -test -s negative case (zero length file)
+      {
+        String[] args = new String[3];
+        args[0] = "-test";
+        args[1] = "-s";
+        args[2] = "/test/mkdirs/isFileHere";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(1, val);
+      }
+
+      // Verify -test -s positive case (nonzero length file)
+      {
+        String[] args = new String[3];
+        args[0] = "-test";
+        args[1] = "-s";
+        args[2] = myFile.toString();
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage());
+        }
+        assertEquals(0, val);
+      }
+
     } finally {
       try {
         fileSys.close();
