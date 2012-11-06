@@ -106,6 +106,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4143. Change blocks to private in INodeFile and renames isLink() to
     isSymlink() in INode. (szetszwo)
 
+    HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
+    C/C++. (Binglin Chang via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
