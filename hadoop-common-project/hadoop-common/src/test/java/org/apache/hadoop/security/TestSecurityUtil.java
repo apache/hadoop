@@ -16,6 +16,8 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.*;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -29,10 +31,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestSecurityUtil {
+  @BeforeClass
+  public static void unsetKerberosRealm() {
+    // prevent failures if kinit-ed or on os x with no realm
+    System.setProperty("java.security.krb5.kdc", "");
+    System.setProperty("java.security.krb5.realm", "NONE");    
+  }
+
   @Test
   public void isOriginalTGTReturnsCorrectValues() {
     assertTrue(SecurityUtil.isTGSPrincipal
@@ -111,9 +122,7 @@ public class TestSecurityUtil {
   @Test
   public void testStartsWithIncorrectSettings() throws IOException {
     Configuration conf = new Configuration();
-    conf.set(
-        org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
-        "kerberos");
+    SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
     String keyTabKey="key";
     conf.set(keyTabKey, "");
     UserGroupInformation.setConfiguration(conf);
@@ -256,7 +265,7 @@ public class TestSecurityUtil {
     SecurityUtil.setTokenServiceUseIp(useIp);
     String serviceHost = useIp ? ip : host.toLowerCase();
     
-    Token token = new Token();
+    Token<?> token = new Token<TokenIdentifier>();
     Text service = new Text(serviceHost+":"+port);
     
     assertEquals(service, SecurityUtil.buildTokenService(addr));
@@ -344,5 +353,44 @@ public class TestSecurityUtil {
     String staticHost = "1.2.3.4";
     NetUtils.addStaticResolution(staticHost, "255.255.255.255");
     verifyServiceAddr(staticHost, "255.255.255.255");
+  }
+  
+  @Test
+  public void testGetAuthenticationMethod() {
+    Configuration conf = new Configuration();
+    // default is simple
+    conf.unset(HADOOP_SECURITY_AUTHENTICATION);
+    assertEquals(SIMPLE, SecurityUtil.getAuthenticationMethod(conf));
+    // simple
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    assertEquals(SIMPLE, SecurityUtil.getAuthenticationMethod(conf));
+    // kerberos
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    assertEquals(KERBEROS, SecurityUtil.getAuthenticationMethod(conf));
+    // bad value
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kaboom");
+    String error = null;
+    try {
+      SecurityUtil.getAuthenticationMethod(conf);
+    } catch (Exception e) {
+      error = e.toString();
+    }
+    assertEquals("java.lang.IllegalArgumentException: " +
+                 "Invalid attribute value for " +
+                 HADOOP_SECURITY_AUTHENTICATION + " of kaboom", error);
+  }
+  
+  @Test
+  public void testSetAuthenticationMethod() {
+    Configuration conf = new Configuration();
+    // default
+    SecurityUtil.setAuthenticationMethod(null, conf);
+    assertEquals("simple", conf.get(HADOOP_SECURITY_AUTHENTICATION));
+    // simple
+    SecurityUtil.setAuthenticationMethod(SIMPLE, conf);
+    assertEquals("simple", conf.get(HADOOP_SECURITY_AUTHENTICATION));
+    // kerberos
+    SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
+    assertEquals("kerberos", conf.get(HADOOP_SECURITY_AUTHENTICATION));
   }
 }

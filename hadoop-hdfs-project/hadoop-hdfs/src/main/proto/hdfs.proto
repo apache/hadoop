@@ -181,11 +181,13 @@ message HdfsFileStatusProto {
 
 /**
  * Checksum algorithms/types used in HDFS
+ * Make sure this enum's integer values match enum values' id properties defined
+ * in org.apache.hadoop.util.DataChecksum.Type
  */
 enum ChecksumTypeProto {
-  NULL = 0;
-  CRC32 = 1;
-  CRC32C = 2;
+  CHECKSUM_NULL = 0;
+  CHECKSUM_CRC32 = 1;
+  CHECKSUM_CRC32C = 2;
 }
 
 /**
@@ -199,7 +201,7 @@ message FsServerDefaultsProto {
   required uint32 fileBufferSize = 5;
   optional bool encryptDataTransfer = 6 [default = false];
   optional uint64 trashInterval = 7 [default = 0];
-  optional ChecksumTypeProto checksumType = 8 [default = CRC32];
+  optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
 }
 
 

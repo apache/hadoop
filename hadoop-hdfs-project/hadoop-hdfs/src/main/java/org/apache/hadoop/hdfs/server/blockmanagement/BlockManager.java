@@ -2696,6 +2696,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   void processOverReplicatedBlocksOnReCommission(
       final DatanodeDescriptor srcNode) {
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
+    int numOverReplicated = 0;
     while(it.hasNext()) {
       final Block block = it.next();
       BlockCollection bc = blocksMap.getBlockCollection(block);
@@ -2705,8 +2706,11 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       if (numCurrentReplica > expectedReplication) {
         // over-replicated block 
         processOverReplicatedBlock(block, expectedReplication, null, null);
+        numOverReplicated++;
       }
     }
+    LOG.info("Invalidated " + numOverReplicated + " over-replicated blocks on " +
+        srcNode + " during recommissioning");
   }
 
   /**

@@ -28,7 +28,6 @@ import java.util.List;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
@@ -473,13 +472,13 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> v) {
+  int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     int total = 1;
     if (children == null) {
       return total;
     }
     for (INode child : children) {
-      total += child.collectSubtreeBlocksAndClear(v);
+      total += child.collectSubtreeBlocksAndClear(info);
     }
     parent = null;
     children = null;

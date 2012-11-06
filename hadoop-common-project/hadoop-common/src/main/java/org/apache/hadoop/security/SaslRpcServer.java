@@ -42,7 +42,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -137,20 +136,17 @@ public class SaslRpcServer {
   /** Authentication method */
   @InterfaceStability.Evolving
   public static enum AuthMethod {
-    SIMPLE((byte) 80, "", AuthenticationMethod.SIMPLE),
-    KERBEROS((byte) 81, "GSSAPI", AuthenticationMethod.KERBEROS),
-    DIGEST((byte) 82, "DIGEST-MD5", AuthenticationMethod.TOKEN);
+    SIMPLE((byte) 80, ""),
+    KERBEROS((byte) 81, "GSSAPI"),
+    DIGEST((byte) 82, "DIGEST-MD5");
 
     /** The code for this method. */
     public final byte code;
     public final String mechanismName;
-    public final AuthenticationMethod authenticationMethod;
 
-    private AuthMethod(byte code, String mechanismName, 
-                       AuthenticationMethod authMethod) {
+    private AuthMethod(byte code, String mechanismName) { 
       this.code = code;
       this.mechanismName = mechanismName;
-      this.authenticationMethod = authMethod;
     }
 
     private static final int FIRST_CODE = values()[0].code;

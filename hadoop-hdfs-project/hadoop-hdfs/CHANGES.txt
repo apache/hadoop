@@ -154,6 +154,9 @@ Trunk (Unreleased)
     HDFS-4151. Change the methods in FSDirectory to pass INodesInPath instead
     of INode[] as a parameter. (szetszwo)
 
+    HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
+    INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -451,6 +454,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4143. Change blocks to private in INodeFile and renames isLink() to
     isSymlink() in INode. (szetszwo)
 
+    HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
+    C/C++. (Binglin Chang via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -547,6 +553,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4132. When libwebhdfs is not enabled, nativeMiniDfsClient frees
     uninitialized memory (Colin Patrick McCabe via todd)
+
+    HDFS-1331. dfs -test should work like /bin/test (Andy Isaacson via daryn)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1934,6 +1942,8 @@ Release 0.23.5 - UNRELEASED
   IMPROVEMENTS
 
   OPTIMIZATIONS
+
+    HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
 
   BUG FIXES
 

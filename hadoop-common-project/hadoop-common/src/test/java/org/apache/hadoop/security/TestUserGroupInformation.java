@@ -305,7 +305,6 @@ public class TestUserGroupInformation {
     assertSame(secret, ugi.getCredentials().getSecretKey(secretKey));
   }
 
-  @SuppressWarnings("unchecked") // from Mockito mocks
   @Test
   public <T extends TokenIdentifier> void testGetCredsNotSame()
       throws Exception {
@@ -429,6 +428,18 @@ public class TestUserGroupInformation {
     assertEquals(2, otherSet.size());
   }
 
+  @Test
+  public void testTestAuthMethod() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    // verify the reverse mappings works
+    for (AuthenticationMethod am : AuthenticationMethod.values()) {
+      if (am.getAuthMethod() != null) {
+        ugi.setAuthenticationMethod(am.getAuthMethod());
+        assertEquals(am, ugi.getAuthenticationMethod());
+      }
+    }
+  }
+  
   @Test
   public void testUGIAuthMethod() throws Exception {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();

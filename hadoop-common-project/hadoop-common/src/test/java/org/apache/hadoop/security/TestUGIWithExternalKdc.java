@@ -21,55 +21,54 @@ import java.io.IOException;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestUGIWithSecurityOn {
-  
-  public static boolean isKdcRunning() {
-    String startKdc = System.getProperty("startKdc");
-    if(startKdc == null || !startKdc.equals("true")) {
-      return false;
-    }
-    return true;
-  } 
- 
+/**
+ * Tests kerberos keytab login using a user-specified external KDC
+ *
+ * To run, users must specify the following system properties:
+ *   externalKdc=true
+ *   java.security.krb5.conf
+ *   user.principal
+ *   user.keytab
+ */
+public class TestUGIWithExternalKdc {
+
   @Before
-  public void testKdcRunning() {
-    //Tests are skipped if KDC is not running
-    Assume.assumeTrue(isKdcRunning());
+  public void testExternalKdcRunning() {
+    Assume.assumeTrue(isExternalKdcRunning());
   }
+
   @Test
   public void testLogin() throws IOException {
-    String nn1keyTabFilepath = System.getProperty("kdc.resource.dir") 
-        + "/keytabs/nn1.keytab";
-    String user1keyTabFilepath = System.getProperty("kdc.resource.dir") 
-        + "/keytabs/user1.keytab";
+    String userPrincipal = System.getProperty("user.principal");
+    String userKeyTab = System.getProperty("user.keytab");
+    Assert.assertNotNull("User principal was not specified", userPrincipal);
+    Assert.assertNotNull("User keytab was not specified", userKeyTab);
+
     Configuration conf = new Configuration();
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    
-    UserGroupInformation ugiNn = UserGroupInformation
-        .loginUserFromKeytabAndReturnUGI("nn1/localhost@EXAMPLE.COM",
-            nn1keyTabFilepath);
-    UserGroupInformation ugiDn = UserGroupInformation
-        .loginUserFromKeytabAndReturnUGI("user1@EXAMPLE.COM",
-            user1keyTabFilepath);
-    
-    Assert.assertEquals(AuthenticationMethod.KERBEROS, 
-        ugiNn.getAuthenticationMethod());
-    Assert.assertEquals(AuthenticationMethod.KERBEROS, 
-        ugiDn.getAuthenticationMethod());
+
+    UserGroupInformation ugi = UserGroupInformation
+        .loginUserFromKeytabAndReturnUGI(userPrincipal, userKeyTab);
+
+    Assert.assertEquals(AuthenticationMethod.KERBEROS,
+        ugi.getAuthenticationMethod());
     
     try {
       UserGroupInformation
-      .loginUserFromKeytabAndReturnUGI("bogus@EXAMPLE.COM",
-          nn1keyTabFilepath);
+      .loginUserFromKeytabAndReturnUGI("bogus@EXAMPLE.COM", userKeyTab);
       Assert.fail("Login should have failed");
     } catch (Exception ex) {
       ex.printStackTrace();
     }
   }
+
 }

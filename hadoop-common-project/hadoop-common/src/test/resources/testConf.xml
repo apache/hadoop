@@ -591,11 +591,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-test -\[ezd\] &lt;path&gt;:\s+If file exists, has zero length, is a directory( )*</expected-output>
+          <expected-output>^-test -\[defsz\] &lt;path&gt;:\sAnswer various questions about &lt;path&gt;, with result via exit status.</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*then return 0, else return 1.( )*</expected-output>
+          <expected-output>^( |\t)*else, return 1.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
