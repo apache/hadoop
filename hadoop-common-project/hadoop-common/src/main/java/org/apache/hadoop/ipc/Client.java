@@ -221,7 +221,6 @@ public class Client {
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
     private String serverPrincipal;  // server's krb5 principal name
-    private IpcConnectionContextProto connectionContext;   // connection context
     private final ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
     private Token<? extends TokenIdentifier> token;
@@ -301,9 +300,6 @@ public class Client {
       } else {
         authMethod = AuthMethod.SIMPLE;
       }
-      
-      connectionContext = ProtoUtil.makeIpcConnectionContext(
-          RPC.getProtocolName(protocol), ticket, authMethod);
       
       if (LOG.isDebugEnabled())
         LOG.debug("Use " + authMethod + " authentication for protocol "
@@ -605,11 +601,6 @@ public class Client {
             } else {
               // fall back to simple auth because server told us so.
               authMethod = AuthMethod.SIMPLE;
-              // remake the connectionContext             
-              connectionContext = ProtoUtil.makeIpcConnectionContext(
-                  connectionContext.getProtocol(), 
-                  ProtoUtil.getUgi(connectionContext.getUserInfo()),
-                  authMethod);
             }
           }
         
@@ -620,7 +611,7 @@ public class Client {
             this.in = new DataInputStream(new BufferedInputStream(inStream));
           }
           this.out = new DataOutputStream(new BufferedOutputStream(outStream));
-          writeConnectionContext();
+          writeConnectionContext(remoteId, authMethod);
 
           // update last activity time
           touch();
@@ -742,10 +733,15 @@ public class Client {
     /* Write the connection context header for each connection
      * Out is not synchronized because only the first thread does this.
      */
-    private void writeConnectionContext() throws IOException {
+    private void writeConnectionContext(ConnectionId remoteId,
+                                        AuthMethod authMethod)
+                                            throws IOException {
       // Write out the ConnectionHeader
       DataOutputBuffer buf = new DataOutputBuffer();
-      connectionContext.writeTo(buf);
+      ProtoUtil.makeIpcConnectionContext(
+          RPC.getProtocolName(remoteId.getProtocol()),
+          remoteId.getTicket(),
+          authMethod).writeTo(buf);
       
       // Write out the payload length
       int bufLen = buf.getLength();
