@@ -394,6 +394,17 @@ extern  "C" {
 
 
     /**
+     * hdfsHSync - Similar to posix fsync, Flush out the data in client's 
+     * user buffer. all the way to the disk device (but the disk may have 
+     * it in its cache).
+     * @param fs configured filesystem handle
+     * @param file file handle
+     * @return 0 on success, -1 on error and sets errno
+     */
+    int hdfsHSync(hdfsFS fs, hdfsFile file);
+
+
+    /**
      * hdfsAvailable - Number of bytes that can be read from this
      * input stream without blocking.
      * @param fs The configured filesystem handle.

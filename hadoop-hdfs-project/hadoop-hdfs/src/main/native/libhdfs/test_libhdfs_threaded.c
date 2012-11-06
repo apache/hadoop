@@ -150,6 +150,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
         return EIO;
     }
     EXPECT_ZERO(hdfsFlush(fs, file));
+    EXPECT_ZERO(hdfsHSync(fs, file));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
     /* Let's re-open the file for reading */

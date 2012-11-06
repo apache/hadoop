@@ -368,6 +368,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4059. Add number of stale DataNodes to metrics. (Jing Zhao via suresh)
 
+    HDFS-4155. libhdfs implementation of hsync API (Liang Xie via todd)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log
