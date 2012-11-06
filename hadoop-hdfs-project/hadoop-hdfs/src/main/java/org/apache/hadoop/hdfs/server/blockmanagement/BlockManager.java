@@ -2311,6 +2311,7 @@ public class BlockManager {
   void processOverReplicatedBlocksOnReCommission(
       final DatanodeDescriptor srcNode) {
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
+    int numOverReplicated = 0;
     while(it.hasNext()) {
       final Block block = it.next();
       INodeFile fileINode = blocksMap.getINode(block);
@@ -2320,8 +2321,11 @@ public class BlockManager {
       if (numCurrentReplica > expectedReplication) {
         // over-replicated block 
         processOverReplicatedBlock(block, expectedReplication, null, null);
+        numOverReplicated++;
       }
     }
+    LOG.info("Invalidated " + numOverReplicated + " over-replicated blocks on " +
+        srcNode + " during recommissioning");
   }
 
   /**

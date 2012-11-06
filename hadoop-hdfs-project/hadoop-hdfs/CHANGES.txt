@@ -16,6 +16,8 @@ Release 0.23.5 - UNRELEASED
     HDFS-3483. Better error message when hdfs fsck is run against a ViewFS
     config. (Stephen Fritz via atm)
 
+    HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
+
   OPTIMIZATIONS
 
   BUG FIXES
