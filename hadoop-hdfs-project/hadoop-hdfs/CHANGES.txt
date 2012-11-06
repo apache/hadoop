@@ -551,6 +551,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4132. When libwebhdfs is not enabled, nativeMiniDfsClient frees
     uninitialized memory (Colin Patrick McCabe via todd)
 
+    HDFS-1331. dfs -test should work like /bin/test (Andy Isaacson via daryn)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
