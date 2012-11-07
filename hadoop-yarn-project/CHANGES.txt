@@ -185,6 +185,9 @@ Release 0.23.5 - UNRELEASED
     YARN-202. Log Aggregation generates a storm of fsync() for namenode 
     (Kihwal Lee via bobby)
 
+    YARN-201. Fix CapacityScheduler to be less conservative for starved 
+    off-switch requests. (jlowe via acmurthy) 
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -1259,7 +1259,7 @@ public class TestLeafQueue {
     assignment = a.assignContainers(clusterResource, node_2);
     verify(app_0).allocate(eq(NodeType.OFF_SWITCH), eq(node_2), 
         any(Priority.class), any(ResourceRequest.class), any(Container.class));
-    assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
+    assertEquals(4, app_0.getSchedulingOpportunities(priority)); // should NOT reset
     assertEquals(2, app_0.getTotalRequiredResources(priority));
     assertEquals(NodeType.OFF_SWITCH, assignment.getType());
     
@@ -1408,11 +1408,11 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getSchedulingOpportunities(priority_2));
     assertEquals(1, app_0.getTotalRequiredResources(priority_2));
 
-    // Another off-switch, shouldn allocate OFF_SWITCH P1
+    // Another off-switch, shouldn't allocate OFF_SWITCH P1
     a.assignContainers(clusterResource, node_2);
     verify(app_0).allocate(eq(NodeType.OFF_SWITCH), eq(node_2), 
         eq(priority_1), any(ResourceRequest.class), any(Container.class));
-    assertEquals(0, app_0.getSchedulingOpportunities(priority_1));
+    assertEquals(3, app_0.getSchedulingOpportunities(priority_1));
     assertEquals(1, app_0.getTotalRequiredResources(priority_1));
     verify(app_0, never()).allocate(any(NodeType.class), eq(node_2), 
         eq(priority_2), any(ResourceRequest.class), any(Container.class));
@@ -1438,7 +1438,7 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getTotalRequiredResources(priority_1));
     verify(app_0).allocate(eq(NodeType.OFF_SWITCH), eq(node_1), 
         eq(priority_2), any(ResourceRequest.class), any(Container.class));
-    assertEquals(0, app_0.getSchedulingOpportunities(priority_2));
+    assertEquals(1, app_0.getSchedulingOpportunities(priority_2));
     assertEquals(0, app_0.getTotalRequiredResources(priority_2));
 
   }
