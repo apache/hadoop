@@ -43,14 +43,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.SaslInputStream;
-import org.apache.hadoop.security.SaslRpcClient;
-import org.apache.hadoop.security.SaslRpcServer;
-import org.apache.hadoop.security.SecurityInfo;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.TestUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.*;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
@@ -58,8 +51,10 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+
 import org.apache.log4j.Level;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /** Unit tests for using Sasl over RPC. */
@@ -76,6 +71,12 @@ public class TestSaslRPC {
   static final String SERVER_PRINCIPAL_2 = "p2/foo@BAR";
   
   private static Configuration conf;
+  
+  @BeforeClass
+  public static void setupKerb() {
+    System.setProperty("java.security.krb5.kdc", "");
+    System.setProperty("java.security.krb5.realm", "NONE"); 
+  }    
 
   @Before
   public void setup() {
@@ -539,21 +540,39 @@ public class TestSaslRPC {
       final boolean useToken,
       final boolean useValidToken) throws Exception {
     
-    Configuration serverConf = new Configuration(conf);
+    String currentUser = UserGroupInformation.getCurrentUser().getUserName();
+    
+    final Configuration serverConf = new Configuration(conf);
     SecurityUtil.setAuthenticationMethod(serverAuth, serverConf);
     UserGroupInformation.setConfiguration(serverConf);
     
-    TestTokenSecretManager sm = new TestTokenSecretManager();
-    Server server = new RPC.Builder(serverConf).setProtocol(TestSaslProtocol.class)
+    final UserGroupInformation serverUgi =
+        UserGroupInformation.createRemoteUser(currentUser + "-SERVER");
+    serverUgi.setAuthenticationMethod(serverAuth);
+
+    final TestTokenSecretManager sm = new TestTokenSecretManager();
+    Server server = serverUgi.doAs(new PrivilegedExceptionAction<Server>() {
+      @Override
+      public Server run() throws IOException {
+        Server server = new RPC.Builder(serverConf)
+        .setProtocol(TestSaslProtocol.class)
         .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true)
         .setSecretManager((serverAuth != SIMPLE) ? sm : null)
         .build();      
-    server.start();
+        server.start();
+        return server;
+      }
+    });
 
+    final Configuration clientConf = new Configuration(conf);
+    SecurityUtil.setAuthenticationMethod(clientAuth, clientConf);
+    UserGroupInformation.setConfiguration(clientConf);
+    
     final UserGroupInformation clientUgi =
-        UserGroupInformation.createRemoteUser(
-            UserGroupInformation.getCurrentUser().getUserName()+"-CLIENT");
+        UserGroupInformation.createRemoteUser(currentUser + "-CLIENT");
+    clientUgi.setAuthenticationMethod(clientAuth);    
+
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     if (useToken) {
       TestTokenIdentifier tokenId = new TestTokenIdentifier(
@@ -568,9 +587,6 @@ public class TestSaslRPC {
       clientUgi.addToken(token);
     }
 
-    final Configuration clientConf = new Configuration(conf);
-    SecurityUtil.setAuthenticationMethod(clientAuth, clientConf);
-    UserGroupInformation.setConfiguration(clientConf);
     
     try {
       return clientUgi.doAs(new PrivilegedExceptionAction<String>() {
