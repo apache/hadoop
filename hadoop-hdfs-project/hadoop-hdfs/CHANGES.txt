@@ -1966,6 +1966,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-4090. getFileChecksum() result incompatible when called against
     zero-byte files. (Kihwal Lee via daryn)
 
+    HDFS-4138. BackupNode startup fails due to uninitialized edit log.
+    (Kihwal Lee via shv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
