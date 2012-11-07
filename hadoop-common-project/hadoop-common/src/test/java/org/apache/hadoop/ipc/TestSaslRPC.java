@@ -53,6 +53,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 import org.apache.log4j.Level;
+import org.apache.tools.ant.types.Assertions.EnabledAssertion;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -69,8 +70,8 @@ public class TestSaslRPC {
   static final String SERVER_KEYTAB_KEY = "test.ipc.server.keytab";
   static final String SERVER_PRINCIPAL_1 = "p1/foo@BAR";
   static final String SERVER_PRINCIPAL_2 = "p2/foo@BAR";
-  
   private static Configuration conf;
+  static Boolean forceSecretManager = null;
   
   @BeforeClass
   public static void setupKerb() {
@@ -83,6 +84,7 @@ public class TestSaslRPC {
     conf = new Configuration();
     SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
+    forceSecretManager = null;
   }
 
   static {
@@ -266,16 +268,6 @@ public class TestSaslRPC {
     }
   }
 
-  @Test
-  public void testSecureToInsecureRpc() throws Exception {
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.SIMPLE, conf);
-    Server server = new RPC.Builder(conf).setProtocol(TestSaslProtocol.class)
-        .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
-        .setNumHandlers(5).setVerbose(true).build();
-    TestTokenSecretManager sm = new TestTokenSecretManager();
-    doDigestRpc(server, sm);
-  }
-  
   @Test
   public void testErrorMessage() throws Exception {
     BadTokenSecretManager sm = new BadTokenSecretManager();
@@ -463,6 +455,8 @@ public class TestSaslRPC {
                       "Failed to specify server's Kerberos principal name.*");
   private static Pattern Denied = 
       Pattern.compile(".*Authorization .* is enabled .*");
+  private static Pattern NoDigest =
+      Pattern.compile(".*Server is not configured to do DIGEST auth.*");
   
   /*
    *  simple server
@@ -479,11 +473,17 @@ public class TestSaslRPC {
     // Tokens are ignored because client is reverted to simple
     assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, true));
     assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, true));
+    forceSecretManager = true;
+    assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, true));
+    assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, true));
   }
     
   @Test
   public void testSimpleServerWithInvalidTokens() throws Exception {
     // Tokens are ignored because client is reverted to simple
+    assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, false));
+    assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, false));
+    forceSecretManager = true;
     assertAuthEquals(SIMPLE, getAuthMethod(SIMPLE,   SIMPLE, false));
     assertAuthEquals(SIMPLE, getAuthMethod(KERBEROS, SIMPLE, false));
   }
@@ -502,12 +502,19 @@ public class TestSaslRPC {
     // can use tokens regardless of auth
     assertAuthEquals(TOKEN, getAuthMethod(SIMPLE,   KERBEROS, true));
     assertAuthEquals(TOKEN, getAuthMethod(KERBEROS, KERBEROS, true));
+    // can't fallback to simple when using kerberos w/o tokens
+    forceSecretManager = false;
+    assertAuthEquals(NoDigest, getAuthMethod(SIMPLE,   KERBEROS, true));
+    assertAuthEquals(NoDigest, getAuthMethod(KERBEROS, KERBEROS, true));
   }
 
   @Test
   public void testKerberosServerWithInvalidTokens() throws Exception {
     assertAuthEquals(BadToken, getAuthMethod(SIMPLE,   KERBEROS, false));
     assertAuthEquals(BadToken, getAuthMethod(KERBEROS, KERBEROS, false));
+    forceSecretManager = false;
+    assertAuthEquals(NoDigest, getAuthMethod(SIMPLE,   KERBEROS, true));
+    assertAuthEquals(NoDigest, getAuthMethod(KERBEROS, KERBEROS, true));
   }
 
 
@@ -551,6 +558,12 @@ public class TestSaslRPC {
     serverUgi.setAuthenticationMethod(serverAuth);
 
     final TestTokenSecretManager sm = new TestTokenSecretManager();
+    boolean useSecretManager = (serverAuth != SIMPLE);
+    if (forceSecretManager != null) {
+      useSecretManager &= forceSecretManager.booleanValue();
+    }
+    final SecretManager<?> serverSm = useSecretManager ? sm : null;
+    
     Server server = serverUgi.doAs(new PrivilegedExceptionAction<Server>() {
       @Override
       public Server run() throws IOException {
@@ -558,7 +571,7 @@ public class TestSaslRPC {
         .setProtocol(TestSaslProtocol.class)
         .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true)
-        .setSecretManager((serverAuth != SIMPLE) ? sm : null)
+        .setSecretManager(serverSm)
         .build();      
         server.start();
         return server;
@@ -587,7 +600,6 @@ public class TestSaslRPC {
       clientUgi.addToken(token);
     }
 
-    
     try {
       return clientUgi.doAs(new PrivilegedExceptionAction<String>() {
         @Override
@@ -596,6 +608,12 @@ public class TestSaslRPC {
           try {
             proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
                 TestSaslProtocol.versionID, addr, clientConf);
+            
+            proxy.ping();
+            // verify sasl completed
+            if (serverAuth != SIMPLE) {
+              assertEquals(SaslRpcServer.SASL_PROPS.get(Sasl.QOP), "auth");
+            }
             
             // make sure the other side thinks we are who we said we are!!!
             assertEquals(clientUgi.getUserName(), proxy.getAuthUser());
