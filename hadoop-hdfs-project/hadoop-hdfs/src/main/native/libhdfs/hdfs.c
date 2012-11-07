@@ -1388,6 +1388,32 @@ int hdfsHFlush(hdfsFS fs, hdfsFile f)
     return 0;
 }
 
+int hdfsHSync(hdfsFS fs, hdfsFile f)
+{
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    //Sanity check
+    if (!f || f->type != OUTPUT) {
+        errno = EBADF;
+        return -1;
+    }
+
+    jobject jOutputStream = f->file;
+    jthrowable jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
+                     HADOOP_OSTRM, "hsync", "()V");
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsHSync: FSDataOutputStream#hsync");
+        return -1;
+    }
+    return 0;
+}
+
 int hdfsAvailable(hdfsFS fs, hdfsFile f)
 {
     // JAVA EQUIVALENT

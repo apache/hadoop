@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
