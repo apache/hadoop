@@ -225,9 +225,6 @@ Trunk (Unreleased)
     HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
     (acmurthy via eli)
 
-    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
-    startup. (Junping Du via todd)
-
     HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
 
     HDFS-3827. TestHASafeMode#assertSafemode method should be made static.
@@ -1965,6 +1962,9 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-4090. getFileChecksum() result incompatible when called against
     zero-byte files. (Kihwal Lee via daryn)
+
+    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
+    startup. (Junping Du via todd)
 
     HDFS-4138. BackupNode startup fails due to uninitialized edit log.
     (Kihwal Lee via shv)
