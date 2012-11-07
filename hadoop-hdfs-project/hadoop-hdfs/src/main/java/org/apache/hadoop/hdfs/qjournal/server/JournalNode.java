@@ -35,6 +35,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -230,6 +231,7 @@ public class JournalNode implements Tool, Configurable {
   }
 
   public static void main(String[] args) throws Exception {
+    StringUtils.startupShutdownMessage(JournalNode.class, args, LOG);
     System.exit(ToolRunner.run(new JournalNode(), args));
   }
 }

@@ -157,6 +157,8 @@ Trunk (Unreleased)
     HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
     INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
 
+    HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
