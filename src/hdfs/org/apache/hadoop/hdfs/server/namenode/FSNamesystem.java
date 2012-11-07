@@ -178,6 +178,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // Default initial capacity and load factor of map
   public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
+  static int BLOCK_DELETION_INCREMENT = 1000;
   
   private float blocksInvalidateWorkPct;
   private int blocksReplWorkMultiplier;
@@ -1843,16 +1844,32 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
   /**
    * Adds block to list of blocks which will be invalidated on 
-   * specified datanode and log the move
+   * specified datanode
    * @param b block
    * @param n datanode
+   * @param log true to create an entry in the log
    */
-  void addToInvalidates(Block b, DatanodeInfo n) {
-    addToInvalidatesNoLog(b, n);
-    NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
-        + b.getBlockName() + " is added to invalidSet of " + n.getName());
+  void addToInvalidates(Block b, DatanodeInfo dn, boolean log) {
+    addToInvalidatesNoLog(b, dn);
+    if (log) {
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
+          + b.getBlockName() + " to " + dn.getName());
+    }
   }
 
+  /**
+   * Adds block to list of blocks which will be invalidated on specified
+   * datanode and log the operation
+   * 
+   * @param b
+   *          block
+   * @param dn
+   *          datanode
+   */
+  void addToInvalidates(Block b, DatanodeInfo dn) {
+    addToInvalidates(b, dn, true);
+  }
+  
   /**
    * Adds block to list of blocks which will be invalidated on 
    * specified datanode
@@ -1875,10 +1892,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * all its datanodes.
    */
   private void addToInvalidates(Block b) {
+    StringBuilder datanodes = new StringBuilder();
     for (Iterator<DatanodeDescriptor> it = 
                                 blocksMap.nodeIterator(b); it.hasNext();) {
       DatanodeDescriptor node = it.next();
-      addToInvalidates(b, node);
+      addToInvalidates(b, node, false);
+      datanodes.append(node.getName()).append(" ");
+    }
+    if (datanodes.length() != 0) {
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.addToInvalidates: "
+          + b.getBlockName() + " to " + datanodes.toString());
     }
   }
 
@@ -2035,8 +2058,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if ((!recursive) && (!dir.isDirEmpty(src))) {
         throw new IOException(src + " is non empty");
       }
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+      }
       boolean status = deleteInternal(src, true);
-      getEditLog().logSync();
       if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
@@ -2046,30 +2071,73 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     
   /**
-   * Remove the indicated filename from the namespace.  This may
-   * invalidate some blocks that make up the file.
+   * Remove a file/directory from the namespace.
+   * <p>
+   * For large directories, deletion is incremental. The blocks under the
+   * directory are collected and deleted a small number at a time holding the
+   * {@link FSNamesystem} lock.
+   * <p>
+   * For small directory or file the deletion is done in one shot.
    */
-  synchronized boolean deleteInternal(String src, 
+  private boolean deleteInternal(String src,
       boolean enforcePermission) throws IOException {
+    boolean deleteNow = false;
+    ArrayList<Block> collectedBlocks = new ArrayList<Block>();
+    synchronized (this) {
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot delete " + src, safeMode);
+      }
+      if (enforcePermission && isPermissionEnabled) {
+        checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
+      }
+      // Unlink the target directory from directory tree
+      if (!dir.delete(src, collectedBlocks)) {
+        return false;
+      }
+      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
+      if (deleteNow) { // Perform small deletes right away
+        removeBlocks(collectedBlocks);
+      }
+    }
+    
+    // Log directory deletion to editlog
+    getEditLog().logSync();
+    if (!deleteNow) {
+      removeBlocks(collectedBlocks); // Incremental deletion of blocks
+    }
+    collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+      NameNode.stateChangeLog.debug("DIR* Namesystem.delete: " + src
+          + " is removed");
     }
-    if (isInSafeMode())
-      throw new SafeModeException("Cannot delete " + src, safeMode);
-    if (enforcePermission && isPermissionEnabled) {
-      checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
+    return true;
+  }
+  
+  /** From the given list, incrementally remove the blocks from blockManager */
+  private void removeBlocks(List<Block> blocks) {
+    int start = 0;
+    int end = 0;
+    while (start < blocks.size()) {
+      end = BLOCK_DELETION_INCREMENT + start;
+      end = end > blocks.size() ? blocks.size() : end;
+      synchronized (this) {
+        for (int i = start; i < end; i++) {
+          Block b = blocks.get(i);
+          blocksMap.removeINode(b);
+          corruptReplicas.removeFromCorruptReplicasMap(b);
+          addToInvalidates(b);
+        }
+      }
+      start = end;
     }
-
-    return dir.delete(src);
   }
 
-  void removePathAndBlocks(String src, List<Block> blocks) throws IOException {
+  void removePathAndBlocks(String src, List<Block> blocks) {
     leaseManager.removeLeaseWithPrefixPath(src);
-    for(Block b : blocks) {
-      blocksMap.removeINode(b);
-      corruptReplicas.removeFromCorruptReplicasMap(b);
-      addToInvalidates(b);
+    if (blocks == null) {
+      return;
     }
+    removeBlocks(blocks);
   }
 
   /** Get the file info for a specific file.

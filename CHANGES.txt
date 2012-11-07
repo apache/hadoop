@@ -12,6 +12,10 @@ Release 1.1.1 - Unreleased
 
   BUG FIXES
 
+    HDFS-3791. HDFS-173 Backport - Namenode will not block until a large 
+    directory deletion completes. It allows other operations when the 
+    deletion is in progress. (umamahesh via suresh)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
