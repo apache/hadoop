@@ -56,3 +56,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4147. When there is a snapshot in a subtree, deletion of the subtree
   should fail. (Jing Zhao via szetszwo)
+
+  HDFS-4150.  Update the inode in the block map when a snapshotted file or a
+  snapshot file is deleted. (Jing Zhao via szetszwo)

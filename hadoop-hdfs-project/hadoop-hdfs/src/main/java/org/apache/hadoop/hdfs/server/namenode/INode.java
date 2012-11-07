@@ -22,7 +22,10 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
@@ -31,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.util.StringUtils;
 
@@ -194,7 +198,8 @@ public abstract class INode implements Comparable<byte[]> {
    * 
    * @param info
    *          Containing all the blocks collected from the children of this
-   *          INode. These blocks later should be removed from the blocksMap.
+   *          INode. These blocks later should be removed/updated in the
+   *          blocksMap.
    */
   abstract int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info);
 
@@ -501,44 +506,84 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Information used for updating the blocksMap when deleting files.
    */
-  public static class BlocksMapUpdateInfo {
-    /**
-     * The list of blocks that need to be removed from blocksMap
-     */
-    private List<Block> toDeleteList;
-    
-    public BlocksMapUpdateInfo(List<Block> toDeleteList) {
-      this.toDeleteList = toDeleteList == null ? new ArrayList<Block>()
-          : toDeleteList;
-    }
+  public static class BlocksMapUpdateInfo implements
+      Iterable<Map.Entry<Block, BlocksMapINodeUpdateEntry>> {
+    private final Map<Block, BlocksMapINodeUpdateEntry> updateMap;
     
     public BlocksMapUpdateInfo() {
-      toDeleteList = new ArrayList<Block>();
+      updateMap = new HashMap<Block, BlocksMapINodeUpdateEntry>();
     }
     
     /**
-     * @return The list of blocks that need to be removed from blocksMap
-     */
-    public List<Block> getToDeleteList() {
-      return toDeleteList;
-    }
-    
-    /**
-     * Add a to-be-deleted block into the
-     * {@link BlocksMapUpdateInfo#toDeleteList}
+     * Add a to-be-deleted block. This block should belongs to a file without
+     * snapshots. We thus only need to put a block-null pair into the updateMap.
+     * 
      * @param toDelete the to-be-deleted block
      */
     public void addDeleteBlock(Block toDelete) {
       if (toDelete != null) {
-        toDeleteList.add(toDelete);
+        updateMap.put(toDelete, null);
       }
     }
     
     /**
-     * Clear {@link BlocksMapUpdateInfo#toDeleteList}
+     * Add a given block, as well as its old and new BlockCollection
+     * information, into the updateMap.
+     * 
+     * @param toUpdateBlock
+     *          The given block
+     * @param entry
+     *          The BlocksMapINodeUpdateEntry instance containing both the
+     *          original BlockCollection of the given block and the new
+     *          BlockCollection of the given block for updating the blocksMap.
+     *          The new BlockCollection should be the INode of one of the
+     *          corresponding file's snapshot.
+     */
+    public void addUpdateBlock(Block toUpdateBlock,
+        BlocksMapINodeUpdateEntry entry) {
+      updateMap.put(toUpdateBlock, entry);
+    }
+
+    /**
+     * Clear {@link BlocksMapUpdateInfo#updateMap}
      */
     public void clear() {
-      toDeleteList.clear();
+      updateMap.clear();
+    }
+
+    @Override
+    public Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> iterator() {
+      return updateMap.entrySet().iterator();
+    }
+  }
+  
+  /**
+   * When deleting a file with snapshot, we cannot directly remove its record
+   * from blocksMap. Instead, we should consider replacing the original record
+   * in blocksMap with INode of snapshot.
+   */
+  public static class BlocksMapINodeUpdateEntry {
+    /**
+     * The BlockCollection of the file to be deleted
+     */
+    private final BlockCollection toDelete;
+    /**
+     * The BlockCollection of the to-be-deleted file's snapshot
+     */
+    private final BlockCollection toReplace;
+
+    public BlocksMapINodeUpdateEntry(BlockCollection toDelete,
+        BlockCollection toReplace) {
+      this.toDelete = toDelete;
+      this.toReplace = toReplace;
+    }
+
+    public BlockCollection getToDelete() {
+      return toDelete;
+    }
+
+    public BlockCollection getToReplace() {
+      return toReplace;
     }
   }
 }

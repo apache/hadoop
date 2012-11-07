@@ -145,6 +145,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -159,6 +160,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapINodeUpdateEntry;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -2718,21 +2720,48 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *          of blocks that need to be removed from blocksMap
    */
   private void removeBlocks(BlocksMapUpdateInfo blocks) {
-    int start = 0;
-    int end = 0;
-    List<Block> toDeleteList = blocks.getToDeleteList();
-    while (start < toDeleteList.size()) {
-      end = BLOCK_DELETION_INCREMENT + start;
-      end = end > toDeleteList.size() ? toDeleteList.size() : end;
+    Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> iter = blocks
+        .iterator();
+    while (iter.hasNext()) {
       writeLock();
       try {
-        for (int i = start; i < end; i++) {
-          blockManager.removeBlock(toDeleteList.get(i));
+        for (int numberToHandle = BLOCK_DELETION_INCREMENT; iter.hasNext()
+            && numberToHandle > 0; numberToHandle--) {
+          Map.Entry<Block, BlocksMapINodeUpdateEntry> entry = iter.next();
+          updateBlocksMap(entry);
         }
       } finally {
         writeUnlock();
       }
-      start = end;
+    }
+  }
+  
+  /**
+   * Update the blocksMap for a given block.
+   * 
+   * @param entry
+   *          The update entry containing both the block and its new INode. The
+   *          block should be removed from the blocksMap if the INode is null,
+   *          otherwise the INode for the block will be updated in the
+   *          blocksMap.
+   */
+  private void updateBlocksMap(
+      Map.Entry<Block, BlocksMapINodeUpdateEntry> entry) {
+    Block block = entry.getKey();
+    BlocksMapINodeUpdateEntry value = entry.getValue();
+    if (value == null) {
+      blockManager.removeBlock(block);
+    } else {
+      BlockCollection toDelete = value.getToDelete();
+      BlockInfo originalBlockInfo = blockManager.getStoredBlock(block);
+      // The FSDirectory tree and the blocksMap share the same INode reference.
+      // Thus we use "==" to check if the INode for the block belongs to the
+      // current file (instead of the INode from a snapshot file).
+      if (originalBlockInfo != null
+          && toDelete == originalBlockInfo.getBlockCollection()) {
+        blockManager.addBlockCollection(originalBlockInfo,
+            value.getToReplace());
+      }
     }
   }
   
@@ -2754,7 +2783,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean trackBlockCounts = isSafeModeTrackingBlocks();
     int numRemovedComplete = 0, numRemovedSafe = 0;
 
-    for (Block b : blocks.getToDeleteList()) {
+    Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> blockIter = 
+        blocks.iterator();
+    while (blockIter.hasNext()) {
+      Map.Entry<Block, BlocksMapINodeUpdateEntry> entry = blockIter.next();
+      Block b = entry.getKey();
       if (trackBlockCounts) {
         BlockInfo bi = blockManager.getStoredBlock(b);
         if (bi.isComplete()) {
@@ -2764,8 +2797,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
         }
       }
-      blockManager.removeBlock(b);
+      updateBlocksMap(entry);
     }
+
     if (trackBlockCounts) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Adjusting safe-mode totals for deletion of " + src + ":" +

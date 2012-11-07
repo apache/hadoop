@@ -91,7 +91,7 @@ public class INodeFile extends INode implements BlockCollection {
     return getFileReplication();
   }
 
-  void setFileReplication(short replication) {
+  protected void setFileReplication(short replication) {
     if(replication <= 0)
        throw new IllegalArgumentException("Unexpected value for the replication");
     header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
