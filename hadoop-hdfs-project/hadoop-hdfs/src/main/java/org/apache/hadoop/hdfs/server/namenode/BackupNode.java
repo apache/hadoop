@@ -354,6 +354,7 @@ public class BackupNode extends NameNode {
     } else {
       nsInfo.validateStorage(storage);
     }
+    bnImage.initEditLog();
     setRegistration();
     NamenodeRegistration nnReg = null;
     while(!isStopRequested()) {
