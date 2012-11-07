@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -252,6 +253,64 @@ public class TestSnapshot {
     exception.expect(RemoteException.class);
     hdfs.delete(dir, true);
   }  
+  
+  /**
+   * Renaming a directory to another directory with snapshots must fail.
+   */
+  @Test
+  public void testRenameToDirectoryWithSnapshot() throws Exception {
+    // create the directory sub1
+    hdfs.mkdirs(sub1);
+    
+    Path sub2 = new Path(dir, "sub2");
+    Path file2 = new Path(sub2, "file");
+    DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
+    
+    // The normal rename should succeed
+    hdfs.rename(sub2, sub1, Rename.OVERWRITE);
+    
+    // Create sub3 and create snapshot for it 
+    Path sub3 = new Path(dir, "sub3");
+    hdfs.mkdirs(sub3);
+    SnapshotTestHelper.createSnapshot(hdfs, sub3, "s1");
+    
+    exception.expect(RemoteException.class);
+    String error = "The direcotry " + sub3.toString()
+        + " cannot be deleted for renaming since " + sub3.toString()
+        + " is snapshottable and already has snapshots";
+    exception.expectMessage(error);
+    hdfs.rename(sub1, sub3, Rename.OVERWRITE);
+  }
+  
+  /**
+   * Renaming a directory to another directory with snapshots
+   * must fail.
+   */
+  @Test
+  public void testRenameToDirectoryWithSnapshot2() throws Exception {
+    Path file0 = new Path(sub1, "file0");
+    Path file1 = new Path(sub1, "file1");
+    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    
+    Path sub2 = new Path(dir, "sub2");
+    Path file2 = new Path(sub2, "file");
+    DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
+    
+    // Create snapshot for sub1
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
+    // Then delete file0 and file1 so that the renaming can succeed if without
+    // snapshots
+    hdfs.delete(file0, true);
+    hdfs.delete(file1, true);
+    
+    exception.expect(RemoteException.class);
+    String error = "The direcotry " + sub1.toString()
+        + " cannot be deleted for renaming since " + sub1.toString()
+        + " is snapshottable and already has snapshots";
+    exception.expectMessage(error);
+    hdfs.rename(sub2, sub1, Rename.OVERWRITE);
+  }
   
   /**
    * Base class to present changes applied to current file/dir. A modification

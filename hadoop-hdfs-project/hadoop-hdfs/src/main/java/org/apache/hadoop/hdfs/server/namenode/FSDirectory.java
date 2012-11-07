@@ -705,6 +705,16 @@ public class FSDirectory implements Closeable {
             + error);
         throw new IOException(error);
       }
+      INode snapshotNode = hasSnapshot(dstInode);
+      if (snapshotNode != null) {
+        error = "The direcotry " + dstInode.getFullPathName()
+            + " cannot be deleted for renaming since "
+            + snapshotNode.getFullPathName()
+            + " is snapshottable and already has snapshots";
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            + error);
+        throw new IOException(error);
+      }
     }
     if (dstInodes[dstInodes.length - 2] == null) {
       error = "rename destination parent " + dst + " not found.";
@@ -1145,10 +1155,13 @@ public class FSDirectory implements Closeable {
           && ((INodeDirectorySnapshottable) targetDir).getNumSnapshots() > 0) {
         return target;
       }
-      for (INode child : targetDir.getChildren()) {
-        INode snapshotDir = hasSnapshot(child);
-        if (snapshotDir != null) {
-          return snapshotDir;
+      List<INode> children = targetDir.getChildren();
+      if (children != null) {
+        for (INode child : children) {
+          INode snapshotDir = hasSnapshot(child);
+          if (snapshotDir != null) {
+            return snapshotDir;
+          }
         }
       }
     }

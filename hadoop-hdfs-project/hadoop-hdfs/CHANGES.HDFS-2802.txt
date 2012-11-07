@@ -59,3 +59,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4150.  Update the inode in the block map when a snapshotted file or a
   snapshot file is deleted. (Jing Zhao via szetszwo)
+
+  HDFS-4159. Rename should fail when the destination directory is snapshottable
+  and has snapshots. (Jing Zhao via szetszwo)
