@@ -354,4 +354,19 @@ public class TestDelegationTokenRenewal {
       //expected
     }
   }
+
+  /**
+   * Run the testDTRenewal(), close the DelegationTokenRenewal, and run the
+   * testDTRenewal() test again to make sure that DelegationTokenRenewal can be
+   * re-used after its been closed
+   * @throws Exception
+   */
+  @Test
+  public void testDTRenewalAfterClose() throws Exception {
+      Renewer.counter = 0;
+      testDTRenewal();
+      DelegationTokenRenewal.close();
+      Renewer.counter = 0;
+      testDTRenewal();
+  }
 }

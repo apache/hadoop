@@ -311,6 +311,9 @@ Release 1.2.0 - unreleased
     directory deletion completes. It allows other operations when the 
     deletion is in progress. (umamahesh via suresh)
 
+    MAPREDUCE-4765. Restarting the JobTracker programmatically can cause
+    DelegationTokenRenewal to throw an exception. (rkanter via tucu)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
