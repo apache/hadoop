@@ -45,6 +45,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on default FS. (Gera Shegalov via tucu)
 
+    MAPREDUCE-4777. In TestIFile, testIFileReaderWithCodec relies on
+    testIFileWriterWithCodec. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
