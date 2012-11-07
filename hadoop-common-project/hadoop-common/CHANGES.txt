@@ -70,6 +70,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9013. UGI should not hardcode loginUser's authenticationType (daryn
     via bobby)
 
+    HADOOP-9014. Standardize creation of SaslRpcClients (daryn via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
