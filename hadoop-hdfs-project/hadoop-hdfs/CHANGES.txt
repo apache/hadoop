@@ -1686,6 +1686,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-3625. Fix TestBackupNode by properly initializing edit log during
     startup. (Junping Du via todd)
 
+    HDFS-4138. BackupNode startup fails due to uninitialized edit log.
+    (Kihwal Lee via shv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -77,10 +77,6 @@ public class BackupNode extends NameNode {
   String nnHttpAddress;
   /** Checkpoint manager */
   Checkpointer checkpointManager;
-  /** ClusterID to which BackupNode belongs to */
-  String clusterId;
-  /** Block pool Id of the peer namenode of this BackupNode */
-  String blockPoolId;
   
   BackupNode(Configuration conf, NamenodeRole role) throws IOException {
     super(conf, role);
@@ -144,6 +140,7 @@ public class BackupNode extends NameNode {
                  CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
     NamespaceInfo nsInfo = handshake(conf);
     super.initialize(conf);
+    namesystem.setBlockPoolId(nsInfo.getBlockPoolID());
 
     if (false == namesystem.isInSafeMode()) {
       namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
@@ -153,9 +150,6 @@ public class BackupNode extends NameNode {
     // therefore lease hard limit should never expire.
     namesystem.leaseManager.setLeasePeriod(
         HdfsConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
-    
-    clusterId = nsInfo.getClusterID();
-    blockPoolId = nsInfo.getBlockPoolID();
 
     // register with the active name-node 
     registerWith(nsInfo);
@@ -209,7 +203,7 @@ public class BackupNode extends NameNode {
   }
   
   /* @Override */// NameNode
-  public boolean setSafeMode(@SuppressWarnings("unused") SafeModeAction action)
+  public boolean setSafeMode(SafeModeAction action)
       throws IOException {
     throw new UnsupportedActionException("setSafeMode");
   }
@@ -403,14 +397,6 @@ public class BackupNode extends NameNode {
       "Active and backup node layout versions must be the same. Expected: "
       + HdfsConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
-  }
-  
-  String getBlockPoolId() {
-    return blockPoolId;
-  }
-  
-  String getClusterId() {
-    return clusterId;
   }
   
   @Override
