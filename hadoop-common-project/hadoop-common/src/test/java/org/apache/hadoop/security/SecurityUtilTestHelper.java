@@ -27,4 +27,19 @@ public class SecurityUtilTestHelper {
   public static void setTokenServiceUseIp(boolean flag) {
     SecurityUtil.setTokenServiceUseIp(flag);
   }
+
+  /**
+   * Return true if externalKdc=true and the location of the krb5.conf
+   * file has been specified, and false otherwise.
+   */
+  public static boolean isExternalKdcRunning() {
+    String externalKdc = System.getProperty("externalKdc");
+    String krb5Conf = System.getProperty("java.security.krb5.conf");
+    if(externalKdc == null || !externalKdc.equals("true") ||
+       krb5Conf == null) {
+      return false;
+    }
+    return true;
+  }
+
 }
