@@ -67,6 +67,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9010. Map UGI authenticationMethod to RPC authMethod (daryn via
     bobby)
 
+    HADOOP-9013. UGI should not hardcode loginUser's authenticationType (daryn
+    via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
