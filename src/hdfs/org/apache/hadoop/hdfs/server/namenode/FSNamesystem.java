@@ -2081,7 +2081,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   private boolean deleteInternal(String src,
       boolean enforcePermission) throws IOException {
-    boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
     synchronized (this) {
       if (isInSafeMode()) {
@@ -2094,17 +2093,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if (!dir.delete(src, collectedBlocks)) {
         return false;
       }
-      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
-      if (deleteNow) { // Perform small deletes right away
-        removeBlocks(collectedBlocks);
-      }
     }
     
     // Log directory deletion to editlog
     getEditLog().logSync();
-    if (!deleteNow) {
-      removeBlocks(collectedBlocks); // Incremental deletion of blocks
-    }
+    removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: " + src

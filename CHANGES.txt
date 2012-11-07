@@ -16,6 +16,9 @@ Release 1.1.1 - Unreleased
     directory deletion completes. It allows other operations when the 
     deletion is in progress. (umamahesh via suresh)
 
+    HDFS-2815. Namenode is not coming out of safemode when we perform ( NN crash + restart ). 
+    Also FSCK report shows blocks missed. (umamahesh)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
