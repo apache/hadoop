@@ -55,6 +55,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import javax.security.auth.callback.CallbackHandler;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
@@ -84,6 +85,7 @@ import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -1037,7 +1039,6 @@ public abstract class Server {
     
     IpcConnectionContextProto connectionContext;
     String protocolName;
-    boolean useSasl;
     SaslServer saslServer;
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
@@ -1153,49 +1154,6 @@ public abstract class Server {
       if (!saslContextEstablished) {
         byte[] replyToken = null;
         try {
-          if (saslServer == null) {
-            switch (authMethod) {
-            case DIGEST:
-              if (secretManager == null) {
-                throw new AccessControlException(
-                    "Server is not configured to do DIGEST authentication.");
-              }
-              secretManager.checkAvailableForRead();
-              saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
-                  .getMechanismName(), null, SaslRpcServer.SASL_DEFAULT_REALM,
-                  SaslRpcServer.SASL_PROPS, new SaslDigestCallbackHandler(
-                      secretManager, this));
-              break;
-            default:
-              UserGroupInformation current = UserGroupInformation
-                  .getCurrentUser();
-              String fullName = current.getUserName();
-              if (LOG.isDebugEnabled())
-                LOG.debug("Kerberos principal name is " + fullName);
-              final String names[] = SaslRpcServer.splitKerberosName(fullName);
-              if (names.length != 3) {
-                throw new AccessControlException(
-                    "Kerberos principal name does NOT have the expected "
-                        + "hostname part: " + fullName);
-              }
-              current.doAs(new PrivilegedExceptionAction<Object>() {
-                @Override
-                public Object run() throws SaslException {
-                  saslServer = Sasl.createSaslServer(AuthMethod.KERBEROS
-                      .getMechanismName(), names[0], names[1],
-                      SaslRpcServer.SASL_PROPS, new SaslGssCallbackHandler());
-                  return null;
-                }
-              });
-            }
-            if (saslServer == null)
-              throw new AccessControlException(
-                  "Unable to find SASL server implementation for "
-                      + authMethod.getMechanismName());
-            if (LOG.isDebugEnabled())
-              LOG.debug("Created SASL server with mechanism = "
-                  + authMethod.getMechanismName());
-          }
           if (LOG.isDebugEnabled())
             LOG.debug("Have read input token of size " + saslToken.length
                 + " for processing by saslServer.evaluateResponse()");
@@ -1334,38 +1292,27 @@ public abstract class Server {
           dataLengthBuffer.clear();
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
-          }          
+          }
+          boolean useSaslServer = isSecurityEnabled;
           final boolean clientUsingSasl;
           switch (authMethod) {
             case SIMPLE: { // no sasl for simple
-              if (isSecurityEnabled) {
-                AccessControlException ae = new AccessControlException("Authorization ("
-                    + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
-                    + ") is enabled but authentication ("
-                    + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
-                    + ") is configured as simple. Please configure another method "
-                    + "like kerberos or digest.");
-                setupResponse(authFailedResponse, authFailedCall, RpcStatusProto.FATAL,
-                    null, ae.getClass().getName(), ae.getMessage());
-                responder.doRespond(authFailedCall);
-                throw ae;
-              }
               clientUsingSasl = false;
-              useSasl = false; 
               break;
             }
-            case DIGEST: {
+            case DIGEST: { // always allow tokens if there's a secret manager
+              useSaslServer |= (secretManager != null);
               clientUsingSasl = true;
-              useSasl = (secretManager != null);
               break;
             }
             default: {
               clientUsingSasl = true;
-              useSasl = isSecurityEnabled; 
               break;
             }
-          }          
-          if (clientUsingSasl && !useSasl) {
+          }
+          if (useSaslServer) {
+            saslServer = createSaslServer(authMethod);
+          } else if (clientUsingSasl) { // security is off
             doSaslReply(SaslStatus.SUCCESS, new IntWritable(
                 SaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
             authMethod = AuthMethod.SIMPLE;
@@ -1407,7 +1354,7 @@ public abstract class Server {
             continue;
           }
           boolean isHeaderRead = connectionContextRead;
-          if (useSasl) {
+          if (saslServer != null) {
             saslReadAndProcess(data.array());
           } else {
             processOneRpc(data.array());
@@ -1421,6 +1368,84 @@ public abstract class Server {
       }
     }
 
+    private SaslServer createSaslServer(AuthMethod authMethod)
+        throws IOException {
+      try {
+        return createSaslServerInternal(authMethod);
+      } catch (IOException ioe) {
+        final String ioeClass = ioe.getClass().getName();
+        final String ioeMessage  = ioe.getLocalizedMessage();
+        if (authMethod == AuthMethod.SIMPLE) {
+          setupResponse(authFailedResponse, authFailedCall,
+              RpcStatusProto.FATAL, null, ioeClass, ioeMessage);
+          responder.doRespond(authFailedCall);
+        } else {
+          doSaslReply(SaslStatus.ERROR, null, ioeClass, ioeMessage);
+        }
+        throw ioe;
+      }
+    }
+
+    private SaslServer createSaslServerInternal(AuthMethod authMethod)
+        throws IOException {
+      SaslServer saslServer = null;
+      String hostname = null;
+      String saslProtocol = null;
+      CallbackHandler saslCallback = null;
+      
+      switch (authMethod) {
+        case SIMPLE: {
+          throw new AccessControlException("Authorization ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
+              + ") is enabled but authentication ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
+              + ") is configured as simple. Please configure another method "
+              + "like kerberos or digest.");
+        }
+        case DIGEST: {
+          if (secretManager == null) {
+            throw new AccessControlException(
+                "Server is not configured to do DIGEST authentication.");
+          }
+          secretManager.checkAvailableForRead();
+          hostname = SaslRpcServer.SASL_DEFAULT_REALM;
+          saslCallback = new SaslDigestCallbackHandler(secretManager, this);
+          break;
+        }
+        case KERBEROS: {
+          String fullName = UserGroupInformation.getCurrentUser().getUserName();
+          if (LOG.isDebugEnabled())
+            LOG.debug("Kerberos principal name is " + fullName);
+          KerberosName krbName = new KerberosName(fullName);
+          hostname = krbName.getHostName();
+          if (hostname == null) {
+            throw new AccessControlException(
+                "Kerberos principal name does NOT have the expected "
+                    + "hostname part: " + fullName);
+          }
+          saslProtocol = krbName.getServiceName();
+          saslCallback = new SaslGssCallbackHandler();
+          break;
+        }
+        default:
+          throw new AccessControlException(
+              "Server does not support SASL " + authMethod);
+      }
+      
+      String mechanism = authMethod.getMechanismName();
+      saslServer = Sasl.createSaslServer(
+          mechanism, saslProtocol, hostname,
+          SaslRpcServer.SASL_PROPS, saslCallback);
+      if (saslServer == null) {
+        throw new AccessControlException(
+            "Unable to find SASL server implementation for " + mechanism);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Created SASL server with mechanism = " + mechanism);
+      }
+      return saslServer;
+    }
+    
     /**
      * Try to set up the response to indicate that the client version
      * is incompatible with the server. This can contain special-case
@@ -1482,7 +1507,7 @@ public abstract class Server {
           .getProtocol() : null;
 
       UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
-      if (!useSasl) {
+      if (saslServer == null) {
         user = protocolUser;
         if (user != null) {
           user.setAuthenticationMethod(AuthMethod.SIMPLE);
@@ -1956,7 +1981,7 @@ public abstract class Server {
   
   private void wrapWithSasl(ByteArrayOutputStream response, Call call)
       throws IOException {
-    if (call.connection.useSasl) {
+    if (call.connection.saslServer != null) {
       byte[] token = response.toByteArray();
       // synchronization may be needed since there can be multiple Handler
       // threads using saslServer to wrap responses.
