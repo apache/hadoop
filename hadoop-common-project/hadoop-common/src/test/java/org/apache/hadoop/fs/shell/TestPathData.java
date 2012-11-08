@@ -116,6 +116,27 @@ public class TestPathData {
   }
 
   @Test
+  public void testToFileRawWindowsPaths() throws Exception {
+    if (!Path.WINDOWS) {
+      return;
+    }
+
+    // Can we handle raw Windows paths? The files need not exist for
+    // the tests to succeed.
+    String[] winPaths = {
+        "n:\\",
+        "N:\\",
+        "N:\\foo",
+        "N:\\foo\\bar"
+    };
+
+    for (String path : winPaths) {
+      PathData item = new PathData(path, conf);
+      assertEquals(new File(path), item.toFile());
+    }
+  }
+
+  @Test
   public void testAbsoluteGlob() throws Exception {
     PathData[] items = PathData.expandAsGlob(testDir+"/d1/f1*", conf);
     assertEquals(

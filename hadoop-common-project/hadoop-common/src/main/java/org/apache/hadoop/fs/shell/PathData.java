@@ -39,6 +39,9 @@ import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
+ * PathData ensures that the returned path string will be the same as the
+ * one passed in during initialization (unlike Path objects which can
+ * modify the path string).
  * The stat field will be null if the path does not exist.
  */
 @InterfaceAudience.Private
@@ -50,6 +53,14 @@ public class PathData implements Comparable<PathData> {
   public final Path path;
   public FileStatus stat;
   public boolean exists;
+
+  /* True if the URI scheme was not present in the pathString but inferred.
+   */
+  private boolean inferredSchemeFromPath;
+
+  /* True if backslashes in a raw Windows path were replaced.
+   */
+  private boolean restoreBackslashes;
 
   /**
    * Creates an object to wrap the given parameters as fields.  The string
@@ -100,6 +111,15 @@ public class PathData implements Comparable<PathData> {
     this.uri = stringToUri(pathString);
     this.path = fs.makeQualified(new Path(uri));
     setStat(stat);
+
+    if (Path.isWindowsAbsolutePath(pathString, false) ||
+        Path.isWindowsAbsolutePath(pathString, true)) {
+      inferredSchemeFromPath = true;
+    }
+
+    if (Path.WINDOWS && (pathString.indexOf('\\') != -1)) {
+      restoreBackslashes = true;
+    }
   }
 
   // need a static method for the ctor above
@@ -236,7 +256,7 @@ public class PathData implements Comparable<PathData> {
    * Given a child of this directory, use the directory's path and the child's
    * basename to construct the string to the child.  This preserves relative
    * paths since Path will fully qualify.
-   * @param child a path contained within this directory
+   * @param childPath a path contained within this directory
    * @return String of the path relative to this directory
    */
   private String getStringForChildPath(Path childPath) {
@@ -386,7 +406,20 @@ public class PathData implements Comparable<PathData> {
     // No interpretation of symbols. Just decode % escaped chars.
     String decodedRemainder = uri.getSchemeSpecificPart();
 
-    if (scheme == null) {
+    // Drop the scheme if it was inferred to ensure fidelity between
+    // the input and output path strings.
+    if ((scheme == null) || (inferredSchemeFromPath)) {
+
+      if (Path.isWindowsAbsolutePath(decodedRemainder, true)) {
+        // Strip the leading '/' added in stringToUri so users see a valid
+        // Windows path.
+        decodedRemainder = decodedRemainder.substring(1);
+      }
+
+      if (restoreBackslashes) {
+        decodedRemainder = decodedRemainder.replace('\\', '/');
+      }
+
       return decodedRemainder;
     } else {
       StringBuilder buffer = new StringBuilder();
@@ -427,26 +460,42 @@ public class PathData implements Comparable<PathData> {
 
     int start = 0;
 
-    // parse uri scheme, if any
-    int colon = pathString.indexOf(':');
-    int slash = pathString.indexOf('/');
-    if (colon > 0 && (slash == colon +1)) {
-      // has a non zero-length scheme
-      scheme = pathString.substring(0, colon);
-      start = colon + 1;
+    if (Path.WINDOWS) {
+      // Convert backslashes to prevent URI from escaping them.
+      pathString = pathString.replace('\\', '/');
     }
 
-    // parse uri authority, if any
-    if (pathString.startsWith("//", start) &&
-        (pathString.length()-start > 2)) {
-      start += 2;
-      int nextSlash = pathString.indexOf('/', start);
-      int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
-      authority = pathString.substring(start, authEnd);
-      start = authEnd;
+    if (Path.isWindowsAbsolutePath(pathString, false)) {
+      // So we don't attempt to parse the drive specifier as a scheme.
+      // Prefix a '/' to the scheme-specific part per RFC2936.
+      scheme = "file";
+      pathString = "/" + pathString;
+    } else if (Path.isWindowsAbsolutePath(pathString, true)){
+      // So we don't attempt to parse the drive specifier as a scheme.
+      // The scheme-specific part already begins with a '/'.
+      scheme = "file";
+    } else {
+      // parse uri scheme, if any
+      int colon = pathString.indexOf(':');
+      int slash = pathString.indexOf('/');
+      if (colon > 0 && (slash == colon +1)) {
+        // has a non zero-length scheme
+        scheme = pathString.substring(0, colon);
+        start = colon + 1;
+      }
+
+      // parse uri authority, if any
+      if (pathString.startsWith("//", start) &&
+          (pathString.length()-start > 2)) {
+        start += 2;
+        int nextSlash = pathString.indexOf('/', start);
+        int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
+        authority = pathString.substring(start, authEnd);
+        start = authEnd;
+      }
     }
 
-    // uri path is the rest of the string. ? or # are not interpreated,
+    // uri path is the rest of the string. ? or # are not interpreted,
     // but any occurrence of them will be quoted by the URI ctor.
     String path = pathString.substring(start, pathString.length());
 

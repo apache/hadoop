@@ -38,3 +38,6 @@ branch-trunk-win changes - unreleased
   HADOOP-8978. TestTrash fails on Windows. (Chris Nauroth via suresh)
 
   HADOOP-8979. TestHttpServer fails on Windows. (Chris Nauroth via suresh)
+
+  HADOOP-8953. Shell PathData parsing failures on Windows. (Arpit Agarwal via
+  suresh)
