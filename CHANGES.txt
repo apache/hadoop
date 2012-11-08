@@ -116,9 +116,6 @@ Release 1.2.0 - unreleased
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
     (suresh)
 
-    HADOOP-8995. Remove unnecessary bogus exception from Configuration.java.
-    (Jing Zhao via suresh)
-
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
@@ -225,9 +222,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-1684. ClusterStatus can be cached in 
     CapacityTaskScheduler.assignTasks() (Koji Noguchi via tgraves)
 
-    HDFS-2815. Namenode is not coming out of safemode when we perform ( NN crash + restart ). 
-    Also FSCK report shows blocks missed. (umamahesh)
-
     MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
 
     HADOOP-8745. Incorrect version numbers in hadoop-core POM.
@@ -274,15 +268,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4706. FairScheduler#dump(): Computing of # running maps and
     reduces is commented out. (Karthik Kambatla via tomwhite)
 
-    HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
-    webhdfs filesystem and fsck to fail when security is on.
-    (Arpit Gupta via suresh)
-
     MAPREDUCE-4451. fairscheduler fail to init job with kerberos authentication 
     configured. (erik.fang via tucu)
-
-    HADOOP-8882. Uppercase namenode host name causes fsck to fail when 
-    useKsslAuth is on. (Arpit Gupta via suresh)
 
     HADOOP-6496. HttpServer sends wrong content-type for CSS files.
     (Todd Lipcon, Backport by Ivan Mitic via suresh).
@@ -323,11 +310,25 @@ Release 1.1.1 - Unreleased
 
     HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
 
+    HADOOP-8995. Remove unnecessary bogus exception from Configuration.java.
+    (Jing Zhao via suresh)
+
+
   BUG FIXES
+
+    HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
+    webhdfs filesystem and fsck to fail when security is on.
+    (Arpit Gupta via suresh)
+
+    HADOOP-8882. Uppercase namenode host name causes fsck to fail when 
+    useKsslAuth is on. (Arpit Gupta via suresh)
 
     HDFS-3791. HDFS-173 Backport - Namenode will not block until a large 
     directory deletion completes. It allows other operations when the 
     deletion is in progress. (umamahesh via suresh)
+
+    HDFS-2815. Namenode is not coming out of safemode when we perform ( NN crash + restart ). 
+    Also FSCK report shows blocks missed. (umamahesh)
 
 Release 1.1.0 - 2012.09.28
 
