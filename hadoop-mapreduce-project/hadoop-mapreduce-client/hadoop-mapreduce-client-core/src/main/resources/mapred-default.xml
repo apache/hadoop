@@ -322,6 +322,14 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.shuffle.retry-delay.max.ms</name>
+  <value>60000</value>
+  <description>The maximum number of ms the reducer will delay before retrying
+  to download map data.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.shuffle.parallelcopies</name>
   <value>5</value>
   <description>The default number of parallel transfers run by reduce

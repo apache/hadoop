@@ -118,8 +118,8 @@ public class TestFetcher {
           encHash);
     
     verify(allErrs).increment(1);
-    verify(ss).copyFailed(map1ID, host, true);
-    verify(ss).copyFailed(map2ID, host, true);
+    verify(ss).copyFailed(map1ID, host, true, false);
+    verify(ss).copyFailed(map2ID, host, true, false);
     
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
@@ -178,8 +178,8 @@ public class TestFetcher {
       .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
           encHash);
     verify(allErrs, never()).increment(1);
-    verify(ss, never()).copyFailed(map1ID, host, true);
-    verify(ss, never()).copyFailed(map2ID, host, true);
+    verify(ss, never()).copyFailed(map1ID, host, true, false);
+    verify(ss, never()).copyFailed(map2ID, host, true, false);
     
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
