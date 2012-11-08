@@ -2240,9 +2240,9 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     // sanity check
     if ((nsQuota < 0 && nsQuota != HdfsConstants.QUOTA_DONT_SET && 
-         nsQuota < HdfsConstants.QUOTA_RESET) || 
+         nsQuota != HdfsConstants.QUOTA_RESET) || 
         (dsQuota < 0 && dsQuota != HdfsConstants.QUOTA_DONT_SET && 
-          dsQuota < HdfsConstants.QUOTA_RESET)) {
+          dsQuota != HdfsConstants.QUOTA_RESET)) {
       throw new IllegalArgumentException("Illegal value for nsQuota or " +
                                          "dsQuota : " + nsQuota + " and " +
                                          dsQuota);

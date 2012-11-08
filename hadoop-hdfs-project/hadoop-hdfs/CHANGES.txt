@@ -260,6 +260,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6519. Document oiv_legacy command (Akira AJISAKA via aw)
 
+    HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
+    (Binglin Chang via suresh)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
