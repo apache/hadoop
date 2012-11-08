@@ -16,6 +16,9 @@ Release 1.1.1 - Unreleased
     webhdfs filesystem and fsck to fail when security is on.
     (Arpit Gupta via suresh)
 
+    HADOOP-8882. Uppercase namenode host name causes fsck to fail when 
+    useKsslAuth is on. (Arpit Gupta via suresh)
+
     HDFS-3791. HDFS-173 Backport - Namenode will not block until a large 
     directory deletion completes. It allows other operations when the 
     deletion is in progress. (umamahesh via suresh)
