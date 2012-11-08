@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
 
+import org.apache.hadoop.util.Shell;
+
 public class TestDFVariations extends TestCase {
 
   public static class XXDF extends DF {
@@ -51,7 +53,9 @@ public class TestDFVariations extends TestCase {
   public void testOSParsing() throws Exception {
     for (DF.OSType ost : EnumSet.allOf(DF.OSType.class)) {
       XXDF df = new XXDF(ost.getId());
-      assertEquals(ost.getId() + " mount", "/foo/bar", df.getMount());
+      assertEquals(ost.getId() + " mount",
+        Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/foo/bar",
+        df.getMount());
     }
   }
 
