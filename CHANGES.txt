@@ -10,6 +10,9 @@ Release 1.1.1 - Unreleased
 
     HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
 
+    HADOOP-8995. Remove unnecessary bogus exception from Configuration.java.
+    (Jing Zhao via suresh)
+
   BUG FIXES
 
     HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
