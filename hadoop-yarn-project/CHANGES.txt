@@ -152,6 +152,9 @@ Release 0.23.5 - UNRELEASED
     YARN-32. Fix TestApplicationTokens to not depend on test order and thus pass
     on JDK7. (vinodkv)
 
+    YARN-186. Coverage fixing LinuxContainerExecutor (Aleksey Gorshkov via
+    bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
