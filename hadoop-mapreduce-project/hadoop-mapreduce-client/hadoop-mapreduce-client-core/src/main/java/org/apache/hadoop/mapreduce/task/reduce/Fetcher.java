@@ -21,6 +21,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -283,6 +284,7 @@ class Fetcher<K,V> extends Thread {
       SecureShuffleUtils.verifyReply(replyHash, encHash, jobTokenSecret);
       LOG.info("for url="+msgToEncode+" sent hash and receievd reply");
     } catch (IOException ie) {
+      boolean connectExcpt = ie instanceof ConnectException;
       ioErrs.increment(1);
       LOG.warn("Failed to connect to " + host + " with " + remaining.size() + 
                " map outputs", ie);
@@ -291,14 +293,14 @@ class Fetcher<K,V> extends Thread {
       // indirectly penalizing the host
       if (!connectSucceeded) {
         for(TaskAttemptID left: remaining) {
-          scheduler.copyFailed(left, host, connectSucceeded);
+          scheduler.copyFailed(left, host, connectSucceeded, connectExcpt);
         }
       } else {
         // If we got a read error at this stage, it implies there was a problem
         // with the first map, typically lost map. So, penalize only that map
         // and add the rest
         TaskAttemptID firstMap = maps.get(0);
-        scheduler.copyFailed(firstMap, host, connectSucceeded);
+        scheduler.copyFailed(firstMap, host, connectSucceeded, connectExcpt);
       }
       
       // Add back all the remaining maps, WITHOUT marking them as failed
@@ -322,7 +324,7 @@ class Fetcher<K,V> extends Thread {
       if(failedTasks != null && failedTasks.length > 0) {
         LOG.warn("copyMapOutput failed for tasks "+Arrays.toString(failedTasks));
         for(TaskAttemptID left: failedTasks) {
-          scheduler.copyFailed(left, host, true);
+          scheduler.copyFailed(left, host, true, false);
         }
       }
       
