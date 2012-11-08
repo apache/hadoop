@@ -307,10 +307,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on 
     default FS. (Gera Shegalov via tucu)
 
-    HDFS-3791. HDFS-173 Backport - Namenode will not block until a large 
-    directory deletion completes. It allows other operations when the 
-    deletion is in progress. (umamahesh via suresh)
-
     MAPREDUCE-4765. Restarting the JobTracker programmatically can cause
     DelegationTokenRenewal to throw an exception. (rkanter via tucu)
 
@@ -325,6 +321,10 @@ Release 1.1.1 - Unreleased
     HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
 
   BUG FIXES
+
+    HDFS-3791. HDFS-173 Backport - Namenode will not block until a large 
+    directory deletion completes. It allows other operations when the 
+    deletion is in progress. (umamahesh via suresh)
 
 Release 1.1.0 - 2012.09.28
 

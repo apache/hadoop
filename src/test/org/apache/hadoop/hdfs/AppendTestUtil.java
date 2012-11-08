@@ -165,7 +165,7 @@ public class AppendTestUtil {
     LOG.info("leasechecker.interruptAndJoin()");
     // lose the lease on the client
     DistributedFileSystem dfs = (DistributedFileSystem)whichfs;
-    dfs.dfs.leaserenewer.interruptAndJoin();
+    dfs.dfs.leasechecker.interruptAndJoin();
   }
   
   public static void recoverFile(MiniDFSCluster cluster, FileSystem fs,
