@@ -2209,7 +2209,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           blocksMap.removeINode(b);
           corruptReplicas.removeFromCorruptReplicasMap(b);
           // Remove the block from pendingReplications
-          pendingReplications.remove(b);
+          if (pendingReplications != null) {
+            pendingReplications.remove(b);
+          }
           addToInvalidates(b);
         }
       }

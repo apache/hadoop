@@ -310,6 +310,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4765. Restarting the JobTracker programmatically can cause
     DelegationTokenRenewal to throw an exception. (rkanter via tucu)
 
+    HDFS-4168. Fix a NullPointerException in FSNamesystem.removeBlocks(..).
+    (Jing Zhao via szetszwo)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
