@@ -246,10 +246,8 @@ class FSImageFormat {
    private int loadDirectory(DataInputStream in) throws IOException {
      String parentPath = FSImageSerialization.readString(in);
      FSDirectory fsDir = namesystem.dir;
-     INode parent = fsDir.rootDir.getNode(parentPath, true);
-     if (parent == null || !parent.isDirectory()) {
-       throw new IOException("Path " + parentPath + "is not a directory.");
-     }
+     final INodeDirectory parent = INodeDirectory.valueOf(
+         fsDir.rootDir.getNode(parentPath, true), parentPath);
 
      int numChildren = in.readInt();
      for(int i=0; i<numChildren; i++) {
@@ -259,7 +257,7 @@ class FSImageFormat {
        INode newNode = loadINode(in); // read rest of inode
 
        // add to parent
-       namesystem.dir.addToParent(localName, (INodeDirectory)parent, newNode, false);
+       namesystem.dir.addToParent(localName, parent, newNode, false);
      }
      return numChildren;
    }
@@ -365,14 +363,7 @@ class FSImageFormat {
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
-        INode old = fsDir.getFileINode(path);
-        if (old == null) {
-          throw new IOException("Found lease for non-existent file " + path);
-        }
-        if (old.isDirectory()) {
-          throw new IOException("Found lease for directory " + path);
-        }
-        INodeFile oldnode = (INodeFile) old;
+        INodeFile oldnode = INodeFile.valueOf(fsDir.getINode(path), path);
         fsDir.replaceNode(path, oldnode, cons);
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
@@ -539,7 +530,7 @@ class FSImageFormat {
     private void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      List<INode> children = current.getChildrenRaw();
+      List<INode> children = current.getChildren();
       if (children == null || children.isEmpty())
         return;
       // print prefix (parent directory name)

@@ -397,7 +397,7 @@ public class YARNRunner implements ClientProtocol {
 
 
     Vector<String> vargsFinal = new Vector<String>(8);
-    // Final commmand
+    // Final command
     StringBuilder mergedCommand = new StringBuilder();
     for (CharSequence str : vargs) {
       mergedCommand.append(str).append(" ");
@@ -411,6 +411,10 @@ public class YARNRunner implements ClientProtocol {
     // i.e. add { Hadoop jars, job jar, CWD } to classpath.
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
+    
+    // Setup the environment variables (LD_LIBRARY_PATH, etc)
+    MRApps.setEnvFromInputString(environment, 
+        conf.get(MRJobConfig.MR_AM_ENV));
 
     // Parse distributed cache
     MRApps.setupDistributedCache(jobConf, localResources);

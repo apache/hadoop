@@ -103,17 +103,10 @@ Trunk (Unreleased)
     HDFS-3510.  Editlog pre-allocation is performed prior to writing edits
     to avoid partial edits case disk out of space.(Colin McCabe via suresh)
 
-    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
-
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
     (Eli Reisman via jghoman)
-
-    HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
-
-    HDFS-3789. JournalManager#format() should be able to throw IOException
-    (Ivan Kelly via todd)
 
     HDFS-3723. Add support -h, -help to all the commands. (Jing Zhao via
     suresh)
@@ -149,6 +142,22 @@ Trunk (Unreleased)
 
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
+
+    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
+
+    HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
+    returning more than INode array. (Jing Zhao via suresh)
+
+    HDFS-4129. Add utility methods to dump NameNode in memory tree for 
+    testing. (szetszwo via suresh)
+
+    HDFS-4151. Change the methods in FSDirectory to pass INodesInPath instead
+    of INode[] as a parameter. (szetszwo)
+
+    HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
+    INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
+
+    HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
 
   OPTIMIZATIONS
 
@@ -216,9 +225,6 @@ Trunk (Unreleased)
     HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
     (acmurthy via eli)
 
-    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
-    startup. (Junping Du via todd)
-
     HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
 
     HDFS-3827. TestHASafeMode#assertSafemode method should be made static.
@@ -229,6 +235,18 @@ Trunk (Unreleased)
 
     HADOOP-8158. Interrupting hadoop fs -put from the command line
     causes a LeaseExpiredException. (daryn via harsh)
+
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
+    HDFS-4067. TestUnderReplicatedBlocks intermittently fails due to 
+    ReplicaAlreadyExistsException. (Jing Zhao via suresh)
+
+    HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
+    (Trevor Robinson via suresh)
+
+    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
+    lastDeletedReport should be volatile. (Jing Zhao via suresh)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
@@ -336,6 +354,9 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
@@ -345,6 +366,8 @@ Release 2.0.3-alpha - Unreleased
     (Jing Zhao via suresh)
 
     HDFS-4059. Add number of stale DataNodes to metrics. (Jing Zhao via suresh)
+
+    HDFS-4155. libhdfs implementation of hsync API (Liang Xie via todd)
 
   IMPROVEMENTS
   
@@ -409,6 +432,31 @@ Release 2.0.3-alpha - Unreleased
     INodeDirectoryWithQuota constructor. (szetszwo)
 
     HDFS-4099. Clean up replication code and add more javadoc. (szetszwo)
+
+    HDFS-4107. Add utility methods for casting INode to INodeFile and
+    INodeFileUnderConstruction. (szetszwo)
+
+    HDFS-4112. A few improvements on INodeDirectory include adding a utility
+    method for casting; avoiding creation of new empty lists; cleaning up 
+    some code and rewriting some javadoc. (szetszwo)
+
+    HDFS-4121. Add namespace declarations in hdfs .proto files for languages 
+    other than java. (Binglin Chang via suresh)
+
+    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
+
+    HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
+
+    HDFS-3789. JournalManager#format() should be able to throw IOException
+    (Ivan Kelly via todd)
+
+    HDFS-3916. libwebhdfs testing code cleanup. (Jing Zhao via suresh)
+
+    HDFS-4143. Change blocks to private in INodeFile and renames isLink() to
+    isSymlink() in INode. (szetszwo)
+
+    HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
+    C/C++. (Binglin Chang via suresh)
 
   OPTIMIZATIONS
 
@@ -482,7 +530,43 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4072. On file deletion remove corresponding blocks pending
     replications. (Jing Zhao via suresh)
 
-    HDFS-4022. Replication not happening for appended block. (Vinay via umamahesh)
+    HDFS-4022. Replication not happening for appended block.
+    (Vinay via umamahesh)
+
+    HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
+    out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
+    via szetszwo)
+
+    HDFS-3616. Fix a ConcurrentModificationException bug that BP actor threads
+    may not be shutdown properly in DataNode.  (Jing Zhao via szetszwo)
+
+    HDFS-4127. Log message is not correct in case of short of replica.
+    (Junping Du via suresh)
+
+    HADOOP-8994. TestDFSShell creates file named "noFileHere", making further
+    tests hard to understand (Andy Isaacson via daryn)
+
+    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.
+    (Ivan Kelly via umamahesh)
+
+    HDFS-3804.  TestHftpFileSystem fails intermittently with JDK7
+    (Trevor Robinson via daryn)
+
+    HDFS-4132. When libwebhdfs is not enabled, nativeMiniDfsClient frees
+    uninitialized memory (Colin Patrick McCabe via todd)
+
+    HDFS-1331. dfs -test should work like /bin/test (Andy Isaacson via daryn)
+
+    HDFS-3979. For hsync, datanode should wait for the local sync to complete
+    before sending ack. (Lars Hofhansl via szetszwo)
+
+    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
+    startup. (Junping Du via todd)
+
+    HDFS-4138. BackupNode startup fails due to uninitialized edit log.
+    (Kihwal Lee via shv)
+
+    HDFS-3810. Implement format() for BKJM (Ivan Kelly via umamahesh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -726,6 +810,9 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3907. Allow multiple users for local block readers. (eli)
 
     HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
+    
+    HDFS-3920. libwebdhfs string processing and using strerror consistently
+    to handle all errors. (Jing Zhao via suresh)
 
   OPTIMIZATIONS
 
@@ -1006,8 +1093,6 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3828. Block Scanner rescans blocks too frequently.
     (Andy Isaacson via eli)
-
-    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
 
     HDFS-3895. hadoop-client must include commons-cli (tucu)
 
@@ -1870,6 +1955,8 @@ Release 0.23.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
+
   BUG FIXES
 
     HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
@@ -1880,6 +1967,9 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-3224. Bug in check for DN re-registration with different storage ID
     (jlowe)
+
+    HDFS-4090. getFileChecksum() result incompatible when called against
+    zero-byte files. (Kihwal Lee via daryn)
 
 Release 0.23.4 - UNRELEASED
 

@@ -189,6 +189,14 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4736. Remove obsolete option [-rootDir] from TestDFSIO.
     (Brandon Li via suresh)
 
+    MAPREDUCE-4637. Handle TaskAttempt diagnostic updates while in the NEW and 
+    UNASSIGNED states. (Mayank Bansal via sseth)
+
+    MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on default FS. (Gera Shegalov via tucu)
+
+    MAPREDUCE-4777. In TestIFile, testIFileReaderWithCodec relies on
+    testIFileWriterWithCodec. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -576,6 +584,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4596. Split StateMachine state from states seen by MRClientProtocol
     for Job, Task and TaskAttempt. (Siddarth Seth via vinodkv) 
 
+    MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
+    Evans via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -602,6 +613,34 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4740. only .jars can be added to the Distributed Cache
     classpath. (Robert Joseph Evans via jlowe)
 
+    MAPREDUCE-4229. Intern counter names in the JT (Miomir Boljanovic and bobby via daryn)
+
+    MAPREDUCE-4741. WARN and ERROR messages logged during normal AM shutdown.
+    (Vinod Kumar Vavilapalli via jlowe)
+
+    MAPREDUCE-4730. Fix Reducer's EventFetcher to scale the map-completion
+    requests slowly to avoid HADOOP-8942. (Jason Lowe via vinodkv)
+
+    MAPREDUCE-4748. Invalid event: T_ATTEMPT_SUCCEEDED at SUCCEEDED. (jlowe)
+
+    MAPREDUCE-4724. job history web ui applications page should be sorted to
+    display last app first (tgraves via bobby)
+
+    MAPREDUCE-4746. The MR Application Master does not have a config to set
+    environment variables (Rob Parker via bobby)
+
+    MAPREDUCE-4729. job history UI not showing all job attempts. (Vinod
+    Kumar Vavilapalli via jlowe)
+
+    MAPREDUCE-4763 repair test TestUmbilicalProtocolWithJobToken (Ivan A.
+    Veselovsky via bobby)
+
+    MAPREDUCE-4771. KeyFieldBasedPartitioner not partitioning properly when
+    configured (jlowe via bobby)
+
+    MAPREDUCE-4772. Fetch failures can take way too long for a map to be 
+    restarted (bobby)
+ 
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

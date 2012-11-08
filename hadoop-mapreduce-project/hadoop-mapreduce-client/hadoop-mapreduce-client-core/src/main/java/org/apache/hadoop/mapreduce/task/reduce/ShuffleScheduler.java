@@ -89,6 +89,7 @@ class ShuffleScheduler<K,V> {
   private DecimalFormat  mbpsFormat = new DecimalFormat("0.00");
 
   private boolean reportReadErrorImmediately = true;
+  private long maxDelay = MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY;
   
   public ShuffleScheduler(JobConf job, TaskStatus status,
                           ExceptionReporter reporter,
@@ -115,6 +116,9 @@ class ShuffleScheduler<K,V> {
         MRJobConfig.SHUFFLE_FETCH_FAILURES, REPORT_FAILURE_LIMIT);
     this.reportReadErrorImmediately = job.getBoolean(
         MRJobConfig.SHUFFLE_NOTIFY_READERROR, true);
+    
+    this.maxDelay = job.getLong(MRJobConfig.MAX_SHUFFLE_FETCH_RETRY_DELAY, 
+        MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY);
   }
 
   public synchronized void copySucceeded(TaskAttemptID mapId, 
@@ -159,7 +163,7 @@ class ShuffleScheduler<K,V> {
   }
 
   public synchronized void copyFailed(TaskAttemptID mapId, MapHost host,
-                                      boolean readError) {
+                                      boolean readError, boolean connectExcpt) {
     host.penalize();
     int failures = 1;
     if (failureCounts.containsKey(mapId)) {
@@ -184,12 +188,15 @@ class ShuffleScheduler<K,V> {
       }
     }
     
-    checkAndInformJobTracker(failures, mapId, readError);
+    checkAndInformJobTracker(failures, mapId, readError, connectExcpt);
 
     checkReducerHealth();
     
     long delay = (long) (INITIAL_PENALTY *
         Math.pow(PENALTY_GROWTH_RATE, failures));
+    if (delay > maxDelay) {
+      delay = maxDelay;
+    }
     
     penalties.add(new Penalty(host, delay));
     
@@ -200,8 +207,9 @@ class ShuffleScheduler<K,V> {
   // after every read error, if 'reportReadErrorImmediately' is true or
   // after every 'maxFetchFailuresBeforeReporting' failures
   private void checkAndInformJobTracker(
-      int failures, TaskAttemptID mapId, boolean readError) {
-    if ((reportReadErrorImmediately && readError)
+      int failures, TaskAttemptID mapId, boolean readError, 
+      boolean connectExcpt) {
+    if (connectExcpt || (reportReadErrorImmediately && readError)
         || ((failures % maxFetchFailuresBeforeReporting) == 0)) {
       LOG.info("Reporting fetch failure for " + mapId + " to jobtracker.");
       status.addFetchFailedMap((org.apache.hadoop.mapred.TaskAttemptID) mapId);

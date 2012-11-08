@@ -73,10 +73,10 @@ public class TestChRootedFileSystem {
     URI uri = fSys.getUri();
     Assert.assertEquals(chrootedTo.toUri(), uri);
     Assert.assertEquals(fSys.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
+        new Path(System.getProperty("user.home"))),
         fSys.getWorkingDirectory());
     Assert.assertEquals(fSys.makeQualified(
-        new Path("/user/" + System.getProperty("user.name"))),
+        new Path(System.getProperty("user.home"))),
         fSys.getHomeDirectory());
     /*
      * ChRootedFs as its uri like file:///chrootRoot.

@@ -28,6 +28,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.counters.AbstractCounters;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.counters.CounterGroupBase;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -235,13 +236,13 @@ public class CountersStrings {
 
       // Get the actual name
       String groupName =
-        getBlock(groupString, UNIT_OPEN, UNIT_CLOSE, groupIndex);
-      groupName = unescape(groupName);
+          StringInterner.weakIntern(getBlock(groupString, UNIT_OPEN, UNIT_CLOSE, groupIndex));
+      groupName = StringInterner.weakIntern(unescape(groupName));
 
       // Get the display name
       String groupDisplayName =
-        getBlock(groupString, UNIT_OPEN, UNIT_CLOSE, groupIndex);
-      groupDisplayName = unescape(groupDisplayName);
+          StringInterner.weakIntern(getBlock(groupString, UNIT_OPEN, UNIT_CLOSE, groupIndex));
+      groupDisplayName = StringInterner.weakIntern(unescape(groupDisplayName));
 
       // Get the counters
       G group = counters.getGroup(groupName);
@@ -255,13 +256,13 @@ public class CountersStrings {
 
         // Get the actual name
         String counterName =
-          getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, counterIndex);
-        counterName = unescape(counterName);
+            StringInterner.weakIntern(getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, counterIndex));
+        counterName = StringInterner.weakIntern(unescape(counterName));
 
         // Get the display name
         String counterDisplayName =
-          getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, counterIndex);
-        counterDisplayName = unescape(counterDisplayName);
+            StringInterner.weakIntern(getBlock(counterString, UNIT_OPEN, UNIT_CLOSE, counterIndex));
+        counterDisplayName = StringInterner.weakIntern(unescape(counterDisplayName));
 
         // Get the value
         long value =

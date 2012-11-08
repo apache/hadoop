@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 
 /**
  * An INode representing a symbolic link.
@@ -41,7 +38,7 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  public boolean isLink() {
+  public boolean isSymlink() {
     return true;
   }
   
@@ -64,7 +61,7 @@ public class INodeSymlink extends INode {
   }
   
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> v) {
+  int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     return 1;
   }
 
@@ -72,10 +69,5 @@ public class INodeSymlink extends INode {
   long[] computeContentSummary(long[] summary) {
     summary[1]++; // Increment the file count
     return summary;
-  }
-
-  @Override
-  public boolean isDirectory() {
-    return false;
   }
 }

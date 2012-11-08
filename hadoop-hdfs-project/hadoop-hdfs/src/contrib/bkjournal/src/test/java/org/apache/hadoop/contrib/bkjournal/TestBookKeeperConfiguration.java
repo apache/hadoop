@@ -149,6 +149,7 @@ public class TestBookKeeperConfiguration {
     bkjm = new BookKeeperJournalManager(conf,
         URI.create("bookkeeper://" + HOSTPORT + "/hdfsjournal-WithBKPath"),
         nsi);
+    bkjm.format(nsi);
     Assert.assertNotNull("Bookie available path : " + bkAvailablePath
         + " doesn't exists", zkc.exists(bkAvailablePath, false));
   }
@@ -166,6 +167,7 @@ public class TestBookKeeperConfiguration {
     bkjm = new BookKeeperJournalManager(conf,
         URI.create("bookkeeper://" + HOSTPORT + "/hdfsjournal-DefaultBKPath"),
         nsi);
+    bkjm.format(nsi);
     Assert.assertNotNull("Bookie available path : " + BK_ROOT_PATH
         + " doesn't exists", zkc.exists(BK_ROOT_PATH, false));
   }

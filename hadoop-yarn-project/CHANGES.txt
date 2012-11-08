@@ -23,6 +23,8 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    YARN-145. Add a Web UI to the fair share scheduler. (Sandy Ryza via tomwhite)
+
   IMPROVEMENTS
 
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
@@ -86,7 +88,16 @@ Release 2.0.3-alpha - Unreleased
     YARN-150. Fixes AppRejectedTransition does not unregister a rejected
     app-attempt from the ApplicationMasterService (Bikas Saha via sseth)
 
-    YARN-140. Add capacity-scheduler-default.xml to provide a default set of configurations for the capacity scheduler. (ahmed via tucu)
+    YARN-140. Add capacity-scheduler-default.xml to provide a default set of
+    configurations for the capacity scheduler. (ahmed via tucu)
+
+    YARN-179. Fix some unit test failures. (Vinod Kumar Vavilapalli via sseth)
+
+    YARN-181. Fixed eclipse settings broken by capacity-scheduler.xml move via
+    YARN-140. (Siddharth Seth via vinodkv)
+
+    YARN-169. Update log4j.appender.EventCounter to use
+    org.apache.hadoop.log.metrics.EventCounter (Anthony Rojas via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -158,12 +169,47 @@ Release 0.23.5 - UNRELEASED
     YARN-32. Fix TestApplicationTokens to not depend on test order and thus pass
     on JDK7. (vinodkv)
 
+    YARN-186. Coverage fixing LinuxContainerExecutor (Aleksey Gorshkov via
+    bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
 
     YARN-163. Retrieving container log via NM webapp can hang with multibyte
     characters in log (jlowe via bobby)
+
+    YARN-174. Modify NodeManager to pass the user's configuration even when
+    rebooting. (vinodkv)
+
+    YARN-177. CapacityScheduler - adding a queue while the RM is running has 
+    wacky results (acmurthy vai tgraves)
+
+    YARN-178. Fix custom ProcessTree instance creation (Radim Kolar via bobby)
+
+    YARN-180. Capacity scheduler - containers that get reserved create 
+    container token to early (acmurthy and bobby)
+
+    YARN-139. Interrupted Exception within AsyncDispatcher leads to user
+    confusion. (Vinod Kumar Vavilapalli via jlowe)
+
+    YARN-165. RM should point tracking URL to RM web page for app when AM fails
+    (jlowe via bobby)
+
+    YARN-159. RM web ui applications page should be sorted to display last app
+    first (tgraves via bobby)
+
+    YARN-166. capacity scheduler doesn't allow capacity < 1.0 (tgraves via
+    bobby)
+
+    YARN-189. Fixed a deadlock between RM's ApplicationMasterService and the
+    dispatcher. (Thomas Graves via vinodkv)
+
+    YARN-202. Log Aggregation generates a storm of fsync() for namenode 
+    (Kihwal Lee via bobby)
+
+    YARN-201. Fix CapacityScheduler to be less conservative for starved 
+    off-switch requests. (jlowe via acmurthy) 
 
 Release 0.23.4 - UNRELEASED
 

@@ -162,7 +162,7 @@ public class FSImageSerialization {
       PermissionStatus.write(out, node.getUserName(),
                              node.getGroupName(),
                              filePerm);
-    } else if (node.isLink()) {
+    } else if (node.isSymlink()) {
       out.writeShort(0);  // replication
       out.writeLong(0);   // modification time
       out.writeLong(0);   // access time

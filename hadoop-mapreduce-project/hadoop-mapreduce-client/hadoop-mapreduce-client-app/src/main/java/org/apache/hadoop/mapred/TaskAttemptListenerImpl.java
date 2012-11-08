@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.CompositeService;
 
@@ -280,6 +281,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   @Override
   public void reportDiagnosticInfo(TaskAttemptID taskAttemptID, String diagnosticInfo)
  throws IOException {
+    diagnosticInfo = StringInterner.weakIntern(diagnosticInfo);
     LOG.info("Diagnostics report from " + taskAttemptID.toString() + ": "
         + diagnosticInfo);
 

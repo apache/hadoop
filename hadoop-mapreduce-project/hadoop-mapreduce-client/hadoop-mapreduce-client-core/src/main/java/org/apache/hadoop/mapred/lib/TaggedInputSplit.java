@@ -29,6 +29,7 @@ import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 
 /**
  * An {@link InputSplit} that tags another InputSplit with extra data for use
@@ -114,7 +115,7 @@ class TaggedInputSplit implements Configurable, InputSplit {
   }
 
   private Class<?> readClass(DataInput in) throws IOException {
-    String className = Text.readString(in);
+    String className = StringInterner.weakIntern(Text.readString(in));
     try {
       return conf.getClassByName(className);
     } catch (ClassNotFoundException e) {

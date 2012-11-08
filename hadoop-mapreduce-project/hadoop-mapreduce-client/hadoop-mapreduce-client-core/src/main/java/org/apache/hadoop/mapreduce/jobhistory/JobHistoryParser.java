@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 
@@ -226,10 +227,10 @@ public class JobHistoryParser {
     TaskAttemptInfo attemptInfo = 
       taskInfo.attemptsMap.get(event.getAttemptId());
     attemptInfo.finishTime = event.getFinishTime();
-    attemptInfo.status = event.getTaskStatus();
-    attemptInfo.state = event.getState();
+    attemptInfo.status = StringInterner.weakIntern(event.getTaskStatus());
+    attemptInfo.state = StringInterner.weakIntern(event.getState());
     attemptInfo.counters = event.getCounters();
-    attemptInfo.hostname = event.getHostname();
+    attemptInfo.hostname = StringInterner.weakIntern(event.getHostname());
   }
 
   private void handleReduceAttemptFinishedEvent
@@ -238,14 +239,14 @@ public class JobHistoryParser {
     TaskAttemptInfo attemptInfo = 
       taskInfo.attemptsMap.get(event.getAttemptId());
     attemptInfo.finishTime = event.getFinishTime();
-    attemptInfo.status = event.getTaskStatus();
-    attemptInfo.state = event.getState();
+    attemptInfo.status = StringInterner.weakIntern(event.getTaskStatus());
+    attemptInfo.state = StringInterner.weakIntern(event.getState());
     attemptInfo.shuffleFinishTime = event.getShuffleFinishTime();
     attemptInfo.sortFinishTime = event.getSortFinishTime();
     attemptInfo.counters = event.getCounters();
-    attemptInfo.hostname = event.getHostname();
+    attemptInfo.hostname = StringInterner.weakIntern(event.getHostname());
     attemptInfo.port = event.getPort();
-    attemptInfo.rackname = event.getRackName();
+    attemptInfo.rackname = StringInterner.weakIntern(event.getRackName());
   }
 
   private void handleMapAttemptFinishedEvent(MapAttemptFinishedEvent event) {
@@ -253,13 +254,13 @@ public class JobHistoryParser {
     TaskAttemptInfo attemptInfo = 
       taskInfo.attemptsMap.get(event.getAttemptId());
     attemptInfo.finishTime = event.getFinishTime();
-    attemptInfo.status = event.getTaskStatus();
-    attemptInfo.state = event.getState();
+    attemptInfo.status = StringInterner.weakIntern(event.getTaskStatus());
+    attemptInfo.state = StringInterner.weakIntern(event.getState());
     attemptInfo.mapFinishTime = event.getMapFinishTime();
     attemptInfo.counters = event.getCounters();
-    attemptInfo.hostname = event.getHostname();
+    attemptInfo.hostname = StringInterner.weakIntern(event.getHostname());
     attemptInfo.port = event.getPort();
-    attemptInfo.rackname = event.getRackName();
+    attemptInfo.rackname = StringInterner.weakIntern(event.getRackName());
   }
 
   private void handleTaskAttemptFailedEvent(
@@ -268,11 +269,11 @@ public class JobHistoryParser {
     TaskAttemptInfo attemptInfo = 
       taskInfo.attemptsMap.get(event.getTaskAttemptId());
     attemptInfo.finishTime = event.getFinishTime();
-    attemptInfo.error = event.getError();
-    attemptInfo.status = event.getTaskStatus();
-    attemptInfo.hostname = event.getHostname();
+    attemptInfo.error = StringInterner.weakIntern(event.getError());
+    attemptInfo.status = StringInterner.weakIntern(event.getTaskStatus());
+    attemptInfo.hostname = StringInterner.weakIntern(event.getHostname());
     attemptInfo.port = event.getPort();
-    attemptInfo.rackname = event.getRackName();
+    attemptInfo.rackname = StringInterner.weakIntern(event.getRackName());
     attemptInfo.shuffleFinishTime = event.getFinishTime();
     attemptInfo.sortFinishTime = event.getFinishTime();
     attemptInfo.mapFinishTime = event.getFinishTime();
@@ -300,7 +301,7 @@ public class JobHistoryParser {
     attemptInfo.startTime = event.getStartTime();
     attemptInfo.attemptId = event.getTaskAttemptId();
     attemptInfo.httpPort = event.getHttpPort();
-    attemptInfo.trackerName = event.getTrackerName();
+    attemptInfo.trackerName = StringInterner.weakIntern(event.getTrackerName());
     attemptInfo.taskType = event.getTaskType();
     attemptInfo.shufflePort = event.getShufflePort();
     attemptInfo.containerId = event.getContainerId();
@@ -325,7 +326,7 @@ public class JobHistoryParser {
     TaskInfo taskInfo = info.tasksMap.get(event.getTaskId());
     taskInfo.status = TaskStatus.State.FAILED.toString();
     taskInfo.finishTime = event.getFinishTime();
-    taskInfo.error = event.getError();
+    taskInfo.error = StringInterner.weakIntern(event.getError());
     taskInfo.failedDueToAttemptId = event.getFailedAttemptID();
     info.errorInfo = "Task " + taskInfo.taskId +" failed " +
     taskInfo.attemptsMap.size() + " times ";
@@ -344,7 +345,7 @@ public class JobHistoryParser {
     info.finishTime = event.getFinishTime();
     info.finishedMaps = event.getFinishedMaps();
     info.finishedReduces = event.getFinishedReduces();
-    info.jobStatus = event.getStatus();
+    info.jobStatus = StringInterner.weakIntern(event.getStatus());
   }
 
   private void handleJobFinishedEvent(JobFinishedEvent event) {
@@ -375,7 +376,7 @@ public class JobHistoryParser {
     amInfo.appAttemptId = event.getAppAttemptId();
     amInfo.startTime = event.getStartTime();
     amInfo.containerId = event.getContainerId();
-    amInfo.nodeManagerHost = event.getNodeManagerHost();
+    amInfo.nodeManagerHost = StringInterner.weakIntern(event.getNodeManagerHost());
     amInfo.nodeManagerPort = event.getNodeManagerPort();
     amInfo.nodeManagerHttpPort = event.getNodeManagerHttpPort();
     if (info.amInfos == null) {
@@ -393,11 +394,11 @@ public class JobHistoryParser {
   private void handleJobSubmittedEvent(JobSubmittedEvent event) {
     info.jobid = event.getJobId();
     info.jobname = event.getJobName();
-    info.username = event.getUserName();
+    info.username = StringInterner.weakIntern(event.getUserName());
     info.submitTime = event.getSubmitTime();
     info.jobConfPath = event.getJobConfPath();
     info.jobACLs = event.getJobAcls();
-    info.jobQueueName = event.getJobQueueName();
+    info.jobQueueName = StringInterner.weakIntern(event.getJobQueueName());
   }
 
   /**

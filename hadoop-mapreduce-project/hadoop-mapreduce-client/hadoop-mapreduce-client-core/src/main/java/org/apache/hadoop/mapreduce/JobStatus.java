@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.StringInterner;
 
 /**************************************************
  * Describes the current status of a job.
@@ -456,15 +457,15 @@ public class JobStatus implements Writable, Cloneable {
     this.cleanupProgress = in.readFloat();
     this.runState = WritableUtils.readEnum(in, State.class);
     this.startTime = in.readLong();
-    this.user = Text.readString(in);
+    this.user = StringInterner.weakIntern(Text.readString(in));
     this.priority = WritableUtils.readEnum(in, JobPriority.class);
-    this.schedulingInfo = Text.readString(in);
+    this.schedulingInfo = StringInterner.weakIntern(Text.readString(in));
     this.finishTime = in.readLong();
     this.isRetired = in.readBoolean();
-    this.historyFile = Text.readString(in);
-    this.jobName = Text.readString(in);
-    this.trackingUrl = Text.readString(in);
-    this.jobFile = Text.readString(in);
+    this.historyFile = StringInterner.weakIntern(Text.readString(in));
+    this.jobName = StringInterner.weakIntern(Text.readString(in));
+    this.trackingUrl = StringInterner.weakIntern(Text.readString(in));
+    this.jobFile = StringInterner.weakIntern(Text.readString(in));
     this.isUber = in.readBoolean();
 
     // De-serialize the job's ACLs

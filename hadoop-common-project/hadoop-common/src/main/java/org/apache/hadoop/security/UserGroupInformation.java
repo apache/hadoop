@@ -59,6 +59,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
@@ -236,15 +237,18 @@ public class UserGroupInformation {
    * @param conf the configuration to use
    */
   private static synchronized void initUGI(Configuration conf) {
-    String value = conf.get(HADOOP_SECURITY_AUTHENTICATION);
-    if (value == null || "simple".equals(value)) {
-      useKerberos = false;
-    } else if ("kerberos".equals(value)) {
-      useKerberos = true;
-    } else {
-      throw new IllegalArgumentException("Invalid attribute value for " +
-                                         HADOOP_SECURITY_AUTHENTICATION + 
-                                         " of " + value);
+    AuthenticationMethod auth = SecurityUtil.getAuthenticationMethod(conf);
+    switch (auth) {
+      case SIMPLE:
+        useKerberos = false;
+        break;
+      case KERBEROS:
+        useKerberos = true;
+        break;
+      default:
+        throw new IllegalArgumentException("Invalid attribute value for " +
+                                           HADOOP_SECURITY_AUTHENTICATION + 
+                                           " of " + auth);
     }
     try {
         kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
@@ -636,19 +640,20 @@ public class UserGroupInformation {
       try {
         Subject subject = new Subject();
         LoginContext login;
+        AuthenticationMethod authenticationMethod;
         if (isSecurityEnabled()) {
+          authenticationMethod = AuthenticationMethod.KERBEROS;
           login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
               subject, new HadoopConfiguration());
         } else {
+          authenticationMethod = AuthenticationMethod.SIMPLE;
           login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
               subject, new HadoopConfiguration());
         }
         login.login();
         loginUser = new UserGroupInformation(subject);
         loginUser.setLogin(login);
-        loginUser.setAuthenticationMethod(isSecurityEnabled() ?
-                                          AuthenticationMethod.KERBEROS :
-                                          AuthenticationMethod.SIMPLE);
+        loginUser.setAuthenticationMethod(authenticationMethod);
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {
@@ -1019,13 +1024,34 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static enum AuthenticationMethod {
-    SIMPLE,
-    KERBEROS,
-    TOKEN,
-    CERTIFICATE,
-    KERBEROS_SSL,
-    PROXY;
-  }
+    // currently we support only one auth per method, but eventually a 
+    // subtype is needed to differentiate, ex. if digest is token or ldap
+    SIMPLE(AuthMethod.SIMPLE),
+    KERBEROS(AuthMethod.KERBEROS),
+    TOKEN(AuthMethod.DIGEST),
+    CERTIFICATE(null),
+    KERBEROS_SSL(null),
+    PROXY(null);
+    
+    private final AuthMethod authMethod;
+    private AuthenticationMethod(AuthMethod authMethod) {
+      this.authMethod = authMethod;
+    }
+    
+    public AuthMethod getAuthMethod() {
+      return authMethod;
+    }
+    
+    public static AuthenticationMethod valueOf(AuthMethod authMethod) {
+      for (AuthenticationMethod value : values()) {
+        if (value.getAuthMethod() == authMethod) {
+          return value;
+        }
+      }
+      throw new IllegalArgumentException(
+          "no authentication method for " + authMethod);
+    }
+  };
 
   /**
    * Create a proxy user using username of the effective user and the ugi of the
@@ -1288,6 +1314,15 @@ public class UserGroupInformation {
   public synchronized 
   void setAuthenticationMethod(AuthenticationMethod authMethod) {
     user.setAuthenticationMethod(authMethod);
+  }
+
+  /**
+   * Sets the authentication method in the subject
+   * 
+   * @param authMethod
+   */
+  public void setAuthenticationMethod(AuthMethod authMethod) {
+    user.setAuthenticationMethod(AuthenticationMethod.valueOf(authMethod));
   }
 
   /**

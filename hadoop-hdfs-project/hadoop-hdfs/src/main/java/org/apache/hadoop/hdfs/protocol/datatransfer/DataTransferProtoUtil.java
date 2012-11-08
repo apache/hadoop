@@ -52,7 +52,7 @@ public abstract class DataTransferProtoUtil {
   }
 
   public static ChecksumProto toProto(DataChecksum checksum) {
-    ChecksumTypeProto type = ChecksumTypeProto.valueOf(checksum.getChecksumType().name());
+    ChecksumTypeProto type = HdfsProtoUtil.toProto(checksum.getChecksumType());
     if (type == null) {
       throw new IllegalArgumentException(
           "Can't convert checksum to protobuf: " + checksum);
@@ -68,7 +68,7 @@ public abstract class DataTransferProtoUtil {
     if (proto == null) return null;
 
     int bytesPerChecksum = proto.getBytesPerChecksum();
-    DataChecksum.Type type = DataChecksum.Type.valueOf(proto.getType().name());
+    DataChecksum.Type type = HdfsProtoUtil.fromProto(proto.getType());
     
     return DataChecksum.newDataChecksum(type, bytesPerChecksum);
   }

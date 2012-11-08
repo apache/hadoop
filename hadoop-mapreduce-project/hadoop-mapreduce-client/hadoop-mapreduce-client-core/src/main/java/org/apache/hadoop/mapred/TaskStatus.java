@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 /**************************************************
  * Describes the current status of a task.  This is
@@ -477,8 +478,8 @@ public abstract class TaskStatus implements Writable, Cloneable {
     setProgress(in.readFloat());
     this.numSlots = in.readInt();
     this.runState = WritableUtils.readEnum(in, State.class);
-    setDiagnosticInfo(Text.readString(in));
-    setStateString(Text.readString(in));
+    setDiagnosticInfo(StringInterner.weakIntern(Text.readString(in)));
+    setStateString(StringInterner.weakIntern(Text.readString(in)));
     this.phase = WritableUtils.readEnum(in, Phase.class); 
     this.startTime = in.readLong(); 
     this.finishTime = in.readLong(); 

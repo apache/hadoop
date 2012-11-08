@@ -584,7 +584,7 @@ public class DatanodeManager {
     if (node.isDecommissionInProgress()) {
       if (!blockManager.isReplicationInProgress(node)) {
         node.setDecommissioned();
-        LOG.info("Decommission complete for node " + node);
+        LOG.info("Decommission complete for " + node);
       }
     }
     return node.isDecommissioned();
@@ -593,8 +593,8 @@ public class DatanodeManager {
   /** Start decommissioning the specified datanode. */
   private void startDecommission(DatanodeDescriptor node) {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      LOG.info("Start Decommissioning node " + node + " with " + 
-          node.numBlocks() +  " blocks.");
+      LOG.info("Start Decommissioning " + node + " with " + 
+          node.numBlocks() +  " blocks");
       heartbeatManager.startDecommission(node);
       node.decommissioningStatus.setStartTime(now());
       
@@ -606,9 +606,13 @@ public class DatanodeManager {
   /** Stop decommissioning the specified datanodes. */
   void stopDecommission(DatanodeDescriptor node) {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      LOG.info("Stop Decommissioning node " + node);
+      LOG.info("Stop Decommissioning " + node);
       heartbeatManager.stopDecommission(node);
-      blockManager.processOverReplicatedBlocksOnReCommission(node);
+      // Over-replicated blocks will be detected and processed when 
+      // the dead node comes back and send in its full block report.
+      if (node.isAlive) {
+        blockManager.processOverReplicatedBlocksOnReCommission(node);
+      }
     }
   }
 
@@ -658,17 +662,15 @@ public class DatanodeManager {
       throw new DisallowedDatanodeException(nodeReg);
     }
       
-    NameNode.stateChangeLog.info("BLOCK* NameSystem.registerDatanode: "
-        + "node registration from " + nodeReg
-        + " storage " + nodeReg.getStorageID());
+    NameNode.stateChangeLog.info("BLOCK* registerDatanode: from "
+        + nodeReg + " storage " + nodeReg.getStorageID());
 
     DatanodeDescriptor nodeS = datanodeMap.get(nodeReg.getStorageID());
     DatanodeDescriptor nodeN = host2DatanodeMap.getDatanodeByXferAddr(
         nodeReg.getIpAddr(), nodeReg.getXferPort());
       
     if (nodeN != null && nodeN != nodeS) {
-      NameNode.LOG.info("BLOCK* NameSystem.registerDatanode: "
-                        + "node from name: " + nodeN);
+      NameNode.LOG.info("BLOCK* registerDatanode: " + nodeN);
       // nodeN previously served a different data storage, 
       // which is not served by anybody anymore.
       removeDatanode(nodeN);
@@ -683,8 +685,8 @@ public class DatanodeManager {
         // storage. We do not need to remove old data blocks, the delta will
         // be calculated on the next block report from the datanode
         if(NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("BLOCK* NameSystem.registerDatanode: "
-                                        + "node restarted.");
+          NameNode.stateChangeLog.debug("BLOCK* registerDatanode: "
+              + "node restarted.");
         }
       } else {
         // nodeS is found
@@ -696,11 +698,9 @@ public class DatanodeManager {
           value in "VERSION" file under the data directory of the datanode,
           but this is might not work if VERSION file format has changed 
        */        
-        NameNode.stateChangeLog.info( "BLOCK* NameSystem.registerDatanode: "
-                                      + "node " + nodeS
-                                      + " is replaced by " + nodeReg + 
-                                      " with the same storageID " +
-                                      nodeReg.getStorageID());
+        NameNode.stateChangeLog.info("BLOCK* registerDatanode: " + nodeS
+            + " is replaced by " + nodeReg + " with the same storageID "
+            + nodeReg.getStorageID());
       }
       // update cluster map
       getNetworkTopology().remove(nodeS);

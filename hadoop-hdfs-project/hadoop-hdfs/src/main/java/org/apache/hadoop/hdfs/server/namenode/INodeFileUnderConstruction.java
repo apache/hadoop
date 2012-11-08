@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -25,16 +26,24 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
-
-import com.google.common.base.Joiner;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 /**
  * I-node for file being written.
  */
 @InterfaceAudience.Private
 class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
+  /** Cast INode to INodeFileUnderConstruction. */
+  public static INodeFileUnderConstruction valueOf(INode inode, String path
+      ) throws IOException {
+    final INodeFile file = INodeFile.valueOf(inode, path);
+    if (!file.isUnderConstruction()) {
+      throw new IOException("File is not under construction: " + path);
+    }
+    return (INodeFileUnderConstruction)file;
+  }
+
   private  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
@@ -99,9 +108,9 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
   // use the modification time as the access time
   //
   INodeFile convertToInodeFile() {
-    assert allBlocksComplete() :
-      "Can't finalize inode " + this + " since it contains " +
-      "non-complete blocks! Blocks are: " + blocksAsString();
+    assert allBlocksComplete() : "Can't finalize inode " + this
+      + " since it contains non-complete blocks! Blocks are "
+      + Arrays.asList(getBlocks());
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
                                   getBlockReplication(),
@@ -116,7 +125,7 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
    * @return true if all of the blocks in this file are marked as completed.
    */
   private boolean allBlocksComplete() {
-    for (BlockInfo b : blocks) {
+    for (BlockInfo b : getBlocks()) {
       if (!b.isComplete()) {
         return false;
       }
@@ -129,6 +138,7 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
    * the last one on the list.
    */
   void removeLastBlock(Block oldblock) throws IOException {
+    final BlockInfo[] blocks = getBlocks();
     if (blocks == null) {
       throw new IOException("Trying to delete non-existant block " + oldblock);
     }
@@ -140,7 +150,7 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
     //copy to a new list
     BlockInfo[] newlist = new BlockInfo[size_1];
     System.arraycopy(blocks, 0, newlist, 0, size_1);
-    blocks = newlist;
+    setBlocks(newlist);
   }
 
   /**
@@ -149,11 +159,9 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
    */
   @Override
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-                                          DatanodeDescriptor[] targets)
-  throws IOException {
-    if (blocks == null || blocks.length == 0) {
-      throw new IOException("Trying to update non-existant block. " +
-          "File is empty.");
+      DatanodeDescriptor[] targets) throws IOException {
+    if (numBlocks() == 0) {
+      throw new IOException("Failed to set last block: File is empty.");
     }
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
@@ -161,9 +169,5 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
     ucBlock.setBlockCollection(this);
     setBlock(numBlocks()-1, ucBlock);
     return ucBlock;
-  }
-  
-  private String blocksAsString() {
-    return Joiner.on(",").join(this.blocks);
   }
 }

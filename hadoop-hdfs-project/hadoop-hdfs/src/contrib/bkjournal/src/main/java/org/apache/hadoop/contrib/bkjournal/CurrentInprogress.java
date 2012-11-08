@@ -56,6 +56,9 @@ class CurrentInprogress {
   CurrentInprogress(ZooKeeper zkc, String lockpath) throws IOException {
     this.currentInprogressNode = lockpath;
     this.zkc = zkc;
+  }
+
+  void init() throws IOException {
     try {
       Stat isCurrentInprogressNodeExists = zkc.exists(currentInprogressNode,
                                                       false);
@@ -96,15 +99,14 @@ class CurrentInprogress {
           this.versionNumberForPermission);
     } catch (KeeperException e) {
       throw new IOException("Exception when setting the data "
-          + "[layout version number,hostname,inprogressNode path]= [" + content
-          + "] to CurrentInprogress. ", e);
+          + "[" + content + "] to CurrentInprogress. ", e);
     } catch (InterruptedException e) {
       throw new IOException("Interrupted while setting the data "
-          + "[layout version number,hostname,inprogressNode path]= [" + content
-          + "] to CurrentInprogress", e);
+          + "[" + content + "] to CurrentInprogress", e);
     }
-    LOG.info("Updated data[layout version number,hostname,inprogressNode path]"
-        + "= [" + content + "] to CurrentInprogress");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updated data[" + content + "] to CurrentInprogress");
+    }
   }
 
   /**
@@ -136,7 +138,7 @@ class CurrentInprogress {
       }
       return builder.build().getPath();
     } else {
-      LOG.info("No data available in CurrentInprogress");
+      LOG.debug("No data available in CurrentInprogress");
     }
     return null;
   }
@@ -152,7 +154,7 @@ class CurrentInprogress {
       throw new IOException(
           "Interrupted when setting the data to CurrentInprogress node", e);
     }
-    LOG.info("Cleared the data from CurrentInprogress");
+    LOG.debug("Cleared the data from CurrentInprogress");
   }
 
 }

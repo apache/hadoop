@@ -19,6 +19,7 @@ option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "TestRpcServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.common;
 
 import "test.proto";
 

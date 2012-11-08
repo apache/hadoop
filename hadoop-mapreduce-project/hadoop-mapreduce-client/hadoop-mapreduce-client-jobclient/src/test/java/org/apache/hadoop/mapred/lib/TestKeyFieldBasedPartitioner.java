@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.mapred.lib;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-
-public class TestKeyFieldBasedPartitioner extends TestCase {
+public class TestKeyFieldBasedPartitioner {
 
   /**
    * Test is key-field-based partitioned works with empty key.
    */
+  @Test
   public void testEmptyKey() throws Exception {
     KeyFieldBasedPartitioner<Text, Text> kfbp = 
       new KeyFieldBasedPartitioner<Text, Text>();
@@ -36,5 +37,19 @@ public class TestKeyFieldBasedPartitioner extends TestCase {
     kfbp.configure(conf);
     assertEquals("Empty key should map to 0th partition", 
                  0, kfbp.getPartition(new Text(), new Text(), 10));
+  }
+
+  @Test
+  public void testMultiConfigure() {
+    KeyFieldBasedPartitioner<Text, Text> kfbp =
+      new KeyFieldBasedPartitioner<Text, Text>();
+    JobConf conf = new JobConf();
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k1,1");
+    kfbp.setConf(conf);
+    Text key = new Text("foo\tbar");
+    Text val = new Text("val");
+    int partNum = kfbp.getPartition(key, val, 4096);
+    kfbp.configure(conf);
+    assertEquals(partNum, kfbp.getPartition(key,val, 4096));
   }
 }

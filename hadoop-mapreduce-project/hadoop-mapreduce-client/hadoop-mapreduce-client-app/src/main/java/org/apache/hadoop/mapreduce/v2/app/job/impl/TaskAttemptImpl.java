@@ -105,6 +105,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
@@ -200,6 +201,10 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptEventType.TA_KILL, new KilledTransition())
      .addTransition(TaskAttemptStateInternal.NEW, TaskAttemptStateInternal.FAILED,
          TaskAttemptEventType.TA_FAILMSG, new FailedTransition())
+     .addTransition(TaskAttemptStateInternal.NEW,
+          TaskAttemptStateInternal.NEW,
+          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
+          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
 
      // Transitions from the UNASSIGNED state.
      .addTransition(TaskAttemptStateInternal.UNASSIGNED,
@@ -211,6 +216,10 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.UNASSIGNED, TaskAttemptStateInternal.FAILED,
          TaskAttemptEventType.TA_FAILMSG, new DeallocateContainerTransition(
              TaskAttemptStateInternal.FAILED, true))
+     .addTransition(TaskAttemptStateInternal.UNASSIGNED,
+          TaskAttemptStateInternal.UNASSIGNED,
+          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
+          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
 
      // Transitions from the ASSIGNED state.
      .addTransition(TaskAttemptStateInternal.ASSIGNED, TaskAttemptStateInternal.RUNNING,
@@ -932,7 +941,6 @@ public abstract class TaskAttemptImpl implements
       Counters counters = reportedStatus.counters;
       if (counters == null) {
         counters = EMPTY_COUNTERS;
-//        counters.groups = new HashMap<String, CounterGroup>();
       }
       return counters;
     } finally {
@@ -1254,9 +1262,10 @@ public abstract class TaskAttemptImpl implements
         (TaskAttemptContainerAssignedEvent) event;
       taskAttempt.containerID = cEvent.getContainer().getId();
       taskAttempt.containerNodeId = cEvent.getContainer().getNodeId();
-      taskAttempt.containerMgrAddress = taskAttempt.containerNodeId
-          .toString();
-      taskAttempt.nodeHttpAddress = cEvent.getContainer().getNodeHttpAddress();
+      taskAttempt.containerMgrAddress = StringInterner.weakIntern(
+          taskAttempt.containerNodeId.toString());
+      taskAttempt.nodeHttpAddress = StringInterner.weakIntern(
+          cEvent.getContainer().getNodeHttpAddress());
       taskAttempt.nodeRackName = RackResolver.resolve(
           taskAttempt.containerNodeId.getHost()).getNetworkLocation();
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
@@ -1702,7 +1711,6 @@ public abstract class TaskAttemptImpl implements
     result.stateString = "NEW";
     result.taskState = TaskAttemptState.NEW;
     Counters counters = EMPTY_COUNTERS;
-    //    counters.groups = new HashMap<String, CounterGroup>();
     result.counters = counters;
   }
 

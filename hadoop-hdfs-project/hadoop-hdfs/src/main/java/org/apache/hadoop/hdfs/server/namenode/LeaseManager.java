@@ -253,7 +253,7 @@ public class LeaseManager {
     private String findPath(INodeFileUnderConstruction pendingFile) {
       try {
         for (String src : paths) {
-          if (fsnamesystem.dir.getFileINode(src) == pendingFile) {
+          if (fsnamesystem.dir.getINode(src) == pendingFile) {
             return src;
           }
         }
@@ -429,7 +429,7 @@ public class LeaseManager {
         return;
       }
 
-      LOG.info("Lease " + oldest + " has expired hard limit");
+      LOG.info(oldest + " has expired hard limit");
 
       final List<String> removing = new ArrayList<String>();
       // need to create a copy of the oldest lease paths, becuase 
@@ -441,15 +441,14 @@ public class LeaseManager {
       for(String p : leasePaths) {
         try {
           if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
-            LOG.info("Lease recovery for file " + p +
-                          " is complete. File closed.");
+            LOG.info("Lease recovery for " + p + " is complete. File closed.");
             removing.add(p);
           } else {
-            LOG.info("Started block recovery for file " + p +
-                          " lease " + oldest);
+            LOG.info("Started block recovery " + p + " lease " + oldest);
           }
         } catch (IOException e) {
-          LOG.error("Cannot release the path "+p+" in the lease "+oldest, e);
+          LOG.error("Cannot release the path " + p + " in the lease "
+              + oldest, e);
           removing.add(p);
         }
       }

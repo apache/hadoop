@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.SignedBytes;
 
 /**
@@ -39,7 +44,8 @@ import com.google.common.primitives.SignedBytes;
  */
 @InterfaceAudience.Private
 abstract class INode implements Comparable<byte[]> {
-  /*
+  static final List<INode> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<INode>());
+  /**
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.
    *  if this encoding is changed, implicitly getFileInfo and listStatus in
@@ -177,14 +183,20 @@ abstract class INode implements Comparable<byte[]> {
   /**
    * Check whether it's a directory
    */
-  abstract boolean isDirectory();
+  public boolean isDirectory() {
+    return false;
+  }
 
   /**
-   * Collect all the blocks in all children of this INode.
-   * Count and return the number of files in the sub tree.
-   * Also clears references since this INode is deleted.
+   * Collect all the blocks in all children of this INode. Count and return the
+   * number of files in the sub tree. Also clears references since this INode is
+   * deleted.
+   * 
+   * @param info
+   *          Containing all the blocks collected from the children of this
+   *          INode. These blocks later should be removed from the blocksMap.
    */
-  abstract int collectSubtreeBlocksAndClear(List<Block> v);
+  abstract int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info);
 
   /** Compute {@link ContentSummary}. */
   public final ContentSummary computeContentSummary() {
@@ -222,11 +234,10 @@ abstract class INode implements Comparable<byte[]> {
   abstract DirCounts spaceConsumedInTree(DirCounts counts);
   
   /**
-   * Get local file name
-   * @return local file name
+   * @return null if the local name is null; otherwise, return the local name.
    */
   String getLocalName() {
-    return DFSUtil.bytes2String(name);
+    return name == null? null: DFSUtil.bytes2String(name);
   }
 
 
@@ -236,8 +247,8 @@ abstract class INode implements Comparable<byte[]> {
   }
 
   /**
-   * Get local file name
-   * @return local file name
+   * @return null if the local name is null;
+   *         otherwise, return the local name byte array.
    */
   byte[] getLocalNameBytes() {
     return name;
@@ -327,7 +338,7 @@ abstract class INode implements Comparable<byte[]> {
   /**
    * Check whether it's a symlink
    */
-  public boolean isLink() {
+  public boolean isSymlink() {
     return false;
   }
 
@@ -454,5 +465,75 @@ abstract class INode implements Comparable<byte[]> {
     // file
     return new INodeFile(permissions, blocks, replication,
         modificationTime, atime, preferredBlockSize);
+  }
+
+  /**
+   * Dump the subtree starting from this inode.
+   * @return a text representation of the tree.
+   */
+  @VisibleForTesting
+  public StringBuffer dumpTreeRecursively() {
+    final StringWriter out = new StringWriter(); 
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder());
+    return out.getBuffer();
+  }
+
+  /**
+   * Dump tree recursively.
+   * @param prefix The prefix string that each line should print.
+   */
+  @VisibleForTesting
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix) {
+    out.print(prefix);
+    out.print(" ");
+    out.print(getLocalName());
+    out.print("   (");
+    final String s = super.toString();
+    out.print(s.substring(s.lastIndexOf(getClass().getSimpleName())));
+    out.println(")");
+  }
+  
+  /**
+   * Information used for updating the blocksMap when deleting files.
+   */
+  public static class BlocksMapUpdateInfo {
+    /**
+     * The list of blocks that need to be removed from blocksMap
+     */
+    private List<Block> toDeleteList;
+    
+    public BlocksMapUpdateInfo(List<Block> toDeleteList) {
+      this.toDeleteList = toDeleteList == null ? new ArrayList<Block>()
+          : toDeleteList;
+    }
+    
+    public BlocksMapUpdateInfo() {
+      toDeleteList = new ArrayList<Block>();
+    }
+    
+    /**
+     * @return The list of blocks that need to be removed from blocksMap
+     */
+    public List<Block> getToDeleteList() {
+      return toDeleteList;
+    }
+    
+    /**
+     * Add a to-be-deleted block into the
+     * {@link BlocksMapUpdateInfo#toDeleteList}
+     * @param toDelete the to-be-deleted block
+     */
+    public void addDeleteBlock(Block toDelete) {
+      if (toDelete != null) {
+        toDeleteList.add(toDelete);
+      }
+    }
+    
+    /**
+     * Clear {@link BlocksMapUpdateInfo#toDeleteList}
+     */
+    public void clear() {
+      toDeleteList.clear();
+    }
   }
 }

@@ -90,7 +90,7 @@ public class FSEditLogLoader {
                                  expectedStartingTxId, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
           + " of size " + edits.length() + " edits # " + numEdits 
-          + " loaded in " + (now()-startTime)/1000 + " seconds.");
+          + " loaded in " + (now()-startTime)/1000 + " seconds");
       return numEdits;
     } finally {
       edits.close();
@@ -477,8 +477,8 @@ public class FSEditLogLoader {
       Lease lease = fsNamesys.leaseManager.getLease(
           reassignLeaseOp.leaseHolder);
       INodeFileUnderConstruction pendingFile =
-          (INodeFileUnderConstruction) fsDir.getFileINode(
-              reassignLeaseOp.path);
+          INodeFileUnderConstruction.valueOf( 
+              fsDir.getINode(reassignLeaseOp.path), reassignLeaseOp.path);
       fsNamesys.reassignLeaseInternal(lease,
           reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
       break;

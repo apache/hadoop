@@ -111,6 +111,14 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.shuffle.retry-delay.max.ms</name>
+  <value>60000</value>
+  <description>The maximum number of ms the reducer will delay before retrying
+  to download map data.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.shuffle.parallelcopies</name>
   <value>5</value>
   <description>The default number of parallel transfers run by reduce
@@ -837,6 +845,33 @@
   <description>The number of seconds the submitter of the job wants to wait
     before job end notification is retried if it fails. This is capped by
     mapreduce.job.end-notification.max.retry.interval</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.env</name>
+  <value></value>
+  <description>User added environment variables for the MR App Master 
+  processes. Example :
+  1) A=foo  This will set the env variable A to foo
+  2) B=$B:c This is inherit tasktracker's B env variable.  
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.command-opts</name>
+  <value>-Xmx1024m</value>
+  <description>Java opts for the MR App Master processes.  
+  The following symbol, if present, will be interpolated: @taskid@ is replaced 
+  by current TaskID. Any other occurrences of '@' will go unchanged.
+  For example, to enable verbose gc logging to a file named for the taskid in
+  /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
+        -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+  
+  Usage of -Djava.library.path can cause programs to no longer function if
+  hadoop native libraries are used. These values should instead be set as part 
+  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and 
+  mapreduce.reduce.env config settings. 
+  </description>
 </property>
 
 <property>

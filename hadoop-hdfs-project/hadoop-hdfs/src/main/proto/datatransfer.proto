@@ -22,6 +22,7 @@
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "DataTransferProtos";
 option java_generate_equals_and_hash = true;
+package hadoop.hdfs;
 
 import "hdfs.proto";
 
@@ -180,5 +181,5 @@ message OpBlockChecksumResponseProto {
   required uint32 bytesPerCrc = 1;
   required uint64 crcPerBlock = 2;
   required bytes md5 = 3;
-  optional ChecksumTypeProto crcType = 4 [default = CRC32];
+  optional ChecksumTypeProto crcType = 4 [default = CHECKSUM_CRC32];
 }

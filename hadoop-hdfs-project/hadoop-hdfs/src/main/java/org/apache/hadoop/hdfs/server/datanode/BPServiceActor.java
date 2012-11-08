@@ -75,14 +75,18 @@ class BPServiceActor implements Runnable {
 
   BPOfferService bpos;
   
-  long lastBlockReport = 0;
-  long lastDeletedReport = 0;
+  // lastBlockReport, lastDeletedReport and lastHeartbeat may be assigned/read
+  // by testing threads (through BPServiceActor#triggerXXX), while also 
+  // assigned/read by the actor thread. Thus they should be declared as volatile
+  // to make sure the "happens-before" consistency.
+  volatile long lastBlockReport = 0;
+  volatile long lastDeletedReport = 0;
 
   boolean resetBlockReportTime = true;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
-  private long lastHeartbeat = 0;
+  private volatile long lastHeartbeat = 0;
   private volatile boolean initialized = false;
   
   /**
@@ -637,8 +641,7 @@ class BPServiceActor implements Runnable {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException ie) {
-      LOG.info("BPOfferService " + this +
-          " interrupted while " + stateString);
+      LOG.info("BPOfferService " + this + " interrupted while " + stateString);
     }
   }
 

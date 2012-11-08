@@ -18,6 +18,7 @@
 option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "RpcPayloadHeaderProtos";
 option java_generate_equals_and_hash = true;
+package hadoop.common;
 
 /**
  * This is the rpc payload header. It is sent with every rpc call.

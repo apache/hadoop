@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -32,6 +32,17 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 /** I-node for closed file. */
 @InterfaceAudience.Private
 public class INodeFile extends INode implements BlockCollection {
+  /** Cast INode to INodeFile. */
+  public static INodeFile valueOf(INode inode, String path) throws IOException {
+    if (inode == null) {
+      throw new FileNotFoundException("File does not exist: " + path);
+    }
+    if (!(inode instanceof INodeFile)) {
+      throw new FileNotFoundException("Path is not a file: " + path);
+    }
+    return (INodeFile)inode;
+  }
+
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
   //Number of bits for Block size
@@ -43,7 +54,7 @@ public class INodeFile extends INode implements BlockCollection {
 
   private long header;
 
-  BlockInfo blocks[] = null;
+  private BlockInfo[] blocks;
 
   INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
@@ -51,7 +62,7 @@ public class INodeFile extends INode implements BlockCollection {
     super(permissions, modificationTime, atime);
     this.setReplication(replication);
     this.setPreferredBlockSize(preferredBlockSize);
-    blocks = blklist;
+    this.blocks = blklist;
   }
 
   /**
@@ -62,11 +73,6 @@ public class INodeFile extends INode implements BlockCollection {
   @Override
   void setPermission(FsPermission permission) {
     super.setPermission(permission.applyUMask(UMASK));
-  }
-
-  @Override
-  boolean isDirectory() {
-    return false;
   }
 
   /** @return the replication factor of the file. */
@@ -116,7 +122,7 @@ public class INodeFile extends INode implements BlockCollection {
     for(BlockInfo bi: newlist) {
       bi.setBlockCollection(this);
     }
-    this.blocks = newlist;
+    setBlocks(newlist);
   }
   
   /**
@@ -124,14 +130,13 @@ public class INodeFile extends INode implements BlockCollection {
    */
   void addBlock(BlockInfo newblock) {
     if (this.blocks == null) {
-      this.blocks = new BlockInfo[1];
-      this.blocks[0] = newblock;
+      this.setBlocks(new BlockInfo[]{newblock});
     } else {
       int size = this.blocks.length;
       BlockInfo[] newlist = new BlockInfo[size + 1];
       System.arraycopy(this.blocks, 0, newlist, 0, size);
       newlist[size] = newblock;
-      this.blocks = newlist;
+      this.setBlocks(newlist);
     }
   }
 
@@ -140,16 +145,21 @@ public class INodeFile extends INode implements BlockCollection {
     this.blocks[idx] = blk;
   }
 
+  /** Set the blocks. */
+  public void setBlocks(BlockInfo[] blocks) {
+    this.blocks = blocks;
+  }
+
   @Override
-  int collectSubtreeBlocksAndClear(List<Block> v) {
+  int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     parent = null;
-    if(blocks != null && v != null) {
+    if(blocks != null && info != null) {
       for (BlockInfo blk : blocks) {
-        v.add(blk);
+        info.addDeleteBlock(blk);
         blk.setBlockCollection(null);
       }
     }
-    blocks = null;
+    setBlocks(null);
     return 1;
   }
   

@@ -125,6 +125,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   public FsServerDefaults getServerDefaults() throws IOException {
     return fsImpl.getServerDefaults();
   }
+  
+  @Override
+  public Path getHomeDirectory() {
+    return fsImpl.getHomeDirectory();
+  }
 
   @Override
   public int getUriDefaultPort() {

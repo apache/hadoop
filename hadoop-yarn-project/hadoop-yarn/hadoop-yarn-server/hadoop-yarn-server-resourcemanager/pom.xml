@@ -50,7 +50,7 @@
        <directory>${basedir}/src/test/resources</directory>
      </testResource>
      <testResource>
-       <directory>${basedir}/../../conf</directory>
+       <directory>${basedir}/conf</directory>
        <includes>
          <include>capacity-scheduler.xml</include>
        </includes>

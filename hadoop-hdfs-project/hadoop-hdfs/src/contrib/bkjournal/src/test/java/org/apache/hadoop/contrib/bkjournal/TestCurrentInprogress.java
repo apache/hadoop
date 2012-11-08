@@ -118,6 +118,7 @@ public class TestCurrentInprogress {
   public void testReadShouldReturnTheZnodePathAfterUpdate() throws Exception {
     String data = "inprogressNode";
     CurrentInprogress ci = new CurrentInprogress(zkc, CURRENT_NODE_PATH);
+    ci.init();
     ci.update(data);
     String inprogressNodePath = ci.read();
     assertEquals("Not returning inprogressZnode", "inprogressNode",
@@ -131,6 +132,7 @@ public class TestCurrentInprogress {
   @Test
   public void testReadShouldReturnNullAfterClear() throws Exception {
     CurrentInprogress ci = new CurrentInprogress(zkc, CURRENT_NODE_PATH);
+    ci.init();
     ci.update("myInprogressZnode");
     ci.read();
     ci.clear();
@@ -146,6 +148,7 @@ public class TestCurrentInprogress {
   public void testUpdateShouldFailWithIOEIfVersionNumberChangedAfterRead()
       throws Exception {
     CurrentInprogress ci = new CurrentInprogress(zkc, CURRENT_NODE_PATH);
+    ci.init();
     ci.update("myInprogressZnode");
     assertEquals("Not returning myInprogressZnode", "myInprogressZnode", ci
         .read());

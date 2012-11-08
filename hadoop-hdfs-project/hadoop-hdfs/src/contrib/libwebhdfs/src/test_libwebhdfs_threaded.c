@@ -18,6 +18,7 @@
 
 #include "expect.h"
 #include "hdfs.h"
+#include "native_mini_dfs.h"
 
 #include <errno.h>
 #include <semaphore.h>
@@ -28,11 +29,9 @@
 
 #define TLH_MAX_THREADS 100
 
-static sem_t *tlhSem;
+static struct NativeMiniDfsCluster* cluster;
 
-static const char *nn;
 static const char *user;
-static int port;
 
 struct tlhThreadInfo {
     /** Thread index */
@@ -43,19 +42,24 @@ struct tlhThreadInfo {
     pthread_t thread;
 };
 
-static int hdfsSingleNameNodeConnect(const char *nn, int port, const char *user, hdfsFS *fs)
+static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cluster,
+                                     hdfsFS *fs)
 {
+    int nnPort;
+    const char *nnHost;
     hdfsFS hdfs;
-    if (port < 0) {
-        fprintf(stderr, "hdfsSingleNameNodeConnect: nmdGetNameNodePort "
-                "returned error %d\n", port);
-        return port;
+    
+    if (nmdGetNameNodeHttpAddress(cluster, &nnPort, &nnHost)) {
+        fprintf(stderr, "Error when retrieving namenode host address.\n");
+        return 1;
     }
     
-    hdfs = hdfsConnectAsUserNewInstance(nn, port, user);
-    if (!hdfs) {
-        return -errno;
+    hdfs = hdfsConnectAsUser(nnHost, nnPort, user);
+    if(!hdfs) {
+        fprintf(stderr, "Oops! Failed to connect to hdfs!\n");
+        return 1;
     }
+
     *fs = hdfs;
     return 0;
 }
@@ -65,6 +69,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     char prefix[256], tmp[256];
     hdfsFile file;
     int ret, expected;
+    hdfsFileInfo *fileInfo;
     
     snprintf(prefix, sizeof(prefix), "/tlhData%04d", ti->threadIdx);
     
@@ -74,18 +79,13 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     EXPECT_ZERO(hdfsCreateDirectory(fs, prefix));
     snprintf(tmp, sizeof(tmp), "%s/file", prefix);
     
-    /*
-     * Although there should not be any file to open for reading,
-     * the right now implementation only construct a local
-     * information struct when opening file
-     */
     EXPECT_NONNULL(hdfsOpenFile(fs, tmp, O_RDONLY, 0, 0, 0));
     
     file = hdfsOpenFile(fs, tmp, O_WRONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
     
     /* TODO: implement writeFully and use it here */
-    expected = strlen(prefix);
+    expected = (int)strlen(prefix);
     ret = hdfsWrite(fs, file, prefix, expected);
     if (ret < 0) {
         ret = errno;
@@ -118,9 +118,28 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     }
     EXPECT_ZERO(memcmp(prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
+        
+    snprintf(tmp, sizeof(tmp), "%s/file", prefix);
+    EXPECT_NONZERO(hdfsChown(fs, tmp, NULL, NULL));
+    EXPECT_ZERO(hdfsChown(fs, tmp, NULL, "doop"));
+    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_NONNULL(fileInfo);
+    EXPECT_ZERO(strcmp("doop", fileInfo->mGroup));
+    hdfsFreeFileInfo(fileInfo, 1);
     
-    // TODO: Non-recursive delete should fail?
-    //EXPECT_NONZERO(hdfsDelete(fs, prefix, 0));
+    EXPECT_ZERO(hdfsChown(fs, tmp, "ha", "doop2"));
+    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_NONNULL(fileInfo);
+    EXPECT_ZERO(strcmp("ha", fileInfo->mOwner));
+    EXPECT_ZERO(strcmp("doop2", fileInfo->mGroup));
+    hdfsFreeFileInfo(fileInfo, 1);
+    
+    EXPECT_ZERO(hdfsChown(fs, tmp, "ha2", NULL));
+    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_NONNULL(fileInfo);
+    EXPECT_ZERO(strcmp("ha2", fileInfo->mOwner));
+    EXPECT_ZERO(strcmp("doop2", fileInfo->mGroup));
+    hdfsFreeFileInfo(fileInfo, 1);
     
     EXPECT_ZERO(hdfsDelete(fs, prefix, 1));
     return 0;
@@ -134,7 +153,7 @@ static void *testHdfsOperations(void *v)
     
     fprintf(stderr, "testHdfsOperations(threadIdx=%d): starting\n",
             ti->threadIdx);
-    ret = hdfsSingleNameNodeConnect(nn, port, user, &fs);
+    ret = hdfsSingleNameNodeConnect(cluster, &fs);
     if (ret) {
         fprintf(stderr, "testHdfsOperations(threadIdx=%d): "
                 "hdfsSingleNameNodeConnect failed with error %d.\n",
@@ -181,18 +200,22 @@ static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
  */
 int main(int argc, const char *args[])
 {
-    if (argc != 4) {
-        fprintf(stderr, "usage: test_libhdfs_threaded <namenode> <port> <username>");
-        return -1;
-    }
-    
-    nn = args[1];
-    port = atoi(args[2]);
-    user = args[3];
-    
     int i, tlhNumThreads;
     const char *tlhNumThreadsStr;
     struct tlhThreadInfo ti[TLH_MAX_THREADS];
+    
+    if (argc != 2) {
+        fprintf(stderr, "usage: test_libwebhdfs_threaded <username>\n");
+        exit(1);
+    }
+    user = args[1];
+    
+    struct NativeMiniDfsConf conf = {
+        .doFormat = 1, .webhdfsEnabled = 1, .namenodeHttpPort = 50070,
+    };
+    cluster = nmdCreate(&conf);
+    EXPECT_NONNULL(cluster);
+    EXPECT_ZERO(nmdWaitClusterUp(cluster));
     
     tlhNumThreadsStr = getenv("TLH_NUM_THREADS");
     if (!tlhNumThreadsStr) {
@@ -210,8 +233,6 @@ int main(int argc, const char *args[])
         ti[i].threadIdx = i;
     }
     
-//    tlhSem = sem_open("sem", O_CREAT, 0644, tlhNumThreads);
-    
     for (i = 0; i < tlhNumThreads; i++) {
         EXPECT_ZERO(pthread_create(&ti[i].thread, NULL,
                                    testHdfsOperations, &ti[i]));
@@ -220,6 +241,7 @@ int main(int argc, const char *args[])
         EXPECT_ZERO(pthread_join(ti[i].thread, NULL));
     }
     
-//    EXPECT_ZERO(sem_close(tlhSem));
+    EXPECT_ZERO(nmdShutdown(cluster));
+    nmdFree(cluster);
     return checkFailures(ti, tlhNumThreads);
 }

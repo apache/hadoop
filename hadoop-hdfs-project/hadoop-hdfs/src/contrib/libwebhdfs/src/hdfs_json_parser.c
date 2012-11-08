@@ -25,6 +25,11 @@
 #include <ctype.h>
 #include <jansson.h>
 
+static const char * const temporaryRedirectCode = "307 TEMPORARY_REDIRECT";
+static const char * const twoHundredOKCode = "200 OK";
+static const char * const twoHundredOneCreatedCode = "201 Created";
+static const char * const httpHeaderString = "HTTP/1.1";
+
 /**
  * Exception information after calling JSON operations
  */
@@ -34,9 +39,6 @@ struct jsonException {
   const char *message;
 };
 
-static hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat,
-                           int *numEntries, const char *operation);
-
 static void dotsToSlashes(char *str)
 {
     for (; *str != '\0'; str++) {
@@ -45,8 +47,9 @@ static void dotsToSlashes(char *str)
     }
 }
 
-int printJsonExceptionV(struct jsonException *exc, int noPrintFlags,
-                        const char *fmt, va_list ap)
+/** Print out the JSON exception information */
+static int printJsonExceptionV(struct jsonException *exc, int noPrintFlags,
+                               const char *fmt, va_list ap)
 {
     char *javaClassName = NULL;
     int excErrno = EINTERNAL, shouldPrint = 0;
@@ -74,11 +77,23 @@ int printJsonExceptionV(struct jsonException *exc, int noPrintFlags,
     return excErrno;
 }
 
-int printJsonException(struct jsonException *exc, int noPrintFlags,
-                       const char *fmt, ...)
+/**
+ * Print out JSON exception information.
+ *
+ * @param exc             The exception information to print and free
+ * @param noPrintFlags    Flags which determine which exceptions we should NOT
+ *                        print.
+ * @param fmt             Printf-style format list
+ * @param ...             Printf-style varargs
+ *
+ * @return                The POSIX error number associated with the exception
+ *                        object.
+ */
+static int printJsonException(struct jsonException *exc, int noPrintFlags,
+                              const char *fmt, ...)
 {
     va_list ap;
-    int ret;
+    int ret = 0;
     
     va_start(ap, fmt);
     ret = printJsonExceptionV(exc, noPrintFlags, fmt, ap);
@@ -86,81 +101,20 @@ int printJsonException(struct jsonException *exc, int noPrintFlags,
     return ret;
 }
 
-static hdfsFileInfo *json_parse_array(json_t *jobj, char *key, hdfsFileInfo *fileStat, int *numEntries, const char *operation) {
-    int arraylen = json_array_size(jobj);                      //Getting the length of the array
-    *numEntries = arraylen;
-    if (!key) {
-        return NULL;
-    }
-    if(arraylen > 0) {
-        fileStat = (hdfsFileInfo *)realloc(fileStat,sizeof(hdfsFileInfo)*arraylen);
-    }
-    json_t *jvalue;
-    int i;
-    for (i=0; i< arraylen; i++) {
-        jvalue = json_array_get(jobj, i);            //Getting the array element at position i
-        if (json_is_array(jvalue)) {                 // array within an array - program should never come here for now
-            json_parse_array(jvalue, NULL, &fileStat[i], numEntries, operation);
-        }
-        else if (json_is_object(jvalue)) {           // program will definitely come over here
-            parseJsonGFS(jvalue, &fileStat[i], numEntries, operation);
-        }
-        else {
-            return NULL;                               // program will never come over here for now
-        }
-    }
-    *numEntries = arraylen;
-    return fileStat;
-}
-
-int parseBoolean(char *response) {
-    json_t *root;
-    json_error_t error;
-    size_t flags = 0;
-    int result = 0;
-    const char *key;
-    json_t *value;
-    root = json_loads(response, flags, &error);
-    void *iter = json_object_iter(root);
-    while(iter)  {
-        key = json_object_iter_key(iter);
-        value = json_object_iter_value(iter);
-        switch (json_typeof(value))  {
-            case JSON_TRUE:
-                result = 1;
-                break;
-            default:
-                result = 0;
-                break;
-        }
-        iter = json_object_iter_next(root, iter);
-    }
-    return result;
-}
-
-int parseMKDIR(char *response) {
-    return (parseBoolean(response));
-}
-
-int parseRENAME(char *response) {
-    return (parseBoolean(response));
-}
-
-int parseDELETE(char *response) {
-    return (parseBoolean(response));
-}
-
-struct jsonException *parseJsonException(json_t *jobj) {
-    const char *key;
-    json_t *value;
+/** Parse the exception information from JSON */
+static struct jsonException *parseJsonException(json_t *jobj)
+{
+    const char *key = NULL;
+    json_t *value = NULL;
     struct jsonException *exception = NULL;
+    void *iter = NULL;
     
     exception = calloc(1, sizeof(*exception));
     if (!exception) {
         return NULL;
     }
     
-    void *iter = json_object_iter(jobj);
+    iter = json_object_iter(jobj);
     while (iter) {
         key = json_object_iter_key(iter);
         value = json_object_iter_value(iter);
@@ -175,23 +129,31 @@ struct jsonException *parseJsonException(json_t *jobj) {
         
         iter = json_object_iter_next(jobj, iter);
     }
-    
     return exception;
 }
 
-struct jsonException *parseException(const char *content) {
+/** 
+ * Parse the exception information which is presented in JSON
+ * 
+ * @param content   Exception information in JSON
+ * @return          jsonException for printing out
+ */
+static struct jsonException *parseException(const char *content)
+{
+    json_error_t error;
+    size_t flags = 0;
+    const char *key = NULL;
+    json_t *value;
+    json_t *jobj;
+    struct jsonException *exception = NULL;
+    
     if (!content) {
         return NULL;
     }
-    
-    json_error_t error;
-    size_t flags = 0;
-    const char *key;
-    json_t *value;
-    json_t *jobj = json_loads(content, flags, &error);
-    
+    jobj = json_loads(content, flags, &error);
     if (!jobj) {
-        fprintf(stderr, "JSon parsing failed\n");
+        fprintf(stderr, "JSon parsing error: on line %d: %s\n",
+                error.line, error.text);
         return NULL;
     }
     void *iter = json_object_iter(jobj);
@@ -199,254 +161,503 @@ struct jsonException *parseException(const char *content) {
         key = json_object_iter_key(iter);
         value = json_object_iter_value(iter);
         
-        if (!strcmp(key, "RemoteException") && json_typeof(value) == JSON_OBJECT) {
-            return parseJsonException(value);
+        if (!strcmp(key, "RemoteException") &&
+                    json_typeof(value) == JSON_OBJECT) {
+            exception = parseJsonException(value);
+            break;
         }
         iter = json_object_iter_next(jobj, iter);
     }
-    return NULL;
+    
+    json_decref(jobj);
+    return exception;
 }
 
-static hdfsFileInfo *parseJsonGFS(json_t *jobj, hdfsFileInfo *fileStat,
-                                  int *numEntries, const char *operation)
+/**
+ * Parse the response information which uses TRUE/FALSE 
+ * to indicate whether the operation succeeded
+ *
+ * @param response  Response information
+ * @return          0 to indicate success
+ */
+static int parseBoolean(const char *response)
 {
-    const char *tempstr;
-    const char *key;
-    json_t *value;
-    void *iter = json_object_iter(jobj);
-    while(iter)  {
-        key = json_object_iter_key(iter);
-        value = json_object_iter_value(iter);
-        
-        switch (json_typeof(value)) {
-            case JSON_INTEGER:
-                if(!strcmp(key,"accessTime")) {
-                    fileStat->mLastAccess = (time_t)(json_integer_value(value)/1000);
-                } else if (!strcmp(key,"blockSize")) {
-                    fileStat->mBlockSize = (tOffset)json_integer_value(value);
-                } else if (!strcmp(key,"length")) {
-                    fileStat->mSize = (tOffset)json_integer_value(value);
-                } else if(!strcmp(key,"modificationTime")) {
-                    fileStat->mLastMod = (time_t)(json_integer_value(value)/1000);
-                } else if (!strcmp(key,"replication")) {
-                    fileStat->mReplication = (short)json_integer_value(value);
-                }
-                break;
-                
-            case JSON_STRING:
-                if(!strcmp(key,"group")) {
-                    fileStat->mGroup=(char *)json_string_value(value);
-                } else if (!strcmp(key,"owner")) {
-                    fileStat->mOwner=(char *)json_string_value(value);
-                } else if (!strcmp(key,"pathSuffix")) {
-                    fileStat->mName=(char *)json_string_value(value);
-                } else if (!strcmp(key,"permission")) {
-                    tempstr=(char *)json_string_value(value);
-                    fileStat->mPermissions = (short)strtol(tempstr,(char **)NULL,8);
-                } else if (!strcmp(key,"type")) {
-                    char *cvalue = (char *)json_string_value(value);
-                    if (!strcmp(cvalue, "DIRECTORY")) {
-                        fileStat->mKind = kObjectKindDirectory;
-                    } else {
-                        fileStat->mKind = kObjectKindFile;
-                    }
-                }
-                break;
-                
-            case JSON_OBJECT:
-                if(!strcmp(key,"FileStatus")) {
-                    parseJsonGFS(value, fileStat, numEntries, operation);
-                } else if (!strcmp(key,"FileStatuses")) {
-                    fileStat = parseJsonGFS(value, &fileStat[0], numEntries, operation);
-                } else if (!strcmp(key,"RemoteException")) {
-                    //Besides returning NULL, we also need to print the exception information
-                    struct jsonException *exception = parseJsonException(value);
-                    if (exception) {
-                        errno = printJsonException(exception, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
-                    }
-                    
-                    if(fileStat != NULL) {
-                        free(fileStat);
-                        fileStat = NULL;
-                    }
-                }
-                break;
-                
-            case JSON_ARRAY:
-                if (!strcmp(key,"FileStatus")) {
-                    fileStat = json_parse_array(value,(char *) key,fileStat,numEntries, operation);
-                }
-                break;
-                
-            default:
-                if(fileStat != NULL) {
-                    free(fileStat);
-                    fileStat = NULL;
-                }
-        }
-        iter = json_object_iter_next(jobj, iter);
+    json_t *root, *value;
+    json_error_t error;
+    size_t flags = 0;
+    int result = 0;
+    
+    root = json_loads(response, flags, &error);
+    if (!root) {
+        fprintf(stderr, "JSon parsing error: on line %d: %s\n",
+                error.line, error.text);
+        return EIO;
     }
-    return fileStat;
+    void *iter = json_object_iter(root);
+    value = json_object_iter_value(iter);
+    if (json_typeof(value) == JSON_TRUE)  {
+        result = 0;
+    } else {
+        result = EIO;  // FALSE means error in remote NN/DN
+    }
+    json_decref(root);
+    return result;
 }
 
+int parseMKDIR(const char *response)
+{
+    return parseBoolean(response);
+}
 
-int checkHeader(char *header, const char *content, const char *operation) {
+int parseRENAME(const char *response)
+{
+    return parseBoolean(response);
+}
+
+int parseDELETE(const char *response)
+{
+    return parseBoolean(response);
+}
+
+int parseSETREPLICATION(const char *response)
+{
+    return parseBoolean(response);
+}
+
+/**
+ * Check the header of response to see if it's 200 OK
+ * 
+ * @param header    Header information for checking
+ * @param content   Stores exception information if there are errors
+ * @param operation Indicate the operation for exception printing
+ * @return 0 for success
+ */
+static int checkHeader(const char *header, const char *content,
+                       const char *operation)
+{
     char *result = NULL;
-    char delims[] = ":";
-    char *responseCode= "200 OK";
-    if(header == '\0' || strncmp(header, "HTTP/", strlen("HTTP/"))) {
-        return 0;
+    const char delims[] = ":";
+    char *savepter;
+    int ret = 0;
+    
+    if (!header || strncmp(header, "HTTP/", strlen("HTTP/"))) {
+        return EINVAL;
     }
-    if(!(strstr(header, responseCode)) || !(header = strstr(header, "Content-Length"))) {
+    if (!(strstr(header, twoHundredOKCode)) ||
+       !(result = strstr(header, "Content-Length"))) {
         struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
+            ret = printJsonException(exc, PRINT_EXC_ALL,
+                                       "Calling WEBHDFS (%s)", operation);
+        } else {
+            ret = EIO;
         }
-        return 0;
+        return ret;
     }
-    result = strtok(header, delims);
-    result = strtok(NULL,delims);
+    result = strtok_r(result, delims, &savepter);
+    result = strtok_r(NULL, delims, &savepter);
     while (isspace(*result)) {
         result++;
     }
-    if(strcmp(result,"0")) {                 //Content-Length should be equal to 0
-        return 1;
-    } else {
-        return 0;
+    // Content-Length should be equal to 0,
+    // and the string should be "0\r\nServer"
+    if (strncmp(result, "0\r\n", 3)) {
+        ret = EIO;
     }
+    return ret;
 }
 
-int parseOPEN(const char *header, const char *content) {
-    const char *responseCode1 = "307 TEMPORARY_REDIRECT";
-    const char *responseCode2 = "200 OK";
-    if(header == '\0' || strncmp(header,"HTTP/",strlen("HTTP/"))) {
-        return -1;
-    }
-    if(!(strstr(header,responseCode1) && strstr(header, responseCode2))) {
-        struct jsonException *exc = parseException(content);
-        if (exc) {
-            //if the exception is an IOException and it is because the offset is out of the range
-            //do not print out the exception
-            if (!strcasecmp(exc->exception, "IOException") && strstr(exc->message, "out of the range")) {
-                return 0;
-            }
-            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (OPEN)");
-        }
-        return -1;
-    }
-    
-    return 1;
-}
-
-int parseCHMOD(char *header, const char *content) {
+int parseCHMOD(const char *header, const char *content)
+{
     return checkHeader(header, content, "CHMOD");
 }
 
-
-int parseCHOWN(char *header, const char *content) {
+int parseCHOWN(const char *header, const char *content)
+{
     return checkHeader(header, content, "CHOWN");
 }
 
-int parseUTIMES(char *header, const char *content) {
-    return checkHeader(header, content, "UTIMES");
+int parseUTIMES(const char *header, const char *content)
+{
+    return checkHeader(header, content, "SETTIMES");
 }
 
-
-int checkIfRedirect(const char *const headerstr, const char *content, const char *operation) {
-    char *responseCode = "307 TEMPORARY_REDIRECT";
-    char * locTag = "Location";
-    char * tempHeader;
-    if(headerstr == '\0' || strncmp(headerstr,"HTTP/", 5)) {
-        return 0;
+/**
+ * Check if the header contains correct information
+ * ("307 TEMPORARY_REDIRECT" and "Location")
+ * 
+ * @param header    Header for parsing
+ * @param content   Contains exception information 
+ *                  if the remote operation failed
+ * @param operation Specify the remote operation when printing out exception
+ * @return 0 for success
+ */
+static int checkRedirect(const char *header,
+                         const char *content, const char *operation)
+{
+    const char *locTag = "Location";
+    int ret = 0, offset = 0;
+    
+    // The header must start with "HTTP/1.1"
+    if (!header || strncmp(header, httpHeaderString,
+                           strlen(httpHeaderString))) {
+        return EINVAL;
     }
-    if(!(tempHeader = strstr(headerstr,responseCode))) {
-        //process possible exception information
+    
+    offset += strlen(httpHeaderString);
+    while (isspace(header[offset])) {
+        offset++;
+    }
+    // Looking for "307 TEMPORARY_REDIRECT" in header
+    if (strncmp(header + offset, temporaryRedirectCode,
+                strlen(temporaryRedirectCode))) {
+        // Process possible exception information
         struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (%s)", operation);
+            ret = printJsonException(exc, PRINT_EXC_ALL,
+                                     "Calling WEBHDFS (%s)", operation);
+        } else {
+            ret = EIO;
         }
-        return 0;
+        return ret;
     }
-    if(!(strstr(tempHeader,locTag))) {
-        return 0;
+    // Here we just simply check if header contains "Location" tag,
+    // detailed processing is in parseDnLoc
+    if (!(strstr(header, locTag))) {
+        ret = EIO;
     }
-    return 1;
+    return ret;
 }
 
-
-int parseNnWRITE(const char *header, const char *content) {
-    return checkIfRedirect(header, content, "Write(NameNode)");
+int parseNnWRITE(const char *header, const char *content)
+{
+    return checkRedirect(header, content, "Write(NameNode)");
 }
 
-
-int parseNnAPPEND(const char *header, const char *content) {
-    return checkIfRedirect(header, content, "Append(NameNode)");
+int parseNnAPPEND(const char *header, const char *content)
+{
+    return checkRedirect(header, content, "Append(NameNode)");
 }
 
-char *parseDnLoc(char *content) {
-    char delims[] = "\r\n";
-    char *url = NULL;
-    char *DnLocation = NULL;
-    char *savepter;
-    DnLocation = strtok_r(content, delims, &savepter);
-    while (DnLocation && strncmp(DnLocation, "Location:", strlen("Location:"))) {
-        DnLocation = strtok_r(NULL, delims, &savepter);
+/** 0 for success , -1 for out of range, other values for error */
+int parseOPEN(const char *header, const char *content)
+{
+    int ret = 0, offset = 0;
+    
+    if (!header || strncmp(header, httpHeaderString,
+                           strlen(httpHeaderString))) {
+        return EINVAL;
     }
-    if (!DnLocation) {
-        return NULL;
+    
+    offset += strlen(httpHeaderString);
+    while (isspace(header[offset])) {
+        offset++;
     }
-    DnLocation = strstr(DnLocation, "http");
-    if (!DnLocation) {
-        return NULL;
+    if (strncmp(header + offset, temporaryRedirectCode,
+                strlen(temporaryRedirectCode)) ||
+        !strstr(header, twoHundredOKCode)) {
+        struct jsonException *exc = parseException(content);
+        if (exc) {
+            // If the exception is an IOException and it is because
+            // the offset is out of the range, do not print out the exception
+            if (!strcasecmp(exc->exception, "IOException") &&
+                    strstr(exc->message, "out of the range")) {
+                ret = -1;
+            } else {
+                ret = printJsonException(exc, PRINT_EXC_ALL,
+                                       "Calling WEBHDFS (OPEN)");
+            }
+        } else {
+            ret = EIO;
+        }
     }
-    url = malloc(strlen(DnLocation) + 1);
+    return ret;
+}
+
+int parseDnLoc(char *content, char **dn)
+{
+    char *url = NULL, *dnLocation = NULL, *savepter, *tempContent;
+    const char *prefix = "Location: http://";
+    const char *prefixToRemove = "Location: ";
+    const char *delims = "\r\n";
+    
+    tempContent = strdup(content);
+    if (!tempContent) {
+        return ENOMEM;
+    }
+    
+    dnLocation = strtok_r(tempContent, delims, &savepter);
+    while (dnLocation && strncmp(dnLocation, "Location:",
+                                 strlen("Location:"))) {
+        dnLocation = strtok_r(NULL, delims, &savepter);
+    }
+    if (!dnLocation) {
+        return EIO;
+    }
+    
+    while (isspace(*dnLocation)) {
+        dnLocation++;
+    }
+    if (strncmp(dnLocation, prefix, strlen(prefix))) {
+        return EIO;
+    }
+    url = strdup(dnLocation + strlen(prefixToRemove));
     if (!url) {
-        return NULL;
+        return ENOMEM;
     }
-    strcpy(url, DnLocation);
-    return url;
+    *dn = url;
+    return 0;
 }
 
-int parseDnWRITE(const char *header, const char *content) {
-    char *responseCode = "201 Created";
-    fprintf(stderr, "\nheaderstr is: %s\n", header);
-    if(header == '\0' || strncmp(header,"HTTP/",strlen("HTTP/"))) {
-        return 0;
+int parseDnWRITE(const char *header, const char *content)
+{
+    int ret = 0;
+    if (header == NULL || header[0] == '\0' ||
+                         strncmp(header, "HTTP/", strlen("HTTP/"))) {
+        return EINVAL;
     }
-    if(!(strstr(header,responseCode))) {
+    if (!(strstr(header, twoHundredOneCreatedCode))) {
         struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (WRITE(DataNode))");
+            ret = printJsonException(exc, PRINT_EXC_ALL,
+                                     "Calling WEBHDFS (WRITE(DataNode))");
+        } else {
+            ret = EIO;
         }
-        return 0;
     }
-    return 1;
+    return ret;
 }
 
-int parseDnAPPEND(const char *header, const char *content) {
-    char *responseCode = "200 OK";
-    if(header == '\0' || strncmp(header, "HTTP/", strlen("HTTP/"))) {
-        return 0;
+int parseDnAPPEND(const char *header, const char *content)
+{
+    int ret = 0;
+    
+    if (header == NULL || header[0] == '\0' ||
+                         strncmp(header, "HTTP/", strlen("HTTP/"))) {
+        return EINVAL;
     }
-    if(!(strstr(header, responseCode))) {
+    if (!(strstr(header, twoHundredOKCode))) {
         struct jsonException *exc = parseException(content);
         if (exc) {
-            errno = printJsonException(exc, PRINT_EXC_ALL, "Calling WEBHDFS (APPEND(DataNode))");
+            ret = printJsonException(exc, PRINT_EXC_ALL,
+                                     "Calling WEBHDFS (APPEND(DataNode))");
+        } else {
+            ret = EIO;
         }
-        return 0;
     }
-    return 1;
+    return ret;
 }
 
-hdfsFileInfo *parseGFS(char *str, hdfsFileInfo *fileStat, int *numEntries) {
+/**
+ * Retrieve file status from the JSON object 
+ *
+ * @param jobj          JSON object for parsing, which contains 
+ *                      file status information
+ * @param fileStat      hdfsFileInfo handle to hold file status information
+ * @return 0 on success
+ */
+static int parseJsonForFileStatus(json_t *jobj, hdfsFileInfo *fileStat)
+{
+    const char *key, *tempstr;
+    json_t *value;
+    void *iter = NULL;
+    
+    iter = json_object_iter(jobj);
+    while (iter) {
+        key = json_object_iter_key(iter);
+        value = json_object_iter_value(iter);
+        
+        if (!strcmp(key, "accessTime")) {
+            // json field contains time in milliseconds,
+            // hdfsFileInfo is counted in seconds
+            fileStat->mLastAccess = json_integer_value(value) / 1000;
+        } else if (!strcmp(key, "blockSize")) {
+            fileStat->mBlockSize = json_integer_value(value);
+        } else if (!strcmp(key, "length")) {
+            fileStat->mSize = json_integer_value(value);
+        } else if (!strcmp(key, "modificationTime")) {
+            fileStat->mLastMod = json_integer_value(value) / 1000;
+        } else if (!strcmp(key, "replication")) {
+            fileStat->mReplication = json_integer_value(value);
+        } else if (!strcmp(key, "group")) {
+            fileStat->mGroup = strdup(json_string_value(value));
+            if (!fileStat->mGroup) {
+                return ENOMEM;
+            }
+        } else if (!strcmp(key, "owner")) {
+            fileStat->mOwner = strdup(json_string_value(value));
+            if (!fileStat->mOwner) {
+                return ENOMEM;
+            }
+        } else if (!strcmp(key, "pathSuffix")) {
+            fileStat->mName = strdup(json_string_value(value));
+            if (!fileStat->mName) {
+                return ENOMEM;
+            }
+        } else if (!strcmp(key, "permission")) {
+            tempstr = json_string_value(value);
+            fileStat->mPermissions = (short) strtol(tempstr, NULL, 8);
+        } else if (!strcmp(key, "type")) {
+            tempstr = json_string_value(value);
+            if (!strcmp(tempstr, "DIRECTORY")) {
+                fileStat->mKind = kObjectKindDirectory;
+            } else {
+                fileStat->mKind = kObjectKindFile;
+            }
+        }
+        // Go to the next key-value pair in the json object
+        iter = json_object_iter_next(jobj, iter);
+    }
+    return 0;
+}
+
+int parseGFS(const char *response, hdfsFileInfo *fileStat, int printError)
+{
+    int ret = 0, printFlag;
     json_error_t error;
     size_t flags = 0;
-    json_t *jobj = json_loads(str, flags, &error);
-    fileStat = parseJsonGFS(jobj, fileStat, numEntries, "GETPATHSTATUS/LISTSTATUS");
-    return fileStat;
+    json_t *jobj, *value;
+    const char *key;
+    void *iter = NULL;
+    
+    if (!response || !fileStat) {
+        return EIO;
+    }
+    jobj = json_loads(response, flags, &error);
+    if (!jobj) {
+        fprintf(stderr, "error while parsing json: on line %d: %s\n",
+                error.line, error.text);
+        return EIO;
+    }
+    iter = json_object_iter(jobj);
+    key = json_object_iter_key(iter);
+    value = json_object_iter_value(iter);
+    if (json_typeof(value) == JSON_OBJECT) {
+        if (!strcmp(key, "RemoteException")) {
+            struct jsonException *exception = parseJsonException(value);
+            if (exception) {
+                if (printError) {
+                    printFlag = PRINT_EXC_ALL;
+                } else {
+                    printFlag = NOPRINT_EXC_FILE_NOT_FOUND |
+                                NOPRINT_EXC_ACCESS_CONTROL |
+                                NOPRINT_EXC_PARENT_NOT_DIRECTORY;
+                }
+                ret = printJsonException(exception, printFlag,
+                                         "Calling WEBHDFS GETFILESTATUS");
+            } else {
+                ret = EIO;
+            }
+        } else if (!strcmp(key, "FileStatus")) {
+            ret = parseJsonForFileStatus(value, fileStat);
+        } else {
+            ret = EIO;
+        }
+        
+    } else {
+        ret = EIO;
+    }
+    
+    json_decref(jobj);
+    return ret;
 }
 
-int parseSETREPLICATION(char *response) {
-    return (parseBoolean(response));
+/**
+ * Parse the JSON array. Called to parse the result of 
+ * the LISTSTATUS operation. Thus each element of the JSON array is 
+ * a JSON object with the information of a file entry contained 
+ * in the folder.
+ *
+ * @param jobj          The JSON array to be parsed
+ * @param fileStat      The hdfsFileInfo handle used to 
+ *                      store a group of file information
+ * @param numEntries    Capture the number of files in the folder
+ * @return              0 for success
+ */
+static int parseJsonArrayForFileStatuses(json_t *jobj, hdfsFileInfo **fileStat,
+                                         int *numEntries)
+{
+    json_t *jvalue = NULL;
+    int i = 0, ret = 0, arraylen = 0;
+    hdfsFileInfo *fileInfo = NULL;
+    
+    arraylen = (int) json_array_size(jobj);
+    if (arraylen > 0) {
+        fileInfo = calloc(arraylen, sizeof(hdfsFileInfo));
+        if (!fileInfo) {
+            return ENOMEM;
+        }
+    }
+    for (i = 0; i < arraylen; i++) {
+        //Getting the array element at position i
+        jvalue = json_array_get(jobj, i);
+        if (json_is_object(jvalue)) {
+            ret = parseJsonForFileStatus(jvalue, &fileInfo[i]);
+            if (ret) {
+                goto done;
+            }
+        } else {
+            ret = EIO;
+            goto done;
+        }
+    }
+done:
+    if (ret) {
+        free(fileInfo);
+    } else {
+        *numEntries = arraylen;
+        *fileStat = fileInfo;
+    }
+    return ret;
 }
 
+int parseLS(const char *response, hdfsFileInfo **fileStats, int *numOfEntries)
+{
+    int ret = 0;
+    json_error_t error;
+    size_t flags = 0;
+    json_t *jobj, *value;
+    const char *key;
+    void *iter = NULL;
+    
+    if (!response || response[0] == '\0' || !fileStats) {
+        return EIO;
+    }
+    jobj = json_loads(response, flags, &error);
+    if (!jobj) {
+        fprintf(stderr, "error while parsing json: on line %d: %s\n",
+                error.line, error.text);
+        return EIO;
+    }
+    
+    iter = json_object_iter(jobj);
+    key = json_object_iter_key(iter);
+    value = json_object_iter_value(iter);
+    if (json_typeof(value) == JSON_OBJECT) {
+        if (!strcmp(key, "RemoteException")) {
+            struct jsonException *exception = parseJsonException(value);
+            if (exception) {
+                ret = printJsonException(exception, PRINT_EXC_ALL,
+                                         "Calling WEBHDFS GETFILESTATUS");
+            } else {
+                ret = EIO;
+            }
+        } else if (!strcmp(key, "FileStatuses")) {
+            iter = json_object_iter(value);
+            value = json_object_iter_value(iter);
+            if (json_is_array(value)) {
+                ret = parseJsonArrayForFileStatuses(value, fileStats,
+                                                    numOfEntries);
+            } else {
+                ret = EIO;
+            }
+        } else {
+            ret = EIO;
+        }
+    } else {
+        ret = EIO;
+    }
+    
+    json_decref(jobj);
+    return ret;
+}

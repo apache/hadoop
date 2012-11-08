@@ -60,7 +60,7 @@ public class ParentQueue implements CSQueue {
 
   private static final Log LOG = LogFactory.getLog(ParentQueue.class);
 
-  private final CSQueue parent;
+  private CSQueue parent;
   private final String queueName;
   
   private float capacity;
@@ -202,7 +202,9 @@ public class ParentQueue implements CSQueue {
       childCapacities += queue.getCapacity();
     }
     float delta = Math.abs(1.0f - childCapacities);  // crude way to check
-    if (delta > PRECISION) {
+    // allow capacities being set to 0, and enforce child 0 if parent is 0
+    if (((capacity > 0) && (delta > PRECISION)) || 
+        ((capacity == 0) && (childCapacities > 0))) {
       throw new IllegalArgumentException("Illegal" +
       		" capacity of " + childCapacities + 
       		" for children of queue " + queueName);
@@ -216,10 +218,15 @@ public class ParentQueue implements CSQueue {
   }
   
   @Override
-  public CSQueue getParent() {
+  public synchronized CSQueue getParent() {
     return parent;
   }
 
+  @Override
+  public synchronized void setParent(CSQueue newParentQueue) {
+    this.parent = (ParentQueue)newParentQueue;
+  }
+  
   @Override
   public String getQueueName() {
     return queueName;
@@ -357,37 +364,52 @@ public class ParentQueue implements CSQueue {
   }
   
   @Override
-  public synchronized void reinitialize(CSQueue queue, Resource clusterResource)
+  public synchronized void reinitialize(
+      CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException {
     // Sanity check
-    if (!(queue instanceof ParentQueue) ||
-        !queue.getQueuePath().equals(getQueuePath())) {
+    if (!(newlyParsedQueue instanceof ParentQueue) ||
+        !newlyParsedQueue.getQueuePath().equals(getQueuePath())) {
       throw new IOException("Trying to reinitialize " + getQueuePath() +
-          " from " + queue.getQueuePath());
+          " from " + newlyParsedQueue.getQueuePath());
     }
 
-    ParentQueue parentQueue = (ParentQueue)queue;
+    ParentQueue newlyParsedParentQueue = (ParentQueue)newlyParsedQueue;
 
     // Set new configs
     setupQueueConfigs(clusterResource,
-        parentQueue.capacity, parentQueue.absoluteCapacity,
-        parentQueue.maximumCapacity, parentQueue.absoluteMaxCapacity,
-        parentQueue.state, parentQueue.acls);
+        newlyParsedParentQueue.capacity, 
+        newlyParsedParentQueue.absoluteCapacity,
+        newlyParsedParentQueue.maximumCapacity, 
+        newlyParsedParentQueue.absoluteMaxCapacity,
+        newlyParsedParentQueue.state, 
+        newlyParsedParentQueue.acls);
 
     // Re-configure existing child queues and add new ones
     // The CS has already checked to ensure all existing child queues are present!
     Map<String, CSQueue> currentChildQueues = getQueues(childQueues);
-    Map<String, CSQueue> newChildQueues = getQueues(parentQueue.childQueues);
+    Map<String, CSQueue> newChildQueues = 
+        getQueues(newlyParsedParentQueue.childQueues);
     for (Map.Entry<String, CSQueue> e : newChildQueues.entrySet()) {
       String newChildQueueName = e.getKey();
       CSQueue newChildQueue = e.getValue();
 
       CSQueue childQueue = currentChildQueues.get(newChildQueueName);
-      if (childQueue != null){
+      
+      // Check if the child-queue already exists
+      if (childQueue != null) {
+        // Re-init existing child queues
         childQueue.reinitialize(newChildQueue, clusterResource);
         LOG.info(getQueueName() + ": re-configured queue: " + childQueue);
       } else {
+        // New child queue, do not re-init
+        
+        // Set parent to 'this'
+        newChildQueue.setParent(this);
+        
+        // Save in list of current child queues
         currentChildQueues.put(newChildQueueName, newChildQueue);
+        
         LOG.info(getQueueName() + ": added new child queue: " + newChildQueue);
       }
     }
