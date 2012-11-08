@@ -49,7 +49,8 @@ public class TestFileContextResolveAfs {
     localFs = FileSystem.get(conf);
     
     Path localPath = new Path(TEST_ROOT_DIR_LOCAL + "/TestFileContextResolveAfs1");
-    Path linkPath = new Path("file://" + TEST_ROOT_DIR_LOCAL + "/TestFileContextResolveAfs2");
+    Path linkPath = localFs.makeQualified(new Path(TEST_ROOT_DIR_LOCAL,
+      "TestFileContextResolveAfs2"));
     localFs.mkdirs(new Path(TEST_ROOT_DIR_LOCAL));
     localFs.create(localPath);
     
