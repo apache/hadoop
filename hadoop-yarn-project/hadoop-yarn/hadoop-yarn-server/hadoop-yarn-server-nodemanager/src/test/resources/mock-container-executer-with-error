@@ -1,0 +1,7 @@
+#!/bin/sh
+for PARAM in "$@"
+do
+    echo $PARAM;
+done > params.txt
+
+exec badcommand
