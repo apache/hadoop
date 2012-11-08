@@ -272,10 +272,13 @@ Trunk (Unreleased)
     HADOOP-8918. test-patch.sh is parsing modified files wrong.
     (Raja Aluri via suresh)
 
+    HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
+    HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
