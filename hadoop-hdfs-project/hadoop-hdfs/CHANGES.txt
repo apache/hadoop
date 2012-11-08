@@ -206,6 +206,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3979. For hsync, datanode should wait for the local sync to complete
     before sending ack. (Lars Hofhansl via szetszwo)
 
+    HDFS-3810. Implement format() for BKJM (Ivan Kelly via umamahesh)
+
     HDFS-3625. Fix TestBackupNode by properly initializing edit log during
     startup. (Junping Du via todd)
 
