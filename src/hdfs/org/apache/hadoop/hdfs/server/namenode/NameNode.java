@@ -1423,7 +1423,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage();
-      return null;
+      System.exit(-2);
     }
     setStartupOption(conf, startOpt);
 

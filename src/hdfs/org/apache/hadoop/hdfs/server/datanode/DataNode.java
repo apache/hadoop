@@ -1616,7 +1616,7 @@ public class DataNode extends Configured
       conf = new Configuration();
     if (!parseArguments(args, conf)) {
       printUsage();
-      return null;
+      System.exit(-2);
     }
     if (conf.get("dfs.network.script") != null) {
       LOG.error("This configuration for rack identification is not supported" +
