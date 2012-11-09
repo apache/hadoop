@@ -132,9 +132,6 @@ Trunk (Unreleased)
     HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
     via suresh)
 
-    HADOOP-8860. Split MapReduce and YARN sections in documentation navigation. 
-    (tomwhite via tucu)
-
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -285,6 +282,7 @@ Trunk (Unreleased)
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -359,6 +357,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9014. Standardize creation of SaslRpcClients (daryn via bobby)
 
     HADOOP-9015. Standardize creation of SaslRpcServers (daryn via bobby)
+
+    HADOOP-8860. Split MapReduce and YARN sections in documentation navigation.
+    (tomwhite via tucu)
 
   OPTIMIZATIONS
 
