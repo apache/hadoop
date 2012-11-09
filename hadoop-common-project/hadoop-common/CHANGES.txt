@@ -132,6 +132,9 @@ Trunk (Unreleased)
     HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
     via suresh)
 
+    HADOOP-8860. Split MapReduce and YARN sections in documentation navigation. 
+    (tomwhite via tucu)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
