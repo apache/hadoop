@@ -431,7 +431,7 @@ public abstract class Storage extends StorageInfo {
         if (!root.exists()) {
           // storage directory does not exist
           if (startOpt != StartupOption.FORMAT) {
-            LOG.info("Storage directory " + rootPath + " does not exist");
+            LOG.warn("Storage directory " + rootPath + " does not exist");
             return StorageState.NON_EXISTENT;
           }
           LOG.info(rootPath + " does not exist. Creating ...");
@@ -440,15 +440,15 @@ public abstract class Storage extends StorageInfo {
         }
         // or is inaccessible
         if (!root.isDirectory()) {
-          LOG.info(rootPath + "is not a directory");
+          LOG.warn(rootPath + "is not a directory");
           return StorageState.NON_EXISTENT;
         }
         if (!root.canWrite()) {
-          LOG.info("Cannot access storage directory " + rootPath);
+          LOG.warn("Cannot access storage directory " + rootPath);
           return StorageState.NON_EXISTENT;
         }
       } catch(SecurityException ex) {
-        LOG.info("Cannot access storage directory " + rootPath, ex);
+        LOG.warn("Cannot access storage directory " + rootPath, ex);
         return StorageState.NON_EXISTENT;
       }
 

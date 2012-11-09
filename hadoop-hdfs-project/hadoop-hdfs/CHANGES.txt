@@ -111,6 +111,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
     C/C++. (Binglin Chang via suresh)
 
+    HDFS-4048. Use ERROR instead of INFO for volume failure logs.
+    (Stephen Chu via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
