@@ -32,6 +32,9 @@ Release 1.1.1 - Unreleased
     HDFS-4134. hadoop namenode and datanode entry points should return 
     negative exit code on bad arguments. (Steve Loughran via suresh)
 
+    MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit
+    (Mark Fuhs via bobby)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
