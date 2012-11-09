@@ -16,6 +16,8 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4266. remove Ant remnants from MR (tgraves via bobby)
 
+    MAPREDUCE-4666. JVM metrics for history server. (jlowe via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
