@@ -313,6 +313,9 @@ Release 1.1.1 - Unreleased
     HADOOP-8995. Remove unnecessary bogus exception from Configuration.java.
     (Jing Zhao via suresh)
 
+    HDFS-4161. Backport HDFS-1865 "Share LeaseChecker thread among DFSClients"
+    and the related JIRAs: HDFS-278, HDFS-1840, HDFS-1870, HDFS-1890, HDFS-2810,
+    HDFS-3646 and HDFS-2240. (szetszwo)
 
   BUG FIXES
 
