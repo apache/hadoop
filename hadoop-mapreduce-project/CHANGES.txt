@@ -14,6 +14,8 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
     Evans via tgraves)
 
+    MAPREDUCE-4266. remove Ant remnants from MR (tgraves via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
