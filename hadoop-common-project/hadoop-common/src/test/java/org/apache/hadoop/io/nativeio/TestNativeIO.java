@@ -61,7 +61,7 @@ public class TestNativeIO {
   public void testFstat() throws Exception {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testfstat"));
-    NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+    NativeIO.Stat stat = NativeIO.getFstat(fos.getFD());
     fos.close();
     LOG.info("Stat: " + String.valueOf(stat));
 
@@ -93,7 +93,7 @@ public class TestNativeIO {
           long et = Time.now() + 5000;
           while (Time.now() < et) {
             try {
-              NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+              NativeIO.Stat stat = NativeIO.getFstat(fos.getFD());
               assertEquals(System.getProperty("user.name"), stat.getOwner());
               assertNotNull(stat.getGroup());
               assertTrue(!"".equals(stat.getGroup()));
@@ -125,7 +125,7 @@ public class TestNativeIO {
       new File(TEST_DIR, "testfstat2"));
     fos.close();
     try {
-      NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+      NativeIO.Stat stat = NativeIO.getFstat(fos.getFD());
     } catch (NativeIOException nioe) {
       LOG.info("Got expected exception", nioe);
       assertEquals(Errno.EBADF, nioe.getErrno());
@@ -281,6 +281,16 @@ public class TestNativeIO {
     FsPermission perms = localfs.getFileStatus(
       new Path(f.getAbsolutePath())).getPermission();
     assertEquals(expected, perms.toShort());
+  }
+
+  @Test
+  public void testGetUserName() throws IOException {
+    assertFalse(NativeIO.getUserName(0).isEmpty());
+  }
+
+  @Test
+  public void testGetGroupName() throws IOException {
+    assertFalse(NativeIO.getGroupName(0).isEmpty());
   }
 
 }

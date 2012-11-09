@@ -184,5 +184,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    */
   public static final String KERBEROS_TICKET_CACHE_PATH =
       "hadoop.security.kerberos.ticket.cache.path";
-}
 
+  public static final String HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_KEY =
+    "hadoop.security.uid.cache.secs";
+
+  public static final long HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT =
+    4*60*60; // 4 hours
+
+}
