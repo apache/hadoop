@@ -114,6 +114,21 @@ public class Client {
   }
   
   /**
+   * The time after which a RPC will timeout. If ping is not enabled (via
+   * ipc.client.ping), then the timeout value is the same as the pingInterval.
+   * If ping is enabled, then there is no timeout value.
+   * 
+   * @param conf Configuration
+   * @return the timeout period in milliseconds. -1 if no timeout value is set
+   */
+  final public static int getTimeout(Configuration conf) {
+    if (!conf.getBoolean("ipc.client.ping", true)) {
+      return getPingInterval(conf);
+    }
+    return -1;
+  }
+  
+  /**
    * Increment this client's reference count
    *
    */
