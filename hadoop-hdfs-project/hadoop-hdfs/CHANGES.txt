@@ -1961,6 +1961,8 @@ Release 0.23.5 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-4080. Add a separate logger for block state change logs to enable turning
+    off those logs. (Kihwal Lee via suresh)
 
   OPTIMIZATIONS
 
