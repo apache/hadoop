@@ -101,7 +101,7 @@ public class AppSchedulable extends Schedulable {
 
   @Override
   public Resource getResourceUsage() {
-    return this.app.getCurrentConsumption();
+    return app.getCurrentConsumption();
   }
 
 
@@ -114,7 +114,7 @@ public class AppSchedulable extends Schedulable {
    * Get metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
-    return this.queue.getQueueSchedulable().getMetrics();
+    return queue.getQueueSchedulable().getMetrics();
   }
 
   @Override
@@ -190,9 +190,9 @@ public class AppSchedulable extends Schedulable {
       RMContainer rmContainer = application.reserve(node, priority, null,
           container);
       node.reserveResource(application, priority, rmContainer);
-      getMetrics().reserveResource(this.app.getUser(),
+      getMetrics().reserveResource(app.getUser(),
           container.getResource());
-      scheduler.getRootQueueMetrics().reserveResource(this.app.getUser(),
+      scheduler.getRootQueueMetrics().reserveResource(app.getUser(),
           container.getResource());
     }
 
@@ -257,13 +257,13 @@ public class AppSchedulable extends Schedulable {
         // TODO this should subtract resource just assigned
         // TEMPROARY
         getMetrics().setAvailableResourcesToQueue(
-            this.scheduler.getClusterCapacity());
+            scheduler.getClusterCapacity());
       }
 
 
       // If we had previously made a reservation, delete it
       if (reserved) {
-        this.unreserve(application, priority, node);
+        unreserve(application, priority, node);
       }
 
       // Inform the node
@@ -290,7 +290,7 @@ public class AppSchedulable extends Schedulable {
 
       // Make sure the application still needs requests at this priority
       if (app.getTotalRequiredResources(priority) == 0) {
-        this.unreserve(app, priority, node);
+        unreserve(app, priority, node);
         return Resources.none();
       }
     } else {

@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.Configured;
  */
 @Private
 @Unstable
-public class NewJobWeightBooster extends Configured implements WeightAdjuster {
+public class NewAppWeightBooster extends Configured implements WeightAdjuster {
   private static final float DEFAULT_FACTOR = 3;
   private static final long DEFAULT_DURATION = 5 * 60 * 1000;
 

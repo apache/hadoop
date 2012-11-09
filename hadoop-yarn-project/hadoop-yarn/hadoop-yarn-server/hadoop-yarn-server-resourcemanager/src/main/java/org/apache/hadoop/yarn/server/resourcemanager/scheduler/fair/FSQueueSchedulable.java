@@ -80,7 +80,7 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
     this.scheduler = scheduler;
     this.queue = queue;
     this.queueMgr = scheduler.getQueueManager();
-    this.metrics = QueueMetrics.forQueue(this.getName(), null, true, scheduler.getConf());
+    this.metrics = QueueMetrics.forQueue(getName(), null, true, scheduler.getConf());
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
     this.lastTimeAtHalfFairShare = scheduler.getClock().getTime();
   }
@@ -113,7 +113,7 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
       Resource toAdd = sched.getDemand();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Counting resource from " + sched.getName() + " " + toAdd
-            + "; Total resource consumption for " + this.getName() + " now "
+            + "; Total resource consumption for " + getName() + " now "
             + demand);
       }
       demand = Resources.add(demand, toAdd);
@@ -123,7 +123,7 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("The updated demand for " + this.getName() + " is " + demand
+      LOG.debug("The updated demand for " + getName() + " is " + demand
           + "; the max is " + maxRes);
     }
   }
@@ -164,9 +164,9 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
 
   @Override
   public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
-    LOG.debug("Node offered to queue: " + this.getName() + " reserved: " + reserved);
+    LOG.debug("Node offered to queue: " + getName() + " reserved: " + reserved);
     // If this queue is over its limit, reject
-    if (Resources.greaterThan(this.getResourceUsage(),
+    if (Resources.greaterThan(getResourceUsage(),
         queueMgr.getMaxResources(queue.getName()))) {
       return Resources.none();
     }
@@ -258,7 +258,7 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
 
   @Override
   public Map<QueueACL, AccessControlList> getQueueAcls() {
-    Map<QueueACL, AccessControlList> acls = this.queueMgr.getQueueAcls(this.getName());
+    Map<QueueACL, AccessControlList> acls = queueMgr.getQueueAcls(getName());
     return new HashMap<QueueACL, AccessControlList>(acls);
   }
 
@@ -284,7 +284,7 @@ public class FSQueueSchedulable extends Schedulable implements Queue {
       recordFactory.newRecordInstance(QueueUserACLInfo.class);
     List<QueueACL> operations = new ArrayList<QueueACL>();
     for (QueueACL operation : QueueACL.values()) {
-      Map<QueueACL, AccessControlList> acls = this.queueMgr.getQueueAcls(this.getName());
+      Map<QueueACL, AccessControlList> acls = queueMgr.getQueueAcls(getName());
       if (acls.get(operation).isUserAllowed(user)) {
         operations.add(operation);
       }
