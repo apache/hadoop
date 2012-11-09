@@ -50,37 +50,40 @@ public class TestNLineInputFormat extends TestCase {
     Job job = Job.getInstance(conf);
     Path file = new Path(workDir, "test.txt");
 
-    int seed = new Random().nextInt();
-    Random random = new Random(seed);
-
     localFs.delete(workDir, true);
     FileInputFormat.setInputPaths(job, workDir);
     int numLinesPerMap = 5;
     NLineInputFormat.setNumLinesPerSplit(job, numLinesPerMap);
-    // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length += random.nextInt(MAX_LENGTH / 10) + 1) {
+         length += 1) {
+ 
       // create a file with length entries
       Writer writer = new OutputStreamWriter(localFs.create(file));
       try {
         for (int i = 0; i < length; i++) {
-          writer.write(Integer.toString(i));
+          writer.write(Integer.toString(i)+" some more text");
           writer.write("\n");
         }
       } finally {
         writer.close();
       }
-      checkFormat(job, numLinesPerMap);
+      int lastN = 0;
+      if (length != 0) {
+        lastN = length % 5;
+        if (lastN == 0) {
+          lastN = 5;
+        }
+      }
+      checkFormat(job, numLinesPerMap, lastN);
     }
   }
 
-  void checkFormat(Job job, int expectedN) 
+  void checkFormat(Job job, int expectedN, int lastN) 
       throws IOException, InterruptedException {
     NLineInputFormat format = new NLineInputFormat();
     List<InputSplit> splits = format.getSplits(job);
-    // check all splits except last one
     int count = 0;
-    for (int i = 0; i < splits.size() -1; i++) {
+    for (int i = 0; i < splits.size(); i++) {
       assertEquals("There are no split locations", 0,
                    splits.get(i).getLocations().length);
       TaskAttemptContext context = MapReduceTestUtil.
@@ -104,8 +107,13 @@ public class TestNLineInputFormat extends TestCase {
       } finally {
         reader.close();
       }
-      assertEquals("number of lines in split is " + expectedN ,
-                   expectedN, count);
+      if ( i == splits.size() - 1) {
+        assertEquals("number of lines in split(" + i + ") is wrong" ,
+                     lastN, count);
+      } else {
+        assertEquals("number of lines in split(" + i + ") is wrong" ,
+                     expectedN, count);
+      }
     }
   }
   
