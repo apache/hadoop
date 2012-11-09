@@ -39,6 +39,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {}; 
 
   public String name;      /// hostname:portNumber
+  private String peerHostName; // hostname from the actual connection
   public String storageID; /// unique per cluster storageID
   protected int infoPort;     /// the port where the infoserver is running
   public int ipcPort;     /// the port where the ipc server is running
@@ -59,6 +60,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
         from.getStorageID(),
         from.getInfoPort(),
         from.getIpcPort());
+    this.peerHostName = from.getPeerHostName();
   }
   
   /**
@@ -84,6 +86,10 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     this.infoPort = infoPort;
   }
   
+  public void setPeerHostName(String peerHostName) {
+    this.peerHostName = peerHostName;
+  }
+  
   public void setIpcPort(int ipcPort) {
     this.ipcPort = ipcPort;
   }
@@ -102,6 +108,13 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     return this.storageID;
   }
 
+  /**
+   * @return hostname from the actual connection 
+   */
+  public String getPeerHostName() {
+    return peerHostName;
+  }
+  
   /**
    * @return infoPort (the port at which the HTTP server bound to)
    */
@@ -168,6 +181,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    */
   public void updateRegInfo(DatanodeID nodeReg) {
     name = nodeReg.getName();
+    peerHostName = nodeReg.getPeerHostName();
     infoPort = nodeReg.getInfoPort();
     ipcPort = nodeReg.getIpcPort();
     // update any more fields added in future.

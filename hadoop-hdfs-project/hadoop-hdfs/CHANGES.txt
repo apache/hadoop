@@ -20,6 +20,8 @@ Release 0.23.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-3990. NN's health report has severe performance problems (daryn)
+
   BUG FIXES
 
     HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
