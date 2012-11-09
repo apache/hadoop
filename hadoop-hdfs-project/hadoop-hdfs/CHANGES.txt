@@ -1677,6 +1677,8 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
 
+    HDFS-3990.  NN's health report has severe performance problems (daryn)
+
   BUG FIXES
 
     HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor

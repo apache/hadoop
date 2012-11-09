@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 import java.net.InetSocketAddress;
+import java.security.Permission;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -47,6 +48,64 @@ public class TestDatanodeRegistration {
   
   public static final Log LOG = LogFactory.getLog(TestDatanodeRegistration.class);
 
+  private static class MonitorDNS extends SecurityManager {
+    int lookups = 0;
+    @Override
+    public void checkPermission(Permission perm) {}    
+    @Override
+    public void checkConnect(String host, int port) {
+      if (port == -1) {
+        lookups++;
+      }
+    }
+  }
+
+  /**
+   * Ensure the datanode manager does not do host lookup after registration,
+   * especially for node reports.
+   * @throws Exception
+   */
+  @Test
+  public void testDNSLookups() throws Exception {
+    MonitorDNS sm = new MonitorDNS();
+    System.setSecurityManager(sm);
+    
+    MiniDFSCluster cluster = null;
+    try {
+      HdfsConfiguration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(8).build();
+      cluster.waitActive();
+      
+      int initialLookups = sm.lookups;
+      assertTrue("dns security manager is active", initialLookups != 0);
+      
+      DatanodeManager dm =
+          cluster.getNamesystem().getBlockManager().getDatanodeManager();
+      
+      // make sure no lookups occur
+      dm.refreshNodes(conf);
+      assertEquals(initialLookups, sm.lookups);
+
+      dm.refreshNodes(conf);
+      assertEquals(initialLookups, sm.lookups);
+      
+      // ensure none of the reports trigger lookups
+      dm.getDatanodeListForReport(DatanodeReportType.ALL);
+      assertEquals(initialLookups, sm.lookups);
+      
+      dm.getDatanodeListForReport(DatanodeReportType.LIVE);
+      assertEquals(initialLookups, sm.lookups);
+      
+      dm.getDatanodeListForReport(DatanodeReportType.DEAD);
+      assertEquals(initialLookups, sm.lookups);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      System.setSecurityManager(null);
+    }
+  }
+  
   /**
    * Regression test for HDFS-894 ensures that, when datanodes
    * are restarted, the new IPC port is registered with the

@@ -38,7 +38,8 @@ public class DatanodeID implements Comparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {};
 
   private String ipAddr;     // IP address
-  private String hostName;   // hostname
+  private String hostName;   // hostname claimed by datanode
+  private String peerHostName; // hostname from the actual connection
   private String storageID;  // unique per cluster storageID
   private int xferPort;      // data streaming port
   private int infoPort;      // info server port
@@ -51,6 +52,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
         from.getXferPort(),
         from.getInfoPort(),
         from.getIpcPort());
+    this.peerHostName = from.getPeerHostName();
   }
   
   /**
@@ -76,6 +78,10 @@ public class DatanodeID implements Comparable<DatanodeID> {
     this.ipAddr = ipAddr;
   }
 
+  public void setPeerHostName(String peerHostName) {
+    this.peerHostName = peerHostName;
+  }
+  
   public void setStorageID(String storageID) {
     this.storageID = storageID;
   }
@@ -94,6 +100,13 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return hostName;
   }
 
+  /**
+   * @return hostname from the actual connection 
+   */
+  public String getPeerHostName() {
+    return peerHostName;
+  }
+  
   /**
    * @return IP:xferPort string
    */
@@ -202,6 +215,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   public void updateRegInfo(DatanodeID nodeReg) {
     ipAddr = nodeReg.getIpAddr();
     hostName = nodeReg.getHostName();
+    peerHostName = nodeReg.getPeerHostName();
     xferPort = nodeReg.getXferPort();
     infoPort = nodeReg.getInfoPort();
     ipcPort = nodeReg.getIpcPort();
