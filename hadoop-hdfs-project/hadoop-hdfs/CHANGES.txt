@@ -574,6 +574,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3810. Implement format() for BKJM (Ivan Kelly via umamahesh)
 
+    HDFS-4162. Some malformed and unquoted HTML strings are returned from 
+    datanode web ui. (Darek Dagit via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
