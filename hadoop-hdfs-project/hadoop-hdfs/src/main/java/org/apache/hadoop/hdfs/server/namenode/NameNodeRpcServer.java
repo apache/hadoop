@@ -101,6 +101,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   private static final Log LOG = NameNode.LOG;
   private static final Log stateChangeLog = NameNode.stateChangeLog;
+  private static final Log blockStateChangeLog = NameNode.blockStateChangeLog;
   
   // Dependencies from other parts of NN.
   private final FSNamesystem namesystem;
@@ -778,8 +779,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       String poolId, long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
+    if(blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.blockReport: "
            + "from " + nodeReg.getName() + " " + blist.getNumberOfBlocks()
            + " blocks");
     }
@@ -794,8 +795,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void blockReceived(DatanodeRegistration nodeReg, String poolId,
       Block blocks[], String delHints[]) throws IOException {
     verifyRequest(nodeReg);
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
+    if(blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
           +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
     }
     for (int i = 0; i < blocks.length; i++) {

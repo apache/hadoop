@@ -131,6 +131,7 @@ public class NameNode {
 
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
+  public static final Log blockStateChangeLog = LogFactory.getLog("BlockStateChange");
   
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;

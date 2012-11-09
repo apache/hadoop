@@ -185,8 +185,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     int priLevel = getPriority(block, curReplicas, decomissionedReplicas,
                                expectedReplicas);
     if(priLevel != LEVEL && priorityQueues.get(priLevel).add(block)) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
+      if(NameNode.blockStateChangeLog.isDebugEnabled()) {
+        NameNode.blockStateChangeLog.debug(
           "BLOCK* NameSystem.UnderReplicationBlock.add:"
           + block
           + " has only " + curReplicas
@@ -228,8 +228,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   boolean remove(Block block, int priLevel) {
     if(priLevel >= 0 && priLevel < LEVEL 
         && priorityQueues.get(priLevel).remove(block)) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
+      if(NameNode.blockStateChangeLog.isDebugEnabled()) {
+        NameNode.blockStateChangeLog.debug(
           "BLOCK* NameSystem.UnderReplicationBlock.remove: "
           + "Removing block " + block
           + " from priority queue "+ priLevel);
@@ -240,8 +240,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       // not found in the queue for the given priority level.
       for (int i = 0; i < LEVEL; i++) {
         if (priorityQueues.get(i).remove(block)) {
-          if(NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug(
+          if(NameNode.blockStateChangeLog.isDebugEnabled()) {
+            NameNode.blockStateChangeLog.debug(
               "BLOCK* NameSystem.UnderReplicationBlock.remove: "
               + "Removing block " + block
               + " from priority queue "+ i);
@@ -291,8 +291,8 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       remove(block, oldPri);
     }
     if(curPri != LEVEL && priorityQueues.get(curPri).add(block)) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
+      if(NameNode.blockStateChangeLog.isDebugEnabled()) {
+        NameNode.blockStateChangeLog.debug(
           "BLOCK* NameSystem.UnderReplicationBlock.update:"
           + block
           + " has only "+ curReplicas

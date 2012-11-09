@@ -228,7 +228,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
-      NameNode.stateChangeLog.warn("BLOCK*"
+      NameNode.blockStateChangeLog.warn("BLOCK*"
         + " INodeFileUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
@@ -240,7 +240,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
         primaryNodeIndex = j;
         DatanodeDescriptor primary = replicas.get(j).getExpectedLocation(); 
         primary.addBlockToBeRecovered(this);
-        NameNode.stateChangeLog.info("BLOCK* " + this
+        NameNode.blockStateChangeLog.info("BLOCK* " + this
           + " recovery started, primary=" + primary);
         return;
       }

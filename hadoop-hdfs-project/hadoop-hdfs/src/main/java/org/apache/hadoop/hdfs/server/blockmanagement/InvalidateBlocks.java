@@ -75,7 +75,7 @@ class InvalidateBlocks {
     if (set.add(block)) {
       numBlocks++;
       if (log) {
-        NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
+        NameNode.blockStateChangeLog.info("BLOCK* " + getClass().getSimpleName()
             + ": add " + block + " to " + datanode.getName());
       }
     }
@@ -135,7 +135,7 @@ class InvalidateBlocks {
     }
 
     if (NameNode.stateChangeLog.isInfoEnabled()) {
-      NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
+      NameNode.blockStateChangeLog.info("BLOCK* " + getClass().getSimpleName()
           + ": ask " + dn.getName() + " to delete " + toInvalidate);
     }
     return toInvalidate.size();
