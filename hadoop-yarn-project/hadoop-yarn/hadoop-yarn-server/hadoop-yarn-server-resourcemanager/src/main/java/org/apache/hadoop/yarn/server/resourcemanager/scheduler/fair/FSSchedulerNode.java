@@ -67,25 +67,25 @@ public class FSSchedulerNode extends SchedulerNode {
   }
 
   public RMNode getRMNode() {
-    return this.rmNode;
+    return rmNode;
   }
 
   public NodeId getNodeID() {
-    return this.rmNode.getNodeID();
+    return rmNode.getNodeID();
   }
 
   public String getHttpAddress() {
-    return this.rmNode.getHttpAddress();
+    return rmNode.getHttpAddress();
   }
 
   @Override
   public String getHostName() {
-    return this.rmNode.getHostName();
+    return rmNode.getHostName();
   }
 
   @Override
   public String getRackName() {
-    return this.rmNode.getRackName();
+    return rmNode.getRackName();
   }
 
   /**
@@ -112,17 +112,18 @@ public class FSSchedulerNode extends SchedulerNode {
 
   @Override
   public synchronized Resource getAvailableResource() {
-    return this.availableResource;
+    return availableResource;
   }
 
   @Override
   public synchronized Resource getUsedResource() {
-    return this.usedResource;
+    return usedResource;
   }
 
   private synchronized boolean isValidContainer(Container c) {    
-    if (launchedContainers.containsKey(c.getId()))
+    if (launchedContainers.containsKey(c.getId())) {
       return true;
+    }
     return false;
   }
 

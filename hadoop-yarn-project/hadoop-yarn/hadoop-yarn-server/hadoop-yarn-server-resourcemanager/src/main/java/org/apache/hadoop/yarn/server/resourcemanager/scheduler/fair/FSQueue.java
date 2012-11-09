@@ -61,7 +61,7 @@ public class FSQueue {
     queueSchedulable.addApp(appSchedulable);
   }
 
-  public void removeJob(FSSchedulerApp app) {
+  public void removeApp(FSSchedulerApp app) {
     applications.remove(app);
     queueSchedulable.removeApp(app);
   }

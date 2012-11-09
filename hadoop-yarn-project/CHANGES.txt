@@ -52,6 +52,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-136. Make ClientToAMTokenSecretManager part of RMContext (Vinod Kumar
     Vavilapalli via sseth)
 
+    YARN-183. Clean up fair scheduler code. (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES 
