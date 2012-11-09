@@ -83,6 +83,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit 
     (Mark Fuhs via bobby)
+
+    MAPREDUCE-4774. JobImpl does not handle asynchronous task events in FAILED
+    state (jlowe via bobby)
  
 Release 0.23.4 - UNRELEASED
 
