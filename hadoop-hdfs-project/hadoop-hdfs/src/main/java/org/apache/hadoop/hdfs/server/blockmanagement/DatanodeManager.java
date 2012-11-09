@@ -540,28 +540,16 @@ public class DatanodeManager {
   private static boolean checkInList(final DatanodeID node,
       final Set<String> hostsList,
       final boolean isExcludeList) {
-    final InetAddress iaddr;
-
-    try {
-      iaddr = InetAddress.getByName(node.getIpAddr());
-    } catch (UnknownHostException e) {
-      LOG.warn("Unknown IP: " + node.getIpAddr(), e);
-      return isExcludeList;
-    }
-
     // if include list is empty, host is in include list
     if ( (!isExcludeList) && (hostsList.isEmpty()) ){
       return true;
     }
-    return // compare ipaddress(:port)
-    (hostsList.contains(iaddr.getHostAddress().toString()))
-        || (hostsList.contains(iaddr.getHostAddress().toString() + ":"
-            + node.getXferPort()))
-        // compare hostname(:port)
-        || (hostsList.contains(iaddr.getHostName()))
-        || (hostsList.contains(iaddr.getHostName() + ":" + node.getXferPort()))
-        || ((node instanceof DatanodeInfo) && hostsList
-            .contains(((DatanodeInfo) node).getHostName()));
+    for (String name : getNodeNamesForHostFiltering(node)) {
+      if (hostsList.contains(name)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -644,16 +632,20 @@ public class DatanodeManager {
    */
   public void registerDatanode(DatanodeRegistration nodeReg)
       throws DisallowedDatanodeException {
-    String dnAddress = Server.getRemoteAddress();
-    if (dnAddress == null) {
-      // Mostly called inside an RPC.
-      // But if not, use address passed by the data-node.
-      dnAddress = nodeReg.getIpAddr();
+    InetAddress dnAddress = Server.getRemoteIp();
+    if (dnAddress != null) {
+      // Mostly called inside an RPC, update ip and peer hostname
+      String hostname = dnAddress.getHostName();
+      String ip = dnAddress.getHostAddress();
+      if (hostname.equals(ip)) {
+        LOG.warn("Unresolved datanode registration from " + ip);
+        throw new DisallowedDatanodeException(nodeReg);
+      }
+      // update node registration with the ip and hostname from rpc request
+      nodeReg.setIpAddr(ip);
+      nodeReg.setPeerHostName(hostname);
     }
 
-    // Update the IP to the address of the RPC request that is
-    // registering this datanode.
-    nodeReg.setIpAddr(dnAddress);
     nodeReg.setExportedKeys(blockManager.getBlockKeys());
 
     // Checks if the node is not on the hosts list.  If it is not, then
@@ -1033,19 +1025,8 @@ public class DatanodeManager {
         if ( (isDead && listDeadNodes) || (!isDead && listLiveNodes) ) {
           nodes.add(dn);
         }
-        // Remove any nodes we know about from the map
-        try {
-          InetAddress inet = InetAddress.getByName(dn.getIpAddr());
-          // compare hostname(:port)
-          mustList.remove(inet.getHostName());
-          mustList.remove(inet.getHostName()+":"+dn.getXferPort());
-          // compare ipaddress(:port)
-          mustList.remove(inet.getHostAddress().toString());
-          mustList.remove(inet.getHostAddress().toString()+ ":" +dn.getXferPort());
-        } catch (UnknownHostException e) {
-          mustList.remove(dn.getName());
-          mustList.remove(dn.getIpAddr());
-          LOG.warn(e);
+        for (String name : getNodeNamesForHostFiltering(dn)) {
+          mustList.remove(name);
         }
       }
     }
@@ -1064,6 +1045,25 @@ public class DatanodeManager {
       }
     }
     return nodes;
+  }
+  
+  private static List<String> getNodeNamesForHostFiltering(DatanodeID node) {
+    String ip = node.getIpAddr();
+    String regHostName = node.getHostName();
+    int xferPort = node.getXferPort();
+    
+    List<String> names = new ArrayList<String>(); 
+    names.add(ip);
+    names.add(ip + ":" + xferPort);
+    names.add(regHostName);
+    names.add(regHostName + ":" + xferPort);
+
+    String peerHostName = node.getPeerHostName();
+    if (peerHostName != null) {
+      names.add(peerHostName);
+      names.add(peerHostName + ":" + xferPort);
+    }
+    return names;
   }
   
   private void setDatanodeDead(DatanodeDescriptor node) {
