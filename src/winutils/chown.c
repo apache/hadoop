@@ -18,265 +18,91 @@
 #include "winutils.h"
 
 //----------------------------------------------------------------------------
-// Function: GetNewAclSize
+// Function: ChangeFileOwnerBySid
 //
 // Description:
-//	Compute the extra size of the new ACL if we replace the old owner Sid with
-//  the new owner Sid.
+//  Change a file or directory ownership by giving new owner and group SIDs
 //
 // Returns:
-//	The extra size needed for the new ACL compared with the ACL passed in. If
-//  the value is negative, it means the size of the new ACL could be reduced.
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
 //
 // Notes:
+//  This function is long path safe, i.e. the path will be converted to long
+//  path format if not already converted. So the caller does not need to do
+//  the converstion before calling the method.
 //
-static BOOL GetNewAclSizeDelta(__in PACL pDACL,
-  __in PSID pOldOwnerSid, __in PSID pNewOwnerSid, __out PLONG pDelta)
+static DWORD ChangeFileOwnerBySid(__in LPCWSTR path,
+  __in_opt PSID pNewOwnerSid, __in_opt PSID pNewGroupSid)
 {
-  PVOID pAce = NULL;
-  DWORD i;
-  PSID aceSid = NULL;
-  ACE_HEADER *aceHeader = NULL;
-  PACCESS_ALLOWED_ACE accessAllowedAce = NULL;
-  PACCESS_DENIED_ACE accessDenieddAce = NULL;
+  LPWSTR longPathName = NULL;
+  INT oldMode = 0;
 
-  assert(pDACL != NULL && pNewOwnerSid != NULL &&
-    pOldOwnerSid != NULL && pDelta != NULL);
+  SECURITY_INFORMATION securityInformation = 0;
 
-  *pDelta = 0;
-  for (i = 0; i < pDACL->AceCount; i++)
+  DWORD dwRtnCode = ERROR_SUCCESS;
+
+  // Convert the path the the long path
+  //
+  dwRtnCode = ConvertToLongPath(path, &longPathName);
+  if (dwRtnCode != ERROR_SUCCESS)
   {
-    if (!GetAce(pDACL, i, &pAce))
-    {
-      ReportErrorCode(L"GetAce", GetLastError());
-      return FALSE;
-    }
-
-    aceHeader = (ACE_HEADER *) pAce;
-    if (aceHeader->AceType == ACCESS_ALLOWED_ACE_TYPE)
-    {
-      accessAllowedAce = (PACCESS_ALLOWED_ACE) pAce;
-      aceSid = (PSID) &accessAllowedAce->SidStart;
-    }
-    else if (aceHeader->AceType == ACCESS_DENIED_ACE_TYPE)
-    {
-      accessDenieddAce = (PACCESS_DENIED_ACE) pAce;
-      aceSid = (PSID) &accessDenieddAce->SidStart;
-    }
-    else
-    {
-      continue;
-    }
-
-    if (EqualSid(pOldOwnerSid, aceSid))
-    {
-      *pDelta += GetLengthSid(pNewOwnerSid) - GetLengthSid(pOldOwnerSid);
-    }
+    goto ChangeFileOwnerByNameEnd;
   }
 
-  return TRUE;
-}
-
-//----------------------------------------------------------------------------
-// Function: AddNewAce
-//
-// Description:
-//	Add an Ace of new owner to the new ACL
-//
-// Returns:
-//	TRUE: on success
-//
-// Notes:
-//  The Ace type should be either ACCESS_ALLOWED_ACE or ACCESS_DENIED_ACE
-//
-static BOOL AddNewAce(PACL pNewDACL, PVOID pOldAce,
-  PSID pOwnerSid, PSID pUserSid)
-{
-  PVOID pNewAce = NULL;
-  DWORD newAceSize = 0;
-
-  assert(pNewDACL != NULL && pOldAce != NULL &&
-    pOwnerSid != NULL && pUserSid != NULL);
-  assert(((PACE_HEADER)pOldAce)->AceType == ACCESS_ALLOWED_ACE_TYPE ||
-    ((PACE_HEADER)pOldAce)->AceType == ACCESS_DENIED_ACE_TYPE);
-
-  newAceSize =  ((PACE_HEADER)pOldAce)->AceSize +
-    GetLengthSid(pUserSid) - GetLengthSid(pOwnerSid);
-  pNewAce = LocalAlloc(LPTR, newAceSize);
-  if (pNewAce == NULL)
+  // Get a pointer to the existing owner information and DACL
+  //
+  dwRtnCode = FindFileOwnerAndPermission(longPathName, NULL, NULL, &oldMode);
+  if (dwRtnCode != ERROR_SUCCESS)
   {
-    ReportErrorCode(L"LocalAlloc", GetLastError());
-    return FALSE;
+    goto ChangeFileOwnerByNameEnd;
   }
 
-  ((PACE_HEADER)pNewAce)->AceType = ((PACE_HEADER) pOldAce)->AceType;
-  ((PACE_HEADER)pNewAce)->AceFlags = ((PACE_HEADER) pOldAce)->AceFlags;
-  ((PACE_HEADER)pNewAce)->AceSize = (WORD) newAceSize;
-
-  if (((PACE_HEADER)pOldAce)->AceType == ACCESS_ALLOWED_ACE_TYPE)
+  // We need SeTakeOwnershipPrivilege to set the owner if the caller does not
+  // have WRITE_OWNER access to the object; we need SeRestorePrivilege if the
+  // SID is not contained in the caller's token, and have the SE_GROUP_OWNER
+  // permission enabled.
+  //
+  if (!EnablePrivilege(L"SeTakeOwnershipPrivilege"))
   {
-    ((PACCESS_ALLOWED_ACE)pNewAce)->Mask = ((PACCESS_ALLOWED_ACE)pOldAce)->Mask;
-    if (!CopySid(GetLengthSid(pUserSid),
-      &((PACCESS_ALLOWED_ACE) pNewAce)->SidStart, pUserSid))
-    {
-      ReportErrorCode(L"CopySid", GetLastError());
-      LocalFree(pNewAce);
-      return FALSE;
-    }
+    fwprintf(stdout, L"INFO: The user does not have SeTakeOwnershipPrivilege.\n");
   }
-  else
+  if (!EnablePrivilege(L"SeRestorePrivilege"))
   {
-    ((PACCESS_DENIED_ACE)pNewAce)->Mask = ((PACCESS_DENIED_ACE)pOldAce)->Mask;
-    if (!CopySid(GetLengthSid(pUserSid),
-      &((PACCESS_DENIED_ACE) pNewAce)->SidStart, pUserSid))
-    {
-      ReportErrorCode(L"CopySid", GetLastError());
-      LocalFree(pNewAce);
-      return FALSE;
-    }
+    fwprintf(stdout, L"INFO: The user does not have SeRestorePrivilege.\n");
   }
 
-  if (!AddAce(pNewDACL, ACL_REVISION, MAXDWORD,
-    pNewAce, ((PACE_HEADER)pNewAce)->AceSize))
-  {
-    ReportErrorCode(L"AddAce", GetLastError());
-    LocalFree(pNewAce);
-    return FALSE;
-  }
-
-  LocalFree(pNewAce);
-  return TRUE;
-}
-
-//----------------------------------------------------------------------------
-// Function: CreateDaclForNewOwner
-//
-// Description:
-//	Create a new DACL for the new owner
-//
-// Returns:
-//	TRUE: on success
-//
-// Notes:
-//  Caller needs to destroy the memory of the new DACL by calling LocalFree()
-//
-static BOOL CreateDaclForNewOwner(
-  __in PACL pDACL,
-  __in_opt PSID pOldOwnerSid,
-  __in_opt PSID pNewOwnerSid,
-  __in_opt PSID pOldGroupSid,
-  __in_opt PSID pNewGroupSid,
-  __out PACL *ppNewDACL)
-{
-  PSID aceSid = NULL;
-  PACE_HEADER aceHeader = NULL;
-  PACCESS_ALLOWED_ACE accessAllowedAce = NULL;
-  PACCESS_DENIED_ACE accessDenieddAce = NULL;
-  PVOID pAce = NULL;
-  ACL_SIZE_INFORMATION aclSizeInfo;
-  LONG delta = 0;
-  DWORD dwNewAclSize = 0;
-  DWORD dwRtnCode = 0;
-  DWORD i;
-
-  assert(pDACL != NULL && ppNewDACL != NULL);
-  assert(pOldOwnerSid != NULL && pOldGroupSid != NULL);
   assert(pNewOwnerSid != NULL || pNewGroupSid != NULL);
 
-  if (!GetAclInformation(pDACL, (LPVOID)&aclSizeInfo,
-    sizeof(ACL_SIZE_INFORMATION), AclSizeInformation))
-  {
-    ReportErrorCode(L"GetAclInformation", GetLastError());
-    return FALSE;
-  }
-
-  dwNewAclSize = aclSizeInfo.AclBytesInUse + aclSizeInfo.AclBytesFree;
-
-  delta = 0;
-  if (pNewOwnerSid != NULL &&
-    !GetNewAclSizeDelta(pDACL, pOldOwnerSid, pNewOwnerSid, &delta))
-  {
-    return FALSE;
-  }
-  dwNewAclSize += delta;
-
-  delta = 0;
-  if (pNewGroupSid != NULL &&
-    !GetNewAclSizeDelta(pDACL, pOldGroupSid, pNewGroupSid, &delta))
-  {
-    return FALSE;
-  }
-  dwNewAclSize += delta;
-
-  *ppNewDACL = (PACL)LocalAlloc(LPTR, dwNewAclSize);
-  if (*ppNewDACL == NULL)
-  {
-    ReportErrorCode(L"LocalAlloc", GetLastError());
-    return FALSE;
-  }
-
-  if (!InitializeAcl(*ppNewDACL, dwNewAclSize, ACL_REVISION))
-  {
-    ReportErrorCode(L"InitializeAcl", GetLastError());
-    return FALSE;
-  }
-
-  // Go through the DACL to change permissions
+  // Set the owners of the file.
   //
-  for (i = 0; i < pDACL->AceCount; i++)
+  if (pNewOwnerSid != NULL) securityInformation |= OWNER_SECURITY_INFORMATION;
+  if (pNewGroupSid != NULL) securityInformation |= GROUP_SECURITY_INFORMATION;
+  dwRtnCode = SetNamedSecurityInfoW(
+    longPathName,
+    SE_FILE_OBJECT,
+    securityInformation,
+    pNewOwnerSid,
+    pNewGroupSid,
+    NULL,
+    NULL);
+  if (dwRtnCode != ERROR_SUCCESS)
   {
-    if (!GetAce(pDACL, i, &pAce))
-    {
-      ReportErrorCode(L"GetAce", GetLastError());
-      return FALSE;
-    }
-
-    aceHeader = (PACE_HEADER) pAce;
-    aceSid = NULL;
-    if (aceHeader->AceType == ACCESS_ALLOWED_ACE_TYPE)
-    {
-      accessAllowedAce = (PACCESS_ALLOWED_ACE) pAce;
-      aceSid = (PSID) &accessAllowedAce->SidStart;
-    }
-    else if (aceHeader->AceType == ACCESS_DENIED_ACE_TYPE)
-    {
-      accessDenieddAce = (PACCESS_DENIED_ACE) pAce;
-      aceSid = (PSID) &accessDenieddAce->SidStart;
-    }
-
-    if (aceSid != NULL)
-    {
-      if (pNewOwnerSid != NULL && EqualSid(pOldOwnerSid, aceSid))
-      {
-        if (!AddNewAce(*ppNewDACL, pAce, pOldOwnerSid, pNewOwnerSid))
-          return FALSE;
-        else
-          continue;
-      }
-      else if (pNewGroupSid != NULL && EqualSid(pOldGroupSid, aceSid))
-      {
-        if (!AddNewAce(*ppNewDACL, pAce, pOldGroupSid, pNewGroupSid))
-          return FALSE;
-        else
-          continue;
-      }
-    }
-
-    // At this point, either:
-    // 1. The Ace is not of type ACCESS_ALLOWED_ACE or ACCESS_DENIED_ACE;
-    // 2. The Ace does not belong to the owner
-    // For both cases, we just add the oringal Ace to the new ACL.
-    //
-    if (!AddAce(*ppNewDACL, ACL_REVISION, MAXDWORD, pAce, aceHeader->AceSize))
-    {
-      ReportErrorCode(L"AddAce", dwRtnCode);
-      return FALSE;
-    }
+    goto ChangeFileOwnerByNameEnd;
   }
 
-  return TRUE;
-}
+  // Set the permission on the file for the new owner.
+  //
+  dwRtnCode = ChangeFileModeByMask(longPathName, oldMode);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto ChangeFileOwnerByNameEnd;
+  }
 
+ChangeFileOwnerByNameEnd:
+  LocalFree(longPathName);
+  return dwRtnCode;
+}
 
 //----------------------------------------------------------------------------
 // Function: Chown
@@ -293,7 +119,6 @@ static BOOL CreateDaclForNewOwner(
 int Chown(int argc, wchar_t *argv[])
 {
   LPWSTR pathName = NULL;
-  LPWSTR longPathName = NULL;
 
   LPWSTR ownerInfo = NULL;
 
@@ -307,16 +132,6 @@ int Chown(int argc, wchar_t *argv[])
 
   PSID pNewOwnerSid = NULL;
   PSID pNewGroupSid = NULL;
-
-  PACL pDACL = NULL;
-  PACL pNewDACL = NULL;
-
-  PSID pOldOwnerSid = NULL;
-  PSID pOldGroupSid = NULL;
-
-  PSECURITY_DESCRIPTOR pSD = NULL;
-
-  SECURITY_INFORMATION securityInformation;
 
   DWORD dwRtnCode = 0;
 
@@ -423,61 +238,10 @@ int Chown(int argc, wchar_t *argv[])
     goto ChownEnd;
   }
 
-  // Convert the path the the long path
-  //
-  dwRtnCode = ConvertToLongPath(pathName, &longPathName);
+  dwRtnCode = ChangeFileOwnerBySid(pathName, pNewOwnerSid, pNewGroupSid);
   if (dwRtnCode != ERROR_SUCCESS)
   {
-    ReportErrorCode(L"ConvertToLongPath", dwRtnCode);
-    goto ChownEnd;
-  }
-
-  // Get a pointer to the existing owner information and DACL
-  //
-  dwRtnCode = GetNamedSecurityInfoW(
-    longPathName,
-    SE_FILE_OBJECT, 
-    OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
-    DACL_SECURITY_INFORMATION,
-    &pOldOwnerSid,
-    &pOldGroupSid,
-    &pDACL,
-    NULL,
-    &pSD);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    ReportErrorCode(L"GetNamedSecurityInfo", dwRtnCode);
-    goto ChownEnd;
-  }
-
-  // Create the new DACL
-  //
-  if (!CreateDaclForNewOwner(pDACL,
-    pOldOwnerSid, pNewOwnerSid,
-    pOldGroupSid, pNewGroupSid,
-    &pNewDACL))
-  {
-    goto ChownEnd;
-  }
-
-  // Set the owner and DACLs in the object's security descriptor. Use
-  // PROTECTED_DACL_SECURITY_INFORMATION flag to remove permission inheritance
-  //
-  securityInformation =
-    DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION;
-  if (pNewOwnerSid != NULL) securityInformation |= OWNER_SECURITY_INFORMATION;
-  if (pNewGroupSid != NULL) securityInformation |= GROUP_SECURITY_INFORMATION;
-  dwRtnCode = SetNamedSecurityInfoW(
-    longPathName,
-    SE_FILE_OBJECT,
-    securityInformation,
-    pNewOwnerSid,
-    pNewGroupSid,
-    pNewDACL,
-    NULL);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    ReportErrorCode(L"SetNamedSecurityInfo", dwRtnCode);
+    ReportErrorCode(L"ChangeFileOwnerBySid", dwRtnCode);
     goto ChownEnd;
   }
 
@@ -488,9 +252,6 @@ ChownEnd:
   LocalFree(groupName);
   LocalFree(pNewOwnerSid);
   LocalFree(pNewGroupSid);
-  LocalFree(pNewDACL);
-  LocalFree(pSD);
-  LocalFree(longPathName);
 
   return ret;
 }

@@ -138,3 +138,5 @@ DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode);
 
 DWORD GetLocalGroupsForUser(__in LPCWSTR user,
   __out LPLOCALGROUP_USERS_INFO_0 *groups, __out LPDWORD entries);
+
+BOOL EnablePrivilege(__in LPCWSTR privilegeName);

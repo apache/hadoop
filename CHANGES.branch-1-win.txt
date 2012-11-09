@@ -208,3 +208,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9007. TestJobStatusPersistency.testJobStoreDisablingWithInvalidPath
     failure. (Chuan Liu via suresh)
+
+    HADOOP-9006. Winutils should keep Administrators privileges intact.
+    (Chuan Liu via suresh)

@@ -263,6 +263,7 @@ static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
   do
   {
     LPWSTR filename = NULL;
+    LPWSTR longFilename = NULL;
     size_t filenameSize = 0;
 
     if (wcscmp(ffd.cFileName, L".") == 0 ||
@@ -285,13 +286,25 @@ static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
       goto ChangeFileModeRecursivelyEnd;
     }
      
-    if(!ChangeFileModeRecursively(filename, mode, actions))
+    // The child fileanme is not prepended with long path prefix.
+    // Convert the filename to long path format.
+    //
+    dwRtnCode = ConvertToLongPath(filename, &longFilename);
+    LocalFree(filename);
+    if (dwRtnCode != ERROR_SUCCESS)
     {
-      LocalFree(filename);
+      ReportErrorCode(L"ConvertToLongPath", dwRtnCode);
+      LocalFree(longFilename);
       goto ChangeFileModeRecursivelyEnd;
     }
 
-    LocalFree(filename);
+    if(!ChangeFileModeRecursively(longFilename, mode, actions))
+    {
+      LocalFree(longFilename);
+      goto ChangeFileModeRecursivelyEnd;
+    }
+
+    LocalFree(longFilename);
 
   } while (FindNextFileW(hFind, &ffd));
 

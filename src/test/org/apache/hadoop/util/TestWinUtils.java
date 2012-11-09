@@ -168,6 +168,27 @@ public class TestWinUtils {
     assertFalse(a.exists());
   }
 
+  private void testNewFileChmodInternal(String expectedPerm) throws IOException {
+    // Create a new directory
+    File dir = new File(TEST_DIR, "dir1");
+
+    assertTrue(dir.mkdir());
+
+    // Set permission use chmod
+    chmod("755", dir);
+
+    // Create a child file in the directory
+    File child = new File(dir, "file1");
+    assertTrue(child.createNewFile());
+
+    // Verify the child file has correct permissions
+    assertPermissions(child, expectedPerm);
+
+    child.delete();
+    dir.delete();
+    assertFalse(dir.exists());
+  }
+
   private void testChmodInternalR(String mode, String expectedPerm,
       String expectedPermx) throws IOException {
     // Setup test folder hierarchy
@@ -281,6 +302,9 @@ public class TestWinUtils {
     testChmodInternalR("u-x,g+rw", "rw-rw----", "rw-rw----");
     testChmodInternalR("u-x,g+rwx-x,o=u", "rw-rw-rw-", "rw-rw-rw-");
     testChmodInternalR("a+rX", "rw-r--r--", "rwxr-xr-x");
+
+    // Test a new file created in a chmod'ed directory has expected permission
+    testNewFileChmodInternal("-rwx------");
   }
 
   private void chown(String userGroup, File file) throws IOException {

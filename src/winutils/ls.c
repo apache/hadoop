@@ -287,7 +287,7 @@ int Ls(int argc, wchar_t *argv[])
     goto LsEnd;
   }
 
-  dwErrorCode = SymbolicLinkCheck(pathName, &isSymlink);
+  dwErrorCode = SymbolicLinkCheck(longPathName, &isSymlink);
   if (dwErrorCode != ERROR_SUCCESS)
   {
      ReportErrorCode(L"IsSymbolicLink", dwErrorCode);
