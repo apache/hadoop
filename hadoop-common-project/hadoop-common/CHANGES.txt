@@ -9,6 +9,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8597. Permit FsShell's text command to read Avro files.
     (Ivan Vladimirov Ivanov via cutting)
 
+    HADOOP-9020. Add a SASL PLAIN server (daryn via bobby)
+
   IMPROVEMENTS
 
     HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
