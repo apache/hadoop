@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.security.Security;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -89,6 +90,7 @@ public class SaslRpcServer {
     
     SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
     SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
+    Security.addProvider(new SaslPlainServer.SecurityProvider());
   }
   
   static String encodeIdentifier(byte[] identifier) {
@@ -138,7 +140,8 @@ public class SaslRpcServer {
   public static enum AuthMethod {
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
-    DIGEST((byte) 82, "DIGEST-MD5");
+    DIGEST((byte) 82, "DIGEST-MD5"),
+    PLAIN((byte) 83, "PLAIN");
 
     /** The code for this method. */
     public final byte code;

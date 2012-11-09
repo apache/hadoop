@@ -27,12 +27,13 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.security.Security;
 import java.util.Collection;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.security.sasl.Sasl;
-
+import javax.security.auth.callback.*;
+import javax.security.sasl.*;
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -44,6 +45,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.*;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
@@ -53,7 +55,6 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 import org.apache.log4j.Level;
-import org.apache.tools.ant.types.Assertions.EnabledAssertion;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -76,7 +77,8 @@ public class TestSaslRPC {
   @BeforeClass
   public static void setupKerb() {
     System.setProperty("java.security.krb5.kdc", "");
-    System.setProperty("java.security.krb5.realm", "NONE"); 
+    System.setProperty("java.security.krb5.realm", "NONE");
+    Security.addProvider(new SaslPlainServer.SecurityProvider());
   }    
 
   @Before
@@ -448,6 +450,120 @@ public class TestSaslRPC {
     System.out.println("Test is successful.");
   }
 
+  @Test
+  public void testSaslPlainServer() throws IOException {
+    runNegotiation(
+        new TestPlainCallbacks.Client("user", "pass"),
+        new TestPlainCallbacks.Server("user", "pass"));
+  }
+
+  @Test
+  public void testSaslPlainServerBadPassword() throws IOException {
+    SaslException e = null;
+    try {
+      runNegotiation(
+          new TestPlainCallbacks.Client("user", "pass1"),
+          new TestPlainCallbacks.Server("user", "pass2"));
+    } catch (SaslException se) {
+      e = se;
+    }
+    assertNotNull(e);
+    assertEquals("PLAIN auth failed: wrong password", e.getMessage());
+  }
+
+
+  private void runNegotiation(CallbackHandler clientCbh,
+                              CallbackHandler serverCbh)
+                                  throws SaslException {
+    String mechanism = AuthMethod.PLAIN.getMechanismName();
+
+    SaslClient saslClient = Sasl.createSaslClient(
+        new String[]{ mechanism }, null, null, null, null, clientCbh);
+    assertNotNull(saslClient);
+
+    SaslServer saslServer = Sasl.createSaslServer(
+        mechanism, null, "localhost", null, serverCbh);
+    assertNotNull("failed to find PLAIN server", saslServer);
+    
+    byte[] response = saslClient.evaluateChallenge(new byte[0]);
+    assertNotNull(response);
+    assertTrue(saslClient.isComplete());
+
+    response = saslServer.evaluateResponse(response);
+    assertNull(response);
+    assertTrue(saslServer.isComplete());
+    assertNotNull(saslServer.getAuthorizationID());
+  }
+  
+  static class TestPlainCallbacks {
+    public static class Client implements CallbackHandler {
+      String user = null;
+      String password = null;
+      
+      Client(String user, String password) {
+        this.user = user;
+        this.password = password;
+      }
+      
+      @Override
+      public void handle(Callback[] callbacks)
+          throws UnsupportedCallbackException {
+        for (Callback callback : callbacks) {
+          if (callback instanceof NameCallback) {
+            ((NameCallback) callback).setName(user);
+          } else if (callback instanceof PasswordCallback) {
+            ((PasswordCallback) callback).setPassword(password.toCharArray());
+          } else {
+            throw new UnsupportedCallbackException(callback,
+                "Unrecognized SASL PLAIN Callback");
+          }
+        }
+      }
+    }
+    
+    public static class Server implements CallbackHandler {
+      String user = null;
+      String password = null;
+      
+      Server(String user, String password) {
+        this.user = user;
+        this.password = password;
+      }
+      
+      @Override
+      public void handle(Callback[] callbacks)
+          throws UnsupportedCallbackException, SaslException {
+        NameCallback nc = null;
+        PasswordCallback pc = null;
+        AuthorizeCallback ac = null;
+        
+        for (Callback callback : callbacks) {
+          if (callback instanceof NameCallback) {
+            nc = (NameCallback)callback;
+            assertEquals(user, nc.getName());
+          } else if (callback instanceof PasswordCallback) {
+            pc = (PasswordCallback)callback;
+            if (!password.equals(new String(pc.getPassword()))) {
+              throw new IllegalArgumentException("wrong password");
+            }
+          } else if (callback instanceof AuthorizeCallback) {
+            ac = (AuthorizeCallback)callback;
+            assertEquals(user, ac.getAuthorizationID());
+            assertEquals(user, ac.getAuthenticationID());
+            ac.setAuthorized(true);
+            ac.setAuthorizedID(ac.getAuthenticationID());
+          } else {
+            throw new UnsupportedCallbackException(callback,
+                "Unsupported SASL PLAIN Callback");
+          }
+        }
+        assertNotNull(nc);
+        assertNotNull(pc);
+        assertNotNull(ac);
+      }
+    }
+  }
+  
   private static Pattern BadToken =
       Pattern.compile(".*DIGEST-MD5: digest response format violation.*");
   private static Pattern KrbFailed =
