@@ -362,6 +362,8 @@ public class FileUtil {
       } else if (!overwrite) {
         throw new IOException("Target " + dst + " already exists");
       }
+    } else if (dst.toString().isEmpty()) {
+      return checkDest(null, dstFS, new Path(srcName), overwrite);
     }
     return dst;
   }
