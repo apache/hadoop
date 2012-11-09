@@ -640,6 +640,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4772. Fetch failures can take way too long for a map to be 
     restarted (bobby)
+
+    MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit 
+    (Mark Fuhs via bobby)
  
 Release 0.23.4 - UNRELEASED
 
