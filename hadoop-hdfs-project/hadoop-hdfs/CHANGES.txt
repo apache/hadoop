@@ -45,6 +45,9 @@ Release 0.23.5 - UNRELEASED
     HDFS-4090. getFileChecksum() result incompatible when called against
     zero-byte files. (Kihwal Lee via daryn)
 
+    HDFS-4162. Some malformed and unquoted HTML strings are returned from 
+    datanode web ui. (Darek Dagit via tgraves)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

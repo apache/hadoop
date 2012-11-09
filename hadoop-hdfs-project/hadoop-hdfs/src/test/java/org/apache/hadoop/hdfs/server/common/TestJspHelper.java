@@ -19,12 +19,18 @@ package org.apache.hadoop.hdfs.server.common;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.InetSocketAddress;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspWriter;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -43,10 +49,16 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 public class TestJspHelper {
 
   private Configuration conf = new HdfsConfiguration();
+  private String jspWriterOutput = "";
 
   public static class DummySecretManager extends
       AbstractDelegationTokenSecretManager<DelegationTokenIdentifier> {
@@ -364,6 +376,32 @@ public class TestJspHelper {
           "User: " + user + " is not allowed to impersonate " + realUser,
            ae.getMessage());
     }
+  }
+
+  @Test
+  public void testPrintGotoFormWritesValidXML() throws IOException,
+         ParserConfigurationException, SAXException {
+    JspWriter mockJspWriter = mock(JspWriter.class);
+    ArgumentCaptor<String> arg = ArgumentCaptor.forClass(String.class);
+    doAnswer(new Answer<Object>() {
+      @Override
+      public Object answer(InvocationOnMock invok) {
+        Object[] args = invok.getArguments();
+        jspWriterOutput += (String) args[0];
+        return null;
+      }
+    }).when(mockJspWriter).print(arg.capture());
+
+    jspWriterOutput = "";
+
+    JspHelper.printGotoForm(mockJspWriter, 424242, "a token string",
+            "foobar/file", "0.0.0.0");
+
+    DocumentBuilder parser =
+        DocumentBuilderFactory.newInstance().newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(jspWriterOutput));
+    parser.parse(is);
   }
   
   private HttpServletRequest getMockRequest(String remoteUser, String user, String doAs) {

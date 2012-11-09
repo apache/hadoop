@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -118,7 +119,7 @@ public class DatanodeJspHelper {
     String target = dir;
     final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
-      out.print("<h3>File or directory : " + target + " does not exist</h3>");
+      out.print("<h3>File or directory : " + StringEscapeUtils.escapeHtml(target) + " does not exist</h3>");
       JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, target,
           nnAddr);
     } else {
@@ -204,7 +205,7 @@ public class DatanodeJspHelper {
               + JspHelper.getDelegationTokenUrlParam(tokenString)
               + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
             cols[0] = "<a href=\"" + datanodeUrl + "\">"
-              + localFileName + "</a>";
+              + HtmlQuoting.quoteHtmlChars(localFileName) + "</a>";
             cols[5] = lsDateFormat.format(new Date((files[i]
               .getModificationTime())));
             cols[6] = files[i].getPermission().toString();
