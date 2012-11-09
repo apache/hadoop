@@ -81,31 +81,33 @@ public class TestApplicationCleanup {
         new ArrayList<ContainerId>()).getAllocatedContainers();
     int contReceived = conts.size();
     int waitCount = 0;
-    while (contReceived < request && waitCount++ < 200) {
-      LOG.info("Got " + contReceived + " containers. Waiting to get "
-               + request);
-      Thread.sleep(100);
+    while (contReceived < request && waitCount++ < 20) {
       conts = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers();
       contReceived += conts.size();
+      LOG.info("Got " + contReceived + " containers. Waiting to get "
+               + request);
+      Thread.sleep(2000);
     }
-    Assert.assertEquals(request, contReceived);
+    Assert.assertEquals(request, conts.size());
     
     am.unregisterAppAttempt();
     am.waitForState(RMAppAttemptState.FINISHED);
 
+    int cleanedConts = 0;
+    int cleanedApps = 0;
+    List<ContainerId> contsToClean = null;
+    List<ApplicationId> apps = null;
+    
     //currently only containers are cleaned via this
     //AM container is cleaned via container launcher
-    resp = nm1.nodeHeartbeat(true);
-    List<ContainerId> contsToClean = resp.getContainersToCleanupList();
-    List<ApplicationId> apps = resp.getApplicationsToCleanupList();
-    int cleanedConts = contsToClean.size();
-    int cleanedApps = apps.size();
     waitCount = 0;
     while ((cleanedConts < 3 || cleanedApps < 1) && waitCount++ < 20) {
       HeartbeatResponse resp = nm1.nodeHeartbeat(true);
       contsToClean = resp.getContainersToCleanupList();
       apps = resp.getApplicationsToCleanupList();
+      LOG.info("Waiting to get cleanup events.. cleanedConts: "
+          + cleanedConts + " cleanedApps: " + cleanedApps);
       cleanedConts += contsToClean.size();
       cleanedApps += apps.size();
       Thread.sleep(1000);
@@ -166,20 +168,20 @@ public class TestApplicationCleanup {
         new ArrayList<ContainerId>()).getAllocatedContainers();
     int contReceived = conts.size();
     int waitCount = 0;
-    while (contReceived < request && waitCount++ < 200) {
-      LOG.info("Got " + contReceived + " containers. Waiting to get "
-               + request);
-      Thread.sleep(100);
+    while (contReceived < request && waitCount++ < 20) {
       conts = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers();
       dispatcher.await();
       contReceived += conts.size();
+      LOG.info("Got " + contReceived + " containers. Waiting to get "
+               + request);
+      Thread.sleep(2000);
     }
-    Assert.assertEquals(request, contReceived);
+    Assert.assertEquals(request, conts.size());
 
     // Release a container.
     ArrayList<ContainerId> release = new ArrayList<ContainerId>();
-    release.add(conts.get(0).getId());
+    release.add(conts.get(1).getId());
     am.allocate(new ArrayList<ResourceRequest>(), release);
     dispatcher.await();
 
@@ -190,7 +192,7 @@ public class TestApplicationCleanup {
         new HashMap<ApplicationId, List<ContainerStatus>>();
     ArrayList<ContainerStatus> containerStatusList =
         new ArrayList<ContainerStatus>();
-    containerStatusList.add(BuilderUtils.newContainerStatus(conts.get(0)
+    containerStatusList.add(BuilderUtils.newContainerStatus(conts.get(1)
       .getId(), ContainerState.RUNNING, "nothing", 0));
     containerStatuses.put(app.getApplicationId(), containerStatusList);
 
@@ -199,13 +201,13 @@ public class TestApplicationCleanup {
     List<ContainerId> contsToClean = resp.getContainersToCleanupList();
     int cleanedConts = contsToClean.size();
     waitCount = 0;
-    while (cleanedConts < 1 && waitCount++ < 200) {
-      LOG.info("Waiting to get cleanup events.. cleanedConts: " + cleanedConts);
-      Thread.sleep(100);
+    while (cleanedConts < 1 && waitCount++ < 20) {
       resp = nm1.nodeHeartbeat(true);
       dispatcher.await();
       contsToClean = resp.getContainersToCleanupList();
+      LOG.info("Waiting to get cleanup events.. cleanedConts: " + cleanedConts);
       cleanedConts += contsToClean.size();
+      Thread.sleep(1000);
     }
     LOG.info("Got cleanup for " + contsToClean.get(0));
     Assert.assertEquals(1, cleanedConts);
@@ -216,7 +218,7 @@ public class TestApplicationCleanup {
         + "NM getting cleanup");
     containerStatuses.clear();
     containerStatusList.clear();
-    containerStatusList.add(BuilderUtils.newContainerStatus(conts.get(0)
+    containerStatusList.add(BuilderUtils.newContainerStatus(conts.get(1)
       .getId(), ContainerState.RUNNING, "nothing", 0));
     containerStatuses.put(app.getApplicationId(), containerStatusList);
 
@@ -227,13 +229,13 @@ public class TestApplicationCleanup {
     // The cleanup list won't be instantaneous as it is given out by scheduler
     // and not RMNodeImpl.
     waitCount = 0;
-    while (cleanedConts < 1 && waitCount++ < 200) {
-      LOG.info("Waiting to get cleanup events.. cleanedConts: " + cleanedConts);
-      Thread.sleep(100);
+    while (cleanedConts < 1 && waitCount++ < 20) {
       resp = nm1.nodeHeartbeat(true);
       dispatcher.await();
       contsToClean = resp.getContainersToCleanupList();
+      LOG.info("Waiting to get cleanup events.. cleanedConts: " + cleanedConts);
       cleanedConts += contsToClean.size();
+      Thread.sleep(1000);
     }
     LOG.info("Got cleanup for " + contsToClean.get(0));
     Assert.assertEquals(1, cleanedConts);

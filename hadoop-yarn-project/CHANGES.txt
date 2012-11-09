@@ -77,9 +77,6 @@ Release 0.23.5 - UNRELEASED
     YARN-201. Fix CapacityScheduler to be less conservative for starved 
     off-switch requests. (jlowe via acmurthy) 
 
-    YARN-206. TestApplicationCleanup.testContainerCleanup occasionally fails.
-    (jlowe via jeagles)
-
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
