@@ -217,7 +217,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4138. BackupNode startup fails due to uninitialized edit log.
     (Kihwal Lee via shv)
 
-Release 2.0.2-alpha - 2012-09-07 
+    HDFS-4162. Some malformed and unquoted HTML strings are returned from 
+    datanode web ui. (Darek Dagit via suresh)
+
   
   INCOMPATIBLE CHANGES
 
