@@ -78,12 +78,12 @@ public class PathData implements Comparable<PathData> {
    * Creates an object to wrap the given parameters as fields.  The string
    * used to create the path will be recorded since the Path object does not
    * return exactly the same string used to initialize it
-   * @param localPath a local File
+   * @param localPath a local URI
    * @param conf the configuration file
    * @throws IOException if anything goes wrong...
    */
-  public PathData(File localPath, Configuration conf) throws IOException {
-    this(FileSystem.getLocal(conf), localPath.toString());
+  public PathData(URI localPath, Configuration conf) throws IOException {
+    this(FileSystem.getLocal(conf), localPath.getPath());
   }
 
   /**

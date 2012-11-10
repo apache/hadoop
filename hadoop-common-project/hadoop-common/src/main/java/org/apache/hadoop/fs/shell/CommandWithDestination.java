@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.shell;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.LinkedList;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -72,8 +74,12 @@ abstract class CommandWithDestination extends FsCommand {
    */
   protected void getLocalDestination(LinkedList<String> args)
   throws IOException {
-    String pathString = (args.size() < 2) ? Path.CUR_DIR : args.removeLast();
-    dst = new PathData(new File(pathString), getConf());
+    try {
+      String pathString = (args.size() < 2) ? Path.CUR_DIR : args.removeLast();
+      dst = new PathData(new URI(pathString), getConf());
+    } catch (URISyntaxException e) {
+      throw new IOException("unexpected URISyntaxException", e);
+    }
   }
 
   /**

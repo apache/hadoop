@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,16 +62,20 @@ class CopyCommands {
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl");
-      cf.parse(args);
+      try {
+        CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl");
+        cf.parse(args);
 
-      delimiter = cf.getOpt("nl") ? "\n" : null;
+        delimiter = cf.getOpt("nl") ? "\n" : null;
 
-      dst = new PathData(new File(args.removeLast()), getConf());
-      if (dst.exists && dst.stat.isDirectory()) {
-        throw new PathIsDirectoryException(dst.toString());
+        dst = new PathData(new URI(args.removeLast()), getConf());
+        if (dst.exists && dst.stat.isDirectory()) {
+          throw new PathIsDirectoryException(dst.toString());
+        }
+        srcs = new LinkedList<PathData>();
+      } catch (URISyntaxException e) {
+        throw new IOException("unexpected URISyntaxException", e);
       }
-      srcs = new LinkedList<PathData>();
     }
 
     @Override
@@ -188,9 +194,13 @@ class CopyCommands {
     // commands operating on local paths have no need for glob expansion
     @Override
     protected List<PathData> expandArgument(String arg) throws IOException {
-      List<PathData> items = new LinkedList<PathData>();
-      items.add(new PathData(new File(arg), getConf()));
-      return items;
+      try {
+        List<PathData> items = new LinkedList<PathData>();
+        items.add(new PathData(new URI(arg), getConf()));
+        return items;
+      } catch (URISyntaxException e) {
+        throw new IOException("unexpected URISyntaxException", e);
+      }
     }
 
     @Override

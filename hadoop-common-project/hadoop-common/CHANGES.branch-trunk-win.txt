@@ -44,3 +44,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8975. TestFileContextResolveAfs fails on Windows. (Chris Nauroth via
   suresh)
+
+  HADOOP-8977. Multiple FsShell test failures on Windows. (Chris Nauroth via
+  suresh)
