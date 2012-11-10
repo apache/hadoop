@@ -342,6 +342,9 @@ Release 1.1.1 - Unreleased
     MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit
     (Mark Fuhs via bobby)
 
+    MAPREDUCE-4749. Fixed a bug in TaskTracker because of which kill-actions get
+    delayed progressively. (Arpit Gupta via vinodkv)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
