@@ -238,14 +238,17 @@ public class UserGroupInformation {
    */
   private static synchronized void initUGI(Configuration conf) {
     AuthenticationMethod auth = SecurityUtil.getAuthenticationMethod(conf);
-    if (auth == AuthenticationMethod.SIMPLE) {
-      useKerberos = false;
-    } else if (auth == AuthenticationMethod.KERBEROS) {
-      useKerberos = true;
-    } else {
-      throw new IllegalArgumentException("Invalid attribute value for " +
-                                         HADOOP_SECURITY_AUTHENTICATION + 
-                                         " of " + auth);
+    switch (auth) {
+      case SIMPLE:
+        useKerberos = false;
+        break;
+      case KERBEROS:
+        useKerberos = true;
+        break;
+      default:
+        throw new IllegalArgumentException("Invalid attribute value for " +
+                                           HADOOP_SECURITY_AUTHENTICATION + 
+                                           " of " + auth);
     }
     try {
         kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
@@ -637,19 +640,20 @@ public class UserGroupInformation {
       try {
         Subject subject = new Subject();
         LoginContext login;
+        AuthenticationMethod authenticationMethod;
         if (isSecurityEnabled()) {
+          authenticationMethod = AuthenticationMethod.KERBEROS;
           login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
               subject, new HadoopConfiguration());
         } else {
+          authenticationMethod = AuthenticationMethod.SIMPLE;
           login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
               subject, new HadoopConfiguration());
         }
         login.login();
         loginUser = new UserGroupInformation(subject);
         loginUser.setLogin(login);
-        loginUser.setAuthenticationMethod(isSecurityEnabled() ?
-                                          AuthenticationMethod.KERBEROS :
-                                          AuthenticationMethod.SIMPLE);
+        loginUser.setAuthenticationMethod(authenticationMethod);
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {

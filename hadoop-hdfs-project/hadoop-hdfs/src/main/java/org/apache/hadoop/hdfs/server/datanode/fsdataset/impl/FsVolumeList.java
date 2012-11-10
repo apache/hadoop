@@ -137,7 +137,7 @@ class FsVolumeList {
     if (removedVols != null && removedVols.size() > 0) {
       // Replace volume list
       volumes = Collections.unmodifiableList(volumeList);
-      FsDatasetImpl.LOG.info("Completed checkDirs. Removed " + removedVols.size()
+      FsDatasetImpl.LOG.warn("Completed checkDirs. Removed " + removedVols.size()
           + " volumes. Current volumes: " + this);
     }
 

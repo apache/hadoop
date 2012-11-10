@@ -248,8 +248,9 @@ public class ViewFs extends AbstractFileSystem {
       if (base == null) {
         base = "/user";
       }
-      homeDir = 
-        this.makeQualified(new Path(base + "/" + ugi.getShortUserName()));
+      homeDir = (base.equals("/") ? 
+        this.makeQualified(new Path(base + ugi.getShortUserName())):
+        this.makeQualified(new Path(base + "/" + ugi.getShortUserName())));
     }
     return homeDir;
   }

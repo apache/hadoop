@@ -1,3 +1,0 @@
-<configuration>
-<property><name>mapred.child.java.opts</name><value>-Xmx1024m -Djava.net.preferIPv4Stack=true</value></property>
-</configuration>

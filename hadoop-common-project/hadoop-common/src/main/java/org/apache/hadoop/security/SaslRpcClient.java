@@ -25,6 +25,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -45,6 +46,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -69,40 +71,48 @@ public class SaslRpcClient {
   public SaslRpcClient(AuthMethod method,
       Token<? extends TokenIdentifier> token, String serverPrincipal)
       throws IOException {
+    String saslUser = null;
+    String saslProtocol = null;
+    String saslServerName = null;
+    Map<String, String> saslProperties = SaslRpcServer.SASL_PROPS;
+    CallbackHandler saslCallback = null;
+    
     switch (method) {
-    case DIGEST:
-      if (LOG.isDebugEnabled())
-        LOG.debug("Creating SASL " + AuthMethod.DIGEST.getMechanismName()
-            + " client to authenticate to service at " + token.getService());
-      saslClient = Sasl.createSaslClient(new String[] { AuthMethod.DIGEST
-          .getMechanismName() }, null, null, SaslRpcServer.SASL_DEFAULT_REALM,
-          SaslRpcServer.SASL_PROPS, new SaslClientCallbackHandler(token));
-      break;
-    case KERBEROS:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating SASL " + AuthMethod.KERBEROS.getMechanismName()
-            + " client. Server's Kerberos principal name is "
-            + serverPrincipal);
+      case DIGEST: {
+        saslServerName = SaslRpcServer.SASL_DEFAULT_REALM;
+        saslCallback = new SaslClientCallbackHandler(token);
+        break;
       }
-      if (serverPrincipal == null || serverPrincipal.length() == 0) {
-        throw new IOException(
-            "Failed to specify server's Kerberos principal name");
+      case KERBEROS: {
+        if (serverPrincipal == null || serverPrincipal.isEmpty()) {
+          throw new IOException(
+              "Failed to specify server's Kerberos principal name");
+        }
+        KerberosName name = new KerberosName(serverPrincipal);
+        saslProtocol = name.getServiceName();
+        saslServerName = name.getHostName();
+        if (saslServerName == null) {
+          throw new IOException(
+              "Kerberos principal name does NOT have the expected hostname part: "
+                  + serverPrincipal);
+        }
+        break;
       }
-      String names[] = SaslRpcServer.splitKerberosName(serverPrincipal);
-      if (names.length != 3) {
-        throw new IOException(
-          "Kerberos principal name does NOT have the expected hostname part: "
-                + serverPrincipal);
-      }
-      saslClient = Sasl.createSaslClient(new String[] { AuthMethod.KERBEROS
-          .getMechanismName() }, null, names[0], names[1],
-          SaslRpcServer.SASL_PROPS, null);
-      break;
-    default:
-      throw new IOException("Unknown authentication method " + method);
+      default:
+        throw new IOException("Unknown authentication method " + method);
     }
-    if (saslClient == null)
+    
+    String mechanism = method.getMechanismName();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Creating SASL " + mechanism
+          + " client to authenticate to service at " + saslServerName);
+    }
+    saslClient = Sasl.createSaslClient(
+        new String[] { mechanism }, saslUser, saslProtocol, saslServerName,
+        saslProperties, saslCallback);
+    if (saslClient == null) {
       throw new IOException("Unable to find SASL client implementation");
+    }
   }
 
   private static void readStatus(DataInputStream inStream) throws IOException {

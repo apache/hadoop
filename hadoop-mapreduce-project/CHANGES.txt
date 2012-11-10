@@ -194,6 +194,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-1806. CombineFileInputFormat does not work with paths not on default FS. (Gera Shegalov via tucu)
 
+    MAPREDUCE-4777. In TestIFile, testIFileReaderWithCodec relies on
+    testIFileWriterWithCodec. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -584,6 +587,10 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
     Evans via tgraves)
 
+    MAPREDUCE-4266. remove Ant remnants from MR (tgraves via bobby)
+
+    MAPREDUCE-4666. JVM metrics for history server (jlowe via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -634,6 +641,15 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4771. KeyFieldBasedPartitioner not partitioning properly when
     configured (jlowe via bobby)
+
+    MAPREDUCE-4772. Fetch failures can take way too long for a map to be 
+    restarted (bobby)
+
+    MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit 
+    (Mark Fuhs via bobby)
+
+    MAPREDUCE-4774. JobImpl does not handle asynchronous task events in FAILED
+    state (jlowe via bobby)
  
 Release 0.23.4 - UNRELEASED
 

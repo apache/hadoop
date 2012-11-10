@@ -107,25 +107,14 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text> {
         numLines++;
         length += num;
         if (numLines == numLinesPerSplit) {
-          // NLineInputFormat uses LineRecordReader, which always reads
-          // (and consumes) at least one character out of its upper split
-          // boundary. So to make sure that each mapper gets N lines, we
-          // move back the upper split limits of each split 
-          // by one character here.
-          if (begin == 0) {
-            splits.add(new FileSplit(fileName, begin, length - 1,
-              new String[] {}));
-          } else {
-            splits.add(new FileSplit(fileName, begin - 1, length,
-              new String[] {}));
-          }
+          splits.add(createFileSplit(fileName, begin, length));
           begin += length;
           length = 0;
           numLines = 0;
         }
       }
       if (numLines != 0) {
-        splits.add(new FileSplit(fileName, begin, length, new String[]{}));
+        splits.add(createFileSplit(fileName, begin, length));
       }
     } finally {
       if (lr != null) {
@@ -133,6 +122,23 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text> {
       }
     }
     return splits; 
+  }
+
+  /**
+   * NLineInputFormat uses LineRecordReader, which always reads
+   * (and consumes) at least one character out of its upper split
+   * boundary. So to make sure that each mapper gets N lines, we
+   * move back the upper split limits of each split 
+   * by one character here.
+   * @param fileName  Path of file
+   * @param begin  the position of the first byte in the file to process
+   * @param length  number of bytes in InputSplit
+   * @return  FileSplit
+   */
+  protected static FileSplit createFileSplit(Path fileName, long begin, long length) {
+    return (begin == 0) 
+    ? new FileSplit(fileName, begin, length - 1, new String[] {})
+    : new FileSplit(fileName, begin - 1, length, new String[] {});
   }
   
   /**

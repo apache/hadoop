@@ -27,6 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -106,6 +108,8 @@ public class JobHistoryServer extends CompositeService {
 
   @Override
   public void start() {
+    DefaultMetricsSystem.initialize("JobHistoryServer");
+    JvmMetrics.initSingleton("JobHistoryServer", null);
     try {
       jhsDTSecretManager.startThreads();
     } catch(IOException io) {
@@ -118,6 +122,7 @@ public class JobHistoryServer extends CompositeService {
   @Override
   public void stop() {
     jhsDTSecretManager.stopThreads();
+    DefaultMetricsSystem.shutdown();
     super.stop();
   }
 

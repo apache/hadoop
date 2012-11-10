@@ -214,6 +214,17 @@
   </description>
 </property>
 
+
+<property>
+    <name>hadoop.security.uid.cache.secs</name>
+    <value>14400</value>
+    <description>
+        This is the config controlling the validity of the entries in the cache
+        containing the userId to userName and groupId to groupName used by
+        NativeIO getFstat().
+    </description>
+</property>
+
 <property>
   <name>hadoop.rpc.protection</name>
   <value>authentication</value>

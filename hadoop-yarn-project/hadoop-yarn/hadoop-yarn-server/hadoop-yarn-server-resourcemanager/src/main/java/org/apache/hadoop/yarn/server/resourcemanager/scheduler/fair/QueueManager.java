@@ -202,7 +202,7 @@ public class QueueManager {
    * Get the queue for a given AppSchedulable.
    */
   public FSQueue getQueueForApp(AppSchedulable app) {
-    return this.getQueue(app.getApp().getQueueName());
+    return getQueue(app.getApp().getQueueName());
   }
 
   /**
@@ -388,7 +388,7 @@ public class QueueManager {
 
     // Commit the reload; also create any queue defined in the alloc file
     // if it does not already exist, so it can be displayed on the web UI.
-    synchronized(this) {
+    synchronized (this) {
       setMinResources(minQueueResources);
       setMaxResources(maxQueueResources);
       setQueueMaxApps(queueMaxApps);
@@ -431,14 +431,14 @@ public class QueueManager {
     synchronized(minQueueResourcesMO) {
       if (minQueueResources.containsKey(queue)) {
         return minQueueResources.get(queue);
-      } else{
+      } else {
         return Resources.createResource(0);
       }
     }
   }
 
   private void setMinResources(Map<String, Resource> resources) {
-    synchronized(minQueueResourcesMO) {
+    synchronized (minQueueResourcesMO) {
       minQueueResources = resources;
     }
   }
@@ -457,7 +457,7 @@ public class QueueManager {
   }
 
   private void setMaxResources(Map<String, Resource> resources) {
-    synchronized(maxQueueResourcesMO) {
+    synchronized (maxQueueResourcesMO) {
       maxQueueResources = resources;
     }
   }
@@ -472,8 +472,8 @@ public class QueueManager {
   /**
    * Remove an app
    */
-  public synchronized void removeJob(FSSchedulerApp app) {
-    getQueue(app.getQueueName()).removeJob(app);
+  public synchronized void removeApp(FSSchedulerApp app) {
+    getQueue(app.getQueueName()).removeApp(app);
   }
 
   /**
@@ -543,7 +543,7 @@ public class QueueManager {
   }
   
   private int getQueueMaxAppsDefault(){
-    synchronized(queueMaxAppsDefaultMO) {
+    synchronized (queueMaxAppsDefaultMO) {
       return queueMaxAppsDefault;
     }
   }
@@ -575,11 +575,12 @@ public class QueueManager {
       queueWeights = weights;
     }
   }
+  
   /**
-  * Get a queue's min share preemption timeout, in milliseconds. This is the
-  * time after which jobs in the queue may kill other queues' tasks if they
-  * are below their min share.
-  */
+   * Get a queue's min share preemption timeout, in milliseconds. This is the
+   * time after which jobs in the queue may kill other queues' tasks if they
+   * are below their min share.
+   */
   public long getMinSharePreemptionTimeout(String queueName) {
     synchronized (minSharePreemptionTimeoutsMO) {
       if (minSharePreemptionTimeouts.containsKey(queueName)) {

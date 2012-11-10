@@ -69,6 +69,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-136. Make ClientToAMTokenSecretManager part of RMContext (Vinod Kumar
     Vavilapalli via sseth)
 
+    YARN-183. Clean up fair scheduler code. (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -95,6 +97,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-181. Fixed eclipse settings broken by capacity-scheduler.xml move via
     YARN-140. (Siddharth Seth via vinodkv)
+
+    YARN-169. Update log4j.appender.EventCounter to use
+    org.apache.hadoop.log.metrics.EventCounter (Anthony Rojas via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -166,6 +171,9 @@ Release 0.23.5 - UNRELEASED
     YARN-32. Fix TestApplicationTokens to not depend on test order and thus pass
     on JDK7. (vinodkv)
 
+    YARN-186. Coverage fixing LinuxContainerExecutor (Aleksey Gorshkov via
+    bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -201,6 +209,12 @@ Release 0.23.5 - UNRELEASED
 
     YARN-202. Log Aggregation generates a storm of fsync() for namenode 
     (Kihwal Lee via bobby)
+
+    YARN-201. Fix CapacityScheduler to be less conservative for starved 
+    off-switch requests. (jlowe via acmurthy) 
+
+    YARN-206. TestApplicationCleanup.testContainerCleanup occasionally fails.
+    (jlowe via jeagles)
 
 Release 0.23.4 - UNRELEASED
 

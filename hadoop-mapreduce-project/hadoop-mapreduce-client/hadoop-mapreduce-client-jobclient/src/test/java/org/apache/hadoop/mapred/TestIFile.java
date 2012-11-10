@@ -56,6 +56,10 @@ public class TestIFile {
     Path path = new Path(new Path("build/test.ifile"), "data");
     DefaultCodec codec = new GzipCodec();
     codec.setConf(conf);
+    IFile.Writer<Text, Text> writer =
+        new IFile.Writer<Text, Text>(conf, rfs, path, Text.class, Text.class,
+                                     codec, null);
+    writer.close();
     IFile.Reader<Text, Text> reader =
       new IFile.Reader<Text, Text>(conf, rfs, path, codec, null);
     reader.close();

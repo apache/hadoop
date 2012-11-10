@@ -49,7 +49,7 @@ MapReduce NextGen aka YARN aka MRv2
 
   * {{{./WebApplicationProxy.html}Web Application Proxy}}
 
-  * {{{./CLIMiniCluster.html}CLI MiniCluster}}
+  * {{{../../hadoop-project-dist/hadoop-common/CLIMiniCluster.html}CLI MiniCluster}}
 
-  * {{{./EncryptedShuffle.html}Encrypted Shuffle}}
+  * {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html}Encrypted Shuffle}}
 

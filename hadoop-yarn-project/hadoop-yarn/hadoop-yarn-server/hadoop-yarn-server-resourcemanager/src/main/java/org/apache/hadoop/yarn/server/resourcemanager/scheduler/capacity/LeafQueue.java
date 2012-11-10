@@ -833,8 +833,12 @@ public class LeafQueue implements CSQueue {
             // Note: Update headroom to account for current allocation too...
             allocateResource(clusterResource, application, assigned);
             
-            // Reset scheduling opportunities
-            application.resetSchedulingOpportunities(priority);
+            // Don't reset scheduling opportunities for non-local assignments
+            // otherwise the app will be delayed for each non-local assignment.
+            // This helps apps with many off-cluster requests schedule faster.
+            if (assignment.getType() != NodeType.OFF_SWITCH) {
+              application.resetSchedulingOpportunities(priority);
+            }
             
             // Done
             return assignment;
