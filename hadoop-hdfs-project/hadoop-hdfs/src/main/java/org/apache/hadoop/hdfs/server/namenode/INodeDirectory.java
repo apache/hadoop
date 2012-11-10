@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -212,6 +213,13 @@ public class INodeDirectory extends INode {
       if (index >= 0) {
         existing.addNode(curNode);
       }
+      if (curNode instanceof INodeDirectorySnapshottable) {
+        //if the path is a non-snapshot path, update the latest snapshot.
+        if (!existing.isSnapshot()) {
+          existing.updateLatestSnapshot(
+              ((INodeDirectorySnapshottable)curNode).getLastSnapshot());
+        }
+      }
       if (curNode.isSymlink() && (!lastComp || (lastComp && resolveLink))) {
         final String path = constructPath(components, 0, components.length);
         final String preceding = constructPath(components, 0, count);
@@ -247,10 +255,17 @@ public class INodeDirectory extends INode {
           return existing;
         }
         // Resolve snapshot root
-        curNode = ((INodeDirectorySnapshottable) parentDir)
-            .getSnapshotRoot(components[count + 1]);
+        final Snapshot s = ((INodeDirectorySnapshottable)parentDir).getSnapshot(
+            components[count + 1]);
+        if (s == null) {
+          //snapshot not found
+          curNode = null;
+        } else {
+          curNode = s.getRoot();
+          existing.setSnapshot(s);
+        }
         if (index >= -1) {
-          existing.snapshotRootIndex = existing.size;
+          existing.snapshotRootIndex = existing.numNonNull;
         }
       } else {
         // normal case, and also for resolving file/dir under snapshot root
@@ -498,7 +513,7 @@ public class INodeDirectory extends INode {
     /**
      * Indicate the number of non-null elements in {@link #inodes}
      */
-    private int size;
+    private int numNonNull;
     /**
      * The path for a snapshot file/dir contains the .snapshot thus makes the
      * length of the path components larger the number of inodes. We use
@@ -513,14 +528,38 @@ public class INodeDirectory extends INode {
      * Index of {@link INodeDirectoryWithSnapshot} for snapshot path, else -1
      */
     private int snapshotRootIndex;
+    /**
+     * For snapshot paths, it is the reference to the snapshot; or null if the
+     * snapshot does not exist. For non-snapshot paths, it is the reference to
+     * the latest snapshot found in the path; or null if no snapshot is found.
+     */
+    private Snapshot snapshot = null; 
 
     INodesInPath(int number) {
       assert (number >= 0);
       inodes = new INode[number];
       capacity = number;
-      size = 0;
+      numNonNull = 0;
       isSnapshot = false;
       snapshotRootIndex = -1;
+    }
+
+    /**
+     * @return the snapshot associated to the path.
+     * @see #snapshot
+     */
+    public Snapshot getSnapshot() {
+      return snapshot;
+    }
+
+    private void setSnapshot(Snapshot s) {
+      snapshot = s;
+    }
+    
+    private void updateLatestSnapshot(Snapshot s) {
+      if (snapshot == null || snapshot.compareTo(s) < 0) {
+        snapshot = s;
+      }
     }
 
     /**
@@ -556,8 +595,7 @@ public class INodeDirectory extends INode {
      * Add an INode at the end of the array
      */
     private void addNode(INode node) {
-      assert size < inodes.length;
-      inodes[size++] = node;
+      inodes[numNonNull++] = node;
     }
     
     void setINode(int i, INode inode) {
@@ -567,8 +605,35 @@ public class INodeDirectory extends INode {
     /**
      * @return The number of non-null elements
      */
-    int getSize() {
-      return size;
+    int getNumNonNull() {
+      return numNonNull;
+    }
+    
+    static String toString(INode inode) {
+      return inode == null? null: inode.getLocalName();
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder b = new StringBuilder(getClass().getSimpleName())
+          .append(":\n  inodes = ");
+      if (inodes == null) {
+        b.append("null");
+      } else if (inodes.length == 0) {
+        b.append("[]");
+      } else {
+        b.append("[").append(toString(inodes[0]));
+        for(int i = 1; i < inodes.length; i++) {
+          b.append(", ").append(toString(inodes[i]));
+        }
+        b.append("]");
+      }
+      b.append("\n  numNonNull = ").append(numNonNull)
+       .append("\n  capacity   = ").append(capacity)
+       .append("\n  isSnapshot        = ").append(isSnapshot)
+       .append("\n  snapshotRootIndex = ").append(snapshotRootIndex)
+       .append("\n  snapshot          = ").append(snapshot);
+      return b.toString();
     }
   }
 

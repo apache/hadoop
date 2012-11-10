@@ -62,3 +62,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4159. Rename should fail when the destination directory is snapshottable
   and has snapshots. (Jing Zhao via szetszwo)
+
+  HDFS-4170. Add snapshot information to INodesInPath.  (szetszwo)

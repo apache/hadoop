@@ -65,6 +65,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
 
   /** Snapshots of this directory in ascending order of snapshot id. */
   private final List<Snapshot> snapshots = new ArrayList<Snapshot>();
+  /** Snapshots of this directory in ascending order of snapshot names. */
+  private final List<Snapshot> snapshotsByNames = new ArrayList<Snapshot>();
 
   /** Number of snapshots allowed. */
   private int snapshotQuota;
@@ -79,16 +81,20 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
     return snapshots.size();
   }
   
-  /** @return the root directory of a snapshot. */
-  public INodeDirectory getSnapshotRoot(byte[] snapshotName) {
-    if (snapshots == null || snapshots.size() == 0) {
-      return null;
-    }
-    int low = Collections.binarySearch(snapshots, snapshotName);
-    if (low >= 0) {
-      return snapshots.get(low).getRoot();
-    }
-    return null;
+  private int searchSnapshot(byte[] snapshotName) {
+    return Collections.binarySearch(snapshotsByNames, snapshotName);
+  }
+
+  /** @return the snapshot with the given name. */
+  public Snapshot getSnapshot(byte[] snapshotName) {
+    final int i = searchSnapshot(snapshotName);
+    return i < 0? null: snapshotsByNames.get(i);
+  }
+
+  /** @return the last snapshot. */
+  public Snapshot getLastSnapshot() {
+    final int n = snapshots.size();
+    return n == 0? null: snapshots.get(n - 1);
   }
 
   public int getSnapshotQuota() {
@@ -108,21 +114,30 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
     return true;
   }
 
-  /** Add a snapshot root under this directory. */
-  void addSnapshot(final Snapshot s) throws SnapshotException {
+  /** Add a snapshot. */
+  Snapshot addSnapshot(int id, String name) throws SnapshotException {
     //check snapshot quota
     if (snapshots.size() + 1 > snapshotQuota) {
       throw new SnapshotException("Failed to add snapshot: there are already "
           + snapshots.size() + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
     }
+    final Snapshot s = new Snapshot(id, name, this);
+    final byte[] nameBytes = s.getRoot().getLocalNameBytes();
+    final int i = searchSnapshot(nameBytes);
+    if (i >= 0) {
+      throw new SnapshotException("Failed to add snapshot: there is already a "
+          + "snapshot with the same name \"" + name + "\".");
+    }
 
     snapshots.add(s);
+    snapshotsByNames.add(-i - 1, s);
 
     //set modification time
     final long timestamp = Time.now();
     s.getRoot().setModificationTime(timestamp);
     setModificationTime(timestamp);
+    return s;
   }
   
   @Override

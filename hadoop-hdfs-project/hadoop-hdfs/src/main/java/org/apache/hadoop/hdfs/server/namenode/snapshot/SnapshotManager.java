@@ -105,8 +105,7 @@ public class SnapshotManager implements SnapshotStats {
         = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
 
     synchronized(this) {
-      final Snapshot s = new Snapshot(snapshotID, snapshotName, srcRoot); 
-      srcRoot.addSnapshot(s);
+      final Snapshot s = srcRoot.addSnapshot(snapshotID, snapshotName);
       new SnapshotCreation().processRecursively(srcRoot, s.getRoot());
       
       //create success, update id
