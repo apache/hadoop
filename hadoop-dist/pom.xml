@@ -90,50 +90,6 @@
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
               <execution>
-                <id>dist</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <echo file="${project.build.directory}/dist-layout-stitching.sh">
-                      run() {
-                        echo "\$ ${@}"
-                        "${@}"
-                        res=$?
-                        if [ $res != 0 ]; then
-                          echo
-                          echo "Failed!"
-                          echo
-                          exit $res
-                        fi
-                      }
-
-                      ROOT=`cd ${basedir}/..;pwd`
-                      echo
-                      echo "Current directory `pwd`"
-                      echo
-                      run rm -rf hadoop-${project.version}
-                      run mkdir hadoop-${project.version}
-                      run cd hadoop-${project.version}
-                      run cp -r $ROOT/hadoop-common-project/hadoop-common/target/hadoop-common-${project.version}/* .
-                      run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${project.version}/* .
-                      run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs-httpfs/target/hadoop-hdfs-httpfs-${project.version}/* .
-                      run cp -r $ROOT/hadoop-yarn-project/target/hadoop-yarn-project-${project.version}/* .
-                      run cp -r $ROOT/hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}/* .
-                      run cp -r $ROOT/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${project.version}/* .
-                      echo
-                      echo "Hadoop dist layout available at: ${project.build.directory}/hadoop-${project.version}"
-                      echo
-                    </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./dist-layout-stitching.sh"/>
-                    </exec>
-                  </target>
-                </configuration>
-              </execution>
-              <execution>
                 <id>tar</id>
                 <phase>package</phase>
                 <goals>
@@ -141,26 +97,61 @@
                 </goals>
                 <configuration>
                   <target if="tar">
-                    <echo file="${project.build.directory}/dist-tar-stitching.sh">
-                      run() {
-                        echo "\$ ${@}"
-                        "${@}"
-                        res=$?
-                        if [ $res != 0 ]; then
-                          echo
-                          echo "Failed!"
-                          echo
-                          exit $res
-                        fi
-                      }
+                    <!-- This script preserves permissions and symlinks. -->
+                    <!-- Python requires resetting indentation to far left. -->
+                    <echo file="${project.build.directory}/dist-maketar.py">
+from os.path import abspath, basename, isdir, join
+import tarfile
 
-                      run tar czf hadoop-${project.version}.tar.gz hadoop-${project.version}
-                      echo
-                      echo "Hadoop dist tar available at: ${project.build.directory}/hadoop-${project.version}.tar.gz"
-                      echo
+def make_file_filter(root, file_name_filter):
+  def filter_func(tar_info):
+    if tar_info.name == root:
+      # Always include root directory.  Otherwise, tarfile.add assumes you are
+      # filtering out the whole directory and produces an empty tar.
+      return tar_info
+    if tar_info.isfile() or tar_info.issym():
+      # Include files and symlinks only if they match the specified name filter.
+      if file_name_filter(basename(tar_info.name)):
+        return tar_info
+    # Otherwise, exclude.
+    return None
+  return filter_func
+
+target_dirs = [
+  abspath(r"${basedir}/../hadoop-common-project/hadoop-common/target/hadoop-common-${project.version}"),
+  abspath(r"${basedir}/../hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${project.version}"),
+  abspath(r"${basedir}/../hadoop-hdfs-project/hadoop-hdfs-httpfs/target/hadoop-hdfs-httpfs-${project.version}"),
+  abspath(r"${basedir}/../hadoop-yarn-project/target/hadoop-yarn-project-${project.version}"),
+  abspath(r"${basedir}/../hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}"),
+  abspath(r"${basedir}/../hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${project.version}")
+]
+base_name = "hadoop" + "-" + "${project.version}"
+dir_name = abspath(join(r"${project.build.directory}", base_name))
+tar_name = dir_name + ".tar.gz"
+
+with tarfile.open(tar_name, "w:gz") as tar:
+  for target_dir in target_dirs:
+    tar.add(target_dir, arcname=base_name)
+    native_dir = abspath(join(target_dir, "../native/target/usr/local/lib"))
+    if isdir(native_dir):
+      arc_name = base_name + "/lib/native"
+      tar.add(native_dir, arcname=arc_name,
+        filter=make_file_filter(arc_name, lambda file: file.startswith("lib")))
+    bin_dir = abspath(join(target_dir, "../bin"))
+    if isdir(bin_dir):
+      arc_name = base_name + "/bin"
+      tar.add(bin_dir, arcname=arc_name)
+  if "${bundle.snappy}" == "true":
+    arc_name = base_name + "/lib/native"
+    tar.add(r"${snappy.lib}", arcname=arc_name,
+      filter=make_file_filter(arc_name, lambda file: "snappy" in file))
+
+print
+print "Hadoop dist tar available at: " + tar_name
+print
                     </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./dist-tar-stitching.sh"/>
+                    <exec executable="python" dir="${project.build.directory}" failonerror="true">
+                      <arg value="dist-maketar.py" />
                     </exec>
                   </target>
                 </configuration>

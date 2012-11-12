@@ -51,3 +51,5 @@ branch-trunk-win changes - unreleased
   HADOOP-9005. Merge hadoop cmd line scripts from branch-1-win. (David Lao, 
   Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
 
+  HADOOP-9008. Building hadoop tarball fails on Windows. (Chris Nauroth via
+  suresh)
