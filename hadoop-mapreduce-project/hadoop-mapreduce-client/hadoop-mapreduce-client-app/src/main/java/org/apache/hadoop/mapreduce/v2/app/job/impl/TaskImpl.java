@@ -217,13 +217,15 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     .addTransition(TaskStateInternal.SUCCEEDED,
         EnumSet.of(TaskStateInternal.SCHEDULED, TaskStateInternal.SUCCEEDED),
         TaskEventType.T_ATTEMPT_KILLED, new RetroactiveKilledTransition())
+    .addTransition(TaskStateInternal.SUCCEEDED, TaskStateInternal.SUCCEEDED,
+        TaskEventType.T_ATTEMPT_SUCCEEDED,
+        new AttemptSucceededAtSucceededTransition())
     // Ignore-able transitions.
     .addTransition(
         TaskStateInternal.SUCCEEDED, TaskStateInternal.SUCCEEDED,
         EnumSet.of(TaskEventType.T_ADD_SPEC_ATTEMPT,
             TaskEventType.T_ATTEMPT_COMMIT_PENDING,
             TaskEventType.T_ATTEMPT_LAUNCHED,
-            TaskEventType.T_ATTEMPT_SUCCEEDED,
             TaskEventType.T_KILL))
 
     // Transitions from FAILED state        
@@ -971,6 +973,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           !castEvent.getTaskAttemptID().equals(task.successfulAttempt)) {
         // don't allow a different task attempt to override a previous
         // succeeded state
+        task.finishedAttempts.add(castEvent.getTaskAttemptID());
+        task.inProgressAttempts.remove(castEvent.getTaskAttemptID());
         return TaskStateInternal.SUCCEEDED;
       }
 
@@ -1013,6 +1017,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
             !attemptId.equals(task.successfulAttempt)) {
           // don't allow a different task attempt to override a previous
           // succeeded state
+          task.finishedAttempts.add(castEvent.getTaskAttemptID());
+          task.inProgressAttempts.remove(castEvent.getTaskAttemptID());
           return TaskStateInternal.SUCCEEDED;
         }
       }
@@ -1040,6 +1046,16 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       // currently pending container requests affinitized to bad nodes.
       task.addAndScheduleAttempt();
       return TaskStateInternal.SCHEDULED;
+    }
+  }
+
+  private static class AttemptSucceededAtSucceededTransition
+    implements SingleArcTransition<TaskImpl, TaskEvent> {
+    @Override
+    public void transition(TaskImpl task, TaskEvent event) {
+      TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+      task.finishedAttempts.add(castEvent.getTaskAttemptID());
+      task.inProgressAttempts.remove(castEvent.getTaskAttemptID());
     }
   }
 
