@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -32,16 +34,29 @@ public abstract class Param<T, D extends Param.Domain<T>> {
     }
   };
 
-  /** Convert the parameters to a sorted String. */
+  /** Convert the parameters to a sorted String.
+   *
+   * @param separator URI parameter separator character
+   * @param parameters parameters to encode into a string
+   * @return the encoded URI string
+   */
   public static String toSortedString(final String separator,
       final Param<?, ?>... parameters) {
     Arrays.sort(parameters, NAME_CMP);
     final StringBuilder b = new StringBuilder();
-    for(Param<?, ?> p : parameters) {
-      if (p.getValue() != null) {
-        b.append(separator).append(p);
+    try {
+      for(Param<?, ?> p : parameters) {
+        if (p.getValue() != null) {
+          b.append(separator).append(
+              URLEncoder.encode(p.getName(), "UTF-8")
+              + "="
+              + URLEncoder.encode(p.getValueString(), "UTF-8"));
+        }
       }
-    }
+  } catch (UnsupportedEncodingException e) {
+    // Sane systems know about UTF-8, so this should never happen.
+    throw new RuntimeException(e);
+  }
     return b.toString();
   }
 
@@ -59,6 +74,9 @@ public abstract class Param<T, D extends Param.Domain<T>> {
   public final T getValue() {
     return value;
   }
+
+  /** @return the parameter value as a string */
+  public abstract String getValueString();
 
   /** @return the parameter name. */
   public abstract String getName();
