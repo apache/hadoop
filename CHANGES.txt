@@ -45,6 +45,10 @@ Release 1.1.1 - Unreleased
     MAPREDUCE-4749. Fixed a bug in TaskTracker because of which kill-actions get
     delayed progressively. (Arpit Gupta via vinodkv)
 
+    HADOOP-9017. Fix hadoop-client-pom-template.xml and
+    hadoop-client-pom-template.xml for version token ( gkesavan )
+
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES

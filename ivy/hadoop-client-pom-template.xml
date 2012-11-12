@@ -32,7 +32,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
-      <version>${project.version}</version>
+      <version>@version</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
