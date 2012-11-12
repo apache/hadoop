@@ -7,3 +7,5 @@ branch-trunk-win changes - unreleased
   
   YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
   suresh)
+
+  YARN-199. Yarn cmd line scripts for windows. (Ivan Mitic via suresh)
