@@ -25,6 +25,12 @@ abstract class StringParam extends Param<String, StringParam.Domain> {
     super(domain, domain.parse(str));
   }
 
+  /** @return the parameter value as a string */
+  @Override
+  public String getValueString() {
+    return value;
+  }
+
   /** The domain of the parameter. */
   static final class Domain extends Param.Domain<String> {
     /** The pattern defining the domain; null . */

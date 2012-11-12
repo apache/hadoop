@@ -114,6 +114,12 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     }
   }
 
+  /** @return the parameter value as a string */
+  @Override
+  public String getValueString() {
+    return value.toString();
+  }
+
   HttpOpParam(final Domain<E> domain, final E value) {
     super(domain, value);
   }
