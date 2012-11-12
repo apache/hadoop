@@ -54,6 +54,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
@@ -63,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskImpl;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
@@ -241,6 +243,39 @@ public class MRApp extends MRAppMaster {
     conf.writeXml(new FileOutputStream(jobFile));
 
     return job;
+  }
+
+  public void waitForInternalState(JobImpl job,
+      JobStateInternal finalState) throws Exception {
+    int timeoutSecs = 0;
+    JobStateInternal iState = job.getInternalState();
+    while (!finalState.equals(iState) && timeoutSecs++ < 20) {
+      System.out.println("Job Internal State is : " + iState
+          + " Waiting for Internal state : " + finalState);
+      Thread.sleep(500);
+      iState = job.getInternalState();
+    }
+    System.out.println("Task Internal State is : " + iState);
+    Assert.assertEquals("Task Internal state is not correct (timedout)",
+        finalState, iState);
+  }
+
+  public void waitForInternalState(TaskImpl task,
+      TaskStateInternal finalState) throws Exception {
+    int timeoutSecs = 0;
+    TaskReport report = task.getReport();
+    TaskStateInternal iState = task.getInternalState();
+    while (!finalState.equals(iState) && timeoutSecs++ < 20) {
+      System.out.println("Task Internal State is : " + iState
+          + " Waiting for Internal state : " + finalState + "   progress : "
+          + report.getProgress());
+      Thread.sleep(500);
+      report = task.getReport();
+      iState = task.getInternalState();
+    }
+    System.out.println("Task Internal State is : " + iState);
+    Assert.assertEquals("Task Internal state is not correct (timedout)",
+        finalState, iState);
   }
 
   public void waitForInternalState(TaskAttemptImpl attempt,
