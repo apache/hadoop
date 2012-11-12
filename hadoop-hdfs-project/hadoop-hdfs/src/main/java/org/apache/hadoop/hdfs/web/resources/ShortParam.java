@@ -44,6 +44,12 @@ abstract class ShortParam extends Param<Short, ShortParam.Domain> {
     return getName() + "=" + domain.toString(getValue());
   }
 
+  /** @return the parameter value as a string */
+  @Override
+  public final String getValueString() {
+    return domain.toString(getValue());
+  }
+
   /** The domain of the parameter. */
   static final class Domain extends Param.Domain<Short> {
     /** The radix of the number. */

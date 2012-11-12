@@ -43,6 +43,12 @@ abstract class LongParam extends Param<Long, LongParam.Domain> {
     return getName() + "=" + domain.toString(getValue());
   }
 
+  /** @return the parameter value as a string */
+  @Override
+  public String getValueString() {
+    return domain.toString(getValue());
+  }
+
   /** The domain of the parameter. */
   static final class Domain extends Param.Domain<Long> {
     /** The radix of the number. */

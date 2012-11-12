@@ -31,6 +31,12 @@ abstract class InetSocketAddressParam
     return getName() + "=" + Domain.toString(getValue());
   }
 
+  /** @return the parameter value as a string */
+  @Override
+  public String getValueString() {
+    return Domain.toString(getValue());
+  }
+
   /** The domain of the parameter. */
   static final class Domain extends Param.Domain<InetSocketAddress> {
     Domain(final String paramName) {
