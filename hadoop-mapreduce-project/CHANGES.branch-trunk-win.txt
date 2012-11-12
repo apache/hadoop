@@ -3,3 +3,5 @@ branch-trunk-win changes - unreleased
   MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
   (Chris Nauroth via suresh)
 
+  MAPREDUCE-4780. MapReduce distribution build fails on Windows.
+  (Chris Nauroth via suresh)
