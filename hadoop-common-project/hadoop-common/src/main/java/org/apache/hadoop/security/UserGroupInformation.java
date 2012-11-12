@@ -239,6 +239,7 @@ public class UserGroupInformation {
     AuthenticationMethod auth = SecurityUtil.getAuthenticationMethod(conf);
     switch (auth) {
       case SIMPLE:
+      case TOKEN:
         useKerberos = false;
         break;
       case KERBEROS:

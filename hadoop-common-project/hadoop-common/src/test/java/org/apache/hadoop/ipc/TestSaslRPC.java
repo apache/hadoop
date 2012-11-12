@@ -569,10 +569,13 @@ public class TestSaslRPC {
   private static Pattern KrbFailed =
       Pattern.compile(".*Failed on local exception:.* " +
                       "Failed to specify server's Kerberos principal name.*");
-  private static Pattern Denied = 
-      Pattern.compile(".*Authorization .* is enabled .*");
-  private static Pattern NoDigest =
-      Pattern.compile(".*Server is not configured to do DIGEST auth.*");
+  private static Pattern Denied(AuthenticationMethod method) {
+      return Pattern.compile(".*RemoteException.*AccessControlException.*: "
+          +method.getAuthMethod() + " authentication is not enabled.*");
+  }
+  private static Pattern NoTokenAuth =
+      Pattern.compile(".*IllegalArgumentException: " +
+                      "TOKEN authentication requires a secret manager");
   
   /*
    *  simple server
@@ -605,12 +608,39 @@ public class TestSaslRPC {
   }
   
   /*
+   *  token server
+   */
+  @Test
+  public void testTokenOnlyServer() throws Exception {
+    assertAuthEquals(Denied(SIMPLE), getAuthMethod(SIMPLE,   TOKEN));
+    assertAuthEquals(KrbFailed,      getAuthMethod(KERBEROS, TOKEN));
+  }
+
+  @Test
+  public void testTokenOnlyServerWithTokens() throws Exception {
+    assertAuthEquals(TOKEN, getAuthMethod(SIMPLE,   TOKEN, true));
+    assertAuthEquals(TOKEN, getAuthMethod(KERBEROS, TOKEN, true));
+    forceSecretManager = false;
+    assertAuthEquals(NoTokenAuth, getAuthMethod(SIMPLE,   TOKEN, true));
+    assertAuthEquals(NoTokenAuth, getAuthMethod(KERBEROS, TOKEN, true));
+  }
+
+  @Test
+  public void testTokenOnlyServerWithInvalidTokens() throws Exception {
+    assertAuthEquals(BadToken, getAuthMethod(SIMPLE,   TOKEN, false));
+    assertAuthEquals(BadToken, getAuthMethod(KERBEROS, TOKEN, false));
+    forceSecretManager = false;
+    assertAuthEquals(NoTokenAuth, getAuthMethod(SIMPLE,   TOKEN, false));
+    assertAuthEquals(NoTokenAuth, getAuthMethod(KERBEROS, TOKEN, false));
+  }
+
+  /*
    * kerberos server
    */
   @Test
   public void testKerberosServer() throws Exception {
-    assertAuthEquals(Denied,    getAuthMethod(SIMPLE,   KERBEROS));
-    assertAuthEquals(KrbFailed, getAuthMethod(KERBEROS, KERBEROS));    
+    assertAuthEquals(Denied(SIMPLE), getAuthMethod(SIMPLE,   KERBEROS));
+    assertAuthEquals(KrbFailed,      getAuthMethod(KERBEROS, KERBEROS));    
   }
 
   @Test
@@ -620,8 +650,8 @@ public class TestSaslRPC {
     assertAuthEquals(TOKEN, getAuthMethod(KERBEROS, KERBEROS, true));
     // can't fallback to simple when using kerberos w/o tokens
     forceSecretManager = false;
-    assertAuthEquals(NoDigest, getAuthMethod(SIMPLE,   KERBEROS, true));
-    assertAuthEquals(NoDigest, getAuthMethod(KERBEROS, KERBEROS, true));
+    assertAuthEquals(Denied(TOKEN), getAuthMethod(SIMPLE,   KERBEROS, true));
+    assertAuthEquals(Denied(TOKEN), getAuthMethod(KERBEROS, KERBEROS, true));
   }
 
   @Test
@@ -629,8 +659,8 @@ public class TestSaslRPC {
     assertAuthEquals(BadToken, getAuthMethod(SIMPLE,   KERBEROS, false));
     assertAuthEquals(BadToken, getAuthMethod(KERBEROS, KERBEROS, false));
     forceSecretManager = false;
-    assertAuthEquals(NoDigest, getAuthMethod(SIMPLE,   KERBEROS, true));
-    assertAuthEquals(NoDigest, getAuthMethod(KERBEROS, KERBEROS, true));
+    assertAuthEquals(Denied(TOKEN), getAuthMethod(SIMPLE,   KERBEROS, false));
+    assertAuthEquals(Denied(TOKEN), getAuthMethod(KERBEROS, KERBEROS, false));
   }
 
 

@@ -76,6 +76,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9015. Standardize creation of SaslRpcServers (daryn via bobby)
 
+    HADOOP-9021. Enforce configured SASL method on the server (daryn via
+    bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
