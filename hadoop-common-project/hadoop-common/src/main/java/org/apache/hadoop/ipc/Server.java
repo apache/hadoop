@@ -45,6 +45,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -87,7 +88,9 @@ import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -113,7 +116,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public abstract class Server {
   private final boolean authorize;
-  private boolean isSecurityEnabled;
+  private EnumSet<AuthMethod> enabledAuthMethods;
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   
   public void addTerseExceptions(Class<?>... exceptionClass) {
@@ -1334,34 +1337,9 @@ public abstract class Server {
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
           }
-          boolean useSaslServer = isSecurityEnabled;
-          final boolean clientUsingSasl;
-          switch (authMethod) {
-            case SIMPLE: { // no sasl for simple
-              clientUsingSasl = false;
-              break;
-            }
-            case DIGEST: { // always allow tokens if there's a secret manager
-              useSaslServer |= (secretManager != null);
-              clientUsingSasl = true;
-              break;
-            }
-            default: {
-              clientUsingSasl = true;
-              break;
-            }
-          }
-          if (useSaslServer) {
-            saslServer = createSaslServer(authMethod);
-          } else if (clientUsingSasl) { // security is off
-            doSaslReply(SaslStatus.SUCCESS, new IntWritable(
-                SaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
-            authMethod = AuthMethod.SIMPLE;
-            // client has already sent the initial Sasl message and we
-            // should ignore it. Both client and server should fall back
-            // to simple auth from now on.
-            skipInitialSaslHandshake = true;
-          }
+  
+          // this may create a SASL server, or switch us into SIMPLE
+          authMethod = initializeAuthContext(authMethod);
           
           connectionHeaderBuf = null;
           connectionHeaderRead = true;
@@ -1409,10 +1387,24 @@ public abstract class Server {
       }
     }
 
-    private SaslServer createSaslServer(AuthMethod authMethod)
+    private AuthMethod initializeAuthContext(AuthMethod authMethod)
         throws IOException {
       try {
-        return createSaslServerInternal(authMethod);
+        if (enabledAuthMethods.contains(authMethod)) {
+          saslServer = createSaslServer(authMethod);
+        } else if (enabledAuthMethods.contains(AuthMethod.SIMPLE)) {
+          doSaslReply(SaslStatus.SUCCESS, new IntWritable(
+              SaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
+          authMethod = AuthMethod.SIMPLE;
+          // client has already sent the initial Sasl message and we
+          // should ignore it. Both client and server should fall back
+          // to simple auth from now on.
+          skipInitialSaslHandshake = true;
+        } else {
+          throw new AccessControlException(
+              authMethod + " authentication is not enabled."
+                  + "  Available:" + enabledAuthMethods);
+        }
       } catch (IOException ioe) {
         final String ioeClass = ioe.getClass().getName();
         final String ioeMessage  = ioe.getLocalizedMessage();
@@ -1425,9 +1417,10 @@ public abstract class Server {
         }
         throw ioe;
       }
+      return authMethod;
     }
 
-    private SaslServer createSaslServerInternal(AuthMethod authMethod)
+    private SaslServer createSaslServer(AuthMethod authMethod)
         throws IOException {
       SaslServer saslServer = null;
       String hostname = null;
@@ -1436,18 +1429,9 @@ public abstract class Server {
       
       switch (authMethod) {
         case SIMPLE: {
-          throw new AccessControlException("Authorization ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
-              + ") is enabled but authentication ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
-              + ") is configured as simple. Please configure another method "
-              + "like kerberos or digest.");
+          return null; // no sasl for simple
         }
         case DIGEST: {
-          if (secretManager == null) {
-            throw new AccessControlException(
-                "Server is not configured to do DIGEST authentication.");
-          }
           secretManager.checkAvailableForRead();
           hostname = SaslRpcServer.SASL_DEFAULT_REALM;
           saslCallback = new SaslDigestCallbackHandler(secretManager, this);
@@ -1469,6 +1453,7 @@ public abstract class Server {
           break;
         }
         default:
+          // we should never be able to get here
           throw new AccessControlException(
               "Server does not support SASL " + authMethod);
       }
@@ -1908,7 +1893,9 @@ public abstract class Server {
     this.authorize = 
       conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
                       false);
-    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+
+    // configure supported authentications
+    this.enabledAuthMethods = getAuthMethods(secretManager, conf);
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
@@ -1929,6 +1916,31 @@ public abstract class Server {
     this.exceptionsHandler.addTerseExceptions(StandbyException.class);
   }
 
+  // get the security type from the conf. implicitly include token support
+  // if a secret manager is provided, or fail if token is the conf value but
+  // there is no secret manager
+  private EnumSet<AuthMethod> getAuthMethods(SecretManager<?> secretManager,
+                                             Configuration conf) {
+    AuthenticationMethod confAuthenticationMethod =
+        SecurityUtil.getAuthenticationMethod(conf);        
+    EnumSet<AuthMethod> authMethods =
+        EnumSet.of(confAuthenticationMethod.getAuthMethod()); 
+        
+    if (confAuthenticationMethod == AuthenticationMethod.TOKEN) {
+      if (secretManager == null) {
+        throw new IllegalArgumentException(AuthenticationMethod.TOKEN +
+            " authentication requires a secret manager");
+      } 
+    } else if (secretManager != null) {
+      LOG.debug(AuthenticationMethod.TOKEN +
+          " authentication enabled for secret manager");
+      authMethods.add(AuthenticationMethod.TOKEN.getAuthMethod());
+    }
+    
+    LOG.debug("Server accepts auth methods:" + authMethods);
+    return authMethods;
+  }
+  
   private void closeConnection(Connection connection) {
     synchronized (connectionList) {
       if (connectionList.remove(connection))
@@ -2043,16 +2055,6 @@ public abstract class Server {
   
   Configuration getConf() {
     return conf;
-  }
-  
-  /** for unit testing only, should be called before server is started */ 
-  void disableSecurity() {
-    this.isSecurityEnabled = false;
-  }
-  
-  /** for unit testing only, should be called before server is started */ 
-  void enableSecurity() {
-    this.isSecurityEnabled = true;
   }
   
   /** Sets the socket buffer size used for responding to RPCs */

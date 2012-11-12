@@ -361,6 +361,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8860. Split MapReduce and YARN sections in documentation navigation.
     (tomwhite via tucu)
 
+    HADOOP-9021. Enforce configured SASL method on the server (daryn via
+    bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
