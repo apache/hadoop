@@ -53,7 +53,7 @@ public class JobEndNotifier implements Configurable {
   protected String userUrl;
   protected String proxyConf;
   protected int numTries; //Number of tries to attempt notification
-  protected int waitInterval; //Time to wait between retrying notification
+  protected int waitInterval; //Time (ms) to wait between retrying notification
   protected URL urlToNotify; //URL to notify read from the config
   protected Proxy proxyToUse = Proxy.NO_PROXY; //Proxy to use for notification
 
@@ -71,10 +71,10 @@ public class JobEndNotifier implements Configurable {
       , conf.getInt(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, 1)
     );
     waitInterval = Math.min(
-    conf.getInt(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, 5)
-    , conf.getInt(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, 5)
+    conf.getInt(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, 5000)
+    , conf.getInt(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, 5000)
     );
-    waitInterval = (waitInterval < 0) ? 5 : waitInterval;
+    waitInterval = (waitInterval < 0) ? 5000 : waitInterval;
 
     userUrl = conf.get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL);
 
