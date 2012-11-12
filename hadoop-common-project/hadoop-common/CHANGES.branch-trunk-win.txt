@@ -47,3 +47,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-8977. Multiple FsShell test failures on Windows. (Chris Nauroth via
   suresh)
+
+  HADOOP-9005. Merge hadoop cmd line scripts from branch-1-win.
+  (Ivan Mitic via suresh)
