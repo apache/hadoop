@@ -274,7 +274,7 @@ public class DistCpOptions {
    * @param maxMaps - Number of maps
    */
   public void setMaxMaps(int maxMaps) {
-    this.maxMaps = maxMaps;
+    this.maxMaps = Math.max(maxMaps, 1);
   }
 
   /** Get the map bandwidth in MB
