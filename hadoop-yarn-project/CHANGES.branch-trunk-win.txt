@@ -4,4 +4,6 @@ branch-trunk-win changes - unreleased
   (Chris Nauroth via suresh)
 
   YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
-
+  
+  YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
+  suresh)
