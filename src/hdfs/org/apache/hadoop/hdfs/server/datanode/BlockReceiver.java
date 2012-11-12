@@ -62,6 +62,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private DataInputStream in = null; // from where data are read
   private DataChecksum checksum; // from where chunks of a block can be read
   private OutputStream out = null; // to block file at local disk
+  private OutputStream cout = null; // output stream for cehcksum file
   private FileDescriptor outFd;
   private DataOutputStream checksumOut = null; // to crc file at local disk
   private int bytesPerChecksum;
@@ -115,6 +116,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       this.finalized = false;
       if (streams != null) {
         this.out = streams.dataOut;
+        this.cout = streams.checksumOut;
         if (out instanceof FileOutputStream) {
           this.outFd = ((FileOutputStream) out).getFD();
         } else {
@@ -122,7 +124,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               + out.getClass());
         }
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-                                                  streams.checksumOut, 
+                                                  streams.checksumOut,
                                                   SMALL_BUFFER_SIZE));
         // If this block is for appends, then remove it from periodic
         // validation.
@@ -160,6 +162,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (checksumOut != null) {
         checksumOut.flush();
+        if (datanode.syncOnClose && (cout instanceof FileOutputStream)) {
+          ((FileOutputStream)cout).getChannel().force(true);
+        }
         checksumOut.close();
         checksumOut = null;
       }
@@ -170,6 +175,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (out != null) {
         out.flush();
+        if (datanode.syncOnClose && (out instanceof FileOutputStream)) {
+          ((FileOutputStream)out).getChannel().force(true);
+        }
         out.close();
         out = null;
       }
