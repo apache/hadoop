@@ -220,7 +220,11 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4162. Some malformed and unquoted HTML strings are returned from 
     datanode web ui. (Darek Dagit via suresh)
 
-  
+    HDFS-4164. fuse_dfs: add -lrt to the compiler command line on Linux.
+    (Colin Patrick McCabe via eli)
+
+Release 2.0.2-alpha - 2012-09-07 
+
   INCOMPATIBLE CHANGES
 
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
