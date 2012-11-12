@@ -1,0 +1,5 @@
+branch-trunk-win changes - unreleased
+
+  HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
+  Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
