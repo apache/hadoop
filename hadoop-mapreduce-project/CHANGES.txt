@@ -90,6 +90,9 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4751. AM stuck in KILL_WAIT for days (vinodkv via bobby)
 
     MAPREDUCE-4787. TestJobMonitorAndPrint is broken (Rob Parker via bobby)
+
+    MAPREDUCE-4425. Speculation + Fetch failures can lead to a hung job (jlowe 
+    via bobby)
  
 Release 0.23.4 - UNRELEASED
 

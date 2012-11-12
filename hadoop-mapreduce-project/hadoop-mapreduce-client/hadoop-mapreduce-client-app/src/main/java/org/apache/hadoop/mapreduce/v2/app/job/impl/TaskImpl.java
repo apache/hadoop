@@ -212,15 +212,17 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     .addTransition(TaskStateInternal.SUCCEEDED, //only possible for map tasks
         EnumSet.of(TaskStateInternal.SCHEDULED, TaskStateInternal.SUCCEEDED, TaskStateInternal.FAILED),
         TaskEventType.T_ATTEMPT_FAILED, new MapRetroactiveFailureTransition())
+    .addTransition(TaskStateInternal.SUCCEEDED, TaskStateInternal.SUCCEEDED,
+        EnumSet.of(TaskEventType.T_ATTEMPT_KILLED,
+            TaskEventType.T_ATTEMPT_SUCCEEDED),
+            new AttemptCompletedAtSucceededTransition())
     // Ignore-able transitions.
     .addTransition(
         TaskStateInternal.SUCCEEDED, TaskStateInternal.SUCCEEDED,
         EnumSet.of(TaskEventType.T_KILL,
             TaskEventType.T_ADD_SPEC_ATTEMPT,
             TaskEventType.T_ATTEMPT_COMMIT_PENDING,
-            TaskEventType.T_ATTEMPT_LAUNCHED,
-            TaskEventType.T_ATTEMPT_KILLED,
-            TaskEventType.T_ATTEMPT_SUCCEEDED))
+            TaskEventType.T_ATTEMPT_LAUNCHED))
 
     // Transitions from FAILED state        
     .addTransition(TaskStateInternal.FAILED, TaskStateInternal.FAILED,
@@ -964,6 +966,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           !castEvent.getTaskAttemptID().equals(task.successfulAttempt)) {
         // don't allow a different task attempt to override a previous
         // succeeded state
+        task.finishedAttempts.add(castEvent.getTaskAttemptID());
+        task.inProgressAttempts.remove(castEvent.getTaskAttemptID());
         return TaskStateInternal.SUCCEEDED;
       }
       
@@ -990,6 +994,16 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     @Override
     protected TaskStateInternal getDefaultState(TaskImpl task) {
       return TaskStateInternal.SCHEDULED;
+    }
+  }
+
+  private static class AttemptCompletedAtSucceededTransition
+    implements SingleArcTransition<TaskImpl, TaskEvent> {
+    @Override
+    public void transition(TaskImpl task, TaskEvent event) {
+      TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+      task.finishedAttempts.add(castEvent.getTaskAttemptID());
+      task.inProgressAttempts.remove(castEvent.getTaskAttemptID());
     }
   }
 

@@ -140,7 +140,6 @@ public class TestTaskImpl {
 
     private float progress = 0;
     private TaskAttemptState state = TaskAttemptState.NEW;
-    private TaskAttemptId attemptId;
 
     public MockTaskAttemptImpl(TaskId taskId, int id, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
@@ -150,13 +149,10 @@ public class TestTaskImpl {
         AppContext appContext) {
       super(taskId, id, eventHandler, taskAttemptListener, jobFile, partition, conf,
           dataLocations, committer, jobToken, credentials, clock, appContext);
-      attemptId = Records.newRecord(TaskAttemptId.class);
-      attemptId.setId(id);
-      attemptId.setTaskId(taskId);
     }
 
     public TaskAttemptId getAttemptId() {
-      return attemptId;
+      return getID();
     }
     
     @Override
@@ -521,5 +517,47 @@ public class TestTaskImpl {
   @Test
   public void testCommitAfterSucceeds() {
     runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_COMMIT_PENDING);
+  }
+
+  @Test
+  public void testSpeculativeMapFetchFailure() {
+    // Setup a scenario where speculative task wins, first attempt killed
+    runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_KILLED);
+    assertEquals(2, taskAttempts.size());
+
+    // speculative attempt retroactively fails from fetch failures
+    mockTask.handle(new TaskTAttemptEvent(taskAttempts.get(1).getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+
+    assertTaskScheduledState();
+    assertEquals(3, taskAttempts.size());
+  }
+
+  @Test
+  public void testSpeculativeMapMultipleSucceedFetchFailure() {
+    // Setup a scenario where speculative task wins, first attempt succeeds
+    runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_SUCCEEDED);
+    assertEquals(2, taskAttempts.size());
+
+    // speculative attempt retroactively fails from fetch failures
+    mockTask.handle(new TaskTAttemptEvent(taskAttempts.get(1).getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+
+    assertTaskScheduledState();
+    assertEquals(3, taskAttempts.size());
+  }
+
+  @Test
+  public void testSpeculativeMapFailedFetchFailure() {
+    // Setup a scenario where speculative task wins, first attempt succeeds
+    runSpeculativeTaskAttemptSucceeds(TaskEventType.T_ATTEMPT_FAILED);
+    assertEquals(2, taskAttempts.size());
+
+    // speculative attempt retroactively fails from fetch failures
+    mockTask.handle(new TaskTAttemptEvent(taskAttempts.get(1).getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+
+    assertTaskScheduledState();
+    assertEquals(3, taskAttempts.size());
   }
 }
