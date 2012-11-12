@@ -17,6 +17,9 @@ Release 1.1.1 - Unreleased
     and the related JIRAs: HDFS-278, HDFS-1840, HDFS-1870, HDFS-1890, HDFS-2810,
     HDFS-3646 and HDFS-2240. (szetszwo)
 
+    HDFS-1539. A config option for the datanode to fsycn a block file
+    when block is completely written. (dhruba via szetszwo)
+
   BUG FIXES
 
     HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
