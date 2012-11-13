@@ -25,6 +25,9 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-3990. NN's health report has severe performance problems (daryn)
 
+    HDFS-4181. LeaseManager tries to double remove and prints extra messages
+    (Kihwal Lee via daryn)
+
   BUG FIXES
 
     HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
