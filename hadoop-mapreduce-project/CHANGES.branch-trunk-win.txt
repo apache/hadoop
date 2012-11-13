@@ -5,3 +5,6 @@ branch-trunk-win changes - unreleased
 
   MAPREDUCE-4780. MapReduce distribution build fails on Windows.
   (Chris Nauroth via suresh)
+
+  MAPREDUCE-4790. MapReduce build script would be more readable using abspath.
+  (Chris Nauroth via suresh)
