@@ -580,6 +580,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4164. fuse_dfs: add -lrt to the compiler command line on Linux.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3921. NN will prematurely consider blocks missing when entering active
+    state while still in safe mode. (atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
