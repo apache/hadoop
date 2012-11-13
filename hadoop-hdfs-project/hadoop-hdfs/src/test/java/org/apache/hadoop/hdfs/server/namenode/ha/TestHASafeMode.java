@@ -631,6 +631,32 @@ public class TestHASafeMode {
   }
   
   /**
+   * Make sure that when we transition to active in safe mode that we don't
+   * prematurely consider blocks missing just because not all DNs have reported
+   * yet.
+   * 
+   * This is a regression test for HDFS-3921.
+   */
+  @Test
+  public void testNoPopulatingReplQueuesWhenStartingActiveInSafeMode()
+      throws IOException {
+    DFSTestUtil.createFile(fs, new Path("/test"), 15*BLOCK_SIZE, (short)3, 1L);
+    
+    // Stop the DN so that when the NN restarts not all blocks wil be reported
+    // and the NN won't leave safe mode.
+    cluster.stopDataNode(1);
+    // Restart the namenode but don't wait for it to hear from all DNs (since
+    // one DN is deliberately shut down.)
+    cluster.restartNameNode(0, false);
+    cluster.transitionToActive(0);
+    
+    assertTrue(cluster.getNameNode(0).isInSafeMode());
+    // We shouldn't yet consider any blocks "missing" since we're in startup
+    // safemode, i.e. not all DNs may have reported.
+    assertEquals(0, cluster.getNamesystem(0).getMissingBlocksCount());
+  }
+  
+  /**
    * Print a big banner in the test log to make debug easier.
    */
   static void banner(String string) {
