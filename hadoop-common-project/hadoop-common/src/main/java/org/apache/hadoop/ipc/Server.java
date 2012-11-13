@@ -1179,6 +1179,10 @@ public abstract class Server {
           AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
           throw e;
         }
+        if (replyToken == null && authMethod == AuthMethod.PLAIN) {
+          // client needs at least response to know if it should use SIMPLE
+          replyToken = new byte[0];
+        }
         if (replyToken != null) {
           if (LOG.isDebugEnabled())
             LOG.debug("Will send token of size " + replyToken.length
