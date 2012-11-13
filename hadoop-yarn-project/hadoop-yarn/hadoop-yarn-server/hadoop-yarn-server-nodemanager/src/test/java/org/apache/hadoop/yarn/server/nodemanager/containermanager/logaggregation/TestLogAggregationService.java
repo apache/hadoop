@@ -319,6 +319,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         this.user, null,
         ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY, this.acls));        
 
+    dispatcher.await();
     ApplicationEvent expectedInitEvents[] = new ApplicationEvent[]{
         new ApplicationEvent(
             application1,
