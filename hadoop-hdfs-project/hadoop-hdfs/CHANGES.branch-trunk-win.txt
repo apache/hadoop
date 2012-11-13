@@ -3,3 +3,6 @@ branch-trunk-win changes - unreleased
   HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
   Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
 
+  HDFS-4163. HDFS distribution build fails on Windows. (Chris Nauroth via
+  suresh)
+
