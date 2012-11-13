@@ -513,6 +513,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4786. Job End Notification retry interval is 5 milliseconds by
     default (Ravi Prakash via bobby)
+
+    MAPREDUCE-4517. Too many INFO messages written out during AM to RM heartbeat
+    (Jason Lowe via tgraves)
  
 Release 0.23.4 - UNRELEASED
 
