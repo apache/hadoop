@@ -166,10 +166,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = xceiverCount; 
   }
 
-  /** rack name **/
+  /** network location **/
   public synchronized String getNetworkLocation() {return location;}
     
-  /** Sets the rack name */
+  /** Sets the network location */
   public synchronized void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }

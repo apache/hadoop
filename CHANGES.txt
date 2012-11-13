@@ -8,6 +8,10 @@ Release 1.2.0 - unreleased
     module external to HDFS to specify how HDFS blocks should be placed.
     (Sumadhur Reddy Bolli via szetszwo)
  
+    HADOOP-8820. Backport HADOOP-8469 and HADOOP-8470: Make NetworkTopology
+    class pluggable and add NetworkTopologyWithNodeGroup, a 4-layer
+    implementation of NetworkTopology.  (Junping Du and Jing Zhao via szetszwo)
+
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via eli)
 
