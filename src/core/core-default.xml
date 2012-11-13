@@ -466,7 +466,8 @@
   </description>
 </property>
 
-<!-- Rack Configuration -->
+
+<!-- Topology Configuration -->
 
 <property>
   <name>topology.node.switch.mapping.impl</name>
@@ -475,6 +476,13 @@
     invokes a script specified in topology.script.file.name to resolve
     node names. If the value for topology.script.file.name is not set, the
     default value of DEFAULT_RACK is returned for all node names.
+  </description>
+</property>
+
+ <property>
+  <name>net.topology.impl</name>
+  <value>org.apache.hadoop.net.NetworkTopology</value>
+  <description> The default implementation of NetworkTopology which is classic three layer one.
   </description>
 </property>
 

@@ -342,7 +342,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private Host2NodesMap host2DataNodeMap = new Host2NodesMap();
     
   // datanode networktoplogy
-  NetworkTopology clusterMap = new NetworkTopology();
+  NetworkTopology clusterMap;
   private DNSToSwitchMapping dnsToSwitchMapping;
   
   // for block replicas placement
@@ -521,7 +521,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
     this.blocksInvalidateWorkPct = 
               DFSUtil.getInvalidateWorkPctPerIteration(conf);
+
     this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+    this.clusterMap = (NetworkTopology) ReflectionUtils.newInstance(
+        conf.getClass("net.topology.impl", NetworkTopology.class,
+            NetworkTopology.class), conf);
 
     this.replicator = BlockPlacementPolicy.getInstance(conf, this, clusterMap);
     this.defaultReplication = conf.getInt("dfs.replication", 3);
@@ -1026,8 +1030,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         true);
     if (blocks != null) {
       //sort the blocks
-      DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
+      // In some deployment cases, cluster is with separation of task tracker 
+      // and datanode which means client machines will not always be recognized 
+      // as known data nodes, so here we should try to get node (but not 
+      // datanode only) for locality based sort.
+      Node client = host2DataNodeMap.getDatanodeByHost(
           clientMachine);
+      if (client == null) {
+        List<String> hosts = new ArrayList<String> (1);
+        hosts.add(clientMachine);
+        String rName = dnsToSwitchMapping.resolve(hosts).get(0);
+        if (rName != null)
+          client = new NodeBase(clientMachine, rName);
+      }   
+
       DFSUtil.StaleComparator comparator = null;
       if (checkForStaleDataNodes) {
         comparator = new DFSUtil.StaleComparator(staleInterval);
