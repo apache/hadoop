@@ -53,3 +53,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-9008. Building hadoop tarball fails on Windows. (Chris Nauroth via
   suresh)
+
+  HADOOP-9011. saveVersion.py does not include branch in version annotation.
+  (Chris Nauroth via suresh)
