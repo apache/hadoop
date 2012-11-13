@@ -361,6 +361,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8860. Split MapReduce and YARN sections in documentation navigation.
     (tomwhite via tucu)
 
+    HADOOP-9021. Enforce configured SASL method on the server (daryn via
+    bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -420,6 +423,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9012. IPC Client sends wrong connection context (daryn via bobby)
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
+
+    HADOOP-8999. SASL negotiation is flawed (daryn)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1139,6 +1144,12 @@ Release 0.23.5 - UNRELEASED
     contains a colon (jlowe via bobby)
 
     HADOOP-8986. Server$Call object is never released after it is sent (bobby)
+
+    HADOOP-9022. Hadoop distcp tool fails to copy file if -m 0 specified
+    (Jonathan Eagles vai bobby)
+
+    HADOOP-9025. org.apache.hadoop.tools.TestCopyListing failing (Jonathan
+    Eagles via jlowe)
 
 Release 0.23.4 - UNRELEASED
 

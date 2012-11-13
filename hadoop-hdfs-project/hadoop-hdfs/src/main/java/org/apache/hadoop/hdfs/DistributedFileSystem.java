@@ -509,14 +509,32 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /**
-   * Create a directory with given name and permission, only when
-   * parent directory exists.
+   * Create a directory, only when the parent directories exist.
+   *
+   * See {@link FsPermission#applyUMask(FsPermission)} for details of how
+   * the permission is applied.
+   *
+   * @param f           The path to create
+   * @param permission  The permission.  See FsPermission#applyUMask for 
+   *                    details about how this is used to calculate the
+   *                    effective permission.
    */
   public boolean mkdir(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
     return dfs.mkdirs(getPathName(f), permission, false);
   }
 
+  /**
+   * Create a directory and its parent directories.
+   *
+   * See {@link FsPermission#applyUMask(FsPermission)} for details of how
+   * the permission is applied.
+   *
+   * @param f           The path to create
+   * @param permission  The permission.  See FsPermission#applyUMask for 
+   *                    details about how this is used to calculate the
+   *                    effective permission.
+   */
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);

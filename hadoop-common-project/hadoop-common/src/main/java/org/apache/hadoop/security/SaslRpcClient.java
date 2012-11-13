@@ -145,15 +145,13 @@ public class SaslRpcClient {
       byte[] saslToken = new byte[0];
       if (saslClient.hasInitialResponse())
         saslToken = saslClient.evaluateChallenge(saslToken);
-      if (saslToken != null) {
+      while (saslToken != null) {
         outStream.writeInt(saslToken.length);
         outStream.write(saslToken, 0, saslToken.length);
         outStream.flush();
         if (LOG.isDebugEnabled())
           LOG.debug("Have sent token of size " + saslToken.length
               + " from initSASLContext.");
-      }
-      if (!saslClient.isComplete()) {
         readStatus(inStream);
         int len = inStream.readInt();
         if (len == SaslRpcServer.SWITCH_TO_SIMPLE_AUTH) {
@@ -161,32 +159,18 @@ public class SaslRpcClient {
             LOG.debug("Server asks us to fall back to simple auth.");
           saslClient.dispose();
           return false;
+        } else if ((len == 0) && saslClient.isComplete()) {
+          break;
         }
         saslToken = new byte[len];
         if (LOG.isDebugEnabled())
           LOG.debug("Will read input token of size " + saslToken.length
               + " for processing by initSASLContext");
         inStream.readFully(saslToken);
-      }
-
-      while (!saslClient.isComplete()) {
         saslToken = saslClient.evaluateChallenge(saslToken);
-        if (saslToken != null) {
-          if (LOG.isDebugEnabled())
-            LOG.debug("Will send token of size " + saslToken.length
-                + " from initSASLContext.");
-          outStream.writeInt(saslToken.length);
-          outStream.write(saslToken, 0, saslToken.length);
-          outStream.flush();
-        }
-        if (!saslClient.isComplete()) {
-          readStatus(inStream);
-          saslToken = new byte[inStream.readInt()];
-          if (LOG.isDebugEnabled())
-            LOG.debug("Will read input token of size " + saslToken.length
-                + " for processing by initSASLContext");
-          inStream.readFully(saslToken);
-        }
+      }
+      if (!saslClient.isComplete()) { // shouldn't happen
+        throw new SaslException("Internal negotiation error");
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client context established. Negotiated QoP: "

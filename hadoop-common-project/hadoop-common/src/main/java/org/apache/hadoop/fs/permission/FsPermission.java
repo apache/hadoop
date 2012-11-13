@@ -184,7 +184,18 @@ public class FsPermission implements Writable {
     return str;
   }
 
-  /** Apply a umask to this permission and return a new one */
+  /**
+   * Apply a umask to this permission and return a new one.
+   *
+   * The umask is used by create, mkdir, and other Hadoop filesystem operations.
+   * The mode argument for these operations is modified by removing the bits
+   * which are set in the umask.  Thus, the umask limits the permissions which
+   * newly created files and directories get.
+   *
+   * @param umask              The umask to use
+   * 
+   * @return                   The effective permission
+   */
   public FsPermission applyUMask(FsPermission umask) {
     return new FsPermission(useraction.and(umask.useraction.not()),
         groupaction.and(umask.groupaction.not()),

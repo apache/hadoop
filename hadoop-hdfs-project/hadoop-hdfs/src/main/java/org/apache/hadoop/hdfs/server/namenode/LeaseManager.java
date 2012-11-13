@@ -135,7 +135,9 @@ public class LeaseManager {
   synchronized void removeLease(Lease lease, String src) {
     sortedLeasesByPath.remove(src);
     if (!lease.removePath(src)) {
-      LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(src + " not found in lease.paths (=" + lease.paths + ")");
+      }
     }
 
     if (!lease.hasPath()) {
@@ -440,11 +442,14 @@ public class LeaseManager {
       oldest.getPaths().toArray(leasePaths);
       for(String p : leasePaths) {
         try {
-          if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
-            LOG.info("Lease recovery for " + p + " is complete. File closed.");
-            removing.add(p);
-          } else {
-            LOG.info("Started block recovery " + p + " lease " + oldest);
+          boolean completed = fsnamesystem.internalReleaseLease(oldest, p,
+              HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          if (LOG.isDebugEnabled()) {
+            if (completed) {
+              LOG.debug("Lease recovery for " + p + " is complete. File closed.");
+            } else {
+              LOG.debug("Started block recovery " + p + " lease " + oldest);
+            }
           }
         } catch (IOException e) {
           LOG.error("Cannot release the path " + p + " in the lease "

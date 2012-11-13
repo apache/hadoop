@@ -144,6 +144,9 @@ public class ApplicationImpl implements Application {
                ApplicationEventType.FINISH_APPLICATION,
                new AppFinishTriggeredTransition())
            .addTransition(ApplicationState.INITING, ApplicationState.INITING,
+               ApplicationEventType.APPLICATION_CONTAINER_FINISHED,
+               CONTAINER_DONE_TRANSITION)
+           .addTransition(ApplicationState.INITING, ApplicationState.INITING,
                ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
                new AppLogInitDoneTransition())
            .addTransition(ApplicationState.INITING, ApplicationState.RUNNING,

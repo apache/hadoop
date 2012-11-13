@@ -216,6 +216,9 @@ Release 0.23.5 - UNRELEASED
     YARN-206. TestApplicationCleanup.testContainerCleanup occasionally fails.
     (jlowe via jeagles)
 
+    YARN-212. NM state machine ignores an APPLICATION_CONTAINER_FINISHED event
+    when it shouldn't (Nathan Roberts via jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES

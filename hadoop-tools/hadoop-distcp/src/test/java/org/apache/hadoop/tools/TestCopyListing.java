@@ -131,8 +131,8 @@ public class TestCopyListing extends SimpleCopyListing {
       fs = FileSystem.get(getConf());
       List<Path> srcPaths = new ArrayList<Path>();
       srcPaths.add(new Path("/tmp/in/*/*"));
-      TestDistCpUtils.createFile(fs, "/tmp/in/1.txt");
-      TestDistCpUtils.createFile(fs, "/tmp/in/src/1.txt");
+      TestDistCpUtils.createFile(fs, "/tmp/in/src1/1.txt");
+      TestDistCpUtils.createFile(fs, "/tmp/in/src2/1.txt");
       Path target = new Path("/tmp/out");
       Path listingFile = new Path("/tmp/list");
       DistCpOptions options = new DistCpOptions(srcPaths, target);

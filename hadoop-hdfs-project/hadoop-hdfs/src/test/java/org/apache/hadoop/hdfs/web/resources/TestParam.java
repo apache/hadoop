@@ -224,4 +224,14 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testToSortedStringEscapesURICharacters() {
+    final String sep = "&";
+    Param<?, ?> ampParam = new TokenArgumentParam("token&ampersand");
+    Param<?, ?> equalParam = new RenewerParam("renewer=equal");
+    final String expected = "&renewer=renewer%3Dequal&token=token%26ampersand";
+    final String actual = Param.toSortedString(sep, equalParam, ampParam);
+    Assert.assertEquals(expected, actual);
+  }
 }

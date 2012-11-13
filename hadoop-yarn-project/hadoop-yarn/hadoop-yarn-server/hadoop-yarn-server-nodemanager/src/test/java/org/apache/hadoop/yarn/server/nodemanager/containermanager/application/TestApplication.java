@@ -155,6 +155,60 @@ public class TestApplication {
     }
   }
 
+  /**
+   * Finished containers properly tracked when only container finishes in APP_INITING
+   */
+  @Test
+  public void testContainersCompleteDuringAppInit1() {
+    WrappedApplication wa = null;
+    try {
+      wa = new WrappedApplication(3, 314159265358979L, "yak", 1);
+      wa.initApplication();
+      wa.initContainer(-1);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.containerFinished(0);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.applicationInited();
+      assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
+      assertEquals(0, wa.app.getContainers().size());
+    } finally {
+      if (wa != null)
+        wa.finished();
+    }
+  }
+
+  /**
+   * Finished containers properly tracked when 1 of several containers finishes in APP_INITING
+   */
+  @Test
+  public void testContainersCompleteDuringAppInit2() {
+    WrappedApplication wa = null;
+    try {
+      wa = new WrappedApplication(3, 314159265358979L, "yak", 3);
+      wa.initApplication();
+      wa.initContainer(-1);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.containerFinished(0);
+
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.applicationInited();
+      assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
+      assertEquals(2, wa.app.getContainers().size());
+
+      wa.containerFinished(1);
+      wa.containerFinished(2);
+      assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
+      assertEquals(0, wa.app.getContainers().size());
+    } finally {
+      if (wa != null)
+        wa.finished();
+    }
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testAppFinishedOnRunningContainers() {

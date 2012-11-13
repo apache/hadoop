@@ -55,22 +55,22 @@ public class TestJobEndNotifier extends JobEndNotifier {
   //Test maximum retry interval is capped by
   //MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL
   private void testWaitInterval(Configuration conf) {
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "5");
-    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "1");
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "5000");
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "1000");
     setConf(conf);
-    Assert.assertTrue("Expected waitInterval to be 1, but was " + waitInterval,
-      waitInterval == 1);
+    Assert.assertTrue("Expected waitInterval to be 1000, but was "
+      + waitInterval, waitInterval == 1000);
 
-    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "10");
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "10000");
     setConf(conf);
-    Assert.assertTrue("Expected waitInterval to be 5, but was " + waitInterval,
-      waitInterval == 5);
+    Assert.assertTrue("Expected waitInterval to be 5000, but was "
+      + waitInterval, waitInterval == 5000);
 
     //Test negative numbers are set to default
     conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "-10");
     setConf(conf);
-    Assert.assertTrue("Expected waitInterval to be 5, but was " + waitInterval,
-      waitInterval == 5);
+    Assert.assertTrue("Expected waitInterval to be 5000, but was "
+      + waitInterval, waitInterval == 5000);
   }
 
   private void testProxyConfiguration(Configuration conf) {
@@ -125,17 +125,28 @@ public class TestJobEndNotifier extends JobEndNotifier {
   public void testNotifyRetries() throws InterruptedException {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_URL, "http://nonexistent");
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "3");
-    conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "3");
-    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "3000");
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "3000");
     JobReport jobReport = Mockito.mock(JobReport.class);
-
+ 
     long startTime = System.currentTimeMillis();
     this.notificationCount = 0;
     this.setConf(conf);
     this.notify(jobReport);
     long endTime = System.currentTimeMillis();
+    Assert.assertEquals("Only 1 try was expected but was : "
+      + this.notificationCount, this.notificationCount, 1);
+    Assert.assertTrue("Should have taken more than 5 seconds it took "
+      + (endTime - startTime), endTime - startTime > 5000);
+
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "3");
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "3");
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "3000");
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "3000");
+
+    startTime = System.currentTimeMillis();
+    this.notificationCount = 0;
+    this.setConf(conf);
+    this.notify(jobReport);
+    endTime = System.currentTimeMillis();
     Assert.assertEquals("Only 3 retries were expected but was : "
       + this.notificationCount, this.notificationCount, 3);
     Assert.assertTrue("Should have taken more than 9 seconds it took "
