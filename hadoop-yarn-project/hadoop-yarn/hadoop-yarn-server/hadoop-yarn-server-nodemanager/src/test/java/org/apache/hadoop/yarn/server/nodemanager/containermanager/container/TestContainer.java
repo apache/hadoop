@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
@@ -65,6 +67,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -200,6 +204,32 @@ public class TestContainer {
       assertEquals(ContainerState.EXITED_WITH_SUCCESS,
           wc.c.getContainerState());
       
+      verifyCleanupCall(wc);
+    }
+    finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked") // mocked generic
+  public void testInitWhileDone() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(6, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      wc.containerSuccessful();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      // Now in DONE, issue INIT
+      wc.initContainer();
+      // Verify still in DONE
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
       verifyCleanupCall(wc);
     }
     finally {
@@ -506,6 +536,8 @@ public class TestContainer {
     final EventHandler<ContainersLauncherEvent> launcherBus;
     final EventHandler<ContainersMonitorEvent> monitorBus;
     final EventHandler<AuxServicesEvent> auxBus;
+    final EventHandler<ApplicationEvent> appBus;
+    final EventHandler<LogHandlerEvent> LogBus;
 
     final ContainerLaunchContext ctxt;
     final ContainerId cId;
@@ -527,10 +559,14 @@ public class TestContainer {
       launcherBus = mock(EventHandler.class);
       monitorBus = mock(EventHandler.class);
       auxBus = mock(EventHandler.class);
+      appBus = mock(EventHandler.class);
+      LogBus = mock(EventHandler.class);
       dispatcher.register(LocalizationEventType.class, localizerBus);
       dispatcher.register(ContainersLauncherEventType.class, launcherBus);
       dispatcher.register(ContainersMonitorEventType.class, monitorBus);
       dispatcher.register(AuxServicesEventType.class, auxBus);
+      dispatcher.register(ApplicationEventType.class, appBus);
+      dispatcher.register(LogHandlerEventType.class, LogBus);
       this.user = user;
 
       ctxt = mock(ContainerLaunchContext.class);
@@ -652,6 +688,11 @@ public class TestContainer {
     public void containerSuccessful() {
       c.handle(new ContainerEvent(cId,
           ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
+      drainDispatcherEvents();
+    }
+    public void containerResourcesCleanup() {
+      c.handle(new ContainerEvent(cId,
+          ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
       drainDispatcherEvents();
     }
 

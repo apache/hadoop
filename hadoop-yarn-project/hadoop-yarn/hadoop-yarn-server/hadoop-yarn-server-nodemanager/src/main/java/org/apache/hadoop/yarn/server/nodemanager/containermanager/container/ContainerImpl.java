@@ -278,6 +278,8 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.DONE, ContainerState.DONE,
         ContainerEventType.KILL_CONTAINER)
     .addTransition(ContainerState.DONE, ContainerState.DONE,
+        ContainerEventType.INIT_CONTAINER)
+    .addTransition(ContainerState.DONE, ContainerState.DONE,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
 
