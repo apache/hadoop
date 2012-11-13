@@ -64,3 +64,6 @@ Branch-2802 Snapshot (Unreleased)
   and has snapshots. (Jing Zhao via szetszwo)
 
   HDFS-4170. Add snapshot information to INodesInPath.  (szetszwo)
+
+  HDFS-4177. Add a snapshot parameter to INodeDirectory.getChildrenList() for
+  selecting particular snapshot children list views.  (szetszwo)

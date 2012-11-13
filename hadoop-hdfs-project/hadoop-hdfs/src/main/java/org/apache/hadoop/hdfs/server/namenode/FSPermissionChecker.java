@@ -28,6 +28,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -121,7 +123,8 @@ class FSPermissionChecker {
     }
     // check if (parentAccess != null) && file exists, then check sb
       // Resolve symlinks, the check is performed on the link target.
-      final INode[] inodes = root.getExistingPathINodes(path, true).getINodes();
+      final INodesInPath inodesInPath = root.getExistingPathINodes(path, true); 
+      final INode[] inodes = inodesInPath.getINodes();
       int ancestorIndex = inodes.length - 2;
       for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
           ancestorIndex--);
@@ -141,7 +144,8 @@ class FSPermissionChecker {
         check(inodes[inodes.length - 1], access);
       }
       if (subAccess != null) {
-        checkSubAccess(inodes[inodes.length - 1], subAccess);
+        final Snapshot s = inodesInPath.getPathSnapshot();
+        checkSubAccess(inodes[inodes.length - 1], s, subAccess);
       }
       if (doCheckOwner) {
         checkOwner(inodes[inodes.length - 1]);
@@ -162,7 +166,7 @@ class FSPermissionChecker {
     }
   }
 
-  private void checkSubAccess(INode inode, FsAction access
+  private void checkSubAccess(INode inode, Snapshot snapshot, FsAction access
       ) throws AccessControlException {
     if (inode == null || !inode.isDirectory()) {
       return;
@@ -173,7 +177,7 @@ class FSPermissionChecker {
       INodeDirectory d = directories.pop();
       check(d, access);
 
-      for(INode child : d.getChildrenList()) {
+      for(INode child : d.getChildrenList(snapshot)) {
         if (child.isDirectory()) {
           directories.push((INodeDirectory)child);
         }

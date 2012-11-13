@@ -118,7 +118,8 @@ public class TestSnapshotPathINodes {
       final Snapshot snapshot, int index) {
     assertEquals(isSnapshot, inodesInPath.isSnapshot());
     assertEquals(index, inodesInPath.getSnapshotRootIndex());
-    assertEquals(snapshot, inodesInPath.getSnapshot());
+    assertEquals(isSnapshot? snapshot: null, inodesInPath.getPathSnapshot());
+    assertEquals(isSnapshot? null: snapshot, inodesInPath.getLatestSnapshot());
   }
 
   /** 

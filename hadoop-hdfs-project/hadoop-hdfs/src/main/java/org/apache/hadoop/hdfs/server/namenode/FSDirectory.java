@@ -23,7 +23,6 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -60,7 +59,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ByteArray;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
 
@@ -696,14 +697,15 @@ public class FSDirectory implements Closeable {
             + error);
         throw new FileAlreadyExistsException(error);
       }
-      List<INode> children = dstInode.isDirectory() ? 
-          ((INodeDirectory) dstInode).getChildren() : null;
-      if (children != null && children.size() != 0) {
-        error = "rename cannot overwrite non empty destination directory "
-            + dst;
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-            + error);
-        throw new IOException(error);
+      if (dstInode.isDirectory()) {
+        final ReadOnlyList<INode> children = ((INodeDirectory) dstInode
+            ).getChildrenList(dstInodesInPath.getPathSnapshot());
+        if (!children.isEmpty()) {
+          error = "rename destination directory is not empty: " + dst;
+          NameNode.stateChangeLog.warn(
+              "DIR* FSDirectory.unprotectedRenameTo: " + error);
+          throw new IOException(error);
+        }
       }
       INode snapshotNode = hasSnapshot(dstInode);
       if (snapshotNode != null) {
@@ -1072,12 +1074,14 @@ public class FSDirectory implements Closeable {
   boolean isNonEmptyDirectory(String path) throws UnresolvedLinkException {
     readLock();
     try {
-      final INode inode = rootDir.getNode(path, false);
+      final INodesInPath inodesInPath = rootDir.getINodesInPath(path, false);
+      final INode inode = inodesInPath.getINode(0);
       if (inode == null || !inode.isDirectory()) {
         //not found or not a directory
         return false;
       }
-      return ((INodeDirectory)inode).getChildrenList().size() != 0;
+      final Snapshot s = inodesInPath.getPathSnapshot();
+      return !((INodeDirectory)inode).getChildrenList(s).isEmpty();
     } finally {
       readUnlock();
     }
@@ -1155,13 +1159,10 @@ public class FSDirectory implements Closeable {
           && ((INodeDirectorySnapshottable) targetDir).getNumSnapshots() > 0) {
         return target;
       }
-      List<INode> children = targetDir.getChildren();
-      if (children != null) {
-        for (INode child : children) {
-          INode snapshotDir = hasSnapshot(child);
-          if (snapshotDir != null) {
-            return snapshotDir;
-          }
+      for (INode child : targetDir.getChildrenList(null)) {
+        INode snapshotDir = hasSnapshot(child);
+        if (snapshotDir != null) {
+          return snapshotDir;
         }
       }
     }
@@ -1195,7 +1196,7 @@ public class FSDirectory implements Closeable {
       replaceINodeUnsynced(path, oldnode, newnode);
 
       //update children's parent directory
-      for(INode i : newnode.getChildrenList()) {
+      for(INode i : newnode.getChildrenList(null)) {
         i.parent = newnode;
       }
     } finally {
@@ -1239,7 +1240,8 @@ public class FSDirectory implements Closeable {
 
     readLock();
     try {
-      INode targetNode = rootDir.getNode(srcs, true);
+      final INodesInPath inodesInPath = rootDir.getINodesInPath(srcs, true);
+      final INode targetNode = inodesInPath.getINode(0);
       if (targetNode == null)
         return null;
       
@@ -1248,8 +1250,10 @@ public class FSDirectory implements Closeable {
             new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
                 targetNode, needLocation)}, 0);
       }
+
       INodeDirectory dirInode = (INodeDirectory)targetNode;
-      List<INode> contents = dirInode.getChildrenList();
+      final ReadOnlyList<INode> contents = dirInode.getChildrenList(
+          inodesInPath.getPathSnapshot());
       int startChild = dirInode.nextChild(startAfter);
       int totalNumChildren = contents.size();
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
@@ -1738,7 +1742,7 @@ public class FSDirectory implements Closeable {
       }
       if (maxDirItems != 0) {
         INodeDirectory parent = (INodeDirectory)pathComponents[pos-1];
-        int count = parent.getChildrenList().size();
+        int count = parent.getChildrenList(null).size();
         if (count >= maxDirItems) {
           throw new MaxDirectoryItemsExceededException(maxDirItems, count);
         }
@@ -1881,7 +1885,7 @@ public class FSDirectory implements Closeable {
      * INode. using 'parent' is not currently recommended. */
     nodesInPath.add(dir);
 
-    for (INode child : dir.getChildrenList()) {
+    for (INode child : dir.getChildrenList(null)) {
       if (child.isDirectory()) {
         updateCountForINodeWithQuota((INodeDirectory)child, 
                                      counts, nodesInPath);

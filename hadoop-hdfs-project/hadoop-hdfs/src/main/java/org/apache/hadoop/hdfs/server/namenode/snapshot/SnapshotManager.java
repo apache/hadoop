@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 /** Manage snapshottable directories and their snapshots. */
 public class SnapshotManager implements SnapshotStats {
@@ -124,10 +125,10 @@ public class SnapshotManager implements SnapshotStats {
     /** Process snapshot creation recursively. */
     private void processRecursively(final INodeDirectory srcDir,
         final INodeDirectory dstDir) throws IOException {
-      final List<INode> children = srcDir.getChildren();
-      if (children != null) {
+      final ReadOnlyList<INode> children = srcDir.getChildrenList(null);
+      if (!children.isEmpty()) {
         final List<INode> inodes = new ArrayList<INode>(children.size());
-        for(final INode c : new ArrayList<INode>(children)) {
+        for(final INode c : new ArrayList<INode>(ReadOnlyList.Util.asList(children))) {
           final INode i;
           if (c == null) {
             i = null;

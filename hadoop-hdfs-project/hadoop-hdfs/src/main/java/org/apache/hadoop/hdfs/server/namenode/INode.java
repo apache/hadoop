@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -48,7 +49,11 @@ import com.google.common.primitives.SignedBytes;
  */
 @InterfaceAudience.Private
 public abstract class INode implements Comparable<byte[]> {
-  static final List<INode> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<INode>());
+  static final List<INode> EMPTY_LIST
+      = Collections.unmodifiableList(new ArrayList<INode>());
+  static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
+      = ReadOnlyList.Util.asReadOnlyList(EMPTY_LIST);
+
   /**
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.

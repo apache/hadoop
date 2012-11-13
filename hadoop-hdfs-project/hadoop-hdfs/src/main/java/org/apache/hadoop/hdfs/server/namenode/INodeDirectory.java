@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -55,16 +56,14 @@ public class INodeDirectory extends INode {
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
-  private List<INode> children;
+  private List<INode> children = null;
 
   public INodeDirectory(String name, PermissionStatus permissions) {
     super(name, permissions);
-    this.children = null;
   }
 
   public INodeDirectory(PermissionStatus permissions, long mTime) {
     super(permissions, mTime, 0);
-    this.children = null;
   }
 
   /** constructor */
@@ -79,7 +78,7 @@ public class INodeDirectory extends INode {
    */
   public INodeDirectory(INodeDirectory other) {
     super(other);
-    this.children = other.getChildren();
+    this.children = other.children;
   }
   
   /** @return true unconditionally. */
@@ -118,39 +117,23 @@ public class INodeDirectory extends INode {
       throw new IllegalArgumentException("No child exists to be replaced");
     }
   }
-  
-  INode getChild(String name) {
-    return getChildINode(DFSUtil.string2Bytes(name));
+
+  private INode getChild(byte[] name, Snapshot snapshot) {
+    final ReadOnlyList<INode> c = getChildrenList(snapshot);
+    final int i = ReadOnlyList.Util.binarySearch(c, name);
+    return i < 0? null: c.get(i);
   }
 
-  private INode getChildINode(byte[] name) {
-    if (children == null) {
-      return null;
-    }
-    int low = Collections.binarySearch(children, name);
-    if (low >= 0) {
-      return children.get(low);
-    }
-    return null;
-  }
-
-  /**
-   * @return the INode of the last component in components, or null if the last
-   * component does not exist.
-   */
-  private INode getNode(byte[][] components, boolean resolveLink
+  /** @return the {@link INodesInPath} containing only the last inode. */
+  INodesInPath getINodesInPath(String path, boolean resolveLink
       ) throws UnresolvedLinkException {
-    INodesInPath inodesInPath = getExistingPathINodes(components, 1,
-        resolveLink);
-    return inodesInPath.inodes[0];
+    return getExistingPathINodes(getPathComponents(path), 1, resolveLink);
   }
 
-  /**
-   * This is the external interface
-   */
+  /** @return the last inode in the path. */
   INode getNode(String path, boolean resolveLink) 
     throws UnresolvedLinkException {
-    return getNode(getPathComponents(path), resolveLink);
+    return getINodesInPath(path, resolveLink).getINode(0);
   }
 
   /**
@@ -269,7 +252,8 @@ public class INodeDirectory extends INode {
         }
       } else {
         // normal case, and also for resolving file/dir under snapshot root
-        curNode = parentDir.getChildINode(components[count + 1]);
+        curNode = parentDir.getChild(components[count + 1],
+            existing.getPathSnapshot());
       }
       count++;
       index++;
@@ -470,16 +454,14 @@ public class INodeDirectory extends INode {
   }
 
   /**
-   * @return an empty list if the children list is null;
-   *         otherwise, return the children list.
-   *         The returned list should not be modified.
+   * @return the current children list if the specified snapshot is null;
+   *         otherwise, return the children list corresponding to the snapshot.
+   *         Note that the returned list is never null.
    */
-  public List<INode> getChildrenList() {
-    return children==null ? EMPTY_LIST : children;
-  }
-  /** @return the children list which is possibly null. */
-  public List<INode> getChildren() {
-    return children;
+  public ReadOnlyList<INode> getChildrenList(final Snapshot snapshot) {
+    //TODO: use snapshot to select children list
+    return children == null ? EMPTY_READ_ONLY_LIST
+        : ReadOnlyList.Util.asReadOnlyList(children);
   }
   /** Set the children list. */
   public void setChildren(List<INode> children) {
@@ -545,11 +527,19 @@ public class INodeDirectory extends INode {
     }
 
     /**
-     * @return the snapshot associated to the path.
-     * @see #snapshot
+     * For non-snapshot paths, return the latest snapshot found in the path.
+     * For snapshot paths, return null.
      */
-    public Snapshot getSnapshot() {
-      return snapshot;
+    public Snapshot getLatestSnapshot() {
+      return isSnapshot? null: snapshot;
+    }
+    
+    /**
+     * For snapshot paths, return the snapshot specified in the path.
+     * For non-snapshot paths, return null.
+     */
+    public Snapshot getPathSnapshot() {
+      return isSnapshot? snapshot: null;
     }
 
     private void setSnapshot(Snapshot s) {
@@ -574,6 +564,11 @@ public class INodeDirectory extends INode {
         inodes = newNodes;
       }
       return inodes;
+    }
+    
+    /** @return the i-th inode. */
+    INode getINode(int i) {
+      return inodes[i];
     }
     
     /**
@@ -626,7 +621,7 @@ public class INodeDirectory extends INode {
         for(int i = 1; i < inodes.length; i++) {
           b.append(", ").append(toString(inodes[i]));
         }
-        b.append("]");
+        b.append("], length=").append(inodes.length);
       }
       b.append("\n  numNonNull = ").append(numNonNull)
        .append("\n  capacity   = ").append(capacity)
