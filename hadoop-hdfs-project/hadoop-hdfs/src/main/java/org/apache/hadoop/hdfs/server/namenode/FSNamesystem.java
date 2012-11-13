@@ -1396,7 +1396,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // replication and blocks sizes should be the same for ALL the blocks
 
     // check the target
-    final INodeFile trgInode = INodeFile.valueOf(dir.getINode(target), target);
+    final INodeFile trgInode = INodeFile.valueOf(dir.getMutableINode(target),
+        target);
     if(trgInode.isUnderConstruction()) {
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is under construction");
@@ -1431,7 +1432,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(i==srcs.length-1)
         endSrc=true;
 
-      final INodeFile srcInode = INodeFile.valueOf(dir.getINode(src), src);
+      final INodeFile srcInode = INodeFile.valueOf(dir.getMutableINode(src), src);
       if(src.isEmpty() 
           || srcInode.isUnderConstruction()
           || srcInode.numBlocks() == 0) {
@@ -1514,7 +1515,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkPathAccess(src, FsAction.WRITE);
       }
-      INode inode = dir.getINode(src);
+      INode inode = dir.getMutableINode(src);
       if (inode != null) {
         dir.setTimes(src, inode, mtime, atime, true);
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
@@ -1787,7 +1788,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // Verify that the destination does not exist as a directory already.
-    boolean pathExists = dir.exists(src);
+    boolean pathExists = dir.existsMutable(src);
     if (pathExists && dir.isDir(src)) {
       throw new FileAlreadyExistsException("Cannot create file " + src
           + "; already exists as a directory.");
@@ -2929,7 +2930,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (isPermissionEnabled) {
       checkTraverse(src);
     }
-    if (dir.isDir(src)) {
+    if (dir.isDirMutable(src)) {
       // all the users of mkdirs() are used to expect 'true' even if
       // a new directory is not created.
       return true;

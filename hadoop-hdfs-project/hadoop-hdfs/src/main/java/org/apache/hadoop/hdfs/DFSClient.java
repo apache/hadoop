@@ -134,6 +134,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -1311,7 +1312,8 @@ public class DFSClient implements java.io.Closeable {
                                      ParentNotDirectoryException.class,
                                      NSQuotaExceededException.class, 
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1342,7 +1344,8 @@ public class DFSClient implements java.io.Closeable {
                                      SafeModeException.class,
                                      DSQuotaExceededException.class,
                                      UnsupportedOperationException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
     return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
         lastBlock, stat, dfsClientConf.createChecksum());
@@ -1395,7 +1398,8 @@ public class DFSClient implements java.io.Closeable {
                                      FileNotFoundException.class,
                                      SafeModeException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1413,7 +1417,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1427,7 +1432,8 @@ public class DFSClient implements java.io.Closeable {
       namenode.concat(trg, srcs);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   /**
@@ -1447,7 +1453,8 @@ public class DFSClient implements java.io.Closeable {
                                      ParentNotDirectoryException.class,
                                      SafeModeException.class,
                                      NSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   /**
@@ -1475,7 +1482,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   
@@ -1797,7 +1805,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -1818,7 +1827,8 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class);                                   
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);                                   
     }
   }
 
@@ -2049,7 +2059,8 @@ public class DFSClient implements java.io.Closeable {
                                      SafeModeException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
   
@@ -2092,7 +2103,8 @@ public class DFSClient implements java.io.Closeable {
                                      FileNotFoundException.class,
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 
@@ -2108,7 +2120,8 @@ public class DFSClient implements java.io.Closeable {
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
-                                     UnresolvedPathException.class);
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
     }
   }
 

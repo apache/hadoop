@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -220,6 +221,7 @@ public class FSDirectory implements Closeable {
    * @throws FileAlreadyExistsException
    * @throws QuotaExceededException
    * @throws UnresolvedLinkException
+   * @throws SnapshotAccessControlException 
    */
   INodeFileUnderConstruction addFile(String path, 
                 PermissionStatus permissions,
@@ -230,7 +232,7 @@ public class FSDirectory implements Closeable {
                 DatanodeDescriptor clientNode,
                 long generationStamp) 
     throws FileAlreadyExistsException, QuotaExceededException,
-      UnresolvedLinkException {
+      UnresolvedLinkException, SnapshotAccessControlException {
     waitForReady();
 
     // Always do an implicit mkdirs for parent directory tree.
@@ -447,13 +449,14 @@ public class FSDirectory implements Closeable {
   }
 
   /**
+   * @throws SnapshotAccessControlException 
    * @see #unprotectedRenameTo(String, String, long)
    * @deprecated Use {@link #renameTo(String, String, Rename...)} instead.
    */
   @Deprecated
   boolean renameTo(String src, String dst) 
       throws QuotaExceededException, UnresolvedLinkException, 
-      FileAlreadyExistsException {
+      FileAlreadyExistsException, SnapshotAccessControlException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
           +src+" to "+dst);
@@ -503,14 +506,15 @@ public class FSDirectory implements Closeable {
    * @return true if rename succeeds; false otherwise
    * @throws QuotaExceededException if the operation violates any quota limit
    * @throws FileAlreadyExistsException if the src is a symlink that points to dst
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @deprecated See {@link #renameTo(String, String)}
    */
   @Deprecated
   boolean unprotectedRenameTo(String src, String dst, long timestamp)
     throws QuotaExceededException, UnresolvedLinkException, 
-    FileAlreadyExistsException {
+    FileAlreadyExistsException, SnapshotAccessControlException {
     assert hasWriteLock();
-    INodesInPath srcInodesInPath = rootDir.getExistingPathINodes(src, false);
+    INodesInPath srcInodesInPath = rootDir.getMutableINodesInPath(src, false);
     INode[] srcInodes = srcInodesInPath.getINodes();
     INode srcInode = srcInodes[srcInodes.length-1];
     
@@ -552,6 +556,10 @@ public class FSDirectory implements Closeable {
     byte[][] dstComponents = INode.getPathComponents(dst);
     INodesInPath dstInodesInPath = rootDir.getExistingPathINodes(dstComponents,
         dstComponents.length, false);
+    if (dstInodesInPath.isSnapshot()) {
+      throw new SnapshotAccessControlException(
+          "Modification on RO snapshot is disallowed");
+    }
     INode[] dstInodes = dstInodesInPath.getINodes();
     if (dstInodes[dstInodes.length-1] != null) {
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
@@ -635,7 +643,8 @@ public class FSDirectory implements Closeable {
       }
     }
     String error = null;
-    final INodesInPath srcInodesInPath = rootDir.getExistingPathINodes(src, false);
+    final INodesInPath srcInodesInPath = rootDir.getMutableINodesInPath(src,
+        false);
     final INode[] srcInodes = srcInodesInPath.getINodes();
     final INode srcInode = srcInodes[srcInodes.length - 1];
     // validate source
@@ -672,8 +681,8 @@ public class FSDirectory implements Closeable {
       throw new IOException(error);
     }
     final byte[][] dstComponents = INode.getPathComponents(dst);
-    INodesInPath dstInodesInPath = rootDir.getExistingPathINodes(dstComponents,
-        dstComponents.length, false);
+    final INodesInPath dstInodesInPath = rootDir.getMutableINodesInPath(
+        dstComponents, false);
     final INode[] dstInodes = dstInodesInPath.getINodes();
     INode dstInode = dstInodes[dstInodes.length - 1];
     if (dstInodes.length == 1) {
@@ -804,9 +813,11 @@ public class FSDirectory implements Closeable {
    * @param oldReplication old replication - output parameter
    * @return array of file blocks
    * @throws QuotaExceededException
+   * @throws SnapshotAccessControlException 
    */
   Block[] setReplication(String src, short replication, short[] oldReplication)
-      throws QuotaExceededException, UnresolvedLinkException {
+      throws QuotaExceededException, UnresolvedLinkException,
+      SnapshotAccessControlException {
     waitForReady();
     Block[] fileBlocks = null;
     writeLock();
@@ -820,14 +831,12 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  Block[] unprotectedSetReplication(String src, 
-                                    short replication,
-                                    short[] oldReplication
-                                    ) throws QuotaExceededException, 
-                                    UnresolvedLinkException {
+  Block[] unprotectedSetReplication(String src, short replication,
+      short[] oldReplication) throws QuotaExceededException,
+      UnresolvedLinkException, SnapshotAccessControlException {
     assert hasWriteLock();
 
-    final INodesInPath inodesInPath = rootDir.getExistingPathINodes(src, true);
+    final INodesInPath inodesInPath = rootDir.getMutableINodesInPath(src, true);
     final INode[] inodes = inodesInPath.getINodes();
     INode inode = inodes[inodes.length - 1];
     if (inode == null) {
@@ -890,8 +899,26 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  boolean existsMutable(String src) throws UnresolvedLinkException,
+      SnapshotAccessControlException {
+    src = normalizePath(src);
+    readLock();
+    try {
+      INode inode = rootDir.getMutableNode(src, false);
+      if (inode == null) {
+         return false;
+      }
+      return inode.isDirectory() || inode.isSymlink() 
+        ? true 
+        : ((INodeFile)inode).getBlocks() != null;
+    } finally {
+      readUnlock();
+    }
+  }
+  
   void setPermission(String src, FsPermission permission)
-      throws FileNotFoundException, UnresolvedLinkException {
+      throws FileNotFoundException, UnresolvedLinkException,
+      SnapshotAccessControlException {
     writeLock();
     try {
       unprotectedSetPermission(src, permission);
@@ -900,11 +927,12 @@ public class FSDirectory implements Closeable {
     }
     fsImage.getEditLog().logSetPermissions(src, permission);
   }
-
-  void unprotectedSetPermission(String src, FsPermission permissions) 
-      throws FileNotFoundException, UnresolvedLinkException {
+  
+  void unprotectedSetPermission(String src, FsPermission permissions)
+      throws FileNotFoundException, UnresolvedLinkException,
+      SnapshotAccessControlException {
     assert hasWriteLock();
-    INode inode = rootDir.getNode(src, true);
+    INode inode = rootDir.getMutableNode(src, true);
     if (inode == null) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
@@ -912,7 +940,8 @@ public class FSDirectory implements Closeable {
   }
 
   void setOwner(String src, String username, String groupname)
-      throws FileNotFoundException, UnresolvedLinkException {
+      throws FileNotFoundException, UnresolvedLinkException,
+      SnapshotAccessControlException {
     writeLock();
     try {
       unprotectedSetOwner(src, username, groupname);
@@ -922,10 +951,11 @@ public class FSDirectory implements Closeable {
     fsImage.getEditLog().logSetOwner(src, username, groupname);
   }
 
-  void unprotectedSetOwner(String src, String username, String groupname) 
-      throws FileNotFoundException, UnresolvedLinkException {
+  void unprotectedSetOwner(String src, String username, String groupname)
+      throws FileNotFoundException, UnresolvedLinkException,
+      SnapshotAccessControlException {
     assert hasWriteLock();
-    INode inode = rootDir.getNode(src, true);
+    INode inode = rootDir.getMutableNode(src, true);
     if (inode == null) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
@@ -1020,7 +1050,7 @@ public class FSDirectory implements Closeable {
     int filesRemoved;
     writeLock();
     try {
-      final INodesInPath inodesInPath = rootDir.getExistingPathINodes(
+      final INodesInPath inodesInPath = rootDir.getMutableINodesInPath(
           normalizePath(src), false);
       final INode[] inodes = inodesInPath.getINodes();
       if (checkPathINodes(inodes, src) == 0) {
@@ -1095,14 +1125,15 @@ public class FSDirectory implements Closeable {
    * <br>
    * @param src a string representation of a path to an inode
    * @param mtime the time the inode is removed
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    */ 
   void unprotectedDelete(String src, long mtime) 
-    throws UnresolvedLinkException {
+    throws UnresolvedLinkException, SnapshotAccessControlException {
     assert hasWriteLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     int filesRemoved = 0;
 
-    final INodesInPath inodesInPath = rootDir.getExistingPathINodes(
+    final INodesInPath inodesInPath = rootDir.getMutableINodesInPath(
         normalizePath(src), false);
     final INode[] inodes = inodesInPath.getINodes();
     if (checkPathINodes(inodes, src) == 0) {
@@ -1325,6 +1356,20 @@ public class FSDirectory implements Closeable {
   }
   
   /**
+   * Get {@link INode} associated with the file / directory.
+   * @throws SnapshotAccessControlException if path is in RO snapshot
+   */
+  public INode getMutableINode(String src) throws UnresolvedLinkException,
+      SnapshotAccessControlException {
+    readLock();
+    try {
+      return rootDir.getMutableNode(src, true);
+    } finally {
+      readUnlock();
+    }
+  }
+
+  /**
    * Get the parent node of path.
    * 
    * @param path the path to explore
@@ -1342,14 +1387,15 @@ public class FSDirectory implements Closeable {
   
   /** 
    * Check whether the filepath could be created
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  boolean isValidToCreate(String src) throws UnresolvedLinkException {
+  boolean isValidToCreate(String src) throws UnresolvedLinkException,
+      SnapshotAccessControlException {
     String srcs = normalizePath(src);
     readLock();
     try {
-      if (srcs.startsWith("/") && 
-          !srcs.endsWith("/") && 
-          rootDir.getNode(srcs, false) == null) {
+      if (srcs.startsWith("/") && !srcs.endsWith("/")
+          && rootDir.getMutableNode(srcs, false) == null) {
         return true;
       } else {
         return false;
@@ -1367,6 +1413,22 @@ public class FSDirectory implements Closeable {
     readLock();
     try {
       INode node = rootDir.getNode(src, false);
+      return node != null && node.isDirectory();
+    } finally {
+      readUnlock();
+    }
+  }
+  
+  /**
+   * Check whether the path specifies a directory
+   * @throws SnapshotAccessControlException if path is in RO snapshot
+   */
+  boolean isDirMutable(String src) throws UnresolvedLinkException,
+      SnapshotAccessControlException {
+    src = normalizePath(src);
+    readLock();
+    try {
+      INode node = rootDir.getMutableNode(src, false);
       return node != null && node.isDirectory();
     } finally {
       readUnlock();
@@ -1510,11 +1572,12 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if directory creation violates 
    *                                any quota limit
    * @throws UnresolvedLinkException if a symlink is encountered in src.                      
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    */
   boolean mkdirs(String src, PermissionStatus permissions,
       boolean inheritPermission, long now)
       throws FileAlreadyExistsException, QuotaExceededException, 
-             UnresolvedLinkException {
+             UnresolvedLinkException, SnapshotAccessControlException {
     src = normalizePath(src);
     String[] names = INode.getPathNames(src);
     byte[][] components = INode.getPathComponents(names);
@@ -1524,6 +1587,10 @@ public class FSDirectory implements Closeable {
     try {
       INodesInPath inodesInPath = rootDir.getExistingPathINodes(components,
           components.length, false);
+      if (inodesInPath.isSnapshot()) {
+        throw new SnapshotAccessControlException(
+            "Modification on RO snapshot is disallowed");
+      }
       INode[] inodes = inodesInPath.getINodes();
 
       // find the index of the first null in inodes[]
@@ -1935,10 +2002,11 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the directory tree size is 
    *                                greater than the given quota
    * @throws UnresolvedLinkException if a symlink is encountered in src.
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    */
   INodeDirectory unprotectedSetQuota(String src, long nsQuota, long dsQuota)
-    throws FileNotFoundException, QuotaExceededException, 
-      UnresolvedLinkException {
+      throws FileNotFoundException, QuotaExceededException,
+      UnresolvedLinkException, SnapshotAccessControlException {
     assert hasWriteLock();
     // sanity check
     if ((nsQuota < 0 && nsQuota != HdfsConstants.QUOTA_DONT_SET && 
@@ -1951,9 +2019,8 @@ public class FSDirectory implements Closeable {
     }
     
     String srcs = normalizePath(src);
-
-    final INodesInPath inodesInPath = rootDir.getExistingPathINodes(src, true);
-    final INode[] inodes = inodesInPath.getINodes();
+    final INode[] inodes = rootDir.getMutableINodesInPath(srcs, true)
+        .getINodes();
     INode targetNode = inodes[inodes.length-1];
     if (targetNode == null) {
       throw new FileNotFoundException("Directory does not exist: " + srcs);
@@ -1998,11 +2065,12 @@ public class FSDirectory implements Closeable {
   /**
    * See {@link ClientProtocol#setQuota(String, long, long)} for the 
    * contract.
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @see #unprotectedSetQuota(String, long, long)
    */
-  void setQuota(String src, long nsQuota, long dsQuota) 
-    throws FileNotFoundException, QuotaExceededException,
-    UnresolvedLinkException { 
+  void setQuota(String src, long nsQuota, long dsQuota)
+      throws FileNotFoundException, QuotaExceededException,
+      UnresolvedLinkException, SnapshotAccessControlException {
     writeLock();
     try {
       INodeDirectory dir = unprotectedSetQuota(src, nsQuota, dsQuota);

@@ -67,3 +67,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4177. Add a snapshot parameter to INodeDirectory.getChildrenList() for
   selecting particular snapshot children list views.  (szetszwo)
+
+  HDFS-4148. Disallow write/modify operations on files and directories in a
+  snapshot. (Brandon Li via suresh)

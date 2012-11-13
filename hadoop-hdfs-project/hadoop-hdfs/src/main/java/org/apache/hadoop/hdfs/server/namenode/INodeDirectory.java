@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -134,6 +135,44 @@ public class INodeDirectory extends INode {
   INode getNode(String path, boolean resolveLink) 
     throws UnresolvedLinkException {
     return getINodesInPath(path, resolveLink).getINode(0);
+  }
+
+  /**
+   * @return the INode of the last component in src, or null if the last
+   * component does not exist.
+   * @throws UnresolvedLinkException if symlink can't be resolved
+   * @throws SnapshotAccessControlException if path is in RO snapshot
+   */
+  INode getMutableNode(String src, boolean resolveLink)
+      throws UnresolvedLinkException, SnapshotAccessControlException {
+    INode[] inodes = getMutableINodesInPath(src, resolveLink).getINodes();
+    return inodes[inodes.length - 1];
+  }
+
+  /**
+   * @return the INodesInPath of the components in src
+   * @throws UnresolvedLinkException if symlink can't be resolved
+   * @throws SnapshotAccessControlException if path is in RO snapshot
+   */
+  INodesInPath getMutableINodesInPath(String src, boolean resolveLink)
+      throws UnresolvedLinkException, SnapshotAccessControlException {
+    return getMutableINodesInPath(INode.getPathComponents(src), resolveLink);
+  }
+  
+  /**
+   * @return the INodesInPath of the components in src
+   * @throws UnresolvedLinkException if symlink can't be resolved
+   * @throws SnapshotAccessControlException if path is in RO snapshot
+   */
+  INodesInPath getMutableINodesInPath(byte[][] components, boolean resolveLink)
+      throws UnresolvedLinkException, SnapshotAccessControlException {
+    INodesInPath inodesInPath = getExistingPathINodes(components,
+        components.length, resolveLink);
+    if (inodesInPath.isSnapshot()) {
+      throw new SnapshotAccessControlException(
+          "Modification on RO snapshot is disallowed");
+    }
+    return inodesInPath;
   }
 
   /**

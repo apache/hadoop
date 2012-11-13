@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.Idempotent;
@@ -163,6 +164,7 @@ public interface ClientProtocol {
    *           quota restriction
    * @throws SafeModeException create not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    *
    * RuntimeExceptions:
@@ -174,7 +176,7 @@ public interface ClientProtocol {
       AlreadyBeingCreatedException, DSQuotaExceededException,
       FileAlreadyExistsException, FileNotFoundException,
       NSQuotaExceededException, ParentNotDirectoryException, SafeModeException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * Append to the end of the file. 
@@ -194,6 +196,7 @@ public interface ClientProtocol {
    *           restriction
    * @throws SafeModeException append not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred.
    *
    * RuntimeExceptions:
@@ -202,7 +205,7 @@ public interface ClientProtocol {
   public LocatedBlock append(String src, String clientName)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
-      IOException;
+      SnapshotAccessControlException, IOException;
 
   /**
    * Set replication for an existing file.
@@ -224,13 +227,14 @@ public interface ClientProtocol {
    * @throws FileNotFoundException If file <code>src</code> is not found
    * @throws SafeModeException not allowed in safemode
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
   public boolean setReplication(String src, short replication)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
-      IOException;
+      SnapshotAccessControlException, IOException;
 
   /**
    * Set permissions for an existing file/directory.
@@ -239,12 +243,13 @@ public interface ClientProtocol {
    * @throws FileNotFoundException If file <code>src</code> is not found
    * @throws SafeModeException not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
   public void setPermission(String src, FsPermission permission)
       throws AccessControlException, FileNotFoundException, SafeModeException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * Set Owner of a path (i.e. a file or a directory).
@@ -257,12 +262,13 @@ public interface ClientProtocol {
    * @throws FileNotFoundException If file <code>src</code> is not found
    * @throws SafeModeException not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
   public void setOwner(String src, String username, String groupname)
       throws AccessControlException, FileNotFoundException, SafeModeException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * The client can give up on a block by calling abandonBlock().
@@ -385,10 +391,11 @@ public interface ClientProtocol {
    * @return true if successful, or false if the old name does not exist
    * or if the new name already belongs to the namespace.
    * 
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException an I/O error occurred 
    */
   public boolean rename(String src, String dst) 
-      throws UnresolvedLinkException, IOException;
+      throws UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * Moves blocks from srcs to trg and delete srcs
@@ -398,9 +405,10 @@ public interface ClientProtocol {
    * @throws IOException if some arguments are invalid
    * @throws UnresolvedLinkException if <code>trg</code> or <code>srcs</code>
    *           contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    */
   public void concat(String trg, String[] srcs) 
-      throws IOException, UnresolvedLinkException;
+      throws IOException, UnresolvedLinkException, SnapshotAccessControlException;
 
   /**
    * Rename src to dst.
@@ -434,13 +442,14 @@ public interface ClientProtocol {
    * @throws SafeModeException rename not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> or
    *           <code>dst</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   public void rename2(String src, String dst, Options.Rename... options)
       throws AccessControlException, DSQuotaExceededException,
       FileAlreadyExistsException, FileNotFoundException,
       NSQuotaExceededException, ParentNotDirectoryException, SafeModeException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
   
   /**
    * Delete the given file or directory from the file system.
@@ -457,11 +466,12 @@ public interface ClientProtocol {
    * @throws FileNotFoundException If file <code>src</code> is not found
    * @throws SafeModeException create not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   public boolean delete(String src, boolean recursive)
       throws AccessControlException, FileNotFoundException, SafeModeException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
   
   /**
    * Create a directory (or hierarchy of directories) with the given
@@ -482,6 +492,7 @@ public interface ClientProtocol {
    *           is not a directory
    * @throws SafeModeException create not allowed in safemode
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred.
    *
    * RunTimeExceptions:
@@ -492,7 +503,7 @@ public interface ClientProtocol {
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, NSQuotaExceededException,
       ParentNotDirectoryException, SafeModeException, UnresolvedLinkException,
-      IOException;
+      SnapshotAccessControlException, IOException;
 
   /**
    * Get a partial listing of the indicated directory
@@ -800,12 +811,13 @@ public interface ClientProtocol {
    * @throws QuotaExceededException if the directory size 
    *           is greater than the given quota
    * @throws UnresolvedLinkException if the <code>path</code> contains a symlink. 
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
   public void setQuota(String path, long namespaceQuota, long diskspaceQuota)
       throws AccessControlException, FileNotFoundException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * Write all metadata for this file into persistent storage.
@@ -836,12 +848,13 @@ public interface ClientProtocol {
    * @throws AccessControlException permission denied
    * @throws FileNotFoundException file <code>src</code> is not found
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink. 
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
   public void setTimes(String src, long mtime, long atime)
       throws AccessControlException, FileNotFoundException, 
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * Create symlink to a file or directory.
@@ -859,13 +872,14 @@ public interface ClientProtocol {
    * @throws ParentNotDirectoryException If parent of <code>link</code> is not a
    *           directory.
    * @throws UnresolvedLinkException if <code>link</target> contains a symlink. 
+   * @throws SnapshotAccessControlException if path is in RO snapshot
    * @throws IOException If an I/O error occurred
    */
   public void createSymlink(String target, String link, FsPermission dirPerm,
       boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, SafeModeException, UnresolvedLinkException,
-      IOException;
+      SnapshotAccessControlException, IOException;
 
   /**
    * Return the target of the given symlink. If there is an intermediate
