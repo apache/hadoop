@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION_ID;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.THEMESWITCHER_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
 
@@ -48,7 +47,6 @@ public class AggregatedLogsPage extends TwoColumnLayout {
     set(TITLE, join("Logs for ", logEntity));
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
-    set(THEMESWITCHER_ID, "themeswitcher");
   }
 
   @Override
