@@ -42,8 +42,7 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
           .li().a("/conf", "Configuration")._()
           .li().a("/logs", "Local logs")._()
           .li().a("/stacks", "Server stacks")._()
-          .li().a("/metrics", "Server metrics")._()._()._()
-      .div("#themeswitcher")._();
+          .li().a("/metrics", "Server metrics")._()._()._();
   }
 
 }
