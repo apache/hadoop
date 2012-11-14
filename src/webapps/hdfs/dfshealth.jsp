@@ -262,7 +262,10 @@
 <h3>Cluster Summary</h3>
 <b> <%= jspHelper.getSafeModeText()%> </b>
 <b> <%= jspHelper.getInodeLimitText()%> </b>
-<a class="warning"> <%= JspHelper.getWarningText(fsn)%></a>
+<a class="warning" href="/corrupt_files.jsp" title="List corrupt files">
+  <%= JspHelper.getWarningText(fsn)%>
+</a>
+
 
 <%
     generateDFSHealthReport(out, nn, request); 

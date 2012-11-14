@@ -329,6 +329,9 @@ Release 1.1.1 - Unreleased
     HDFS-1539. A config option for the datanode to fsycn a block file
     when block is completely written. (dhruba via szetszwo)
 
+    HDFS-4174. Add abilit to list the corrupted files in WebUI (backport of
+    HDFS-1031). (Jing Zhao via suresh)
+
   BUG FIXES
 
     HADOOP-8878. Uppercase namenode hostname causes hadoop dfs calls with
