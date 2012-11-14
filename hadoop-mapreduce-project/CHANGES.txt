@@ -663,6 +663,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4517. Too many INFO messages written out during AM to RM heartbeat
     (Jason Lowe via tgraves)
+
+    MAPREDUCE-4797. LocalContainerAllocator can loop forever trying to contact
+    the RM (jlowe via bobby)
  
 Release 0.23.4 - UNRELEASED
 
