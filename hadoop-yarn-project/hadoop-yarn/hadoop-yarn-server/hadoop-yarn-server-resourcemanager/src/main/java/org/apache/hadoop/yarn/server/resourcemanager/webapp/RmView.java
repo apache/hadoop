@@ -47,7 +47,6 @@ public class RmView extends TwoColumnLayout {
   protected void commonPreHead(Page.HTML<_> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
-    set(THEMESWITCHER_ID, "themeswitcher");
   }
 
   @Override

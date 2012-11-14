@@ -33,7 +33,6 @@ public class TestTwoColumnCssPage {
     public void index() {
       set("title", "Testing a Two Column Layout");
       set("ui.accordion.id", "nav");
-      set("ui.themeswitcher.id", "themeswitcher");
       render(TwoColumnCssLayout.class);
     }
 

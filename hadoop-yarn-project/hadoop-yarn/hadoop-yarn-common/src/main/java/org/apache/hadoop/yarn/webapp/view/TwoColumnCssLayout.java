@@ -63,7 +63,6 @@ public class TwoColumnCssLayout extends HtmlPage {
                 _(content())._()._().
             div(".nav").
               _(nav()).
-              div("#themeswitcher")._().
               div(".push")._()._()._()._()._().
       div(".footer.ui-widget-content").
         _(footer())._()._();
