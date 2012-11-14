@@ -31,7 +31,6 @@
 //
 typedef struct dfs_context_struct {
   int debug;
-  int read_only;
   int usetrash;
   int direct_io;
   char **protectedpaths;

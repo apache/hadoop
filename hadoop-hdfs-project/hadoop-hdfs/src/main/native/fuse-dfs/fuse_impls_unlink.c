@@ -40,12 +40,6 @@ int dfs_unlink(const char *path)
     goto cleanup;
   }
 
-  if (dfs->read_only) {
-    ERROR("HDFS configured read-only, cannot create directory %s", path);
-    ret = -EACCES;
-    goto cleanup;
-  }
-
   ret = fuseConnectAsThreadUid(&conn);
   if (ret) {
     fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "

@@ -93,6 +93,18 @@ int main(int argc, char *argv[])
   if (!options.no_permissions) {
     fuse_opt_add_arg(&args, "-odefault_permissions");
   }
+  /*
+   * FUSE already has a built-in parameter for mounting the filesystem as
+   * read-only, -r.  We defined our own parameter for doing this called -oro.
+   * We support it by translating it into -r internally.
+   * The kernel intercepts and returns an error message for any "write"
+   * operations that the user attempts to perform on a read-only filesystem.
+   * That means that we don't have to write any code to handle read-only mode.
+   * See HDFS-4139 for more details.
+   */
+  if (options.read_only) {
+    fuse_opt_add_arg(&args, "-r");
+  }
 
   {
     char buf[80];
