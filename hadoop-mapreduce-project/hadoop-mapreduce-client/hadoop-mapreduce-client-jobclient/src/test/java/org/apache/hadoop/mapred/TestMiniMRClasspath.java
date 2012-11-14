@@ -178,7 +178,7 @@ public class TestMiniMRClasspath extends TestCase {
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 3);
-      JobConf jobConf = new JobConf();
+      JobConf jobConf = mr.createJobConf();
       String result;
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       result = launchWordCount(fileSys.getUri(), jobTrackerName, jobConf, 
@@ -212,7 +212,7 @@ public class TestMiniMRClasspath extends TestCase {
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 3);      
-      JobConf jobConf = new JobConf();
+      JobConf jobConf = mr.createJobConf();
       String result;
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       

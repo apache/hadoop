@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URL;
 
+import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -53,6 +59,14 @@ public class TestDistributedShell {
           1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
+      URL url = Thread.currentThread().getContextClassLoader().getResource("yarn-site.xml");
+      if (url == null) {
+        throw new RuntimeException("Could not find 'yarn-site.xml' dummy file in classpath");
+      }
+      yarnCluster.getConfig().set("yarn.application.classpath", new File(url.getPath()).getParent());
+      OutputStream os = new FileOutputStream(new File(url.getPath()));
+      yarnCluster.getConfig().writeXml(os);
+      os.close();
     }
     try {
       Thread.sleep(2000);
@@ -86,14 +100,14 @@ public class TestDistributedShell {
     };
 
     LOG.info("Initializing DS Client");
-    Client client = new Client();
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
     boolean initSuccess = client.init(args);
-    assert(initSuccess);
+    Assert.assertTrue(initSuccess);
     LOG.info("Running DS Client");
     boolean result = client.run();
 
     LOG.info("Client run completed. Result=" + result);
-    assert (result == true);		 
+    Assert.assertTrue(result);
 
   }
 

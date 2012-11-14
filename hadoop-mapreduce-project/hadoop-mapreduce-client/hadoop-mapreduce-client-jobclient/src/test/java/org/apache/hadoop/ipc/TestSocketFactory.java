@@ -83,7 +83,9 @@ public class TestSocketFactory {
       JobConf jobConf = new JobConf();
       FileSystem.setDefaultUri(jobConf, fs.getUri().toString());
       miniMRYarnCluster = initAndStartMiniMRYarnCluster(jobConf);
-      JobConf jconf = new JobConf(cconf);
+      JobConf jconf = new JobConf(miniMRYarnCluster.getConfig());
+      jconf.set("hadoop.rpc.socket.factory.class.default",
+                "org.apache.hadoop.ipc.DummySocketFactory");
       jconf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       String rmAddress = jconf.get("yarn.resourcemanager.address");
       String[] split = rmAddress.split(":");

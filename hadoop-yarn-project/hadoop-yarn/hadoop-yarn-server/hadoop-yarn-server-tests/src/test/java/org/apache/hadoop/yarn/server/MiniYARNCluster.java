@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.server;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -118,7 +121,16 @@ public class MiniYARNCluster extends CompositeService {
   public NodeManager getNodeManager(int i) {
     return this.nodeManagers[i];
   }
-  
+
+  public static String getHostname() {
+    try {
+      return InetAddress.getLocalHost().getHostName();
+    }
+    catch (UnknownHostException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
   private class ResourceManagerWrapper extends AbstractService {
     public ResourceManagerWrapper() {
       super(ResourceManagerWrapper.class.getName());
@@ -127,6 +139,22 @@ public class MiniYARNCluster extends CompositeService {
     @Override
     public synchronized void start() {
       try {
+        getConfig().setBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, true);
+        if (!getConfig().getBoolean(
+            YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
+            YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
+          // pick free random ports.
+          getConfig().set(YarnConfiguration.RM_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_ADMIN_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_WEBAPP_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+        }
         Store store = StoreFactory.getStore(getConfig());
         resourceManager = new ResourceManager(store) {
           @Override
@@ -156,6 +184,10 @@ public class MiniYARNCluster extends CompositeService {
       } catch (Throwable t) {
         throw new YarnException(t);
       }
+      LOG.info("MiniYARN ResourceManager address: " +
+               getConfig().get(YarnConfiguration.RM_ADDRESS));
+      LOG.info("MiniYARN ResourceManager web address: " +
+               getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS));
     }
 
     @Override
@@ -217,9 +249,12 @@ public class MiniYARNCluster extends CompositeService {
             	remoteLogDir.getAbsolutePath());
         // By default AM + 2 containers
         getConfig().setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
-        getConfig().set(YarnConfiguration.NM_ADDRESS, "0.0.0.0:0");
-        getConfig().set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "0.0.0.0:0");
-        getConfig().set(YarnConfiguration.NM_WEBAPP_ADDRESS, "0.0.0.0:0");
+        getConfig().set(YarnConfiguration.NM_ADDRESS,
+                        MiniYARNCluster.getHostname() + ":0");
+        getConfig().set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
+                        MiniYARNCluster.getHostname() + ":0");
+        getConfig().set(YarnConfiguration.NM_WEBAPP_ADDRESS,
+                        MiniYARNCluster.getHostname() + ":0");
         LOG.info("Starting NM: " + index);
         nodeManagers[index].init(getConfig());
         new Thread() {

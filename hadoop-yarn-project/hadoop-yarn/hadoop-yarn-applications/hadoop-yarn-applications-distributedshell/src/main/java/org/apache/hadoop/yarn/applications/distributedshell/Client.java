@@ -76,7 +76,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -198,10 +197,16 @@ public class Client {
 
   /**
    */
-  public Client() throws Exception  {
+  public Client(Configuration conf) throws Exception  {
     // Set up the configuration and RPC
-    conf = new Configuration();
+    this.conf = conf;
     rpc = YarnRPC.create(conf);
+  }
+
+  /**
+   */
+  public Client() throws Exception  {
+    this(new Configuration());
   }
 
   /**
@@ -504,22 +509,20 @@ public class Client {
     // It should be provided out of the box. 
     // For now setting all required classpaths including
     // the classpath to "." for the application jar
-    String classPathEnv = "${CLASSPATH}"
-        + ":./*"
-        + ":$HADOOP_CONF_DIR"
-        + ":$HADOOP_COMMON_HOME/share/hadoop/common/*"
-        + ":$HADOOP_COMMON_HOME/share/hadoop/common/lib/*"
-        + ":$HADOOP_HDFS_HOME/share/hadoop/hdfs/*"
-        + ":$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*"
-        + ":$YARN_HOME/modules/*"
-        + ":$YARN_HOME/lib/*"
-        + ":./log4j.properties:";
+    StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
+    for (String c : conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH)
+        .split(",")) {
+      classPathEnv.append(':');
+      classPathEnv.append(c.trim());
+    }
+    classPathEnv.append(":./log4j.properties");
 
-    // add the runtime classpath needed for tests to work 
+    // add the runtime classpath needed for tests to work
     String testRuntimeClassPath = Client.getTestRuntimeClasspath();
-    classPathEnv += ":" + testRuntimeClassPath; 
+    classPathEnv.append(':');
+    classPathEnv.append(testRuntimeClassPath);
 
-    env.put("CLASSPATH", classPathEnv);
+    env.put("CLASSPATH", classPathEnv.toString());
 
     amContainer.setEnvironment(env);
 

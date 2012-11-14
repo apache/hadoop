@@ -83,6 +83,9 @@ Release 0.23.5 - UNRELEASED
     YARN-212. NM state machine ignores an APPLICATION_CONTAINER_FINISHED event
     when it shouldn't (Nathan Roberts via jlowe)
 
+    YARN-144. MiniMRYarnCluster launches RM and JHS on default ports (Robert
+    Parker via jlowe)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
