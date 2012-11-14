@@ -859,6 +859,7 @@ public class SecondaryNameNode implements Runnable {
             "just been downloaded");
       }
       dstImage.reloadFromImageFile(file);
+      dstImage.getFSNamesystem().dir.imageLoadComplete();
     }
     
     Checkpointer.rollForwardByApplyingLogs(manifest, dstImage);

@@ -55,6 +55,17 @@ public class TestNameCache {
     for (String s : notMatching) {
       verifyNameReuse(cache, s, false);
     }
+    
+    cache.reset();
+    cache.initialized();
+    
+    for (String s : matching) {
+      verifyNameReuse(cache, s, false);
+    }
+    
+    for (String s : notMatching) {
+      verifyNameReuse(cache, s, false);
+    }
   }
 
   private void verifyNameReuse(NameCache<String> cache, String s, boolean reused) {

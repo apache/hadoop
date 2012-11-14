@@ -60,6 +60,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 /*************************************************
  * FSDirectory stores the filesystem directory state.
  * It handles writing/loading values to disk, and logging
@@ -184,6 +187,21 @@ public class FSDirectory implements Closeable {
         fsImage.close();
       }
     }
+    setReady();
+  }
+  
+
+  /**
+   * Notify that loading of this FSDirectory is complete, and
+   * it is ready for use 
+   */
+  void imageLoadComplete() {
+    Preconditions.checkState(!ready, "FSDirectory already loaded");
+    setReady();
+  }
+
+  void setReady() {
+    if(ready) return;
     writeLock();
     try {
       setReady(true);
@@ -192,6 +210,12 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
+  }
+  
+  //This is for testing purposes only
+  @VisibleForTesting
+  boolean isReady() {
+    return ready;
   }
 
   // exposed for unit tests
@@ -2129,9 +2153,16 @@ public class FSDirectory implements Closeable {
    * Reset the entire namespace tree.
    */
   void reset() {
-    rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-        getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
-        Integer.MAX_VALUE, -1);
+    writeLock();
+    try {
+      setReady(false);
+      rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
+          getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
+          Integer.MAX_VALUE, -1);
+      nameCache.reset();
+    } finally {
+      writeUnlock();
+    }
   }
 
   /**
@@ -2293,4 +2324,5 @@ public class FSDirectory implements Closeable {
       inode.setLocalName(name.getBytes());
     }
   }
+
 }
