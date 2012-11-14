@@ -464,6 +464,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-1322. Document umask in DistributedFileSystem#mkdirs javadocs.
     (Colin Patrick McCabe via eli)
 
+    HDFS-4038. Override toString() for BookKeeperEditLogInputStream.
+    (Vinay via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
