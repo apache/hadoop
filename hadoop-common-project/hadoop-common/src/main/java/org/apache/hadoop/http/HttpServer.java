@@ -24,11 +24,7 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.servlet.Filter;
@@ -102,6 +98,7 @@ public class HttpServer implements FilterContainer {
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   public static final String ADMINS_ACL = "admins.acl";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String NO_CACHE_FILTER = "NoCacheFilter";
 
   public static final String BIND_ADDRESS = "bind.address";
 
@@ -254,6 +251,7 @@ public class HttpServer implements FilterContainer {
     webAppContext.setWar(appDir + "/" + name);
     webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webAppContext.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
+    addNoCacheFilter(webAppContext);
     webServer.addHandler(webAppContext);
 
     addDefaultApps(contexts, appDir, conf);
@@ -276,6 +274,12 @@ public class HttpServer implements FilterContainer {
         addFilterPathMapping(path, webAppContext);
       }
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void addNoCacheFilter(WebAppContext ctxt) {
+    defineFilter(ctxt, NO_CACHE_FILTER,
+      NoCacheFilter.class.getName(), Collections.EMPTY_MAP, new String[] { "/*"});
   }
 
   /**
@@ -337,6 +341,7 @@ public class HttpServer implements FilterContainer {
       }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
+      addNoCacheFilter(webAppContext);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
@@ -368,6 +373,7 @@ public class HttpServer implements FilterContainer {
   public void addContext(Context ctxt, boolean isFiltered)
       throws IOException {
     webServer.addHandler(ctxt);
+    addNoCacheFilter(webAppContext);
     defaultContexts.put(ctxt, isFiltered);
   }
 
@@ -461,7 +467,7 @@ public class HttpServer implements FilterContainer {
       holder.setName(name);
     }
     webAppContext.addServlet(holder, pathSpec);
-    
+
     if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
        LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
        ServletHandler handler = webAppContext.getServletHandler();
