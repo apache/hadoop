@@ -307,6 +307,8 @@ Release 1.2.0 - unreleased
     HADOOP-8963. CopyFromLocal doesn't always create user directory.
     (Arpit Gupta via suresh)
 
+    HDFS-4180. Update TestFileCreation for HDFS-4122.  (Jing Zhao via szetszwo)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES

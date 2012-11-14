@@ -250,7 +250,7 @@ public class TestFileCreation {
         fs.close();
         assertTrue("Did not prevent directory from being overwritten.", false);
       } catch (IOException ie) {
-        if (!ie.getMessage().contains("already exists as a directory."))
+        if (!ie.getMessage().contains("already exists as a directory"))
           throw ie;
       }
       
