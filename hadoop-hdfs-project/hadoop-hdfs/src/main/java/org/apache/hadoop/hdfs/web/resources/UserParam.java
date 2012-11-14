@@ -19,9 +19,6 @@ package org.apache.hadoop.hdfs.web.resources;
 
 import org.apache.hadoop.security.UserGroupInformation;
 
-import java.text.MessageFormat;
-import java.util.regex.Pattern;
-
 /** User parameter. */
 public class UserParam extends StringParam {
   /** Parameter name. */
@@ -29,29 +26,14 @@ public class UserParam extends StringParam {
   /** Default parameter value. */
   public static final String DEFAULT = "";
 
-  private static final Domain DOMAIN = new Domain(NAME,
-    Pattern.compile("^[a-z_][a-z0-9_-]*[$]?$"));
-
-  private static String validateLength(String str) {
-    if (str == null) {
-      throw new IllegalArgumentException(
-        MessageFormat.format("Parameter [{0}], cannot be NULL", NAME));
-    }
-    int len = str.length();
-    if (len < 1 || len > 31) {
-      throw new IllegalArgumentException(MessageFormat.format(
-        "Parameter [{0}], invalid value [{1}], it's length must be between 1 and 31",
-        NAME, str));
-    }
-    return str;
-  }
+  private static final Domain DOMAIN = new Domain(NAME, null);
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
   public UserParam(final String str) {
-    super(DOMAIN, (str == null) ? null: validateLength(str));
+    super(DOMAIN, str == null || str.equals(DEFAULT)? null: str);
   }
 
   /**

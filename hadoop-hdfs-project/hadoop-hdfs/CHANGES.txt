@@ -235,8 +235,6 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
     lastDeletedReport should be volatile. (Jing Zhao via suresh)
 
-    HDFS-4171. WebHDFS and HttpFs should accept only valid Unix user names. (tucu)
-
     HDFS-4139. fuse-dfs RO mode still allows file truncation.
     (Colin Patrick McCabe via eli)    
 
