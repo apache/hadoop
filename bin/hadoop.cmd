@@ -143,10 +143,15 @@ call :updatepath %HADOOP_BIN_PATH%
 
 :updatepath
   set path_to_add=%*
-  set current_path_comparable=%path:(x86)=%
+  set current_path_comparable=%path%
   set current_path_comparable=%current_path_comparable: =_%
-  set path_to_add_comparable=%path_to_add:(x86)=%
+  set current_path_comparable=%current_path_comparable:(=_%
+  set current_path_comparable=%current_path_comparable:)=_%
+  set path_to_add_comparable=%path_to_add%
   set path_to_add_comparable=%path_to_add_comparable: =_%
+  set path_to_add_comparable=%path_to_add_comparable:(=_%
+  set path_to_add_comparable=%path_to_add_comparable:)=_%
+
   for %%i in ( %current_path_comparable% ) do (
     if /i "%%i" == "%path_to_add_comparable%" (
       set path_to_add_exist=true
