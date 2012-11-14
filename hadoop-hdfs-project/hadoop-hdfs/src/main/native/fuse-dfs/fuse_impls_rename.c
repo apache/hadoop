@@ -43,11 +43,6 @@ int dfs_rename(const char *from, const char *to)
     return -EACCES;
   }
 
-  if (dfs->read_only) {
-    ERROR("HDFS configured read-only, cannot rename directory %s", from);
-    return -EACCES;
-  }
-
   ret = fuseConnectAsThreadUid(&conn);
   if (ret) {
     fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "

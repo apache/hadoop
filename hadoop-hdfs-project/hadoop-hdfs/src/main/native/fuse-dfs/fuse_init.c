@@ -114,7 +114,6 @@ void *dfs_init(void)
 
   // initialize the context
   dfs->debug                 = options.debug;
-  dfs->read_only             = options.read_only;
   dfs->usetrash              = options.usetrash;
   dfs->protectedpaths        = NULL;
   dfs->rdbuffer_size         = options.rdbuffer_size;
