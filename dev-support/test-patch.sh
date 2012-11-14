@@ -710,7 +710,7 @@ runTests () {
           ordered_modules="$ordered_modules $module"
       fi
   done
-  if [ -n $hdfs_modules ]; then
+  if [ -n "$hdfs_modules" ]; then
       ordered_modules="$ordered_modules $hdfs_modules"
       if [[ $building_common -eq 0 ]]; then
           echo "  Building hadoop-common with -Pnative in order to provide \

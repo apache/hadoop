@@ -277,6 +277,9 @@ Trunk (Unreleased)
 
     HADOOP-8974. TestDFVariations fails on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9037. Bug in test-patch.sh and precommit build process (Kihwal Lee
+    via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
