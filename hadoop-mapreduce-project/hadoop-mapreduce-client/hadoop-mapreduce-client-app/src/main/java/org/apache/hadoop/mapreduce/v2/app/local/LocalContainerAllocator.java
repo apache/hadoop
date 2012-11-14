@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.app.local;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,7 +61,6 @@ public class LocalContainerAllocator extends RMCommunicator
 
   @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
-  private AtomicInteger containerCount = new AtomicInteger();
   private long retryInterval;
   private long retrystartTime;
   private String nmHost;
@@ -102,9 +100,9 @@ public class LocalContainerAllocator extends RMCommunicator
         this.applicationAttemptId, this.lastResponseID, super
             .getApplicationProgress(), new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     AMResponse response;
     try {
+      AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
       response = allocateResponse.getAMResponse();
       // Reset retry count if no exception occurred.
       retrystartTime = System.currentTimeMillis();
