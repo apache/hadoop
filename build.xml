@@ -82,10 +82,10 @@
   <property name="build.anttasks" value="${build.dir}/ant"/>
   <property name="build.librecordio" value="${build.dir}/librecordio"/>
   <!-- convert spaces to _ so that mac os doesn't break things -->
-  <exec executable="sed" inputstring="${os.name}" 
-        outputproperty="nonspace.os">
-     <arg value="s/ /_/g"/>
-  </exec>
+  <script language="javascript">
+    var before = project.getProperty("os.name");
+    project.setProperty("nonspace.os", before.replaceAll(" ", "_"));
+  </script>
   <condition property="build.platform"
     value="${env.OS}-${os.arch}-${sun.arch.data.model}"
     else="${nonspace.os}-${os.arch}-${sun.arch.data.model}">
@@ -446,9 +446,9 @@
     <exec executable="python">
        <arg line="src/saveVersion.py ${version} ${build.dir}"/>
     </exec>
-	
-   <exec executable="sh">
-       <arg line="src/fixFontsPath.sh ${src.docs.cn}"/>
+
+   <exec executable="python">
+       <arg line="src/fixFontsPath.py ${src.docs.cn}"/>
    </exec>
   </target>
 
@@ -1530,12 +1530,10 @@
        </classpath>
     </javadoc>
   </target>
-	
+
   <target name="write-null">
-	<exec executable="touch">
-	   <arg value="${jdiff.home}/Null.java"/>
-        </exec>
-  </target> 
+    <touch file="${jdiff.home}/Null.java"/>
+  </target>
 
   <target name="api-report" depends="ivy-retrieve-jdiff,api-xml">
     <mkdir dir="${jdiff.build.dir}"/>
@@ -1606,13 +1604,13 @@
       </fileset>
     </copy>
 
-  	<exec dir="${dist.dir}" executable="sh" failonerror="true">
-	  <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
-	  <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
-	  <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
+    <exec dir="${dist.dir}" executable="python" failonerror="true">
+    <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+      <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
+      <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
       <env key="BUNDLE_SNAPPY_LIB" value="${bundle.snappy}"/>
       <env key="SNAPPY_LIB_DIR" value="${snappy.prefix}/lib"/>
-	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+      <arg line="${native.src.dir}/packageNativeHadoop.py"/>
     </exec>
 
     <subant target="package">
@@ -1733,11 +1731,11 @@
       </fileset>
     </copy>
 
-    <exec dir="${dist.dir}" executable="sh" failonerror="true">
+    <exec dir="${dist.dir}" executable="python" failonerror="true">
           <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
           <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
           <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
-          <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+          <arg line="${native.src.dir}/packageNativeHadoop.py"/>
     </exec>
 
     <subant target="package">

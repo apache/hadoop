@@ -1,4 +1,4 @@
-#!/bin/sh
+#! /usr/bin/python
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -16,15 +16,17 @@
 # limitations under the License.
 
 
-# This file is used to fix the paths in CNDOCS_SRC/uming.conf, CNDOCS_SRC/src/documentation/sitemap.xmap 
+# This file is used to fix the paths in CNDOCS_SRC/uming.conf and
+# CNDOCS_SRC/src/documentation/sitemap.xmap 
 
-CNDOCS_SRC=$1
+import os
+import sys
 
-cat <<EOF > src/docs/cn/uming.conf
-<?xml version="1.0"?>
+template_uming = \
+'''<?xml version="1.0"?>
 <configuration>
   <fonts>
-    <font metrics-file="$CNDOCS_SRC/uming.xml" kerning="yes" embed-file="$CNDOCS_SRC/uming.ttc">
+    <font metrics-file="%s/uming.xml" kerning="yes" embed-file="%s/uming.ttc">
       <font-triplet name="AR PL UMing" style="normal" weight="normal"/>
       <font-triplet name="AR PL UMing" style="italic" weight="normal"/>
       <font-triplet name="AR PL UMing" style="normal" weight="bold"/>
@@ -32,10 +34,10 @@ cat <<EOF > src/docs/cn/uming.conf
     </font>
   </fonts>
 </configuration>
-EOF
+'''
 
-cat <<EOF > src/docs/cn/src/documentation/sitemap.xmap
-<?xml version="1.0"?>
+template_sitemap = \
+'''<?xml version="1.0"?>
 <!--
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -58,7 +60,7 @@ cat <<EOF > src/docs/cn/src/documentation/sitemap.xmap
       <map:serializer name="fo2pdf"
                 src="org.apache.cocoon.serialization.FOPSerializer"
                 mime-type="application/pdf">
-        <user-config src="$CNDOCS_SRC/uming.conf"/>
+        <user-config src="%s/uming.conf"/>
         </map:serializer>
     </map:serializers>
   </map:components>
@@ -83,4 +85,24 @@ cat <<EOF > src/docs/cn/src/documentation/sitemap.xmap
     </map:pipeline>
   </map:pipelines>
 </map:sitemap>
-EOF
+'''
+
+def main(argv=None):
+  if argv is None:
+    argv = sys.argv[1:3]
+  cndocs_src = argv[0]
+
+  uming_file = 'src/docs/cn/uming.conf'
+  fout = open(uming_file, "w")
+  fout.write(template_uming % (cndocs_src, cndocs_src))
+  fout.close()
+  
+  site_map_file = 'src/docs/cn/src/documentation/sitemap.xmap'
+  fout = open(site_map_file, "w")
+  fout.write(template_sitemap % (cndocs_src))
+  fout.close()
+  return 0
+
+##########################
+if __name__ == "__main__":
+  sys.exit(main())
