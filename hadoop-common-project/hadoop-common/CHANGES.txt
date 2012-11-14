@@ -364,6 +364,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9021. Enforce configured SASL method on the server (daryn via
     bobby)
 
+    HADOO-8998. set Cache-Control no-cache header on all dynamic content. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
