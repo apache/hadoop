@@ -245,9 +245,6 @@ Trunk (Unreleased)
     HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
     (Trevor Robinson via suresh)
 
-    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
-    lastDeletedReport should be volatile. (Jing Zhao via suresh)
-
     HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
     (Binglin Chang via suresh)
 
@@ -585,6 +582,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3921. NN will prematurely consider blocks missing when entering active
     state while still in safe mode. (atm)
+
+    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
+    lastDeletedReport should be volatile. (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
