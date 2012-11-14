@@ -81,7 +81,6 @@ public class TestFSDirectory {
 
     DFSTestUtil.createFile(hdfs, file5, 1024, REPLICATION, seed);
     hdfs.mkdirs(sub2);
-
   }
 
   @After
@@ -128,6 +127,16 @@ public class TestFSDirectory {
     System.out.println("diff=" + diff);
     Assert.assertTrue(i > j);
     Assert.assertTrue(diff.contains(file4.getName()));
+  }
+  
+  @Test
+  public void testReset() throws Exception {
+    fsdir.reset();
+    Assert.assertFalse(fsdir.isReady());
+    final INodeDirectory root = (INodeDirectory) fsdir.getINode("/");
+    Assert.assertNull(root.getChildren());
+    fsdir.imageLoadComplete();
+    Assert.assertTrue(fsdir.isReady());
   }
   
   static void checkClassName(String line) {

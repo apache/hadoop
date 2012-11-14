@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.util.ByteArray;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /*************************************************
@@ -174,6 +175,12 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
+  }
+  
+  //This is for testing purposes only
+  @VisibleForTesting
+  boolean isReady() {
+    return ready;
   }
 
   // exposed for unit tests
@@ -1981,9 +1988,16 @@ public class FSDirectory implements Closeable {
    * Reset the entire namespace tree.
    */
   void reset() {
-    rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-        getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
-        Integer.MAX_VALUE, -1);
+    writeLock();
+    try {
+      setReady(false);
+      rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
+          getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
+          Integer.MAX_VALUE, -1);
+      nameCache.reset();
+    } finally {
+      writeUnlock();
+    }
   }
 
   /**
