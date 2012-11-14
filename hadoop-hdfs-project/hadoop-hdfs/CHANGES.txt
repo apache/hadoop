@@ -1726,6 +1726,8 @@ Release 0.23.5 - UNRELEASED
     HDFS-4172. namenode does not URI-encode parameters when building URI for
     datanode request (Derek Dagit via bobby)
 
+    HDFS-4182. SecondaryNameNode leaks NameCache entries (bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
