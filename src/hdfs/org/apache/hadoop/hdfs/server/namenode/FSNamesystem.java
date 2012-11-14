@@ -322,6 +322,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private boolean allowBrokenAppend = false;
   // enable durable sync
   private boolean durableSync = true;
+  // How many entries are returned by getCorruptInodes()
+  int maxCorruptFilesReturned;
 
   /**
    * Last block index used for replication work.
@@ -508,6 +510,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
               DFSUtil.getInvalidateWorkPctPerIteration(conf);
     this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
 
+    this.maxCorruptFilesReturned = conf.getInt(
+        DFSConfigKeys.DFS_MAX_CORRUPT_FILES_RETURNED_KEY,
+        DFSConfigKeys.DFS_MAX_CORRUPT_FILES_RETURNED_DEFAULT);
     this.defaultReplication = conf.getInt("dfs.replication", 3);
     this.maxReplication = conf.getInt("dfs.replication.max", 512);
     this.minReplication = conf.getInt("dfs.replication.min", 1);
@@ -6050,5 +6055,59 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   @Override
   public String toString() {
     return getClass().getSimpleName() + ": " + host2DataNodeMap;
+  }
+  
+  /**
+   * Used by {@link FSNamesystem#getCorruptFileBlocks()} and
+   * {@link FSNamesystem#listCorruptFileBlocks()} to represent information about
+   * corrupt file and its corresponding block
+   */
+  static class CorruptFileBlockInfo {
+    String path;
+    Block block;
+
+    public CorruptFileBlockInfo(String p, Block b) {
+      path = p;
+      block = b;
+    }
+
+    @Override
+    public String toString() {
+      return block.getBlockName() + "\t" + path;
+    }
+  }
+
+  /**
+   * @return a collection of corrupt files with their blocks information, with a
+   *         maximum of {@link FSNamesystem#maxCorruptFilesReturned} files
+   *         listed in total
+   */
+  private Collection<CorruptFileBlockInfo> getCorruptFileBlocks() {
+    ArrayList<CorruptFileBlockInfo> corruptFiles = 
+        new ArrayList<CorruptFileBlockInfo>();
+    for (Block blk : neededReplications.getCorruptQueue()) {
+      INode inode = blocksMap.getINode(blk);
+      if (inode != null && countNodes(blk).liveReplicas() == 0) {
+        String filePath = FSDirectory.getFullPathName(inode);
+        CorruptFileBlockInfo info = new CorruptFileBlockInfo(filePath, blk);
+        corruptFiles.add(info);
+        if (corruptFiles.size() >= this.maxCorruptFilesReturned) {
+          break;
+        }
+      }
+    }
+    return corruptFiles;
+  }
+
+  /**
+   * @return Collection of CorruptFileBlockInfo objects representing files with
+   *         corrupted blocks.
+   * @throws AccessControlException
+   * @throws IOException
+   */
+  synchronized Collection<CorruptFileBlockInfo> listCorruptFileBlocks()
+      throws AccessControlException, IOException {
+    checkSuperuserPrivilege();
+    return getCorruptFileBlocks();
   }
 }

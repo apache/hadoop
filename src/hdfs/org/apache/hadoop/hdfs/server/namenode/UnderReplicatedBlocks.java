@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
  */
 class UnderReplicatedBlocks implements Iterable<Block> {
   static final int LEVEL = 3;
+  public static final int QUEUE_WITH_CORRUPT_BLOCKS = 2;
   private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
       
   /* constructor */
@@ -187,39 +188,55 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     return new BlockIterator();
   }
   
-    class BlockIterator implements Iterator<Block> {
-      private int level;
-      private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
-      BlockIterator()  
-      {
-        level=0;
-        for(int i=0; i<LEVEL; i++) {
-          iterators.add(priorityQueues.get(i).iterator());
-        }
+  class BlockIterator implements Iterator<Block> {
+    private int level;
+    private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
+
+    BlockIterator() {
+      level = 0;
+      for (int i = 0; i < LEVEL; i++) {
+        iterators.add(priorityQueues.get(i).iterator());
       }
-              
-      private void update() {
-        while(level< LEVEL-1 && !iterators.get(level).hasNext()) {
-          level++;
-        }
+    }
+
+    private void update() {
+      while (level < LEVEL - 1 && !iterators.get(level).hasNext()) {
+        level++;
       }
-              
-      public Block next() {
-        update();
-        return iterators.get(level).next();
-      }
-              
-      public boolean hasNext() {
-        update();
-        return iterators.get(level).hasNext();
-      }
-              
-      public void remove() {
-        iterators.get(level).remove();
-      }
-      
-      public int getPriority() {
-        return level;
-    };
+    }
+
+    public Block next() {
+      update();
+      return iterators.get(level).next();
+    }
+
+    public boolean hasNext() {
+      update();
+      return iterators.get(level).hasNext();
+    }
+
+    public void remove() {
+      iterators.get(level).remove();
+    }
+
+    public int getPriority() {
+      return level;
+    }
+  }
+  
+  /* returns an iterator of all blocks in a given priority queue */
+  private synchronized Iterable<Block> getQueue(int priority) {
+    if (priority < 0 || priority >= LEVEL) {
+      return null;
+    }
+    return priorityQueues.get(priority);
+  }
+
+  /**
+   * @return an iterator of all the blocks in the QUEUE_WITH_CORRUPT_BLOCKS
+   *         priority queue
+   */
+  Iterable<Block> getCorruptQueue() {
+    return getQueue(QUEUE_WITH_CORRUPT_BLOCKS);
   }
 }
