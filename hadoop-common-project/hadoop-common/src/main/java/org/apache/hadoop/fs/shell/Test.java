@@ -91,8 +91,6 @@ class Test extends FsCommand {
 
   @Override
   protected void processNonexistentPath(PathData item) throws IOException {
-    // NOTE: errors for FNF is not how the shell works!
-    if (flag != 'e') displayError(new PathNotFoundException(item.toString()));
     exitCode = 1;
   }
 }
