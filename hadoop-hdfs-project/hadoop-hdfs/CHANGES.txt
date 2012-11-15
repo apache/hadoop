@@ -1689,6 +1689,18 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1728,7 +1740,7 @@ Release 0.23.5 - UNRELEASED
 
     HDFS-4182. SecondaryNameNode leaks NameCache entries (bobby)
 
-Release 0.23.4 - UNRELEASED
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 
