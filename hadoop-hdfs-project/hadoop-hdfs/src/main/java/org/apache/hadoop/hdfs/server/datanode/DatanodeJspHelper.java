@@ -259,7 +259,8 @@ public class DatanodeJspHelper {
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
-    final String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    final String nnAddr = StringEscapeUtils.escapeHtml(
+        req.getParameter(JspHelper.NAMENODE_ADDRESS));
     if (nnAddr == null){
       out.print(JspHelper.NAMENODE_ADDRESS + " url param is null");
       return;
@@ -637,7 +638,7 @@ public class DatanodeJspHelper {
     UserGroupInformation ugi = JspHelper.getUGI(req, conf);
 
     String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
-    String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    String nnAddr = StringEscapeUtils.escapeHtml(req.getParameter(JspHelper.NAMENODE_ADDRESS));
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);

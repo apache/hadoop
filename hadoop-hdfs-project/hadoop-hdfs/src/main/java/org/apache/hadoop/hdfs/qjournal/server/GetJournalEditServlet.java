@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -139,8 +140,9 @@ public class GetJournalEditServlet extends HttpServlet {
       HttpServletRequest request, HttpServletResponse response)
       throws IOException {
     String myStorageInfoString = storage.toColonSeparatedString();
-    String theirStorageInfoString = request.getParameter(STORAGEINFO_PARAM);
-    
+    String theirStorageInfoString = StringEscapeUtils.escapeHtml(
+        request.getParameter(STORAGEINFO_PARAM));
+
     if (theirStorageInfoString != null
         && !myStorageInfoString.equals(theirStorageInfoString)) {
       String msg = "This node has storage info '" + myStorageInfoString
