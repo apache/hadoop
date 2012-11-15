@@ -285,6 +285,8 @@ public class JobInfo {
         case SCHEDULED:
           ++this.mapsPending;
           break;
+        default:
+          break;
         }
         break;
       case REDUCE:
@@ -296,8 +298,13 @@ public class JobInfo {
         case SCHEDULED:
           ++this.reducesPending;
           break;
+        default:
+          break;
         }
         break;
+      default:
+        throw new IllegalStateException(
+            "Task type is neither map nor reduce: " + task.getType());
       }
       // Attempts counts
       Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
@@ -337,6 +344,9 @@ public class JobInfo {
           this.failedReduceAttempts += failed;
           this.killedReduceAttempts += killed;
           break;
+        default:
+          throw new IllegalStateException("Task type neither map nor reduce: " + 
+              task.getType());
         }
       }
     }

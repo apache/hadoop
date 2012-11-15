@@ -37,6 +37,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Charsets;
+
 public class WordMean extends Configured implements Tool {
 
   private double mean = 0;
@@ -125,7 +127,7 @@ public class WordMean extends Configured implements Tool {
 
     // average = total sum / number of elements;
     try {
-      br = new BufferedReader(new InputStreamReader(fs.open(file)));
+      br = new BufferedReader(new InputStreamReader(fs.open(file), Charsets.UTF_8));
 
       long count = 0;
       long length = 0;
@@ -151,7 +153,9 @@ public class WordMean extends Configured implements Tool {
       System.out.println("The mean is: " + theMean);
       return theMean;
     } finally {
-      br.close();
+      if (br != null) {
+        br.close();
+      }
     }
   }
 

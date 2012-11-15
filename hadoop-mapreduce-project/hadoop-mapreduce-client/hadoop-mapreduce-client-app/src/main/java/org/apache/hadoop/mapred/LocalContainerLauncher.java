@@ -359,9 +359,8 @@ public class LocalContainerLauncher extends AbstractService implements
               + StringUtils.stringifyException(e));
         }
         // Report back any failures, for diagnostic purposes
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        exception.printStackTrace(new PrintStream(baos));
-        umbilical.reportDiagnosticInfo(classicAttemptID, baos.toString());
+        umbilical.reportDiagnosticInfo(classicAttemptID, 
+            StringUtils.stringifyException(exception));
         throw new RuntimeException();
 
       } catch (Throwable throwable) {

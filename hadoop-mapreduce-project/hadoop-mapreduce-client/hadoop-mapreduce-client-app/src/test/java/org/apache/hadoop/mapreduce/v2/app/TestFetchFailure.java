@@ -412,7 +412,6 @@ public class TestFetchFailure {
     status.fetchFailedMaps = new ArrayList<TaskAttemptId>();
     status.id = attempt.getID();
     status.mapFinishTime = 0;
-    status.outputSize = 0;
     status.phase = phase;
     status.progress = 0.5f;
     status.shuffleFinishTime = 0;

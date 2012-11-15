@@ -22,7 +22,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -49,6 +51,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.base.Charsets;
 
 /**
  * A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact 
@@ -151,7 +155,8 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
         LOG.info("Writing text output to " + outfile);
         final OutputStream outputstream = fs.create(outfile);
         try {
-          final PrintStream out = new PrintStream(outputstream, true);
+          final PrintWriter out = new PrintWriter(
+              new OutputStreamWriter(outputstream, Charsets.UTF_8), true);
           // write hex text
           print(out, hex.iterator(), "Pi = 0x3.", "%02X", 5, 5);
           out.println("Total number of hexadecimal digits is "
@@ -184,7 +189,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
   }
 
   /** Print out elements in a nice format. */
-  private static <T> void print(PrintStream out, Iterator<T> iterator,
+  private static <T> void print(PrintWriter out, Iterator<T> iterator,
       String prefix, String format, int elementsPerGroup, int groupsPerLine) {
     final StringBuilder sb = new StringBuilder("\n");
     for (int i = 0; i < prefix.length(); i++)

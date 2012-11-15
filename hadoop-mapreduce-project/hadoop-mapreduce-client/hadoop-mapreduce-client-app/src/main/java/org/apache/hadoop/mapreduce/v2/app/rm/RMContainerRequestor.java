@@ -210,7 +210,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       return; //already blacklisted
     }
     Integer failures = nodeFailures.remove(hostName);
-    failures = failures == null ? 0 : failures;
+    failures = failures == null ? Integer.valueOf(0) : failures;
     failures++;
     LOG.info(failures + " failures on node " + hostName);
     if (failures >= maxTaskFailuresPerNode) {

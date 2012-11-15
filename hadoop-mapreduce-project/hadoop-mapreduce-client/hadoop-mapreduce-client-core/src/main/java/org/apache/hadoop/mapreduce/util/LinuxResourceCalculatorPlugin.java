@@ -19,9 +19,10 @@
 package org.apache.hadoop.mapreduce.util;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import com.google.common.base.Charsets;
 
 /**
  * Plugin to calculate resource information on Linux systems.
@@ -152,9 +155,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
     // Read "/proc/memInfo" file
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
-      fReader = new FileReader(procfsMemFile);
+      fReader = new InputStreamReader(new FileInputStream(procfsMemFile),
+          Charsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -211,9 +215,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
     // Read "/proc/cpuinfo" file
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
-      fReader = new FileReader(procfsCpuFile);
+      fReader = new InputStreamReader(new FileInputStream(procfsCpuFile), 
+          Charsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -258,9 +263,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private void readProcStatFile() {
     // Read "/proc/stat" file
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
-      fReader = new FileReader(procfsStatFile);
+      fReader = new InputStreamReader(new FileInputStream(procfsStatFile),
+          Charsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....

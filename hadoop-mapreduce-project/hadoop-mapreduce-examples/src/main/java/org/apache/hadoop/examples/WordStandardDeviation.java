@@ -37,6 +37,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Charsets;
+
 public class WordStandardDeviation extends Configured implements Tool {
 
   private double stddev = 0;
@@ -135,7 +137,7 @@ public class WordStandardDeviation extends Configured implements Tool {
     double stddev = 0;
     BufferedReader br = null;
     try {
-      br = new BufferedReader(new InputStreamReader(fs.open(file)));
+      br = new BufferedReader(new InputStreamReader(fs.open(file), Charsets.UTF_8));
       long count = 0;
       long length = 0;
       long square = 0;
@@ -166,7 +168,9 @@ public class WordStandardDeviation extends Configured implements Tool {
       stddev = Math.sqrt((term - mean));
       System.out.println("The standard deviation is: " + stddev);
     } finally {
-      br.close();
+      if (br != null) {
+        br.close();
+      }
     }
     return stddev;
   }
