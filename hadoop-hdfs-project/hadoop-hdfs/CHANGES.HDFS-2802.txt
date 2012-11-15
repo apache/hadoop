@@ -73,3 +73,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4188. Add Snapshot.ID_COMPARATOR for comparing IDs and fix a bug in
   ReadOnlyList.Util.binarySearch(..).  (szetszwo)
+
+  HDFS-4187. Add tests for replication handling in snapshots. (Jing Zhao via
+  szetszwo)
