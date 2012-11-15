@@ -48,8 +48,9 @@ public class TestUserGroupInformation {
   final private static String GROUP2_NAME = "group2";
   final private static String GROUP3_NAME = "group3";
   final private static String[] GROUP_NAMES = 
-    new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
-  
+    new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME}; 
+  private static Configuration conf;
+ 
   /**
    * UGI should not use the default security conf, else it will collide
    * with other classes that may change the default conf.  Using this dummy
@@ -68,16 +69,75 @@ public class TestUserGroupInformation {
   /** configure ugi */
   @BeforeClass
   public static void setup() {
-    Configuration conf = new Configuration();
+    javax.security.auth.login.Configuration.setConfiguration(
+        new DummyLoginConfiguration());
+  }
+  
+  @Before
+  public void setupUgi() {
+    conf = new Configuration();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
         + "DEFAULT");
     UserGroupInformation.setConfiguration(conf);
-    javax.security.auth.login.Configuration.setConfiguration(
-        new DummyLoginConfiguration());
+    UserGroupInformation.setLoginUser(null);
   }
   
+  @After
+  public void resetUgi() {
+    UserGroupInformation.setLoginUser(null);
+  }
+
+  @Test
+  public void testSimpleLogin() throws IOException {
+    tryLoginAuthenticationMethod(AuthenticationMethod.SIMPLE, true);
+  }
+
+  @Test
+  public void testTokenLogin() throws IOException {
+    tryLoginAuthenticationMethod(AuthenticationMethod.TOKEN, false);
+  }
+  
+  @Test
+  public void testProxyLogin() throws IOException {
+    tryLoginAuthenticationMethod(AuthenticationMethod.PROXY, false);
+  }
+  
+  private void tryLoginAuthenticationMethod(AuthenticationMethod method,
+                                            boolean expectSuccess)
+                                                throws IOException {
+    SecurityUtil.setAuthenticationMethod(method, conf);
+    UserGroupInformation.setConfiguration(conf); // pick up changed auth       
+
+    UserGroupInformation ugi = null;
+    Exception ex = null;
+    try {
+      ugi = UserGroupInformation.getLoginUser();
+    } catch (Exception e) {
+      ex = e;
+    }
+    if (expectSuccess) {
+      assertNotNull(ugi);
+      assertEquals(method, ugi.getAuthenticationMethod());
+    } else {
+      assertNotNull(ex);
+      assertEquals(UnsupportedOperationException.class, ex.getClass());
+      assertEquals(method + " login authentication is not supported",
+                   ex.getMessage());
+    }
+  }
+  
+  @Test
+  public void testGetRealAuthenticationMethod() {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user1");
+    ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+    assertEquals(AuthenticationMethod.SIMPLE, ugi.getAuthenticationMethod());
+    assertEquals(AuthenticationMethod.SIMPLE, ugi.getRealAuthenticationMethod());
+    ugi = UserGroupInformation.createProxyUser("user2", ugi);
+    assertEquals(AuthenticationMethod.PROXY, ugi.getAuthenticationMethod());
+    assertEquals(AuthenticationMethod.SIMPLE, ugi.getRealAuthenticationMethod());
+  }
   /** Test login method */
   @Test
   public void testLogin() throws Exception {

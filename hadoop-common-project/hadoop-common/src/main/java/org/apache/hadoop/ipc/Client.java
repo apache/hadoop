@@ -292,14 +292,15 @@ public class Client {
         }
       }
       
+      AuthenticationMethod authentication;
       if (token != null) {
-        authMethod = AuthenticationMethod.TOKEN.getAuthMethod();
-      } else if (UserGroupInformation.isSecurityEnabled()) {
-        // eventually just use the ticket's authMethod
-        authMethod = AuthMethod.KERBEROS;
-      } else {
-        authMethod = AuthMethod.SIMPLE;
+        authentication = AuthenticationMethod.TOKEN;
+      } else if (ticket != null) {
+        authentication = ticket.getRealAuthenticationMethod();
+      } else { // this only happens in lazy tests
+        authentication = AuthenticationMethod.SIMPLE;
       }
+      authMethod = authentication.getAuthMethod();
       
       if (LOG.isDebugEnabled())
         LOG.debug("Use " + authMethod + " authentication for protocol "
