@@ -38,6 +38,10 @@ public class NoCacheFilter implements Filter {
     throws IOException, ServletException {
     HttpServletResponse httpRes = (HttpServletResponse) res;
     httpRes.setHeader("Cache-Control", "no-cache");
+    long now = System.currentTimeMillis();
+    httpRes.addDateHeader("Expires", now);
+    httpRes.addDateHeader("Date", now);
+    httpRes.addHeader("Pragma", "no-cache");
     chain.doFilter(req, res);
   }
 

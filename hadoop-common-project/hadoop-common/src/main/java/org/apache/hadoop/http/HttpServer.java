@@ -25,7 +25,12 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.GeneralSecurityException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.servlet.Filter;
@@ -960,7 +965,7 @@ public class HttpServer implements FilterContainer {
       @Override
       public Enumeration<String> getParameterNames() {
         return new Enumeration<String>() {
-          private Enumeration<String> rawIterator = 
+          private Enumeration<String> rawIterator =
             rawRequest.getParameterNames();
           @Override
           public boolean hasMoreElements() {
