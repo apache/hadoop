@@ -401,16 +401,20 @@ public class LeaseManager {
     @Override
     public void run() {
       for(; shouldRunMonitor && fsnamesystem.isRunning(); ) {
+        boolean needSync = false;
         try {
           fsnamesystem.writeLockInterruptibly();
           try {
             if (!fsnamesystem.isInSafeMode()) {
-              checkLeases();
+              needSync = checkLeases();
             }
           } finally {
             fsnamesystem.writeUnlock();
+            // lease reassignments should to be sync'ed.
+            if (needSync) {
+              fsnamesystem.getEditLog().logSync();
+            }
           }
-  
   
           Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
         } catch(InterruptedException ie) {
@@ -422,13 +426,16 @@ public class LeaseManager {
     }
   }
 
-  /** Check the leases beginning from the oldest. */
-  private synchronized void checkLeases() {
+  /** Check the leases beginning from the oldest.
+   *  @return true is sync is needed.
+   */
+  private synchronized boolean checkLeases() {
+    boolean needSync = false;
     assert fsnamesystem.hasWriteLock();
     for(; sortedLeases.size() > 0; ) {
       final Lease oldest = sortedLeases.first();
       if (!oldest.expiredHardLimit()) {
-        return;
+        return needSync;
       }
 
       LOG.info(oldest + " has expired hard limit");
@@ -451,6 +458,10 @@ public class LeaseManager {
               LOG.debug("Started block recovery " + p + " lease " + oldest);
             }
           }
+          // If a lease recovery happened, we need to sync later.
+          if (!needSync && !completed) {
+            needSync = true;
+          }
         } catch (IOException e) {
           LOG.error("Cannot release the path " + p + " in the lease "
               + oldest, e);
@@ -462,6 +473,7 @@ public class LeaseManager {
         removeLease(oldest, p);
       }
     }
+    return needSync;
   }
 
   @Override
