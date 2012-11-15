@@ -81,7 +81,7 @@ public class TestINodeDirectoryWithSnapshot {
 
     // make modifications to current and record the diff
     final List<INode> current = new ArrayList<INode>(previous);
-    final Diff diff = computeDiff? new Diff(0): null;
+    final Diff diff = computeDiff? new Diff(): null;
 
     for(int m = 0; m < numModifications; m++) {
       // if current is empty, the next operation must be create;
@@ -226,6 +226,37 @@ public class TestINodeDirectoryWithSnapshot {
     current.set(i, newinode);
     if (diff != null) {
       diff.modify(oldinode, newinode);
+    }
+  }
+
+  /**
+   * Test {@link Snapshot#ID_COMPARATOR}.
+   */
+  @Test
+  public void testIdCmp() {
+    final INodeDirectory dir = new INodeDirectory("foo", PERM);
+    final INodeDirectorySnapshottable snapshottable
+        = INodeDirectorySnapshottable.newInstance(dir, 100);
+    final Snapshot[] snapshots = {
+      new Snapshot(1, "s1", snapshottable),
+      new Snapshot(1, "s1", snapshottable),
+      new Snapshot(2, "s2", snapshottable),
+      new Snapshot(2, "s2", snapshottable),
+    };
+
+    Assert.assertEquals(0, Snapshot.ID_COMPARATOR.compare(null, null));
+    for(Snapshot s : snapshots) {
+      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) < 0);
+      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) > 0);
+      
+      for(Snapshot t : snapshots) {
+        final int expected = s.getRoot().getLocalName().compareTo(
+            t.getRoot().getLocalName());
+        final int computed = Snapshot.ID_COMPARATOR.compare(s, t);
+        Assert.assertEquals(expected > 0, computed > 0);
+        Assert.assertEquals(expected == 0, computed == 0);
+        Assert.assertEquals(expected < 0, computed < 0);
+      }
     }
   }
 }

@@ -19,12 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,10 +46,8 @@ import com.google.common.primitives.SignedBytes;
  */
 @InterfaceAudience.Private
 public abstract class INode implements Comparable<byte[]> {
-  static final List<INode> EMPTY_LIST
-      = Collections.unmodifiableList(new ArrayList<INode>());
   static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
-      = ReadOnlyList.Util.asReadOnlyList(EMPTY_LIST);
+      = ReadOnlyList.Util.emptyList();
 
   /**
    *  The inode name is in java UTF8 encoding; 

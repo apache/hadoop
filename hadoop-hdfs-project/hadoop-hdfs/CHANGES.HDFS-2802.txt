@@ -70,3 +70,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4148. Disallow write/modify operations on files and directories in a
   snapshot. (Brandon Li via suresh)
+
+  HDFS-4188. Add Snapshot.ID_COMPARATOR for comparing IDs and fix a bug in
+  ReadOnlyList.Util.binarySearch(..).  (szetszwo)

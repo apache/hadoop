@@ -52,6 +52,11 @@ public interface ReadOnlyList<E> extends Iterable<E> {
    * Utilities for {@link ReadOnlyList}
    */
   public static class Util {
+    /** @return an empty list. */
+    public static <E> ReadOnlyList<E> emptyList() {
+      return ReadOnlyList.Util.asReadOnlyList(Collections.<E>emptyList());
+    }
+
     /**
      * The same as {@link Collections#binarySearch(List, Object)}
      * except that the list is a {@link ReadOnlyList}.
@@ -61,7 +66,20 @@ public interface ReadOnlyList<E> extends Iterable<E> {
      */
     public static <K, E extends Comparable<K>> int binarySearch(
         final ReadOnlyList<E> list, final K key) {
-      return Collections.binarySearch(asList(list), key);
+      int lower = 0;
+      for(int upper = list.size() - 1; lower <= upper; ) {
+        final int mid = (upper + lower) >>> 1;
+
+        final int d = list.get(mid).compareTo(key);
+        if (d == 0) {
+          return mid;
+        } else if (d > 0) {
+          upper = mid - 1;
+        } else {
+          lower = mid + 1;
+        }
+      }
+      return -(lower + 1);
     }
 
     /**

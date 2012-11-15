@@ -17,11 +17,26 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.util.Comparator;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
 public class Snapshot implements Comparable<byte[]> {
+  /** Compare snapshot IDs with null <= s for any snapshot s. */
+  public static final Comparator<Snapshot> ID_COMPARATOR
+      = new Comparator<Snapshot>() {
+    @Override
+    public int compare(Snapshot left, Snapshot right) {
+      if (left == null) {
+        return right == null? 0: -1;
+      } else {
+        return right == null? 1: left.id - right.id; 
+      }
+    }
+  };
+
   /** Snapshot ID. */
   private final int id;
   /** The root directory of the snapshot. */
@@ -40,11 +55,6 @@ public class Snapshot implements Comparable<byte[]> {
   @Override
   public int compareTo(byte[] bytes) {
     return root.compareTo(bytes);
-  }
-
-  /** Compare snapshot IDs. */
-  public int compareTo(Snapshot s) {
-    return id - s.id;
   }
   
   @Override

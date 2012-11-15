@@ -79,16 +79,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
       return inodes == null? -1: Collections.binarySearch(inodes, name);
     }
 
-    /** The ID (e.g. snapshot ID) of this object. */
-    final int id;
     /** c-list: inode(s) created in current. */
     private List<INode> created;
     /** d-list: inode(s) deleted from current. */
     private List<INode> deleted;
-
-    Diff(int id) {
-      this.id = id;
-    }
 
     /**
      * Insert the inode to created.
@@ -251,7 +245,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
 
     @Override
     public String toString() {
-      return getClass().getSimpleName() + "_" + id
+      return getClass().getSimpleName()
           + ":\n  created=" + toString(created)
           + "\n  deleted=" + toString(deleted);
     }
