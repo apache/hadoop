@@ -180,9 +180,16 @@ public class BookKeeperJournalManager implements JournalManager {
 
     try {
       zkConnectLatch = new CountDownLatch(1);
-      zkc = new ZooKeeper(zkConnect, conf.getInt(BKJM_ZK_SESSION_TIMEOUT,
-          BKJM_ZK_SESSION_TIMEOUT_DEFAULT), new ZkConnectionWatcher());
-      if (!zkConnectLatch.await(6000, TimeUnit.MILLISECONDS)) {
+      int bkjmZKSessionTimeout = conf.getInt(BKJM_ZK_SESSION_TIMEOUT,
+          BKJM_ZK_SESSION_TIMEOUT_DEFAULT);
+      zkc = new ZooKeeper(zkConnect, bkjmZKSessionTimeout,
+          new ZkConnectionWatcher());
+      // Configured zk session timeout + some extra grace period (here
+      // BKJM_ZK_SESSION_TIMEOUT_DEFAULT used as grace period)
+      int zkConnectionLatchTimeout = bkjmZKSessionTimeout
+          + BKJM_ZK_SESSION_TIMEOUT_DEFAULT;
+      if (!zkConnectLatch
+          .await(zkConnectionLatchTimeout, TimeUnit.MILLISECONDS)) {
         throw new IOException("Error connecting to zookeeper");
       }
 
