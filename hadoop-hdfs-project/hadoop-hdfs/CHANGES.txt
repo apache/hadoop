@@ -11,7 +11,7 @@ Release 0.23.6 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-/
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -67,6 +67,9 @@ Release 0.23.5 - UNRELEASED
     datanode request (Derek Dagit via bobby)
 
     HDFS-4182. SecondaryNameNode leaks NameCache entries (bobby)
+
+    HDFS-4186. logSync() is called with the write lock held while releasing
+    lease (Kihwal Lee via daryn)
 
 Release 0.23.4
 
