@@ -73,11 +73,11 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.
-      link(root_url("static/jquery/themes-1.8.16/base/jquery-ui.css")).
-      link(root_url("static/dt-1.7.5/css/jui-dt.css")).
-      script(root_url("static/jquery/jquery.min-1.6.4.js")).
-      script(root_url("static/jquery/jquery-ui.min-1.8.16.js")).
-      script(root_url("static/dt-1.7.5/js/jquery.dataTables.min.js")).
+      link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css")).
+      link(root_url("static/dt-1.9.4/css/jui-dt.css")).
+      script(root_url("static/jquery/jquery-1.8.2.min.js")).
+      script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js")).
+      script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js")).
       script(root_url("static/yarn.dt.plugins.js")).
       style("#jsnotice { padding: 0.2em; text-align: center; }",
             ".ui-progressbar { height: 1em; min-width: 5em }"); // required

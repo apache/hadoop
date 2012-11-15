@@ -82,17 +82,15 @@ public class HsView extends TwoColumnLayout {
    */
   private String jobsTableInit() {
     return tableInit().
+        append(", 'aaData': jobsTableData").
+        append(", bDeferRender: true").
+        append(", bProcessing: true").
+
         // Sort by id upon page load
         append(", aaSorting: [[2, 'desc']]").
         append(", aoColumnDefs:[").
-        // Maps Total
-        append("{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 7 ] }").
-        // Maps Completed
-        append(",{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 8 ] }").
-        // Reduces Total
-        append(",{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 9 ] }").
-        // Reduces Completed
-        append(",{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 10 ] }").
+        // Maps Total, Maps Completed, Reduces Total and Reduces Completed
+        append("{'sType':'numeric', 'bSearchable': false, 'aTargets': [ 7, 8, 9, 10 ] }").
         append("]}").
         toString();
   }

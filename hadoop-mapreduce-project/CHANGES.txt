@@ -593,6 +593,9 @@ Release 0.23.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4720. Browser thinks History Server main page JS is taking too 
+    long (Ravi Prakash via bobby)
+
   BUG FIXES
 
     MAPREDUCE-4554. Job Credentials are not transmitted if security is turned 
