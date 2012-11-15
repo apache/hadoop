@@ -73,14 +73,15 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.
-      link(join("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/base/jquery-ui.css")).
-      link(root_url("static/dt-1.7.5/css/jui-dt.css")).
-      script("https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js").
-      script("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js").
-      script(root_url("static/dt-1.7.5/js/jquery.dataTables.min.js")).
+      link("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/base"
+          + "/jquery-ui.css").
+      link(root_url("static/dt-1.9.4/css/jui-dt.css")).
+      script(root_url("static/jquery-1.8.2.min.js")).
+      script(root_url("static/jquery-ui-1.9.1.custom.min.js")).
+      script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js")).
       script(root_url("static/yarn.dt.plugins.js")).
       style("#jsnotice { padding: 0.2em; text-align: center; }",
-            ".ui-progressbar { height: 1em; min-width: 5em }"); // required
+        ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
     List<String> list = Lists.newArrayList();
     initAccordions(list);
