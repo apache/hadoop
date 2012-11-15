@@ -144,7 +144,6 @@ public class Shuffle<K, V> implements ExceptionReporter {
     for (Fetcher<K,V> fetcher : fetchers) {
       fetcher.shutDown();
     }
-    fetchers = null;
     
     // stop the scheduler
     scheduler.close();

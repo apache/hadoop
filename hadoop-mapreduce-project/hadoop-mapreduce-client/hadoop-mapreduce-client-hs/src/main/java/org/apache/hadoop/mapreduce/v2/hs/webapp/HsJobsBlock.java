@@ -38,7 +38,7 @@ import com.google.inject.Inject;
  */
 public class HsJobsBlock extends HtmlBlock {
   final AppContext appContext;
-  static final SimpleDateFormat dateFormat =
+  final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
 
   @Inject HsJobsBlock(AppContext appCtx) {

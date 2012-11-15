@@ -49,9 +49,7 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
   protected CombineFileSplit split;
   protected JobConf jc;
   protected Reporter reporter;
-  protected Class<RecordReader<K, V>> rrClass;
   protected Constructor<RecordReader<K, V>> rrConstructor;
-  protected FileSystem fs;
   
   protected int idx;
   protected long progress;
@@ -106,7 +104,6 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
     throws IOException {
     this.split = split;
     this.jc = job;
-    this.rrClass = rrClass;
     this.reporter = reporter;
     this.idx = 0;
     this.curReader = null;

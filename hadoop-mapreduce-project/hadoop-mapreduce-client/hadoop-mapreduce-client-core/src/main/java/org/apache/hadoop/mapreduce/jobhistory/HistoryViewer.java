@@ -188,7 +188,7 @@ public class HistoryViewer {
              decimal.format(counter.getValue());
 
            buff.append(
-               String.format("\n|%1$-30s|%2$-30s|%3$-10s|%4$-10s|%5$-10s", 
+               String.format("%n|%1$-30s|%2$-30s|%3$-10s|%4$-10s|%5$-10s", 
                    totalGroup.getDisplayName(),
                    counter.getDisplayName(),
                    mapValue, reduceValue, totalValue));

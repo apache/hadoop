@@ -38,6 +38,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Charsets;
+
 public class WordMedian extends Configured implements Tool {
 
   private double median = 0;
@@ -127,7 +129,7 @@ public class WordMedian extends Configured implements Tool {
     BufferedReader br = null;
 
     try {
-      br = new BufferedReader(new InputStreamReader(fs.open(file)));
+      br = new BufferedReader(new InputStreamReader(fs.open(file), Charsets.UTF_8));
       int num = 0;
 
       String line;
@@ -157,7 +159,9 @@ public class WordMedian extends Configured implements Tool {
         }
       }
     } finally {
-      br.close();
+      if (br != null) {
+        br.close();
+      }
     }
     // error, no median found
     return -1;

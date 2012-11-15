@@ -184,10 +184,8 @@ class YarnChild {
         LOG.info("Exception cleaning up: " + StringUtils.stringifyException(e));
       }
       // Report back any failures, for diagnostic purposes
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      exception.printStackTrace(new PrintStream(baos));
       if (taskid != null) {
-        umbilical.fatalError(taskid, baos.toString());
+        umbilical.fatalError(taskid, StringUtils.stringifyException(exception));
       }
     } catch (Throwable throwable) {
       LOG.fatal("Error running child : "

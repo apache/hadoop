@@ -18,20 +18,22 @@
 package org.apache.hadoop.mapreduce.security;
 
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.URL;
 
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.record.Utils;
+
+import com.google.common.base.Charsets;
 
 /**
  * 
@@ -41,6 +43,8 @@ import org.apache.hadoop.record.Utils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SecureShuffleUtils {
+  private static final Log LOG = LogFactory.getLog(SecureShuffleUtils.class);
+  
   public static final String HTTP_HEADER_URL_HASH = "UrlHash";
   public static final String HTTP_HEADER_REPLY_URL_HASH = "ReplyHash";
   
@@ -49,7 +53,8 @@ public class SecureShuffleUtils {
    * @param msg
    */
   public static String generateHash(byte[] msg, SecretKey key) {
-    return new String(Base64.encodeBase64(generateByteHash(msg, key)));
+    return new String(Base64.encodeBase64(generateByteHash(msg, key)), 
+        Charsets.UTF_8);
   }
   
   /**
@@ -80,7 +85,7 @@ public class SecureShuffleUtils {
    */
   public static String hashFromString(String enc_str, SecretKey key) 
   throws IOException {
-    return generateHash(enc_str.getBytes(), key); 
+    return generateHash(enc_str.getBytes(Charsets.UTF_8), key); 
   }
   
   /**
@@ -91,9 +96,9 @@ public class SecureShuffleUtils {
    */
   public static void verifyReply(String base64Hash, String msg, SecretKey key)
   throws IOException {
-    byte[] hash = Base64.decodeBase64(base64Hash.getBytes());
+    byte[] hash = Base64.decodeBase64(base64Hash.getBytes(Charsets.UTF_8));
     
-    boolean res = verifyHash(hash, msg.getBytes(), key);
+    boolean res = verifyHash(hash, msg.getBytes(Charsets.UTF_8), key);
     
     if(res != true) {
       throw new IOException("Verification of the hashReply failed");
@@ -125,20 +130,5 @@ public class SecureShuffleUtils {
    */
   private static String buildMsgFrom(String uri_path, String uri_query, int port) {
     return String.valueOf(port) + uri_path + "?" + uri_query;
-  }
-  
-  
-  /**
-   * byte array to Hex String
-   * @param ba
-   * @return string with HEX value of the key
-   */
-  public static String toHex(byte[] ba) {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintStream ps = new PrintStream(baos);
-    for(byte b: ba) {
-      ps.printf("%x", b);
-    }
-    return baos.toString();
   }
 }

@@ -425,6 +425,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
           }
           break;
         }
+        default:
+          continue; // nothing special to do for this character
       }
     }
     pathStrings.add(commaSeparatedPaths.substring(pathStart, length));

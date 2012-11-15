@@ -106,6 +106,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
 
+import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ShuffleHandler extends AbstractService 
@@ -490,7 +491,8 @@ public class ShuffleHandler extends AbstractService
       SecureShuffleUtils.verifyReply(urlHashStr, enc_str, tokenSecret);
       // verification passed - encode the reply
       String reply =
-        SecureShuffleUtils.generateHash(urlHashStr.getBytes(), tokenSecret);
+        SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8), 
+            tokenSecret);
       response.setHeader(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);
       if (LOG.isDebugEnabled()) {
         int len = reply.length();

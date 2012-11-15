@@ -833,6 +833,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         break;
       case SUCCEEDED:
         metrics.completedJob(this);
+        break;
+      default:
+        throw new IllegalArgumentException("Illegal job state: " + finalState);
     }
     return finalState;
   }
@@ -1311,6 +1314,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       case REDUCE:
         this.finalReduceCounters.incrAllCounters(counters);
         break;
+      default:
+        throw new IllegalStateException("Task type neither map nor reduce: " + 
+            t.getType());
       }
       this.fullCounters.incrAllCounters(counters);
     }

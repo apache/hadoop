@@ -29,6 +29,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
+import com.google.common.base.Charsets;
+
 class TeraScheduler {
   static String USE = "mapreduce.terasort.use.terascheduler";
   private static final Log LOG = LogFactory.getLog(TeraScheduler.class);
@@ -73,7 +75,8 @@ class TeraScheduler {
 
   List<String> readFile(String filename) throws IOException {
     List<String> result = new ArrayList<String>(10000);
-    BufferedReader in = new BufferedReader(new FileReader(filename));
+    BufferedReader in = new BufferedReader(
+        new InputStreamReader(new FileInputStream(filename), Charsets.UTF_8));
     String line = in.readLine();
     while (line != null) {
       result.add(line);

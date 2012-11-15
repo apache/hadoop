@@ -166,6 +166,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8911. CRLF characters in source and text files.
     (Raja Aluri via suresh)
 
+    MAPREDUCE-4723. Fix warnings found by findbugs 2. (Sandy Ryza via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
