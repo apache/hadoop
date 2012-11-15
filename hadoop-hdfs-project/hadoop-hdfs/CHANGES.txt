@@ -238,6 +238,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4139. fuse-dfs RO mode still allows file truncation.
     (Colin Patrick McCabe via eli)    
 
+    HDFS-4104. dfs -test -d prints inappropriate error on nonexistent directory
+    (Andy Isaacson via daryn)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
