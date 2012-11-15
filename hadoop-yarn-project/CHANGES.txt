@@ -166,6 +166,9 @@ Release 0.23.6 - UNRELEASED
 
   BUG FIXES
 
+    YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
+    bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

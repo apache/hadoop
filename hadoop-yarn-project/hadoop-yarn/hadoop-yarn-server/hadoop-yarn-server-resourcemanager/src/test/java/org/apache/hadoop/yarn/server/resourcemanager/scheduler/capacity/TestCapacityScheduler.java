@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -415,6 +417,29 @@ public class TestCapacityScheduler {
     } finally {
       B3_CAPACITY += B4_CAPACITY;
     }
+  }
+  @Test
+  public void testCapacitySchedulerInfo() throws Exception {
+    QueueInfo queueInfo = resourceManager.getResourceScheduler().getQueueInfo("a", true, true);
+    Assert.assertEquals(queueInfo.getQueueName(), "a");
+    Assert.assertEquals(queueInfo.getChildQueues().size(), 2);
+
+    List<QueueUserACLInfo> userACLInfo = resourceManager.getResourceScheduler().getQueueUserAclInfo();
+    Assert.assertNotNull(userACLInfo);
+    for (QueueUserACLInfo queueUserACLInfo : userACLInfo) {
+      Assert.assertEquals(getQueueCount(userACLInfo, queueUserACLInfo.getQueueName()), 1);
+    }
+
+  }
+
+  private int getQueueCount(List<QueueUserACLInfo> queueInformation, String queueName) {
+    int result = 0;
+    for (QueueUserACLInfo queueUserACLInfo : queueInformation) {
+      if (queueName.equals(queueUserACLInfo.getQueueName())) {
+        result++;
+      }
+    }
+    return result;
   }
 
 }
