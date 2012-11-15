@@ -369,6 +369,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOO-8998. set Cache-Control no-cache header on all dynamic content. (tucu)
 
+    HADOOP-9035. Generalize setup of LoginContext (daryn via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
