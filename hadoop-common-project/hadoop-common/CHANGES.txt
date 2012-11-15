@@ -81,9 +81,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOO-8998. set Cache-Control no-cache header on all dynamic content. (tucu)
 
-    HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
-    (Colin Patrick McCabe via eli)
-
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
