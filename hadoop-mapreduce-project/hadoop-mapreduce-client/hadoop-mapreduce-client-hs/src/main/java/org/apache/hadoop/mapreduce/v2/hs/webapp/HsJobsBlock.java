@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
@@ -67,22 +68,36 @@ public class HsJobsBlock extends HtmlBlock {
             th("Reduces Completed")._()._().
         tbody();
     LOG.info("Getting list of all Jobs.");
+    // Write all the data into a JavaScript array of arrays for JQuery
+    // DataTables to display
+    StringBuilder jobsTableData = new StringBuilder("[\n");
     for (Job j : appContext.getAllJobs().values()) {
       JobInfo job = new JobInfo(j);
-      tbody.
-        tr().
-          td(dateFormat.format(new Date(job.getStartTime()))).
-          td(dateFormat.format(new Date(job.getFinishTime()))).
-          td().a(url("job", job.getId()), job.getId())._().
-          td(job.getName()).
-          td(job.getUserName()).
-          td(job.getQueueName()).
-          td(job.getState()).
-          td(String.valueOf(job.getMapsTotal())).
-          td(String.valueOf(job.getMapsCompleted())).
-          td(String.valueOf(job.getReducesTotal())).
-          td(String.valueOf(job.getReducesCompleted()))._();
+      jobsTableData.append("[\"")
+      .append(dateFormat.format(new Date(job.getStartTime()))).append("\",\"")
+      .append(dateFormat.format(new Date(job.getFinishTime()))).append("\",\"")
+      .append("<a href='").append(url("job", job.getId())).append("'>")
+      .append(job.getId()).append("</a>\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(job.getName()))
+      .append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(job.getUserName()))
+      .append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(job.getQueueName()))
+      .append("\",\"")
+      .append(job.getState()).append("\",\"")
+      .append(String.valueOf(job.getMapsTotal())).append("\",\"")
+      .append(String.valueOf(job.getMapsCompleted())).append("\",\"")
+      .append(String.valueOf(job.getReducesTotal())).append("\",\"")
+      .append(String.valueOf(job.getReducesCompleted())).append("\"],\n");
     }
+
+    //Remove the last comma and close off the array of arrays
+    if(jobsTableData.charAt(jobsTableData.length() - 2) == ',') {
+      jobsTableData.delete(jobsTableData.length()-2, jobsTableData.length()-1);
+    }
+    jobsTableData.append("]");
+    html.script().$type("text/javascript").
+    _("var jobsTableData=" + jobsTableData)._();
     tbody._().
     tfoot().
       tr().
