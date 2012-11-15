@@ -595,6 +595,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4104. dfs -test -d prints inappropriate error on nonexistent directory
     (Andy Isaacson via daryn)
 
+    HDFS-3623. BKJM: zkLatchWaitTimeout hard coded to 6000. Make use of ZKSessionTimeout instead.
+    (umamahesh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
