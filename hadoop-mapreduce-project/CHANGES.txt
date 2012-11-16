@@ -534,6 +534,9 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4797. LocalContainerAllocator can loop forever trying to contact
     the RM (jlowe via bobby)
+
+    MAPREDUCE-4801. ShuffleHandler can generate large logs due to prematurely
+    closed channels (jlowe via bobby)
  
 Release 0.23.4
 
