@@ -142,9 +142,9 @@ public class UpgradeUtilities {
       writeFile(fs, new Path(baseDir, "file2"), buffer, bufferSize);
       
       // save image
-      namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       namenode.saveNamespace();
-      namenode.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      namenode.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       
       // write more files
       writeFile(fs, new Path(baseDir, "file3"), buffer, bufferSize);
