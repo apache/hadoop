@@ -217,3 +217,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9027. Build fails on Windows without sh/sed/echo in the path.
     (Ivan Mitic via suresh)
+
+    HADOOP-8847. Change untar to use Java API on Windows instead of spawning
+    tar process. (Bikas Saha via suresh)

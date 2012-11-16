@@ -141,6 +141,11 @@
       rev="${commons-math.version}"
       conf="common->default"/>
 
+    <dependency org="org.apache.commons"
+      name="commons-compress"
+      rev="${commons-compress.version}"
+      conf="common->default"/>
+
     <!--Configuration: Jetty -->
 
 <!-- <dependency org="javax.servlet"
