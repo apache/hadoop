@@ -58,10 +58,14 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
 
 function renderHadoopDate(data, type, full) {
   if (type === 'display') {
+    if(data === '0') {
+      return "N/A";
+    }
     return new Date(parseInt(data)).toUTCString();
   }
   // 'filter', 'sort', 'type' and undefined all just use the number
-  return data;  
+  // If date is 0, then for purposes of sorting it should be consider max_int
+  return data === '0' ? '9007199254740992' : data;  
 }
 
 function renderHadoopElapsedTime(data, type, full) {
