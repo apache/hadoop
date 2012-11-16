@@ -86,6 +86,21 @@ if [ -n "$SECONDARY_NAMENODES" ]; then
 fi
 
 #---------------------------------------------------------
+# quorumjournal nodes (if any)
+
+SHARED_EDITS_DIR=$($HADOOP_PREFIX/bin/hdfs getconf -confKey dfs.namenode.shared.edits.dir 2>&-)
+
+case "$SHARED_EDITS_DIR" in
+qjournal://*)
+  JOURNAL_NODES=$(echo "$SHARED_EDITS_DIR" | sed 's,qjournal://\([^/]*\)/.*,\1,g; s/;/ /g; s/:[0-9]*//g')
+  echo "Starting journal nodes [$JOURNAL_NODES]"
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
+      --config "$HADOOP_CONF_DIR" \
+      --hostnames "$JOURNAL_NODES" \
+      --script "$bin/hdfs" start journalnode ;;
+esac
+
+#---------------------------------------------------------
 # ZK Failover controllers, if auto-HA is enabled
 AUTOHA_ENABLED=$($HADOOP_PREFIX/bin/hdfs getconf -confKey dfs.ha.automatic-failover.enabled)
 if [ "$(echo "$AUTOHA_ENABLED" | tr A-Z a-z)" = "true" ]; then
