@@ -401,9 +401,9 @@ public class TestNameNodeMetrics {
     assertGauge("TransactionsSinceLastCheckpoint", 4L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
     
-    cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     cluster.getNameNodeRpc().saveNamespace();
-    cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
     updateMetrics();
     
     long newLastCkptTime = MetricsAsserts.getLongGauge("LastCheckpointTime",

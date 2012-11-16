@@ -702,8 +702,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
     
   @Override // ClientProtocol
-  public boolean setSafeMode(SafeModeAction action) throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
+  public boolean setSafeMode(SafeModeAction action, boolean isChecked)
+      throws IOException {
+    OperationCategory opCategory = OperationCategory.UNCHECKED;
+    if (isChecked) {
+      if (action == SafeModeAction.SAFEMODE_GET) {
+        opCategory = OperationCategory.READ;
+      } else {
+        opCategory = OperationCategory.WRITE;
+      }
+    }
+    namesystem.checkOperation(opCategory);
     return namesystem.setSafeMode(action);
   }
 

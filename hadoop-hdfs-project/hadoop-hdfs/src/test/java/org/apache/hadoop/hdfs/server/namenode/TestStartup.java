@@ -397,7 +397,7 @@ public class TestStartup {
         new PermissionStatus("hairong", null, FsPermission.getDefault()), true);
     NamenodeProtocols nnRpc = namenode.getRpcServer();
     assertTrue(nnRpc.getFileInfo("/test").isDir());
-    nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     nnRpc.saveNamespace();
     namenode.stop();
     namenode.join();
@@ -427,7 +427,7 @@ public class TestStartup {
     NameNode namenode = new NameNode(conf);
     NamenodeProtocols nnRpc = namenode.getRpcServer();
     assertTrue(nnRpc.getFileInfo("/test").isDir());
-    nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     nnRpc.saveNamespace();
     namenode.stop();
     namenode.join();

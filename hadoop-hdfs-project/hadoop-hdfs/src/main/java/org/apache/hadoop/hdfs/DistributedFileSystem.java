@@ -671,11 +671,27 @@ public class DistributedFileSystem extends FileSystem {
    * Enter, leave or get safe mode.
    *  
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
-   *    HdfsConstants.SafeModeAction)
+   *    HdfsConstants.SafeModeAction,boolean)
    */
   public boolean setSafeMode(HdfsConstants.SafeModeAction action) 
   throws IOException {
-    return dfs.setSafeMode(action);
+    return setSafeMode(action, false);
+  }
+
+  /**
+   * Enter, leave or get safe mode.
+   * 
+   * @param action
+   *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
+   *          SafeModeAction.GET
+   * @param isChecked
+   *          If true check only for Active NNs status, else check first NN's
+   *          status
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(SafeModeAction, boolean)
+   */
+  public boolean setSafeMode(HdfsConstants.SafeModeAction action,
+      boolean isChecked) throws IOException {
+    return dfs.setSafeMode(action, isChecked);
   }
 
   /**
@@ -922,12 +938,14 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Utility function that returns if the NameNode is in safemode or not.
-   *
+   * Utility function that returns if the NameNode is in safemode or not. In HA
+   * mode, this API will return only ActiveNN's safemode status.
+   * 
    * @return true if NameNode is in safemode, false otherwise.
-   * @throws IOException when there is an issue communicating with the NameNode
+   * @throws IOException
+   *           when there is an issue communicating with the NameNode
    */
   public boolean isInSafeMode() throws IOException {
-    return setSafeMode(SafeModeAction.SAFEMODE_GET);
+    return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
 }

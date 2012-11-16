@@ -1900,10 +1900,25 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Enter, leave or get safe mode.
    * 
-   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction)
+   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction,boolean)
    */
   public boolean setSafeMode(SafeModeAction action) throws IOException {
-    return namenode.setSafeMode(action);
+    return setSafeMode(action, false);
+  }
+  
+  /**
+   * Enter, leave or get safe mode.
+   * 
+   * @param action
+   *          One of SafeModeAction.GET, SafeModeAction.ENTER and
+   *          SafeModeActiob.LEAVE
+   * @param isChecked
+   *          If true, then check only active namenode's safemode status, else
+   *          check first namenode's status.
+   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeActio,boolean)
+   */
+  public boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException{
+    return namenode.setSafeMode(action, isChecked);    
   }
 
   /**

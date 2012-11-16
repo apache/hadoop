@@ -61,9 +61,11 @@ public class TestFetchImage {
       fs.mkdirs(new Path("/foo2"));
       fs.mkdirs(new Path("/foo3"));
       
-      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc()
+          .setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       cluster.getNameNodeRpc().saveNamespace();
-      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      cluster.getNameNodeRpc()
+          .setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       
       runFetchImage(dfsAdmin, cluster);
     } finally {

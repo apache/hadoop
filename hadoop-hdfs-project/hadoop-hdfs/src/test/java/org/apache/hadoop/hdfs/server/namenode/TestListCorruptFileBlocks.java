@@ -149,8 +149,8 @@ public class TestListCorruptFileBlocks {
       conf.setFloat(DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
                     0f);
       cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
-      cluster.getNameNodeRpc().
-        setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      cluster.getNameNodeRpc().setSafeMode(
+          HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
       FileSystem fs = cluster.getFileSystem();
 
       // create two files with one block each
@@ -247,8 +247,8 @@ public class TestListCorruptFileBlocks {
                  cluster.getNameNode().isInSafeMode());
 
       // now leave safe mode so that we can clean up
-      cluster.getNameNodeRpc().
-        setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      cluster.getNameNodeRpc().setSafeMode(
+          HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
 
       util.cleanup(fs, "/srcdat10");
     } catch (Exception e) {

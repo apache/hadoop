@@ -507,9 +507,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public boolean setSafeMode(SafeModeAction action) throws IOException {
-    SetSafeModeRequestProto req = SetSafeModeRequestProto.newBuilder().
-        setAction(PBHelper.convert(action)).build();
+  public boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException {
+    SetSafeModeRequestProto req = SetSafeModeRequestProto.newBuilder()
+        .setAction(PBHelper.convert(action)).setChecked(isChecked).build();
     try {
       return rpcProxy.setSafeMode(null, req).getResult();
     } catch (ServiceException e) {
