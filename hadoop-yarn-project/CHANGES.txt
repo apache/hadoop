@@ -15,6 +15,9 @@ Release 0.23.6 - UNRELEASED
     YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
     bobby)
 
+    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
+    (jeagles via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
