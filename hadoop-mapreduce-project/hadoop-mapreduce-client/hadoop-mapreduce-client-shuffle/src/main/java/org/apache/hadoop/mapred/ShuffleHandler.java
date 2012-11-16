@@ -37,6 +37,7 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
@@ -110,6 +112,12 @@ public class ShuffleHandler extends AbstractService
     implements AuxServices.AuxiliaryService {
 
   private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
+
+  // pattern to identify errors related to the client closing the socket early
+  // idea borrowed from Netty SslHandler
+  private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
+      "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
+      Pattern.CASE_INSENSITIVE);
 
   private int port;
   private ChannelFactory selector;
@@ -280,12 +288,16 @@ public class ShuffleHandler extends AbstractService
     }
   }
 
+  protected Shuffle getShuffle(Configuration conf) {
+    return new Shuffle(conf);
+  }
+
   class HttpPipelineFactory implements ChannelPipelineFactory {
 
     final Shuffle SHUFFLE;
 
     public HttpPipelineFactory(Configuration conf) {
-      SHUFFLE = new Shuffle(conf);
+      SHUFFLE = getShuffle(conf);
     }
 
     @Override
@@ -410,7 +422,7 @@ public class ShuffleHandler extends AbstractService
       lastMap.addListener(ChannelFutureListener.CLOSE);
     }
 
-    private void verifyRequest(String appid, ChannelHandlerContext ctx,
+    protected void verifyRequest(String appid, ChannelHandlerContext ctx,
         HttpRequest request, HttpResponse response, URL requestUri)
         throws IOException {
       SecretKey tokenSecret = secretManager.retrieveTokenSecret(appid);
@@ -499,12 +511,12 @@ public class ShuffleHandler extends AbstractService
       return writeFuture;
     }
 
-    private void sendError(ChannelHandlerContext ctx,
+    protected void sendError(ChannelHandlerContext ctx,
         HttpResponseStatus status) {
       sendError(ctx, "", status);
     }
 
-    private void sendError(ChannelHandlerContext ctx, String message,
+    protected void sendError(ChannelHandlerContext ctx, String message,
         HttpResponseStatus status) {
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
       response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
@@ -523,6 +535,16 @@ public class ShuffleHandler extends AbstractService
       if (cause instanceof TooLongFrameException) {
         sendError(ctx, BAD_REQUEST);
         return;
+      } else if (cause instanceof IOException) {
+        if (cause instanceof ClosedChannelException) {
+          LOG.debug("Ignoring closed channel error", cause);
+          return;
+        }
+        String message = String.valueOf(cause.getMessage());
+        if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+          LOG.debug("Ignoring client socket close", cause);
+          return;
+        }
       }
 
       LOG.error("Shuffle error: ", cause);
