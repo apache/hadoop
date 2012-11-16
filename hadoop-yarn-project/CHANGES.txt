@@ -18,6 +18,9 @@ Release 0.23.6 - UNRELEASED
     YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
     (jeagles via bobby)
 
+    YARN-151. Browser thinks RM main page JS is taking too long 
+    (Ravi Prakash via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
