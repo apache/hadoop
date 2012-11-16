@@ -21,15 +21,13 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.percent;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -66,6 +64,8 @@ public class TasksBlock extends HtmlBlock {
             th("Finish Time").
             th("Elapsed Time")._()._().
         tbody();
+    StringBuilder tasksTableData = new StringBuilder("[\n");
+
     for (Task task : app.getJob().getTasks().values()) {
       if (type != null && task.getType() != type) {
         continue;
@@ -73,31 +73,28 @@ public class TasksBlock extends HtmlBlock {
       TaskInfo info = new TaskInfo(task);
       String tid = info.getId();
       String pct = percent(info.getProgress() / 100);
-      long startTime = info.getStartTime();
-      long finishTime = info.getFinishTime();
-      long elapsed = info.getElapsedTime();
-      tbody.
-        tr().
-          td().
-            br().$title(String.valueOf(info.getTaskNum()))._(). // sorting
-            a(url("task", tid), tid)._().
-          td().
-            br().$title(pct)._().
-            div(_PROGRESSBAR).
-              $title(join(pct, '%')). // tooltip
-              div(_PROGRESSBAR_VALUE).
-                $style(join("width:", pct, '%'))._()._()._().
-          td(info.getState()).
-          td().
-            br().$title(String.valueOf(startTime))._().
-            _(Times.format(startTime))._().
-          td().
-            br().$title(String.valueOf(finishTime))._().
-            _(Times.format(finishTime))._().
-          td().
-            br().$title(String.valueOf(elapsed))._().
-            _(StringUtils.formatTime(elapsed))._()._();
+      tasksTableData.append("[\"<a href='").append(url("task", tid))
+      .append("'>").append(tid).append("</a>\",\"")
+      //Progress bar
+      .append("<br title='").append(pct)
+      .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
+      .append(join(pct, '%')).append("'> ").append("<div class='")
+      .append(C_PROGRESSBAR_VALUE).append("' style='")
+      .append(join("width:", pct, '%')).append("'> </div> </div>\",\"")
+
+      .append(info.getState()).append("\",\"")
+      .append(info.getStartTime()).append("\",\"")
+      .append(info.getFinishTime()).append("\",\"")
+      .append(info.getElapsedTime()).append("\"],\n");
     }
+    //Remove the last comma and close off the array of arrays
+    if(tasksTableData.charAt(tasksTableData.length() - 2) == ',') {
+      tasksTableData.delete(tasksTableData.length()-2, tasksTableData.length()-1);
+    }
+    tasksTableData.append("]");
+    html.script().$type("text/javascript").
+    _("var tasksTableData=" + tasksTableData)._();
+
     tbody._()._();
   }
 }

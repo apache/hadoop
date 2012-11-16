@@ -438,6 +438,9 @@ Release 0.23.6 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4802. Takes a long time to load the task list on the AM for
+    large jobs (Ravi Prakash via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
