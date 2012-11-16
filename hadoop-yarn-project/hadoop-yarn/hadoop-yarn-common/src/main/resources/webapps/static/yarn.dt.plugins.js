@@ -106,3 +106,11 @@ function parseHadoopID(data, type, full) {
   var splits = data.split('_');
   return splits[parseInt(splits.length-1)].split('<')[0];
 }
+
+function parseHadoopProgress(data, type, full) {
+  if (type === 'display') {
+    return data;
+  }
+  //Return the title attribute for 'sort', 'filter', 'type' and undefined
+  return data.split("'")[1];
+}
