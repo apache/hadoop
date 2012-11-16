@@ -214,3 +214,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9026. Hadoop.cmd fails to initialize if user's %path% variable has
     parenthesis. (Ivan Mitic via suresh)
+
+    HADOOP-9027. Build fails on Windows without sh/sed/echo in the path.
+    (Ivan Mitic via suresh)
