@@ -37,11 +37,26 @@ public class TasksPage extends AppView {
   }
 
   private String tasksTableInit() {
-    return tableInit().
-        // Sort by id upon page load
-        append(", aaSorting: [[0, 'asc']]").
-        append(",aoColumns:[{sType:'title-numeric'},{sType:'title-numeric',").
-        append("bSearchable:false},null,{sType:'title-numeric'},").
-        append("{sType:'title-numeric'},{sType:'title-numeric'}]}").toString();
+    return tableInit()
+      .append(", 'aaData': tasksTableData")
+      .append(", bDeferRender: true")
+      .append(", bProcessing: true")
+
+      .append("\n, aoColumnDefs: [\n")
+      .append("{'sType':'numeric', 'aTargets': [0]")
+      .append(", 'mRender': parseHadoopID }")
+
+      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [1]")
+      .append(", 'mRender': parseHadoopProgress }")
+
+
+      .append("\n, {'sType':'numeric', 'aTargets': [3, 4]")
+      .append(", 'mRender': renderHadoopDate }")
+
+      .append("\n, {'sType':'numeric', 'aTargets': [5]")
+      .append(", 'mRender': renderHadoopElapsedTime }]")
+
+      // Sort by id upon page load
+      .append(", aaSorting: [[0, 'asc']] }").toString();
   }
 }
