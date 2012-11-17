@@ -732,6 +732,31 @@ public class NetworkTopology {
     }
     return tree.toString();
   }
+  
+  /**
+   * Divide networklocation string into two parts by last separator, and get the
+   * first part here.
+   * 
+   * @param networkLocation
+   * @return
+   */
+  public static String getFirstHalf(String networkLocation) {
+    int index = networkLocation.lastIndexOf(NodeBase.PATH_SEPARATOR_STR);
+    return networkLocation.substring(0, index);
+  }
+
+  /**
+   * Divide networklocation string into two parts by last separator, and get the
+   * second part here.
+   * 
+   * @param networkLocation
+   * @return
+   */
+  public static String getLastHalf(String networkLocation) {
+    int index = networkLocation.lastIndexOf(NodeBase.PATH_SEPARATOR_STR);
+    return networkLocation.substring(index);
+  }
+
 
   /* swap two array items */
   static protected void swap(Node[] nodes, int i, int j) {

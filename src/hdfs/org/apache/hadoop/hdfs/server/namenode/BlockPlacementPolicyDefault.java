@@ -47,8 +47,8 @@ import org.apache.hadoop.net.NodeBase;
  */
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
-  private boolean considerLoad; 
-  private NetworkTopology clusterMap;
+  protected boolean considerLoad; 
+  protected NetworkTopology clusterMap;
   private FSClusterStats stats;
   private long staleInterval;   // interval used to identify stale DataNodes
 
@@ -132,6 +132,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       new ArrayList<DatanodeDescriptor>(chosenNodes);
     for (Node node:chosenNodes) {
       excludedNodes.put(node, node);
+      adjustExcludedNodes(excludedNodes, node);
     }
       
     if (!clusterMap.contains(writer)) {
@@ -225,7 +226,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * choose a node on the same rack
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseLocalNode(DatanodeDescriptor localMachine,
+  protected DatanodeDescriptor chooseLocalNode(DatanodeDescriptor localMachine,
       HashMap<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeDescriptor> results, boolean avoidStaleNodes)
     throws NotEnoughReplicasException {
@@ -256,7 +257,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * in the cluster.
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseLocalRack(DatanodeDescriptor localMachine,
+  protected DatanodeDescriptor chooseLocalRack(DatanodeDescriptor localMachine,
       HashMap<Node, Node> excludedNodes, long blocksize, int maxNodesPerRack,
       List<DatanodeDescriptor> results, boolean avoidStaleNodes)
     throws NotEnoughReplicasException {
@@ -303,8 +304,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * if not enough nodes are available, choose the remaining ones 
    * from the local rack
    */
-    
-  private void chooseRemoteRack(int numOfReplicas,
+  protected void chooseRemoteRack(int numOfReplicas,
                                 DatanodeDescriptor localMachine,
                                 HashMap<Node, Node> excludedNodes,
                                 long blocksize,
@@ -328,7 +328,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /* Randomly choose one target from <i>nodes</i>.
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseRandom(String nodes,
+  protected DatanodeDescriptor chooseRandom(String nodes,
                                           HashMap<Node, Node> excludedNodes,
                                           long blocksize,
                                           int maxNodesPerRack,
@@ -342,11 +342,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
 
       Node oldNode = excludedNodes.put(chosenNode, chosenNode);
-      if (oldNode == null) { // choosendNode was not in the excluded list
+      if (oldNode == null) { // chosendNode was not in the excluded list
         numOfAvailableNodes--;
         if (isGoodTarget(chosenNode, blocksize, maxNodesPerRack, results,
             avoidStaleNodes)) {
           results.add(chosenNode);
+          adjustExcludedNodes(excludedNodes, chosenNode);
           return chosenNode;
         }
       }
@@ -358,7 +359,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     
   /* Randomly choose <i>numOfReplicas</i> targets from <i>nodes</i>.
    */
-  private void chooseRandom(int numOfReplicas,
+  protected void chooseRandom(int numOfReplicas,
                             String nodes,
                             HashMap<Node, Node> excludedNodes,
                             long blocksize,
@@ -380,6 +381,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
             avoidStaleNodes)) {
           numOfReplicas--;
           results.add(chosenNode);
+          adjustExcludedNodes(excludedNodes, chosenNode);
         }
       }
     }
@@ -389,7 +391,22 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                            "Not able to place enough replicas");
     }
   }
-    
+   
+  /**
+   * After choosing a node to place replica, adjust excluded nodes accordingly.
+   * It should do nothing here as chosenNode is already put into exlcudeNodes, 
+   * but it can be overridden in subclass to put more related nodes into 
+   * excludedNodes.
+   * 
+   * @param excludedNodes
+   * @param chosenNode
+   * @return Number of nodes that should be added into the excludedNodes
+   */
+  protected void adjustExcludedNodes(HashMap<Node, Node> excludedNodes,
+      Node chosenNode) {
+    // do nothing
+  }
+  
   /* judge if a node is a good target.
    * return true if <i>node</i> has enough space, 
    * does not have too much load, and the rack does not have too many nodes
@@ -417,7 +434,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    *         does not have too much load, 
    *         and the rack does not have too many nodes.
    */
-  private boolean isGoodTarget(DatanodeDescriptor node,
+  protected boolean isGoodTarget(DatanodeDescriptor node,
                                long blockSize, int maxTargetPerLoc,
                                boolean considerLoad,
                                List<DatanodeDescriptor> results,
@@ -548,8 +565,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // pick replica from the first Set. If first is empty, then pick replicas
     // from second set.
-    Iterator<DatanodeDescriptor> iter =
-          first.isEmpty() ? second.iterator() : first.iterator();
+    Iterator<DatanodeDescriptor> iter = pickupReplicaSet(first, second);
 
     // pick node with least free space
     while (iter.hasNext() ) {
@@ -561,6 +577,20 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
     }
     return cur;
+  }
+  
+  /**
+   * Pick up replica node set for deleting replica as over-replicated. First set
+   * contains replica nodes on rack with more than one replica while second set
+   * contains remaining replica nodes. So pick up first set if not empty. If
+   * first is empty, then pick second.
+   */
+  protected Iterator<DatanodeDescriptor> pickupReplicaSet(
+      Collection<DatanodeDescriptor> first,
+      Collection<DatanodeDescriptor> second) {
+    Iterator<DatanodeDescriptor> iter = first.isEmpty() ? second.iterator()
+        : first.iterator();
+    return iter;
   }
 }
 
