@@ -12,6 +12,12 @@ Release 1.2.0 - unreleased
     class pluggable and add NetworkTopologyWithNodeGroup, a 4-layer
     implementation of NetworkTopology.  (Junping Du and Jing Zhao via szetszwo)
 
+    HDFS-3941. Backport HDFS-3498 and HDFS-3601: Support replica removal in
+    BlockPlacementPolicy and make BlockPlacementPolicyDefault extensible for
+    reusing code in subclasses, and add BlockPlacementPolicyWithNodeGroup to
+    support block placement with 4-layer network topology.  (Junping Du and
+    Jing Zhao via szetszwo)
+
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via eli)
 
