@@ -199,6 +199,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4777. In TestIFile, testIFileReaderWithCodec relies on
     testIFileWriterWithCodec. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4800. Cleanup o.a.h.mapred.MapTaskStatus - remove unused 
+    code. (kkambatl via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
