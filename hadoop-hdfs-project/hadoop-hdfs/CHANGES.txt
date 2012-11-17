@@ -250,6 +250,9 @@ Trunk (Unreleased)
     HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
     (Binglin Chang via suresh)
 
+    HDFS-4105. The SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

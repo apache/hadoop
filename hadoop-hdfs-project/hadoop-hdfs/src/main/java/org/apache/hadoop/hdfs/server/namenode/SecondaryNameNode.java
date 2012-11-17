@@ -250,8 +250,15 @@ public class SecondaryNameNode implements Runnable {
                                 new AccessControlList(conf.get(DFS_ADMIN, " "))) {
       {
         if (UserGroupInformation.isSecurityEnabled()) {
-          initSpnego(conf, DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
+          String httpKeytabKey = DFSConfigKeys.
+              DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY;
+          if (null == conf.get(httpKeytabKey)) {
+            httpKeytabKey = DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY;
+          }
+          initSpnego(
+              conf,
+              DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+              httpKeytabKey);
         }
       }
     };
