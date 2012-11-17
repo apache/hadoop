@@ -315,6 +315,9 @@ Release 1.2.0 - unreleased
 
     HDFS-4180. Update TestFileCreation for HDFS-4122.  (Jing Zhao via szetszwo)
 
+    HDFS-4105. the SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
