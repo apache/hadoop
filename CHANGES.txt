@@ -48,6 +48,8 @@ Release 1.1.1 - Unreleased
     HADOOP-9017. Fix hadoop-client-pom-template.xml and
     hadoop-client-pom-template.xml for version token ( gkesavan )
 
+    HDFS-4105. the SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
 
 Release 1.1.0 - 2012.09.28
 
