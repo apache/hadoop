@@ -247,6 +247,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3507. DFS#isInSafeMode needs to execute only on Active NameNode.
     (Vinay via atm)
 
+    HDFS-4105. The SPNEGO user for secondary namenode should use the web
+    keytab. (Arpit Gupta via jitendra)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
