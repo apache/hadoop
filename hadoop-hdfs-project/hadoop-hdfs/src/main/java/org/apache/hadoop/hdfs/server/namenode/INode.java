@@ -49,23 +49,12 @@ public abstract class INode implements Comparable<byte[]> {
   static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
       = ReadOnlyList.Util.emptyList();
 
-  /**
-   *  The inode name is in java UTF8 encoding; 
-   *  The name in HdfsFileStatus should keep the same encoding as this.
-   *  if this encoding is changed, implicitly getFileInfo and listStatus in
-   *  clientProtocol are changed; The decoding at the client
-   *  side should change accordingly.
-   */
-  protected byte[] name;
-  protected INodeDirectory parent;
-  protected long modificationTime;
-  protected long accessTime;
 
-  /** Simple wrapper for two counters : 
-   *  nsCount (namespace consumed) and dsCount (diskspace consumed).
-   */
+  /** Wrapper of two counters for namespace consumed and diskspace consumed. */
   static class DirCounts {
+    /** namespace count */
     long nsCount = 0;
+    /** diskspace count */
     long dsCount = 0;
     
     /** returns namespace count */
@@ -78,10 +67,6 @@ public abstract class INode implements Comparable<byte[]> {
     }
   }
   
-  //Only updated by updatePermissionStatus(...).
-  //Other codes should not modify it.
-  private long permission;
-
   private static enum PermissionStatusFormat {
     MODE(0, 16),
     GROUP(MODE.OFFSET + MODE.LENGTH, 25),
@@ -104,31 +89,67 @@ public abstract class INode implements Comparable<byte[]> {
     long combine(long bits, long record) {
       return (record & ~MASK) | (bits << OFFSET);
     }
+
+    /** Set the {@link PermissionStatus} */
+    static long toLong(PermissionStatus ps) {
+      long permission = 0L;
+      final int user = SerialNumberManager.INSTANCE.getUserSerialNumber(
+          ps.getUserName());
+      permission = PermissionStatusFormat.USER.combine(user, permission);
+      final int group = SerialNumberManager.INSTANCE.getGroupSerialNumber(
+          ps.getGroupName());
+      permission = PermissionStatusFormat.GROUP.combine(group, permission);
+      final int mode = ps.getPermission().toShort();
+      permission = PermissionStatusFormat.MODE.combine(mode, permission);
+      return permission;
+    }
   }
 
-  INode(PermissionStatus permissions, long mTime, long atime) {
-    this.name = null;
-    this.parent = null;
-    this.modificationTime = mTime;
-    setAccessTime(atime);
-    setPermissionStatus(permissions);
+  /**
+   *  The inode name is in java UTF8 encoding; 
+   *  The name in HdfsFileStatus should keep the same encoding as this.
+   *  if this encoding is changed, implicitly getFileInfo and listStatus in
+   *  clientProtocol are changed; The decoding at the client
+   *  side should change accordingly.
+   */
+  private byte[] name = null;
+  /** 
+   * Permission encoded using PermissionStatusFormat.
+   * Codes other than {@link #updatePermissionStatus(PermissionStatusFormat, long)}.
+   * should not modify it.
+   */
+  private long permission = 0L;
+  protected INodeDirectory parent = null;
+  protected long modificationTime = 0L;
+  protected long accessTime = 0L;
+
+  private INode(byte[] name, long permission, INodeDirectory parent,
+      long modificationTime, long accessTime) {
+    this.name = name;
+    this.permission = permission;
+    this.parent = parent;
+    this.modificationTime = modificationTime;
+    this.accessTime = accessTime;
+  }
+
+  INode(byte[] name, PermissionStatus permissions, INodeDirectory parent,
+      long modificationTime, long accessTime) {
+    this(name, PermissionStatusFormat.toLong(permissions), parent,
+        modificationTime, accessTime);
+  }
+
+  INode(PermissionStatus permissions, long mtime, long atime) {
+    this(null, permissions, null, mtime, atime);
   }
 
   protected INode(String name, PermissionStatus permissions) {
-    this(permissions, 0L, 0L);
-    setLocalName(name);
+    this(DFSUtil.string2Bytes(name), permissions, null, 0L, 0L);
   }
   
-  /** copy constructor
-   * 
-   * @param other Other node to be copied
-   */
+  /** @param other Other node to be copied */
   INode(INode other) {
-    setLocalName(other.getLocalName());
-    this.parent = other.getParent();
-    setPermissionStatus(other.getPermissionStatus());
-    setModificationTime(other.getModificationTime());
-    setAccessTime(other.getAccessTime());
+    this(other.getLocalNameBytes(), other.permission, other.getParent(), 
+        other.getModificationTime(), other.getAccessTime());
   }
 
   /**

@@ -621,7 +621,7 @@ public interface ClientProtocol {
    * <p>
    * Safe mode is entered automatically at name node startup.
    * Safe mode can also be entered manually using
-   * {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}.
+   * {@link #setSafeMode(HdfsConstants.SafeModeAction,boolean) setSafeMode(SafeModeAction.SAFEMODE_ENTER,false)}.
    * <p>
    * At startup the name node accepts data node reports collecting
    * information about block locations.
@@ -637,11 +637,11 @@ public interface ClientProtocol {
    * Then the name node leaves safe mode.
    * <p>
    * If safe mode is turned on manually using
-   * {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_ENTER)}
+   * {@link #setSafeMode(HdfsConstants.SafeModeAction,boolean) setSafeMode(SafeModeAction.SAFEMODE_ENTER,false)}
    * then the name node stays in safe mode until it is manually turned off
-   * using {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_LEAVE)}.
+   * using {@link #setSafeMode(HdfsConstants.SafeModeAction,boolean) setSafeMode(SafeModeAction.SAFEMODE_LEAVE,false)}.
    * Current state of the name node can be verified using
-   * {@link #setSafeMode(HdfsConstants.SafeModeAction) setSafeMode(SafeModeAction.SAFEMODE_GET)}
+   * {@link #setSafeMode(HdfsConstants.SafeModeAction,boolean) setSafeMode(SafeModeAction.SAFEMODE_GET,false)}
    * <h4>Configuration parameters:</h4>
    * <tt>dfs.safemode.threshold.pct</tt> is the threshold parameter.<br>
    * <tt>dfs.safemode.extension</tt> is the safe mode extension parameter.<br>
@@ -659,12 +659,15 @@ public interface ClientProtocol {
    * @param action  <ul> <li>0 leave safe mode;</li>
    *                <li>1 enter safe mode;</li>
    *                <li>2 get safe mode state.</li></ul>
+   * @param isChecked If true then action will be done only in ActiveNN.
+   * 
    * @return <ul><li>0 if the safe mode is OFF or</li> 
    *         <li>1 if the safe mode is ON.</li></ul>
    *                   
    * @throws IOException
    */
-  public boolean setSafeMode(HdfsConstants.SafeModeAction action) 
+  @Idempotent
+  public boolean setSafeMode(HdfsConstants.SafeModeAction action, boolean isChecked) 
       throws IOException;
 
   /**

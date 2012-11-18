@@ -535,7 +535,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public SetSafeModeResponseProto setSafeMode(RpcController controller,
       SetSafeModeRequestProto req) throws ServiceException {
     try {
-      boolean result = server.setSafeMode(PBHelper.convert(req.getAction()));
+      boolean result = server.setSafeMode(PBHelper.convert(req.getAction()),
+          req.getChecked());
       return SetSafeModeResponseProto.newBuilder().setResult(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);

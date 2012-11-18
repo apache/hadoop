@@ -447,7 +447,7 @@ public class TestEditLog {
 
       // Now ask to sync edit from B, which should sync both edits.
       doCallLogSync(threadB, editLog);
-      assertEquals("logSync from second thread should bump txid up to 2",
+      assertEquals("logSync from second thread should bump txid up to 3",
         3, editLog.getSyncTxId());
 
       // Now ask to sync edit from A, which was already batched in - thus

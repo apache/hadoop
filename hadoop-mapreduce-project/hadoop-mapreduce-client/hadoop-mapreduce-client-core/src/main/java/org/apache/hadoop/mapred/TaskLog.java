@@ -49,6 +49,8 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Charsets;
+
 /**
  * A simple logger to handle the task-specific user logs.
  * This class uses the system property <code>hadoop.log.dir</code>.
@@ -104,7 +106,8 @@ public class TaskLog {
   throws IOException {
     File indexFile = getIndexFile(taskid, isCleanup);
     BufferedReader fis = new BufferedReader(new InputStreamReader(
-      SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid), null)));
+      SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid), null),
+      Charsets.UTF_8));
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
     //stdout:<start-offset in the stdout file> <length>

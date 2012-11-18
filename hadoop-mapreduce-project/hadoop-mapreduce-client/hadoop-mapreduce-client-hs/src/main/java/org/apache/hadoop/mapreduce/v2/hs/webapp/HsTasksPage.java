@@ -67,18 +67,32 @@ public class HsTasksPage extends HsView {
       type = MRApps.taskType(symbol);
     }
     StringBuilder b = tableInit().
-    append(",aoColumnDefs:[");
-    b.append("{'sType':'title-numeric', 'aTargets': [ 0, 4");
+    append(", 'aaData': tasksTableData");
+    b.append(", bDeferRender: true");
+    b.append(", bProcessing: true");
+
+    b.append("\n, aoColumnDefs: [\n");
+    b.append("{'sType':'numeric', 'aTargets': [ 0 ]");
+    b.append(", 'mRender': parseHadoopID }");
+
+    b.append(", {'sType':'numeric', 'aTargets': [ 4");
     if(type == TaskType.REDUCE) {
       b.append(", 9, 10, 11, 12");
     } else { //MAP
       b.append(", 7");
     }
-    b.append(" ] }]");
+    b.append(" ], 'mRender': renderHadoopElapsedTime }");
+
+    b.append("\n, {'sType':'numeric', 'aTargets': [ 2, 3, 5");
+    if(type == TaskType.REDUCE) {
+      b.append(", 6, 7, 8");
+    } else { //MAP
+      b.append(", 6");
+    }
+    b.append(" ], 'mRender': renderHadoopDate }]");
 
     // Sort by id upon page load
-    b.append(", aaSorting: [[0, 'asc']]");
-
+    b.append("\n, aaSorting: [[0, 'asc']]");
     b.append("}");
     return b.toString();
   }

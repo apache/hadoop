@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /*************************************************
@@ -126,6 +127,12 @@ public class FSDirectory implements Closeable {
     this.cond = dirLock.writeLock().newCondition();
 
     this.namesystem = ns;
+    int threshold = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
+    NameNode.LOG.info("Caching file names occuring more than " + threshold
+        + " times");
+    this.nameCache = new NameCache<ByteArray>(threshold);
     reset();
 
     this.fsImage = fsImage;
@@ -141,13 +148,6 @@ public class FSDirectory implements Closeable {
     this.maxDirItems = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
-
-    int threshold = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
-        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
-    NameNode.LOG.info("Caching file names occuring more than " + threshold
-        + " times");
-    nameCache = new NameCache<ByteArray>(threshold);
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -177,6 +177,12 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
+  }
+  
+  //This is for testing purposes only
+  @VisibleForTesting
+  boolean isReady() {
+    return ready;
   }
 
   // exposed for unit tests
@@ -303,14 +309,14 @@ public class FSDirectory implements Closeable {
     return newNode;
   }
 
-  INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
+  INodeDirectory addToParent(INodeDirectory parentINode,
       INode newNode, boolean propagateModTime) {
     // NOTE: This does not update space counts for parents
     INodeDirectory newParent = null;
     writeLock();
     try {
       try {
-        newParent = rootDir.addToParent(src, newNode, parentINode,
+        newParent = rootDir.addToParent(newNode, parentINode,
                                         propagateModTime);
         cacheName(newNode);
       } catch (FileNotFoundException e) {
@@ -539,7 +545,7 @@ public class FSDirectory implements Closeable {
       return true;
     }
     if (srcInode.isSymlink() && 
-        dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
+        dst.equals(((INodeSymlink)srcInode).getSymlinkString())) {
       throw new FileAlreadyExistsException(
           "Cannot rename symlink "+src+" to its target "+dst);
     }
@@ -667,7 +673,7 @@ public class FSDirectory implements Closeable {
           "The source "+src+" and destination "+dst+" are the same");
     }
     if (srcInode.isSymlink() && 
-        dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
+        dst.equals(((INodeSymlink)srcInode).getSymlinkString())) {
       throw new FileAlreadyExistsException(
           "Cannot rename symlink "+src+" to its target "+dst);
     }
@@ -1291,7 +1297,7 @@ public class FSDirectory implements Closeable {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing; i++) {
         INode cur = contents.get(startChild+i);
-        listing[i] = createFileStatus(cur.name, cur, needLocation);
+        listing[i] = createFileStatus(cur.getLocalNameBytes(), cur, needLocation);
       }
       return new DirectoryListing(
           listing, totalNumChildren-startChild-numOfListing);
@@ -1519,7 +1525,7 @@ public class FSDirectory implements Closeable {
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
         INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.unprotectedUpdateNumItemsInTree(nsDelta, dsDelta);
+        node.addSpaceConsumed(nsDelta, dsDelta);
       }
     }
   }
@@ -2142,11 +2148,18 @@ public class FSDirectory implements Closeable {
    * Reset the entire namespace tree.
    */
   void reset() {
-    final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
-        INodeDirectory.ROOT_NAME,
-        getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
-        Long.MAX_VALUE, UNKNOWN_DISK_SPACE);
-    rootDir = INodeDirectorySnapshottable.newInstance(r, 0);
+    writeLock();
+    try {
+      setReady(false);
+      final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
+          INodeDirectory.ROOT_NAME,
+          getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
+          Long.MAX_VALUE, UNKNOWN_DISK_SPACE);
+      rootDir = INodeDirectorySnapshottable.newInstance(r, 0);
+      nameCache.reset();
+    } finally {
+      writeUnlock();
+    }
   }
 
   /**

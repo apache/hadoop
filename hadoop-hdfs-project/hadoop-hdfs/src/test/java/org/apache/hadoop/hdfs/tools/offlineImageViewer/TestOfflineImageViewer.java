@@ -133,7 +133,8 @@ public class TestOfflineImageViewer {
       }
 
       // Write results to the fsimage file
-      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc()
+          .setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       cluster.getNameNodeRpc().saveNamespace();
       
       // Determine location of fsimage file

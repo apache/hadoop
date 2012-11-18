@@ -479,4 +479,28 @@
       <Field name="sslFileBufferSize" />
      <Bug pattern="IS2_INCONSISTENT_SYNC" />
    </Match> 
+   
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.util.ProcessTree" />
+     <Method name="sendSignal" />  
+    <Bug pattern="NP_GUARANTEED_DEREF_ON_EXCEPTION_PATH" />
+  </Match>
+   
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.util.ProcessTree" />
+     <Method name="isSetsidSupported" />  
+    <Bug pattern="NP_GUARANTEED_DEREF_ON_EXCEPTION_PATH" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.util.ProcessTree" />
+     <Method name="isSetsidSupported" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_EXCEPTION" />
+  </Match>
+   
+  <Match>
+    <Class name="org.apache.hadoop.mapreduce.v2.hs.CachedHistoryStorage$1" />
+    <Bug pattern="SE_BAD_FIELD_INNER_CLASS" />
+  </Match>
+   
  </FindBugsFilter>

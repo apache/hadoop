@@ -22,19 +22,16 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 /**
- * An INode representing a symbolic link.
+ * An {@link INode} representing a symbolic link.
  */
 @InterfaceAudience.Private
 public class INodeSymlink extends INode {
-  private byte[] symlink; // The target URI
+  private final byte[] symlink; // The target URI
 
-  INodeSymlink(String value, long modTime, long atime,
+  INodeSymlink(String value, long mtime, long atime,
                PermissionStatus permissions) {
-    super(permissions, modTime, atime);
-    assert value != null;
-    setLinkValue(value);
-    setModificationTimeForce(modTime);
-    setAccessTime(atime);
+    super(permissions, mtime, atime);
+    this.symlink = DFSUtil.string2Bytes(value);
   }
   
   public INodeSymlink(INodeSymlink that) {
@@ -49,12 +46,8 @@ public class INodeSymlink extends INode {
   public boolean isSymlink() {
     return true;
   }
-  
-  void setLinkValue(String value) {
-    this.symlink = DFSUtil.string2Bytes(value);
-  }
 
-  public String getLinkValue() {
+  public String getSymlinkString() {
     return DFSUtil.bytes2String(symlink);
   }
 

@@ -315,8 +315,6 @@ public class TaskAttemptListenerImpl extends CompositeService
         + taskStatus.getProgress());
     // Task sends the updated state-string to the TT.
     taskAttemptStatus.stateString = taskStatus.getStateString();
-    // Set the output-size when map-task finishes. Set by the task itself.
-    taskAttemptStatus.outputSize = taskStatus.getOutputSize();
     // Task sends the updated phase to the TT.
     taskAttemptStatus.phase = TypeConverter.toYarn(taskStatus.getPhase());
     // Counters are updated by the task. Convert counters into new format as

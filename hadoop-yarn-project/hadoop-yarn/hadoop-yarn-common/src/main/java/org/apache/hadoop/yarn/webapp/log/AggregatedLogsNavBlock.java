@@ -27,7 +27,6 @@ public class AggregatedLogsNavBlock extends HtmlBlock {
     html
       .div("#nav")
         .h3()._("Logs")._() // 
-      ._()
-      .div("#themeswitcher")._();
+      ._();
   }
 }

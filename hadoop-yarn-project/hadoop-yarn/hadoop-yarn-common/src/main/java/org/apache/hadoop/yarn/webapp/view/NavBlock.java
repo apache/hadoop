@@ -33,7 +33,6 @@ public class NavBlock extends HtmlBlock {
           li().a("/conf", "Configuration")._().
           li().a("/stacks", "Thread dump")._().
           li().a("/logs", "Logs")._().
-          li().a("/metrics", "Metrics")._()._()._().
-      div("#themeswitcher")._();
+          li().a("/metrics", "Metrics")._()._()._();
   }
 }

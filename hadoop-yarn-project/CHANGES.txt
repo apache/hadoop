@@ -101,6 +101,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-169. Update log4j.appender.EventCounter to use
     org.apache.hadoop.log.metrics.EventCounter (Anthony Rojas via tomwhite)
 
+    YARN-184. Remove unnecessary locking in fair scheduler, and address 
+    findbugs excludes. (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -154,6 +157,27 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
+    bobby)
+
+    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
+    (jeagles via bobby)
+
+    YARN-151. Browser thinks RM main page JS is taking too long 
+    (Ravi Prakash via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -173,6 +197,8 @@ Release 0.23.5 - UNRELEASED
 
     YARN-186. Coverage fixing LinuxContainerExecutor (Aleksey Gorshkov via
     bobby)
+
+    YARN-216. Remove jquery theming support. (Robert Joseph Evans via jlowe)
 
   OPTIMIZATIONS
 
@@ -219,7 +245,7 @@ Release 0.23.5 - UNRELEASED
     YARN-212. NM state machine ignores an APPLICATION_CONTAINER_FINISHED event
     when it shouldn't (Nathan Roberts via jlowe)
 
-Release 0.23.4 - UNRELEASED
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

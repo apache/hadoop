@@ -21,6 +21,8 @@ package org.apache.hadoop.examples.dancing;
 import java.io.*;
 import java.util.*;
 
+import com.google.common.base.Charsets;
+
 /**
  * This class uses the dancing links algorithm from Knuth to solve sudoku
  * puzzles. It has solved 42x42 puzzles in 1.02 seconds.
@@ -133,7 +135,8 @@ public class Sudoku {
    * @param stream The input stream to read the data from
    */
   public Sudoku(InputStream stream) throws IOException {
-    BufferedReader file = new BufferedReader(new InputStreamReader(stream));
+    BufferedReader file = new BufferedReader(
+        new InputStreamReader(stream, Charsets.UTF_8));
     String line = file.readLine();
     List<int[]> result = new ArrayList<int[]>();
     while (line != null) {

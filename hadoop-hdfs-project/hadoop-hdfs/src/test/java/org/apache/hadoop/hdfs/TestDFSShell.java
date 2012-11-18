@@ -452,6 +452,15 @@ public class TestDFSShell {
       assertEquals(" no error ", 0, ret);
       assertTrue("empty path specified",
           (returned.lastIndexOf("empty string") == -1));
+      out.reset();
+      argv = new String[3];
+      argv[0] = "-test";
+      argv[1] = "-d";
+      argv[2] = "/no/such/dir";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertEquals(" -test -d wrong result ", 1, ret);
+      assertTrue(returned.isEmpty());
     } finally {
       if (bak != null) {
         System.setErr(bak);

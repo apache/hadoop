@@ -45,14 +45,43 @@ public class INodeFile extends INode implements BlockCollection {
 
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
-  //Number of bits for Block size
-  static final short BLOCKBITS = 48;
 
-  //Header mask 64-bit representation
-  //Format: [16 bits for replication][48 bits for PreferredBlockSize]
-  static final long HEADERMASK = 0xffffL << BLOCKBITS;
+  /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
+  private static class HeaderFormat {
+    /** Number of bits for Block size */
+    static final int BLOCKBITS = 48;
+    /** Header mask 64-bit representation */
+    static final long HEADERMASK = 0xffffL << BLOCKBITS;
+    static final long MAX_BLOCK_SIZE = ~HEADERMASK; 
+    
+    static short getReplication(long header) {
+      return (short) ((header & HEADERMASK) >> BLOCKBITS);
+    }
 
-  private long header;
+    static long combineReplication(long header, short replication) {
+      if (replication <= 0) {
+         throw new IllegalArgumentException(
+             "Unexpected value for the replication: " + replication);
+      }
+      return ((long)replication << BLOCKBITS) | (header & MAX_BLOCK_SIZE);
+    }
+    
+    static long getPreferredBlockSize(long header) {
+      return header & MAX_BLOCK_SIZE;
+    }
+
+    static long combinePreferredBlockSize(long header, long blockSize) {
+      if (blockSize < 0) {
+         throw new IllegalArgumentException("Block size < 0: " + blockSize);
+      } else if (blockSize > MAX_BLOCK_SIZE) {
+        throw new IllegalArgumentException("Block size = " + blockSize
+            + " > MAX_BLOCK_SIZE = " + MAX_BLOCK_SIZE);
+     }
+      return (header & HEADERMASK) | (blockSize & MAX_BLOCK_SIZE);
+    }
+  }
+
+  private long header = 0L;
 
   private BlockInfo[] blocks;
 
@@ -60,15 +89,15 @@ public class INodeFile extends INode implements BlockCollection {
                       short replication, long modificationTime,
                       long atime, long preferredBlockSize) {
     super(permissions, modificationTime, atime);
-    this.setFileReplication(replication);
-    this.setPreferredBlockSize(preferredBlockSize);
+    header = HeaderFormat.combineReplication(header, replication);
+    header = HeaderFormat.combinePreferredBlockSize(header, preferredBlockSize);
     this.blocks = blklist;
   }
 
   protected INodeFile(INodeFile f) {
     this(f.getPermissionStatus(), f.getBlocks(), f.getFileReplication(),
         f.getModificationTime(), f.getAccessTime(), f.getPreferredBlockSize());
-    this.name = f.getLocalNameBytes();
+    this.setLocalName(f.getLocalNameBytes());
   }
 
   /**
@@ -83,7 +112,7 @@ public class INodeFile extends INode implements BlockCollection {
 
   /** @return the replication factor of the file. */
   public final short getFileReplication() {
-    return (short) ((header & HEADERMASK) >> BLOCKBITS);
+    return HeaderFormat.getReplication(header);
   }
 
   @Override
@@ -92,21 +121,13 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   protected void setFileReplication(short replication) {
-    if(replication <= 0)
-       throw new IllegalArgumentException("Unexpected value for the replication");
-    header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
+    header = HeaderFormat.combineReplication(header, replication);
   }
 
   /** @return preferred block size (in bytes) of the file. */
   @Override
   public long getPreferredBlockSize() {
-    return header & ~HEADERMASK;
-  }
-
-  private void setPreferredBlockSize(long preferredBlkSize) {
-    if((preferredBlkSize < 0) || (preferredBlkSize > ~HEADERMASK ))
-       throw new IllegalArgumentException("Unexpected value for the block size");
-    header = (header & HEADERMASK) | (preferredBlkSize & ~HEADERMASK);
+    return HeaderFormat.getPreferredBlockSize(header);
   }
 
   /** @return the blocks of the file. */

@@ -60,4 +60,10 @@
     <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.examples.terasort.TeraInputFormat" />
+      <Method name="getSplits" />
+    <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
+  </Match>
+
 </FindBugsFilter>

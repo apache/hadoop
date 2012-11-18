@@ -20,12 +20,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
 import java.util.Collection;
 import java.util.HashSet;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -72,41 +73,50 @@ class AppsBlock extends HtmlBlock {
         reqAppStates.add(RMAppState.valueOf(stateString));
       }
     }
+    StringBuilder appsTableData = new StringBuilder("[\n");
     for (RMApp app : list.apps.values()) {
       if (reqAppStates != null && !reqAppStates.contains(app.getState())) {
         continue;
       }
       AppInfo appInfo = new AppInfo(app, true);
       String percent = String.format("%.1f", appInfo.getProgress());
-      String startTime = Times.format(appInfo.getStartTime());
-      String finishTime = Times.format(appInfo.getFinishTime());
-      tbody.
-        tr().
-          td().
-            br().$title(appInfo.getAppIdNum())._(). // for sorting
-            a(url("app", appInfo.getAppId()), appInfo.getAppId())._().
-          td(appInfo.getUser()).
-          td(appInfo.getName()).
-          td(appInfo.getQueue()).
-          td().
-            br().$title(String.valueOf(appInfo.getStartTime()))._().
-            _(startTime)._().
-          td().
-            br().$title(String.valueOf(appInfo.getFinishTime()))._().
-            _(finishTime)._().
-          td(appInfo.getState()).
-          td(appInfo.getFinalStatus()).
-          td().
-            br().$title(percent)._(). // for sorting
-            div(_PROGRESSBAR).
-              $title(join(percent, '%')). // tooltip
-              div(_PROGRESSBAR_VALUE).
-                $style(join("width:", percent, '%'))._()._()._().
-          td().
-            a(!appInfo.isTrackingUrlReady()?
-              "#" : appInfo.getTrackingUrlPretty(), appInfo.getTrackingUI())._()._();
+      //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
+      appsTableData.append("[\"<a href='")
+      .append(url("app", appInfo.getAppId())).append("'>")
+      .append(appInfo.getAppId()).append("</a>\",\"")
+      .append(StringEscapeUtils.escapeHtml(appInfo.getUser()))
+      .append("\",\"")
+      .append(StringEscapeUtils.escapeHtml(appInfo.getName()))
+      .append("\",\"")
+      .append(StringEscapeUtils.escapeHtml(appInfo.getQueue()))
+      .append("\",\"")
+      .append(appInfo.getStartTime()).append("\",\"")
+      .append(appInfo.getFinishTime()).append("\",\"")
+      .append(appInfo.getState()).append("\",\"")
+      .append(appInfo.getFinalStatus()).append("\",\"")
+      // Progress bar
+      .append("<br title='").append(percent)
+      .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
+      .append(join(percent, '%')).append("'> ").append("<div class='")
+      .append(C_PROGRESSBAR_VALUE).append("' style='")
+      .append(join("width:", percent, '%')).append("'> </div> </div>")
+      .append("\",\"<a href='");
+
+      String trackingURL =
+        !appInfo.isTrackingUrlReady()? "#" : appInfo.getTrackingUrlPretty();
+      
+      appsTableData.append(trackingURL).append("'>")
+      .append(appInfo.getTrackingUI()).append("</a>\"],\n");
+
       if (list.rendering != Render.HTML && ++i >= 20) break;
     }
+    if(appsTableData.charAt(appsTableData.length() - 2) == ',') {
+      appsTableData.delete(appsTableData.length()-2, appsTableData.length()-1);
+    }
+    appsTableData.append("]");
+    html.script().$type("text/javascript").
+    _("var appsTableData=" + appsTableData)._();
+
     tbody._()._();
 
     if (list.rendering == Render.JS_ARRAY) {

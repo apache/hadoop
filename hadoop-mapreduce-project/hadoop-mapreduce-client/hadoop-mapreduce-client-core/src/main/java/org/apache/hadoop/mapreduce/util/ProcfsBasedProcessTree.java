@@ -20,9 +20,10 @@ package org.apache.hadoop.mapreduce.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.base.Charsets;
 
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
@@ -350,7 +353,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   }
 
   private static final String PROCESSTREE_DUMP_FORMAT =
-      "\t|- %s %s %d %d %s %d %d %d %d %s\n";
+      "\t|- %s %s %d %d %s %d %d %d %d %s%n";
 
   /**
    * Get a dump of the process-tree.
@@ -363,7 +366,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     // The header.
     ret.append(String.format("\t|- PID PPID PGRPID SESSID CMD_NAME "
         + "USER_MODE_TIME(MILLIS) SYSTEM_TIME(MILLIS) VMEM_USAGE(BYTES) "
-        + "RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
+        + "RSSMEM_USAGE(PAGES) FULL_CMD_LINE%n"));
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
         ret.append(String.format(PROCESSTREE_DUMP_FORMAT, p.getPid(), p
@@ -505,10 +508,11 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     ProcessInfo ret = null;
     // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
       File pidDir = new File(procfsDir, pinfo.getPid());
-      fReader = new FileReader(new File(pidDir, PROCFS_STAT_FILE));
+      fReader = new InputStreamReader(new FileInputStream(
+          new File(pidDir, PROCFS_STAT_FILE)), Charsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
@@ -695,11 +699,11 @@ public class ProcfsBasedProcessTree extends ProcessTree {
         return ret;
       }
       BufferedReader in = null;
-      FileReader fReader = null;
+      InputStreamReader fReader = null;
       try {
-        fReader =
-            new FileReader(new File(new File(procfsDir, pid),
-                PROCFS_CMDLINE_FILE));
+        fReader = new InputStreamReader(new FileInputStream(
+            new File(new File(procfsDir, pid), PROCFS_CMDLINE_FILE)),
+            Charsets.UTF_8);
       } catch (FileNotFoundException f) {
         // The process vanished in the interim!
         return ret;

@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.List;
@@ -29,6 +30,8 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.base.Charsets;
 
 /**
  * <code>JobQueueClient</code> is interface provided to the user in order to get
@@ -144,7 +147,8 @@ class JobQueueClient extends Configured implements Tool {
   private void displayQueueList() throws IOException {
     JobQueueInfo[] rootQueues = jc.getRootQueues();
     for (JobQueueInfo queue : rootQueues) {
-      printJobQueueInfo(queue, new PrintWriter(System.out));
+      printJobQueueInfo(queue, new PrintWriter(new OutputStreamWriter(
+          System.out, Charsets.UTF_8)));
     }
   }
   
@@ -182,7 +186,8 @@ class JobQueueClient extends Configured implements Tool {
       System.out.println("Queue \"" + queue + "\" does not exist.");
       return;
     }
-    printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out));
+    printJobQueueInfo(jobQueueInfo, new PrintWriter(new OutputStreamWriter(
+        System.out, Charsets.UTF_8)));
     if (showJobs && (jobQueueInfo.getChildren() == null ||
         jobQueueInfo.getChildren().size() == 0)) {
       JobStatus[] jobs = jobQueueInfo.getJobStatuses();
@@ -223,10 +228,10 @@ class JobQueueClient extends Configured implements Tool {
     if ("-queueinfo".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + "<job-queue-name> [-showJobs]]");
     } else {
-      System.err.printf(prefix + "<command> <args>\n");
-      System.err.printf("\t[-list]\n");
-      System.err.printf("\t[-info <job-queue-name> [-showJobs]]\n");
-      System.err.printf("\t[-showacls] \n\n");
+      System.err.printf(prefix + "<command> <args>%n");
+      System.err.printf("\t[-list]%n");
+      System.err.printf("\t[-info <job-queue-name> [-showJobs]]%n");
+      System.err.printf("\t[-showacls] %n%n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }

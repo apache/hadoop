@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.ipc.RPC;
@@ -399,7 +400,7 @@ public class DFSAdmin extends FsShell {
         } catch (java.lang.InterruptedException e) {
           throw new IOException("Wait Interrupted");
         }
-        inSafeMode = dfs.isInSafeMode();
+        inSafeMode = dfs.setSafeMode(SafeModeAction.SAFEMODE_GET);
       }
     }
 

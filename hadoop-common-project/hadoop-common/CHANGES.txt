@@ -277,6 +277,9 @@ Trunk (Unreleased)
 
     HADOOP-8974. TestDFVariations fails on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9037. Bug in test-patch.sh and precommit build process (Kihwal Lee
+    via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -364,6 +367,10 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9021. Enforce configured SASL method on the server (daryn via
     bobby)
 
+    HADOO-8998. set Cache-Control no-cache header on all dynamic content. (tucu)
+
+    HADOOP-9035. Generalize setup of LoginContext (daryn via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -425,6 +432,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
 
     HADOOP-8999. SASL negotiation is flawed (daryn)
+
+    HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1116,6 +1125,18 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1151,7 +1172,7 @@ Release 0.23.5 - UNRELEASED
     HADOOP-9025. org.apache.hadoop.tools.TestCopyListing failing (Jonathan
     Eagles via jlowe)
 
-Release 0.23.4 - UNRELEASED
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

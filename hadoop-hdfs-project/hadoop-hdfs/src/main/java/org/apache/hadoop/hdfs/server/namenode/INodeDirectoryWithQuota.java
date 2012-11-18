@@ -27,9 +27,9 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
  */
 public class INodeDirectoryWithQuota extends INodeDirectory {
   private long nsQuota; /// NameSpace quota
-  private long nsCount;
+  private long nsCount = 1L;
   private long dsQuota; /// disk space quota
-  private long diskspace;
+  private long diskspace = 0L;
   
   /** Convert an existing directory inode to one with the given quota
    * 
@@ -44,7 +44,8 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     other.spaceConsumedInTree(counts);
     this.nsCount = counts.getNsCount();
     this.diskspace = counts.getDsCount();
-    setQuota(nsQuota, dsQuota);
+    this.nsQuota = nsQuota;
+    this.dsQuota = dsQuota;
   }
   
   /** constructor with no quota verification */
@@ -53,7 +54,6 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     super(permissions, modificationTime);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
-    this.nsCount = 1;
   }
   
   /** constructor with no quota verification */
@@ -62,7 +62,6 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     super(name, permissions);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
-    this.nsCount = 1;
   }
   
   /** Get this directory's namespace quota
@@ -116,19 +115,8 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @param nsDelta the change of the tree size
    * @param dsDelta change to disk space occupied
    */
-  void updateNumItemsInTree(long nsDelta, long dsDelta) {
-    nsCount += nsDelta;
-    diskspace += dsDelta;
-  }
-  
-  /** Update the size of the tree
-   * 
-   * @param nsDelta the change of the tree size
-   * @param dsDelta change to disk space occupied
-   **/
-  void unprotectedUpdateNumItemsInTree(long nsDelta, long dsDelta) {
-    nsCount = nsCount + nsDelta;
-    diskspace = diskspace + dsDelta;
+  void addSpaceConsumed(long nsDelta, long dsDelta) {
+    setSpaceConsumed(nsCount + nsDelta, diskspace + dsDelta);
   }
   
   /** 
