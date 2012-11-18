@@ -26,6 +26,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 public class TestParam {
   public static final Log LOG = LogFactory.getLog(TestParam.class);
 
@@ -233,5 +236,44 @@ public class TestParam {
     final String expected = "&renewer=renewer%3Dequal&token=token%26ampersand";
     final String actual = Param.toSortedString(sep, equalParam, ampParam);
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void userNameEmpty() {
+    UserParam userParam = new UserParam("");
+    assertNull(userParam.getValue());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void userNameTooLong() {
+    new UserParam("a123456789012345678901234567890x");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void userNameInvalidStart() {
+    new UserParam("1x");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void userNameInvalidDollarSign() {
+    new UserParam("1$x");
+  }
+
+  @Test
+  public void userNameMinLength() {
+    UserParam userParam = new UserParam("a");
+    assertNotNull(userParam.getValue());
+  }
+
+  @Test
+  public void userNameMaxLength() {
+    UserParam userParam = new UserParam("a123456789012345678901234567890");
+    assertNotNull(userParam.getValue());
+  }
+
+  @Test
+  public void userNameValidDollarSign() {
+    UserParam userParam = new UserParam("a$");
+    assertNotNull(userParam.getValue());
   }
 }
