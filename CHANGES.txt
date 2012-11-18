@@ -30,6 +30,9 @@ Release 1.2.0 - unreleased
     HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
     doesn't match decompressed size. (Andy Isaacson via suresh)
 
+    HADOOP-9036. Fix racy test case TestSinkQueue (Backport HADOOP-7292).
+    (Luke Lu backport by suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
