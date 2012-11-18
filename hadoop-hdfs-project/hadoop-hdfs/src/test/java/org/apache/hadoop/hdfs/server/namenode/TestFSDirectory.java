@@ -134,7 +134,7 @@ public class TestFSDirectory {
     fsdir.reset();
     Assert.assertFalse(fsdir.isReady());
     final INodeDirectory root = (INodeDirectory) fsdir.getINode("/");
-    Assert.assertNull(root.getChildren());
+    Assert.assertTrue(root.getChildrenList().isEmpty());
     fsdir.imageLoadComplete();
     Assert.assertTrue(fsdir.isReady());
   }

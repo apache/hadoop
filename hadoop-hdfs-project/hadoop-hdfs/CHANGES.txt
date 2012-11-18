@@ -161,6 +161,9 @@ Trunk (Unreleased)
 
     HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
 
+    HDFS-4206. Change the fields in INode and its subclasses to private.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

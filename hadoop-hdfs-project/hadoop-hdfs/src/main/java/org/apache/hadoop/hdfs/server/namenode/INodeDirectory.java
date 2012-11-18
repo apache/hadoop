@@ -50,22 +50,19 @@ class INodeDirectory extends INode {
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
-  private List<INode> children;
+  private List<INode> children = null;
 
   INodeDirectory(String name, PermissionStatus permissions) {
     super(name, permissions);
-    this.children = null;
   }
 
   public INodeDirectory(PermissionStatus permissions, long mTime) {
     super(permissions, mTime, 0);
-    this.children = null;
   }
 
   /** constructor */
-  INodeDirectory(byte[] localName, PermissionStatus permissions, long mTime) {
-    this(permissions, mTime);
-    this.name = localName;
+  INodeDirectory(byte[] name, PermissionStatus permissions, long mtime) {
+    super(name, permissions, null, mtime, 0L);
   }
   
   /** copy constructor
@@ -74,7 +71,7 @@ class INodeDirectory extends INode {
    */
   INodeDirectory(INodeDirectory other) {
     super(other);
-    this.children = other.getChildren();
+    this.children = other.children;
   }
   
   /** @return true unconditionally. */
@@ -83,14 +80,20 @@ class INodeDirectory extends INode {
     return true;
   }
 
-  INode removeChild(INode node) {
-    assert children != null;
-    int low = Collections.binarySearch(children, node.name);
-    if (low >= 0) {
-      return children.remove(low);
-    } else {
-      return null;
+  private void assertChildrenNonNull() {
+    if (children == null) {
+      throw new AssertionError("children is null: " + this);
     }
+  }
+
+  private int searchChildren(INode inode) {
+    return Collections.binarySearch(children, inode.getLocalNameBytes());
+  }
+
+  INode removeChild(INode node) {
+    assertChildrenNonNull();
+    final int i = searchChildren(node);
+    return i >= 0? children.remove(i): null;
   }
 
   /** Replace a child that has the same name as newChild by newChild.
@@ -98,10 +101,9 @@ class INodeDirectory extends INode {
    * @param newChild Child node to be added
    */
   void replaceChild(INode newChild) {
-    if ( children == null ) {
-      throw new IllegalArgumentException("The directory is empty");
-    }
-    int low = Collections.binarySearch(children, newChild.name);
+    assertChildrenNonNull();
+
+    final int low = searchChildren(newChild);
     if (low>=0) { // an old child exists so replace by the newChild
       children.set(low, newChild);
     } else {
@@ -210,7 +212,7 @@ class INodeDirectory extends INode {
         final String remainder =
           constructPath(components, count + 1, components.length);
         final String link = DFSUtil.bytes2String(components[count]);
-        final String target = ((INodeSymlink)curNode).getLinkValue();
+        final String target = ((INodeSymlink)curNode).getSymlinkString();
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("UnresolvedPathException " +
             " path: " + path + " preceding: " + preceding +
@@ -282,7 +284,7 @@ class INodeDirectory extends INode {
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
-    int low = Collections.binarySearch(children, node.name);
+    final int low = searchChildren(node);
     if(low >= 0)
       return null;
     node.parent = this;
@@ -322,13 +324,9 @@ class INodeDirectory extends INode {
    * @throws  FileNotFoundException if parent does not exist or 
    *          is not a directory.
    */
-  INodeDirectory addToParent( byte[] localname,
-                              INode newNode,
-                              INodeDirectory parent,
-                              boolean propagateModTime
-                              ) throws FileNotFoundException {
+  INodeDirectory addToParent(INode newNode, INodeDirectory parent,
+      boolean propagateModTime) throws FileNotFoundException {
     // insert into the parent children list
-    newNode.name = localname;
     if(parent.addChild(newNode, propagateModTime) == null)
       return null;
     return parent;
@@ -366,7 +364,7 @@ class INodeDirectory extends INode {
     if (pathComponents.length < 2) { // add root
       return null;
     }
-    newNode.name = pathComponents[pathComponents.length - 1];
+    newNode.setLocalName(pathComponents[pathComponents.length - 1]);
     // insert into the parent children list
     INodeDirectory parent = getParent(pathComponents);
     return parent.addChild(newNode, propagateModTime) == null? null: parent;
@@ -421,10 +419,6 @@ class INodeDirectory extends INode {
    */
   public List<INode> getChildrenList() {
     return children==null ? EMPTY_LIST : children;
-  }
-  /** @return the children list which is possibly null. */
-  public List<INode> getChildren() {
-    return children;
   }
 
   @Override
