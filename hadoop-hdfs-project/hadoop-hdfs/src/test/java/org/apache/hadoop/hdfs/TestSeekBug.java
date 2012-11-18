@@ -157,8 +157,6 @@ public class TestSeekBug {
         fs,
         seekFile,
         ONEMB,
-        ONEMB,
-        fs.getDefaultBlockSize(seekFile),
         fs.getDefaultReplication(seekFile),
         seed);
       FSDataInputStream stream = fs.open(seekFile);
@@ -188,8 +186,6 @@ public class TestSeekBug {
         fs,
         seekFile,
         ONEMB,
-        ONEMB,
-        fs.getDefaultBlockSize(seekFile),
         fs.getDefaultReplication(seekFile),
         seed);
       FSDataInputStream stream = fs.open(seekFile);
