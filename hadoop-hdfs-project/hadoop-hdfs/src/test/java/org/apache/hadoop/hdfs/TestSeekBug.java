@@ -141,7 +141,69 @@ public class TestSeekBug {
       cluster.shutdown();
     }
   }
-  
+
+ /**
+  * Test (expected to throw IOE) for negative
+  * <code>FSDataInpuStream#seek</code> argument
+  */
+  @Test (expected=IOException.class)
+  public void testNegativeSeek() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    try {
+      Path seekFile = new Path("seekboundaries.dat");
+      DFSTestUtil.createFile(
+        fs,
+        seekFile,
+        ONEMB,
+        ONEMB,
+        fs.getDefaultBlockSize(seekFile),
+        fs.getDefaultReplication(seekFile),
+        seed);
+      FSDataInputStream stream = fs.open(seekFile);
+      // Perform "safe seek" (expected to pass)
+      stream.seek(65536);
+      assertEquals(65536, stream.getPos());
+      // expect IOE for this call
+      stream.seek(-73);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
+ /**
+  * Test (expected to throw IOE) for <code>FSDataInpuStream#seek</code>
+  * when the position argument is larger than the file size.
+  */
+  @Test (expected=IOException.class)
+  public void testSeekPastFileSize() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    try {
+      Path seekFile = new Path("seekboundaries.dat");
+      DFSTestUtil.createFile(
+        fs,
+        seekFile,
+        ONEMB,
+        ONEMB,
+        fs.getDefaultBlockSize(seekFile),
+        fs.getDefaultReplication(seekFile),
+        seed);
+      FSDataInputStream stream = fs.open(seekFile);
+      // Perform "safe seek" (expected to pass)
+      stream.seek(65536);
+      assertEquals(65536, stream.getPos());
+      // expect IOE for this call
+      stream.seek(ONEMB + ONEMB + ONEMB);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+ 
   /**
    * Tests if the seek bug exists in FSDataInputStream in LocalFS.
    */
