@@ -48,7 +48,7 @@ abstract class StringParam extends Param<String, StringParam.Domain> {
 
     @Override
     final String parse(final String str) {
-      if (pattern != null) {
+      if (str != null && pattern != null) {
         if (!pattern.matcher(str).matches()) {
           throw new IllegalArgumentException("Invalid value: \"" + str
               + "\" does not belong to the domain " + getDomain());

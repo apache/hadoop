@@ -31,6 +31,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.ext.Provider;
 import java.lang.reflect.Type;
 import java.security.Principal;
+import java.text.MessageFormat;
 import java.util.regex.Pattern;
 
 @Provider
@@ -40,12 +41,25 @@ public class UserProvider extends AbstractHttpContextInjectable<Principal> imple
 
   public static final String USER_NAME_PARAM = "user.name";
 
-  public static final Pattern USER_PATTERN = Pattern.compile("[_a-zA-Z0-9]+");
+  public static final Pattern USER_PATTERN = Pattern.compile("^[A-Za-z_][A-Za-z0-9._-]*[$]?$");
 
-  private static class UserParam extends StringParam {
+  static class UserParam extends StringParam {
 
     public UserParam(String user) {
       super(USER_NAME_PARAM, user, USER_PATTERN);
+    }
+
+    @Override
+    public String parseParam(String str) {
+      if (str != null) {
+        int len = str.length();
+        if (len < 1 || len > 31) {
+          throw new IllegalArgumentException(MessageFormat.format(
+            "Parameter [{0}], invalid value [{1}], it's length must be between 1 and 31",
+            getName(), str));
+        }
+      }
+      return super.parseParam(str);
     }
   }
 
