@@ -318,6 +318,9 @@ Release 1.2.0 - unreleased
     HDFS-4105. the SPNEGO user for secondary namenode should use the web 
     keytab. (Arpit Gupta via jitendra)
 
+    HADOOP-9036. Fix racy test case TestSinkQueue (Backport HADOOP-7292).
+    (Luke Lu backport by suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
