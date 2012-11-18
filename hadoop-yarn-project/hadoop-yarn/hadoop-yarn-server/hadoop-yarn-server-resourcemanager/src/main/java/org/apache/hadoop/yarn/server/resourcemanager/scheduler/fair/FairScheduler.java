@@ -94,7 +94,7 @@ public class FairScheduler implements ResourceScheduler {
   protected long UPDATE_INTERVAL = 500;
 
   // Whether to use username in place of "default" queue name
-  private boolean userAsDefaultQueue = false;
+  private volatile boolean userAsDefaultQueue = false;
 
   private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
@@ -136,7 +136,11 @@ public class FairScheduler implements ResourceScheduler {
   private FairSchedulerEventLog eventLog;   // Machine-readable event log
   protected boolean assignMultiple; // Allocate multiple containers per heartbeat
   protected int maxAssign; // Max containers to assign per heartbeat
-
+  
+  public FairScheduler() {
+    clock = new SystemClock();
+    queueMgr = new QueueManager(this);
+  }
 
   public FairSchedulerConfiguration getConf() {
     return conf;
@@ -166,7 +170,7 @@ public class FairScheduler implements ResourceScheduler {
    */
   private class UpdateThread implements Runnable {
     public void run() {
-      while (initialized) {
+      while (true) {
         try {
           Thread.sleep(UPDATE_INTERVAL);
           update();
@@ -256,7 +260,7 @@ public class FairScheduler implements ResourceScheduler {
    * If such queues exist, compute how many tasks of each type need to be
    * preempted and then select the right ones using preemptTasks.
    */
-  protected void preemptTasksIfNecessary() {
+  protected synchronized void preemptTasksIfNecessary() {
     if (!preemptionEnabled) {
       return;
     }
@@ -414,7 +418,8 @@ public class FairScheduler implements ResourceScheduler {
     return rmContext.getContainerTokenSecretManager();
   }
 
-  public double getAppWeight(AppSchedulable app) {
+  // synchronized for sizeBasedWeight
+  public synchronized double getAppWeight(AppSchedulable app) {
     if (!app.getRunnable()) {
       // Job won't launch tasks, but don't return 0 to avoid division errors
       return 1.0;
@@ -885,7 +890,6 @@ public class FairScheduler implements ResourceScheduler {
       this.conf = new FairSchedulerConfiguration(conf);
       rootMetrics = QueueMetrics.forQueue("root", null, true, conf);
       this.rmContext = rmContext;
-      this.clock = new SystemClock();
       this.eventLog = new FairSchedulerEventLog();
       eventLog.init(this.conf);
       minimumAllocation = this.conf.getMinimumMemoryAllocation();
@@ -897,14 +901,9 @@ public class FairScheduler implements ResourceScheduler {
       assignMultiple = this.conf.getAssignMultiple();
       maxAssign = this.conf.getMaxAssign();
 
-      Thread updateThread = new Thread(new UpdateThread());
-      updateThread.start();
-
       initialized = true;
 
       sizeBasedWeight = this.conf.getSizeBasedWeight();
-
-      queueMgr = new QueueManager(this);
 
       try {
         queueMgr.initialize();
@@ -912,6 +911,11 @@ public class FairScheduler implements ResourceScheduler {
       catch (Exception e) {
         throw new IOException("Failed to start FairScheduler", e);
       }
+      
+      Thread updateThread = new Thread(new UpdateThread());
+      updateThread.setName("FairSchedulerUpdateThread");
+      updateThread.setDaemon(true);
+      updateThread.start();
     } else {
       this.conf = new FairSchedulerConfiguration(conf);
       userAsDefaultQueue = this.conf.getUserAsDefaultQueue();

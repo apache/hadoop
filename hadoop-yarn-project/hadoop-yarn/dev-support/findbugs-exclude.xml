@@ -236,54 +236,5 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AppLogAggregatorImpl" />
     <Bug pattern="EI_EXPOSE_REP2" />
   </Match>
-
-
-   <!-- MAPREDUCE-4439 -->
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerEventLog" />
-      <Method name="shutdown" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="initialized" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="preemptionEnabled" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="queueMgr" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="sizeBasedWeight" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="userAsDefaultQueue" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="logDisabled" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="queueMaxAppsDefault" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-   <Match>
-     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-      <Field name="userMaxAppsDefault" />
-     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-   </Match>
-
-
+  
 </FindBugsFilter>
