@@ -63,7 +63,7 @@ abstract public class Shell {
   /** Return a command to get a given user's groups list */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String[] { WINUTILS, "groups", user}
+    return (WINDOWS)? new String[] { WINUTILS, "groups", "-F", "\"" + user + "\""}
                     : new String [] {"bash", "-c", "id -Gn " + user};
   }
 
@@ -76,7 +76,7 @@ abstract public class Shell {
 
   /** Return a command to get permission information. */
   public static String[] getGetPermissionCommand() {
-    return (WINDOWS) ? new String[] { WINUTILS, "ls" }
+    return (WINDOWS) ? new String[] { WINUTILS, "ls", "-F" }
                      : new String[] { "/bin/ls", "-ld" };
   }
 
@@ -99,10 +99,10 @@ abstract public class Shell {
 
   /** Return a command to set owner */
   public static String[] getSetOwnerCommand(String owner) {
-    return (WINDOWS) ? new String[] { WINUTILS, "chown", owner }
+    return (WINDOWS) ? new String[] { WINUTILS, "chown", "\"" + owner + "\"" }
                      : new String[] { "chown", owner };
   }
-
+  
   /** Return a command to create symbolic links */
   public static String[] getSymlinkCommand(String target, String link) {
     return WINDOWS ? new String[] { WINUTILS, "symlink", link, target }
@@ -208,6 +208,10 @@ abstract public class Shell {
   
   public static final boolean LINUX
                 = System.getProperty("os.name").startsWith("Linux");
+
+  /** Token separator regex used to parse Shell tool outputs */
+  public static final String TOKEN_SEPARATOR_REGEX
+                = WINDOWS ? "[|\n\r]" : "[ \t\n\r\f]";
 
   /* Set flag for aiding Windows porting temporarily for branch-1-win*/
   // TODO - this needs to be fixed

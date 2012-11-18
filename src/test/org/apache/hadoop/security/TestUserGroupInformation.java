@@ -124,14 +124,15 @@ public class TestUserGroupInformation {
     }
     // get the groups
     pp = Runtime.getRuntime().exec(Shell.WINDOWS ?
-      Shell.WINUTILS + " groups" : "id -Gn");
+      Shell.WINUTILS + " groups -F" : "id -Gn");
     br = new BufferedReader(new InputStreamReader(pp.getInputStream()));
     String line = br.readLine();
 
     System.out.println(userName + ":" + line);
    
-    List<String> groups = new ArrayList<String> ();    
-    for(String s: line.split("[\\s]")) {
+    List<String> groups = new ArrayList<String> ();
+    String[] tokens = line.split(Shell.TOKEN_SEPARATOR_REGEX);
+    for(String s: tokens) {
       groups.add(s);
     }
     

@@ -220,3 +220,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8847. Change untar to use Java API on Windows instead of spawning
     tar process. (Bikas Saha via suresh)
+
+    HADOOP-8456. Support spaces in user names and group names in results 
+    returned via winutils. (Ivan Mitic via suresh)

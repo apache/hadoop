@@ -67,7 +67,8 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
         // if we didn't get the group - just return empty list;
         LOG.warn("got exception trying to get groups for user " + user, e);
       }
-      StringTokenizer tokenizer = new StringTokenizer(result);
+      StringTokenizer tokenizer =
+          new StringTokenizer(result, Shell.TOKEN_SEPARATOR_REGEX);
       
       while (tokenizer.hasMoreTokens()) {
         groups.add(tokenizer.nextToken());

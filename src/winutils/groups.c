@@ -28,8 +28,13 @@
 // Notes:
 //   This function could fail on first pass when we fail to find groups for
 //   domain account; so we do not report Windows API errors in this function.
+//   If formatOutput is true, pipe character is used as separator for groups
+//   otherwise, space.
 //
-static BOOL PrintGroups(LPLOCALGROUP_USERS_INFO_0 groups, DWORD entries)
+static BOOL PrintGroups(
+  LPLOCALGROUP_USERS_INFO_0 groups,
+  DWORD entries,
+  BOOL formatOutput)
 {
   BOOL ret = TRUE;
   LPLOCALGROUP_USERS_INFO_0 pTmpBuf = groups;
@@ -45,7 +50,14 @@ static BOOL PrintGroups(LPLOCALGROUP_USERS_INFO_0 groups, DWORD entries)
 
     if (i != 0)
     {
-      wprintf(L" ");
+      if (formatOutput)
+      {
+        wprintf(L"|");
+      }
+      else
+      {
+        wprintf(L" ");
+      }
     }
     wprintf(L"%s", pTmpBuf->lgrui0_name);
 
@@ -56,6 +68,56 @@ static BOOL PrintGroups(LPLOCALGROUP_USERS_INFO_0 groups, DWORD entries)
     wprintf(L"\n");
 
   return ret;
+}
+
+//----------------------------------------------------------------------------
+// Function: ParseCommandLine
+//
+// Description:
+//   Parses the command line
+//
+// Returns:
+//   TRUE on the valid command line, FALSE otherwise
+//
+static BOOL ParseCommandLine(
+  int argc, wchar_t *argv[], wchar_t **user, BOOL *formatOutput)
+{
+  *formatOutput = FALSE;
+
+  assert(argv != NULL);
+  assert(user != NULL);
+
+  if (argc == 1)
+  {
+    // implicitly use the current user
+    *user = NULL;
+    return TRUE;
+  }
+  else if (argc == 2)
+  {
+    // check if the second argument is formating
+    if (wcscmp(argv[1], L"-F") == 0)
+    {
+      *user = NULL;
+      *formatOutput = TRUE;
+      return TRUE;
+    }
+    else
+    {
+      *user = argv[1];
+      return TRUE;
+    }
+  }
+  else if (argc == 3 && wcscmp(argv[1], L"-F") == 0)
+  {
+    // if 3 args, the second argument must be "-F"
+
+    *user = argv[2];
+    *formatOutput = TRUE;
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 //----------------------------------------------------------------------------
@@ -83,15 +145,18 @@ int Groups(int argc, wchar_t *argv[])
   DWORD dwRtnCode = ERROR_SUCCESS;
 
   int ret = EXIT_SUCCESS;
+  BOOL formatOutput = FALSE;
 
-  if (argc != 2 && argc != 1)
+  if (!ParseCommandLine(argc, argv, &input, &formatOutput))
   {
     fwprintf(stderr, L"Incorrect command line arguments.\n\n");
     GroupsUsage(argv[0]);
     return EXIT_FAILURE;
   }
 
-  if (argc == 1)
+  // if username was not specified on the command line, fallback to the
+  // current user
+  if (input == NULL)
   {
     GetUserNameW(currentUser, &cchCurrentUser);
     if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
@@ -120,10 +185,6 @@ int Groups(int argc, wchar_t *argv[])
       goto GroupsEnd;
     }
   }
-  else
-  {
-    input = argv[1];
-  }
 
   if ((dwRtnCode = GetLocalGroupsForUser(input, &groups, &entries))
     != ERROR_SUCCESS)
@@ -133,7 +194,7 @@ int Groups(int argc, wchar_t *argv[])
     goto GroupsEnd;
   }
 
-  if (!PrintGroups(groups, entries))
+  if (!PrintGroups(groups, entries, formatOutput))
   {
     ret = EXIT_FAILURE;
   }
@@ -147,8 +208,10 @@ GroupsEnd:
 void GroupsUsage(LPCWSTR program)
 {
   fwprintf(stdout, L"\
-Usage: %s [USERNAME]\n\
-Print group information of the specified USERNAME\
-(the current user by default).\n",
+Usage: %s [OPTIONS] [USERNAME]\n\
+Print group information of the specified USERNAME \
+(the current user by default).\n\
+\n\
+OPTIONS: -F format the output by separating tokens with a pipe\n",
 program);
 }
