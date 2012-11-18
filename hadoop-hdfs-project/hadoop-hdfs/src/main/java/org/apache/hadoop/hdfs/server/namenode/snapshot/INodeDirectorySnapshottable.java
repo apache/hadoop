@@ -26,10 +26,13 @@ import java.util.List;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Directories where taking snapshots is allowed.
@@ -67,7 +70,23 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
   private final List<Snapshot> snapshots = new ArrayList<Snapshot>();
   /** Snapshots of this directory in ascending order of snapshot names. */
   private final List<Snapshot> snapshotsByNames = new ArrayList<Snapshot>();
+  
+  /**
+   * @return {@link #snapshots}
+   */
+  @VisibleForTesting
+  List<Snapshot> getSnapshots() {
+    return snapshots;
+  }
 
+  /**
+   * @return {@link #snapshotsByNames}
+   */
+  @VisibleForTesting
+  List<Snapshot> getSnapshotsByNames() {
+    return snapshotsByNames;
+  }
+  
   /** Number of snapshots allowed. */
   private int snapshotQuota;
 
@@ -89,6 +108,48 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
   public Snapshot getSnapshot(byte[] snapshotName) {
     final int i = searchSnapshot(snapshotName);
     return i < 0? null: snapshotsByNames.get(i);
+  }
+  
+  /**
+   * Rename a snapshot
+   * @param path
+   *          The directory path where the snapshot was taken. Used for
+   *          generating exception message.
+   * @param oldName
+   *          Old name of the snapshot
+   * @param newName
+   *          New name the snapshot will be renamed to
+   * @throws SnapshotException
+   *           Throw SnapshotException when either the snapshot with the old
+   *           name does not exist or a snapshot with the new name already
+   *           exists
+   */
+  public void renameSnapshot(String path, String oldName, String newName)
+      throws SnapshotException {
+    if (newName.equals(oldName)) {
+      return;
+    }
+    final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
+    if (indexOfOld < 0) {
+      throw new SnapshotException("The snapshot " + oldName
+          + " does not exist for directory " + path);
+    } else {
+      int indexOfNew = searchSnapshot(DFSUtil.string2Bytes(newName));
+      if (indexOfNew > 0) {
+        throw new SnapshotException("The snapshot " + newName
+            + " already exists for directory " + path);
+      }
+      // remove the one with old name from snapshotsByNames
+      Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
+      INodeDirectoryWithSnapshot ssRoot = snapshot.getRoot();
+      ssRoot.setLocalName(newName);
+      indexOfNew = -indexOfNew - 1;
+      if (indexOfNew <= indexOfOld) {
+        snapshotsByNames.add(indexOfNew, snapshot);
+      } else { // indexOfNew > indexOfOld
+        snapshotsByNames.add(indexOfNew - 1, snapshot);
+      }
+    }
   }
 
   /** @return the last snapshot. */

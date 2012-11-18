@@ -31,7 +31,18 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-/** Manage snapshottable directories and their snapshots. */
+/**
+ * Manage snapshottable directories and their snapshots.
+ * 
+ * This class includes operations that create, access, modify snapshots and/or
+ * snapshot-related data. In general, the locking structure of snapshot
+ * operations is: <br>
+ * 
+ * 1. Lock the {@link FSNamesystem} lock in {@link FSNamesystem} before calling
+ * into {@link SnapshotManager} methods.<br>
+ * 2. Lock the {@link FSDirectory} lock for the {@link SnapshotManager} methods
+ * if necessary.
+ */
 public class SnapshotManager implements SnapshotStats {
   private final FSNamesystem namesystem;
   private final FSDirectory fsdir;
@@ -95,24 +106,52 @@ public class SnapshotManager implements SnapshotStats {
 
   /**
    * Create a snapshot of the given path.
-   * 
-   * @param snapshotName The name of the snapshot.
-   * @param path The directory path where the snapshot will be taken.
+   * @param snapshotName
+   *          The name of the snapshot.
+   * @param path
+   *          The directory path where the snapshot will be taken.
+   * @throws IOException
+   *           Throw IOException when 1) the given path does not lead to an
+   *           existing snapshottable directory, and/or 2) there exists a
+   *           snapshot with the given name for the directory, and/or 3)
+   *           snapshot number exceeds quota
    */
   public void createSnapshot(final String snapshotName, final String path
       ) throws IOException {
     // Find the source root directory path where the snapshot is taken.
     final INodeDirectorySnapshottable srcRoot
         = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
-
-    synchronized(this) {
-      final Snapshot s = srcRoot.addSnapshot(snapshotID, snapshotName);
-      new SnapshotCreation().processRecursively(srcRoot, s.getRoot());
+    final Snapshot s = srcRoot.addSnapshot(snapshotID, snapshotName);
+    new SnapshotCreation().processRecursively(srcRoot, s.getRoot());
       
-      //create success, update id
-      snapshotID++;
-    }
+    //create success, update id
+    snapshotID++;
     numSnapshots.getAndIncrement();
+  }
+
+  /**
+   * Rename the given snapshot
+   * @param path
+   *          The directory path where the snapshot was taken
+   * @param oldSnapshotName
+   *          Old name of the snapshot
+   * @param newSnapshotName
+   *          New name of the snapshot
+   * @throws IOException
+   *           Throw IOException when 1) the given path does not lead to an
+   *           existing snapshottable directory, and/or 2) the snapshot with the
+   *           old name does not exist for the directory, and/or 3) there exists
+   *           a snapshot with the new name for the directory
+   */
+  public void renameSnapshot(final String path, final String oldSnapshotName,
+      final String newSnapshotName) throws IOException {
+    // Find the source root directory path where the snapshot was taken.
+    // All the check for path has been included in the valueOf method.
+    final INodeDirectorySnapshottable srcRoot
+        = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
+    // Note that renameSnapshot and createSnapshot are synchronized externally
+    // through FSNamesystem's write lock
+    srcRoot.renameSnapshot(path, oldSnapshotName, newSnapshotName);
   }
   
   /**

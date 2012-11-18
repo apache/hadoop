@@ -968,9 +968,20 @@ public interface ClientProtocol {
    * Create a snapshot
    * @param snapshotName name of the snapshot created
    * @param snapshotRoot the path that is being snapshotted
+   * @throws IOException
    */
   public void createSnapshot(String snapshotName, String snapshotRoot)
       throws IOException;
+  
+  /**
+   * Rename a snapshot
+   * @param snapshotRoot the directory path where the snapshot was taken 
+   * @param snapshotOldName old name of the snapshot
+   * @param snapshotNewName new name of the snapshot
+   * @throws IOException
+   */
+  public void renameSnapshot(String snapshotRoot, String snapshotOldName,
+      String snapshotNewName) throws IOException;
   
     /**
      * Allow snapshot on a directory.

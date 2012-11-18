@@ -1098,4 +1098,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrDisAllowSnapshotOps();
     namesystem.disallowSnapshot(snapshot);
   }
+
+  @Override
+  public void renameSnapshot(String snapshotRoot, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    metrics.incrRenameSnapshotOps();
+    namesystem.renameSnapshot(snapshotRoot, snapshotOldName, snapshotNewName);
+  }
 }

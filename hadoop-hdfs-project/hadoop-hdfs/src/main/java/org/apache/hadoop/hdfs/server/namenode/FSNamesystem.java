@@ -5645,19 +5645,59 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       dir.writeLock();
       try {
         snapshotManager.createSnapshot(snapshotName, path);
-        getEditLog().logCreateSnapshot(snapshotName, path);
       } finally {
         dir.writeUnlock();
       }
+      getEditLog().logCreateSnapshot(snapshotName, path);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      Path snapshotRoot = new Path(path, ".snapshot/" + snapshotName);
+      Path snapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR + "/"
+          + snapshotName);
       logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
           "createSnapshot", path, snapshotRoot.toString(), null);
+    }
+  }
+  
+  /**
+   * Rename a snapshot
+   * @param path The directory path where the snapshot was taken
+   * @param snapshotOldName Old snapshot name
+   * @param snapshotNewName New snapshot name
+   * @throws SafeModeException
+   * @throws IOException 
+   */
+  public void renameSnapshot(String path, String snapshotOldName,
+      String snapshotNewName) throws SafeModeException, IOException {
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException("Cannot rename snapshot for " + path,
+            safeMode);
+      }
+      checkOwner(path);
+      // TODO: check if the new name is valid. May also need this for
+      // creationSnapshot
+      
+      snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
+      getEditLog().logRenameSnapshot(path, snapshotOldName, snapshotNewName);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      Path oldSnapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR
+          + "/" + snapshotOldName);
+      Path newSnapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR
+          + "/" + snapshotNewName);
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
+          "renameSnapshot", oldSnapshotRoot.toString(),
+          newSnapshotRoot.toString(), null);
     }
   }
 }

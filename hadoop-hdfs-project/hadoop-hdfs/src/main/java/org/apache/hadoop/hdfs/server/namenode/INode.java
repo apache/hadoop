@@ -262,7 +262,7 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Set local file name
    */
-  protected void setLocalName(String name) {
+  public void setLocalName(String name) {
     this.name = DFSUtil.string2Bytes(name);
   }
 

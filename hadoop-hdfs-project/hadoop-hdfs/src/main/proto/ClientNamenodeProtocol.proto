@@ -451,6 +451,15 @@ message CreateSnapshotRequestProto {
 message CreateSnapshotResponseProto { // void response
 }
 
+message RenameSnapshotRequestProto {
+  required string snapshotRoot = 1;
+  required string snapshotOldName = 2;
+  required string snapshotNewName = 3;
+}
+
+message RenameSnapshotResponseProto { // void response
+}
+
 message AllowSnapshotRequestProto {
   required string snapshotRoot = 1;
 }
@@ -540,6 +549,8 @@ service ClientNamenodeProtocol {
       returns(GetDataEncryptionKeyResponseProto);
   rpc createSnapshot(CreateSnapshotRequestProto)
       returns(CreateSnapshotResponseProto);
+  rpc renameSnapshot(RenameSnapshotRequestProto)
+      returns(RenameSnapshotResponseProto);
   rpc allowSnapshot(AllowSnapshotRequestProto)
       returns(AllowSnapshotResponseProto);
   rpc disallowSnapshot(DisallowSnapshotRequestProto)

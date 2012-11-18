@@ -119,6 +119,7 @@ public abstract class FSEditLogOp {
       inst.put(OP_DISALLOW_SNAPSHOT, new DisallowSnapshotOp());
       inst.put(OP_CREATE_SNAPSHOT, new CreateSnapshotOp());
       inst.put(OP_DELETE_SNAPSHOT, new DeleteSnapshotOp());
+      inst.put(OP_RENAME_SNAPSHOT, new RenameSnapshotOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -2282,6 +2283,79 @@ public abstract class FSEditLogOp {
       builder.append(snapshotName);
       builder.append(", snapshotRoot=");
       builder.append(snapshotRoot);
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+  
+  /**
+   * Operation corresponding to rename a snapshot
+   */
+  static class RenameSnapshotOp extends FSEditLogOp {
+    String snapshotRoot;
+    String snapshotOldName;
+    String snapshotNewName;
+    
+    RenameSnapshotOp() {
+      super(OP_RENAME_SNAPSHOT);
+    }
+    
+    static RenameSnapshotOp getInstance(OpInstanceCache cache) {
+      return (RenameSnapshotOp) cache.get(OP_RENAME_SNAPSHOT);
+    }
+    
+    RenameSnapshotOp setSnapshotOldName(String snapshotOldName) {
+      this.snapshotOldName = snapshotOldName;
+      return this;
+    }
+
+    RenameSnapshotOp setSnapshotNewName(String snapshotNewName) {
+      this.snapshotNewName = snapshotNewName;
+      return this;
+    }
+    
+    RenameSnapshotOp setSnapshotRoot(String snapshotRoot) {
+      this.snapshotRoot = snapshotRoot;
+      return this;
+    }
+    
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      snapshotRoot = FSImageSerialization.readString(in);
+      snapshotOldName = FSImageSerialization.readString(in);
+      snapshotNewName = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(snapshotRoot, out);
+      FSImageSerialization.writeString(snapshotOldName, out);
+      FSImageSerialization.writeString(snapshotNewName, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTOLDNAME", snapshotOldName);
+      XMLUtils.addSaxString(contentHandler, "SNAPSHOTNEWNAME", snapshotNewName);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      snapshotRoot = st.getValue("SNAPSHOTROOT");
+      snapshotOldName = st.getValue("SNAPSHOTOLDNAME");
+      snapshotNewName = st.getValue("SNAPSHOTNEWNAME");
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("RenameSnapshotOp [snapshotRoot=");
+      builder.append(snapshotRoot);
+      builder.append(", snapshotOldName=");
+      builder.append(snapshotOldName);
+      builder.append(", snapshotNewName=");
+      builder.append(snapshotNewName);
       builder.append("]");
       return builder.toString();
     }

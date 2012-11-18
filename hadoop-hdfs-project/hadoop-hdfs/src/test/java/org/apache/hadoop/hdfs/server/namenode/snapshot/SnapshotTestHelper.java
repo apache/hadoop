@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 /**
  * Helper for writing snapshot related tests
@@ -33,7 +34,8 @@ public class SnapshotTestHelper {
   }
 
   public static Path getSnapshotRoot(Path snapshottedDir, String snapshotName) {
-    return new Path(snapshottedDir, ".snapshot/" + snapshotName);
+    return new Path(snapshottedDir, HdfsConstants.DOT_SNAPSHOT_DIR + "/"
+        + snapshotName);
   }
 
   public static Path getSnapshotPath(Path snapshottedDir, String snapshotName,

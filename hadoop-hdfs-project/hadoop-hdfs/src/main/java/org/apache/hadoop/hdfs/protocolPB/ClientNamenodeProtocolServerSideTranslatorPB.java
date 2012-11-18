@@ -101,6 +101,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2ResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameSnapshotRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewLeaseRequestProto;
@@ -156,6 +158,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   final private ClientProtocol server;
   static final CreateSnapshotResponseProto VOID_CREATE_SNAPSHOT_RESPONSE =
       CreateSnapshotResponseProto.newBuilder().build();
+  static final RenameSnapshotResponseProto VOID_RENAME_SNAPSHOT_RESPONSE =
+      RenameSnapshotResponseProto.newBuilder().build();
   static final AllowSnapshotResponseProto VOID_ALLOW_SNAPSHOT_RESPONSE = 
       AllowSnapshotResponseProto.newBuilder().build();
   static final DisallowSnapshotResponseProto VOID_DISALLOW_SNAPSHOT_RESPONSE =
@@ -885,6 +889,18 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.disallowSnapshot(req.getSnapshotRoot());
       return VOID_DISALLOW_SNAPSHOT_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RenameSnapshotResponseProto renameSnapshot(RpcController controller,
+      RenameSnapshotRequestProto request) throws ServiceException {
+    try {
+      server.renameSnapshot(request.getSnapshotRoot(),
+          request.getSnapshotOldName(), request.getSnapshotNewName());
+      return VOID_RENAME_SNAPSHOT_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
     }

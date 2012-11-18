@@ -912,4 +912,16 @@ public class DistributedFileSystem extends FileSystem {
       throws IOException {
     dfs.createSnapshot(snapshotName, path);
   }
+  
+  /**
+   * Rename a snapshot
+   * @param path The directory path where the snapshot was taken
+   * @param snapshotOldName Old name of the snapshot
+   * @param snapshotNewName New name of the snapshot
+   * @throws IOException
+   */
+  public void renameSnapshot(String path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    dfs.renameSnapshot(path, snapshotOldName, snapshotNewName);
+  }
 }

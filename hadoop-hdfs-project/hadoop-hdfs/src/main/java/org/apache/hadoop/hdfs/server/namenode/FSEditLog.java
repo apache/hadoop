@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
@@ -876,6 +877,13 @@ public class FSEditLog implements LogsPurgeable {
   void logDeleteSnapshot(String snapName, String snapRoot) {
     DeleteSnapshotOp op = DeleteSnapshotOp.getInstance(cache.get())
         .setSnapshotName(snapName).setSnapshotRoot(snapRoot);
+    logEdit(op);
+  }
+  
+  void logRenameSnapshot(String path, String snapOldName, String snapNewName) {
+    RenameSnapshotOp op = RenameSnapshotOp.getInstance(cache.get())
+        .setSnapshotRoot(path).setSnapshotOldName(snapOldName)
+        .setSnapshotNewName(snapNewName);
     logEdit(op);
   }
   

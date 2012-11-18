@@ -76,3 +76,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4187. Add tests for replication handling in snapshots. (Jing Zhao via
   szetszwo)
+
+  HDFS-4196. Support renaming of snapshots. (Jing Zhao via szetszwo)
