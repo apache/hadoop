@@ -84,6 +84,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-169. Update log4j.appender.EventCounter to use
     org.apache.hadoop.log.metrics.EventCounter (Anthony Rojas via tomwhite)
 
+    YARN-184. Remove unnecessary locking in fair scheduler, and address 
+    findbugs excludes. (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
