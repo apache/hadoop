@@ -63,6 +63,9 @@ Release 1.1.1 - 2012.11.18
 
     HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
 
+    HADOOP-8745. Incorrect version numbers in hadoop-core POM.
+    (Matthias Friedrich via eli)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
