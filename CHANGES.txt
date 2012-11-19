@@ -13,9 +13,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
     command-line (philip and ahmed via tucu)
 
-    HDFS-528. Backport: Add ability for safemode to wait for a minimum number
-    of live datanodes.  (szetszwo)
-
     HDFS-385. Backport: Add support for an experimental API that allows a
     module external to HDFS to specify how HDFS blocks should be placed.
     (Sumadhur Reddy Bolli via szetszwo)
@@ -85,8 +82,6 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4499. Looking for speculative tasks is very expensive in 1.x
     (Koji Noguchi via tgraves)
-
-    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
 
     HADOOP-8832. Port generic service plugin mechanism from HADOOP-5257
     to branch-1. (backported by Brandon Li via suresh) 
@@ -213,15 +208,11 @@ Release 1.2.0 - unreleased
 
     HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
 
-    HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
-
     HADOOP-8611. Allow fall-back to the shell-based implementation when
     JNI-based users-group mapping fails (Robert Parker via bobby)
 
     MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
     via atm)
-
-    HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
 
     HADOOP-4572. Can not access user logs - Jetty is not configured by default 
     to serve aliases/symlinks (ahmed via tucu)
@@ -233,9 +224,6 @@ Release 1.2.0 - unreleased
     CapacityTaskScheduler.assignTasks() (Koji Noguchi via tgraves)
 
     MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
-
-    HADOOP-8745. Incorrect version numbers in hadoop-core POM.
-    (Matthias Friedrich via eli)
 
     HDFS-2757. Cannot read a local block that's being written to when
     using the local read short circuit. (Jean-Daniel Cryans via eli)
@@ -324,7 +312,12 @@ Release 1.1.1 - Unreleased
 
   NEW FEATURES
 
+    HDFS-528. Backport: Add ability for safemode to wait for a minimum number
+    of live datanodes.  (szetszwo)
+
   IMPROVEMENTS
+
+    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
 
     HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
 
@@ -338,7 +331,7 @@ Release 1.1.1 - Unreleased
     HDFS-1539. A config option for the datanode to fsycn a block file
     when block is completely written. (dhruba via szetszwo)
 
-    HDFS-4174. Add abilit to list the corrupted files in WebUI (backport of
+    HDFS-4174. Add ability to list the corrupted files in WebUI (backport of
     HDFS-1031). (Jing Zhao via suresh)
 
   BUG FIXES
@@ -374,6 +367,13 @@ Release 1.1.1 - Unreleased
 
     MAPREDUCE-4792. Unit Test TestJobTrackerRestartWithLostTracker fails 
     with ant-1.8.4. (Amir Sanjar via mattf)
+
+    HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
+
+    HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
+
+    HADOOP-8745. Incorrect version numbers in hadoop-core POM.
+    (Matthias Friedrich via eli)
 
 Release 1.1.0 - 2012.09.28
 
