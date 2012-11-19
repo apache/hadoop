@@ -88,6 +88,8 @@ Release 0.23.5 - UNRELEASED
     YARN-144. MiniMRYarnCluster launches RM and JHS on default ports (Robert
     Parker via jlowe)
 
+    YARN-219. NM should aggregate logs when application finishes. (bobby)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
