@@ -62,13 +62,23 @@ public class RmView extends TwoColumnLayout {
   private String appsTableInit() {
     AppsList list = getInstance(AppsList.class);
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
-    StringBuilder init = tableInit().
-        append(", aoColumns:[{sType:'title-numeric'}, null, null, null, ").
-        append("{sType:'title-numeric'}, {sType:'title-numeric'} , null, ").
-        append("null,{sType:'title-numeric', bSearchable:false}, null]");
+    StringBuilder init = tableInit()
+      .append(", 'aaData': appsTableData")
+      .append(", bDeferRender: true")
+      .append(", bProcessing: true")
 
-    // Sort by id upon page load
-    init.append(", aaSorting: [[0, 'desc']]");
+      .append("\n, aoColumnDefs: [\n")
+      .append("{'sType':'numeric', 'aTargets': [0]")
+      .append(", 'mRender': parseHadoopID }")
+
+      .append("\n, {'sType':'numeric', 'aTargets': [4, 5]")
+      .append(", 'mRender': renderHadoopDate }")
+
+      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [8]")
+      .append(", 'mRender': parseHadoopProgress }]")
+
+      // Sort by id upon page load
+      .append(", aaSorting: [[0, 'desc']]");
 
     String rows = $("rowlimit");
     int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);

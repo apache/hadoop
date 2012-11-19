@@ -1,5 +1,17 @@
 Hadoop Change Log
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -61,7 +73,7 @@ Release 0.23.5 - UNRELEASED
     HADOOP-9025. org.apache.hadoop.tools.TestCopyListing failing (Jonathan
     Eagles via jlowe)
 
-Release 0.23.4 - UNRELEASED
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

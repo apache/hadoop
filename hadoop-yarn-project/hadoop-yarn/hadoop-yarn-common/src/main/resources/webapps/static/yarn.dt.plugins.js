@@ -58,10 +58,14 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
 
 function renderHadoopDate(data, type, full) {
   if (type === 'display') {
+    if(data === '0') {
+      return "N/A";
+    }
     return new Date(parseInt(data)).toUTCString();
   }
   // 'filter', 'sort', 'type' and undefined all just use the number
-  return data;  
+  // If date is 0, then for purposes of sorting it should be consider max_int
+  return data === '0' ? '9007199254740992' : data;  
 }
 
 function renderHadoopElapsedTime(data, type, full) {
@@ -101,4 +105,12 @@ function parseHadoopID(data, type, full) {
   //The number after the last '_' and before the end tag '<'
   var splits = data.split('_');
   return splits[parseInt(splits.length-1)].split('<')[0];
+}
+
+function parseHadoopProgress(data, type, full) {
+  if (type === 'display') {
+    return data;
+  }
+  //Return the title attribute for 'sort', 'filter', 'type' and undefined
+  return data.split("'")[1];
 }
