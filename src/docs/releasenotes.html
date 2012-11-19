@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.1.0 Release Notes</title>
+<title>Hadoop 1.1.1 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,123 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.1.0 Release Notes</h1>
+<h1>Hadoop 1.1.1 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+
+<h2>Changes since Hadoop 1.1.0</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+    None.
+</ul>
+
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8745">HADOOP-8745</a>.
+     Minor bug reported by mafr and fixed by mafr <br>
+     <b>Incorrect version numbers in hadoop-core POM</b><br>
+     <blockquote>The hadoop-core POM as published to Maven central has different dependency versions than Hadoop actually has on its runtime classpath. This can lead to client code working in unit tests but failing on the cluster and vice versa.<br><br>The following version numbers are incorrect: jackson-mapper-asl, kfs, and jets3t. There&apos;s also a duplicate dependency to commons-net.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8823">HADOOP-8823</a>.
+     Major improvement reported by szetszwo and fixed by szetszwo (build)<br>
+     <b>ant package target should not depend on cn-docs</b><br>
+     <blockquote>In branch-1, the package target depends on cn-docs but the doc is already outdated.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8878">HADOOP-8878</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>uppercase namenode hostname causes hadoop dfs calls with webhdfs filesystem and fsck to fail when security is on</b><br>
+     <blockquote>This was noticed on a secure cluster where the namenode had an upper case hostname and the following command was issued<br><br>hadoop dfs -ls webhdfs://NN:PORT/PATH<br><br>the above command failed because delegation token retrieval failed.<br><br>Upon looking at the kerberos logs it was determined that we tried to get the ticket for kerberos principal with upper case hostnames and that host did not exit in kerberos. We should convert the hostnames to lower case. Take a look at HADOOP-7988 where the same fix wa...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8882">HADOOP-8882</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>uppercase namenode host name causes fsck to fail when useKsslAuth is on</b><br>
+     <blockquote>{code}<br> public static void fetchServiceTicket(URL remoteHost) throws IOException {<br>    if(!UserGroupInformation.isSecurityEnabled())<br>      return;<br>    <br>    String serviceName = &quot;host/&quot; + remoteHost.getHost();<br>{code}<br><br>the hostname should be converted to lower case. Saw this in branch 1, will look at trunk and update the bug accordingly.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8995">HADOOP-8995</a>.
+     Minor bug reported by jingzhao and fixed by jingzhao <br>
+     <b>Remove unnecessary bogus exception log from Configuration</b><br>
+     <blockquote>In Configuration#Configuration(boolean) and Configuration#Configuration(Configuration), bogus exceptions are thrown when Log level is DEBUG.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9017">HADOOP-9017</a>.
+     Major bug reported by gkesavan and fixed by gkesavan (build)<br>
+     <b>fix hadoop-client-pom-template.xml and hadoop-client-pom-template.xml for version </b><br>
+     <blockquote>hadoop-client-pom-template.xml and hadoop-client-pom-template.xml references to project.version variable, instead they should refer to @version token.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-528">HDFS-528</a>.
+     Major new feature reported by tlipcon and fixed by tlipcon (scripts)<br>
+     <b>Add ability for safemode to wait for a minimum number of live datanodes</b><br>
+     <blockquote>When starting up a fresh cluster programatically, users often want to wait until DFS is &quot;writable&quot; before continuing in a script. &quot;dfsadmin -safemode wait&quot; doesn&apos;t quite work for this on a completely fresh cluster, since when there are 0 blocks on the system, 100% of them are accounted for before any DNs have reported.<br><br>This JIRA is to add a command which waits until a certain number of DNs have reported as alive to the NN.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1108">HDFS-1108</a>.
+     Major sub-task reported by dhruba and fixed by tlipcon (ha, name-node)<br>
+     <b>Log newly allocated blocks</b><br>
+     <blockquote>The current HDFS design says that newly allocated blocks for a file are not persisted in the NN transaction log when the block is allocated. Instead, a hflush() or a close() on the file persists the blocks into the transaction log. It would be nice if we can immediately persist newly allocated blocks (as soon as they are allocated) for specific files.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1539">HDFS-1539</a>.
+     Major improvement reported by dhruba and fixed by dhruba (data-node, hdfs client, name-node)<br>
+     <b>prevent data loss when a cluster suffers a power loss</b><br>
+     <blockquote>we have seen an instance where a external outage caused many datanodes to reboot at around the same time.  This resulted in many corrupted blocks. These were recently written blocks; the current implementation of HDFS Datanodes do not sync the data of a block file when the block is closed.<br><br>1. Have a cluster-wide config setting that causes the datanode to sync a block file when a block is finalized.<br>2. Introduce a new parameter to the FileSystem.create() to trigger the new behaviour, i.e. cau...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2815">HDFS-2815</a>.
+     Critical bug reported by umamaheswararao and fixed by umamaheswararao (name-node)<br>
+     <b>Namenode is not coming out of safemode when we perform ( NN crash + restart ) .  Also FSCK report shows blocks missed.</b><br>
+     <blockquote>When tested the HA(internal) with continuous switch with some 5mins gap, found some *blocks missed* and namenode went into safemode after next switch.<br>   <br>   After the analysis, i found that this files already deleted by clients. But i don&apos;t see any delete commands logs namenode log files. But namenode added that blocks to invalidateSets and DNs deleted the blocks.<br>   When restart of the namenode, it went into safemode and expecting some more blocks to come out of safemode.<br><br>   Here the reaso...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3658">HDFS-3658</a>.
+     Major bug reported by eli and fixed by szetszwo <br>
+     <b>TestDFSClientRetries#testNamenodeRestart failed</b><br>
+     <blockquote>Saw the following fail on a jenkins run:<br><br>{noformat}<br>Error Message<br><br>expected:&lt;MD5-of-0MD5-of-512CRC32:f397fb3d9133d0a8f55854ea2bb268b0&gt; but was:&lt;MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51&gt;<br>Stacktrace<br><br>junit.framework.AssertionFailedError: expected:&lt;MD5-of-0MD5-of-512CRC32:f397fb3d9133d0a8f55854ea2bb268b0&gt; but was:&lt;MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51&gt;<br>	at junit.framework.Assert.fail(Assert.java:47)<br>	at junit.framework.Assert.failNotEquals(Assert.java:283)<br>	at jun...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3791">HDFS-3791</a>.
+     Major bug reported by umamaheswararao and fixed by umamaheswararao (name-node)<br>
+     <b>Backport HDFS-173 to Branch-1 :  Recursively deleting a directory with millions of files makes NameNode unresponsive for other commands until the deletion completes</b><br>
+     <blockquote>Backport HDFS-173. <br>see the [comment|https://issues.apache.org/jira/browse/HDFS-2815?focusedCommentId=13422007&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13422007] for more details</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3846">HDFS-3846</a>.
+     Major bug reported by szetszwo and fixed by brandonli (name-node)<br>
+     <b>Namenode deadlock in branch-1</b><br>
+     <blockquote>Jitendra found out the following problem:<br>1. Handler : Acquires namesystem lock waits on SafemodeInfo lock at SafeModeInfo.isOn()<br>2. SafemodeMonitor : Calls SafeModeInfo.canLeave() which is synchronized so SafemodeInfo lock is acquired, but this method also causes following call sequence needEnter() -&gt; getNumLiveDataNodes() -&gt; getNumberOfDatanodes() -&gt; getDatanodeListForReport() -&gt; getDatanodeListForReport() . The getDatanodeListForReport is synchronized with FSNamesystem lock.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4105">HDFS-4105</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>the SPNEGO user for secondary namenode should use the web keytab</b><br>
+     <blockquote>This is similar to HDFS-3466 where we made sure the namenode checks for the web keytab before it uses the namenode keytab.<br><br>The same needs to be done for secondary namenode as well.<br><br>{code}<br>String httpKeytab = <br>              conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);<br>            if (httpKeytab != null &amp;&amp; !httpKeytab.isEmpty()) {<br>              params.put(&quot;kerberos.keytab&quot;, httpKeytab);<br>            }<br>{code}</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4134">HDFS-4134</a>.
+     Minor bug reported by stevel@apache.org and fixed by  (name-node)<br>
+     <b>hadoop namenode &amp; datanode entry points should return negative exit code on bad arguments</b><br>
+     <blockquote>When you go  {{hadoop namenode start}} (or some other bad argument to the namenode), a usage message is generated -but the script returns 0. <br><br>This stops it being a robust command to invoke from other scripts -and is inconsistent with the JT &amp; TT entry points, that do return -1 on a usage message</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4161">HDFS-4161</a>.
+     Major bug reported by sureshms and fixed by szetszwo (hdfs client)<br>
+     <b>HDFS keeps a thread open for every file writer</b><br>
+     <blockquote>In 1.0 release DFSClient uses a thread per file writer. In some use cases (dynamic partions in hive) that use a large number of file writers a large number of threads are created. The file writer thread has the following stack:<br>{noformat}<br>at java.lang.Thread.sleep(Native Method)<br>at org.apache.hadoop.hdfs.DFSClient$LeaseChecker.run(DFSClient.java:1462)<br>at java.lang.Thread.run(Thread.java:662)<br>{noformat}<br><br>This problem has been fixed in later releases. This jira will post a consolidated patch fr...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4174">HDFS-4174</a>.
+     Major improvement reported by jingzhao and fixed by jingzhao <br>
+     <b>Backport HDFS-1031 to branch-1: to list a few of the corrupted files in WebUI</b><br>
+     <blockquote>1. Add getCorruptFiles method to FSNamesystem (the getCorruptFiles method is in branch-0.21 but not in branch-1).<br><br>2. Backport HDFS-1031: display corrupt files in WebUI.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4749">MAPREDUCE-4749</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>Killing multiple attempts of a task taker longer as more attempts are killed</b><br>
+     <blockquote>The following was noticed on a mr job running on hadoop 1.1.0<br><br>1. Start an mr job with 1 mapper<br><br>2. Wait for a min<br><br>3. Kill the first attempt of the mapper and then subsequently kill the other 3 attempts in order to fail the job<br><br>The time taken to kill the task grew exponentially.<br><br>1st attempt was killed immediately.<br>2nd attempt took a little over a min<br>3rd attempt took approx. 20 mins<br>4th attempt took around 3 hrs.<br><br>The command used to kill the attempt was &quot;hadoop job -fail-task&quot;<br><br>Note that ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4782">MAPREDUCE-4782</a>.
+     Blocker bug reported by mark.fuhs and fixed by mark.fuhs (client)<br>
+     <b>NLineInputFormat skips first line of last InputSplit</b><br>
+     <blockquote>NLineInputFormat creates FileSplits that are then used by LineRecordReader to generate Text values. To deal with an idiosyncrasy of LineRecordReader, the begin and length fields of the FileSplit are constructed differently for the first FileSplit vs. the rest.<br><br>After looping through all lines of a file, the final FileSplit is created, but the creation does not respect the difference of how the first vs. the rest of the FileSplits are created.<br><br>This results in the first line of the final Input...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4792">MAPREDUCE-4792</a>.
+     Major bug reported by asanjar and fixed by asanjar (test)<br>
+     <b>Unit Test TestJobTrackerRestartWithLostTracker fails with ant-1.8.4</b><br>
+     <blockquote>Problem:<br>JUnit tag @Ignore is not recognized since the testcase is JUnit3 and not JUnit4:<br>Solution:<br>Migrate the testcase to JUnit4, including:<br>* Remove extends TestCase&quot;<br>* Remove import junit.framework.TestCase;<br>* Add import org.junit.*; <br>* Use appropriate annotations such as @After, @Before, @Test.</blockquote></li>
+
+</ul>
 
 <h2>Changes since Hadoop 1.0.3</h2>
 
