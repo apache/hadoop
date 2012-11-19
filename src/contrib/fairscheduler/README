@@ -17,6 +17,6 @@ hadoop release it can be found at $HADOOP_HOME/docs. In order to build the
 documentation on your own from source please use the following command in 
 the downloaded source folder:
 
-ant docs -Dforrest.home=path to forrest -Djava5.home= path to jdk5. 
+ant docs -Dforrest.home=path to forrest 
 
 The documentation so built would be under $HADOOP_HOME/build/docs
