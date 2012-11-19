@@ -6,6 +6,9 @@ Release 1.1.1 - Unreleased
 
   NEW FEATURES
 
+    HDFS-528. Backport: Add ability for safemode to wait for a minimum number
+    of live datanodes.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
