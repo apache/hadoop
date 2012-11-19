@@ -31,6 +31,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
@@ -42,6 +43,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -78,6 +80,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -544,6 +547,8 @@ public class TestDFSClientRetries extends TestCase {
     final Path dir = new Path("/testNamenodeRestart");
 
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
+    conf.setInt("dfs.safemode.extension.testing", 5000);
 
     final short numDatanodes = 3;
     final MiniDFSCluster cluster = new MiniDFSCluster(
@@ -565,10 +570,37 @@ public class TestDFSClientRetries extends TestCase {
       final FileStatus s1 = fs.getFileStatus(file1);
       assertEquals(length, s1.getLen());
 
+      //create file4, write some data but not close
+      final Path file4 = new Path(dir, "file4"); 
+      final FSDataOutputStream out4 = fs.create(file4, false, 4096,
+          fs.getDefaultReplication(file4), 1024L, null);
+      final byte[] bytes = new byte[1000];
+      new Random().nextBytes(bytes);
+      out4.write(bytes);
+      out4.write(bytes);
+      out4.sync();
+
       //shutdown namenode
       assertTrue(DistributedFileSystem.isHealthy(uri));
       cluster.shutdownNameNode();
       assertFalse(DistributedFileSystem.isHealthy(uri));
+
+      //namenode is down, continue writing file4 in a thread
+      final Thread file4thread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            //write some more data and then close the file
+            out4.write(bytes);
+            out4.write(bytes);
+            out4.write(bytes);
+            out4.close();
+          } catch (Exception e) {
+            exceptions.add(e);
+          }
+        }
+      });
+      file4thread.start();
 
       //namenode is down, read the file in a thread
       final Thread reader = new Thread(new Runnable() {
@@ -628,10 +660,26 @@ public class TestDFSClientRetries extends TestCase {
 
       //check file1 and file3
       thread.join();
+      assertEmpty(exceptions);
       assertEquals(s1.getLen(), fs.getFileStatus(file3).getLen());
       assertEquals(fs.getFileChecksum(file1), fs.getFileChecksum(file3));
 
       reader.join();
+      assertEmpty(exceptions);
+
+      //check file4
+      file4thread.join();
+      assertEmpty(exceptions);
+      {
+        final FSDataInputStream in = fs.open(file4);
+        int count = 0;
+        for(int r; (r = in.read()) != -1; count++) {
+          Assert.assertEquals(String.format("count=%d", count),
+              bytes[count % bytes.length], (byte)r);
+        }
+        Assert.assertEquals(5 * bytes.length, count);
+        in.close();
+      }
 
       //enter safe mode
       assertTrue(DistributedFileSystem.isHealthy(uri));
@@ -671,19 +719,28 @@ public class TestDFSClientRetries extends TestCase {
         LOG.info("GOOD!", fnfe);
       }
 
-      if (!exceptions.isEmpty()) {
-        LOG.error("There are " + exceptions.size() + " exception(s):");
-        for(int i = 0; i < exceptions.size(); i++) {
-          LOG.error("Exception " + i, exceptions.get(i));
-        }
-        fail();
-      }
+      assertEmpty(exceptions);
     } finally {
       cluster.shutdown();
     }
   }
 
-  public static FileSystem createFsWithDifferentUsername(
+  static void assertEmpty(final List<Exception> exceptions) {
+    if (!exceptions.isEmpty()) {
+      final StringBuilder b = new StringBuilder("There are ")
+        .append(exceptions.size())
+        .append(" exception(s):");
+      for(int i = 0; i < exceptions.size(); i++) {
+        b.append("\n  Exception ")
+         .append(i)
+         .append(": ")
+         .append(StringUtils.stringifyException(exceptions.get(i)));
+      }
+      fail(b.toString());
+    }
+  }
+
+  private static FileSystem createFsWithDifferentUsername(
       final Configuration conf, final boolean isWebHDFS
       ) throws IOException, InterruptedException {
     String username = UserGroupInformation.getCurrentUser().getShortUserName()+"_XXX";

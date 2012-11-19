@@ -59,6 +59,8 @@ Release 1.1.1 - 2012.11.18
     MAPREDUCE-4792. Unit Test TestJobTrackerRestartWithLostTracker fails 
     with ant-1.8.4. (Amir Sanjar via mattf)
 
+    HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES

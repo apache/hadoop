@@ -252,7 +252,8 @@ public class MiniDFSCluster {
     
     int replication = conf.getInt("dfs.replication", 3);
     conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
-    conf.setInt("dfs.safemode.extension", 0);
+    int safemodeExtension = conf.getInt("dfs.safemode.extension.testing", 0);
+    conf.setInt("dfs.safemode.extension", safemodeExtension);
     conf.setInt("dfs.namenode.decommission.interval", 3); // 3 second
 
     // Set a small delay on blockReceived in the minicluster to approximate
