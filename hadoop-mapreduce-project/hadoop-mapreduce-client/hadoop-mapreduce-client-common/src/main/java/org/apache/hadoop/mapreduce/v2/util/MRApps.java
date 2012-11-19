@@ -18,13 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -134,62 +129,24 @@ public class MRApps extends Apps {
 
   private static void setMRFrameworkClasspath(
       Map<String, String> environment, Configuration conf) throws IOException {
-    InputStream classpathFileStream = null;
-    BufferedReader reader = null;
-    try {
-      // Get yarn mapreduce-app classpath from generated classpath
-      // Works if compile time env is same as runtime. Mainly tests.
-      ClassLoader thisClassLoader =
-          Thread.currentThread().getContextClassLoader();
-      String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
-      classpathFileStream =
-          thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
+    // Propagate the system classpath when using the mini cluster
+    if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
+          System.getProperty("java.class.path"));
+    }
 
-      // Put the file itself on classpath for tasks.
-      URL classpathResource = thisClassLoader
-        .getResource(mrAppGeneratedClasspathFile);
-      if (classpathResource != null) {
-        String classpathElement = classpathResource.getFile();
-        if (classpathElement.contains("!")) {
-          classpathElement = classpathElement.substring(0,
-            classpathElement.indexOf("!"));
-        } else {
-          classpathElement = new File(classpathElement).getParent();
-        }
-        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
-          classpathElement);
-      }
-
-      if (classpathFileStream != null) {
-        reader = new BufferedReader(new InputStreamReader(classpathFileStream, 
-            Charsets.UTF_8));
-        String cp = reader.readLine();
-        if (cp != null) {
-          Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
-            cp.trim());
-        }
-      }
-
-      // Add standard Hadoop classes
-      for (String c : conf.getStrings(
-          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
-            .trim());
-      }
-      for (String c : conf.getStrings(
-          MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
-          MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
-        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
-            .trim());
-      }
-    } finally {
-      if (classpathFileStream != null) {
-        classpathFileStream.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
+    // Add standard Hadoop classes
+    for (String c : conf.getStrings(
+        YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+        YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
+          .trim());
+    }
+    for (String c : conf.getStrings(
+        MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
+        MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
+      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
+          .trim());
     }
     // TODO: Remove duplicates.
   }
