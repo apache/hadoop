@@ -74,7 +74,7 @@ fi
 #---------------------------------------------------------
 # secondary namenodes (if any)
 
-SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>&-)
+SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>/dev/null)
 
 if [ -n "$SECONDARY_NAMENODES" ]; then
   echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
