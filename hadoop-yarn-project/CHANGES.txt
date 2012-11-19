@@ -12,15 +12,6 @@ Release 0.23.6 - UNRELEASED
 
   BUG FIXES
 
-    YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
-    bobby)
-
-    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
-    (jeagles via bobby)
-
-    YARN-151. Browser thinks RM main page JS is taking too long 
-    (Ravi Prakash via bobby)
-
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -110,6 +101,16 @@ Release 0.23.5 - UNRELEASED
     Parker via jlowe)
 
     YARN-219. NM should aggregate logs when application finishes. (bobby)
+
+    YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
+    bobby)
+
+    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
+    (jeagles via bobby)
+
+    YARN-151. Browser thinks RM main page JS is taking too long 
+    (Ravi Prakash via bobby)
+
 
 Release 0.23.4
 
