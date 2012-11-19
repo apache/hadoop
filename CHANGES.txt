@@ -61,6 +61,8 @@ Release 1.1.1 - 2012.11.18
 
     HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
 
+    HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
