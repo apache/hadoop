@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.1.1 - Unreleased
+Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
 
@@ -10,6 +10,8 @@ Release 1.1.1 - Unreleased
     of live datanodes.  (szetszwo)
 
   IMPROVEMENTS
+
+    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
 
     HADOOP-8823. ant package target should not depend on cn-docs. (szetszwo)
 

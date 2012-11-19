@@ -104,6 +104,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_WEBHDFS_ENABLED_DEFAULT = false;
   public static final String  DFS_PERMISSIONS_ENABLED_KEY = "dfs.permissions.enabled";
   public static final boolean DFS_PERMISSIONS_ENABLED_DEFAULT = true;
+  public static final String  DFS_PERSIST_BLOCKS_KEY = "dfs.persist.blocks";
+  public static final boolean DFS_PERSIST_BLOCKS_DEFAULT = false;
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_KEY = "dfs.permissions.superusergroup";
   public static final String  DFS_ADMIN = "dfs.cluster.administrators";
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT = "supergroup";

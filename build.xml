@@ -922,6 +922,7 @@
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.tar.gz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/hdfs/hadoop-14-dfs-dir.tgz" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/hdfs/hadoop-1.0-multiblock-file.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/hdfs/hadoop-dfs-dir.txt" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/testConf.xml" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/cli/clitest_data/data15bytes" todir="${test.cache.data}"/>
