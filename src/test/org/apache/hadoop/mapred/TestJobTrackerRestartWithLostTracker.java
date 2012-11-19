@@ -17,21 +17,24 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.TestJobTrackerRestart;
+import org.junit.Test;
 
-import junit.framework.TestCase;
+
 import java.io.*;
-import org.junit.*;
+
 
 /** 
  * This test checks if the jobtracker can detect and recover a tracker that was
  * lost while the jobtracker was down.
  */
 
-public class TestJobTrackerRestartWithLostTracker extends TestCase {
+public class TestJobTrackerRestartWithLostTracker {
   final Path testDir = new Path("/jt-restart-lost-tt-testing");
   final Path inDir = new Path(testDir, "input");
   final Path shareDir = new Path(testDir, "share");
@@ -114,7 +117,7 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
 
     assertTrue("Job should be successful", rJob.isSuccessful());
   }
-  
+  @Test
   public void testRestartWithLostTracker() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;

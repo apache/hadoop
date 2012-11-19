@@ -51,6 +51,9 @@ Release 1.1.1 - Unreleased
     HDFS-4105. the SPNEGO user for secondary namenode should use the web 
     keytab. (Arpit Gupta via jitendra)
 
+    MAPREDUCE-4792. Unit Test TestJobTrackerRestartWithLostTracker fails 
+    with ant-1.8.4. (Amir Sanjar via mattf)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
