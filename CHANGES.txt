@@ -315,9 +315,6 @@ Release 1.2.0 - unreleased
 
     HDFS-4180. Update TestFileCreation for HDFS-4122.  (Jing Zhao via szetszwo)
 
-    HDFS-4105. the SPNEGO user for secondary namenode should use the web 
-    keytab. (Arpit Gupta via jitendra)
-
     HADOOP-9036. Fix racy test case TestSinkQueue (Backport HADOOP-7292).
     (Luke Lu backport by suresh)
 
@@ -372,6 +369,11 @@ Release 1.1.1 - Unreleased
     HADOOP-9017. Fix hadoop-client-pom-template.xml and
     hadoop-client-pom-template.xml for version token ( gkesavan )
 
+    HDFS-4105. the SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
+
+    MAPREDUCE-4792. Unit Test TestJobTrackerRestartWithLostTracker fails 
+    with ant-1.8.4. (Amir Sanjar via mattf)
 
 Release 1.1.0 - 2012.09.28
 
