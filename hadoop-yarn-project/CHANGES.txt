@@ -54,6 +54,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-183. Clean up fair scheduler code. (Sandy Ryza via tomwhite)
 
+    YARN-129. Simplify classpath construction for mini YARN tests. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES 
