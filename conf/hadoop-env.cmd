@@ -21,12 +21,12 @@ if not defined JAVA_HOME (
 @rem set HADOOP_OPTS=-server
 
 @rem Command specific options appended to HADOOP_OPTS when specified
-set HADOOP_NAMENODE_OPTS=-Dcom.sun.management.jmxremote
-set HADOOP_SECONDARYNAMENODE_OPTS=-Dcom.sun.management.jmxremote
-set HADOOP_DATANODE_OPTS=-Dcom.sun.management.jmxremote
-set HADOOP_BALANCER_OPTS=-Dcom.sun.management.jmxremote
-set HADOOP_JOBTRACKER_OPTS=-Dcom.sun.management.jmxremote
-set HADOOP_TASKTRACKER_OPTS=-Dcom.sun.management.jmxremote
+set HADOOP_NAMENODE_OPTS=-Dcom.sun.management.jmxremote %HADOOP_NAMENODE_OPTS%
+set HADOOP_SECONDARYNAMENODE_OPTS=-Dcom.sun.management.jmxremote %HADOOP_SECONDARYNAMENODE_OPTS%
+set HADOOP_DATANODE_OPTS=-Dcom.sun.management.jmxremote %HADOOP_DATANODE_OPTS%
+set HADOOP_BALANCER_OPTS=-Dcom.sun.management.jmxremote %HADOOP_BALANCER_OPTS%
+set HADOOP_JOBTRACKER_OPTS=-Dcom.sun.management.jmxremote %HADOOP_JOBTRACKER_OPTS%
+set HADOOP_TASKTRACKER_OPTS=-Dcom.sun.management.jmxremote %HADOOP_TASKTRACKER_OPTS%
 
 @rem The following applies to multiple commands (fs, dfs, fsck, distcp etc)
 @rem set HADOOP_CLIENT_OPTS
