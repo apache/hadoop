@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,13 +29,16 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,25 +54,30 @@ public class TestSnapshot {
   protected static final long seed = 0;
   protected static final short REPLICATION = 3;
   protected static final long BLOCKSIZE = 1024;
-  public static final int SNAPSHOTNUMBER = 10;
-
-  private final Path dir = new Path("/TestSnapshot");
-  private final Path sub1 = new Path(dir, "sub1");
-  private final Path subsub1 = new Path(sub1, "subsub1");
+  /** The number of times snapshots are created for a snapshottable directory  */
+  public static final int SNAPSHOT_ITERATION_NUMBER = 20;
+  /** Height of directory tree used for testing */
+  public static final int DIRECTORY_TREE_LEVEL = 5;
   
   protected Configuration conf;
   protected MiniDFSCluster cluster;
   protected FSNamesystem fsn;
   protected DistributedFileSystem hdfs;
 
+  private static Random random = new Random(Time.now());
+  
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+  
   /**
    * The list recording all previous snapshots. Each element in the array
    * records a snapshot root.
    */
   protected static ArrayList<Path> snapshotList = new ArrayList<Path>();
-  
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
+  /**
+   * Check {@link SnapshotTestHelper.TestDirectoryTree}
+   */
+  private TestDirectoryTree dirTree;
 
   @Before
   public void setUp() throws Exception {
@@ -79,6 +88,7 @@ public class TestSnapshot {
 
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
+    dirTree = new TestDirectoryTree(DIRECTORY_TREE_LEVEL, hdfs);
   }
 
   @After
@@ -94,7 +104,7 @@ public class TestSnapshot {
    * 
    * @param modifications Modifications that to be applied to the current dir.
    */
-  public void modifyCurrentDirAndCheckSnapshots(Modification[] modifications)
+  private void modifyCurrentDirAndCheckSnapshots(Modification[] modifications)
       throws Exception {
     for (Modification modification : modifications) {
       modification.loadSnapshots();
@@ -104,96 +114,66 @@ public class TestSnapshot {
   }
 
   /**
-   * Generate the snapshot name based on its index.
+   * Create two snapshots in each iteration. Each time we will create a snapshot
+   * for the top node, then randomly pick a dir in the tree and create
+   * snapshot for it.
    * 
-   * @param snapshotIndex The index of the snapshot
-   * @return The snapshot name
+   * Finally check the snapshots are created correctly.
    */
-  private String genSnapshotName(int snapshotIndex) {
-    return "s" + snapshotIndex;
+  protected TestDirectoryTree.Node[] createSnapshots() throws Exception {
+    TestDirectoryTree.Node[] nodes = new TestDirectoryTree.Node[2];
+    // Each time we will create a snapshot for the top level dir
+    Path root = SnapshotTestHelper.createSnapshot(hdfs,
+        dirTree.topNode.nodePath, this.genSnapshotName());
+    snapshotList.add(root);
+    nodes[0] = dirTree.topNode; 
+    SnapshotTestHelper.checkSnapshotCreation(hdfs, root, nodes[0].nodePath);
+    
+    // Then randomly pick one dir from the tree (cannot be the top node) and
+    // create snapshot for it
+    ArrayList<TestDirectoryTree.Node> excludedList = 
+        new ArrayList<TestDirectoryTree.Node>();
+    excludedList.add(nodes[0]);
+    nodes[1] = dirTree.getRandomDirNode(random, excludedList);
+    root = SnapshotTestHelper.createSnapshot(hdfs, nodes[1].nodePath,
+        this.genSnapshotName());
+    snapshotList.add(root);
+    SnapshotTestHelper.checkSnapshotCreation(hdfs, root, nodes[1].nodePath);
+    return nodes;
   }
 
+  
   /**
    * Main test, where we will go in the following loop:
    * 
-   * Create snapshot <----------------------+ -> Check snapshot creation | ->
-   * Change the current/live files/dir | -> Check previous snapshots
-   * -----------+
-   * 
-   * @param snapshottedDir The dir to be snapshotted
-   * @param modificiationsList The list of modifications. Each element in the
-   *          list is a group of modifications applied to current dir.
+   *    Create snapshot and check the creation <--+  
+   * -> Change the current/live files/dir         | 
+   * -> Check previous snapshots -----------------+
    */
-  protected void testSnapshot(Path snapshottedDir,
-      ArrayList<Modification[]> modificationsList) throws Exception {
-    int snapshotIndex = 0;
-    for (Modification[] modifications : modificationsList) {
-      // 1. create snapshot
-      // TODO: we also need to check creating snapshot for a directory under a
-      // snapshottable directory
-      Path snapshotRoot = SnapshotTestHelper.createSnapshot(hdfs,
-          snapshottedDir, genSnapshotName(snapshotIndex++));
-      snapshotList.add(snapshotRoot);
-      // 2. Check the basic functionality of the snapshot(s)
-      SnapshotTestHelper.checkSnapshotCreation(hdfs, snapshotRoot,
-          snapshottedDir);
-      // 3. Make changes to the current directory
-      for (Modification m : modifications) {
-        m.loadSnapshots();
-        m.modify();
-        m.checkSnapshots();
-      }
-    }
-  }
-
-  /**
-   * Prepare a list of modifications. A modification may be a file creation,
-   * file deletion, or a modification operation such as appending to an existing
-   * file.
-   * 
-   * @param number
-   *          Number of times that we make modifications to the current
-   *          directory.
-   * @return A list of modifications. Each element in the list is a group of
-   *         modifications that will be apply to the "current" directory.
-   * @throws Exception
-   */
-  private ArrayList<Modification[]> prepareModifications(int number)
-      throws Exception {
-    final Path[] files = new Path[3];
-    files[0] = new Path(sub1, "file0");
-    files[1] = new Path(sub1, "file1");
-    files[2] = new Path(sub1, "file2");
-    DFSTestUtil.createFile(hdfs, files[0], BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, files[1], BLOCKSIZE, REPLICATION, seed);
-
-    ArrayList<Modification[]> mList = new ArrayList<Modification[]>();
-    //
-    // Modification iterations are as follows:
-    // Iteration 0 - delete:file0, append:file1, create:file2
-    // Iteration 1 - delete:file1, append:file2, create:file0
-    // Iteration 3 - delete:file2, append:file0, create:file1
-    // ...
-    //
-    for (int i = 0; i < number; i++) {
-      Modification[] mods = new Modification[3];
-      // delete files[i % 3]
-      mods[0] = new FileDeletion(files[i % 3], hdfs);
-      // modify files[(i+1) % 3]
-      mods[1] = new FileAppend(files[(i + 1) % 3], hdfs, (int) BLOCKSIZE);
-      // create files[(i+2) % 3]
-      mods[2] = new FileCreation(files[(i + 2) % 3], hdfs, (int) BLOCKSIZE);
-      mList.add(mods);
-    }
-    return mList;
-  }
-
   @Test
   public void testSnapshot() throws Exception {
-    ArrayList<Modification[]> mList = prepareModifications(SNAPSHOTNUMBER);
-    testSnapshot(sub1, mList);
+    for (int i = 0; i < SNAPSHOT_ITERATION_NUMBER; i++) {
+      // create snapshot and check the creation
+      TestDirectoryTree.Node[] ssNodes = createSnapshots();
+      
+      // prepare the modifications for the snapshotted dirs
+      // we cover the following directories: top, new, and a random
+      ArrayList<TestDirectoryTree.Node> excludedList = 
+          new ArrayList<TestDirectoryTree.Node>();
+      TestDirectoryTree.Node[] modNodes = 
+          new TestDirectoryTree.Node[ssNodes.length + 1];
+      for (int n = 0; n < ssNodes.length; n++) {
+        modNodes[n] = ssNodes[n];
+        excludedList.add(ssNodes[n]);
+      }
+      modNodes[modNodes.length - 1] = dirTree.getRandomDirNode(random,
+          excludedList);
+      Modification[] mods = prepareModifications(modNodes);
+      // make changes to the current directory
+      modifyCurrentDirAndCheckSnapshots(mods);
+    }
   }
-
+  
   /**
    * Creating snapshots for a directory that is not snapshottable must fail.
    * 
@@ -202,114 +182,110 @@ public class TestSnapshot {
    */
   @Test
   public void testSnapshottableDirectory() throws Exception {
-    Path file0 = new Path(sub1, "file0");
-    Path file1 = new Path(sub1, "file1");
+    Path dir = new Path("/TestSnapshot/sub");
+    Path file0 = new Path(dir, "file0");
+    Path file1 = new Path(dir, "file1");
     DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
 
     exception.expect(RemoteException.class);
-    hdfs.createSnapshot("s1", sub1.toString());
+    exception.expectMessage("Directory is not a snapshottable directory: "
+        + dir.toString());
+    hdfs.createSnapshot("s1", dir.toString());
   }
-    
+
   /**
-   * Deleting snapshottable directory with snapshots must fail.
+   * Prepare a list of modifications. A modification may be a file creation,
+   * file deletion, or a modification operation such as appending to an existing
+   * file.
    */
-  @Test
-  public void testDeleteDirectoryWithSnapshot() throws Exception {
-    Path file0 = new Path(sub1, "file0");
-    Path file1 = new Path(sub1, "file1");
-    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
-
-    // Allow snapshot for sub1, and create snapshot for it
-    hdfs.allowSnapshot(sub1.toString());
-    hdfs.createSnapshot("s1", sub1.toString());
-
-    // Deleting a snapshottable dir with snapshots should fail
-    exception.expect(RemoteException.class);
-    hdfs.delete(sub1, true);
-  }
-  
-  /**
-   * Deleting directory with snapshottable descendant with snapshots must fail.
-   */
-  @Test
-  public void testDeleteDirectoryWithSnapshot2() throws Exception {
-    Path file0 = new Path(sub1, "file0");
-    Path file1 = new Path(sub1, "file1");
-    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
-    
-    Path subfile1 = new Path(subsub1, "file0");
-    Path subfile2 = new Path(subsub1, "file1");
-    DFSTestUtil.createFile(hdfs, subfile1, BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, subfile2, BLOCKSIZE, REPLICATION, seed);
-
-    // Allow snapshot for subsub1, and create snapshot for it
-    hdfs.allowSnapshot(subsub1.toString());
-    hdfs.createSnapshot("s1", subsub1.toString());
-
-    // Deleting dir while its descedant subsub1 having snapshots should fail
-    exception.expect(RemoteException.class);
-    hdfs.delete(dir, true);
-  }  
-  
-  /**
-   * Renaming a directory to another directory with snapshots must fail.
-   */
-  @Test
-  public void testRenameToDirectoryWithSnapshot() throws Exception {
-    // create the directory sub1
-    hdfs.mkdirs(sub1);
-    
-    Path sub2 = new Path(dir, "sub2");
-    Path file2 = new Path(sub2, "file");
-    DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
-    
-    // The normal rename should succeed
-    hdfs.rename(sub2, sub1, Rename.OVERWRITE);
-    
-    // Create sub3 and create snapshot for it 
-    Path sub3 = new Path(dir, "sub3");
-    hdfs.mkdirs(sub3);
-    SnapshotTestHelper.createSnapshot(hdfs, sub3, "s1");
-    
-    exception.expect(RemoteException.class);
-    String error = "The direcotry " + sub3.toString()
-        + " cannot be deleted for renaming since " + sub3.toString()
-        + " is snapshottable and already has snapshots";
-    exception.expectMessage(error);
-    hdfs.rename(sub1, sub3, Rename.OVERWRITE);
+  private Modification[] prepareModifications(TestDirectoryTree.Node[] nodes)
+      throws Exception {
+    ArrayList<Modification> mList = new ArrayList<Modification>();
+    for (TestDirectoryTree.Node node : nodes) {
+      // If the node does not have files in it, create files
+      if (node.fileList == null) {
+        node.initFileList(BLOCKSIZE, REPLICATION, seed, 6);
+      }
+      
+      //
+      // Modification iterations are as follows:
+      // Iteration 0 - create:fileList[5], delete:fileList[0],
+      //               append:fileList[1], chmod:fileList[2], 
+      //               chown:fileList[3],  change_replication:fileList[4].
+      //               Set nullFileIndex to 0
+      //
+      // Iteration 1 - create:fileList[0], delete:fileList[1],
+      //               append:fileList[2], chmod:fileList[3], 
+      //               chown:fileList[4],  change_replication:fileList[5]
+      //               Set nullFileIndex to 1
+      // 
+      // Iteration 2 - create:fileList[1], delete:fileList[2],
+      //               append:fileList[3], chmod:fileList[4], 
+      //               chown:fileList[5],  change_replication:fileList[6]
+      //               Set nullFileIndex to 2
+      // ...
+      //
+      Modification create = new FileCreation(
+          node.fileList.get(node.nullFileIndex), hdfs, (int) BLOCKSIZE);
+      Modification delete = new FileDeletion(
+          node.fileList.get((node.nullFileIndex + 1) % node.fileList.size()),
+          hdfs);
+      Modification append = new FileAppend(
+          node.fileList.get((node.nullFileIndex + 2) % node.fileList.size()),
+          hdfs, (int) BLOCKSIZE);
+      Modification chmod = new FileChangePermission(
+          node.fileList.get((node.nullFileIndex + 3) % node.fileList.size()),
+          hdfs, genRandomPermission());
+      String[] userGroup = genRandomOwner();
+      Modification chown = new FileChown(
+          node.fileList.get((node.nullFileIndex + 4) % node.fileList.size()),
+          hdfs, userGroup[0], userGroup[1]);
+      Modification replication = new FileChangeReplication(
+          node.fileList.get((node.nullFileIndex + 5) % node.fileList.size()),
+          hdfs, (short) (random.nextInt(REPLICATION) + 1));
+      node.nullFileIndex = (node.nullFileIndex + 1) % node.fileList.size();
+      Modification dirChange = new DirCreationOrDeletion(node.nodePath, hdfs,
+          node, random.nextBoolean());
+      
+      mList.add(create);
+      mList.add(delete);
+      mList.add(append);
+      mList.add(chmod);
+      mList.add(chown);
+      mList.add(replication);
+      mList.add(dirChange);
+    }
+    return mList.toArray(new Modification[0]);
   }
   
   /**
-   * Renaming a directory to another directory with snapshots
-   * must fail.
+   * @return A random FsPermission
    */
-  @Test
-  public void testRenameToDirectoryWithSnapshot2() throws Exception {
-    Path file0 = new Path(sub1, "file0");
-    Path file1 = new Path(sub1, "file1");
-    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
-    
-    Path sub2 = new Path(dir, "sub2");
-    Path file2 = new Path(sub2, "file");
-    DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
-    
-    // Create snapshot for sub1
-    SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
-    // Then delete file0 and file1 so that the renaming can succeed if without
-    // snapshots
-    hdfs.delete(file0, true);
-    hdfs.delete(file1, true);
-    
-    exception.expect(RemoteException.class);
-    String error = "The direcotry " + sub1.toString()
-        + " cannot be deleted for renaming since " + sub1.toString()
-        + " is snapshottable and already has snapshots";
-    exception.expectMessage(error);
-    hdfs.rename(sub2, sub1, Rename.OVERWRITE);
+  private FsPermission genRandomPermission() {
+    // randomly select between "rwx" and "rw-"
+    FsAction u = random.nextBoolean() ? FsAction.ALL : FsAction.READ_WRITE;
+    FsAction g = random.nextBoolean() ? FsAction.ALL : FsAction.READ_WRITE;
+    FsAction o = random.nextBoolean() ? FsAction.ALL : FsAction.READ_WRITE;
+    return new FsPermission(u, g, o);
+  }
+  
+  /**
+   * @return A string array containing two string: the first string indicates
+   *         the owner, and the other indicates the group
+   */
+  private String[] genRandomOwner() {
+    // TODO
+    String[] userGroup = new String[]{"dr.who", "unknown"};
+    return userGroup;
+  }
+  
+  /**
+   * Generate a random snapshot name.
+   * @return The snapshot name
+   */
+  private String genSnapshotName() {
+    return "s" + Math.abs(random.nextLong());
   }
   
   /**
@@ -325,13 +301,11 @@ public class TestSnapshot {
     protected final Path file;
     protected final FileSystem fs;
     final String type;
-    protected final Random random;
 
     Modification(Path file, FileSystem fs, String type) {
       this.file = file;
       this.fs = fs;
       this.type = type;
-      this.random = new Random();
     }
 
     abstract void loadSnapshots() throws Exception;
@@ -342,15 +316,112 @@ public class TestSnapshot {
   }
 
   /**
+   * Modifications that change the file status. We check the FileStatus of
+   * snapshot files before/after the modification.
+   */
+  static abstract class FileStatusChange extends Modification {
+    protected final HashMap<Path, FileStatus> statusMap;
+    
+    FileStatusChange(Path file, FileSystem fs, String type) {
+      super(file, fs, type);
+      statusMap = new HashMap<Path, FileStatus>();
+    }
+     
+    @Override
+    void loadSnapshots() throws Exception {
+      for (Path snapshotRoot : snapshotList) {
+        Path snapshotFile = SnapshotTestHelper.getSnapshotFile(fs,
+            snapshotRoot, file);
+        if (snapshotFile != null) {
+          if (fs.exists(snapshotFile)) {
+            FileStatus status = fs.getFileStatus(snapshotFile);
+            statusMap.put(snapshotFile, status);
+          } else {
+            statusMap.put(snapshotFile, null);
+          }
+        }
+      }
+    }
+    
+    @Override
+    void checkSnapshots() throws Exception {
+      for (Path snapshotFile : statusMap.keySet()) {
+        FileStatus currentStatus = fs.exists(snapshotFile) ? fs
+            .getFileStatus(snapshotFile) : null;
+        FileStatus originalStatus = statusMap.get(snapshotFile);
+        assertEquals(currentStatus, originalStatus);
+        if (currentStatus != null) {
+          assertEquals(currentStatus.toString(), originalStatus.toString());
+        }
+      }
+    }
+  }
+  
+  /**
+   * Change the file permission
+   */
+  static class FileChangePermission extends FileStatusChange {
+    private final FsPermission newPermission;
+    
+    FileChangePermission(Path file, FileSystem fs, FsPermission newPermission) {
+      super(file, fs, "chmod");
+      this.newPermission = newPermission;
+    }
+        
+    @Override
+    void modify() throws Exception {
+      assertTrue(fs.exists(file));
+      fs.setPermission(file, newPermission);
+    }
+  }
+  
+  /**
+   * Change the replication factor of file
+   */
+  static class FileChangeReplication extends FileStatusChange {
+    private final short newReplication;
+    
+    FileChangeReplication(Path file, FileSystem fs, short replication) {
+      super(file, fs, "replication");
+      this.newReplication = replication;
+    }
+    
+    @Override
+    void modify() throws Exception {
+      assertTrue(fs.exists(file));
+      fs.setReplication(file, newReplication);
+    }
+  }
+  
+  /**
+   * Change the owner:group of a file
+   */
+  static class FileChown extends FileStatusChange {
+    private final String newUser;
+    private final String newGroup;
+    
+    FileChown(Path file, FileSystem fs, String user, String group) {
+      super(file, fs, "chown");
+      this.newUser = user;
+      this.newGroup = group;
+    }
+
+    @Override
+    void modify() throws Exception {
+      assertTrue(fs.exists(file));
+      fs.setOwner(file, newUser, newGroup);
+    }
+  }
+  
+  /**
    * Appending a specified length to an existing file
    */
   static class FileAppend extends Modification {
     final int appendLen;
     private final HashMap<Path, Long> snapshotFileLengthMap;
 
-    FileAppend(Path file, FileSystem fs, int len) throws Exception {
+    FileAppend(Path file, FileSystem fs, int len) {
       super(file, fs, "append");
-      assert len >= 0;
       this.appendLen = len;
       this.snapshotFileLengthMap = new HashMap<Path, Long>();
     }
@@ -358,19 +429,19 @@ public class TestSnapshot {
     @Override
     void loadSnapshots() throws Exception {
       for (Path snapshotRoot : snapshotList) {
-        Path snapshotFile = new Path(snapshotRoot, file.getName());
-        if (fs.exists(snapshotFile)) {
-          long snapshotFileLen = fs.getFileStatus(snapshotFile).getLen();
+        Path snapshotFile = SnapshotTestHelper.getSnapshotFile(fs,
+            snapshotRoot, file);
+        if (snapshotFile != null) {
+          long snapshotFileLen = fs.exists(snapshotFile) ? fs.getFileStatus(
+              snapshotFile).getLen() : -1L;
           snapshotFileLengthMap.put(snapshotFile, snapshotFileLen);
-        } else {
-          snapshotFileLengthMap.put(snapshotFile, -1L);
         }
       }
     }
 
     @Override
     void modify() throws Exception {
-      assert fs.exists(file);
+      assertTrue(fs.exists(file));
       FSDataOutputStream out = fs.append(file);
       byte[] buffer = new byte[appendLen];
       random.nextBytes(buffer);
@@ -381,16 +452,13 @@ public class TestSnapshot {
     @Override
     void checkSnapshots() throws Exception {
       byte[] buffer = new byte[32];
-      for (Path snapshotRoot : snapshotList) {
-        Path snapshotFile = new Path(snapshotRoot, file.getName());
-        long currentSnapshotFileLen = -1L;
-        if (fs.exists(snapshotFile)) {
-          currentSnapshotFileLen = fs.getFileStatus(snapshotFile).getLen();
-        }
+      for (Path snapshotFile : snapshotFileLengthMap.keySet()) {        
+        long currentSnapshotFileLen = fs.exists(snapshotFile) ? fs
+            .getFileStatus(snapshotFile).getLen() : -1L;
         long originalSnapshotFileLen = snapshotFileLengthMap.get(snapshotFile);
         assertEquals(currentSnapshotFileLen, originalSnapshotFileLen);
         // Read the snapshot file out of the boundary
-        if (fs.exists(snapshotFile)) {
+        if (currentSnapshotFileLen != -1L) {
           FSDataInputStream input = fs.open(snapshotFile);
           int readLen = input.read(currentSnapshotFileLen, buffer, 0, 1);
           assertEquals(readLen, -1);
@@ -416,12 +484,12 @@ public class TestSnapshot {
     @Override
     void loadSnapshots() throws Exception {
       for (Path snapshotRoot : snapshotList) {
-        Path snapshotFile = new Path(snapshotRoot, file.getName());
-        boolean exist = fs.exists(snapshotFile);
-        if (exist) {
-          fileStatusMap.put(snapshotFile, fs.getFileStatus(snapshotFile));
-        } else {
-          fileStatusMap.put(snapshotFile, null);
+        Path snapshotFile = SnapshotTestHelper.getSnapshotFile(fs,
+            snapshotRoot, file);
+        if (snapshotFile != null) {
+          FileStatus status = 
+              fs.exists(snapshotFile) ? fs.getFileStatus(snapshotFile) : null; 
+          fileStatusMap.put(snapshotFile, status);
         }
       }
     }
@@ -435,19 +503,26 @@ public class TestSnapshot {
     @Override
     void checkSnapshots() throws Exception {
       for (Path snapshotRoot : snapshotList) {
-        Path snapshotFile = new Path(snapshotRoot, file.getName());
-        boolean currentSnapshotFileExist = fs.exists(snapshotFile);
-        boolean originalSnapshotFileExist = !(fileStatusMap.get(snapshotFile) == null);
-        assertEquals(currentSnapshotFileExist, originalSnapshotFileExist);
-        if (currentSnapshotFileExist) {
-          FileStatus currentSnapshotStatus = fs.getFileStatus(snapshotFile);
-          FileStatus originalStatus = fileStatusMap.get(snapshotFile);
-          assertEquals(currentSnapshotStatus, originalStatus);
+        Path snapshotFile = SnapshotTestHelper.getSnapshotFile(fs,
+            snapshotRoot, file);
+        if (snapshotFile != null) {
+          boolean currentSnapshotFileExist = fs.exists(snapshotFile);
+          boolean originalSnapshotFileExist = 
+              fileStatusMap.get(snapshotFile) != null;
+          assertEquals(currentSnapshotFileExist, originalSnapshotFileExist);
+          if (currentSnapshotFileExist) {
+            FileStatus currentSnapshotStatus = fs.getFileStatus(snapshotFile);
+            FileStatus originalStatus = fileStatusMap.get(snapshotFile);
+            // We compare the string because it contains all the information,
+            // while FileStatus#equals only compares the path
+            assertEquals(currentSnapshotStatus.toString(),
+                originalStatus.toString());
+          }
         }
       }
     }
   }
-
+  
   /**
    * File deletion
    */
@@ -462,9 +537,9 @@ public class TestSnapshot {
     @Override
     void loadSnapshots() throws Exception {
       for (Path snapshotRoot : snapshotList) {
-        Path snapshotFile = new Path(snapshotRoot, file.getName());
-        boolean existence = fs.exists(snapshotFile);
-        snapshotFileExistenceMap.put(snapshotFile, existence);
+        boolean existence = SnapshotTestHelper.getSnapshotFile(fs,
+            snapshotRoot, file) != null;
+        snapshotFileExistenceMap.put(snapshotRoot, existence);
       }
     }
 
@@ -476,12 +551,91 @@ public class TestSnapshot {
     @Override
     void checkSnapshots() throws Exception {
       for (Path snapshotRoot : snapshotList) {
-        Path snapshotFile = new Path(snapshotRoot, file.getName());
-        boolean currentSnapshotFileExist = fs.exists(snapshotFile);
+        boolean currentSnapshotFileExist = SnapshotTestHelper.getSnapshotFile(
+            fs, snapshotRoot, file) != null;
         boolean originalSnapshotFileExist = snapshotFileExistenceMap
-            .get(snapshotFile);
+            .get(snapshotRoot);
         assertEquals(currentSnapshotFileExist, originalSnapshotFileExist);
       }
     }
   }
+  
+  /**
+   * Directory creation or deletion.
+   */
+  static class DirCreationOrDeletion extends Modification {
+    private final TestDirectoryTree.Node node;
+    private final boolean isCreation;
+    private final Path changedPath;
+    private final HashMap<Path, FileStatus> statusMap;
+    
+    DirCreationOrDeletion(Path file, FileSystem fs, TestDirectoryTree.Node node,
+        boolean isCreation) {
+      super(file, fs, "dircreation");
+      this.node = node;
+      // If the node's nonSnapshotChildren is empty, we still need to create
+      // sub-directories
+      this.isCreation = isCreation || node.nonSnapshotChildren.isEmpty();
+      if (this.isCreation) {
+        // Generate the path for the dir to be created
+        changedPath = new Path(node.nodePath, "sub"
+            + node.nonSnapshotChildren.size());
+      } else {
+        // If deletion, we delete the current last dir in nonSnapshotChildren
+        changedPath = node.nonSnapshotChildren.get(node.nonSnapshotChildren
+            .size() - 1).nodePath;
+      }
+      this.statusMap = new HashMap<Path, FileStatus>();
+    }
+    
+    @Override
+    void loadSnapshots() throws Exception {
+      for (Path snapshotRoot : snapshotList) {
+        Path snapshotDir = SnapshotTestHelper.getSnapshotFile(fs, snapshotRoot,
+            changedPath);
+        if (snapshotDir != null) {
+          FileStatus status = fs.exists(snapshotDir) ? fs
+              .getFileStatus(snapshotDir) : null;
+          statusMap.put(snapshotDir, status);
+          // In each non-snapshottable directory, we also create a file. Thus
+          // here we also need to check the file's status before/after taking
+          // snapshots
+          Path snapshotFile = new Path(snapshotDir, "file0");
+          status = fs.exists(snapshotFile) ? fs.getFileStatus(snapshotFile)
+              : null;
+          statusMap.put(snapshotFile, status);
+        }
+      }
+    }
+
+    @Override
+    void modify() throws Exception {
+      if (isCreation) {
+        // creation
+        TestDirectoryTree.Node newChild = new TestDirectoryTree.Node(
+            changedPath, node.level + 1, node, node.fs);
+        // create file under the new non-snapshottable directory
+        newChild.initFileList(BLOCKSIZE, REPLICATION, seed, 2);
+        node.nonSnapshotChildren.add(newChild);
+      } else {
+        // deletion
+        TestDirectoryTree.Node childToDelete = node.nonSnapshotChildren
+            .remove(node.nonSnapshotChildren.size() - 1);
+        node.fs.delete(childToDelete.nodePath, true);
+      }
+    }
+
+    @Override
+    void checkSnapshots() throws Exception {
+      for (Path snapshot : statusMap.keySet()) {
+        FileStatus currentStatus = fs.exists(snapshot) ? fs
+            .getFileStatus(snapshot) : null;
+        FileStatus originalStatus = statusMap.get(snapshot);
+        assertEquals(currentStatus, originalStatus);
+        if (currentStatus != null) {
+          assertEquals(currentStatus.toString(), originalStatus.toString());
+        }
+      }
+    } 
+  } 
 }
