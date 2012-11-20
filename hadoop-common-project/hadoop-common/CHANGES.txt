@@ -25,6 +25,9 @@ Release 0.23.5 - UNRELEASED
 
     HADOOP-8889. Upgrade to Surefire 2.12.3 (todd)
 
+    HADOOP-8860. Split MapReduce and YARN sections in documentation navigation.
+    (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-8819. Incorrectly & is used instead of && in some file system 
