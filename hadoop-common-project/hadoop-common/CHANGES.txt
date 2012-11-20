@@ -91,6 +91,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8926. hadoop.util.PureJavaCrc32 cache hit-ratio is low for static
     data (Gopal V via bobby)
 
+    HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
+    (Colin McCabe via eli)
+
   BUG FIXES
 
     HADOOP-8795. BASH tab completion doesn't look in PATH, assumes path to
