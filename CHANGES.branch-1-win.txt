@@ -227,4 +227,4 @@ Branch-hadoop-1-win - unreleased
     HADOOP-9050. Remove java5 dependencies from build. (Raja Aluri via suresh)
 
     HADOOP-9062. hadoop-env.cmd overwrites the value of *_OPTS set before
-    install. (Ivan Mitic via suresh)
+    install. (Ganeshan Iyer via suresh)
