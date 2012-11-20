@@ -3994,7 +3994,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // of the number of total blocks in the system.
         this.shouldIncrementallyTrackBlocks = true;
       }
-      
+      if(blockSafe < 0)
+        this.blockSafe = 0;
       checkMode();
     }
       

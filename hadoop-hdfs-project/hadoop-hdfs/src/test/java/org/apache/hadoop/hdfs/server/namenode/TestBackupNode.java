@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
@@ -99,7 +100,10 @@ public class TestBackupNode {
     c.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY,
         "127.0.0.1:0");
 
-    return (BackupNode)NameNode.createNameNode(new String[]{startupOpt.getName()}, c);
+    BackupNode bn = (BackupNode)NameNode.createNameNode(
+        new String[]{startupOpt.getName()}, c);
+    assertTrue(bn.getRole() + " must be in SafeMode.", bn.isInSafeMode());
+    return bn;
   }
 
   void waitCheckpointDone(MiniDFSCluster cluster, long txid) {
@@ -358,10 +362,21 @@ public class TestBackupNode {
         DFSTestUtil.createFile(bnFS, file3, fileSize, fileSize, blockSize,
             replication, seed);
       } catch (IOException eio) {
-        LOG.info("Write to BN failed as expected: ", eio);
+        LOG.info("Write to " + backup.getRole() + " failed as expected: ", eio);
         canWrite = false;
       }
       assertFalse("Write to BackupNode must be prohibited.", canWrite);
+
+      // Reads are allowed for BackupNode, but not for CheckpointNode
+      boolean canRead = true;
+      try {
+        bnFS.exists(file2);
+      } catch (IOException eio) {
+        LOG.info("Read from " + backup.getRole() + " failed: ", eio);
+        canRead = false;
+      }
+      assertEquals("Reads to BackupNode are allowed, but not CheckpointNode.",
+          canRead, backup.isRole(NamenodeRole.BACKUP));
 
       DFSTestUtil.createFile(fileSys, file3, fileSize, fileSize, blockSize,
           replication, seed);

@@ -619,6 +619,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4178. Shell scripts should not close stderr (Andy Isaacson via daryn)
 
+    HDFS-4179. BackupNode: allow reads, fix checkpointing, safeMode. (shv)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

@@ -69,6 +69,8 @@ public class BackupNode extends NameNode {
   private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
   private static final String BN_HTTP_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
   private static final String BN_SERVICE_RPC_ADDRESS_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY;
+  private static final float  BN_SAFEMODE_THRESHOLD_PCT_DEFAULT = 1.5f;
+  private static final int    BN_SAFEMODE_EXTENSION_DEFAULT = Integer.MAX_VALUE;
 
   /** Name-node proxy */
   NamenodeProtocol namenode;
@@ -127,6 +129,10 @@ public class BackupNode extends NameNode {
 
   @Override // NameNode
   protected void loadNamesystem(Configuration conf) throws IOException {
+    conf.setFloat(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
+                                BN_SAFEMODE_THRESHOLD_PCT_DEFAULT);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY,
+                                BN_SAFEMODE_EXTENSION_DEFAULT);
     BackupImage bnImage = new BackupImage(conf);
     this.namesystem = new FSNamesystem(conf, bnImage);
     bnImage.setNamesystem(namesystem);
@@ -423,9 +429,9 @@ public class BackupNode extends NameNode {
         return;
       }
       if (OperationCategory.JOURNAL != op &&
-          !(OperationCategory.READ == op && allowStaleStandbyReads)) {
+          !(OperationCategory.READ == op && !isRole(NamenodeRole.CHECKPOINT))) {
         String msg = "Operation category " + op
-            + " is not supported at the BackupNode";
+            + " is not supported at " + getRole();
         throw new StandbyException(msg);
       }
     }
