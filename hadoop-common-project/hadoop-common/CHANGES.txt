@@ -854,6 +854,9 @@ Release 0.23.6 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-9072. Hadoop-Common-0.23-Build Fails to build in Jenkins 
+    (Robert Parker via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
