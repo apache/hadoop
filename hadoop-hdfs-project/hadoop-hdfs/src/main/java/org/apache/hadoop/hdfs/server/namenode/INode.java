@@ -90,17 +90,17 @@ public abstract class INode implements Comparable<byte[]> {
       return (record & ~MASK) | (bits << OFFSET);
     }
 
-    /** Set the {@link PermissionStatus} */
+    /** Encode the {@link PermissionStatus} to a long. */
     static long toLong(PermissionStatus ps) {
       long permission = 0L;
       final int user = SerialNumberManager.INSTANCE.getUserSerialNumber(
           ps.getUserName());
-      permission = PermissionStatusFormat.USER.combine(user, permission);
+      permission = USER.combine(user, permission);
       final int group = SerialNumberManager.INSTANCE.getGroupSerialNumber(
           ps.getGroupName());
-      permission = PermissionStatusFormat.GROUP.combine(group, permission);
+      permission = GROUP.combine(group, permission);
       final int mode = ps.getPermission().toShort();
-      permission = PermissionStatusFormat.MODE.combine(mode, permission);
+      permission = MODE.combine(mode, permission);
       return permission;
     }
   }
@@ -114,8 +114,9 @@ public abstract class INode implements Comparable<byte[]> {
    */
   private byte[] name = null;
   /** 
-   * Permission encoded using PermissionStatusFormat.
-   * Codes other than {@link #updatePermissionStatus(PermissionStatusFormat, long)}.
+   * Permission encoded using {@link PermissionStatusFormat}.
+   * Codes other than {@link #clonePermissionStatus(INode)}
+   * and {@link #updatePermissionStatus(PermissionStatusFormat, long)}
    * should not modify it.
    */
   private long permission = 0L;
@@ -159,11 +160,9 @@ public abstract class INode implements Comparable<byte[]> {
     return name.length == 0;
   }
 
-  /** Set the {@link PermissionStatus} */
-  protected void setPermissionStatus(PermissionStatus ps) {
-    setUser(ps.getUserName());
-    setGroup(ps.getGroupName());
-    setPermission(ps.getPermission());
+  /** Clone the {@link PermissionStatus}. */
+  void clonePermissionStatus(INode that) {
+    this.permission = that.permission;
   }
   /** Get the {@link PermissionStatus} */
   public PermissionStatus getPermissionStatus() {
@@ -203,6 +202,13 @@ public abstract class INode implements Comparable<byte[]> {
   /** Set the {@link FsPermission} of this {@link INode} */
   void setPermission(FsPermission permission) {
     updatePermissionStatus(PermissionStatusFormat.MODE, permission.toShort());
+  }
+
+  /**
+   * Check whether it's a file.
+   */
+  public boolean isFile() {
+    return false;
   }
 
   /**

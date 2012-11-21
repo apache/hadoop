@@ -132,6 +132,12 @@ Trunk (Unreleased)
     HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
     via suresh)
 
+    HADOOP-6616. Improve documentation for rack awareness. (Adam Faris via 
+    jghoman)
+
+    HADOOP-9075. FileContext#FSLinkResolver should be made static.
+    (Arpit Agarwal via suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -371,6 +377,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9035. Generalize setup of LoginContext (daryn via bobby)
 
+    HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
+    (Colin McCabe via eli)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -434,6 +443,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8999. SASL negotiation is flawed (daryn)
 
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
+
+    HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
+    should register/deregister to/from. (Karthik Kambatla via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1136,6 +1148,9 @@ Release 0.23.6 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9072. Hadoop-Common-0.23-Build Fails to build in Jenkins 
+    (Robert Parker via tgraves)
 
 Release 0.23.5 - UNRELEASED
 

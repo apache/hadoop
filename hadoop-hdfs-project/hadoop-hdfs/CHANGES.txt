@@ -164,6 +164,9 @@ Trunk (Unreleased)
     HDFS-4206. Change the fields in INode and its subclasses to private.
     (szetszwo)
 
+    HDFS-4215. Remove locking from addToParent(..) since it is used in image
+    loading, and add INode.isFile().  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -616,6 +619,13 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4171. WebHDFS and HttpFs should accept only valid Unix user 
     names. (tucu)
+
+    HDFS-4178. Shell scripts should not close stderr (Andy Isaacson via daryn)
+
+    HDFS-4179. BackupNode: allow reads, fix checkpointing, safeMode. (shv)
+
+    HDFS-4216. Do not ignore QuotaExceededException when adding symlinks.
+    (szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 

@@ -703,11 +703,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
           <version>2.3.1</version>
-          <configuration>
-            <excludes>
-              <exclude>mrapp-generated-classpath</exclude>
-            </excludes>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -798,21 +793,6 @@
                 <mkdir dir="${test.build.dir}"/>
                 <mkdir dir="${test.build.data}"/>
               </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>build-classpath</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <configuration>
-              <outputFile>target/classes/mrapp-generated-classpath</outputFile>
             </configuration>
           </execution>
         </executions>

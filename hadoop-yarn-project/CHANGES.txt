@@ -71,6 +71,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-183. Clean up fair scheduler code. (Sandy Ryza via tomwhite)
 
+    YARN-129. Simplify classpath construction for mini YARN tests. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -244,6 +246,8 @@ Release 0.23.5 - UNRELEASED
 
     YARN-212. NM state machine ignores an APPLICATION_CONTAINER_FINISHED event
     when it shouldn't (Nathan Roberts via jlowe)
+
+    YARN-219. NM should aggregate logs when application finishes. (bobby)
 
 Release 0.23.4
 

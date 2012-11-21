@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
@@ -1020,6 +1019,7 @@ public class FSImage implements Closeable {
   NamenodeCommand startCheckpoint(NamenodeRegistration bnReg, // backup node
                                   NamenodeRegistration nnReg) // active name-node
   throws IOException {
+    LOG.info("Start checkpoint at txid " + getEditLog().getLastWrittenTxId());
     String msg = null;
     // Verify that checkpoint is allowed
     if(bnReg.getNamespaceID() != storage.getNamespaceID())
@@ -1059,6 +1059,7 @@ public class FSImage implements Closeable {
    * @throws IOException if the checkpoint fields are inconsistent
    */
   void endCheckpoint(CheckpointSignature sig) throws IOException {
+    LOG.info("End checkpoint at txid " + getEditLog().getLastWrittenTxId());
     sig.validateStorageInfo(this);
   }
 

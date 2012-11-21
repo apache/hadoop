@@ -601,7 +601,7 @@ public class JobHistoryEventHandler extends AbstractService
       setSummarySlotSeconds(summary, context.getJob(jobId).getAllCounters());
       break;
     default:
-      throw new YarnException("Invalid event type");
+      break;
     }
   }
 

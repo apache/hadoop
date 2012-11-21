@@ -77,6 +77,12 @@ import com.google.common.base.Preconditions;
  * 
  *************************************************/
 public class FSDirectory implements Closeable {
+  private static INodeDirectoryWithQuota createRoot(FSNamesystem namesystem) {
+    final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
+        INodeDirectory.ROOT_NAME,
+        namesystem.createFsOwnerPermissions(new FsPermission((short)0755)));
+    return INodeDirectorySnapshottable.newInstance(r, 0);
+  }
 
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
@@ -125,16 +131,7 @@ public class FSDirectory implements Closeable {
   FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.cond = dirLock.writeLock().newCondition();
-
-    this.namesystem = ns;
-    int threshold = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
-        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
-    NameNode.LOG.info("Caching file names occuring more than " + threshold
-        + " times");
-    this.nameCache = new NameCache<ByteArray>(threshold);
-    reset();
-
+    rootDir = createRoot(ns);
     this.fsImage = fsImage;
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
@@ -148,6 +145,14 @@ public class FSDirectory implements Closeable {
     this.maxDirItems = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
+
+    int threshold = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
+    NameNode.LOG.info("Caching file names occuring more than " + threshold
+        + " times");
+    nameCache = new NameCache<ByteArray>(threshold);
+    namesystem = ns;
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -307,35 +312,6 @@ public class FSDirectory implements Closeable {
       return null;
     }
     return newNode;
-  }
-
-  INodeDirectory addToParent(INodeDirectory parentINode,
-      INode newNode, boolean propagateModTime) {
-    // NOTE: This does not update space counts for parents
-    INodeDirectory newParent = null;
-    writeLock();
-    try {
-      try {
-        newParent = rootDir.addToParent(newNode, parentINode,
-                                        propagateModTime);
-        cacheName(newNode);
-      } catch (FileNotFoundException e) {
-        return null;
-      }
-      if(newParent == null)
-        return null;
-      if(!newNode.isDirectory() && !newNode.isSymlink()) {
-        // Add file->block mapping
-        INodeFile newF = (INodeFile)newNode;
-        BlockInfo[] blocks = newF.getBlocks();
-        for (int i = 0; i < blocks.length; i++) {
-          newF.setBlock(i, getBlockManager().addBlockCollection(blocks[i], newF));
-        }
-      }
-    } finally {
-      writeUnlock();
-    }
-    return newParent;
   }
 
   /**
@@ -845,11 +821,7 @@ public class FSDirectory implements Closeable {
     final INodesInPath inodesInPath = rootDir.getMutableINodesInPath(src, true);
     final INode[] inodes = inodesInPath.getINodes();
     INode inode = inodes[inodes.length - 1];
-    if (inode == null) {
-      return null;
-    }
-    assert !inode.isSymlink();
-    if (inode.isDirectory()) {
+    if (inode == null || !inode.isFile()) {
       return null;
     }
     INodeFile fileNode = (INodeFile)inode;
@@ -868,22 +840,15 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Get the blocksize of a file
-   * @param filename the filename
-   * @return the number of bytes 
+   * @param path the file path
+   * @return the block size of the file. 
    */
-  long getPreferredBlockSize(String filename) throws UnresolvedLinkException,
+  long getPreferredBlockSize(String path) throws UnresolvedLinkException,
       FileNotFoundException, IOException {
     readLock();
     try {
-      INode inode = rootDir.getNode(filename, false);
-      if (inode == null) {
-        throw new FileNotFoundException("File does not exist: " + filename);
-      }
-      if (inode.isDirectory() || inode.isSymlink()) {
-        throw new IOException("Getting block size of non-file: "+ filename); 
-      }
-      return ((INodeFile)inode).getPreferredBlockSize();
+      return INodeFile.valueOf(rootDir.getNode(path, false), path
+          ).getPreferredBlockSize();
     } finally {
       readUnlock();
     }
@@ -897,9 +862,7 @@ public class FSDirectory implements Closeable {
       if (inode == null) {
          return false;
       }
-      return inode.isDirectory() || inode.isSymlink() 
-        ? true 
-        : ((INodeFile)inode).getBlocks() != null;
+      return !inode.isFile() || ((INodeFile)inode).getBlocks() != null;
     } finally {
       readUnlock();
     }
@@ -1336,14 +1299,8 @@ public class FSDirectory implements Closeable {
     waitForReady();
     readLock();
     try {
-      INode targetNode = rootDir.getNode(src, false);
-      if (targetNode == null)
-        return null;
-      if (targetNode.isDirectory())
-        return null;
-      if (targetNode.isSymlink()) 
-        return null;
-      return ((INodeFile)targetNode).getBlocks();
+      final INode i = rootDir.getNode(src, false);
+      return i != null && i.isFile()? ((INodeFile)i).getBlocks(): null;
     } finally {
       readUnlock();
     }
@@ -2151,11 +2108,7 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       setReady(false);
-      final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
-          INodeDirectory.ROOT_NAME,
-          getFSNamesystem().createFsOwnerPermissions(new FsPermission((short)0755)),
-          Long.MAX_VALUE, UNKNOWN_DISK_SPACE);
-      rootDir = INodeDirectorySnapshottable.newInstance(r, 0);
+      rootDir = createRoot(getFSNamesystem());
       nameCache.reset();
     } finally {
       writeUnlock();
@@ -2250,7 +2203,7 @@ public class FSDirectory implements Closeable {
   INodeSymlink addSymlink(String path, String target,
       PermissionStatus dirPerms, boolean createParent)
       throws UnresolvedLinkException, FileAlreadyExistsException,
-      QuotaExceededException, IOException {
+      QuotaExceededException, SnapshotAccessControlException {
     waitForReady();
 
     final long modTime = now();
@@ -2264,7 +2217,7 @@ public class FSDirectory implements Closeable {
     INodeSymlink newNode  = null;
     writeLock();
     try {
-      newNode = unprotectedSymlink(path, target, modTime, modTime,
+      newNode = unprotectedAddSymlink(path, target, modTime, modTime,
           new PermissionStatus(userName, null, FsPermission.getDefault()));
     } finally {
       writeUnlock();
@@ -2284,23 +2237,12 @@ public class FSDirectory implements Closeable {
   /**
    * Add the specified path into the namespace. Invoked from edit log processing.
    */
-  INodeSymlink unprotectedSymlink(String path, String target, long modTime, 
+  INodeSymlink unprotectedAddSymlink(String path, String target, long mtime, 
                                   long atime, PermissionStatus perm) 
-      throws UnresolvedLinkException {
+      throws UnresolvedLinkException, QuotaExceededException {
     assert hasWriteLock();
-    INodeSymlink newNode = new INodeSymlink(target, modTime, atime, perm);
-    try {
-      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
-    } catch (UnresolvedLinkException e) {
-      /* All UnresolvedLinkExceptions should have been resolved by now, but we
-       * should re-throw them in case that changes so they are not swallowed 
-       * by catching IOException below.
-       */
-      throw e;
-    } catch (IOException e) {
-      return null;
-    }
-    return newNode;
+    final INodeSymlink symlink = new INodeSymlink(target, mtime, atime, perm);
+    return addNode(path, symlink, UNKNOWN_DISK_SPACE);
   }
   
   /**
@@ -2309,7 +2251,7 @@ public class FSDirectory implements Closeable {
    */
   void cacheName(INode inode) {
     // Name is cached only for files
-    if (inode.isDirectory() || inode.isSymlink()) {
+    if (!inode.isFile()) {
       return;
     }
     ByteArray name = new ByteArray(inode.getLocalNameBytes());

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -33,6 +34,8 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   @Override
   protected void setUp() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
+        FileSystemContractBaseTest.TEST_UMASK);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fs = cluster.getFileSystem();
     defaultWorkingDirectory = "/user/" + 

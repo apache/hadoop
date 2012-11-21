@@ -89,11 +89,6 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
-        <configuration>
-          <excludes>
-            <exclude>mrapp-generated-classpath</exclude>
-          </excludes>
-        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
