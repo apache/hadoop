@@ -2110,7 +2110,7 @@ public class FSDirectory implements Closeable {
   INodeSymlink addSymlink(String path, String target,
       PermissionStatus dirPerms, boolean createParent)
       throws UnresolvedLinkException, FileAlreadyExistsException,
-      QuotaExceededException, IOException {
+      QuotaExceededException {
     waitForReady();
 
     final long modTime = now();
@@ -2124,7 +2124,7 @@ public class FSDirectory implements Closeable {
     INodeSymlink newNode  = null;
     writeLock();
     try {
-      newNode = unprotectedSymlink(path, target, modTime, modTime,
+      newNode = unprotectedAddSymlink(path, target, modTime, modTime,
           new PermissionStatus(userName, null, FsPermission.getDefault()));
     } finally {
       writeUnlock();
@@ -2144,23 +2144,12 @@ public class FSDirectory implements Closeable {
   /**
    * Add the specified path into the namespace. Invoked from edit log processing.
    */
-  INodeSymlink unprotectedSymlink(String path, String target, long modTime, 
+  INodeSymlink unprotectedAddSymlink(String path, String target, long mtime, 
                                   long atime, PermissionStatus perm) 
-      throws UnresolvedLinkException {
+      throws UnresolvedLinkException, QuotaExceededException {
     assert hasWriteLock();
-    INodeSymlink newNode = new INodeSymlink(target, modTime, atime, perm);
-    try {
-      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
-    } catch (UnresolvedLinkException e) {
-      /* All UnresolvedLinkExceptions should have been resolved by now, but we
-       * should re-throw them in case that changes so they are not swallowed 
-       * by catching IOException below.
-       */
-      throw e;
-    } catch (IOException e) {
-      return null;
-    }
-    return newNode;
+    final INodeSymlink symlink = new INodeSymlink(target, mtime, atime, perm);
+    return addNode(path, symlink, UNKNOWN_DISK_SPACE);
   }
   
   /**
