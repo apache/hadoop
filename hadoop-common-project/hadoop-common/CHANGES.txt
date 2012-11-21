@@ -152,6 +152,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
+    HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
+    should register/deregister to/from. (Karthik Kambatla via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
