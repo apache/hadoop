@@ -624,6 +624,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4179. BackupNode: allow reads, fix checkpointing, safeMode. (shv)
 
+    HDFS-4216. Do not ignore QuotaExceededException when adding symlinks.
+    (szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
