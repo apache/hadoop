@@ -604,7 +604,8 @@ public class StringUtils {
             "  build = " + VersionInfo.getUrl() + " -r "
                          + VersionInfo.getRevision()  
                          + "; compiled by '" + VersionInfo.getUser()
-                         + "' on " + VersionInfo.getDate()}
+                         + "' on " + VersionInfo.getDate(),
+            "  java = " + System.getProperty("java.version") }
         )
       );
 

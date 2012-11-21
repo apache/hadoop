@@ -8,6 +8,8 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8931. Add Java version to startup message. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
