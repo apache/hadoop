@@ -132,7 +132,11 @@ Trunk (Unreleased)
     HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
     via suresh)
 
-    HADOOP-6616. Improve documentation for rack awareness. (Adam Faris via jghoman)
+    HADOOP-6616. Improve documentation for rack awareness. (Adam Faris via 
+    jghoman)
+
+    HADOOP-9075. FileContext#FSLinkResolver should be made static.
+    (Arpit Agarwal via suresh)
 
   BUG FIXES
 
