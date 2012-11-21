@@ -164,6 +164,9 @@ Trunk (Unreleased)
     HDFS-4206. Change the fields in INode and its subclasses to private.
     (szetszwo)
 
+    HDFS-4215. Remove locking from addToParent(..) since it is used in image
+    loading, and add INode.isFile().  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

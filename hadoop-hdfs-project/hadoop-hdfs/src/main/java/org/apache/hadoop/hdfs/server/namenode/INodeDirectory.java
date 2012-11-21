@@ -315,23 +315,6 @@ class INodeDirectory extends INode {
     return addToParent(pathComponents, newNode, true) == null? null: newNode;
   }
 
-  /**
-   * Add new inode to the parent if specified.
-   * Optimized version of addNode() if parent is not null.
-   * 
-   * @return  parent INode if new inode is inserted
-   *          or null if it already exists.
-   * @throws  FileNotFoundException if parent does not exist or 
-   *          is not a directory.
-   */
-  INodeDirectory addToParent(INode newNode, INodeDirectory parent,
-      boolean propagateModTime) throws FileNotFoundException {
-    // insert into the parent children list
-    if(parent.addChild(newNode, propagateModTime) == null)
-      return null;
-    return parent;
-  }
-
   INodeDirectory getParent(byte[][] pathComponents
       ) throws FileNotFoundException, UnresolvedLinkException {
     if (pathComponents.length < 2)  // add root
