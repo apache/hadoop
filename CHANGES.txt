@@ -306,6 +306,9 @@ Release 1.2.0 - unreleased
     HADOOP-9036. Fix racy test case TestSinkQueue (Backport HADOOP-7292).
     (Luke Lu backport by suresh)
 
+    HDFS-4207. All hadoop fs operations fail if the default fs is down even if 
+    a different fs is specified in the command. (Jing Zhao via suresh)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES

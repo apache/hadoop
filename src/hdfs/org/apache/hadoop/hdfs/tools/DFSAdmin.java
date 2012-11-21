@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -255,73 +254,78 @@ public class DFSAdmin extends FsShell {
     super(conf);
   }
   
+  protected DistributedFileSystem getDFS() throws IOException {
+    FileSystem fs = getFS();
+    if (!(fs instanceof DistributedFileSystem)) {
+      throw new IllegalArgumentException("FileSystem " + fs.getUri()
+          + " is not a distributed file system");
+    }
+    return (DistributedFileSystem) fs;
+  }
+  
   /**
    * Gives a report on how the FileSystem is doing.
    * @exception IOException if the filesystem does not exist.
    */
   public void report() throws IOException {
-    if (fs instanceof DistributedFileSystem) {
-      DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      DiskStatus ds = dfs.getDiskStatus();
-      long capacity = ds.getCapacity();
-      long used = ds.getDfsUsed();
-      long remaining = ds.getRemaining();
-      long presentCapacity = used + remaining;
-      boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
-      UpgradeStatusReport status = 
-                      dfs.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
+    DistributedFileSystem dfs = getDFS();
+    DiskStatus ds = dfs.getDiskStatus();
+    long capacity = ds.getCapacity();
+    long used = ds.getDfsUsed();
+    long remaining = ds.getRemaining();
+    long presentCapacity = used + remaining;
+    boolean mode = dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET);
+    UpgradeStatusReport status = dfs
+        .distributedUpgradeProgress(UpgradeAction.GET_STATUS);
 
-      if (mode) {
-        System.out.println("Safe mode is ON");
-      }
-      if (status != null) {
-        System.out.println(status.getStatusText(false));
-      }
-      System.out.println("Configured Capacity: " + capacity
-                         + " (" + StringUtils.byteDesc(capacity) + ")");
-      System.out.println("Present Capacity: " + presentCapacity
-          + " (" + StringUtils.byteDesc(presentCapacity) + ")");
-      System.out.println("DFS Remaining: " + remaining
-          + " (" + StringUtils.byteDesc(remaining) + ")");
-      System.out.println("DFS Used: " + used
-                         + " (" + StringUtils.byteDesc(used) + ")");
-      System.out.println("DFS Used%: "
-                         + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
-                         + "%");
-      
-      /* These counts are not always upto date. They are updated after  
-       * iteration of an internal list. Should be updated in a few seconds to 
-       * minutes. Use "-metaSave" to list of all such blocks and accurate 
-       * counts.
-       */
-      System.out.println("Under replicated blocks: " + 
-                         dfs.getUnderReplicatedBlocksCount());
-      System.out.println("Blocks with corrupt replicas: " + 
-                         dfs.getCorruptBlocksCount());
-      System.out.println("Missing blocks: " + 
-                         dfs.getMissingBlocksCount());
-                           
-      System.out.println();
-
-      System.out.println("-------------------------------------------------");
-      
-      DatanodeInfo[] live = dfs.getClient().datanodeReport(
-                                                   DatanodeReportType.LIVE);
-      DatanodeInfo[] dead = dfs.getClient().datanodeReport(
-                                                   DatanodeReportType.DEAD);
-      System.out.println("Datanodes available: " + live.length +
-                         " (" + (live.length + dead.length) + " total, " + 
-                         dead.length + " dead)\n");
-      
-      for (DatanodeInfo dn : live) {
-        System.out.println(dn.getDatanodeReport());
-        System.out.println();
-      }
-      for (DatanodeInfo dn : dead) {
-        System.out.println(dn.getDatanodeReport());
-        System.out.println();
-      }      
+    if (mode) {
+      System.out.println("Safe mode is ON");
     }
+    if (status != null) {
+      System.out.println(status.getStatusText(false));
+    }
+    System.out.println("Configured Capacity: " + capacity + " ("
+        + StringUtils.byteDesc(capacity) + ")");
+    System.out.println("Present Capacity: " + presentCapacity + " ("
+        + StringUtils.byteDesc(presentCapacity) + ")");
+    System.out.println("DFS Remaining: " + remaining + " ("
+        + StringUtils.byteDesc(remaining) + ")");
+    System.out.println("DFS Used: " + used + " (" + StringUtils.byteDesc(used)
+        + ")");
+    System.out.println("DFS Used%: "
+        + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
+        + "%");
+
+    /*
+     * These counts are not always upto date. They are updated after iteration
+     * of an internal list. Should be updated in a few seconds to minutes. Use
+     * "-metaSave" to list of all such blocks and accurate counts.
+     */
+    System.out.println("Under replicated blocks: "
+        + dfs.getUnderReplicatedBlocksCount());
+    System.out.println("Blocks with corrupt replicas: "
+        + dfs.getCorruptBlocksCount());
+    System.out.println("Missing blocks: " + dfs.getMissingBlocksCount());
+
+    System.out.println();
+
+    System.out.println("-------------------------------------------------");
+
+    DatanodeInfo[] live = dfs.getClient().datanodeReport(
+        DatanodeReportType.LIVE);
+    DatanodeInfo[] dead = dfs.getClient().datanodeReport(
+        DatanodeReportType.DEAD);
+    System.out.println("Datanodes available: " + live.length + " ("
+        + (live.length + dead.length) + " total, " + dead.length + " dead)\n");
+
+    for (DatanodeInfo dn : live) {
+      System.out.println(dn.getDatanodeReport());
+      System.out.println();
+    }
+    for (DatanodeInfo dn : dead) {
+      System.out.println(dn.getDatanodeReport());
+      System.out.println();
+    }     
   }
 
   /**
@@ -332,10 +336,6 @@ public class DFSAdmin extends FsShell {
    * @exception IOException if the filesystem does not exist.
    */
   public void setSafeMode(String[] argv, int idx) throws IOException {
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getUri());
-      return;
-    }
     if (idx != argv.length - 1) {
       printUsage("-safemode");
       return;
@@ -356,7 +356,7 @@ public class DFSAdmin extends FsShell {
       printUsage("-safemode");
       return;
     }
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     boolean inSafeMode = dfs.setSafeMode(action);
 
     //
@@ -386,12 +386,7 @@ public class DFSAdmin extends FsShell {
   public int saveNamespace() throws IOException {
     int exitCode = -1;
 
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getUri());
-      return exitCode;
-    }
-
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     dfs.saveNamespace();
     exitCode = 0;
    
@@ -407,12 +402,7 @@ public class DFSAdmin extends FsShell {
   public int refreshNodes() throws IOException {
     int exitCode = -1;
 
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getUri());
-      return exitCode;
-    }
-
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     dfs.refreshNodes();
     exitCode = 0;
    
@@ -440,12 +430,7 @@ public class DFSAdmin extends FsShell {
       return exitCode;
     }
 
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getUri());
-      return exitCode;
-    }
-
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     dfs.setBalancerBandwidth(bandwidth);
     exitCode = 0;
    
@@ -595,18 +580,10 @@ public class DFSAdmin extends FsShell {
    * @exception IOException 
    */
   public int finalizeUpgrade() throws IOException {
-    int exitCode = -1;
-
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.out.println("FileSystem is " + fs.getUri());
-      return exitCode;
-    }
-
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     dfs.finalizeUpgrade();
-    exitCode = 0;
    
-    return exitCode;
+    return 0;
   }
 
   /**
@@ -617,10 +594,6 @@ public class DFSAdmin extends FsShell {
    * @exception IOException 
    */
   public int upgradeProgress(String[] argv, int idx) throws IOException {
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.out.println("FileSystem is " + fs.getUri());
-      return -1;
-    }
     if (idx != argv.length - 1) {
       printUsage("-upgradeProgress");
       return -1;
@@ -638,7 +611,7 @@ public class DFSAdmin extends FsShell {
       return -1;
     }
 
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     UpgradeStatusReport status = dfs.distributedUpgradeProgress(action);
     String statusText = (status == null ? 
         "There are no upgrades in progress." :
@@ -657,7 +630,7 @@ public class DFSAdmin extends FsShell {
    */
   public int metaSave(String[] argv, int idx) throws IOException {
     String pathname = argv[idx];
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     dfs.metaSave(pathname);
     System.out.println("Created file " + pathname + " on server " +
                        dfs.getUri());
@@ -936,13 +909,13 @@ public class DFSAdmin extends FsShell {
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
       } else if (ClearQuotaCommand.matches(cmd)) {
-        exitCode = new ClearQuotaCommand(argv, i, fs).runAll();
+        exitCode = new ClearQuotaCommand(argv, i, getDFS()).runAll();
       } else if (SetQuotaCommand.matches(cmd)) {
-        exitCode = new SetQuotaCommand(argv, i, fs).runAll();
+        exitCode = new SetQuotaCommand(argv, i, getDFS()).runAll();
       } else if (ClearSpaceQuotaCommand.matches(cmd)) {
-        exitCode = new ClearSpaceQuotaCommand(argv, i, fs).runAll();
+        exitCode = new ClearSpaceQuotaCommand(argv, i, getDFS()).runAll();
       } else if (SetSpaceQuotaCommand.matches(cmd)) {
-        exitCode = new SetSpaceQuotaCommand(argv, i, fs).runAll();
+        exitCode = new SetSpaceQuotaCommand(argv, i, getDFS()).runAll();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcl();
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
