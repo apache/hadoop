@@ -56,6 +56,8 @@ History Server REST API's.
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
 *---------------+--------------+-------------------------------+
+| startedOn | long  | The time the history server was started (in ms since epoch)|
+*---------------+--------------+-------------------------------+
 | hadoopVersion | string  | Version of hadoop common |
 *---------------+--------------+-------------------------------+
 | hadoopBuildVersion | string  | Hadoop common build string with build version, user, and checksum |
@@ -87,6 +89,7 @@ History Server REST API's.
 +---+
 {   
    "historyInfo" : {
+      "startedOn":1353512830963,
       "hadoopVersionBuiltOn" : "Wed Jan 11 21:18:36 UTC 2012",
       "hadoopBuildVersion" : "0.23.1-SNAPSHOT from 1230253 by user1 source checksum bb6e554c6d50b0397d826081017437a7",
       "hadoopVersion" : "0.23.1-SNAPSHOT"
@@ -117,6 +120,7 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <historyInfo>
+  <startedOn>1353512830963</startedOn>
   <hadoopVersion>0.23.1-SNAPSHOT</hadoopVersion>
   <hadoopBuildVersion>0.23.1-SNAPSHOT from 1230253 by user1 source checksum bb6e554c6d50b0397d826081017437a7</hadoopBuildVersion>
   <hadoopVersionBuiltOn>Wed Jan 11 21:18:36 UTC 2012</hadoopVersionBuiltOn>

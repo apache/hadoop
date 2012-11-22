@@ -51,6 +51,8 @@ public class JobHistoryServer extends CompositeService {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
+  public static final long historyServerTimeStamp = System.currentTimeMillis();
+
   private static final Log LOG = LogFactory.getLog(JobHistoryServer.class);
   private HistoryContext historyContext;
   private HistoryClientService clientService;
