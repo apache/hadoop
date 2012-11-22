@@ -22,17 +22,20 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.util.VersionInfo;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class HistoryInfo {
 
+  protected long startedOn;
   protected String hadoopVersion;
   protected String hadoopBuildVersion;
   protected String hadoopVersionBuiltOn;
 
   public HistoryInfo() {
+    this.startedOn = JobHistoryServer.historyServerTimeStamp;
     this.hadoopVersion = VersionInfo.getVersion();
     this.hadoopBuildVersion = VersionInfo.getBuildVersion();
     this.hadoopVersionBuiltOn = VersionInfo.getDate();
@@ -48,6 +51,10 @@ public class HistoryInfo {
 
   public String getHadoopVersionBuiltOn() {
     return this.hadoopVersionBuiltOn;
+  }
+
+  public long getStartedOn() {
+    return this.startedOn;
   }
 
 }
