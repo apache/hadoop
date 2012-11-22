@@ -437,6 +437,9 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4811. JobHistoryServer should show when it was started in WebUI
+    About page (Ravi Prakash via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
