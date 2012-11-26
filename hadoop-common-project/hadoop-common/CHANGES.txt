@@ -1155,6 +1155,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-8992. Enhance unit-test coverage of class HarFileSystem (Ivan A.
     Veselovsky via bobby)
 
+    HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
+    Veselovsky via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
