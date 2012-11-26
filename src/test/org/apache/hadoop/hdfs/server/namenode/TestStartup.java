@@ -15,17 +15,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
 
 /**
  * Startup and checkpoint tests
@@ -306,30 +301,6 @@ public class TestStartup extends TestCase {
         sn.shutdown();
       if(cluster!=null)
         cluster.shutdown();
-    }
-  }
-  
-  /** Test SafeMode counts only complete blocks */
-  @Test(timeout=60000)
-  public void testGetBlocks() throws Exception {
-    final Configuration CONF = new Configuration();
-
-    config.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "1.0f");
-    MiniDFSCluster cluster = new MiniDFSCluster(CONF, 2, true, null);
-    try {
-      cluster.waitActive();
-
-      // Create a file and add one block, but not write to DataNode
-      DFSClient client = new DFSClient(CONF);
-      client.namenode.create("/tmp1.txt", new FsPermission("755"),
-          "clientName", false, (short) 2, 1024);
-      client.namenode.addBlock("/tmp1.txt", "clientName", new DatanodeInfo[0]);
-
-      // Should not be stuck in safe mode
-      cluster.restartNameNode();
-
-    } finally {
-      cluster.shutdown();
     }
   }
 }

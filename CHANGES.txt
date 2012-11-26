@@ -381,9 +381,6 @@ Release 1.1.1 - Unreleased
     HADOOP-8745. Incorrect version numbers in hadoop-core POM.
     (Matthias Friedrich via eli)
 
-    HDFS-4208. NameNode could be stuck in SafeMode due to never-created
-    blocks. (Brandon Li via suresh)
-
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES
