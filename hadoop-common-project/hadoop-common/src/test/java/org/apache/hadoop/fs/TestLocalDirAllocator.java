@@ -22,6 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
@@ -32,6 +34,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 /** This test LocalDirAllocator works correctly;
  * Every test case uses different buffer dirs to
@@ -301,7 +304,7 @@ public class TestLocalDirAllocator {
    */
   @Test
   public void testNoSideEffects() throws IOException {
-    if (isWindows) return;
+    assumeTrue(!isWindows);
     String dir = buildBufferDir(ROOT, 0);
     try {
       conf.set(CONTEXT, dir);
@@ -322,8 +325,7 @@ public class TestLocalDirAllocator {
    */
   @Test
   public void testGetLocalPathToRead() throws IOException {
-    if (isWindows)
-      return;
+    assumeTrue(!isWindows);
     String dir = buildBufferDir(ROOT, 0);
     try {
       conf.set(CONTEXT, dir);
@@ -337,7 +339,60 @@ public class TestLocalDirAllocator {
       Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
       rmBufferDirs();
     }
+  }
 
+  /**
+   * Test that {@link LocalDirAllocator#getAllLocalPathsToRead(String, Configuration)} 
+   * returns correct filenames and "file" schema.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetAllLocalPathsToRead() throws IOException {
+    assumeTrue(!isWindows);
+    
+    String dir0 = buildBufferDir(ROOT, 0);
+    String dir1 = buildBufferDir(ROOT, 1);
+    try {
+      conf.set(CONTEXT, dir0 + "," + dir1);
+      assertTrue(localFs.mkdirs(new Path(dir0)));
+      assertTrue(localFs.mkdirs(new Path(dir1)));
+      
+      localFs.create(new Path(dir0 + Path.SEPARATOR + FILENAME));
+      localFs.create(new Path(dir1 + Path.SEPARATOR + FILENAME));
+
+      // check both the paths are returned as paths to read:  
+      final Iterable<Path> pathIterable = dirAllocator.getAllLocalPathsToRead(FILENAME, conf);
+      int count = 0;
+      for (final Path p: pathIterable) {
+        count++;
+        assertEquals(FILENAME, p.getName());
+        assertEquals("file", p.getFileSystem(conf).getUri().getScheme());
+      }
+      assertEquals(2, count);
+
+      // test #next() while no element to iterate any more: 
+      try {
+        Path p = pathIterable.iterator().next();
+        assertFalse("NoSuchElementException must be thrown, but returned ["+p
+            +"] instead.", true); // exception expected
+      } catch (NoSuchElementException nsee) {
+        // okay
+      }
+      
+      // test modification not allowed:
+      final Iterable<Path> pathIterable2 = dirAllocator.getAllLocalPathsToRead(FILENAME, conf);
+      final Iterator<Path> it = pathIterable2.iterator();
+      try {
+        it.remove();
+        assertFalse(true); // exception expected
+      } catch (UnsupportedOperationException uoe) {
+        // okay
+      }
+    } finally {
+      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      rmBufferDirs();
+    }
   }
   
   @Test

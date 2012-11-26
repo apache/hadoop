@@ -478,11 +478,14 @@ public class LocalDirAllocator {
 
       @Override
       public Path next() {
-        Path result = next;
+        final Path result = next;
         try {
           advance();
         } catch (IOException ie) {
           throw new RuntimeException("Can't check existance of " + next, ie);
+        }
+        if (result == null) {
+          throw new NoSuchElementException();
         }
         return result;
       }
