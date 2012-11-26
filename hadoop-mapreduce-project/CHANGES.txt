@@ -15,6 +15,8 @@ Release 0.23.6 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4764. repair TestBinaryTokenFile (Ivan A. Veselovsky via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
