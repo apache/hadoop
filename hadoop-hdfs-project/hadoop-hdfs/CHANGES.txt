@@ -167,6 +167,9 @@ Trunk (Unreleased)
     HDFS-4215. Remove locking from addToParent(..) since it is used in image
     loading, and add INode.isFile().  (szetszwo)
 
+    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
+    (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
