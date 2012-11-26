@@ -584,13 +584,6 @@ public class HarFileSystem extends FilterFileSystem {
     public String getName() {
       return name;
     }
-    
-    public List<String> getChildren() {
-      return children;
-    }
-    public String getFileName() {
-      return name;
-    }
     public String getPartName() {
       return partName;
     }
@@ -662,15 +655,6 @@ public class HarFileSystem extends FilterFileSystem {
         hstatus.getStartIndex(), hstatus.getLength(), bufferSize);
   }
  
-  /*
-   * create throws an exception in Har filesystem.
-   * The archive once created cannot be changed.
-   */
-  public FSDataOutputStream create(Path f, int bufferSize) 
-                                    throws IOException {
-    throw new IOException("Har: Create not allowed");
-  }
-  
   @Override
   public FSDataOutputStream create(Path f,
       FsPermission permission,
@@ -1105,5 +1089,12 @@ public class HarFileSystem extends FilterFileSystem {
         // do nothing just a read.
       }
     }
+  }
+  
+  /*
+   * testing purposes only:
+   */
+  HarMetaData getMetadata() {
+    return metadata;
   }
 }
