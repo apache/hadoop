@@ -312,6 +312,10 @@ Release 1.2.0 - unreleased
     HDFS-4207. All hadoop fs operations fail if the default fs is down even if 
     a different fs is specified in the command. (Jing Zhao via suresh)
 
+    HADOOP-9095. Backport HADOOP-8372: NetUtils.normalizeHostName() incorrectly
+    handles hostname starting with a numeric character.  (Jing Zhao via
+    szetszwo)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES

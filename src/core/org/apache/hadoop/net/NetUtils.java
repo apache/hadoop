@@ -536,15 +536,11 @@ public class NetUtils {
    * @return its IP address in the string format
    */
   public static String normalizeHostName(String name) {
-    if (Character.digit(name.charAt(0), 10) != -1) { //FIXME 
+    try {
+      InetAddress ipAddress = InetAddress.getByName(name);
+      return ipAddress.getHostAddress();
+    } catch (UnknownHostException e) {
       return name;
-    } else {
-      try {
-        InetAddress ipAddress = InetAddress.getByName(name);
-        return ipAddress.getHostAddress();
-      } catch (UnknownHostException e) {
-        return name;
-      }
     }
   }
   
