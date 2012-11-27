@@ -138,6 +138,9 @@ Trunk (Unreleased)
     HADOOP-9075. FileContext#FSLinkResolver should be made static.
     (Arpit Agarwal via suresh)
 
+    HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
+    (suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
