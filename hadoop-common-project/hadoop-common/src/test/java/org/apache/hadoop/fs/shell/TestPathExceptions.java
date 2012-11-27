@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
+import org.apache.hadoop.fs.PathIOException;
 import org.junit.Test;
 
 public class TestPathExceptions {

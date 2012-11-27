@@ -23,7 +23,7 @@ import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.PathIsNotDirectoryException;
 
 /**
  * Snapshot related operations

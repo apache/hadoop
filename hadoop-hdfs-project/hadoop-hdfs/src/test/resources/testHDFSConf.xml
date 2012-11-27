@@ -15488,7 +15488,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Cannot set quota on a file: /test/file1</expected-output>
+          <expected-output>setQuota: `/test/file1': Is not a directory</expected-output>
         </comparator>
       </comparators>
     </test>

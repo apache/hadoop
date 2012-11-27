@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -36,10 +37,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 public class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
   /** Cast INode to INodeFileUnderConstruction. */
   public static INodeFileUnderConstruction valueOf(INode inode, String path
-      ) throws IOException {
+      ) throws FileNotFoundException {
     final INodeFile file = INodeFile.valueOf(inode, path);
     if (!file.isUnderConstruction()) {
-      throw new IOException("File is not under construction: " + path);
+      throw new FileNotFoundException("File is not under construction: " + path);
     }
     return (INodeFileUnderConstruction)file;
   }

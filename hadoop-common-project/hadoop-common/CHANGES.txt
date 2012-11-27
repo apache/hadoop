@@ -138,6 +138,9 @@ Trunk (Unreleased)
     HADOOP-9075. FileContext#FSLinkResolver should be made static.
     (Arpit Agarwal via suresh)
 
+    HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
+    (suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -446,6 +449,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
     should register/deregister to/from. (Karthik Kambatla via tomwhite)
+
+    HADOOP-9064. Augment DelegationTokenRenewer API to cancel the tokens on 
+    calls to removeRenewAction. (kkambatl via tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1151,6 +1157,12 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9072. Hadoop-Common-0.23-Build Fails to build in Jenkins 
     (Robert Parker via tgraves)
+
+    HADOOP-8992. Enhance unit-test coverage of class HarFileSystem (Ivan A.
+    Veselovsky via bobby)
+
+    HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
+    Veselovsky via bobby)
 
 Release 0.23.5 - UNRELEASED
 

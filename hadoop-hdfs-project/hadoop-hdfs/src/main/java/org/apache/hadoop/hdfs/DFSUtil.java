@@ -233,7 +233,7 @@ public class DFSUtil {
   /**
    * Given a list of path components returns a path as a UTF8 String
    */
-  public static String byteArray2String(byte[][] pathComponents) {
+  public static String byteArray2PathString(byte[][] pathComponents) {
     if (pathComponents.length == 0)
       return "";
     if (pathComponents.length == 1 && pathComponents[0].length == 0) {
@@ -252,6 +252,14 @@ public class DFSUtil {
       assert false : "UTF8 encoding is not supported ";
     }
     return null;
+  }
+
+  /** Convert an object representing a path to a string. */
+  public static String path2String(final Object path) {
+    return path == null? null
+        : path instanceof String? (String)path
+        : path instanceof byte[][]? byteArray2PathString((byte[][])path)
+        : path.toString();
   }
 
   /**
