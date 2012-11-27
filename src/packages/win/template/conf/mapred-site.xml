@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration xmlns:xi="http://www.w3.org/2001/XInclude">
+
+  <property>
+    <name>mapred.system.dir</name>
+    <value>/mapred/system</value>
+    <description>No description</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>mapred.job.tracker</name>
+    <value>localhost:50300</value>
+    <description>No description</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>mapred.jobtracker.taskScheduler</name>
+    <value>org.apache.hadoop.mapred.CapacityTaskScheduler</value>
+  </property>
+
+  <property>
+    <name>mapred.job.tracker.http.address</name>
+    <value>localhost:50030</value>
+    <description>No description</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>mapred.local.dir</name>
+    <value>C:\Hadoop\hdfs\mapred\local</value>
+    <description>No description</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>mapred.job.tracker.history.completed.location</name>
+    <value>/mapred/history/done</value>
+    <description>No description</description>
+  </property>
+
+  <property>
+    <name>mapreduce.history.server.embedded</name>
+    <value>false</value>
+    <description>Should job history server be embedded within Job tracker process</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>mapreduce.history.server.http.address</name>
+    <value>localhost:51111</value>
+    <description>Http address of the history server</description>
+    <final>false</final>
+  </property>
+
+  <property>
+    <name>mapred.queue.names</name>
+    <value>default</value>
+    <description> Comma separated list of queues configured for this jobtracker.</description>
+  </property>
+
+</configuration>

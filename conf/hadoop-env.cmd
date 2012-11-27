@@ -7,9 +7,6 @@
 @rem remote nodes.
 
 @rem The java implementation to use.  Required.
-if not defined JAVA_HOME (
- set JAVA_HOME=c:\apps\java\openjdk7
-)
 
 @rem Extra Java CLASSPATH elements.  Optional.
 @rem set HADOOP_CLASSPATH=

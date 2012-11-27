@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+  <property>
+    <name>dfs.name.dir</name>
+    <value>C:\Hadoop\hdfs\nn</value>
+    <description>Determines where on the local filesystem the DFS name node
+      should store the name table.  If this is a comma-delimited list
+      of directories then the name table is replicated in all of the
+      directories, for redundancy. </description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+    <description>to enable webhdfs</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>heartbeat.recheck.interval</name>
+    <value>1</value>
+    <description>None </description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>dfs.data.dir</name>
+    <value>C:\Hadoop\hdfs\dn</value>
+  </property>
+  
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+    <description>Determines datanode heartbeat interval in seconds.</description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.address</name>
+    <value>0.0.0.0:50010</value>
+  </property>
+
+  <property>
+    <name>dfs.datanode.http.address</name>
+    <value>0.0.0.0:50075</value>
+  </property>
+
+  <property>
+    <name>dfs.http.address</name>
+    <value>localhost:50070</value>
+    <description>The name of the default file system.  Either the
+       literal string "local" or a host:port for NDFS.</description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>dfs.datanode.ipc.address</name>
+    <value>0.0.0.0:8010</value>
+    <description>The datanode ipc server address and port.
+      If the port is 0 then the server will start on a free port.
+     </description>
+  </property>
+
+  <property>
+     <name>dfs.permissions</name>
+     <value>false</value>
+     <description>
+        If "true", enable permission checking in HDFS.
+        If "false", permission checking is turned off,
+        but all other behavior is unchanged.
+        Switching from one parameter value to the other does not change the mode,
+        owner or group of files or directories.
+     </description>
+  </property>
+
+  <property>
+    <name>dfs.secondary.http.address</name>
+    <value>localhost:50090</value>
+    <description>Address of secondary namenode web server</description>
+  </property>
+
+  <property>
+    <name>dfs.secondary.https.port</name>
+    <value>50490</value>
+    <description>The https port where secondary-namenode binds</description>
+  </property>
+
+  <property>
+    <name>dfs.https.address</name>
+    <value>localhost:50470</value>
+  <description>The https address where namenode binds</description>
+  </property>
+
+</configuration>

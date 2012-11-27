@@ -63,7 +63,11 @@ call :updatepath %HADOOP_BIN_PATH%
   set hadoop-hdfs-script=%HADOOP_BIN_PATH%\hdfs.cmd
   set hadoop-mapred-script=%HADOOP_BIN_PATH%\mapred.cmd
 
-  call %hadoop-config-script%
+  call %hadoop-config-script% %*
+  if "%1" == "--config" (
+    shift
+    shift
+  )
 
   set hadoop-command=%1
   if not defined hadoop-command (
@@ -78,7 +82,7 @@ call :updatepath %HADOOP_BIN_PATH%
   )
   if defined hdfscommand (
     if exist %hadoop-hdfs-script% (
-      call %hadoop-hdfs-script% %*
+      call %hadoop-hdfs-script% %hadoop-command% %hadoop-command-arguments%
       goto :eof
     )
   )
@@ -89,7 +93,7 @@ call :updatepath %HADOOP_BIN_PATH%
   )
   if defined mapredcommand (
     if exist %hadoop-mapred-script% (
-      call %hadoop-mapred-script% %*
+      call %hadoop-mapred-script% %hadoop-command% %hadoop-command-arguments%
       goto :eof
     )
   )
@@ -109,8 +113,9 @@ call :updatepath %HADOOP_BIN_PATH%
     set CLASSPATH=%CLASSPATH%;%CD%
     set CLASS=%hadoop-command%
   )
-  
+
   set path=%PATH%;%HADOOP_BIN_PATH%
+  
   call %JAVA% %JAVA_HEAP_MAX% %HADOOP_OPTS% -classpath %CLASSPATH% %CLASS% %hadoop-command-arguments%
 
   goto :eof
@@ -165,7 +170,11 @@ call :updatepath %HADOOP_BIN_PATH%
 
 @rem This changes %1, %2 etc. Hence those cannot be used after calling this.
 :make_command_arguments
-  if "%2" == "" goto :eof
+  if "%1" == "--config" (
+    shift
+    shift
+  )
+  if [%2] == [] goto :eof
   shift
   set _arguments=
   :MakeCmdArgsLoop 
@@ -184,7 +193,7 @@ call :updatepath %HADOOP_BIN_PATH%
 
 
 :print_usage
-  @echo Usage: hadoop COMMAND
+  @echo Usage: hadoop [--config confdir] COMMAND
   @echo where COMMAND is one of:
   @echo   namenode -format     format the DFS filesystem
   @echo   secondarynamenode    run the DFS secondary namenode

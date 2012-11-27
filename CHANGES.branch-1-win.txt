@@ -228,3 +228,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9062. hadoop-env.cmd overwrites the value of *_OPTS set before
     install. (Ganeshan Iyer via suresh)
+
+    HADOOP-9074. Hadoop install scripts for Windows. (Steve Maine,
+    Ramya Nimmagadda, Chuan Liu, Brad Sarsfield and Ivan Mitic via suresh)

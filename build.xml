@@ -66,6 +66,8 @@
   <property name="librecordio.src" value="${c++.src}/librecordio"/>
   <property name="tools.src" value="${basedir}/src/tools"/>
   <property name="winutils.src.dir" value="${basedir}/src/winutils"/>
+  <property name="wininstaller.root.dir" value="${basedir}/src/packages/win"/>
+  <property name="servicehost.src.dir" value="${basedir}/src/packages/win/HadoopServiceHost"/>
 
   <property name="package.prefix" value="/usr"/>
   <property name="package.conf.dir" value="/etc/hadoop"/>
@@ -94,6 +96,7 @@
   <property name="jvm.arch" 
             value="${sun.arch.data.model}"/>
   <property name="build.winutils" value="${build.dir}/winutils/${env.OS}-${env.Platform}"/>
+  <property name="build.servicehost" value="${build.dir}/servicehost"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
   <!-- 'build.native.win' is the path under which Hadoop native libraries for Windows are built -->
   <!-- We need a special path on Windows because we need a path that can be referenced from MSBuild -->
@@ -145,8 +148,7 @@
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
- 
-  <property name="test.winutils.dir" value="${test.build.dir}/winutils/"/>
+  <property name="test.wininstaller.dir" value="${test.build.dir}/wininstaller"/>
 
   <property name="librecordio.test.dir" value="${test.build.dir}/librecordio"/>
   <property name="web.src.dir" value="${basedir}/src/web"/>
@@ -200,6 +202,12 @@
       <os arch="x86" />
     </or>
   </condition>
+
+  <condition property="windows">
+    <os family="windows" />
+  </condition>
+
+
   <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-${os-arch}.tar.gz" />
   <property name="jsvc.dest.name" value="jsvc.${os.arch}.tar.gz" />
 
@@ -394,6 +402,16 @@
       destfile="@{param.destfile}">
       <param.listofitems/>
       </tar>
+    </sequential>
+  </macrodef>
+  
+  <macrodef name="macro_zip" description="Worker Macro for zip">
+    <attribute name="param.destfile"/>
+    <element name="param.listofitems"/>
+    <sequential>
+      <zip destfile="@{param.destfile}">
+      <param.listofitems/>
+      </zip>
     </sequential>
   </macrodef>
 
@@ -620,21 +638,24 @@
       />
     </copy>
   </target>
-
-  <target name="compile-winutils">
-    <antcall target="compile-ms-winutils">
-      <param name="windows" value="true"/>
-    </antcall>
-  </target>
-
   <target name="compile-ms-winutils" if="windows">
     <mkdir dir="${build.winutils}"/>
 
     <exec dir="${build.winutils}" executable="${msbuild.cmd}" failonerror="true">
-      <arg line="${winutils.src.dir}/winutils.vcxproj /p:Configuration=Release;OutDir=${build.winutils}/"/>
+      <arg line="${winutils.src.dir}/winutils.sln /p:Configuration=Release;OutDir=${build.winutils}/"/>
     </exec>
 
     <copy file="${build.winutils}/winutils.exe" todir="${basedir}/bin"/>
+  </target>
+
+  <target name="compile-ms-servicehost" if="windows">
+    <mkdir dir="${build.servicehost}"/>
+
+    <exec dir="${build.servicehost}" executable="${msbuild.cmd}" failonerror="true">
+      <arg line="${servicehost.src.dir}/HadoopServiceHost.sln /target:clean;build /p:Platform=&quot;Any CPU&quot; /p:Configuration=Release;OutDir=${build.servicehost}/"/>
+    </exec>
+
+    <copy file="${build.servicehost}/hadoopservicehost.exe" todir="${basedir}/bin"/>
   </target>
 
   <target name="compile-ms-winutils-debug" if="windows">
@@ -688,7 +709,7 @@
     <copy file="${build.native.win}/hadoop.dll" todir="${build.native}/lib"/>
   </target>
 
-  <target name="create-native-configure">
+  <target name="create-native-configure" unless="windows">
     <exec executable="autoreconf" dir="${native.src.dir}" searchpath="yes" 
           failonerror="yes">
        <arg value="-if"/>
@@ -776,7 +797,7 @@
   <target name="compile-core"
           depends="clover,compile-core-classes,compile-mapred-classes,
           compile-hdfs-classes,compile-core-native,compile-c++,compile-ms-winutils,
-          compile-win-core-native"
+          compile-win-core-native,compile-ms-servicehost"
   	description="Compile core only">
   </target>
 
@@ -1295,6 +1316,44 @@
     </antcall>
   </target>
 
+  <target name="ms-win-installer-test-zip" description="Mini zip file used for test-ms-win-installer">
+    <delete dir="${test.wininstaller.dir}"/>
+    <mkdir dir="${test.wininstaller.dir}"/>
+    <macro_zip param.destfile="${test.wininstaller.dir}/resources/${final.name}.zip">
+      <param.listofitems>
+        <zipfileset dir="${build.dir}">
+          <include name="${final.name}/bin/*" />
+          <include name="${final.name}/conf/*" />
+          <include name="${final.name}/lib/hadoop-capacity-scheduler*" />
+          <include name="${final.name}/contrib/streaming/*" />
+        </zipfileset>
+      </param.listofitems>
+    </macro_zip>
+  </target>
+
+  <target name="test-ms-win-installer" depends="ms-win-installer-test-zip" if="windows">
+    <copy todir="${test.wininstaller.dir}">
+      <fileset dir="${wininstaller.root.dir}" includes="**/*">
+        <exclude name="servicehost/**/*"/>
+      </fileset>
+      <filterchain>
+        <replacetokens>
+          <token key="version" value="${version}" />
+          <token key="test.wininstaller.username" value="${testusername}" />
+          <token key="test.wininstaller.password" value="${testpassword}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <exec dir="${test.wininstaller.dir}"
+        executable="powershell.exe"
+        failonerror="true">
+      <env key="HADOOP_NODE_INSTALL_ROOT" value="${test.wininstaller.dir}/TestHadoop"/>
+      <env key="WINPKG_LOG" value="${test.wininstaller.dir}/TEST-test-ms-win-installer.log"/>
+      <env key="UNZIP_CMD" value="unzip.exe -o @SRC -d @DEST"/>
+      <arg line="${test.wininstaller.dir}/scripts/TestInstallApi.ps1"/>
+    </exec>
+  </target>
+
   <target name="nightly" depends="test, tar">
   </target>
 	
@@ -1698,119 +1757,6 @@
 
   </target>
 
-  <target name="ms-package" depends="compile, jar, examples, tools-jar, jar-test"
-          description="assembles isotope artifacts for distribution">
-    <delete dir="${dist.dir}"/>
-    <mkdir dir="${dist.dir}"/>
-    <mkdir dir="${dist.dir}/bin"/>
-    <mkdir dir="${dist.dir}/contrib"/>
-    <mkdir dir="${dist.dir}/docs"/>
-    <mkdir dir="${dist.dir}/docs/api"/>
-    <mkdir dir="${dist.dir}/docs/jdiff"/>
-    <mkdir dir="${dist.dir}/lib"/>
-    <mkdir dir="${dist.dir}/libexec"/>
-    <mkdir dir="${dist.dir}/sbin"/>
-    <mkdir dir="${dist.dir}/share/${name}/templates/conf"/>
-
-    <copy todir="${dist.dir}/share/${name}/templates/conf" includeEmptyDirs="false">
-      <fileset dir="${basedir}/src/packages/templates/conf">
-        <include name="*"/>
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
-      <fileset dir="${common.ivy.lib.dir}"/>
-    </copy>
-
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
-      <fileset dir="lib">
-        <exclude name="**/native/**"/>
-      </fileset>
-    </copy>
-
-    <exec dir="${dist.dir}" executable="python" failonerror="true">
-          <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
-          <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
-          <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
-          <arg line="${native.src.dir}/packageNativeHadoop.py"/>
-    </exec>
-
-    <subant target="package">
-      <!--Pass down the version in case its needed again and the target
-      distribution directory so contribs know where to install to.-->
-      <property name="version" value="${version}"/>
-      <property name="dist.dir" value="${dist.dir}"/>
-      <fileset file="${contrib.dir}/build.xml"/>
-    </subant>
-
-    <copy todir="${dist.dir}/webapps">
-      <fileset dir="${build.webapps}"/>
-    </copy>
-
-    <copy todir="${dist.dir}">
-      <fileset file="${build.dir}/${name}-*-${version}.jar"/>
-    </copy>
-
-    <copy todir="${dist.dir}/bin">
-      <fileset dir="bin"/>
-    </copy>
-
-    <copy todir="${dist.dir}/libexec">
-      <fileset dir="bin">
-        <include name="hadoop-config.sh"/>
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/conf">
-      <fileset dir="${conf.dir}" excludes="**/*.template"/>
-    </copy>
-
-    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
-
-    <copy todir="${dist.dir}/ivy">
-      <fileset dir="ivy"/>
-    </copy>
-
-    <copy todir="${dist.dir}">
-      <fileset dir=".">
-        <include name="*.txt" />
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/sbin">
-      <fileset dir="${basedir}/src/packages">
-        <include name="*.sh" />
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/src" includeEmptyDirs="true">
-      <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
-    </copy>
-
-    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
-      <fileset dir="${build.dir}/c++"/>
-    </copy>
-
-    <copy todir="${dist.dir}/" file="build.xml"/>
-
-    <copy todir="${dist.dir}/.eclipse.templates">
-      <fileset dir="${basedir}/.eclipse.templates"/>
-    </copy>
-
-    <chmod perm="ugo+x" type="file" parallel="false">
-        <fileset dir="${dist.dir}/bin"/>
-        <fileset dir="${dist.dir}/sbin"/>
-        <fileset dir="${dist.dir}/src/contrib/">
-          <include name="*/bin/*" />
-        </fileset>
-        <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
-    </chmod>
-    <chmod perm="ugo+x" type="file">
-        <fileset dir="${dist.dir}/src/c++/pipes/debug"/>
-    </chmod>
-
-  </target>
-
   <!-- ================================================================== -->
   <!-- Make release tarball                                               -->
   <!-- ================================================================== -->
@@ -1861,6 +1807,59 @@
       </param.listofitems>
     </macro_tar>
   </target>
+  
+  
+  <!-- ================================================================== -->
+  <!-- Make release zip                                                   -->
+  <!-- ================================================================== -->
+  <target name="zip" depends="package" description="Make multi-platform release zip, both source and binary">
+    <!-- build source tarball -->
+    <macro_zip param.destfile="${build.dir}/${final.name}.zip">
+      <param.listofitems>
+        <zipfileset dir="${build.dir}" filemode="664">
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/sbin/*" />
+          <exclude name="${final.name}/libexec/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
+          <exclude name="${final.name}/src/contrib/ec2/bin/*" />
+          <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
+          <include name="${final.name}/**" />
+          <include name="${final.name}/eclipse.templates/**" />
+        </zipfileset>
+        <zipfileset dir="${build.dir}" filemode="755">
+          <include name="${final.name}/bin/*" />
+          <include name="${final.name}/sbin/*" />
+          <include name="${final.name}/libexec/*" />
+          <include name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/image/*" />
+        </zipfileset>
+      </param.listofitems>
+    </macro_zip>
+    <!-- build multi-platform binary tarball -->
+    <macro_zip param.destfile="${build.dir}/${final.name}-bin.zip">
+      <param.listofitems>
+        <zipfileset dir="${build.dir}" filemode="664">
+          <exclude name="${final.name}/src/**" />
+          <exclude name="${final.name}/docs/**" />
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/sbin/*" />
+          <exclude name="${final.name}/libexec/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/**" />
+        </zipfileset>
+        <zipfileset dir="${build.dir}" filemode="755">
+          <include name="${final.name}/bin/*" />
+          <include name="${final.name}/sbin/*" />
+          <include name="${final.name}/libexec/*" />
+          <include name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/image/*" />
+        </zipfileset>
+      </param.listofitems>
+    </macro_zip>
+  </target>
+
 
   <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
 		description="assembles platform-specific artifacts for binary targets">
@@ -2140,6 +2139,51 @@
     <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
   </target>
 
+  <target name="winpkg" depends="zip,just-winpkg" />
+  <target name="just-winpkg" description="Make a package for Windows">
+    <copy file="${build.dir}/${final.name}.zip" todir="${package.buildroot}/resources"/>
+    <copy todir="${package.buildroot}/scripts">
+      <fileset dir="${src.dir}/packages/win/scripts">
+        <include name="**" />
+      </fileset>
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="build.arch" value="${os.arch}" />
+          <token key="version" value="${version}" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.zip" value="${final.name}.zip" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <copy todir="${package.buildroot}/resources">
+      <fileset dir="${src.dir}/packages/win/resources">
+        <include name="**" />
+      </fileset>
+    </copy>
+    <copy todir="${package.buildroot}/template">
+      <fileset dir="${src.dir}/packages/win/template">
+        <include name="**" />
+      </fileset>
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="build.arch" value="${os.arch}" />
+          <token key="version" value="${version}" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.zip" value="${final.name}.zip" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <macro_zip param.destfile="${build.dir}/${final.name}.winpkg.zip">
+      <param.listofitems>
+         <zipfileset dir="${package.buildroot}">
+          <include name="**" />
+         </zipfileset>
+      </param.listofitems>
+    </macro_zip>
+  </target>
+
   <!-- ================================================================== -->
   <!-- Perform audit activities for the release                           -->
   <!-- ================================================================== -->
@@ -2185,7 +2229,6 @@
     <delete failonerror="false">
       <fileset dir="${winutils.src.dir}" includes="**/*">
         <exclude name="**/*.c"/>
-        <exclude name="**/*.cpp"/>
         <exclude name="**/*.h"/>
         <exclude name="**/*.sln"/>
         <exclude name="**/*.vcxproj"/>
@@ -2971,7 +3014,7 @@
   </target>
 
   <!-- taskcontroller targets -->
-  <target name="task-controller" depends="init">
+  <target name="task-controller" depends="init" unless="windows">
     <exec executable="autoreconf" 
           dir="${c++.task-controller.src}"
           searchpath="yes" failonerror="yes">
