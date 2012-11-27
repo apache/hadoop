@@ -163,6 +163,9 @@ Release 0.23.6 - UNRELEASED
     YARN-151. Browser thinks RM main page JS is taking too long 
     (Ravi Prakash via bobby)
 
+    YARN-204. test coverage for org.apache.hadoop.tools (Aleksey Gorshkov via
+    bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
