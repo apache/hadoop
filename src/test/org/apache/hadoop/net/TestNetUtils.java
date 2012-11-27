@@ -18,6 +18,7 @@
 package org.apache.hadoop.net;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -30,6 +31,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -320,5 +323,27 @@ public class TestNetUtils {
     String expectStr = StringUtils.join(expect, ", ");
     String gotStr = StringUtils.join(got, ", ");
     assertEquals(expectStr, gotStr);
+  }
+  
+  /**
+   * Test for {@link NetUtils#normalizeHostNames
+
+   */
+  @Test
+  public void testNormalizeHostName() {
+    List<String> hosts = Arrays.asList(new String[] { "127.0.0.1", "localhost",
+        "3w.org", "UnknownHost" });
+    List<String> normalizedHosts = NetUtils.normalizeHostNames(hosts);
+    // when ipaddress is normalized, same address is expected in return
+    assertEquals(normalizedHosts.get(0), hosts.get(0));
+    // for normalizing a resolvable hostname, resolved ipaddress is expected in
+    // return
+    assertFalse(normalizedHosts.get(1).equals(hosts.get(1)));
+    assertEquals(normalizedHosts.get(1), hosts.get(0));
+    // when normalizing a valid resolvable hostname start with numeric,
+    // its ipaddress is expected to return
+    assertFalse(normalizedHosts.get(2).equals(hosts.get(2)));
+    // return the same hostname after normalizing a irresolvable hostname.
+    assertEquals(normalizedHosts.get(3), hosts.get(3));
   }
 }
