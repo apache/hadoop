@@ -158,6 +158,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
     should register/deregister to/from. (Karthik Kambatla via tomwhite)
 
+    HADOOP-9084. Augment DelegationTokenRenewer API to cancel the tokens on 
+    calls to removeRenewAction. (kkambatl via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
