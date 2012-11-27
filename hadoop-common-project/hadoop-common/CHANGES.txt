@@ -83,6 +83,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9035. Generalize setup of LoginContext (daryn via bobby)
 
+    HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
+    (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
