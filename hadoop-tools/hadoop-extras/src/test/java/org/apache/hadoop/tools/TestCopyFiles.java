@@ -43,21 +43,19 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.tools.DistCpV1;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.junit.Ignore;
 
 
 /**
  * A JUnit test for copying files recursively.
  */
-@Ignore
+
 public class TestCopyFiles extends TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
@@ -738,20 +736,22 @@ public class TestCopyFiles extends TestCase {
   public void testMapCount() throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
-    MiniMRCluster mr = null;
+    MiniDFSCluster mr = null;
     try {
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 3, true, null);
+      
+      dfs= new MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();
+      
       FileSystem fs = dfs.getFileSystem();
       final FsShell shell = new FsShell(conf);
       namenode = fs.getUri().toString();
-      mr = new MiniMRCluster(3, namenode, 1);
       MyFile[] files = createFiles(fs.getUri(), "/srcdat");
       long totsize = 0;
       for (MyFile f : files) {
         totsize += f.getSize();
       }
-      Configuration job = mr.createJobConf();
+      
+      Configuration job = new JobConf(conf);
       job.setLong("distcp.bytes.per.map", totsize / 3);
       ToolRunner.run(new DistCpV1(job),
           new String[] {"-m", "100",
@@ -766,8 +766,7 @@ public class TestCopyFiles extends TestCase {
       System.out.println(execCmd(shell, "-lsr", logdir));
       FileStatus[] logs = fs.listStatus(new Path(logdir));
       // rare case where splits are exact, logs.length can be 4
-      assertTrue("Unexpected map count, logs.length=" + logs.length,
-          logs.length == 5 || logs.length == 4);
+      assertTrue( logs.length == 2);
 
       deldir(fs, "/destdat");
       deldir(fs, "/logs");
