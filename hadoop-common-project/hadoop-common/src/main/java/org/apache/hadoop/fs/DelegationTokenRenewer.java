@@ -24,6 +24,8 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -35,6 +37,9 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 public class DelegationTokenRenewer
     extends Thread {
+  private static final Log LOG = LogFactory
+      .getLog(DelegationTokenRenewer.class);
+
   /** The renewable interface used by the renewer. */
   public interface Renewable {
     /** @return the renew token. */
@@ -168,11 +173,24 @@ public class DelegationTokenRenewer
     }
   }
 
-  /** Remove the associated renew action from the queue */
+  /**
+   * Remove the associated renew action from the queue
+   * 
+   * @throws IOException
+   */
   public synchronized <T extends FileSystem & Renewable> void removeRenewAction(
-      final T fs) {
+      final T fs) throws IOException {
     for (RenewAction<?> action : queue) {
       if (action.weakFs.get() == fs) {
+        try {
+          fs.getRenewToken().cancel(fs.getConf());
+        } catch (InterruptedException ie) {
+          LOG.error("Interrupted while canceling token for " + fs.getUri()
+              + "filesystem");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(ie.getStackTrace());
+          }
+        }
         queue.remove(action);
         return;
       }

@@ -23,6 +23,7 @@ public class TestDelegationTokenRenewer {
   @SuppressWarnings("rawtypes")
   static class TestToken extends Token {
     public volatile int renewCount = 0;
+    public volatile boolean cancelled = false;
 
     @Override
     public long renew(Configuration conf) {
@@ -32,6 +33,11 @@ public class TestDelegationTokenRenewer {
         renewCount++;
       }
       return renewCount;
+    }
+
+    @Override
+    public void cancel(Configuration conf) {
+      cancelled = true;
     }
   }
   
@@ -123,27 +129,12 @@ public class TestDelegationTokenRenewer {
   }
 
   @Test
-  public void testAddRenewAction() throws IOException, InterruptedException {
+  public void testAddRemoveRenewAction() throws IOException,
+      InterruptedException {
     TestFileSystem tfs = new TestFileSystem();
     renewer.addRenewAction(tfs);
 
-    for (int i = 0; i < 10; i++) {
-      Thread.sleep(RENEW_CYCLE);
-      if (tfs.testToken.renewCount > 0) {
-        return;
-      }
-    }
-
-    assertTrue("Token not renewed even after 10 seconds",
-        (tfs.testToken.renewCount > 0));
-  }
-
-  @Test
-  public void testRemoveRenewAction() throws IOException, InterruptedException {
-    TestFileSystem tfs = new TestFileSystem();
-    renewer.addRenewAction(tfs);
-
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 60; i++) {
       Thread.sleep(RENEW_CYCLE);
       if (tfs.testToken.renewCount > 0) {
         renewer.removeRenewAction(tfs);
@@ -151,9 +142,9 @@ public class TestDelegationTokenRenewer {
       }
     }
 
-    assertTrue("Token not renewed even once",
+    assertTrue("Token not renewed even after 1 minute",
         (tfs.testToken.renewCount > 0));
-    assertTrue("Token not removed",
-        (tfs.testToken.renewCount < MAX_RENEWALS));
+    assertTrue("Token not removed", (tfs.testToken.renewCount < MAX_RENEWALS));
+    assertTrue("Token not cancelled", tfs.testToken.cancelled);
   }
 }
