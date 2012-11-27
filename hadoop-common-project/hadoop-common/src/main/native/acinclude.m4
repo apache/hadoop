@@ -1,4 +1,4 @@
-# AC_COMPUTE_NEEDED_DSO(LIBRARY, PREPROC_SYMBOL)
+# AC_COMPUTE_NEEDED_DSO(LIBRARY, TEST_PROGRAM, PREPROC_SYMBOL)
 # --------------------------------------------------
 # Compute the 'actual' dynamic-library used 
 # for LIBRARY and set it to PREPROC_SYMBOL
@@ -6,7 +6,7 @@ AC_DEFUN([AC_COMPUTE_NEEDED_DSO],
 [
 AC_CACHE_CHECK([Checking for the 'actual' dynamic-library for '-l$1'], ac_cv_libname_$1,
   [
-  echo 'int main(int argc, char **argv){return 0;}' > conftest.c
+  echo '$2' > conftest.c
   if test -z "`${CC} ${LDFLAGS} -o conftest conftest.c -l$1 2>&1`"; then
     dnl Try objdump and ldd in that order to get the dynamic library
     if test ! -z "`which objdump | grep -v 'no objdump'`"; then
@@ -24,5 +24,5 @@ AC_CACHE_CHECK([Checking for the 'actual' dynamic-library for '-l$1'], ac_cv_lib
   rm -f conftest*
   ]
 )
-AC_DEFINE_UNQUOTED($2, ${ac_cv_libname_$1}, [The 'actual' dynamic-library for '-l$1'])
+AC_DEFINE_UNQUOTED($3, ${ac_cv_libname_$1}, [The 'actual' dynamic-library for '-l$1'])
 ])# AC_COMPUTE_NEEDED_DSO
