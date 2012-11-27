@@ -5339,7 +5339,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   void setBlockTotal() {
     if (safeMode == null)
       return;
-    safeMode.setBlockTotal(blocksMap.size());
+    safeMode.setBlockTotal((int)getSafeBlockCount());
   }
 
   /**
@@ -5349,6 +5349,52 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return blocksMap.size();
   }
 
+  /**
+   * There are times when a block is allocated by a client but was never used to
+   * write to. This could happen because the response to block allocation
+   * request never made it to the client or the client failed right after block
+   * allocation. In such a case, NameNode might get stuck in safemode in
+   * subsequent restart waiting for such blocks to be reported. To handle this,
+   * such blocks should not be counted toward total blocks needed to exit
+   * safemode.
+   * <br>
+   * This method returns the total number of blocks excluding the last blocks of
+   * files under construction with length zero.
+   */
+  private long getSafeBlockCount() {
+    // Calculate number of blocks excluded in safe block count
+    long numExcludedBlocks = 0;
+    for (Lease lease : leaseManager.getSortedLeases()) {
+      for (String path : lease.getPaths()) {
+        INode node = dir.getFileINode(path);
+        if (node == null) {
+          LOG.error("Found a lease for nonexisting file: " + path);
+          continue;
+        }
+        if (!node.isUnderConstruction()) {
+          LOG.error("Found a lease for file that is not under construction:"
+              + path);
+          continue;
+        }
+        INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
+        BlockInfo[] blocks = cons.getBlocks();
+        if (blocks == null || blocks.length == 0) {
+          continue;
+        }
+        // Exclude the last block of a file under construction with zero length
+        if (blocks[blocks.length - 1].getNumBytes() == 0) {
+          numExcludedBlocks++;
+        }
+      }
+    }
+    LOG.info("Number of blocks excluded by safe block count: "
+        + numExcludedBlocks + " total blocks: " + getBlocksTotal()
+        + " and thus the safe blocks: "
+        + (getBlocksTotal() - numExcludedBlocks));
+
+    return getBlocksTotal() - numExcludedBlocks;
+  }
+  
   /**
    * Enter safe mode manually.
    * @throws IOException
