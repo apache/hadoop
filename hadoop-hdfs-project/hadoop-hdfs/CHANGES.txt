@@ -120,6 +120,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4038. Override toString() for BookKeeperEditLogInputStream.
     (Vinay via umamahesh)
 
+    HDFS-4214. OfflineEditsViewer should print out the offset at which it
+    encountered an error. (Colin Patrick McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 
