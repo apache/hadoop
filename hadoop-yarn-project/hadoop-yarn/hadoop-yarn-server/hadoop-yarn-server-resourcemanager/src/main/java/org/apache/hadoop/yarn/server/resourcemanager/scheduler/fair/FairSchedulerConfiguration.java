@@ -18,7 +18,7 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Whether to use the user name as the queue name (instead of "default") if
    * the request does not specify a queue. */
   protected static final String  USER_AS_DEFAULT_QUEUE = CONF_PREFIX + "user-as-default-queue";
-  protected static final boolean DEFAULT_USER_AS_DEFAULT_QUEUE = false;
+  protected static final boolean DEFAULT_USER_AS_DEFAULT_QUEUE = true;
 
   protected static final String LOCALITY_THRESHOLD = CONF_PREFIX + "locality.threshold";
   protected static final float  DEFAULT_LOCALITY_THRESHOLD = -1.0f;
