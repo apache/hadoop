@@ -17,6 +17,9 @@ Trunk (Unreleased)
     reliably storing HDFS edit logs. See dedicated section below for breakdown
     of subtasks.
 
+    HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
+    (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
