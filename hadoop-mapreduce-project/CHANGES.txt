@@ -1,10 +1,5 @@
 Hadoop MapReduce Change Log
 
-Branch MR-2454
-
-    MAPREDUCE-4809. Make internal classes required for MAPREDUCE-2454 to be
-    java public. (Mariappan Asokan via acmurthy)
-
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES

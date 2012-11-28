@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -35,9 +33,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
-@InterfaceAudience.LimitedPrivate({"MapReduce"})
-@InterfaceStability.Unstable
-public abstract class MapOutput<K,V> {
+class MapOutput<K,V> {
   private static final Log LOG = LogFactory.getLog(MapOutput.class);
   private static AtomicInteger ID = new AtomicInteger(0);
   
@@ -66,7 +62,7 @@ public abstract class MapOutput<K,V> {
   
   private final boolean primaryMapOutput;
   
-  MapOutput(caskAttemptID mapId, MergeManager<K,V> merger, long size, 
+  MapOutput(TaskAttemptID mapId, MergeManager<K,V> merger, long size, 
             JobConf conf, LocalDirAllocator localDirAllocator,
             int fetcher, boolean primaryMapOutput, MapOutputFile mapOutputFile)
          throws IOException {
