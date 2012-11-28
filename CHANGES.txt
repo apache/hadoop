@@ -322,6 +322,9 @@ Release 1.2.0 - unreleased
     HADOOP-9099. TestNetUtils fails if "UnknownHost" is resolved as a valid
     hostname.  (Ivan Mitic via szetszwo)
 
+    MAPREDUCE-4778. Fair scheduler event log is only written if directory
+    exists on HDFS. (Sandy Ryza via tomwhite)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES

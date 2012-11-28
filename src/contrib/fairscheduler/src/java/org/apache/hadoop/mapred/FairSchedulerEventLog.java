@@ -76,12 +76,11 @@ class FairSchedulerEventLog {
       logDir = conf.get("mapred.fairscheduler.eventlog.location",
           new File(System.getProperty("hadoop.log.dir")).getAbsolutePath()
           + File.separator + "fairscheduler");
-      Path logDirPath = new Path(logDir);
-      FileSystem fs = logDirPath.getFileSystem(conf);
-      if (!fs.exists(logDirPath)) {
-        if (!fs.mkdirs(logDirPath)) {
+      File logDirFile = new File(logDir);
+      if (!logDirFile.exists()) {
+        if (!logDirFile.mkdirs()) {
           throw new IOException(
-              "Mkdirs failed to create " + logDirPath.toString());
+              "Mkdirs failed to create " + logDirFile.toString());
         }
       }
       String username = System.getProperty("user.name");
@@ -123,6 +122,10 @@ class FairSchedulerEventLog {
       LOG.error("Failed to append to fair scheduler event log", e);
       logDisabled = true;
     }
+  }
+  
+  String getLogFile() {
+    return logFile;
   }
   
   /**
