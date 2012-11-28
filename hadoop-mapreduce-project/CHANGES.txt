@@ -452,6 +452,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4825. JobImpl.finished doesn't expect ERROR as a final job state
     (jlowe via bobby)
 
+    MAPREDUCE-4817. Hardcoded task ping timeout kills tasks localizing large 
+    amounts of data (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
