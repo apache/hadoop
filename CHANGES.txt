@@ -319,6 +319,9 @@ Release 1.2.0 - unreleased
     HDFS-4208. NameNode could be stuck in SafeMode due to never-created
     blocks. (Brandon Li via suresh)
 
+    HADOOP-9099. TestNetUtils fails if "UnknownHost" is resolved as a valid
+    hostname.  (Ivan Mitic via szetszwo)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
