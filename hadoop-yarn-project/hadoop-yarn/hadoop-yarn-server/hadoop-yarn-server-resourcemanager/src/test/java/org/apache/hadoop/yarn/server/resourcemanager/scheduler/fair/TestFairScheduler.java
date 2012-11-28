@@ -401,11 +401,11 @@ public class TestFairScheduler {
         createAppAttemptId(1, 1), "default", "user1");
     scheduler.handle(appAddedEvent1);
 
-    // Scheduler should have one queue (the default)
-    assertEquals(1, scheduler.getQueueManager().getQueues().size());
+    // Scheduler should have two queues (the default and the one created for user1)
+    assertEquals(2, scheduler.getQueueManager().getQueues().size());
 
     // That queue should have one app
-    assertEquals(1, scheduler.getQueueManager().getQueue("default").getApplications().size());
+    assertEquals(1, scheduler.getQueueManager().getQueue("user1").getApplications().size());
 
     AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
         createAppAttemptId(1, 1), RMAppAttemptState.FINISHED);
@@ -413,8 +413,8 @@ public class TestFairScheduler {
     // Now remove app
     scheduler.handle(appRemovedEvent1);
 
-    // Default queue should have no apps
-    assertEquals(0, scheduler.getQueueManager().getQueue("default").getApplications().size());
+    // Queue should have no apps
+    assertEquals(0, scheduler.getQueueManager().getQueue("user1").getApplications().size());
   }
 
   @Test
