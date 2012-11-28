@@ -112,6 +112,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-222. Fair scheduler should create queue for each user by default.
     (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4778. Fair scheduler event log is only written if directory
+    exists on HDFS. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
