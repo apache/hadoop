@@ -23,11 +23,13 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * <p>
@@ -43,7 +45,7 @@ import org.apache.hadoop.fs.Path;
  * </p>
  */
 public abstract class FileSystemContractBaseTest extends TestCase {
-  
+  protected final static String TEST_UMASK = "062";
   protected FileSystem fs;
   protected byte[] data = new byte[getBlockSize() * 2]; // two blocks of data
   {
@@ -151,7 +153,26 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     assertFalse(fs.exists(testDeepSubDir));
     
   }
-  
+
+  public void testMkdirsWithUmask() throws Exception {
+    if (fs.getScheme().equals("s3") || fs.getScheme().equals("s3n")) {
+      // skip permission tests for S3FileSystem until HDFS-1333 is fixed.
+      return;
+    }
+    Configuration conf = fs.getConf();
+    String oldUmask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
+    try {
+      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, TEST_UMASK);
+      final Path dir = new Path("/test/newDir");
+      assertTrue(fs.mkdirs(dir, new FsPermission((short)0777)));
+      FileStatus status = fs.getFileStatus(dir);
+      assertTrue(status.isDirectory());
+      assertEquals((short)0715, status.getPermission().toShort());
+    } finally {
+      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, oldUmask);
+    }
+  }
+
   public void testGetFileStatusThrowsExceptionForNonExistentFile() 
     throws Exception {
     try {

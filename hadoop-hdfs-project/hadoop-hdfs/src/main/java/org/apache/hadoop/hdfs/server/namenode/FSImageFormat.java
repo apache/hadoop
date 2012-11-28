@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
@@ -202,7 +203,7 @@ class FSImageFormat {
       fsDir.rootDir.setQuota(nsQuota, dsQuota);
     }
     fsDir.rootDir.setModificationTime(root.getModificationTime());
-    fsDir.rootDir.setPermissionStatus(root.getPermissionStatus());    
+    fsDir.rootDir.clonePermissionStatus(root);    
   }
 
   /** 
@@ -258,7 +259,7 @@ class FSImageFormat {
 
        // add to parent
        newNode.setLocalName(localName);
-       namesystem.dir.addToParent(parent, newNode, false);
+       addToParent(parent, newNode);
      }
      return numChildren;
    }
@@ -287,13 +288,36 @@ class FSImageFormat {
       }
       // check if the new inode belongs to the same parent
       if(!isParent(pathComponents, parentPath)) {
-        parentINode = fsDir.getParent(pathComponents);
+        parentINode = fsDir.rootDir.getParent(pathComponents);
         parentPath = getParent(pathComponents);
       }
 
       // add new inode
       newNode.setLocalName(pathComponents[pathComponents.length-1]);
-      parentINode = fsDir.addToParent(parentINode, newNode, false);
+      addToParent(parentINode, newNode);
+    }
+  }
+
+  /**
+   * Add the child node to parent and, if child is a file, update block map.
+   * This method is only used for image loading so that synchronization,
+   * modification time update and space count update are not needed.
+   */
+  void addToParent(INodeDirectory parent, INode child) {
+    // NOTE: This does not update space counts for parents
+    if (!parent.addChild(child, false)) {
+      return;
+    }
+    namesystem.dir.cacheName(child);
+
+    if (child.isFile()) {
+      // Add file->block mapping
+      final INodeFile file = (INodeFile)child;
+      final BlockInfo[] blocks = file.getBlocks();
+      final BlockManager bm = namesystem.getBlockManager();
+      for (int i = 0; i < blocks.length; i++) {
+        file.setBlock(i, bm.addBlockCollection(blocks[i], file));
+      }
     }
   }
 

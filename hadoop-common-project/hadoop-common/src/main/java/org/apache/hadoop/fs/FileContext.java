@@ -1119,7 +1119,7 @@ public final class FileContext {
    * @param target The symlink's absolute target
    * @return Fully qualified version of the target.
    */
-  private Path qualifySymlinkTarget(final AbstractFileSystem pathFS,
+  private static Path qualifySymlinkTarget(final AbstractFileSystem pathFS,
     Path pathWithLink, Path target) {
     // NB: makeQualified uses the target's scheme and authority, if
     // specified, and the scheme and authority of pathFS, if not.
@@ -2321,7 +2321,7 @@ public final class FileContext {
    * Class used to perform an operation on and resolve symlinks in a
    * path. The operation may potentially span multiple file systems.  
    */
-  protected abstract class FSLinkResolver<T> {
+  protected static abstract class FSLinkResolver<T> {
     // The maximum number of symbolic link components in a path
     private static final int MAX_PATH_LINKS = 32;
 

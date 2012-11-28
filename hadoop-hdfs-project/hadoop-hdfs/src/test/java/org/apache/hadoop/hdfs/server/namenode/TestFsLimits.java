@@ -73,7 +73,7 @@ public class TestFsLimits {
              fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
                                 "namenode")).toString());
 
-    rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME, perms, 0L, 0L);
+    rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME, perms);
     inodes = new INode[]{ rootInode, null };
     fs = null;
     fsIsReady = true;

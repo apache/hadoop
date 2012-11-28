@@ -586,12 +586,17 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4811. JobHistoryServer should show when it was started in WebUI
+    About page (Ravi Prakash via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
 
     MAPREDUCE-4802. Takes a long time to load the task list on the AM for
     large jobs (Ravi Prakash via bobby)
+
+    MAPREDUCE-4764. repair TestBinaryTokenFile (Ivan A. Veselovsky via bobby)
 
 Release 0.23.5 - UNRELEASED
 

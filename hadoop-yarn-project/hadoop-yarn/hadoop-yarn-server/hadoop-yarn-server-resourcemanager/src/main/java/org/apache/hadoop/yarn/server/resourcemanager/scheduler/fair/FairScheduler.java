@@ -723,7 +723,9 @@ public class FairScheduler implements ResourceScheduler {
   private synchronized void nodeUpdate(RMNode nm,
       List<ContainerStatus> newlyLaunchedContainers,
       List<ContainerStatus> completedContainers) {
-    LOG.info("nodeUpdate: " + nm + " cluster capacity: " + clusterCapacity);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("nodeUpdate: " + nm + " cluster capacity: " + clusterCapacity);
+    }
     eventLog.log("HEARTBEAT", nm.getHostName());
     FSSchedulerNode node = nodes.get(nm.getNodeID());
 

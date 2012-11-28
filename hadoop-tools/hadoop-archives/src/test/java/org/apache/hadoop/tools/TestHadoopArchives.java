@@ -27,8 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -38,111 +36,117 @@ import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.log4j.Level;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * test {@link HadoopArchives}
  */
-public class TestHadoopArchives extends TestCase {
+public class TestHadoopArchives {
 
-  public static final String HADOOP_ARCHIVES_JAR = JarFinder.getJar(HadoopArchives.class);
+  public static final String HADOOP_ARCHIVES_JAR = JarFinder
+      .getJar(HadoopArchives.class);
 
   {
-    ((Log4JLogger)LogFactory.getLog(org.apache.hadoop.security.Groups.class)
-        ).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)org.apache.hadoop.ipc.Server.LOG
-        ).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)org.apache.hadoop.util.AsyncDiskService.LOG
-        ).getLogger().setLevel(Level.ERROR);
+    ((Log4JLogger) LogFactory.getLog(org.apache.hadoop.security.Groups.class))
+        .getLogger().setLevel(Level.ERROR);
+
   }
 
   private static final String inputDir = "input";
 
   private Path inputPath;
   private MiniDFSCluster dfscluster;
-  private MiniMRCluster mapred;
+
+  private Configuration conf;
   private FileSystem fs;
   private Path archivePath;
-  
-  static private Path createFile(Path dir, String filename, FileSystem fs
-      ) throws IOException {
+
+  static private Path createFile(Path dir, String filename, FileSystem fs)
+      throws IOException {
     final Path f = new Path(dir, filename);
-    final FSDataOutputStream out = fs.create(f); 
+    final FSDataOutputStream out = fs.create(f);
     out.write(filename.getBytes());
     out.close();
     return f;
   }
-  
-  protected void setUp() throws Exception {
-    super.setUp();
-    dfscluster = new MiniDFSCluster(new Configuration(), 2, true, null);
+
+  @Before
+  public void setUp() throws Exception {
+    conf = new Configuration();
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + "."
+        + CapacitySchedulerConfiguration.QUEUES, "default");
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".default."
+        + CapacitySchedulerConfiguration.CAPACITY, "100");
+    dfscluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true)
+        .build();
+
     fs = dfscluster.getFileSystem();
-    mapred = new MiniMRCluster(2, fs.getUri().toString(), 1);
-    inputPath = new Path(fs.getHomeDirectory(), inputDir); 
+    inputPath = new Path(fs.getHomeDirectory(), inputDir);
     archivePath = new Path(fs.getHomeDirectory(), "archive");
     fs.mkdirs(inputPath);
     createFile(inputPath, "a", fs);
     createFile(inputPath, "b", fs);
     createFile(inputPath, "c", fs);
   }
-  
-  protected void tearDown() throws Exception {
+
+  @After
+  public void tearDown() throws Exception {
     try {
-      if (mapred != null) {
-        mapred.shutdown();
+      if (dfscluster != null) {
+        dfscluster.shutdown();
       }
       if (dfscluster != null) {
         dfscluster.shutdown();
       }
-    } catch(Exception e) {
+    } catch (Exception e) {
       System.err.println(e);
     }
-    super.tearDown();
   }
-  
-   
+
+  @Test
   public void testRelativePath() throws Exception {
     fs.delete(archivePath, true);
 
     final Path sub1 = new Path(inputPath, "dir1");
     fs.mkdirs(sub1);
     createFile(sub1, "a", fs);
-    final Configuration conf = mapred.createJobConf();
     final FsShell shell = new FsShell(conf);
 
     final List<String> originalPaths = lsr(shell, "input");
     System.out.println("originalPath: " + originalPaths);
     final URI uri = fs.getUri();
-    final String prefix = "har://hdfs-" + uri.getHost() +":" + uri.getPort()
+    final String prefix = "har://hdfs-" + uri.getHost() + ":" + uri.getPort()
         + archivePath.toUri().getPath() + Path.SEPARATOR;
 
     {
       final String harName = "foo.har";
-      final String[] args = {
-          "-archiveName",
-          harName,
-          "-p",
-          "input",
-          "*",
-          "archive"
-      };
-      System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
-      final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
-      assertEquals(0, ToolRunner.run(har, args));
+      final String[] args = { "-archiveName", harName, "-p", "input", "*",
+          "archive" };
+      System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
+          HADOOP_ARCHIVES_JAR);
+      final HadoopArchives har = new HadoopArchives(conf);
+      Assert.assertEquals(0, ToolRunner.run(har, args));
 
-      //compare results
+      // compare results
       final List<String> harPaths = lsr(shell, prefix + harName);
-      assertEquals(originalPaths, harPaths);
+      Assert.assertEquals(originalPaths, harPaths);
     }
   }
-
+  
+@Test
   public void testPathWithSpaces() throws Exception {
     fs.delete(archivePath, true);
 
-    //create files/directories with spaces
+    // create files/directories with spaces
     createFile(inputPath, "c c", fs);
     final Path sub1 = new Path(inputPath, "sub 1");
     fs.mkdirs(sub1);
@@ -154,42 +158,36 @@ public class TestHadoopArchives extends TestCase {
     final Path sub2 = new Path(inputPath, "sub 1 with suffix");
     fs.mkdirs(sub2);
     createFile(sub2, "z", fs);
-    final Configuration conf = mapred.createJobConf();
+
     final FsShell shell = new FsShell(conf);
 
     final String inputPathStr = inputPath.toUri().getPath();
-    System.out.println("inputPathStr = " + inputPathStr);
 
     final List<String> originalPaths = lsr(shell, inputPathStr);
     final URI uri = fs.getUri();
-    final String prefix = "har://hdfs-" + uri.getHost() +":" + uri.getPort()
+    final String prefix = "har://hdfs-" + uri.getHost() + ":" + uri.getPort()
         + archivePath.toUri().getPath() + Path.SEPARATOR;
 
-    {//Enable space replacement
+    {// Enable space replacement
       final String harName = "foo.har";
-      final String[] args = {
-          "-archiveName",
-          harName,
-          "-p",
-          inputPathStr,
-          "*",
-          archivePath.toString()
-      };
-      System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
-      final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
-      assertEquals(0, ToolRunner.run(har, args));
+      final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
+          archivePath.toString() };
+      System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
+          HADOOP_ARCHIVES_JAR);
+      final HadoopArchives har = new HadoopArchives(conf);
+      Assert.assertEquals(0, ToolRunner.run(har, args));
 
-      //compare results
+      // compare results
       final List<String> harPaths = lsr(shell, prefix + harName);
-      assertEquals(originalPaths, harPaths);
+      Assert.assertEquals(originalPaths, harPaths);
     }
 
   }
 
-  private static List<String> lsr(final FsShell shell, String dir
-      ) throws Exception {
+  private static List<String> lsr(final FsShell shell, String dir)
+      throws Exception {
     System.out.println("lsr root=" + dir);
-    final ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final PrintStream out = new PrintStream(bytes);
     final PrintStream oldOut = System.out;
     final PrintStream oldErr = System.err;
@@ -197,7 +195,7 @@ public class TestHadoopArchives extends TestCase {
     System.setErr(out);
     final String results;
     try {
-      assertEquals(0, shell.run(new String[]{"-lsr", dir}));
+      Assert.assertEquals(0, shell.run(new String[] { "-lsr", dir }));
       results = bytes.toString();
     } finally {
       IOUtils.closeStream(out);
@@ -206,13 +204,13 @@ public class TestHadoopArchives extends TestCase {
     }
     System.out.println("lsr results:\n" + results);
     String dirname = dir;
-    if (dir.lastIndexOf(Path.SEPARATOR) != -1 ) {
+    if (dir.lastIndexOf(Path.SEPARATOR) != -1) {
       dirname = dir.substring(dir.lastIndexOf(Path.SEPARATOR));
     }
 
     final List<String> paths = new ArrayList<String>();
-    for(StringTokenizer t = new StringTokenizer(results, "\n");
-        t.hasMoreTokens(); ) {
+    for (StringTokenizer t = new StringTokenizer(results, "\n"); t
+        .hasMoreTokens();) {
       final String s = t.nextToken();
       final int i = s.indexOf(dirname);
       if (i >= 0) {
@@ -220,7 +218,8 @@ public class TestHadoopArchives extends TestCase {
       }
     }
     Collections.sort(paths);
-    System.out.println("lsr paths = " + paths.toString().replace(", ", ",\n  "));
+    System.out
+        .println("lsr paths = " + paths.toString().replace(", ", ",\n  "));
     return paths;
   }
 }

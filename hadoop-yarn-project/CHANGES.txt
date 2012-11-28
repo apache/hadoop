@@ -106,6 +106,15 @@ Release 2.0.3-alpha - Unreleased
     YARN-184. Remove unnecessary locking in fair scheduler, and address 
     findbugs excludes. (sandyr via tucu)
 
+    YARN-224. Fair scheduler logs too many nodeUpdate INFO messages.
+    (Sandy Ryza via tomwhite)
+
+    YARN-222. Fair scheduler should create queue for each user by default.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4778. Fair scheduler event log is only written if directory
+    exists on HDFS. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -179,6 +188,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-151. Browser thinks RM main page JS is taking too long 
     (Ravi Prakash via bobby)
+
+    YARN-204. test coverage for org.apache.hadoop.tools (Aleksey Gorshkov via
+    bobby)
 
 Release 0.23.5 - UNRELEASED
 
