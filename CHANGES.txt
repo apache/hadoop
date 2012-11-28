@@ -37,6 +37,9 @@ Release 1.2.0 - unreleased
     handles hostname starting with a numeric character.  (Jing Zhao via
     szetszwo)
 
+    HADOOP-9099. TestNetUtils fails if "UnknownHost" is resolved as a valid
+    hostname.  (Ivan Mitic via szetszwo)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
