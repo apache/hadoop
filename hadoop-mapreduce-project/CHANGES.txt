@@ -17,6 +17,9 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4764. repair TestBinaryTokenFile (Ivan A. Veselovsky via bobby)
 
+    MAPREDUCE-4825. JobImpl.finished doesn't expect ERROR as a final job state
+    (jlowe via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
