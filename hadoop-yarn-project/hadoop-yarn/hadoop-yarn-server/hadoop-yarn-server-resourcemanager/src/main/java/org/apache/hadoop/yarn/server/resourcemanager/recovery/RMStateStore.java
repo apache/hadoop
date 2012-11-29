@@ -15,18 +15,10 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import java.io.IOException;
-
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-
-
-public interface NodeStore {
-  public void storeNode(RMNode node) throws IOException;
-  public void removeNode(RMNode node) throws IOException;
-  public NodeId getNextNodeId() throws IOException;
-  public boolean isLoggable();
+public interface RMStateStore {
+  public interface RMState {
+    
+  }
 }

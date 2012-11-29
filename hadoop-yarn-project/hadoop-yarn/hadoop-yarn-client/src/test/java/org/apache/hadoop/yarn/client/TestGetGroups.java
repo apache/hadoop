@@ -28,7 +28,7 @@ import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.AfterClass;
@@ -46,7 +46,7 @@ public class TestGetGroups extends GetGroupsTestBase {
   @BeforeClass
   public static void setUpResourceManager() throws IOException, InterruptedException {
     conf = new YarnConfiguration();
-    Store store = StoreFactory.getStore(conf);
+    RMStateStore store = StoreFactory.getStore(conf);
     resourceManager = new ResourceManager(store) {
       @Override
       protected void doSecureLogin() throws IOException {

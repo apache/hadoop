@@ -53,7 +53,7 @@ public class TestFSSchedulerApp {
 
     ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
     FSSchedulerApp schedulerApp =
-        new FSSchedulerApp(applicationAttemptId, "user1", queue , null, null, null);
+        new FSSchedulerApp(applicationAttemptId, "user1", queue , null, null);
 
     // Default level should be node-local
     assertEquals(NodeType.NODE_LOCAL, schedulerApp.getAllowedLocalityLevel(
@@ -111,7 +111,7 @@ public class TestFSSchedulerApp {
 
     ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
     FSSchedulerApp schedulerApp =
-        new FSSchedulerApp(applicationAttemptId, "user1", queue , null, null, null);
+        new FSSchedulerApp(applicationAttemptId, "user1", queue , null, null);
     assertEquals(NodeType.OFF_SWITCH, schedulerApp.getAllowedLocalityLevel(
         prio, 10, -1.0, -1.0));
   }
