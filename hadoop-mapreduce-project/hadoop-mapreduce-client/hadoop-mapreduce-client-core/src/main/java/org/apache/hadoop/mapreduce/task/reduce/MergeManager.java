@@ -59,7 +59,7 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 
 @SuppressWarnings(value={"unchecked", "deprecation"})
-@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class MergeManager<K, V> {
   

@@ -584,9 +584,9 @@ abstract public class Task implements Writable, Configurable {
     return status;
   }
 
-  @InterfaceAudience.LimitedPrivate({"MapReduce"})
+  @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public class TaskReporter 
+  protected class TaskReporter 
       extends org.apache.hadoop.mapreduce.StatusReporter
       implements Runnable, Reporter {
     private TaskUmbilicalProtocol umbilical;
@@ -1466,9 +1466,9 @@ abstract public class Task implements Writable, Configurable {
     return reducerContext;
   }
 
-  @InterfaceAudience.LimitedPrivate({"MapReduce"})
+  @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public static abstract class CombinerRunner<K,V> {
+  protected static abstract class CombinerRunner<K,V> {
     protected final Counters.Counter inputCounter;
     protected final JobConf job;
     protected final TaskReporter reporter;
@@ -1486,13 +1486,13 @@ abstract public class Task implements Writable, Configurable {
      * @param iterator the key/value pairs to use as input
      * @param collector the output collector
      */
-    public abstract void combine(RawKeyValueIterator iterator, 
+    abstract void combine(RawKeyValueIterator iterator, 
                           OutputCollector<K,V> collector
                          ) throws IOException, InterruptedException, 
                                   ClassNotFoundException;
 
     @SuppressWarnings("unchecked")
-    public static <K,V> 
+    static <K,V> 
     CombinerRunner<K,V> create(JobConf job,
                                TaskAttemptID taskId,
                                Counters.Counter inputCounter,
@@ -1542,7 +1542,7 @@ abstract public class Task implements Writable, Configurable {
     }
 
     @SuppressWarnings("unchecked")
-    public void combine(RawKeyValueIterator kvIter,
+    protected void combine(RawKeyValueIterator kvIter,
                            OutputCollector<K,V> combineCollector
                            ) throws IOException {
       Reducer<K,V,K,V> combiner = 
@@ -1611,7 +1611,7 @@ abstract public class Task implements Writable, Configurable {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void combine(RawKeyValueIterator iterator, 
+    void combine(RawKeyValueIterator iterator, 
                  OutputCollector<K,V> collector
                  ) throws IOException, InterruptedException,
                           ClassNotFoundException {

@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.PureJavaCrc32;
 
-public class SpillRecord {
+class SpillRecord {
 
   /** Backing store */
   private final ByteBuffer buf;
@@ -142,4 +142,18 @@ public class SpillRecord {
     }
   }
 
+}
+
+class IndexRecord {
+  long startOffset;
+  long rawLength;
+  long partLength;
+
+  public IndexRecord() { }
+
+  public IndexRecord(long startOffset, long rawLength, long partLength) {
+    this.startOffset = startOffset;
+    this.rawLength = rawLength;
+    this.partLength = partLength;
+  }
 }

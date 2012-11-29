@@ -1,8 +1,3 @@
-Branch MR-2454
-
-   MAPREDUCE-4809. Make internal classes required for MAPREDUCE-2454 to be
-   java public. (masokan via tucu)
-
 Hadoop MapReduce Change Log
 
 Trunk (Unreleased)

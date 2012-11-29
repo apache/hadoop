@@ -38,7 +38,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.Progress;
 
-@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class Shuffle<K, V> implements ExceptionReporter {
