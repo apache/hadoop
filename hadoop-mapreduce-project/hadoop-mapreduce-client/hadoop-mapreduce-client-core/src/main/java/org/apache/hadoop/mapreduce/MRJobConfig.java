@@ -30,6 +30,9 @@ public interface MRJobConfig {
 
   public static final String MAP_CLASS_ATTR = "mapreduce.job.map.class";
 
+  public static final String MAP_OUTPUT_COLLECTOR_CLASS_ATTR
+                                  = "mapreduce.job.map.output.collector.class";
+
   public static final String COMBINE_CLASS_ATTR = "mapreduce.job.combine.class";
 
   public static final String REDUCE_CLASS_ATTR = "mapreduce.job.reduce.class";

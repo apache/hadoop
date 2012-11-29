@@ -5,6 +5,8 @@ Branch MR-2454
     MAPREDUCE-4809. Make internal classes required for MAPREDUCE-2454 to be
     java public. (masokan via tucu)
 
+    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
