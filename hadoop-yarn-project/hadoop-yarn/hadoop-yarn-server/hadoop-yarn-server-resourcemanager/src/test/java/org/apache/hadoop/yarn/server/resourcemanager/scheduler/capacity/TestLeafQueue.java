@@ -250,14 +250,14 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_0, user_0, B);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_1, user_0, B);  // same user
 
     
@@ -295,14 +295,14 @@ public class TestLeafQueue {
     final ApplicationAttemptId appAttemptId_0 = TestUtils
         .getMockApplicationAttemptId(0, 1);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_d, d, null,
-        rmContext, null);
+        rmContext);
     d.submitApplication(app_0, user_d, D);
 
     // Attempt the same application again
     final ApplicationAttemptId appAttemptId_1 = TestUtils
         .getMockApplicationAttemptId(0, 2);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_d, d, null,
-        rmContext, null);
+        rmContext);
     d.submitApplication(app_1, user_d, D); // same user
   }
 
@@ -320,7 +320,7 @@ public class TestLeafQueue {
     final ApplicationAttemptId appAttemptId_0 = TestUtils
         .getMockApplicationAttemptId(0, 1);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a, null,
-        rmContext, null);
+        rmContext);
     a.submitApplication(app_0, user_0, B);
     
     when(cs.getApplication(appAttemptId_0)).thenReturn(app_0);
@@ -335,7 +335,7 @@ public class TestLeafQueue {
     final ApplicationAttemptId appAttemptId_1 = TestUtils
         .getMockApplicationAttemptId(0, 2);
     FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a, null,
-        rmContext, null);
+        rmContext);
     a.submitApplication(app_1, user_0, B); // same user
 
     assertEquals(1, a.getMetrics().getAppsSubmitted());
@@ -371,14 +371,14 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_1, user_0, A);  // same user
 
     
@@ -495,21 +495,21 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_1, user_0, A);  // same user
 
     final ApplicationAttemptId appAttemptId_2 = 
         TestUtils.getMockApplicationAttemptId(2, 0); 
     FiCaSchedulerApp app_2 = 
         new FiCaSchedulerApp(appAttemptId_2, user_1, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_2, user_1, A);
 
     // Setup some nodes
@@ -588,21 +588,21 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_1, user_0, A);  // same user
 
     final ApplicationAttemptId appAttemptId_2 = 
         TestUtils.getMockApplicationAttemptId(2, 0); 
     FiCaSchedulerApp app_2 = 
         new FiCaSchedulerApp(appAttemptId_2, user_1, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_2, user_1, A);
 
     // Setup some nodes
@@ -699,28 +699,28 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_0, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_1, user_0, A);  // same user
 
     final ApplicationAttemptId appAttemptId_2 = 
         TestUtils.getMockApplicationAttemptId(2, 0); 
     FiCaSchedulerApp app_2 = 
         new FiCaSchedulerApp(appAttemptId_2, user_1, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_2, user_1, A);
 
     final ApplicationAttemptId appAttemptId_3 = 
         TestUtils.getMockApplicationAttemptId(3, 0); 
     FiCaSchedulerApp app_3 = 
         new FiCaSchedulerApp(appAttemptId_3, user_2, a, 
-            a.getActiveUsersManager(), rmContext, null);
+            a.getActiveUsersManager(), rmContext);
     a.submitApplication(app_3, user_2, A);
     
     // Setup some nodes
@@ -874,14 +874,14 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_1, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_1, user_1, A);  
 
     // Setup some nodes
@@ -973,14 +973,14 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0);
     FiCaSchedulerApp app_0 =
         new FiCaSchedulerApp(appAttemptId_0, user_0, a,
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 =
         TestUtils.getMockApplicationAttemptId(1, 0);
     FiCaSchedulerApp app_1 =
         new FiCaSchedulerApp(appAttemptId_1, user_1, a,
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_1, user_1, A);
 
     // Setup some nodes
@@ -1072,14 +1072,14 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_0, user_0, A);
 
     final ApplicationAttemptId appAttemptId_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     FiCaSchedulerApp app_1 = 
         new FiCaSchedulerApp(appAttemptId_1, user_1, a, 
-            mock(ActiveUsersManager.class), rmContext, null);
+            mock(ActiveUsersManager.class), rmContext);
     a.submitApplication(app_1, user_1, A);  
 
     // Setup some nodes
@@ -1187,7 +1187,7 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         spy(new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null));
+            mock(ActiveUsersManager.class), rmContext));
     a.submitApplication(app_0, user_0, A);
     
     // Setup some nodes and racks
@@ -1327,7 +1327,7 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         spy(new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null));
+            mock(ActiveUsersManager.class), rmContext));
     a.submitApplication(app_0, user_0, A);
     
     // Setup some nodes and racks
@@ -1457,7 +1457,7 @@ public class TestLeafQueue {
         TestUtils.getMockApplicationAttemptId(0, 0); 
     FiCaSchedulerApp app_0 = 
         spy(new FiCaSchedulerApp(appAttemptId_0, user_0, a, 
-            mock(ActiveUsersManager.class), rmContext, null));
+            mock(ActiveUsersManager.class), rmContext));
     a.submitApplication(app_0, user_0, A);
     
     // Setup some nodes and racks

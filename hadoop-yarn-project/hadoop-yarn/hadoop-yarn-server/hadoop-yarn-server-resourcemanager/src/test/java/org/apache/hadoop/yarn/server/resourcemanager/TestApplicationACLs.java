@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.service.Service.STATE;
@@ -85,7 +85,7 @@ public class TestApplicationACLs {
 
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {
-    Store store = StoreFactory.getStore(conf);
+    RMStateStore store = StoreFactory.getStore(conf);
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     AccessControlList adminACL = new AccessControlList("");
     adminACL.addGroup(SUPER_GROUP);

@@ -43,7 +43,7 @@ public class TestQueueParsing {
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(conf);
-    capacityScheduler.reinitialize(conf, new RMContextImpl(null, null, null,
+    capacityScheduler.reinitialize(conf, new RMContextImpl(null, null,
       null, null, null, null, new RMContainerTokenSecretManager(conf),
       new ClientToAMTokenSecretManagerInRM()));
     

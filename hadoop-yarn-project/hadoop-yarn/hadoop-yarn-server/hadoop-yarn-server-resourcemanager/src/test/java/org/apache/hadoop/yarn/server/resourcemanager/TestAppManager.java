@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -93,7 +92,7 @@ public class TestAppManager{
         rmDispatcher);
     AMLivelinessMonitor amFinishingMonitor = new AMLivelinessMonitor(
         rmDispatcher);
-    return new RMContextImpl(new MemStore(), rmDispatcher,
+    return new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
         null, null, null, null) {
       @Override
@@ -366,7 +365,6 @@ public class TestAppManager{
         YarnConfiguration.DEFAULT_QUEUE_NAME, 
         app.getQueue());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
-    Assert.assertNotNull("app store is null", app.getApplicationStore());
 
     // wait for event to be processed
     int timeoutSecs = 0;
@@ -413,7 +411,6 @@ public class TestAppManager{
     Assert.assertEquals("app name doesn't match", "testApp1", app.getName());
     Assert.assertEquals("app queue doesn't match", "testQueue", app.getQueue());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
-    Assert.assertNotNull("app store is null", app.getApplicationStore());
 
     // wait for event to be processed
     int timeoutSecs = 0;

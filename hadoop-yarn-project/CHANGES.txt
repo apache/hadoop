@@ -115,6 +115,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4778. Fair scheduler event log is only written if directory
     exists on HDFS. (Sandy Ryza via tomwhite)
 
+    YARN-229. Remove old unused RM recovery code. (Bikas Saha via acmurthy) 
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

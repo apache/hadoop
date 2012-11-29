@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -292,7 +292,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     // TODO: Fix store
     FiCaSchedulerApp schedulerApp = 
         new FiCaSchedulerApp(appAttemptId, user, DEFAULT_QUEUE, activeUsersManager,
-            this.rmContext, null);
+            this.rmContext);
     applications.put(appAttemptId, schedulerApp);
     metrics.submitApp(user, appAttemptId.getAttemptId());
     LOG.info("Application Submission: " + appAttemptId.getApplicationId() + 
@@ -763,13 +763,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
 
   @Override
   public void recover(RMState state) {
-    // TODO fix recovery
-//    for (Map.Entry<ApplicationId, ApplicationInfo> entry: state.getStoredApplications().entrySet()) {
-//      ApplicationId appId = entry.getKey();
-//      ApplicationInfo appInfo = entry.getValue();
-//      SchedulerApp app = applications.get(appId);
-//      app.allocate(appInfo.getContainers());
-//    }
+    // NOT IMPLEMENTED
   }
 
   @Override
