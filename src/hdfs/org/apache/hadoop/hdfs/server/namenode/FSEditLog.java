@@ -688,7 +688,9 @@ public class FSEditLog {
             break; // no more transactions
           }
         } catch (EOFException e) {
-          LOG.info("Reading " + edits.getName() + ": " + e);
+          LOG.info("EOF of " + edits.getName() + ", reached end of edit log "
+              + "Number of transactions found: " + numEdits + ".  "
+              + "Bytes read: " + tracker.getPos());
           break; // no more transactions
         }
         recentOpcodeOffsets[numEdits % recentOpcodeOffsets.length] =

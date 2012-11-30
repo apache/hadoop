@@ -124,6 +124,9 @@ Release 1.2.0 - unreleased
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
     (suresh)
 
+    HDFS-4252. Improve confusing log message that prints exception when editlog 
+    read is completed. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
