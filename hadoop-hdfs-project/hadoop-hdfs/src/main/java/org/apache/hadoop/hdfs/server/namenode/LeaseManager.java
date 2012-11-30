@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -310,7 +311,8 @@ public class LeaseManager {
     }
 
     final int len = overwrite.length();
-    for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPath)) {
+    for(Map.Entry<String, Lease> entry
+        : findLeaseWithPrefixPath(src, sortedLeasesByPath).entrySet()) {
       final String oldpath = entry.getKey();
       final Lease lease = entry.getValue();
       //overwrite must be a prefix of oldpath
@@ -325,7 +327,8 @@ public class LeaseManager {
   }
 
   synchronized void removeLeaseWithPrefixPath(String prefix) {
-    for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPath)) {
+    for(Map.Entry<String, Lease> entry
+        : findLeaseWithPrefixPath(prefix, sortedLeasesByPath).entrySet()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
             + ".removeLeaseWithPrefixPath: entry=" + entry);
@@ -334,13 +337,13 @@ public class LeaseManager {
     }
   }
 
-  static private List<Map.Entry<String, Lease>> findLeaseWithPrefixPath(
+  static private Map<String, Lease> findLeaseWithPrefixPath(
       String prefix, SortedMap<String, Lease> path2lease) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
     }
 
-    List<Map.Entry<String, Lease>> entries = new ArrayList<Map.Entry<String, Lease>>();
+    final Map<String, Lease> entries = new HashMap<String, Lease>();
     final int srclen = prefix.length();
 
     for(Map.Entry<String, Lease> entry : path2lease.tailMap(prefix).entrySet()) {
@@ -349,7 +352,7 @@ public class LeaseManager {
         return entries;
       }
       if (p.length() == srclen || p.charAt(srclen) == Path.SEPARATOR_CHAR) {
-        entries.add(entry);
+        entries.put(entry.getKey(), entry.getValue());
       }
     }
     return entries;

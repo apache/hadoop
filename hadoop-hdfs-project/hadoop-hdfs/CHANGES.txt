@@ -14,6 +14,10 @@ Release 0.23.6 - UNRELEASED
     HDFS-4233. NN keeps serving even after no journals started while rolling
     edit. (Kihwal Lee via suresh)
 
+    HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
+    of it is undefined after the iteration or modifications of the map.
+    (szetszwo via daryn)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
