@@ -1,5 +1,18 @@
 Hadoop Change Log
 
+Release 1.1.2 - 2012.11.18
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
