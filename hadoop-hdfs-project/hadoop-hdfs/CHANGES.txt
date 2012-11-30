@@ -490,9 +490,6 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4214. OfflineEditsViewer should print out the offset at which it
     encountered an error. (Colin Patrick McCabe via atm)
 
-    HDFS-3680. Allow customized audit logging in HDFS FSNamesystem. (Marcelo
-    Vanzin via atm)
-
   OPTIMIZATIONS
 
   BUG FIXES
