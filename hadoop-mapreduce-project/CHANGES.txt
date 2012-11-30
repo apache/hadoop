@@ -604,6 +604,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4817. Hardcoded task ping timeout kills tasks localizing large 
     amounts of data (tgraves)
 
+    MAPREDUCE-4836. Elapsed time for running tasks on AM web UI tasks page is 0
+    (Ravi Prakash via jeagles)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
