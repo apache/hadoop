@@ -8,6 +8,9 @@ Release 1.1.2 - 2012.11.18
 
   IMPROVEMENTS
 
+    HDFS-4252. Improve confusing log message that prints exception when editlog 
+    read is completed. (Jing Zhao via suresh)
+
   BUG FIXES
 
     HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
