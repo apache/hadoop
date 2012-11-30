@@ -106,6 +106,19 @@ Release 2.0.3-alpha - Unreleased
     YARN-184. Remove unnecessary locking in fair scheduler, and address 
     findbugs excludes. (sandyr via tucu)
 
+    YARN-224. Fair scheduler logs too many nodeUpdate INFO messages.
+    (Sandy Ryza via tomwhite)
+
+    YARN-222. Fair scheduler should create queue for each user by default.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4778. Fair scheduler event log is only written if directory
+    exists on HDFS. (Sandy Ryza via tomwhite)
+
+    YARN-229. Remove old unused RM recovery code. (Bikas Saha via acmurthy) 
+
+    YARN-187. Add hierarchical queues to the fair scheduler. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -182,6 +195,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-204. test coverage for org.apache.hadoop.tools (Aleksey Gorshkov via
     bobby)
+
+    YARN-251. Proxy URI generation fails for blank tracking URIs (Tom White
+    via jlowe)
 
 Release 0.23.5 - UNRELEASED
 

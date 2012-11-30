@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
@@ -130,13 +129,6 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the number of nodes added to the {@link Collection}
    */
   int pullRMNodeUpdates(Collection<RMNode> updatedNodes);
-
-  /**
-   * Application level metadata is stored in {@link ApplicationStore} which
-   * can persist the information.
-   * @return the {@link ApplicationStore}  for this {@link RMApp}.
-   */
-  ApplicationStore getApplicationStore();
 
   /**
    * The finish time of the {@link RMApp}

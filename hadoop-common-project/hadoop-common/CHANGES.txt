@@ -453,6 +453,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9064. Augment DelegationTokenRenewer API to cancel the tokens on 
     calls to removeRenewAction. (kkambatl via tucu)
 
+    HADOOP-8958. ViewFs:Non absolute mount name failures when running 
+    multiple tests on Windows. (Chris Nauroth via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

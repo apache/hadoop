@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -365,7 +365,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     // TODO: Fix store
     FiCaSchedulerApp SchedulerApp = 
         new FiCaSchedulerApp(applicationAttemptId, user, queue, 
-            queue.getActiveUsersManager(), rmContext, null);
+            queue.getActiveUsersManager(), rmContext);
 
     // Submit to the queue
     try {
@@ -767,18 +767,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   @Override
   @Lock(Lock.NoLock.class)
   public void recover(RMState state) throws Exception {
-    // TODO: VINDOKVFIXME recovery
-//    applications.clear();
-//    for (Map.Entry<ApplicationId, ApplicationInfo> entry : state.getStoredApplications().entrySet()) {
-//      ApplicationId appId = entry.getKey();
-//      ApplicationInfo appInfo = entry.getValue();
-//      SchedulerApp app = applications.get(appId);
-//      app.allocate(appInfo.getContainers());
-//      for (Container c: entry.getValue().getContainers()) {
-//        Queue queue = queues.get(appInfo.getApplicationSubmissionContext().getQueue());
-//        queue.recoverContainer(clusterResource, applications.get(appId), c);
-//      }
-//    }
+    // NOT IMPLEMENTED
   }
 
   @Override

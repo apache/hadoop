@@ -828,6 +828,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       case KILLED:
         metrics.killedJob(this);
         break;
+      case ERROR:
       case FAILED:
         metrics.failedJob(this);
         break;
