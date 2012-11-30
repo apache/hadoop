@@ -494,9 +494,10 @@ public class Client extends YarnClientImpl {
     classPathEnv.append(":./log4j.properties");
 
     // add the runtime classpath needed for tests to work
-    String testRuntimeClassPath = Client.getTestRuntimeClasspath();
-    classPathEnv.append(':');
-    classPathEnv.append(testRuntimeClassPath);
+    if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      classPathEnv.append(':');
+      classPathEnv.append(System.getProperty("java.class.path"));
+    }
 
     env.put("CLASSPATH", classPathEnv.toString());
 
@@ -662,51 +663,5 @@ public class Client extends YarnClientImpl {
     // throws an exception in case of failures
     super.killApplication(appId);	
   }
-
-  private static String getTestRuntimeClasspath() {
-
-    InputStream classpathFileStream = null;
-    BufferedReader reader = null;
-    String envClassPath = "";
-
-    LOG.info("Trying to generate classpath for app master from current thread's classpath");
-    try {
-
-      // Create classpath from generated classpath
-      // Check maven ppom.xml for generated classpath info
-      // Works if compile time env is same as runtime. Mainly tests.
-      ClassLoader thisClassLoader =
-          Thread.currentThread().getContextClassLoader();
-      String generatedClasspathFile = "yarn-apps-ds-generated-classpath";
-      classpathFileStream =
-          thisClassLoader.getResourceAsStream(generatedClasspathFile);
-      if (classpathFileStream == null) {
-        LOG.info("Could not classpath resource from class loader");
-        return envClassPath;
-      }
-      LOG.info("Readable bytes from stream=" + classpathFileStream.available());
-      reader = new BufferedReader(new InputStreamReader(classpathFileStream));
-      String cp = reader.readLine();
-      if (cp != null) {
-        envClassPath += cp.trim() + ":";
-      }
-      // Put the file itself on classpath for tasks.
-      envClassPath += thisClassLoader.getResource(generatedClasspathFile).getFile();
-    } catch (IOException e) {
-      LOG.info("Could not find the necessary resource to generate class path for tests. Error=" + e.getMessage());
-    } 
-
-    try {
-      if (classpathFileStream != null) {
-        classpathFileStream.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
-    } catch (IOException e) {
-      LOG.info("Failed to close class path file stream or reader. Error=" + e.getMessage());
-    } 
-    return envClassPath;
-  }			
 
 }

@@ -69,6 +69,10 @@ Release 2.0.3-alpha - Unreleased
     YARN-136. Make ClientToAMTokenSecretManager part of RMContext (Vinod Kumar
     Vavilapalli via sseth)
 
+    YARN-183. Clean up fair scheduler code. (Sandy Ryza via tomwhite)
+
+    YARN-129. Simplify classpath construction for mini YARN tests. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -98,6 +102,22 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-169. Update log4j.appender.EventCounter to use
     org.apache.hadoop.log.metrics.EventCounter (Anthony Rojas via tomwhite)
+
+    YARN-184. Remove unnecessary locking in fair scheduler, and address 
+    findbugs excludes. (sandyr via tucu)
+
+    YARN-224. Fair scheduler logs too many nodeUpdate INFO messages.
+    (Sandy Ryza via tomwhite)
+
+    YARN-222. Fair scheduler should create queue for each user by default.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4778. Fair scheduler event log is only written if directory
+    exists on HDFS. (Sandy Ryza via tomwhite)
+
+    YARN-229. Remove old unused RM recovery code. (Bikas Saha via acmurthy) 
+
+    YARN-187. Add hierarchical queues to the fair scheduler. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -152,6 +172,33 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-188. Coverage fixing for CapacityScheduler (Aleksey Gorshkov via
+    bobby)
+
+    YARN-214. RMContainerImpl does not handle event EXPIRE at state RUNNING
+    (jeagles via bobby)
+
+    YARN-151. Browser thinks RM main page JS is taking too long 
+    (Ravi Prakash via bobby)
+
+    YARN-204. test coverage for org.apache.hadoop.tools (Aleksey Gorshkov via
+    bobby)
+
+    YARN-251. Proxy URI generation fails for blank tracking URIs (Tom White
+    via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -171,6 +218,8 @@ Release 0.23.5 - UNRELEASED
 
     YARN-186. Coverage fixing LinuxContainerExecutor (Aleksey Gorshkov via
     bobby)
+
+    YARN-216. Remove jquery theming support. (Robert Joseph Evans via jlowe)
 
   OPTIMIZATIONS
 
@@ -211,7 +260,15 @@ Release 0.23.5 - UNRELEASED
     YARN-201. Fix CapacityScheduler to be less conservative for starved 
     off-switch requests. (jlowe via acmurthy) 
 
-Release 0.23.4 - UNRELEASED
+    YARN-206. TestApplicationCleanup.testContainerCleanup occasionally fails.
+    (jlowe via jeagles)
+
+    YARN-212. NM state machine ignores an APPLICATION_CONTAINER_FINISHED event
+    when it shouldn't (Nathan Roberts via jlowe)
+
+    YARN-219. NM should aggregate logs when application finishes. (bobby)
+
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

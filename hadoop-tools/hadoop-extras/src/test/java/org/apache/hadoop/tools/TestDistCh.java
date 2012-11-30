@@ -22,8 +22,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.LogFactory;
@@ -39,10 +37,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.log4j.Level;
-import org.junit.Ignore;
-@Ignore
+
 public class TestDistCh extends junit.framework.TestCase {
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.StateChange")
@@ -52,7 +50,8 @@ public class TestDistCh extends junit.framework.TestCase {
   }
 
   static final Long RANDOM_NUMBER_GENERATOR_SEED = null;
-
+  static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
+  
   private static final Random RANDOM = new Random();
   static {
     final long seed = RANDOM_NUMBER_GENERATOR_SEED == null?
@@ -65,7 +64,7 @@ public class TestDistCh extends junit.framework.TestCase {
     new Path(System.getProperty("test.build.data","/tmp")
         ).toString().replace(' ', '+');
 
-  static final int NUN_SUBS = 5;
+  static final int NUN_SUBS = 7;
 
   static class FileTree {
     private final FileSystem fs;
@@ -127,9 +126,12 @@ public class TestDistCh extends junit.framework.TestCase {
   
   public void testDistCh() throws Exception {
     final Configuration conf = new Configuration();
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+
+    conf.set(CapacitySchedulerConfiguration.PREFIX+CapacitySchedulerConfiguration.ROOT+"."+CapacitySchedulerConfiguration.QUEUES, "default");
+    conf.set(CapacitySchedulerConfiguration.PREFIX+CapacitySchedulerConfiguration.ROOT+".default."+CapacitySchedulerConfiguration.CAPACITY, "100");
+    final MiniDFSCluster cluster=  new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true).build();
+    
     final FileSystem fs = cluster.getFileSystem();
-    final MiniMRCluster mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
     final FsShell shell = new FsShell(conf);
     
     try {
@@ -138,37 +140,36 @@ public class TestDistCh extends junit.framework.TestCase {
 
       runLsr(shell, tree.root, 0);
 
-      //generate random arguments
-      final String[] args = new String[RANDOM.nextInt(NUN_SUBS-1) + 1];
+      final String[] args = new String[NUN_SUBS];
       final PermissionStatus[] newstatus = new PermissionStatus[NUN_SUBS];
-      final List<Integer> indices = new LinkedList<Integer>();
-      for(int i = 0; i < NUN_SUBS; i++) {
-        indices.add(i);
-      }
-      for(int i = 0; i < args.length; i++) {
-        final int index = indices.remove(RANDOM.nextInt(indices.size()));
-        final String sub = "sub" + index;
-        final boolean changeOwner = RANDOM.nextBoolean();
-        final boolean changeGroup = RANDOM.nextBoolean();
-        final boolean changeMode = !changeOwner && !changeGroup? true: RANDOM.nextBoolean();
-        
-        final String owner = changeOwner? sub: "";
-        final String group = changeGroup? sub: "";
-        final String permission = changeMode? RANDOM.nextInt(8) + "" + RANDOM.nextInt(8) + "" + RANDOM.nextInt(8): "";
 
-        args[i] = tree.root + "/" + sub + ":" + owner + ":" + group + ":" + permission;
-        newstatus[index] = new ChPermissionStatus(rootstatus, owner, group, permission);
-      }
-      for(int i = 0; i < NUN_SUBS; i++) {
-        if (newstatus[i] == null) {
-          newstatus[i] = new ChPermissionStatus(rootstatus);
-        }
-      }
+      
+      args[0]="/test/testDistCh/sub0:sub1::";
+      newstatus[0] = new ChPermissionStatus(rootstatus, "sub1", "", "");
+
+      args[1]="/test/testDistCh/sub1::sub2:";
+      newstatus[1] = new ChPermissionStatus(rootstatus, "", "sub2", "");
+
+      args[2]="/test/testDistCh/sub2:::437";
+      newstatus[2] = new ChPermissionStatus(rootstatus, "", "", "437");
+
+      args[3]="/test/testDistCh/sub3:sub1:sub2:447";
+      newstatus[3] = new ChPermissionStatus(rootstatus, "sub1", "sub2", "447");
+ 
+      args[4]="/test/testDistCh/sub4::sub5:437";
+      newstatus[4] = new ChPermissionStatus(rootstatus, "", "sub5", "437");
+
+      args[5]="/test/testDistCh/sub5:sub1:sub5:";
+      newstatus[5] = new ChPermissionStatus(rootstatus, "sub1", "sub5", "");
+
+      args[6]="/test/testDistCh/sub6:sub3::437";
+      newstatus[6] = new ChPermissionStatus(rootstatus, "sub3", "", "437");
+      
       System.out.println("args=" + Arrays.asList(args).toString().replace(",", ",\n  "));
       System.out.println("newstatus=" + Arrays.asList(newstatus).toString().replace(",", ",\n  "));
 
       //run DistCh
-      new DistCh(mr.createJobConf()).run(args);
+      new DistCh(MiniMRClientClusterFactory.create(this.getClass(), 2, conf).getConfig()).run(args);
       runLsr(shell, tree.root, 0);
 
       //check results
@@ -184,7 +185,7 @@ public class TestDistCh extends junit.framework.TestCase {
     }
   }
 
-  static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
+ 
 
   static void checkFileStatus(PermissionStatus expected, FileStatus actual) {
     assertEquals(expected.getUserName(), actual.getOwner());

@@ -32,6 +32,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import com.google.common.base.Charsets;
+
 /** An {@link InputFormat} for plain text files.  Files are broken into lines.
  * Either linefeed or carriage-return are used to signal end of line.  Keys are
  * the position in the file, and values are the line of text.. */
@@ -47,7 +49,7 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text> {
         "textinputformat.record.delimiter");
     byte[] recordDelimiterBytes = null;
     if (null != delimiter)
-      recordDelimiterBytes = delimiter.getBytes();
+      recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
     return new LineRecordReader(recordDelimiterBytes);
   }
 

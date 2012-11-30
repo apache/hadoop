@@ -426,7 +426,7 @@ public class FSEditLogLoader {
     }
     case OP_SYMLINK: {
       SymlinkOp symlinkOp = (SymlinkOp)op;
-      fsDir.unprotectedSymlink(symlinkOp.path, symlinkOp.value,
+      fsDir.unprotectedAddSymlink(symlinkOp.path, symlinkOp.value,
                                symlinkOp.mtime, symlinkOp.atime,
                                symlinkOp.permissionStatus);
       break;

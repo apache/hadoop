@@ -70,6 +70,7 @@ IF(FUSE_FOUND)
         hdfs
         m
         pthread
+        rt
     )
     add_executable(test_fuse_dfs
         test/test_fuse_dfs.c

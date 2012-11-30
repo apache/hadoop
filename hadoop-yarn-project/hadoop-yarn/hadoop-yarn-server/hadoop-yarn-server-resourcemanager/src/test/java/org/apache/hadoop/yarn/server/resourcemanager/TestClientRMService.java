@@ -182,7 +182,7 @@ public class TestClientRMService {
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName) {
     return new RMAppImpl(applicationId3, rmContext, config, null, null,
-        queueName, null, null, null, yarnScheduler, null, System
+        queueName, null, null, yarnScheduler, null, System
             .currentTimeMillis());
   }
 }

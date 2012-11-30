@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 
@@ -26,10 +27,14 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
  * Directory INode class that has a quota restriction
  */
 class INodeDirectoryWithQuota extends INodeDirectory {
-  private long nsQuota; /// NameSpace quota
-  private long nsCount;
-  private long dsQuota; /// disk space quota
-  private long diskspace;
+  /** Name space quota */
+  private long nsQuota = Long.MAX_VALUE;
+  /** Name space count */
+  private long nsCount = 1L;
+  /** Disk space quota */
+  private long dsQuota = HdfsConstants.QUOTA_RESET;
+  /** Disk space count */
+  private long diskspace = 0L;
   
   /** Convert an existing directory inode to one with the given quota
    * 
@@ -44,7 +49,8 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     other.spaceConsumedInTree(counts);
     this.nsCount = counts.getNsCount();
     this.diskspace = counts.getDsCount();
-    setQuota(nsQuota, dsQuota);
+    this.nsQuota = nsQuota;
+    this.dsQuota = dsQuota;
   }
   
   /** constructor with no quota verification */
@@ -53,16 +59,11 @@ class INodeDirectoryWithQuota extends INodeDirectory {
     super(permissions, modificationTime);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
-    this.nsCount = 1;
   }
   
   /** constructor with no quota verification */
-  INodeDirectoryWithQuota(String name, PermissionStatus permissions,
-      long nsQuota, long dsQuota) {
+  INodeDirectoryWithQuota(String name, PermissionStatus permissions) {
     super(name, permissions);
-    this.nsQuota = nsQuota;
-    this.dsQuota = dsQuota;
-    this.nsCount = 1;
   }
   
   /** Get this directory's namespace quota
@@ -116,19 +117,8 @@ class INodeDirectoryWithQuota extends INodeDirectory {
    * @param nsDelta the change of the tree size
    * @param dsDelta change to disk space occupied
    */
-  void updateNumItemsInTree(long nsDelta, long dsDelta) {
-    nsCount += nsDelta;
-    diskspace += dsDelta;
-  }
-  
-  /** Update the size of the tree
-   * 
-   * @param nsDelta the change of the tree size
-   * @param dsDelta change to disk space occupied
-   **/
-  void unprotectedUpdateNumItemsInTree(long nsDelta, long dsDelta) {
-    nsCount = nsCount + nsDelta;
-    diskspace = diskspace + dsDelta;
+  void addSpaceConsumed(long nsDelta, long dsDelta) {
+    setSpaceConsumed(nsCount + nsDelta, diskspace + dsDelta);
   }
   
   /** 

@@ -50,10 +50,10 @@ public class AppSchedulable extends Schedulable {
   private long startTime;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static final Log LOG = LogFactory.getLog(AppSchedulable.class);
-  private FSQueue queue;
+  private FSLeafQueue queue;
   private RMContainerTokenSecretManager containerTokenSecretManager;
 
-  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSQueue queue) {
+  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSLeafQueue queue) {
     this.scheduler = scheduler;
     this.app = app;
     this.startTime = System.currentTimeMillis();
@@ -97,11 +97,8 @@ public class AppSchedulable extends Schedulable {
   }
 
   @Override
-  public void redistributeShare() {}
-
-  @Override
   public Resource getResourceUsage() {
-    return this.app.getCurrentConsumption();
+    return app.getCurrentConsumption();
   }
 
 
@@ -114,7 +111,7 @@ public class AppSchedulable extends Schedulable {
    * Get metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
-    return this.queue.getQueueSchedulable().getMetrics();
+    return queue.getMetrics();
   }
 
   @Override
@@ -190,9 +187,9 @@ public class AppSchedulable extends Schedulable {
       RMContainer rmContainer = application.reserve(node, priority, null,
           container);
       node.reserveResource(application, priority, rmContainer);
-      getMetrics().reserveResource(this.app.getUser(),
+      getMetrics().reserveResource(app.getUser(),
           container.getResource());
-      scheduler.getRootQueueMetrics().reserveResource(this.app.getUser(),
+      scheduler.getRootQueueMetrics().reserveResource(app.getUser(),
           container.getResource());
     }
 
@@ -257,13 +254,13 @@ public class AppSchedulable extends Schedulable {
         // TODO this should subtract resource just assigned
         // TEMPROARY
         getMetrics().setAvailableResourcesToQueue(
-            this.scheduler.getClusterCapacity());
+            scheduler.getClusterCapacity());
       }
 
 
       // If we had previously made a reservation, delete it
       if (reserved) {
-        this.unreserve(application, priority, node);
+        unreserve(application, priority, node);
       }
 
       // Inform the node
@@ -290,7 +287,7 @@ public class AppSchedulable extends Schedulable {
 
       // Make sure the application still needs requests at this priority
       if (app.getTotalRequiredResources(priority) == 0) {
-        this.unreserve(app, priority, node);
+        unreserve(app, priority, node);
         return Resources.none();
       }
     } else {

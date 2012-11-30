@@ -24,9 +24,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.NodeStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -39,7 +36,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 public class RMContextImpl implements RMContext {
 
   private final Dispatcher rmDispatcher;
-  private final Store store;
 
   private final ConcurrentMap<ApplicationId, RMApp> applications
     = new ConcurrentHashMap<ApplicationId, RMApp>();
@@ -58,7 +54,7 @@ public class RMContextImpl implements RMContext {
   private final RMContainerTokenSecretManager containerTokenSecretManager;
   private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
 
-  public RMContextImpl(Store store, Dispatcher rmDispatcher,
+  public RMContextImpl(Dispatcher rmDispatcher,
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
@@ -66,7 +62,6 @@ public class RMContextImpl implements RMContext {
       ApplicationTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
-    this.store = store;
     this.rmDispatcher = rmDispatcher;
     this.containerAllocationExpirer = containerAllocationExpirer;
     this.amLivelinessMonitor = amLivelinessMonitor;
@@ -80,16 +75,6 @@ public class RMContextImpl implements RMContext {
   @Override
   public Dispatcher getDispatcher() {
     return this.rmDispatcher;
-  }
-
-  @Override
-  public NodeStore getNodeStore() {
-   return store;
-  }
-
-  @Override
-  public ApplicationsStore getApplicationsStore() {
-    return store;
   }
 
   @Override

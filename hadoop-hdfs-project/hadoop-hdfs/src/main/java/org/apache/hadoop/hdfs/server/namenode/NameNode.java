@@ -227,6 +227,7 @@ public class NameNode {
   public static final int DEFAULT_PORT = 8020;
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
+  public static final Log blockStateChangeLog = LogFactory.getLog("BlockStateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
   

@@ -517,7 +517,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <groupId>com.atlassian.maven.plugins</groupId>
             <artifactId>maven-clover2-plugin</artifactId>
             <configuration>
-              <includesAllSourceRoots>true</includesAllSourceRoots>
+              <includesAllSourceRoots>false</includesAllSourceRoots>
               <includesTestSourceRoots>true</includesTestSourceRoots>
               <licenseLocation>${cloverLicenseLocation}</licenseLocation>
               <cloverDatabase>${cloverDatabase}</cloverDatabase>

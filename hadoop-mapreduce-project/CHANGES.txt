@@ -166,6 +166,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8911. CRLF characters in source and text files.
     (Raja Aluri via suresh)
 
+    MAPREDUCE-4723. Fix warnings found by findbugs 2. (Sandy Ryza via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -196,6 +198,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4777. In TestIFile, testIFileReaderWithCodec relies on
     testIFileWriterWithCodec. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4800. Cleanup o.a.h.mapred.MapTaskStatus - remove unused 
+    code. (kkambatl via tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -573,6 +578,32 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-4811. JobHistoryServer should show when it was started in WebUI
+    About page (Ravi Prakash via jlowe)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4802. Takes a long time to load the task list on the AM for
+    large jobs (Ravi Prakash via bobby)
+
+    MAPREDUCE-4764. repair TestBinaryTokenFile (Ivan A. Veselovsky via bobby)
+
+    MAPREDUCE-4825. JobImpl.finished doesn't expect ERROR as a final job state
+    (jlowe via bobby)
+
+    MAPREDUCE-4817. Hardcoded task ping timeout kills tasks localizing large 
+    amounts of data (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -587,7 +618,14 @@ Release 0.23.5 - UNRELEASED
     MAPREDUCE-4752. Reduce MR AM memory usage through String Interning (Robert
     Evans via tgraves)
 
+    MAPREDUCE-4266. remove Ant remnants from MR (tgraves via bobby)
+
+    MAPREDUCE-4666. JVM metrics for history server (jlowe via jeagles)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-4720. Browser thinks History Server main page JS is taking too 
+    long (Ravi Prakash via bobby)
 
   BUG FIXES
 
@@ -640,8 +678,33 @@ Release 0.23.5 - UNRELEASED
 
     MAPREDUCE-4772. Fetch failures can take way too long for a map to be 
     restarted (bobby)
+
+    MAPREDUCE-4782. NLineInputFormat skips first line of last InputSplit 
+    (Mark Fuhs via bobby)
+
+    MAPREDUCE-4774. JobImpl does not handle asynchronous task events in FAILED
+    state (jlowe via bobby)
+
+    MAPREDUCE-4751. AM stuck in KILL_WAIT for days (vinodkv via bobby)
+
+    MAPREDUCE-4787. TestJobMonitorAndPrint is broken (Rob Parker via bobby)
+
+    MAPREDUCE-4425. Speculation + Fetch failures can lead to a hung job (jlowe
+    via bobby)
+
+    MAPREDUCE-4786. Job End Notification retry interval is 5 milliseconds by
+    default (Ravi Prakash via bobby)
+
+    MAPREDUCE-4517. Too many INFO messages written out during AM to RM heartbeat
+    (Jason Lowe via tgraves)
+
+    MAPREDUCE-4797. LocalContainerAllocator can loop forever trying to contact
+    the RM (jlowe via bobby)
+
+    MAPREDUCE-4801. ShuffleHandler can generate large logs due to prematurely
+    closed channels (jlowe via bobby)
  
-Release 0.23.4 - UNRELEASED
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

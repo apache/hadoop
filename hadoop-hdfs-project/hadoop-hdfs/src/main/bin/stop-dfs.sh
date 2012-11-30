@@ -50,7 +50,7 @@ fi
 #---------------------------------------------------------
 # secondary namenodes (if any)
 
-SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>&-)
+SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>/dev/null)
 
 if [ -n "$SECONDARY_NAMENODES" ]; then
   echo "Stopping secondary namenodes [$SECONDARY_NAMENODES]"
@@ -60,6 +60,21 @@ if [ -n "$SECONDARY_NAMENODES" ]; then
       --hostnames "$SECONDARY_NAMENODES" \
       --script "$bin/hdfs" stop secondarynamenode
 fi
+
+#---------------------------------------------------------
+# quorumjournal nodes (if any)
+
+SHARED_EDITS_DIR=$($HADOOP_PREFIX/bin/hdfs getconf -confKey dfs.namenode.shared.edits.dir 2>&-)
+
+case "$SHARED_EDITS_DIR" in
+qjournal://*)
+  JOURNAL_NODES=$(echo "$SHARED_EDITS_DIR" | sed 's,qjournal://\([^/]*\)/.*,\1,g; s/;/ /g; s/:[0-9]*//g')
+  echo "Stopping journal nodes [$JOURNAL_NODES]"
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
+      --config "$HADOOP_CONF_DIR" \
+      --hostnames "$JOURNAL_NODES" \
+      --script "$bin/hdfs" stop journalnode ;;
+esac
 
 #---------------------------------------------------------
 # ZK Failover controllers, if auto-HA is enabled

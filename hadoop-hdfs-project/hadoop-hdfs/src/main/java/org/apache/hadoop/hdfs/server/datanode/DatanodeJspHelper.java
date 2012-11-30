@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -119,7 +120,7 @@ public class DatanodeJspHelper {
     String target = dir;
     final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
-      out.print("<h3>File or directory : " + target + " does not exist</h3>");
+      out.print("<h3>File or directory : " + StringEscapeUtils.escapeHtml(target) + " does not exist</h3>");
       JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, target,
           nnAddr);
     } else {
@@ -203,7 +204,7 @@ public class DatanodeJspHelper {
               + JspHelper.getDelegationTokenUrlParam(tokenString)
               + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
             cols[0] = "<a href=\"" + datanodeUrl + "\">"
-              + localFileName + "</a>";
+              + HtmlQuoting.quoteHtmlChars(localFileName) + "</a>";
             cols[5] = lsDateFormat.format(new Date((files[i]
               .getModificationTime())));
             cols[6] = files[i].getPermission().toString();
@@ -258,7 +259,8 @@ public class DatanodeJspHelper {
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
-    final String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    final String nnAddr = StringEscapeUtils.escapeHtml(
+        req.getParameter(JspHelper.NAMENODE_ADDRESS));
     if (nnAddr == null){
       out.print(JspHelper.NAMENODE_ADDRESS + " url param is null");
       return;
@@ -636,7 +638,7 @@ public class DatanodeJspHelper {
     UserGroupInformation ugi = JspHelper.getUGI(req, conf);
 
     String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
-    String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    String nnAddr = StringEscapeUtils.escapeHtml(req.getParameter(JspHelper.NAMENODE_ADDRESS));
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);

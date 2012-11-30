@@ -25,8 +25,7 @@ import java.io.IOException;
 
 class MapTaskStatus extends TaskStatus {
 
-  private long mapFinishTime;
-  private long sortFinishTime;
+  private long mapFinishTime = 0;
   
   public MapTaskStatus() {}
 
@@ -49,10 +48,10 @@ class MapTaskStatus extends TaskStatus {
   @Override
   void setFinishTime(long finishTime) {
     super.setFinishTime(finishTime);
-    if (mapFinishTime == 0) {
-      mapFinishTime = finishTime;
+    // set mapFinishTime if it hasn't been set before
+    if (getMapFinishTime() == 0) {
+      setMapFinishTime(finishTime);
     }
-    setSortFinishTime(finishTime);
   }
   
   @Override
@@ -73,16 +72,6 @@ class MapTaskStatus extends TaskStatus {
   @Override
   void setMapFinishTime(long mapFinishTime) {
     this.mapFinishTime = mapFinishTime;
-  }
-
-  @Override
-  public long getSortFinishTime() {
-    return sortFinishTime;
-  }
-
-  @Override
-  void setSortFinishTime(long sortFinishTime) {
-    this.sortFinishTime = sortFinishTime;
   }
   
   @Override

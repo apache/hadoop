@@ -98,10 +98,13 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEventType.KILL, new KillTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.RELEASED,
         RMContainerEventType.RELEASED, new KillTransition())
+    .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
+        RMContainerEventType.EXPIRE)
 
     // Transitions from COMPLETED state
     .addTransition(RMContainerState.COMPLETED, RMContainerState.COMPLETED,
-        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
+        EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
+            RMContainerEventType.KILL))
 
     // Transitions from EXPIRED state
     .addTransition(RMContainerState.EXPIRED, RMContainerState.EXPIRED,
@@ -109,13 +112,13 @@ public class RMContainerImpl implements RMContainer {
 
     // Transitions from RELEASED state
     .addTransition(RMContainerState.RELEASED, RMContainerState.RELEASED,
-        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL,
-            RMContainerEventType.FINISHED))
+        EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
+            RMContainerEventType.KILL, RMContainerEventType.FINISHED))
 
     // Transitions from KILLED state
     .addTransition(RMContainerState.KILLED, RMContainerState.KILLED,
-        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL,
-            RMContainerEventType.FINISHED))
+        EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
+            RMContainerEventType.KILL, RMContainerEventType.FINISHED))
 
     // create the topology tables
     .installTopology(); 

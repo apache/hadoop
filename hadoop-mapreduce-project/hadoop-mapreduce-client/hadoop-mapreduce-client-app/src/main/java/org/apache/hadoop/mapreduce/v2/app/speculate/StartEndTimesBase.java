@@ -43,7 +43,6 @@ abstract class StartEndTimesBase implements TaskRuntimeEstimator {
   static final int MINIMUM_COMPLETE_NUMBER_TO_SPECULATE
       = 1;
 
-  protected Configuration conf = null;
   protected AppContext context = null;
 
   protected final Map<TaskAttemptId, Long> startTimes
@@ -82,7 +81,6 @@ abstract class StartEndTimesBase implements TaskRuntimeEstimator {
 
   @Override
   public void contextualize(Configuration conf, AppContext context) {
-    this.conf = conf;
     this.context = context;
 
     Map<JobId, Job> allJobs = context.getAllJobs();

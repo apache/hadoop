@@ -18,12 +18,9 @@
 
 package org.apache.hadoop.yarn.applications.unmanagedamlauncher;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 
@@ -80,51 +77,17 @@ public class TestUnmanagedAMLauncher {
   }
 
   private static String getTestRuntimeClasspath() {
-
-    InputStream classpathFileStream = null;
-    BufferedReader reader = null;
-    String envClassPath = "";
-
     LOG.info("Trying to generate classpath for app master from current thread's classpath");
-    try {
-
-      // Create classpath from generated classpath
-      // Check maven pom.xml for generated classpath info
-      // Works if compile time env is same as runtime. Mainly tests.
-      ClassLoader thisClassLoader = Thread.currentThread()
-          .getContextClassLoader();
-      String generatedClasspathFile = "yarn-apps-am-generated-classpath";
-      classpathFileStream = thisClassLoader
-          .getResourceAsStream(generatedClasspathFile);
-      if (classpathFileStream == null) {
-        LOG.info("Could not classpath resource from class loader");
-        return envClassPath;
-      }
-      LOG.info("Readable bytes from stream=" + classpathFileStream.available());
-      reader = new BufferedReader(new InputStreamReader(classpathFileStream));
-      String cp = reader.readLine();
-      if (cp != null) {
-        envClassPath += cp.trim() + File.pathSeparator;
-      }
-      // yarn-site.xml at this location contains proper config for mini cluster
-      URL url = thisClassLoader.getResource("yarn-site.xml");
-      envClassPath += new File(url.getFile()).getParent();
-    } catch (IOException e) {
-      LOG.info("Could not find the necessary resource to generate class path for tests. Error="
-          + e.getMessage());
+    String envClassPath = "";
+    String cp = System.getProperty("java.class.path");
+    if (cp != null) {
+      envClassPath += cp.trim() + File.pathSeparator;
     }
-
-    try {
-      if (classpathFileStream != null) {
-        classpathFileStream.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
-    } catch (IOException e) {
-      LOG.info("Failed to close class path file stream or reader. Error="
-          + e.getMessage());
-    }
+    // yarn-site.xml at this location contains proper config for mini cluster
+    ClassLoader thisClassLoader = Thread.currentThread()
+      .getContextClassLoader();
+    URL url = thisClassLoader.getResource("yarn-site.xml");
+    envClassPath += new File(url.getFile()).getParent();
     return envClassPath;
   }
 

@@ -108,8 +108,5 @@ public class FakeSchedulable extends Schedulable {
   }
 
   @Override
-  public void redistributeShare() {}
-
-  @Override
   public void updateDemand() {}
 }

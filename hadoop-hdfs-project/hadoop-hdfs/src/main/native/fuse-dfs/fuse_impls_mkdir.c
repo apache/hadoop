@@ -39,11 +39,6 @@ int dfs_mkdir(const char *path, mode_t mode)
     return -EACCES;
   }
 
-  if (dfs->read_only) {
-    ERROR("HDFS is configured read-only, cannot create directory %s", path);
-    return -EACCES;
-  }
-  
   ret = fuseConnectAsThreadUid(&conn);
   if (ret) {
     fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "

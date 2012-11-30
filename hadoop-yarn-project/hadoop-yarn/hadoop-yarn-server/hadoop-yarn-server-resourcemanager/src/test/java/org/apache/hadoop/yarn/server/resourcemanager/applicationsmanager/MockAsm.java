@@ -32,7 +32,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -191,10 +190,6 @@ public abstract class MockAsm extends MockApps {
     }
     @Override
     public Map<ApplicationAttemptId, RMAppAttempt> getAppAttempts() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-    @Override
-    public ApplicationStore getApplicationStore() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override

@@ -348,6 +348,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobStateInternal.FAILED, JobStateInternal.FAILED,
               EnumSet.of(JobEventType.JOB_KILL, 
                   JobEventType.JOB_UPDATED_NODES,
+                  JobEventType.JOB_TASK_COMPLETED,
+                  JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
+                  JobEventType.JOB_MAP_TASK_RESCHEDULED,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
 
           // Transitions from KILLED state
@@ -709,7 +712,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    * The only entry point to change the Job.
    */
   public void handle(JobEvent event) {
-    LOG.debug("Processing " + event.getJobId() + " of type " + event.getType());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing " + event.getJobId() + " of type "
+          + event.getType());
+    }
     try {
       writeLock.lock();
       JobStateInternal oldState = getInternalState();
@@ -822,11 +828,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       case KILLED:
         metrics.killedJob(this);
         break;
+      case ERROR:
       case FAILED:
         metrics.failedJob(this);
         break;
       case SUCCEEDED:
         metrics.completedJob(this);
+        break;
+      default:
+        throw new IllegalArgumentException("Illegal job state: " + finalState);
     }
     return finalState;
   }
@@ -1305,6 +1315,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       case REDUCE:
         this.finalReduceCounters.incrAllCounters(counters);
         break;
+      default:
+        throw new IllegalStateException("Task type neither map nor reduce: " + 
+            t.getType());
       }
       this.fullCounters.incrAllCounters(counters);
     }

@@ -152,4 +152,14 @@ class NameCache<K> {
     cache.put(name, name);
     lookups += useThreshold;
   }
+
+  public void reset() {
+    initialized = false;
+    cache.clear();
+    if (transientMap == null) {
+      transientMap = new HashMap<K, UseCount>();
+    } else {
+      transientMap.clear();
+    }
+  }
 }

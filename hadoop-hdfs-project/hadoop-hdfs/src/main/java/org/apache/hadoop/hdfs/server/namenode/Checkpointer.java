@@ -206,6 +206,7 @@ class Checkpointer extends Daemon {
     RemoteEditLogManifest manifest =
       getRemoteNamenodeProxy().getEditLogManifest(bnImage.getLastAppliedTxId() + 1);
 
+    boolean needReloadImage = false;
     if (!manifest.getLogs().isEmpty()) {
       RemoteEditLog firstRemoteLog = manifest.getLogs().get(0);
       // we don't have enough logs to roll forward using only logs. Need
@@ -218,13 +219,10 @@ class Checkpointer extends Daemon {
             bnStorage, true);
         bnImage.saveDigestAndRenameCheckpointImage(
             sig.mostRecentCheckpointTxId, downloadedHash);
-        
-        LOG.info("Loading image with txid " + sig.mostRecentCheckpointTxId);
-        File file = bnStorage.findImageFile(sig.mostRecentCheckpointTxId);
-        bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
+        lastApplied = sig.mostRecentCheckpointTxId;
+        needReloadImage = true;
       }
-      
-      lastApplied = bnImage.getLastAppliedTxId();
+
       if (firstRemoteLog.getStartTxId() > lastApplied + 1) {
         throw new IOException("No logs to roll forward from " + lastApplied);
       }
@@ -234,7 +232,12 @@ class Checkpointer extends Daemon {
         TransferFsImage.downloadEditsToStorage(
             backupNode.nnHttpAddress, log, bnStorage);
       }
-  
+
+      if(needReloadImage) {
+        LOG.info("Loading image with txid " + sig.mostRecentCheckpointTxId);
+        File file = bnStorage.findImageFile(sig.mostRecentCheckpointTxId);
+        bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
+      }
       rollForwardByApplyingLogs(manifest, bnImage, backupNode.getNamesystem());
     }
     
@@ -243,8 +246,9 @@ class Checkpointer extends Daemon {
     backupNode.namesystem.writeLock();
     try {
       backupNode.namesystem.dir.setReady();
-      backupNode.namesystem.setBlockTotal();
-      
+      if(backupNode.namesystem.getBlocksTotal() > 0) {
+        backupNode.namesystem.setBlockTotal();
+      }
       bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
       bnStorage.writeAll();
     } finally {
@@ -284,12 +288,12 @@ class Checkpointer extends Daemon {
   
     List<EditLogInputStream> editsStreams = Lists.newArrayList();    
     for (RemoteEditLog log : manifest.getLogs()) {
-      File f = dstStorage.findFinalizedEditsFile(
-          log.getStartTxId(), log.getEndTxId());
-      if (log.getStartTxId() > dstImage.getLastAppliedTxId()) {
+      if (log.getEndTxId() > dstImage.getLastAppliedTxId()) {
+        File f = dstStorage.findFinalizedEditsFile(
+            log.getStartTxId(), log.getEndTxId());
         editsStreams.add(new EditLogFileInputStream(f, log.getStartTxId(), 
                                                     log.getEndTxId(), true));
-       }
+      }
     }
     LOG.info("Checkpointer about to load edits from " +
         editsStreams.size() + " stream(s).");

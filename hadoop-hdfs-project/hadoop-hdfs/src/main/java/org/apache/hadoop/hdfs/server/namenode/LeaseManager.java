@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.now;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -38,8 +41,6 @@ import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
-import static org.apache.hadoop.util.Time.now;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files.   
@@ -135,7 +136,9 @@ public class LeaseManager {
   synchronized void removeLease(Lease lease, String src) {
     sortedLeasesByPath.remove(src);
     if (!lease.removePath(src)) {
-      LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(src + " not found in lease.paths (=" + lease.paths + ")");
+      }
     }
 
     if (!lease.hasPath()) {
@@ -338,7 +341,8 @@ public class LeaseManager {
     }
 
     final int len = overwrite.length();
-    for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPath)) {
+    for(Map.Entry<String, Lease> entry
+        : findLeaseWithPrefixPath(src, sortedLeasesByPath).entrySet()) {
       final String oldpath = entry.getKey();
       final Lease lease = entry.getValue();
       //overwrite must be a prefix of oldpath
@@ -353,7 +357,8 @@ public class LeaseManager {
   }
 
   synchronized void removeLeaseWithPrefixPath(String prefix) {
-    for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPath)) {
+    for(Map.Entry<String, Lease> entry
+        : findLeaseWithPrefixPath(prefix, sortedLeasesByPath).entrySet()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(LeaseManager.class.getSimpleName()
             + ".removeLeaseWithPrefixPath: entry=" + entry);
@@ -362,13 +367,13 @@ public class LeaseManager {
     }
   }
 
-  static private List<Map.Entry<String, Lease>> findLeaseWithPrefixPath(
+  static private Map<String, Lease> findLeaseWithPrefixPath(
       String prefix, SortedMap<String, Lease> path2lease) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
     }
 
-    List<Map.Entry<String, Lease>> entries = new ArrayList<Map.Entry<String, Lease>>();
+    final Map<String, Lease> entries = new HashMap<String, Lease>();
     final int srclen = prefix.length();
 
     for(Map.Entry<String, Lease> entry : path2lease.tailMap(prefix).entrySet()) {
@@ -377,7 +382,7 @@ public class LeaseManager {
         return entries;
       }
       if (p.length() == srclen || p.charAt(srclen) == Path.SEPARATOR_CHAR) {
-        entries.add(entry);
+        entries.put(entry.getKey(), entry.getValue());
       }
     }
     return entries;
@@ -399,16 +404,20 @@ public class LeaseManager {
     @Override
     public void run() {
       for(; shouldRunMonitor && fsnamesystem.isRunning(); ) {
+        boolean needSync = false;
         try {
           fsnamesystem.writeLockInterruptibly();
           try {
             if (!fsnamesystem.isInSafeMode()) {
-              checkLeases();
+              needSync = checkLeases();
             }
           } finally {
             fsnamesystem.writeUnlock();
+            // lease reassignments should to be sync'ed.
+            if (needSync) {
+              fsnamesystem.getEditLog().logSync();
+            }
           }
-  
   
           Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
         } catch(InterruptedException ie) {
@@ -420,13 +429,16 @@ public class LeaseManager {
     }
   }
 
-  /** Check the leases beginning from the oldest. */
-  private synchronized void checkLeases() {
+  /** Check the leases beginning from the oldest.
+   *  @return true is sync is needed.
+   */
+  private synchronized boolean checkLeases() {
+    boolean needSync = false;
     assert fsnamesystem.hasWriteLock();
     for(; sortedLeases.size() > 0; ) {
       final Lease oldest = sortedLeases.first();
       if (!oldest.expiredHardLimit()) {
-        return;
+        return needSync;
       }
 
       LOG.info(oldest + " has expired hard limit");
@@ -440,11 +452,18 @@ public class LeaseManager {
       oldest.getPaths().toArray(leasePaths);
       for(String p : leasePaths) {
         try {
-          if(fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) {
-            LOG.info("Lease recovery for " + p + " is complete. File closed.");
-            removing.add(p);
-          } else {
-            LOG.info("Started block recovery " + p + " lease " + oldest);
+          boolean completed = fsnamesystem.internalReleaseLease(oldest, p,
+              HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          if (LOG.isDebugEnabled()) {
+            if (completed) {
+              LOG.debug("Lease recovery for " + p + " is complete. File closed.");
+            } else {
+              LOG.debug("Started block recovery " + p + " lease " + oldest);
+            }
+          }
+          // If a lease recovery happened, we need to sync later.
+          if (!needSync && !completed) {
+            needSync = true;
           }
         } catch (IOException e) {
           LOG.error("Cannot release the path " + p + " in the lease "
@@ -457,6 +476,7 @@ public class LeaseManager {
         removeLease(oldest, p);
       }
     }
+    return needSync;
   }
 
   @Override

@@ -1335,6 +1335,8 @@ public abstract class TaskAttemptImpl implements
               taskAttempt.attemptId,
               TaskEventType.T_ATTEMPT_KILLED));
           break;
+        default:
+          LOG.error("Task final state is not FAILED or KILLED: " + finalState);
       }
       if (taskAttempt.getLaunchTime() != 0) {
         TaskAttemptUnsuccessfulCompletionEvent tauce =

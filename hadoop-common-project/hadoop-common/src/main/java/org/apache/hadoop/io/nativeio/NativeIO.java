@@ -19,8 +19,13 @@ package org.apache.hadoop.io.nativeio;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import org.apache.commons.logging.Log;
@@ -30,6 +35,8 @@ import org.apache.commons.logging.LogFactory;
  * These functions should generally be used alongside a fallback to another
  * more portable mechanism.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class NativeIO {
   // Flags for open() call from bits/fcntl.h
   public static final int O_RDONLY   =    00;
@@ -86,6 +93,8 @@ public class NativeIO {
     "hadoop.workaround.non.threadsafe.getpwuid";
   static final boolean WORKAROUND_NON_THREADSAFE_CALLS_DEFAULT = false;
 
+  private static long cacheTimeout = -1;
+
   static {
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       try {
@@ -96,6 +105,14 @@ public class NativeIO {
 
         initNative();
         nativeLoaded = true;
+
+        cacheTimeout = conf.getLong(
+          CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_KEY,
+          CommonConfigurationKeys.HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT) *
+          1000;
+        LOG.debug("Initialized cache for IDs to User/Group mapping with a" +
+          " cache timeout of " + cacheTimeout/1000 + " seconds.");
+
       } catch (Throwable t) {
         // This can happen if the user has an older version of libhadoop.so
         // installed - in this case we can continue without native IO
@@ -115,7 +132,7 @@ public class NativeIO {
   /** Wrapper around open(2) */
   public static native FileDescriptor open(String path, int flags, int mode) throws IOException;
   /** Wrapper around fstat(2) */
-  public static native Stat fstat(FileDescriptor fd) throws IOException;
+  private static native Stat fstat(FileDescriptor fd) throws IOException;
   /** Wrapper around chmod(2) */
   public static native void chmod(String path, int mode) throws IOException;
 
@@ -176,6 +193,7 @@ public class NativeIO {
    * Result type of the fstat call
    */
   public static class Stat {
+    private int ownerId, groupId;
     private String owner, group;
     private int mode;
 
@@ -196,9 +214,9 @@ public class NativeIO {
     public static final int S_IWUSR = 0000200;  /* write permission, owner */
     public static final int S_IXUSR = 0000100;  /* execute/search permission, owner */
 
-    Stat(String owner, String group, int mode) {
-      this.owner = owner;
-      this.group = group;
+    Stat(int ownerId, int groupId, int mode) {
+      this.ownerId = ownerId;
+      this.groupId = groupId;
       this.mode = mode;
     }
 
@@ -217,5 +235,62 @@ public class NativeIO {
     public int getMode() {
       return mode;
     }
+  }
+
+  static native String getUserName(int uid) throws IOException;
+
+  static native String getGroupName(int uid) throws IOException;
+
+  private static class CachedName {
+    final long timestamp;
+    final String name;
+
+    public CachedName(String name, long timestamp) {
+      this.name = name;
+      this.timestamp = timestamp;
+    }
+  }
+
+  private static final Map<Integer, CachedName> USER_ID_NAME_CACHE =
+    new ConcurrentHashMap<Integer, CachedName>();
+
+  private static final Map<Integer, CachedName> GROUP_ID_NAME_CACHE =
+    new ConcurrentHashMap<Integer, CachedName>();
+
+  private enum IdCache { USER, GROUP }
+
+  private static String getName(IdCache domain, int id) throws IOException {
+    Map<Integer, CachedName> idNameCache = (domain == IdCache.USER)
+      ? USER_ID_NAME_CACHE : GROUP_ID_NAME_CACHE;
+    String name;
+    CachedName cachedName = idNameCache.get(id);
+    long now = System.currentTimeMillis();
+    if (cachedName != null && (cachedName.timestamp + cacheTimeout) > now) {
+      name = cachedName.name;
+    } else {
+      name = (domain == IdCache.USER) ? getUserName(id) : getGroupName(id);
+      if (LOG.isDebugEnabled()) {
+        String type = (domain == IdCache.USER) ? "UserName" : "GroupName";
+        LOG.debug("Got " + type + " " + name + " for ID " + id +
+          " from the native implementation");
+      }
+      cachedName = new CachedName(name, now);
+      idNameCache.put(id, cachedName);
+    }
+    return name;
+  }
+
+  /**
+   * Returns the file stat for a file descriptor.
+   *
+   * @param fd file descriptor.
+   * @return the file descriptor file stat.
+   * @throws IOException thrown if there was an IO error while obtaining the file stat.
+   */
+  public static Stat getFstat(FileDescriptor fd) throws IOException {
+    Stat stat = fstat(fd);
+    stat.owner = getName(IdCache.USER, stat.ownerId);
+    stat.group = getName(IdCache.GROUP, stat.groupId);
+    return stat;
   }
 }

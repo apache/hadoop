@@ -29,7 +29,6 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -100,6 +99,10 @@ public class HsTasksBlock extends HtmlBlock {
     theadRow.th("Elapsed Time"); //Attempt
 
     TBODY<TABLE<Hamlet>> tbody = theadRow._()._().tbody();
+
+    // Write all the data into a JavaScript array of arrays for JQuery
+    // DataTables to display
+    StringBuilder tasksTableData = new StringBuilder("[\n");
     for (Task task : app.getJob().getTasks().values()) {
       if (type != null && task.getType() != type) {
         continue;
@@ -137,55 +140,36 @@ public class HsTasksBlock extends HtmlBlock {
         attemptFinishTime = ta.getFinishTime();
         attemptElapsed = ta.getElapsedTime();
       }
-
-      TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
-      row.
-          td().
-            br().$title(String.valueOf(info.getTaskNum()))._(). // sorting
-            a(url("task", tid), tid)._().
-          td(info.getState()).
-          td().
-            br().$title(String.valueOf(startTime))._().
-            _(Times.format(startTime))._().
-          td().
-            br().$title(String.valueOf(finishTime))._().
-            _(Times.format(finishTime))._().
-          td().
-            br().$title(String.valueOf(elapsed))._().
-            _(formatTime(elapsed))._().
-          td().
-            br().$title(String.valueOf(attemptStartTime))._().
-            _(Times.format(attemptStartTime))._();
-      if(type == TaskType.REDUCE) {
-        row.td().
-          br().$title(String.valueOf(shuffleFinishTime))._().
-          _(Times.format(shuffleFinishTime))._();
-        row.td().
-        br().$title(String.valueOf(sortFinishTime))._().
-        _(Times.format(sortFinishTime))._();
-      }
-      row.
-          td().
-            br().$title(String.valueOf(attemptFinishTime))._().
-            _(Times.format(attemptFinishTime))._();
+      tasksTableData.append("[\"")
+      .append("<a href='" + url("task", tid)).append("'>")
+      .append(tid).append("</a>\",\"")
+      .append(info.getState()).append("\",\"")
+      .append(startTime).append("\",\"")
+      .append(finishTime).append("\",\"")
+      .append(elapsed).append("\",\"")
+      .append(attemptStartTime).append("\",\"");
 
       if(type == TaskType.REDUCE) {
-        row.td().
-          br().$title(String.valueOf(elapsedShuffleTime))._().
-        _(formatTime(elapsedShuffleTime))._();
-        row.td().
-        br().$title(String.valueOf(elapsedSortTime))._().
-      _(formatTime(elapsedSortTime))._();
-        row.td().
-          br().$title(String.valueOf(elapsedReduceTime))._().
-        _(formatTime(elapsedReduceTime))._();
+        tasksTableData.append(shuffleFinishTime).append("\",\"")
+        .append(sortFinishTime).append("\",\"");
       }
-
-      row.td().
-        br().$title(String.valueOf(attemptElapsed))._().
-        _(formatTime(attemptElapsed))._();
-      row._();
+      tasksTableData.append(attemptFinishTime).append("\",\"");
+      if(type == TaskType.REDUCE) {
+        tasksTableData.append(elapsedShuffleTime).append("\",\"")
+        .append(elapsedSortTime).append("\",\"")
+        .append(elapsedReduceTime).append("\",\"");
+      }
+      tasksTableData.append(attemptElapsed).append("\"],\n");
     }
+    //Remove the last comma and close off the array of arrays
+    if(tasksTableData.charAt(tasksTableData.length() - 2) == ',') {
+      tasksTableData.delete(
+        tasksTableData.length()-2, tasksTableData.length()-1);
+    }
+    tasksTableData.append("]");
+    html.script().$type("text/javascript").
+    _("var tasksTableData=" + tasksTableData)._();
+    
     TR<TFOOT<TABLE<Hamlet>>> footRow = tbody._().tfoot().tr();
     footRow.th().input("search_init").$type(InputType.text).$name("task")
         .$value("ID")._()._().th().input("search_init").$type(InputType.text)

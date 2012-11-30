@@ -1076,6 +1076,9 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     if (targetPos > getFileLength()) {
       throw new IOException("Cannot seek after EOF");
     }
+    if (targetPos < 0) {
+      throw new IOException("Cannot seek to negative offset");
+    }
     if (closed) {
       throw new IOException("Stream is closed!");
     }

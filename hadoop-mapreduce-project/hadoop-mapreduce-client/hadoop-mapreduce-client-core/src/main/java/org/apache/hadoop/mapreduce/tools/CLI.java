@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapreduce.tools;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +53,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.logaggregation.LogDumper;
+
+import com.google.common.base.Charsets;
 
 /**
  * Interprets the map reduce cli options 
@@ -426,25 +429,25 @@ public class CLI extends Configured implements Tool {
           " <job-id> <task-attempt-id>]. " +
           " <task-attempt-id> is optional to get task attempt logs.");      
     } else {
-      System.err.printf(prefix + "<command> <args>\n");
-      System.err.printf("\t[-submit <job-file>]\n");
-      System.err.printf("\t[-status <job-id>]\n");
-      System.err.printf("\t[-counter <job-id> <group-name> <counter-name>]\n");
-      System.err.printf("\t[-kill <job-id>]\n");
+      System.err.printf(prefix + "<command> <args>%n");
+      System.err.printf("\t[-submit <job-file>]%n");
+      System.err.printf("\t[-status <job-id>]%n");
+      System.err.printf("\t[-counter <job-id> <group-name> <counter-name>]%n");
+      System.err.printf("\t[-kill <job-id>]%n");
       System.err.printf("\t[-set-priority <job-id> <priority>]. " +
-        "Valid values for priorities are: " + jobPriorityValues + "\n");
-      System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]\n");
-      System.err.printf("\t[-history <jobHistoryFile>]\n");
-      System.err.printf("\t[-list [all]]\n");
-      System.err.printf("\t[-list-active-trackers]\n");
-      System.err.printf("\t[-list-blacklisted-trackers]\n");
+        "Valid values for priorities are: " + jobPriorityValues + "%n");
+      System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]%n");
+      System.err.printf("\t[-history <jobHistoryFile>]%n");
+      System.err.printf("\t[-list [all]]%n");
+      System.err.printf("\t[-list-active-trackers]%n");
+      System.err.printf("\t[-list-blacklisted-trackers]%n");
       System.err.println("\t[-list-attempt-ids <job-id> <task-type> " +
         "<task-state>]. " +
         "Valid values for <task-type> are " + taskTypes + ". " +
         "Valid values for <task-state> are " + taskStates);
-      System.err.printf("\t[-kill-task <task-attempt-id>]\n");
-      System.err.printf("\t[-fail-task <task-attempt-id>]\n");
-      System.err.printf("\t[-logs <job-id> <task-attempt-id>]\n\n");
+      System.err.printf("\t[-kill-task <task-attempt-id>]%n");
+      System.err.printf("\t[-fail-task <task-attempt-id>]%n");
+      System.err.printf("\t[-logs <job-id> <task-attempt-id>]%n%n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }
@@ -584,7 +587,8 @@ public class CLI extends Configured implements Tool {
 
   public void displayJobList(JobStatus[] jobs) 
       throws IOException, InterruptedException {
-    displayJobList(jobs, new PrintWriter(System.out));
+    displayJobList(jobs, new PrintWriter(new OutputStreamWriter(System.out,
+        Charsets.UTF_8)));
   }
 
   @Private

@@ -30,7 +30,6 @@ public class TestTwoColumnLayout {
     public void index() {
       setTitle("Test the two column table layout");
       set("ui.accordion.id", "nav");
-      set("ui.themeswitcher.id", "themeswitcher");
       render(TwoColumnLayout.class);
     }
   }

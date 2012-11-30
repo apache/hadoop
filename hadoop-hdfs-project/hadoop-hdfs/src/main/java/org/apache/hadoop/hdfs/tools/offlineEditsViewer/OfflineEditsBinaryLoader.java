@@ -79,6 +79,7 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
       } catch (IOException e) {
         if (!recoveryMode) {
           // Tell the visitor to clean up, then re-throw the exception
+          LOG.error("Got IOException at position " + inputStream.getPosition());
           visitor.close(e);
           throw e;
         }
@@ -87,6 +88,7 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
       } catch (RuntimeException e) {
         if (!recoveryMode) {
           // Tell the visitor to clean up, then re-throw the exception
+          LOG.error("Got RuntimeException at position " + inputStream.getPosition());
           visitor.close(e);
           throw e;
         }

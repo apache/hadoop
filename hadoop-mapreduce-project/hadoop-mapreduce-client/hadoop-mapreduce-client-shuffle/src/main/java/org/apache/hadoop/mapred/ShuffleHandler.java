@@ -37,6 +37,7 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -45,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
@@ -106,6 +108,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
 
+import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ShuffleHandler extends AbstractService 
@@ -119,10 +122,16 @@ public class ShuffleHandler extends AbstractService
   public static final String SHUFFLE_READAHEAD_BYTES = "mapreduce.shuffle.readahead.bytes";
   public static final int DEFAULT_SHUFFLE_READAHEAD_BYTES = 4 * 1024 * 1024;
 
+  // pattern to identify errors related to the client closing the socket early
+  // idea borrowed from Netty SslHandler
+  private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
+      "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
+      Pattern.CASE_INSENSITIVE);
+
   private int port;
   private ChannelFactory selector;
   private final ChannelGroup accepted = new DefaultChannelGroup();
-  private HttpPipelineFactory pipelineFact;
+  protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
 
   /**
@@ -318,13 +327,17 @@ public class ShuffleHandler extends AbstractService
     }
   }
 
+  protected Shuffle getShuffle(Configuration conf) {
+    return new Shuffle(conf);
+  }
+
   class HttpPipelineFactory implements ChannelPipelineFactory {
 
     final Shuffle SHUFFLE;
     private SSLFactory sslFactory;
 
     public HttpPipelineFactory(Configuration conf) throws Exception {
-      SHUFFLE = new Shuffle(conf);
+      SHUFFLE = getShuffle(conf);
       if (conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
                           MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT)) {
         sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
@@ -464,7 +477,7 @@ public class ShuffleHandler extends AbstractService
       lastMap.addListener(ChannelFutureListener.CLOSE);
     }
 
-    private void verifyRequest(String appid, ChannelHandlerContext ctx,
+    protected void verifyRequest(String appid, ChannelHandlerContext ctx,
         HttpRequest request, HttpResponse response, URL requestUri)
         throws IOException {
       SecretKey tokenSecret = secretManager.retrieveTokenSecret(appid);
@@ -490,7 +503,8 @@ public class ShuffleHandler extends AbstractService
       SecureShuffleUtils.verifyReply(urlHashStr, enc_str, tokenSecret);
       // verification passed - encode the reply
       String reply =
-        SecureShuffleUtils.generateHash(urlHashStr.getBytes(), tokenSecret);
+        SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8), 
+            tokenSecret);
       response.setHeader(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);
       if (LOG.isDebugEnabled()) {
         int len = reply.length();
@@ -564,12 +578,12 @@ public class ShuffleHandler extends AbstractService
       return writeFuture;
     }
 
-    private void sendError(ChannelHandlerContext ctx,
+    protected void sendError(ChannelHandlerContext ctx,
         HttpResponseStatus status) {
       sendError(ctx, "", status);
     }
 
-    private void sendError(ChannelHandlerContext ctx, String message,
+    protected void sendError(ChannelHandlerContext ctx, String message,
         HttpResponseStatus status) {
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
       response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
@@ -588,6 +602,16 @@ public class ShuffleHandler extends AbstractService
       if (cause instanceof TooLongFrameException) {
         sendError(ctx, BAD_REQUEST);
         return;
+      } else if (cause instanceof IOException) {
+        if (cause instanceof ClosedChannelException) {
+          LOG.debug("Ignoring closed channel error", cause);
+          return;
+        }
+        String message = String.valueOf(cause.getMessage());
+        if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+          LOG.debug("Ignoring client socket close", cause);
+          return;
+        }
       }
 
       LOG.error("Shuffle error: ", cause);

@@ -45,23 +45,12 @@ import com.google.common.primitives.SignedBytes;
 @InterfaceAudience.Private
 abstract class INode implements Comparable<byte[]> {
   static final List<INode> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<INode>());
-  /**
-   *  The inode name is in java UTF8 encoding; 
-   *  The name in HdfsFileStatus should keep the same encoding as this.
-   *  if this encoding is changed, implicitly getFileInfo and listStatus in
-   *  clientProtocol are changed; The decoding at the client
-   *  side should change accordingly.
-   */
-  protected byte[] name;
-  protected INodeDirectory parent;
-  protected long modificationTime;
-  protected long accessTime;
 
-  /** Simple wrapper for two counters : 
-   *  nsCount (namespace consumed) and dsCount (diskspace consumed).
-   */
+  /** Wrapper of two counters for namespace consumed and diskspace consumed. */
   static class DirCounts {
+    /** namespace count */
     long nsCount = 0;
+    /** diskspace count */
     long dsCount = 0;
     
     /** returns namespace count */
@@ -74,10 +63,6 @@ abstract class INode implements Comparable<byte[]> {
     }
   }
   
-  //Only updated by updatePermissionStatus(...).
-  //Other codes should not modify it.
-  private long permission;
-
   private static enum PermissionStatusFormat {
     MODE(0, 16),
     GROUP(MODE.OFFSET + MODE.LENGTH, 25),
@@ -100,31 +85,68 @@ abstract class INode implements Comparable<byte[]> {
     long combine(long bits, long record) {
       return (record & ~MASK) | (bits << OFFSET);
     }
+
+    /** Encode the {@link PermissionStatus} to a long. */
+    static long toLong(PermissionStatus ps) {
+      long permission = 0L;
+      final int user = SerialNumberManager.INSTANCE.getUserSerialNumber(
+          ps.getUserName());
+      permission = USER.combine(user, permission);
+      final int group = SerialNumberManager.INSTANCE.getGroupSerialNumber(
+          ps.getGroupName());
+      permission = GROUP.combine(group, permission);
+      final int mode = ps.getPermission().toShort();
+      permission = MODE.combine(mode, permission);
+      return permission;
+    }
   }
 
-  INode(PermissionStatus permissions, long mTime, long atime) {
-    this.name = null;
-    this.parent = null;
-    this.modificationTime = mTime;
-    setAccessTime(atime);
-    setPermissionStatus(permissions);
+  /**
+   *  The inode name is in java UTF8 encoding; 
+   *  The name in HdfsFileStatus should keep the same encoding as this.
+   *  if this encoding is changed, implicitly getFileInfo and listStatus in
+   *  clientProtocol are changed; The decoding at the client
+   *  side should change accordingly.
+   */
+  private byte[] name = null;
+  /** 
+   * Permission encoded using {@link PermissionStatusFormat}.
+   * Codes other than {@link #clonePermissionStatus(INode)}
+   * and {@link #updatePermissionStatus(PermissionStatusFormat, long)}
+   * should not modify it.
+   */
+  private long permission = 0L;
+  protected INodeDirectory parent = null;
+  protected long modificationTime = 0L;
+  protected long accessTime = 0L;
+
+  private INode(byte[] name, long permission, INodeDirectory parent,
+      long modificationTime, long accessTime) {
+    this.name = name;
+    this.permission = permission;
+    this.parent = parent;
+    this.modificationTime = modificationTime;
+    this.accessTime = accessTime;
+  }
+
+  INode(byte[] name, PermissionStatus permissions, INodeDirectory parent,
+      long modificationTime, long accessTime) {
+    this(name, PermissionStatusFormat.toLong(permissions), parent,
+        modificationTime, accessTime);
+  }
+
+  INode(PermissionStatus permissions, long mtime, long atime) {
+    this(null, permissions, null, mtime, atime);
   }
 
   protected INode(String name, PermissionStatus permissions) {
-    this(permissions, 0L, 0L);
-    setLocalName(name);
+    this(DFSUtil.string2Bytes(name), permissions, null, 0L, 0L);
   }
   
-  /** copy constructor
-   * 
-   * @param other Other node to be copied
-   */
+  /** @param other Other node to be copied */
   INode(INode other) {
-    setLocalName(other.getLocalName());
-    this.parent = other.getParent();
-    setPermissionStatus(other.getPermissionStatus());
-    setModificationTime(other.getModificationTime());
-    setAccessTime(other.getAccessTime());
+    this(other.getLocalNameBytes(), other.permission, other.getParent(), 
+        other.getModificationTime(), other.getAccessTime());
   }
 
   /**
@@ -134,11 +156,9 @@ abstract class INode implements Comparable<byte[]> {
     return name.length == 0;
   }
 
-  /** Set the {@link PermissionStatus} */
-  protected void setPermissionStatus(PermissionStatus ps) {
-    setUser(ps.getUserName());
-    setGroup(ps.getGroupName());
-    setPermission(ps.getPermission());
+  /** Clone the {@link PermissionStatus}. */
+  void clonePermissionStatus(INode that) {
+    this.permission = that.permission;
   }
   /** Get the {@link PermissionStatus} */
   protected PermissionStatus getPermissionStatus() {
@@ -178,6 +198,13 @@ abstract class INode implements Comparable<byte[]> {
   /** Set the {@link FsPermission} of this {@link INode} */
   void setPermission(FsPermission permission) {
     updatePermissionStatus(PermissionStatusFormat.MODE, permission.toShort());
+  }
+
+  /**
+   * Check whether it's a file.
+   */
+  public boolean isFile() {
+    return false;
   }
 
   /**

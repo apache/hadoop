@@ -28,9 +28,11 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
@@ -51,6 +53,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
 
   private static MiniDFSCluster cluster;
   private static WebHdfsFileSystem webhdfs;
+  private static DistributedFileSystem dfs;
 
   
   @Override
@@ -89,6 +92,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     cluster = new MiniDFSCluster.Builder(conf).build();
     fc = FileContext.getFileContext(cluster.getURI(0));
     webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
+    dfs = cluster.getFileSystem();
   }
   
   @AfterClass
@@ -316,5 +320,28 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     assertEquals(0, fc.getFileLinkStatus(link).getReplication());
     assertEquals(2, fc.getFileStatus(link).getReplication());      
     assertEquals(2, fc.getFileStatus(file).getReplication());
+  }
+
+  @Test
+  /** Test craeteSymlink(..) with quota. */  
+  public void testQuota() throws IOException {
+    final Path dir = new Path(testBaseDir1());
+    dfs.setQuota(dir, 3, HdfsConstants.QUOTA_DONT_SET);
+
+    final Path file = new Path(dir, "file");
+    createAndWriteFile(file);
+
+    //creating the first link should succeed
+    final Path link1 = new Path(dir, "link1");
+    fc.createSymlink(file, link1, false);
+
+    try {
+      //creating the second link should fail with QuotaExceededException.
+      final Path link2 = new Path(dir, "link2");
+      fc.createSymlink(file, link2, false);
+      fail("Created symlink despite quota violation");
+    } catch(QuotaExceededException qee) {
+      //expected
+    }
   }
 }

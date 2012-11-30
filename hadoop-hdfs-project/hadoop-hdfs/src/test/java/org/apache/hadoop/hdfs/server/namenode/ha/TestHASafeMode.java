@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -34,6 +35,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -43,6 +45,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -603,9 +607,9 @@ public class TestHASafeMode {
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
     
     // get some blocks in the SBN's image
-    nn1.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    nn1.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     NameNodeAdapter.saveNamespace(nn1);
-    nn1.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    nn1.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
 
     // and some blocks in the edit logs
     DFSTestUtil.createFile(fs, new Path("/test2"), 15*BLOCK_SIZE, (short)3, 1L);
@@ -631,12 +635,83 @@ public class TestHASafeMode {
   }
   
   /**
+   * Make sure that when we transition to active in safe mode that we don't
+   * prematurely consider blocks missing just because not all DNs have reported
+   * yet.
+   * 
+   * This is a regression test for HDFS-3921.
+   */
+  @Test
+  public void testNoPopulatingReplQueuesWhenStartingActiveInSafeMode()
+      throws IOException {
+    DFSTestUtil.createFile(fs, new Path("/test"), 15*BLOCK_SIZE, (short)3, 1L);
+    
+    // Stop the DN so that when the NN restarts not all blocks wil be reported
+    // and the NN won't leave safe mode.
+    cluster.stopDataNode(1);
+    // Restart the namenode but don't wait for it to hear from all DNs (since
+    // one DN is deliberately shut down.)
+    cluster.restartNameNode(0, false);
+    cluster.transitionToActive(0);
+    
+    assertTrue(cluster.getNameNode(0).isInSafeMode());
+    // We shouldn't yet consider any blocks "missing" since we're in startup
+    // safemode, i.e. not all DNs may have reported.
+    assertEquals(0, cluster.getNamesystem(0).getMissingBlocksCount());
+  }
+  
+  /**
    * Print a big banner in the test log to make debug easier.
    */
   static void banner(String string) {
     LOG.info("\n\n\n\n================================================\n" +
         string + "\n" +
         "==================================================\n\n");
+  }
+  
+  /**
+   * DFS#isInSafeMode should check the ActiveNNs safemode in HA enabled cluster. HDFS-3507
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testIsInSafemode() throws Exception {
+    // Check for the standby nn without client failover.
+    NameNode nn2 = cluster.getNameNode(1);
+    assertTrue("nn2 should be in standby state", nn2.isStandbyState());
+
+    InetSocketAddress nameNodeAddress = nn2.getNameNodeAddress();
+    Configuration conf = new Configuration();
+    DistributedFileSystem dfs = new DistributedFileSystem();
+    try {
+      dfs.initialize(
+          URI.create("hdfs://" + nameNodeAddress.getHostName() + ":"
+              + nameNodeAddress.getPort()), conf);
+      dfs.isInSafeMode();
+      fail("StandBy should throw exception for isInSafeMode");
+    } catch (IOException e) {
+      if (e instanceof RemoteException) {
+        IOException sbExcpetion = ((RemoteException) e).unwrapRemoteException();
+        assertTrue("StandBy nn should not support isInSafeMode",
+            sbExcpetion instanceof StandbyException);
+      } else {
+        throw e;
+      }
+    } finally {
+      if (null != dfs) {
+        dfs.close();
+      }
+    }
+
+    // Check with Client FailOver
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    cluster.getNameNodeRpc(1).setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+    DistributedFileSystem dfsWithFailOver = (DistributedFileSystem) fs;
+    assertTrue("ANN should be in SafeMode", dfsWithFailOver.isInSafeMode());
+
+    cluster.getNameNodeRpc(1).setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
+    assertFalse("ANN should be out of SafeMode", dfsWithFailOver.isInSafeMode());
   }
 
 }

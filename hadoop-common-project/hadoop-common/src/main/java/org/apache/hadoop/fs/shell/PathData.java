@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
-import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
-import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
-import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.PathIsDirectoryException;
+import org.apache.hadoop.fs.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.PathNotFoundException;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).

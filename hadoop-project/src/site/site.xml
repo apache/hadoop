@@ -48,34 +48,36 @@
 
     <menu name="Common" inherit="top">
       <item name="Overview" href="index.html"/>
-      <item name="Single Node Setup" href="hadoop-yarn/hadoop-yarn-site/SingleCluster.html"/>
-      <item name="Cluster Setup" href="hadoop-yarn/hadoop-yarn-site/ClusterSetup.html"/>
-      <item name="Hadoop Commands" href="hadoop-project-dist/hadoop-common/commands_manual.html"/>
+      <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
+      <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
+      <item name="CLI Mini Cluster" href="hadoop-project-dist/hadoop-common/CLIMiniCluster.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
-      <item name="High Availability With QJM" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithQJM.html"/>
-      <item name="High Availability With NFS" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithNFS.html"/>
-      <item name="Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
-      <item name="WebHDFS REST API" href="hadoop-yarn/hadoop-yarn-site/WebHDFS.html"/>
+      <item name="High Availability With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
+      <item name="High Availability With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
+      <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
+      <item name="WebHDFS REST API" href="hadoop-project-dist/hadoop-hdfs/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
-      <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/hdfs_user_guide.html"/>
     </menu>
 
-    <menu name="Yarn/MapReduce" inherit="top">
+    <menu name="MapReduce" inherit="top">
+      <item name="Encrypted Shuffle" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html"/>
+    </menu>
+
+    <menu name="YARN" inherit="top">
       <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
-      <item name="Writing Yarn Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
+      <item name="Writing YARN Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
-      <item name="Encrypted Shuffle" href="hadoop-yarn/hadoop-yarn-site/EncryptedShuffle.html"/>
-      <item name="Yarn Commands" href="hadoop-yarn/hadoop-yarn-site/YarnCommands.html"/>
+      <item name="YARN Commands" href="hadoop-yarn/hadoop-yarn-site/YarnCommands.html"/>
     </menu>
 
-    <menu name="YARN REST API's" inherit="top">
+    <menu name="YARN REST APIs" inherit="top">
       <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/WebServicesIntro.html"/>
       <item name="Resource Manager" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html"/>
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
-      <item name="Mapreduce Application Master" href="hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html"/>
+      <item name="MR Application Master" href="hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html"/>
       <item name="History Server" href="hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html"/>
     </menu>
     
@@ -97,8 +99,8 @@
     <menu name="Configuration" inherit="top">
       <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
       <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
-      <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-common/yarn-default.xml"/>
       <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
+      <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-common/yarn-default.xml"/>
       <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>
     </menu>
 

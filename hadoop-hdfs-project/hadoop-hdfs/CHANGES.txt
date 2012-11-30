@@ -17,6 +17,9 @@ Trunk (Unreleased)
     reliably storing HDFS edit logs. See dedicated section below for breakdown
     of subtasks.
 
+    HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
+    (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -159,6 +162,20 @@ Trunk (Unreleased)
 
     HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
 
+    HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
+
+    HDFS-4206. Change the fields in INode and its subclasses to private.
+    (szetszwo)
+
+    HDFS-4215. Remove locking from addToParent(..) since it is used in image
+    loading, and add INode.isFile().  (szetszwo)
+
+    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
+    (suresh)
+
+    HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
+    FSDirectory and INodeDirectory. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -245,8 +262,11 @@ Trunk (Unreleased)
     HDFS-4115. TestHDFSCLI.testAll fails one test due to number format.
     (Trevor Robinson via suresh)
 
-    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
-    lastDeletedReport should be volatile. (Jing Zhao via suresh)
+    HDFS-4165. Faulty sanity check in FsDirectory.unprotectedSetQuota.
+    (Binglin Chang via suresh)
+
+    HDFS-4105. The SPNEGO user for secondary namenode should use the web 
+    keytab. (Arpit Gupta via jitendra)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
@@ -458,6 +478,18 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4046. Rename ChecksumTypeProto enum NULL since it is illegal in
     C/C++. (Binglin Chang via suresh)
 
+    HDFS-4048. Use ERROR instead of INFO for volume failure logs.
+    (Stephen Chu via eli)
+
+    HDFS-1322. Document umask in DistributedFileSystem#mkdirs javadocs.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-4038. Override toString() for BookKeeperEditLogInputStream.
+    (Vinay via umamahesh)
+
+    HDFS-4214. OfflineEditsViewer should print out the offset at which it
+    encountered an error. (Colin Patrick McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -567,6 +599,49 @@ Release 2.0.3-alpha - Unreleased
     (Kihwal Lee via shv)
 
     HDFS-3810. Implement format() for BKJM (Ivan Kelly via umamahesh)
+
+    HDFS-4162. Some malformed and unquoted HTML strings are returned from 
+    datanode web ui. (Darek Dagit via suresh)
+
+    HDFS-4164. fuse_dfs: add -lrt to the compiler command line on Linux.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3921. NN will prematurely consider blocks missing when entering active
+    state while still in safe mode. (atm)
+
+    HDFS-4106. BPServiceActor#lastHeartbeat, lastBlockReport and
+    lastDeletedReport should be volatile. (Jing Zhao via suresh)
+
+    HDFS-4139. fuse-dfs RO mode still allows file truncation.
+    (Colin Patrick McCabe via eli)    
+
+    HDFS-4104. dfs -test -d prints inappropriate error on nonexistent directory
+    (Andy Isaacson via daryn)
+
+    HDFS-3623. BKJM: zkLatchWaitTimeout hard coded to 6000. Make use of ZKSessionTimeout instead.
+    (umamahesh)
+
+    HDFS-4100. Fix all findbug security warings. (Liang Xie via eli)
+
+    HDFS-3507. DFS#isInSafeMode needs to execute only on Active NameNode.
+    (Vinay via atm)
+
+    HDFS-4156. Seeking to a negative position should throw an IOE.
+    (Eli Reisman via eli)
+
+    HDFS-4171. WebHDFS and HttpFs should accept only valid Unix user 
+    names. (tucu)
+
+    HDFS-4178. Shell scripts should not close stderr (Andy Isaacson via daryn)
+
+    HDFS-4179. BackupNode: allow reads, fix checkpointing, safeMode. (shv)
+
+    HDFS-4216. Do not ignore QuotaExceededException when adding symlinks.
+    (szetszwo)
+
+    HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
+    of it is undefined after the iteration or modifications of the map.
+    (szetszwo)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1945,7 +2020,7 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -1955,7 +2030,27 @@ Release 0.23.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+  BUG FIXES
+
+Release 0.23.5 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+    HDFS-4080. Add a separate logger for block state change logs to enable turning
+    off those logs. (Kihwal Lee via suresh)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
     HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
+
+    HDFS-3990.  NN's health report has severe performance problems (daryn)
+
+    HDFS-4181.  LeaseManager tries to double remove and prints extra messages
+    (Kihwal Lee via daryn)
 
   BUG FIXES
 
@@ -1971,7 +2066,15 @@ Release 0.23.5 - UNRELEASED
     HDFS-4090. getFileChecksum() result incompatible when called against
     zero-byte files. (Kihwal Lee via daryn)
 
-Release 0.23.4 - UNRELEASED
+    HDFS-4172. namenode does not URI-encode parameters when building URI for
+    datanode request (Derek Dagit via bobby)
+
+    HDFS-4182. SecondaryNameNode leaks NameCache entries (bobby)
+
+    HDFS-4186. logSync() is called with the write lock held while releasing
+    lease (Kihwal Lee via daryn)
+
+Release 0.23.4
 
   INCOMPATIBLE CHANGES
 

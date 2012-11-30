@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -81,7 +80,6 @@ public class RMAppImpl implements RMApp {
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
   private final String clientTokenStr;
-  private final ApplicationStore appStore;
   private final Dispatcher dispatcher;
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
@@ -213,7 +211,6 @@ public class RMAppImpl implements RMApp {
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
-      ApplicationStore appStore,
       YarnScheduler scheduler, ApplicationMasterService masterService, 
       long submitTime) {
 
@@ -227,7 +224,6 @@ public class RMAppImpl implements RMApp {
     this.queue = queue;
     this.submissionContext = submissionContext;
     this.clientTokenStr = clientTokenStr;
-    this.appStore = appStore;
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.submitTime = submitTime;
@@ -338,11 +334,6 @@ public class RMAppImpl implements RMApp {
     } finally {
       this.readLock.unlock();
     }
-  }
-
-  @Override
-  public ApplicationStore getApplicationStore() {
-    return this.appStore;
   }
 
   private YarnApplicationState createApplicationState(RMAppState rmAppState) {

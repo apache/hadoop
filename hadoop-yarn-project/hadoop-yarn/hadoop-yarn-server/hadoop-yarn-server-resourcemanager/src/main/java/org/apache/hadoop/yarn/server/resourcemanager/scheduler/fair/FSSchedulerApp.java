@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -103,21 +102,21 @@ public class FSSchedulerApp extends SchedulerApplication {
   private final RMContext rmContext;
   public FSSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
-      RMContext rmContext, ApplicationStore store) {
+      RMContext rmContext) {
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            activeUsersManager, store);
+            activeUsersManager);
     this.queue = queue;
   }
 
   public ApplicationId getApplicationId() {
-    return this.appSchedulingInfo.getApplicationId();
+    return appSchedulingInfo.getApplicationId();
   }
 
   @Override
   public ApplicationAttemptId getApplicationAttemptId() {
-    return this.appSchedulingInfo.getApplicationAttemptId();
+    return appSchedulingInfo.getApplicationAttemptId();
   }
   
   public void setAppSchedulable(AppSchedulable appSchedulable) {
@@ -129,7 +128,7 @@ public class FSSchedulerApp extends SchedulerApplication {
   }
 
   public String getUser() {
-    return this.appSchedulingInfo.getUser();
+    return appSchedulingInfo.getUser();
   }
 
   public synchronized void updateResourceRequests(
@@ -138,19 +137,19 @@ public class FSSchedulerApp extends SchedulerApplication {
   }
 
   public Map<String, ResourceRequest> getResourceRequests(Priority priority) {
-    return this.appSchedulingInfo.getResourceRequests(priority);
+    return appSchedulingInfo.getResourceRequests(priority);
   }
 
   public int getNewContainerId() {
-    return this.appSchedulingInfo.getNewContainerId();
+    return appSchedulingInfo.getNewContainerId();
   }
   
   public Collection<Priority> getPriorities() {
-    return this.appSchedulingInfo.getPriorities();
+    return appSchedulingInfo.getPriorities();
   }
 
   public ResourceRequest getResourceRequest(Priority priority, String nodeAddress) {
-    return this.appSchedulingInfo.getResourceRequest(priority, nodeAddress);
+    return appSchedulingInfo.getResourceRequest(priority, nodeAddress);
   }
 
   public synchronized int getTotalRequiredResources(Priority priority) {
@@ -158,7 +157,7 @@ public class FSSchedulerApp extends SchedulerApplication {
   }
   
   public Resource getResource(Priority priority) {
-    return this.appSchedulingInfo.getResource(priority);
+    return appSchedulingInfo.getResource(priority);
   }
 
   /**
@@ -167,11 +166,11 @@ public class FSSchedulerApp extends SchedulerApplication {
    */
   @Override
   public boolean isPending() {
-    return this.appSchedulingInfo.isPending();
+    return appSchedulingInfo.isPending();
   }
 
   public String getQueueName() {
-    return this.appSchedulingInfo.getQueueName();
+    return appSchedulingInfo.getQueueName();
   }
 
   /**
@@ -185,7 +184,7 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
     // Cleanup all scheduling information
-    this.appSchedulingInfo.stop(rmAppAttemptFinalState);
+    appSchedulingInfo.stop(rmAppAttemptFinalState);
   }
 
   @SuppressWarnings("unchecked")
@@ -196,7 +195,7 @@ public class FSSchedulerApp extends SchedulerApplication {
         getRMContainer(containerId);
     if (rmContainer == null) {
       // Some unknown container sneaked into the system. Kill it.
-      this.rmContext.getDispatcher().getEventHandler()
+      rmContext.getDispatcher().getEventHandler()
         .handle(new RMNodeCleanContainerEvent(nodeId, containerId));
       return;
     }
@@ -272,7 +271,7 @@ public class FSSchedulerApp extends SchedulerApplication {
   }
 
   synchronized public void addSchedulingOpportunity(Priority priority) {
-    this.schedulingOpportunities.setCount(priority,
+    schedulingOpportunities.setCount(priority,
         schedulingOpportunities.count(priority) + 1);
   }
 
@@ -282,19 +281,19 @@ public class FSSchedulerApp extends SchedulerApplication {
    * successfully did so.
    */
   synchronized public int getSchedulingOpportunities(Priority priority) {
-    return this.schedulingOpportunities.count(priority);
+    return schedulingOpportunities.count(priority);
   }
 
   synchronized void resetReReservations(Priority priority) {
-    this.reReservations.setCount(priority, 0);
+    reReservations.setCount(priority, 0);
   }
 
   synchronized void addReReservation(Priority priority) {
-    this.reReservations.add(priority);
+    reReservations.add(priority);
   }
 
   synchronized public int getReReservations(Priority priority) {
-    return this.reReservations.count(priority);
+    return reReservations.count(priority);
   }
 
   public synchronized int getNumReservedContainers(Priority priority) {
@@ -458,8 +457,8 @@ public class FSSchedulerApp extends SchedulerApplication {
    * @param priority The priority of the container scheduled.
    */
   synchronized public void resetSchedulingOpportunities(Priority priority) {
-    this.lastScheduledContainer.put(priority, System.currentTimeMillis());
-    this.schedulingOpportunities.setCount(priority, 0);
+    lastScheduledContainer.put(priority, System.currentTimeMillis());
+    schedulingOpportunities.setCount(priority, 0);
   }
 
   /**
@@ -494,14 +493,14 @@ public class FSSchedulerApp extends SchedulerApplication {
       rackLocalityThreshold;
 
     // Relax locality constraints once we've surpassed threshold.
-    if (this.getSchedulingOpportunities(priority) > (numNodes * threshold)) {
+    if (getSchedulingOpportunities(priority) > (numNodes * threshold)) {
       if (allowed.equals(NodeType.NODE_LOCAL)) {
         allowedLocalityLevel.put(priority, NodeType.RACK_LOCAL);
-        this.resetSchedulingOpportunities(priority);
+        resetSchedulingOpportunities(priority);
       }
       else if (allowed.equals(NodeType.RACK_LOCAL)) {
         allowedLocalityLevel.put(priority, NodeType.OFF_SWITCH);
-        this.resetSchedulingOpportunities(priority);
+        resetSchedulingOpportunities(priority);
       }
     }
     return allowedLocalityLevel.get(priority);
@@ -512,7 +511,7 @@ public class FSSchedulerApp extends SchedulerApplication {
       Priority priority, ResourceRequest request,
       Container container) {
     // Update allowed locality level
-    NodeType allowed = this.allowedLocalityLevel.get(priority);
+    NodeType allowed = allowedLocalityLevel.get(priority);
     if (allowed != null) {
       if (allowed.equals(NodeType.OFF_SWITCH) &&
           (type.equals(NodeType.NODE_LOCAL) ||
@@ -532,9 +531,9 @@ public class FSSchedulerApp extends SchedulerApplication {
     }
     
     // Create RMContainer
-    RMContainer rmContainer = new RMContainerImpl(container, this
-        .getApplicationAttemptId(), node.getNodeID(), this.rmContext
-        .getDispatcher().getEventHandler(), this.rmContext
+    RMContainer rmContainer = new RMContainerImpl(container, 
+        getApplicationAttemptId(), node.getNodeID(), rmContext
+        .getDispatcher().getEventHandler(), rmContext
         .getContainerAllocationExpirer());
 
     // Add it to allContainers list.

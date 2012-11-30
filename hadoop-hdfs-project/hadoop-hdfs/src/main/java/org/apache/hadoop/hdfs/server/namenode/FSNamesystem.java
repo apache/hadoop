@@ -660,13 +660,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
         editLogTailer.catchupDuringFailover();
-        blockManager.setPostponeBlocksFromFuture(false);
         
-        LOG.info("Reprocessing replication and invalidation queues");
+        blockManager.setPostponeBlocksFromFuture(false);
         blockManager.getDatanodeManager().markAllDatanodesStale();
         blockManager.clearQueues();
         blockManager.processAllPendingDNMessages();
-        blockManager.processMisReplicatedBlocks();
+        
+        if (!isInSafeMode() ||
+            (isInSafeMode() && safeMode.isPopulatingReplQueues())) {
+          LOG.info("Reprocessing replication and invalidation queues");
+          blockManager.processMisReplicatedBlocks();
+        }
         
         if (LOG.isDebugEnabled()) {
           LOG.debug("NameNode metadata after re-processing " +
@@ -1716,16 +1720,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       short replication, long blockSize) throws AccessControlException,
       SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
+    boolean skipSync = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
 
       startFileInternal(src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize);
+    } catch (StandbyException se) {
+      skipSync = true;
+      throw se;
     } finally {
       writeUnlock();
-    }
-    getEditLog().logSync();
+      // There might be transactions logged while trying to recover the lease.
+      // They need to be sync'ed even when an exception was thrown.
+      if (!skipSync) {
+        getEditLog().logSync();
+      }
+    } 
+
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
@@ -1906,6 +1919,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
+    boolean skipSync = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1927,8 +1941,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
   
       recoverLeaseInternal(inode, src, holder, clientMachine, true);
+    } catch (StandbyException se) {
+      skipSync = true;
+      throw se;
     } finally {
       writeUnlock();
+      // There might be transactions logged while trying to recover the lease.
+      // They need to be sync'ed even when an exception was thrown.
+      if (!skipSync) {
+        getEditLog().logSync();
+      }
     }
     return false;
   }
@@ -2031,6 +2053,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
+    boolean skipSync = false;
     if (!supportAppends) {
       throw new UnsupportedOperationException(
           "Append is not enabled on this NameNode. Use the " +
@@ -2044,10 +2067,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       lb = startFileInternal(src, null, holder, clientMachine, 
                         EnumSet.of(CreateFlag.APPEND), 
                         false, blockManager.maxReplication, 0);
+    } catch (StandbyException se) {
+      skipSync = true;
+      throw se;
     } finally {
       writeUnlock();
+      // There might be transactions logged while trying to recover the lease.
+      // They need to be sync'ed even when an exception was thrown.
+      if (!skipSync) {
+        getEditLog().logSync();
+      }
     }
-    getEditLog().logSync();
     if (lb != null) {
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
@@ -2979,7 +3009,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *         RecoveryInProgressException if lease recovery is in progress.<br>
    *         IOException in case of an error.
    * @return true  if file has been successfully finalized and closed or 
-   *         false if block recovery has been initiated
+   *         false if block recovery has been initiated. Since the lease owner
+   *         has been changed and logged, caller should call logSync().
    */
   boolean internalReleaseLease(Lease lease, String src, 
       String recoveryLeaseHolder) throws AlreadyBeingCreatedException, 
@@ -3100,6 +3131,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     if(newHolder == null)
       return lease;
+    // The following transaction is not synced. Make sure it's sync'ed later.
     logReassignLease(lease.getHolder(), src, newHolder);
     return reassignLeaseInternal(lease, src, newHolder, pendingFile);
   }
@@ -3962,7 +3994,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // of the number of total blocks in the system.
         this.shouldIncrementallyTrackBlocks = true;
       }
-      
+      if(blockSafe < 0)
+        this.blockSafe = 0;
       checkMode();
     }
       
@@ -5199,13 +5232,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   private void logReassignLease(String leaseHolder, String src,
       String newHolder) {
-    writeLock();
-    try {
-      getEditLog().logReassignLease(leaseHolder, src, newHolder);
-    } finally {
-      writeUnlock();
-    }
-    getEditLog().logSync();
+    assert hasWriteLock();
+    getEditLog().logReassignLease(leaseHolder, src, newHolder);
   }
   
   /**

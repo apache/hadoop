@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -295,28 +295,6 @@ public class ResourceTrackerService extends AbstractService implements
 
     nodeHeartBeatResponse.setHeartbeatResponse(latestResponse);
     return nodeHeartBeatResponse;
-  }
-
-  public void recover(RMState state) {
-//
-//    List<RMNode> nodeManagers = state.getStoredNodeManagers();
-//    for (RMNode nm : nodeManagers) {
-//      createNewNode(nm.getNodeID(), nm.getNodeHostName(), nm
-//          .getCommandPort(), nm.getHttpPort(), nm.getNode(), nm
-//          .getTotalCapability());
-//    }
-//    for (Map.Entry<ApplicationId, ApplicationInfo> entry : state
-//        .getStoredApplications().entrySet()) {
-//      List<Container> containers = entry.getValue().getContainers();
-//      List<Container> containersToAdd = new ArrayList<Container>();
-//      for (Container c : containers) {
-//        RMNode containerNode = this.rmContext.getNodesCollection()
-//            .getNodeInfo(c.getNodeId());
-//        containersToAdd.add(c);
-//        containerNode.allocateContainer(entry.getKey(), containersToAdd);
-//        containersToAdd.clear();
-//      }
-//    }
   }
 
   /**

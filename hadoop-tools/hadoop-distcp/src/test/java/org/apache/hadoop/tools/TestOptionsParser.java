@@ -275,6 +275,13 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     Assert.assertEquals(options.getMaxMaps(), 1);
 
+    options = OptionsParser.parse(new String[] {
+        "-m",
+        "0",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertEquals(options.getMaxMaps(), 1);
+
     try {
       OptionsParser.parse(new String[] {
           "-m",

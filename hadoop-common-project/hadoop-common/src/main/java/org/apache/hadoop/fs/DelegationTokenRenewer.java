@@ -24,6 +24,8 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -33,8 +35,11 @@ import org.apache.hadoop.util.Time;
  * A daemon thread that waits for the next file system to renew.
  */
 @InterfaceAudience.Private
-public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewer.Renewable>
+public class DelegationTokenRenewer
     extends Thread {
+  private static final Log LOG = LogFactory
+      .getLog(DelegationTokenRenewer.class);
+
   /** The renewable interface used by the renewer. */
   public interface Renewable {
     /** @return the renew token. */
@@ -93,7 +98,7 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
      * @param newTime the new time
      */
     private void updateRenewalTime() {
-      renewalTime = RENEW_CYCLE + Time.now();
+      renewalTime = renewCycle + Time.now();
     }
 
     /**
@@ -134,34 +139,82 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
   }
 
   /** Wait for 95% of a day between renewals */
-  private static final int RENEW_CYCLE = 24 * 60 * 60 * 950;
+  private static final int RENEW_CYCLE = 24 * 60 * 60 * 950; 
 
-  private DelayQueue<RenewAction<T>> queue = new DelayQueue<RenewAction<T>>();
+  @InterfaceAudience.Private
+  protected static int renewCycle = RENEW_CYCLE;
 
-  public DelegationTokenRenewer(final Class<T> clazz) {
+  /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
+  private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
+  
+  /**
+   * Create the singleton instance. However, the thread can be started lazily in
+   * {@link #addRenewAction(FileSystem)}
+   */
+  private static DelegationTokenRenewer INSTANCE = null;
+
+  private DelegationTokenRenewer(final Class<? extends FileSystem> clazz) {
     super(clazz.getSimpleName() + "-" + DelegationTokenRenewer.class.getSimpleName());
     setDaemon(true);
   }
 
-  /** Add a renew action to the queue. */
-  public void addRenewAction(final T fs) {
-    queue.add(new RenewAction<T>(fs));
+  public static synchronized DelegationTokenRenewer getInstance() {
+    if (INSTANCE == null) {
+      INSTANCE = new DelegationTokenRenewer(FileSystem.class);
+    }
+    return INSTANCE;
   }
 
+  /** Add a renew action to the queue. */
+  public synchronized <T extends FileSystem & Renewable> void addRenewAction(final T fs) {
+    queue.add(new RenewAction<T>(fs));
+    if (!isAlive()) {
+      start();
+    }
+  }
+
+  /**
+   * Remove the associated renew action from the queue
+   * 
+   * @throws IOException
+   */
+  public synchronized <T extends FileSystem & Renewable> void removeRenewAction(
+      final T fs) throws IOException {
+    for (RenewAction<?> action : queue) {
+      if (action.weakFs.get() == fs) {
+        try {
+          fs.getRenewToken().cancel(fs.getConf());
+        } catch (InterruptedException ie) {
+          LOG.error("Interrupted while canceling token for " + fs.getUri()
+              + "filesystem");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(ie.getStackTrace());
+          }
+        }
+        queue.remove(action);
+        return;
+      }
+    }
+  }
+
+  @SuppressWarnings("static-access")
   @Override
   public void run() {
     for(;;) {
-      RenewAction<T> action = null;
+      RenewAction<?> action = null;
       try {
-        action = queue.take();
-        if (action.renew()) {
-          action.updateRenewalTime();
-          queue.add(action);
+        synchronized (this) {
+          action = queue.take();
+          if (action.renew()) {
+            action.updateRenewalTime();
+            queue.add(action);
+          }
         }
       } catch (InterruptedException ie) {
         return;
       } catch (Exception ie) {
-        T.LOG.warn("Failed to renew token, action=" + action, ie);
+        action.weakFs.get().LOG.warn("Failed to renew token, action=" + action,
+            ie);
       }
     }
   }

@@ -19,9 +19,10 @@ package org.apache.hadoop.examples.pi;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
@@ -45,6 +46,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.base.Charsets;
 
 /** Utility methods */
 public class Util {
@@ -81,7 +84,7 @@ public class Util {
       final long t = System.currentTimeMillis();
       final long delta = t - (isAccumulative? start: previous);
       if (s != null) {
-        out.format("%15dms (=%-15s: %s\n", delta, millis2String(delta) + ")", s);
+        out.format("%15dms (=%-15s: %s%n", delta, millis2String(delta) + ")", s);
         out.flush();
       }
       previous = t;
@@ -203,16 +206,16 @@ public class Util {
       throw new IllegalArgumentException("dir (=" + dir + ") is not a directory.");
   }
 
-  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("-yyyyMMdd-HHmmssSSS");
   /** Create a writer of a local file. */
   public static PrintWriter createWriter(File dir, String prefix) throws IOException {
     checkDirectory(dir);
-
+    
+    SimpleDateFormat dateFormat = new SimpleDateFormat("-yyyyMMdd-HHmmssSSS");
     for(;;) {
       final File f = new File(dir,
-          prefix + DATE_FORMAT.format(new Date(System.currentTimeMillis())) + ".txt");
+          prefix + dateFormat.format(new Date(System.currentTimeMillis())) + ".txt");
       if (!f.exists())
-        return new PrintWriter(new FileWriter(f));
+        return new PrintWriter(new OutputStreamWriter(new FileOutputStream(f), Charsets.UTF_8));
 
       try {Thread.sleep(10);} catch (InterruptedException e) {}
     }
@@ -286,7 +289,8 @@ public class Util {
     final List<TaskResult> results = new ArrayList<TaskResult>();
     for(FileStatus status : fs.listStatus(outdir)) {
       if (status.getPath().getName().startsWith("part-")) {
-        final BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(status.getPath())));
+        final BufferedReader in = new BufferedReader(
+            new InputStreamReader(fs.open(status.getPath()), Charsets.UTF_8));
         try {
           for(String line; (line = in.readLine()) != null; )
             results.add(TaskResult.valueOf(line));
@@ -305,7 +309,7 @@ public class Util {
   static void writeResults(String name, List<TaskResult> results, FileSystem fs, String dir) throws IOException {
     final Path outfile = new Path(dir, name + ".txt");
     Util.out.println(name + "> writing results to " + outfile);
-    final PrintStream out = new PrintStream(fs.create(outfile), true);
+    final PrintWriter out = new PrintWriter(new OutputStreamWriter(fs.create(outfile), Charsets.UTF_8), true);
     try {
       for(TaskResult r : results)
         out.println(r);

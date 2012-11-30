@@ -77,12 +77,11 @@ class FairSchedulerEventLog {
   boolean init(FairSchedulerConfiguration conf) {
     try {
       logDir = conf.getEventlogDir();
-      Path logDirPath = new Path(logDir);
-      FileSystem fs = logDirPath.getFileSystem(conf);
-      if (!fs.exists(logDirPath)) {
-        if (!fs.mkdirs(logDirPath)) {
+      File logDirFile = new File(logDir);
+      if (!logDirFile.exists()) {
+        if (!logDirFile.mkdirs()) {
           throw new IOException(
-              "Mkdirs failed to create " + logDirPath.toString());
+              "Mkdirs failed to create " + logDirFile.toString());
         }
       }
       String username = System.getProperty("user.name");
@@ -141,5 +140,9 @@ class FairSchedulerEventLog {
 
   synchronized boolean isEnabled() {
     return !logDisabled;
+  }
+  
+  public String getLogFile() {
+    return logFile;
   }
 }

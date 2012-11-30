@@ -219,7 +219,6 @@ public abstract class CombineFileInputFormat<K, V>
       Path p = fs.makeQualified(paths[i]);
       newpaths.add(p);
     }
-    paths = null;
 
     // In one single iteration, process all the paths in a single pool.
     // Processing one pool at a time ensures that a split contains paths

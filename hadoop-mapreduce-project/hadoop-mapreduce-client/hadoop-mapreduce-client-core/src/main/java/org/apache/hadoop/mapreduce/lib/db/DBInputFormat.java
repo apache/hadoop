@@ -30,6 +30,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -58,6 +60,8 @@ import org.apache.hadoop.conf.Configuration;
 public class DBInputFormat<T extends DBWritable>
     extends InputFormat<LongWritable, T> implements Configurable {
 
+  private static final Log LOG = LogFactory.getLog(DBInputFormat.class);
+  
   private String dbProductName = "DEFAULT";
 
   /**
@@ -354,6 +358,8 @@ public class DBInputFormat<T extends DBWritable>
         this.connection.close();
         this.connection = null;
       }
-    } catch (SQLException sqlE) { } // ignore exception on close.
+    } catch (SQLException sqlE) {
+      LOG.debug("Exception on close", sqlE);
+    }
   }
 }

@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
+import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.Clock;
@@ -344,21 +345,24 @@ public class TestHsWebServices extends JerseyTest {
   }
 
   public void verifyHsInfoGeneric(String hadoopVersionBuiltOn,
-      String hadoopBuildVersion, String hadoopVersion) {
+      String hadoopBuildVersion, String hadoopVersion, long startedon) {
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
         VersionInfo.getDate(), hadoopVersionBuiltOn);
     WebServicesTestUtils.checkStringMatch("hadoopBuildVersion",
         VersionInfo.getBuildVersion(), hadoopBuildVersion);
     WebServicesTestUtils.checkStringMatch("hadoopVersion",
         VersionInfo.getVersion(), hadoopVersion);
+    assertEquals("startedOn doesn't match: ",
+        JobHistoryServer.historyServerTimeStamp, startedon);
   }
 
   public void verifyHSInfo(JSONObject info, TestAppContext ctx)
       throws JSONException {
-    assertEquals("incorrect number of elements", 3, info.length());
+    assertEquals("incorrect number of elements", 4, info.length());
 
     verifyHsInfoGeneric(info.getString("hadoopVersionBuiltOn"),
-        info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"));
+        info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
+        info.getLong("startedOn"));
   }
 
   public void verifyHSInfoXML(String xml, TestAppContext ctx)
@@ -376,7 +380,8 @@ public class TestHsWebServices extends JerseyTest {
       verifyHsInfoGeneric(
           WebServicesTestUtils.getXmlString(element, "hadoopVersionBuiltOn"),
           WebServicesTestUtils.getXmlString(element, "hadoopBuildVersion"),
-          WebServicesTestUtils.getXmlString(element, "hadoopVersion"));
+          WebServicesTestUtils.getXmlString(element, "hadoopVersion"),
+          WebServicesTestUtils.getXmlLong(element, "startedOn"));
     }
   }
 

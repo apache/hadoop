@@ -133,14 +133,16 @@ public class TestLeaseRecovery {
       filestr = "/foo.safemode";
       filepath = new Path(filestr);
       dfs.create(filepath, (short)1);
-      cluster.getNameNodeRpc().setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().setSafeMode(
+          HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
       assertTrue(dfs.dfs.exists(filestr));
       DFSTestUtil.waitReplication(dfs, filepath, (short)1);
       waitLeaseRecovery(cluster);
       // verify that we still cannot recover the lease
       LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
       assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
-      cluster.getNameNodeRpc().setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      cluster.getNameNodeRpc().setSafeMode(
+          HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
     }
     finally {
       if (cluster != null) {cluster.shutdown();}

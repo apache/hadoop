@@ -27,6 +27,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
 
+import com.google.common.base.Charsets;
+
 /** 
  * An {@link InputFormat} for plain text files.  Files are broken into lines.
  * Either linefeed or carriage-return are used to signal end of line.  Keys are
@@ -59,7 +61,9 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text>
     reporter.setStatus(genericSplit.toString());
     String delimiter = job.get("textinputformat.record.delimiter");
     byte[] recordDelimiterBytes = null;
-    if (null != delimiter) recordDelimiterBytes = delimiter.getBytes();
+    if (null != delimiter) {
+      recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);
+    }
     return new LineRecordReader(job, (FileSplit) genericSplit,
         recordDelimiterBytes);
   }

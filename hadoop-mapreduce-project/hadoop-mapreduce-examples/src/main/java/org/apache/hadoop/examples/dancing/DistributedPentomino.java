@@ -33,6 +33,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.*;
 
+import com.google.common.base.Charsets;
+
 /**
  * Launch a distributed pentomino solver.
  * It generates a complete list of prefixes of length N with each unique prefix
@@ -137,9 +139,9 @@ public class DistributedPentomino extends Configured implements Tool {
     fs.mkdirs(dir);
     List<int[]> splits = pent.getSplits(depth);
     Path input = new Path(dir, "part1");
-    PrintStream file = 
-      new PrintStream(new BufferedOutputStream
-                      (fs.create(input), 64*1024));
+    PrintWriter file = 
+      new PrintWriter(new OutputStreamWriter(new BufferedOutputStream
+                      (fs.create(input), 64*1024), Charsets.UTF_8));
     for(int[] prefix: splits) {
       for(int i=0; i < prefix.length; ++i) {
         if (i != 0) {

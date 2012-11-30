@@ -23,7 +23,6 @@ import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 
 /**
  * Perform shell-like file tests 
@@ -91,8 +90,6 @@ class Test extends FsCommand {
 
   @Override
   protected void processNonexistentPath(PathData item) throws IOException {
-    // NOTE: errors for FNF is not how the shell works!
-    if (flag != 'e') displayError(new PathNotFoundException(item.toString()));
     exitCode = 1;
   }
 }

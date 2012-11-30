@@ -600,6 +600,8 @@ public class JobHistoryEventHandler extends AbstractService
       summary.setJobFinishTime(juce.getFinishTime());
       setSummarySlotSeconds(summary, context.getJob(jobId).getAllCounters());
       break;
+    default:
+      break;
     }
   }
 
