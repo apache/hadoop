@@ -53,6 +53,22 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   capacity between the running apps. queues can also be given weights to share 
   the cluster non-proportionally in the config file.
 
+  The fair scheduler supports hierarchical queues. All queues descend from a
+  queue named "root". Available resources are distributed among the children
+  of the root queue in the typical fair scheduling fashion. Then, the children
+  distribute the resources assigned to them to their children in the same
+  fashion.  Applications may only be scheduled on leaf queues. Queues can be
+  specified as children of other queues by placing them as sub-elements of 
+  their parents in the fair scheduler configuration file.
+  
+  A queue's name starts with the names of its parents, with periods as
+  separators.  So a queue named "queue1" under the root named, would be 
+  referred to as "root.queue1", and a queue named "queue2" under a queue
+  named "parent1" would be referred to as "root.parent1.queue2". When
+  referring to queues, the root part of the name is optional, so queue1 could
+  be referred to as just "queue1", and a queue2 could be referred to as just 
+  "parent1.queue2".
+
   In addition to providing fair sharing, the Fair Scheduler allows assigning 
   guaranteed minimum shares to queues, which is useful for ensuring that 
   certain users, groups or production applications always get sufficient 
@@ -163,11 +179,14 @@ Allocation file format
 <?xml version="1.0"?>
 <allocations>
   <queue name="sample_queue">
-    <minResources>100000</minResources>
-    <maxResources>900000</maxResources>
+    <minResources>10000</minResources>
+    <maxResources>90000</maxResources>
     <maxRunningApps>50</maxRunningApps>
     <weight>2.0</weight>
     <schedulingMode>fair</schedulingMode>
+    <queue name="sample_sub_queue">
+      <minResources>5000</minResources>
+    </queue>
   </queue>
   <user name="sample_user">
     <maxRunningApps>30</maxRunningApps>

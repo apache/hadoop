@@ -50,10 +50,10 @@ public class AppSchedulable extends Schedulable {
   private long startTime;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static final Log LOG = LogFactory.getLog(AppSchedulable.class);
-  private FSQueue queue;
+  private FSLeafQueue queue;
   private RMContainerTokenSecretManager containerTokenSecretManager;
 
-  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSQueue queue) {
+  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSLeafQueue queue) {
     this.scheduler = scheduler;
     this.app = app;
     this.startTime = System.currentTimeMillis();
@@ -97,9 +97,6 @@ public class AppSchedulable extends Schedulable {
   }
 
   @Override
-  public void redistributeShare() {}
-
-  @Override
   public Resource getResourceUsage() {
     return app.getCurrentConsumption();
   }
@@ -114,7 +111,7 @@ public class AppSchedulable extends Schedulable {
    * Get metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
-    return queue.getQueueSchedulable().getMetrics();
+    return queue.getMetrics();
   }
 
   @Override

@@ -92,12 +92,6 @@ abstract class Schedulable {
   public abstract void updateDemand();
 
   /**
-   * Distribute the fair share assigned to this Schedulable among its
-   * children (used in queues where the internal scheduler is fair sharing).
-   */
-  public abstract void redistributeShare();
-
-  /**
    * Assign a container on this node if possible, and return the amount of
    * resources assigned. If {@code reserved} is true, it means a reservation
    * already exists on this node, and the schedulable should fulfill that
