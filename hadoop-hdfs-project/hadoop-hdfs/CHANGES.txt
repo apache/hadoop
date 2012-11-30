@@ -639,6 +639,10 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4216. Do not ignore QuotaExceededException when adding symlinks.
     (szetszwo)
 
+    HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
+    of it is undefined after the iteration or modifications of the map.
+    (szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
