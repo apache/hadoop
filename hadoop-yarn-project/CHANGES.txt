@@ -15,6 +15,9 @@ Release 0.23.6 - UNRELEASED
     YARN-204. test coverage for org.apache.hadoop.tools (Aleksey Gorshkov via
     bobby)
 
+    YARN-251. Proxy URI generation fails for blank tracking URIs (Tom White
+    via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

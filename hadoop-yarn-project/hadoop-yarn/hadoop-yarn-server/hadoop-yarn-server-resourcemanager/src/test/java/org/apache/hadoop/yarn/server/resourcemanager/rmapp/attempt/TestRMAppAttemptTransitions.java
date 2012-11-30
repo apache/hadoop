@@ -504,6 +504,14 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(amContainer, diagnostics);
   }
 
+
+  @Test
+  public void testNoTrackingUrl() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "");
+  }
+
   @Test
   public void testRunningToFailed() {
     Container amContainer = allocateApplicationAttempt();
