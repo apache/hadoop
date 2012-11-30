@@ -10,6 +10,9 @@ Release 1.1.2 - 2012.11.18
 
   BUG FIXES
 
+    HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
+    principal. (atm)
+
     MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
     via atm)
 

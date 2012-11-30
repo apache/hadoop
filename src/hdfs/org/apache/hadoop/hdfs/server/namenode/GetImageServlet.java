@@ -121,7 +121,7 @@ public class GetImageServlet extends HttpServlet {
           return UserGroupInformation
           .loginUserFromKeytabAndReturnUGI(
                   SecurityUtil.getServerPrincipal(conf
-                      .get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode
+                      .get(DFS_NAMENODE_USER_NAME_KEY), NameNode
                       .getAddress(conf).getHostName()),
               conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
         }
@@ -144,14 +144,8 @@ public class GetImageServlet extends HttpServlet {
     }
     
     String[] validRequestors = {
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode.getAddress(
-            conf).getHostName()),
         SecurityUtil.getServerPrincipal(conf.get(DFS_NAMENODE_USER_NAME_KEY),
             NameNode.getAddress(conf).getHostName()),
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-            SecondaryNameNode.getHttpAddress(conf).getHostName()),
         SecurityUtil.getServerPrincipal(conf
             .get(DFS_SECONDARY_NAMENODE_USER_NAME_KEY), SecondaryNameNode
             .getHttpAddress(conf).getHostName()) };
