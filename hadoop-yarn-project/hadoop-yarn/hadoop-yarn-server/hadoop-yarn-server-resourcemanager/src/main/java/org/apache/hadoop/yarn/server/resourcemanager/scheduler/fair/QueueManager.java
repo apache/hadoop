@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -52,6 +53,7 @@ import org.xml.sax.SAXException;
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
  * such as guaranteed share allocations, from the fair scheduler config file.
+ * 
  */
 @Private
 @Unstable
@@ -59,6 +61,8 @@ public class QueueManager {
   public static final Log LOG = LogFactory.getLog(
     QueueManager.class.getName());
 
+  public static final String ROOT_QUEUE = "root";
+  
   /** Time to wait between checks of the allocation file */
   public static final long ALLOC_RELOAD_INTERVAL = 10 * 1000;
 
@@ -76,7 +80,10 @@ public class QueueManager {
                             // used) or a String to specify an absolute path (if
                             // mapred.fairscheduler.allocation.file is used).
 
-  private Map<String, FSQueue> queues = new HashMap<String, FSQueue>();
+  private final Collection<FSLeafQueue> leafQueues = 
+      new CopyOnWriteArrayList<FSLeafQueue>();
+  private final Map<String, FSQueue> queues = new HashMap<String, FSQueue>();
+  private FSParentQueue rootQueue;
 
   private volatile QueueManagerInfo info = new QueueManagerInfo();
   
@@ -87,10 +94,17 @@ public class QueueManager {
   public QueueManager(FairScheduler scheduler) {
     this.scheduler = scheduler;
   }
+  
+  public FSParentQueue getRootQueue() {
+    return rootQueue;
+  }
 
   public void initialize() throws IOException, SAXException,
       AllocationConfigurationException, ParserConfigurationException {
     FairSchedulerConfiguration conf = scheduler.getConf();
+    rootQueue = new FSParentQueue("root", this, scheduler, null);
+    queues.put(rootQueue.getName(), rootQueue);
+    
     this.allocFile = conf.getAllocationFile();
     if (allocFile == null) {
       // No allocation file specified in jobconf. Use the default allocation
@@ -106,21 +120,106 @@ public class QueueManager {
     lastSuccessfulReload = scheduler.getClock().getTime();
     lastReloadAttempt = scheduler.getClock().getTime();
     // Create the default queue
-    getQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+    getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
   }
-
+  
   /**
-   * Get a queue by name, creating it if necessary
+   * Get a queue by name, creating it if necessary.  If the queue
+   * is not or can not be a leaf queue, i.e. it already exists as a parent queue,
+   * or one of the parents in its name is already a leaf queue, null is returned.
+   * 
+   * The root part of the name is optional, so a queue underneath the root 
+   * named "queue1" could be referred to  as just "queue1", and a queue named
+   * "queue2" underneath a parent named "parent1" that is underneath the root 
+   * could be referred to as just "parent1.queue2".
    */
-  public FSQueue getQueue(String name) {
+  public FSLeafQueue getLeafQueue(String name) {
+    if (!name.startsWith(ROOT_QUEUE + ".")) {
+      name = ROOT_QUEUE + "." + name;
+    }
     synchronized (queues) {
       FSQueue queue = queues.get(name);
       if (queue == null) {
-        queue = new FSQueue(scheduler, name);
-        queue.setSchedulingMode(info.defaultSchedulingMode);
-        queues.put(name, queue);
+        FSLeafQueue leafQueue = createLeafQueue(name);
+        if (leafQueue == null) {
+          return null;
+        }
+        leafQueue.setSchedulingMode(info.defaultSchedulingMode);
+        queue = leafQueue;
+      } else if (queue instanceof FSParentQueue) {
+        return null;
       }
-      return queue;
+      return (FSLeafQueue)queue;
+    }
+  }
+  
+  /**
+   * Creates a leaf queue and places it in the tree. Creates any
+   * parents that don't already exist.
+   * 
+   * @return
+   *    the created queue, if successful. null if not allowed (one of the parent
+   *    queues in the queue name is already a leaf queue)
+   */
+  private FSLeafQueue createLeafQueue(String name) {
+    List<String> newQueueNames = new ArrayList<String>();
+    newQueueNames.add(name);
+    int sepIndex = name.length();
+    FSParentQueue parent = null;
+
+    // Move up the queue tree until we reach one that exists.
+    while (sepIndex != -1) {
+      sepIndex = name.lastIndexOf('.', sepIndex-1);
+      FSQueue queue;
+      String curName = null;
+      curName = name.substring(0, sepIndex);
+      queue = queues.get(curName);
+
+      if (queue == null) {
+        newQueueNames.add(curName);
+      } else {
+        if (queue instanceof FSParentQueue) {
+          parent = (FSParentQueue)queue;
+          break;
+        } else {
+          return null;
+        }
+      }
+    }
+    
+    // At this point, parent refers to the deepest existing parent of the
+    // queue to create.
+    // Now that we know everything worked out, make all the queues
+    // and add them to the map.
+    FSLeafQueue leafQueue = null;
+    for (int i = newQueueNames.size()-1; i >= 0; i--) {
+      String queueName = newQueueNames.get(i);
+      if (i == 0) {
+        // First name added was the leaf queue
+        leafQueue = new FSLeafQueue(name, this, scheduler, parent);
+        parent.addChildQueue(leafQueue);
+        queues.put(leafQueue.getName(), leafQueue);
+        leafQueues.add(leafQueue);
+      } else {
+        FSParentQueue newParent = new FSParentQueue(queueName, this, scheduler, parent);
+        parent.addChildQueue(newParent);
+        queues.put(newParent.getName(), newParent);
+        parent = newParent;
+      }
+    }
+    
+    return leafQueue;
+  }
+
+  /**
+   * Gets a queue by name.
+   */
+  public FSQueue getQueue(String name) {
+    if (!name.startsWith(ROOT_QUEUE + ".") && !name.equals(ROOT_QUEUE)) {
+      name = ROOT_QUEUE + "." + name;
+    }
+    synchronized (queues) {
+      return queues.get(name);
     }
   }
 
@@ -136,8 +235,8 @@ public class QueueManager {
   /**
    * Get the queue for a given AppSchedulable.
    */
-  public FSQueue getQueueForApp(AppSchedulable app) {
-    return getQueue(app.getApp().getQueueName());
+  public FSLeafQueue getQueueForApp(AppSchedulable app) {
+    return getLeafQueue(app.getApp().getQueueName());
   }
 
   /**
@@ -237,54 +336,9 @@ public class QueueManager {
       Element element = (Element)node;
       if ("queue".equals(element.getTagName()) ||
     	  "pool".equals(element.getTagName())) {
-        String queueName = element.getAttribute("name");
-        Map<QueueACL, AccessControlList> acls =
-            new HashMap<QueueACL, AccessControlList>();
-        queueNamesInAllocFile.add(queueName);
-        NodeList fields = element.getChildNodes();
-        for (int j = 0; j < fields.getLength(); j++) {
-          Node fieldNode = fields.item(j);
-          if (!(fieldNode instanceof Element))
-            continue;
-          Element field = (Element) fieldNode;
-          if ("minResources".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            int val = Integer.parseInt(text);
-            minQueueResources.put(queueName, Resources.createResource(val));
-          } else if ("maxResources".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            int val = Integer.parseInt(text);
-            maxQueueResources.put(queueName, Resources.createResource(val));
-          } else if ("maxRunningApps".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            int val = Integer.parseInt(text);
-            queueMaxApps.put(queueName, val);
-          } else if ("weight".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            double val = Double.parseDouble(text);
-            queueWeights.put(queueName, val);
-          } else if ("minSharePreemptionTimeout".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            long val = Long.parseLong(text) * 1000L;
-            minSharePreemptionTimeouts.put(queueName, val);
-          } else if ("schedulingMode".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            queueModes.put(queueName, parseSchedulingMode(text));
-          } else if ("aclSubmitApps".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            acls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(text));
-          } else if ("aclAdministerApps".equals(field.getTagName())) {
-            String text = ((Text)field.getFirstChild()).getData().trim();
-            acls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(text));
-          }
-        }
-        queueAcls.put(queueName, acls);
-        if (maxQueueResources.containsKey(queueName) && minQueueResources.containsKey(queueName)
-            && Resources.lessThan(maxQueueResources.get(queueName),
-                minQueueResources.get(queueName))) {
-          LOG.warn(String.format("Queue %s has max resources %d less than min resources %d",
-              queueName, maxQueueResources.get(queueName), minQueueResources.get(queueName)));
-        }
+        loadQueue("root", element, minQueueResources, maxQueueResources, queueMaxApps,
+            userMaxApps, queueWeights, queueModes, minSharePreemptionTimeouts,
+            queueAcls, queueNamesInAllocFile);
       } else if ("user".equals(element.getTagName())) {
         String userName = element.getAttribute("name");
         NodeList fields = element.getChildNodes();
@@ -331,13 +385,82 @@ public class QueueManager {
           queueMaxAppsDefault, defaultSchedulingMode, minSharePreemptionTimeouts,
           queueAcls, fairSharePreemptionTimeout, defaultMinSharePreemptionTimeout);
       for (String name: queueNamesInAllocFile) {
-        FSQueue queue = getQueue(name);
+        FSLeafQueue queue = getLeafQueue(name);
         if (queueModes.containsKey(name)) {
           queue.setSchedulingMode(queueModes.get(name));
         } else {
           queue.setSchedulingMode(defaultSchedulingMode);
         }
       }
+    }
+  }
+  
+  /**
+   * Loads a queue from a queue element in the configuration file
+   */
+  private void loadQueue(String parentName, Element element, Map<String, Resource> minQueueResources,
+      Map<String, Resource> maxQueueResources, Map<String, Integer> queueMaxApps,
+      Map<String, Integer> userMaxApps, Map<String, Double> queueWeights,
+      Map<String, SchedulingMode> queueModes, Map<String, Long> minSharePreemptionTimeouts,
+      Map<String, Map<QueueACL, AccessControlList>> queueAcls, List<String> queueNamesInAllocFile) 
+      throws AllocationConfigurationException {
+    String queueName = parentName + "." + element.getAttribute("name");
+    Map<QueueACL, AccessControlList> acls =
+        new HashMap<QueueACL, AccessControlList>();
+    NodeList fields = element.getChildNodes();
+    boolean isLeaf = true;
+
+    for (int j = 0; j < fields.getLength(); j++) {
+      Node fieldNode = fields.item(j);
+      if (!(fieldNode instanceof Element))
+        continue;
+      Element field = (Element) fieldNode;
+      if ("minResources".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        int val = Integer.parseInt(text);
+        minQueueResources.put(queueName, Resources.createResource(val));
+      } else if ("maxResources".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        int val = Integer.parseInt(text);
+        maxQueueResources.put(queueName, Resources.createResource(val));
+      } else if ("maxRunningApps".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        int val = Integer.parseInt(text);
+        queueMaxApps.put(queueName, val);
+      } else if ("weight".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        double val = Double.parseDouble(text);
+        queueWeights.put(queueName, val);
+      } else if ("minSharePreemptionTimeout".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        long val = Long.parseLong(text) * 1000L;
+        minSharePreemptionTimeouts.put(queueName, val);
+      } else if ("schedulingMode".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        queueModes.put(queueName, parseSchedulingMode(text));
+      } else if ("aclSubmitApps".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        acls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(text));
+      } else if ("aclAdministerApps".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        acls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(text));
+      } else if ("queue".endsWith(field.getTagName()) || 
+          "pool".equals(field.getTagName())) {
+        loadQueue(queueName, field, minQueueResources, maxQueueResources, queueMaxApps,
+            userMaxApps, queueWeights, queueModes, minSharePreemptionTimeouts,
+            queueAcls, queueNamesInAllocFile);
+        isLeaf = false;
+      }
+    }
+    if (isLeaf) {
+      queueNamesInAllocFile.add(queueName);
+    }
+    queueAcls.put(queueName, acls);
+    if (maxQueueResources.containsKey(queueName) && minQueueResources.containsKey(queueName)
+        && Resources.lessThan(maxQueueResources.get(queueName),
+            minQueueResources.get(queueName))) {
+      LOG.warn(String.format("Queue %s has max resources %d less than min resources %d",
+          queueName, maxQueueResources.get(queueName), minQueueResources.get(queueName)));
     }
   }
 
@@ -384,9 +507,9 @@ public class QueueManager {
   /**
    * Get a collection of all queues
    */
-  public Collection<FSQueue> getQueues() {
+  public Collection<FSLeafQueue> getLeafQueues() {
     synchronized (queues) {
-      return new ArrayList<FSQueue>(queues.values());
+      return leafQueues;
     }
   }
 
