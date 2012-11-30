@@ -638,6 +638,14 @@ public class TestRMAppAttemptTransitions {
         "Killed by user");
   }
 
+
+  @Test
+  public void testNoTrackingUrl() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "");
+  }
+
   @Test
   public void testUnregisterToSuccessfulFinishing() {
     Container amContainer = allocateApplicationAttempt();
