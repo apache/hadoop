@@ -659,12 +659,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void fsync(String src, String client) throws AccessControlException,
-      FileNotFoundException, UnresolvedLinkException, IOException {
-    FsyncRequestProto req = FsyncRequestProto.newBuilder()
-        .setSrc(src)
-        .setClient(client)
-        .build();
+  public void fsync(String src, String client, long lastBlockLength)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    FsyncRequestProto req = FsyncRequestProto.newBuilder().setSrc(src)
+        .setClient(client).setLastBlockLength(lastBlockLength).build();
     try {
       rpcProxy.fsync(null, req);
     } catch (ServiceException e) {

@@ -389,6 +389,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4155. libhdfs implementation of hsync API (Liang Xie via todd)
 
+    HDFS-4213. Add an API to hsync for updating the last block length at the
+    namenode. (Jing Zhao via szetszwo)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log
