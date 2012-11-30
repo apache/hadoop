@@ -394,6 +394,9 @@ Release 1.1.1 - Unreleased
     HADOOP-8745. Incorrect version numbers in hadoop-core POM.
     (Matthias Friedrich via eli)
 
+    MAPREDUCE-4478. Fixed a bug in TaskTracker's heartbeat to keep it under
+    control. (Liyin Liang via vinodkv)
+
 Release 1.1.0 - 2012.09.28
 
   INCOMPATIBLE CHANGES

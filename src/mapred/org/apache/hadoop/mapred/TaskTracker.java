@@ -1734,6 +1734,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         // accelerate to account for multiple finished tasks up-front
         long remaining = 
           (lastHeartbeat + getHeartbeatInterval(finishedCount.get())) - now;
+        
+        if (remaining <= 0) {
+          finishedCount.set(0);
+        }
+          
         while (remaining > 0) {
           // sleeps for the wait time or 
           // until there are *enough* empty slots to schedule tasks
