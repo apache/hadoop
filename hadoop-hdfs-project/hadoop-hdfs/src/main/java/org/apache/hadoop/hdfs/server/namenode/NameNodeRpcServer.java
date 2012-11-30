@@ -813,8 +813,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override // ClientProtocol
-  public void fsync(String src, String clientName) throws IOException {
-    namesystem.fsync(src, clientName);
+  public void fsync(String src, String clientName, long lastBlockLength)
+      throws IOException {
+    namesystem.fsync(src, clientName, lastBlockLength);
   }
 
   @Override // ClientProtocol

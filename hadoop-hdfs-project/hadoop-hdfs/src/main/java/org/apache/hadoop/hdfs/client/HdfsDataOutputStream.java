@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.client;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -55,5 +56,25 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
    */
   public synchronized int getCurrentBlockReplication() throws IOException {
     return ((DFSOutputStream)getWrappedStream()).getCurrentBlockReplication();
+  }
+  
+  /**
+   * Sync buffered data to DataNodes (flush to disk devices).
+   * 
+   * @param syncFlags
+   *          Indicate the detailed semantic and actions of the hsync.
+   * @throws IOException
+   * @see FSDataOutputStream#hsync()
+   */
+  public void hsync(EnumSet<SyncFlag> syncFlags) throws IOException {
+    ((DFSOutputStream) getWrappedStream()).hsync(syncFlags);
+  }
+  
+  public static enum SyncFlag {
+    /**
+     * When doing sync to DataNodes, also update the metadata (block
+     * length) in the NameNode
+     */
+    UPDATE_LENGTH;
   }
 }

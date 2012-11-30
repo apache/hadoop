@@ -170,4 +170,22 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
     setBlock(numBlocks()-1, ucBlock);
     return ucBlock;
   }
+
+  /**
+   * Update the length for the last block
+   * 
+   * @param lastBlockLength
+   *          The length of the last block reported from client
+   * @throws IOException
+   */
+  void updateLengthOfLastBlock(long lastBlockLength) throws IOException {
+    BlockInfo lastBlock = this.getLastBlock();
+    assert (lastBlock != null) : "The last block for path "
+        + this.getFullPathName() + " is null when updating its length";
+    assert (lastBlock instanceof BlockInfoUnderConstruction) : "The last block for path "
+        + this.getFullPathName()
+        + " is not a BlockInfoUnderConstruction when updating its length";
+    lastBlock.setNumBytes(lastBlockLength);
+  }
+  
 }

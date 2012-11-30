@@ -357,6 +357,7 @@ message SetQuotaResponseProto { // void response
 message FsyncRequestProto {
   required string src = 1;
   required string client = 2;
+  optional sint64 lastBlockLength = 3 [default = -1];
 }
 
 message FsyncResponseProto { // void response

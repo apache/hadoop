@@ -688,7 +688,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public FsyncResponseProto fsync(RpcController controller,
       FsyncRequestProto req) throws ServiceException {
     try {
-      server.fsync(req.getSrc(), req.getClient());
+      server.fsync(req.getSrc(), req.getClient(), req.getLastBlockLength());
       return VOID_FSYNC_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
