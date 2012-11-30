@@ -1146,11 +1146,14 @@ public class MiniDFSCluster {
    */
   public void shutdown() {
     LOG.info("Shutting down the Mini HDFS Cluster");
+    boolean hasExitError = ExitUtil.terminateCalled();
+    ExitUtil.clearTerminateCalled();
     if (checkExitOnShutdown)  {
-     if (ExitUtil.terminateCalled()) {
+     if (hasExitError) {
        throw new AssertionError("Test resulted in an unexpected exit");
      }
     }
+    
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
       NameNode nameNode = nnInfo.nameNode;

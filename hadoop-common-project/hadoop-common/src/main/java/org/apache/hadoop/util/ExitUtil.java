@@ -50,6 +50,13 @@ public final class ExitUtil {
   }
 
   /**
+   * Clear the previous exit record.
+   */
+  public static void clearTerminateCalled() {
+    terminateCalled = false;
+  }
+
+  /**
    * @return true if terminate has been called
    */
   public static boolean terminateCalled() {

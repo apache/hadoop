@@ -10,6 +10,9 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-8931. Add Java version to startup message. (eli)
 
+    HADOOP-9108. Add a method to clear terminateCalled to ExitUtil for test 
+    cases (Kihwal Lee via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
