@@ -440,7 +440,8 @@ public class FSEditLog  {
       synchronized (this) {
         if (sync) {
           try {
-            if (badJournals.size() >= journals.size()) {
+            if (badJournals.size() >= journals.size() ||
+                candidateJournals.isEmpty()) {
               final String msg =
                 "Could not sync enough journals to persistent storage. "
                 + "Unsynced transactions: " + (txid - synctxid);

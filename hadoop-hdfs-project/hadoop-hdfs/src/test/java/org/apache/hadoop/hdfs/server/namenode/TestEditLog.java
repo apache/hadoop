@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.aspectj.util.FileUtil;
@@ -185,7 +186,9 @@ public class TestEditLog extends TestCase {
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .checkExitOnShutdown(false).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
@@ -212,6 +215,15 @@ public class TestEditLog extends TestCase {
       
       editLog.logSetReplication("fakefile", (short) 2);
       editLog.logSync();
+
+      // logSync() should fail if there is no active journal.
+      editLog.endCurrentLogSegment(true);
+      editLog.logSetReplication("fakefile", (short) 3);
+      try {
+        editLog.logSync();
+        fail("logSync() should have failed when no journal is active.");
+      } catch (ExitException e) { }
+      
       
       editLog.close();
     } finally {
