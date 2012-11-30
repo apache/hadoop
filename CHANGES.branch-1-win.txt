@@ -138,7 +138,7 @@ Branch-hadoop-1-win - unreleased
     HADOOP-8836. UGI should throw exception in case winutils.exe cannot be
     loaded. (Bikas Saha via suresh)
 
-    MAPREDUCE-4567. WindowsResourceCalculatorPlugin has NPE.
+    MAPREDUCE-4657. WindowsResourceCalculatorPlugin has NPE.
     (Bikas Saha via suresh)
 
     HADOOP-8879. TestUserGroupInformation fails on Windows when run as
