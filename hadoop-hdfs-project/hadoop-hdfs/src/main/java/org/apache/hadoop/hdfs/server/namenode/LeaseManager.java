@@ -429,6 +429,26 @@ public class LeaseManager {
     }
   }
 
+  /**
+   * Get the list of inodes corresponding to valid leases.
+   * @return list of inodes
+   * @throws UnresolvedLinkException
+   */
+  Map<String, INodeFileUnderConstruction> getINodesUnderConstruction() {
+    Map<String, INodeFileUnderConstruction> inodes =
+        new TreeMap<String, INodeFileUnderConstruction>();
+    for (String p : sortedLeasesByPath.keySet()) {
+      // verify that path exists in namespace
+      try {
+        INode node = fsnamesystem.dir.getINode(p);
+        inodes.put(p, INodeFileUnderConstruction.valueOf(node, p));
+      } catch (IOException ioe) {
+        LOG.error(ioe);
+      }
+    }
+    return inodes;
+  }
+  
   /** Check the leases beginning from the oldest.
    *  @return true is sync is needed.
    */
