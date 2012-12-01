@@ -600,6 +600,8 @@ public class FSDirectory implements Closeable {
         // update modification time of dst and the parent of src
         srcInodes[srcInodes.length-2].setModificationTime(timestamp);
         dstInodes[dstInodes.length-2].setModificationTime(timestamp);
+        // update moved leases with new filename
+        getFSNamesystem().unprotectedChangeLease(src, dst);        
         return true;
       }
     } finally {
@@ -757,6 +759,8 @@ public class FSDirectory implements Closeable {
         }
         srcInodes[srcInodes.length - 2].setModificationTime(timestamp);
         dstInodes[dstInodes.length - 2].setModificationTime(timestamp);
+        // update moved lease with new filename
+        getFSNamesystem().unprotectedChangeLease(src, dst);
 
         // Collect the blocks and remove the lease for previous dst
         if (removedDst != null) {

@@ -1738,6 +1738,9 @@ Release 0.23.6 - UNRELEASED
 
     HDFS-4247. saveNamespace should be tolerant of dangling lease (daryn)
 
+    HDFS-4248. Renaming directories may incorrectly remove the paths in leases
+    under the tree.  (daryn via szetszwo)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
