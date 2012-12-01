@@ -398,6 +398,38 @@ public class LeaseManager {
     }
   }
 
+  /**
+   * Get the list of inodes corresponding to valid leases.
+   * @return list of inodes
+   * @throws UnresolvedLinkException
+   */
+  Map<String, INodeFileUnderConstruction> getINodesUnderConstruction() {
+    Map<String, INodeFileUnderConstruction> inodes =
+        new TreeMap<String, INodeFileUnderConstruction>();
+    for (String p : sortedLeasesByPath.keySet()) {
+      String error = null;
+      INodeFile node = null;
+      try {
+        node = fsnamesystem.dir.getFileINode(p);
+      } catch (UnresolvedLinkException ule) {
+        error = "file does not reside on this FS";
+      }
+      if (error == null) {
+        if (node == null) {
+          error = "no matching entry in namespace";
+        } else if (!node.isUnderConstruction()) {
+          error = "is not under construction";
+        }
+      }
+      if (error == null) {
+        inodes.put(p, (INodeFileUnderConstruction)node);
+      } else {
+        LOG.error("found path " + p + " but " + error);
+      }
+    }
+    return inodes;
+  }
+  
   /** Check the leases beginning from the oldest.
    *  @return true if sync is needed
    */

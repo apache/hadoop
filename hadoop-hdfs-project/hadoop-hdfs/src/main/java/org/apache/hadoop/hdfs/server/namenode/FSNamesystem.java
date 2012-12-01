@@ -3938,28 +3938,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // lock on our behalf. If we took the read lock here, we could block
     // for fairness if a writer is waiting on the lock.
     synchronized (leaseManager) {
-      out.writeInt(leaseManager.countPath()); // write the size
-
-      for (Lease lease : leaseManager.getSortedLeases()) {
-        for(String path : lease.getPaths()) {
-          // verify that path exists in namespace
-          INode node;
-          try {
-            node = dir.getFileINode(path);
-          } catch (UnresolvedLinkException e) {
-            throw new AssertionError("Lease files should reside on this FS");
-          }
-          if (node == null) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but no matching entry in namespace.");
-          }
-          if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but is not under construction.");
-          }
-          INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          FSImageSerialization.writeINodeUnderConstruction(out, cons, path);
-        }
+      Map<String, INodeFileUnderConstruction> nodes =
+          leaseManager.getINodesUnderConstruction();
+      out.writeInt(nodes.size()); // write the size    
+      for (Map.Entry<String, INodeFileUnderConstruction> entry
+           : nodes.entrySet()) {
+        FSImageSerialization.writeINodeUnderConstruction(
+            out, entry.getValue(), entry.getKey());
       }
     }
   }
