@@ -28,7 +28,6 @@ import java.util.EnumMap;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -251,10 +250,8 @@ public class FSEditLogLoader {
           }
           case OP_RENAME_OLD: {
             RenameOldOp renameOp = (RenameOldOp)op;
-            HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                       renameOp.timestamp);
-            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
             break;
           }
           case OP_DELETE: {
@@ -330,10 +327,8 @@ public class FSEditLogLoader {
           case OP_RENAME: {
             RenameOp renameOp = (RenameOp)op;
 
-            HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
             fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                       renameOp.timestamp, renameOp.options);
-            fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
             break;
           }
           case OP_GET_DELEGATION_TOKEN: {
