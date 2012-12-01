@@ -18,6 +18,9 @@ Release 0.23.6 - UNRELEASED
     of it is undefined after the iteration or modifications of the map.
     (szetszwo via daryn)
 
+    HDFS-4254. testAllEditsDirsFailOnFlush makes subsequent test cases fail
+    (0.23.6 only) (Kihwal Lee via daryn)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

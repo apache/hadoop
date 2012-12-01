@@ -103,6 +103,8 @@ public class TestEditLogJournalFailures {
       GenericTestUtils.assertExceptionContains(
         "Could not sync enough journals to persistent storage. " +
         "Unsynced transactions: 1", re);
+      cluster.getNamesystem().getFSImage().getEditLog()
+          .abortCurrentLogSegment();
     }
   }
   
