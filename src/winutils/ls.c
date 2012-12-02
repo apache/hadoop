@@ -124,14 +124,14 @@ static BOOL LsPrintLine(
   {
     fwprintf(stdout, L"%10s|%d|%s|%s|%lld|%3s|%2d|%4d|%s\n",
       maskString, hardlinkCount, ownerName, groupName, fileSize.QuadPart,
-      MONTHS[stFileWriteTime.wMonth], stFileWriteTime.wDay,
+      MONTHS[stFileWriteTime.wMonth-1], stFileWriteTime.wDay,
       stFileWriteTime.wYear, path);
   }
   else
   {
     fwprintf(stdout, L"%10s %d %s %s %lld %3s %2d %4d %s\n",
       maskString, hardlinkCount, ownerName, groupName, fileSize.QuadPart,
-      MONTHS[stFileWriteTime.wMonth], stFileWriteTime.wDay,
+      MONTHS[stFileWriteTime.wMonth-1], stFileWriteTime.wDay,
       stFileWriteTime.wYear, path);
   }
 
