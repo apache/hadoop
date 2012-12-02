@@ -137,6 +137,9 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
+    race conditions.  (Sam Liu via eyang)
+
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
     HADOOP_SECURE_DN_PID_DIR (bobby)
 
