@@ -13,6 +13,9 @@ Release 1.1.2 - 2012.11.18
 
   BUG FIXES
 
+    MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
+    race conditions.  (Sam Liu via eyang)
+
     HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
     principal. (atm)
 
