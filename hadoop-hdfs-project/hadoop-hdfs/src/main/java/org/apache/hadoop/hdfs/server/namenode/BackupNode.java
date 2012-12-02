@@ -24,6 +24,7 @@ import java.net.SocketTimeoutException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
@@ -404,14 +406,23 @@ public class BackupNode extends NameNode {
       + HdfsConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
   }
-  
+
   @Override
+  protected String getNameServiceId(Configuration conf) {
+    return DFSUtil.getBackupNameServiceId(conf);
+  }
+
+  protected HAState createHAState() {
+    return new BackupState();
+  }
+
+  @Override // NameNode
   protected NameNodeHAContext createHAContext() {
     return new BNHAContext();
   }
-  
+
   private class BNHAContext extends NameNodeHAContext {
-    @Override // NameNode
+    @Override // NameNodeHAContext
     public void checkOperation(OperationCategory op)
         throws StandbyException {
       if (op == OperationCategory.UNCHECKED ||
@@ -425,10 +436,42 @@ public class BackupNode extends NameNode {
         throw new StandbyException(msg);
       }
     }
-  }
-  
-  @Override
-  protected String getNameServiceId(Configuration conf) {
-    return DFSUtil.getBackupNameServiceId(conf);
+
+    @Override // NameNodeHAContext
+    public void prepareToStopStandbyServices() throws ServiceFailedException {
+    }
+
+    /**
+     * Start services for BackupNode.
+     * <p>
+     * The following services should be muted
+     * (not run or not pass any control commands to DataNodes)
+     * on BackupNode:
+     * {@link LeaseManager.Monitor} protected by SafeMode.
+     * {@link BlockManager.ReplicationMonitor} protected by SafeMode.
+     * {@link HeartbeatManager.Monitor} protected by SafeMode.
+     * {@link DecommissionManager.Monitor} need to prohibit refreshNodes().
+     * {@link PendingReplicationBlocks.PendingReplicationMonitor} harmless,
+     * because ReplicationMonitor is muted.
+     */
+    @Override
+    public void startActiveServices() throws IOException {
+      try {
+        namesystem.startActiveServices();
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
+      }
+    }
+
+    @Override
+    public void stopActiveServices() throws IOException {
+      try {
+        if (namesystem != null) {
+          namesystem.stopActiveServices();
+        }
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
+      }
+    }
   }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -98,6 +99,9 @@ public class TestBackupNode {
     BackupNode bn = (BackupNode)NameNode.createNameNode(
         new String[]{startupOpt.getName()}, c);
     assertTrue(bn.getRole() + " must be in SafeMode.", bn.isInSafeMode());
+    assertTrue(bn.getRole() + " must be in StandbyState",
+               bn.getNamesystem().getHAState()
+                 .equalsIgnoreCase(HAServiceState.STANDBY.name()));
     return bn;
   }
 

@@ -273,6 +273,8 @@ Release 2.0.3-alpha - Unreleased
     of it is undefined after the iteration or modifications of the map.
     (szetszwo)
 
+    HDFS-4231. BackupNode: Introduce BackupState. (shv)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
