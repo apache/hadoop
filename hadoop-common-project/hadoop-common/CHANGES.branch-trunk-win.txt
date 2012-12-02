@@ -56,3 +56,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-9011. saveVersion.py does not include branch in version annotation.
   (Chris Nauroth via suresh)
+
+  HADOOP-9110. winutils ls off-by-one error indexing MONTHS array can cause 
+  access violation. (Chris Nauroth via suresh)
