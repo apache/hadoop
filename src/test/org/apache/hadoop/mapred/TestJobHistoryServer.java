@@ -72,6 +72,9 @@ public class TestJobHistoryServer extends TestCase {
     } catch (IOException e) {
       LOG.error("Failure running test", e);
       Assert.fail(e.getMessage());
+    } catch (InterruptedException e) {
+      LOG.error("Exit due to being interrupted");
+      Assert.fail(e.getMessage());
     } finally {
       if (mrCluster != null) mrCluster.shutdown();
     }
@@ -110,6 +113,9 @@ public class TestJobHistoryServer extends TestCase {
 
     } catch (IOException e) {
       LOG.error("Failure running test", e);
+      Assert.fail(e.getMessage());
+    } catch (InterruptedException e) {
+      LOG.error("Exit due to being interrupted");
       Assert.fail(e.getMessage());
     } finally {
       if (mrCluster != null) mrCluster.shutdown();
@@ -150,12 +156,28 @@ public class TestJobHistoryServer extends TestCase {
     return JobClient.runJob(conf);
   }
 
-  private String getRedirectUrl(String jobUrl) throws IOException {
+  private String getRedirectUrl(String jobUrl) throws IOException, InterruptedException {
     HttpClient client = new HttpClient();
     GetMethod method = new GetMethod(jobUrl);
     method.setFollowRedirects(false);
     try {
       int status = client.executeMethod(method);
+      if(status!=HttpURLConnection.HTTP_MOVED_TEMP) {
+        int retryTimes = 4;
+        for(int i = 1; i < retryTimes + 1; i++) {
+          try {
+            // Wait i sec
+            Thread.sleep(i * 1000);
+          } catch (InterruptedException e) {
+            throw new InterruptedException("Exit due to being interrupted");
+          }
+          // Get the latest status
+          status = client.executeMethod(method);
+          if(status == HttpURLConnection.HTTP_MOVED_TEMP)
+            break;
+        }
+      }
+
       Assert.assertEquals(status, HttpURLConnection.HTTP_MOVED_TEMP);
 
       LOG.info("Location: " + method.getResponseHeader("Location"));
