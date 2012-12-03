@@ -6,6 +6,8 @@ Release 0.23.6 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9020. Add a SASL PLAIN server (daryn via tgraves)
+
   IMPROVEMENTS
 
     HADOOP-8931. Add Java version to startup message. (eli)
