@@ -54,7 +54,7 @@ public class INodeDirectory extends INode {
     }
     return (INodeDirectory)inode; 
   }
-
+  
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static String ROOT_NAME = "";
 
@@ -99,32 +99,56 @@ public class INodeDirectory extends INode {
     }
   }
 
-  private int searchChildren(INode inode) {
+  public int searchChildren(INode inode) {
     return Collections.binarySearch(children, inode.getLocalNameBytes());
   }
 
-  INode removeChild(INode node) {
+  public int searchChildrenForExistingINode(INode inode) {
+    final int i = searchChildren(inode);
+    if (i < 0) {
+      throw new AssertionError("Child not found: inode=" + inode);
+    }
+    return i;
+  }
+
+  public INode removeChild(INode node, Snapshot latestSnapshot) {
     assertChildrenNonNull();
+
+    if (latestSnapshot != null) {
+      final INodeDirectoryWithSnapshot dir
+          = INodeDirectoryWithSnapshot.replaceDir(this, latestSnapshot);
+      return dir.removeChild(node, latestSnapshot);
+    }
+
     final int i = searchChildren(node);
     return i >= 0? children.remove(i): null;
   }
-
   /** Replace a child that has the same name as newChild by newChild.
    * 
    * @param newChild Child node to be added
    */
-  void replaceChild(INode newChild) {
+  public INode replaceChild(INodeDirectory newChild, Snapshot latestSnapshot) {
     assertChildrenNonNull();
 
-    final int low = searchChildren(newChild);
-    if (low>=0) { // an old child exists so replace by the newChild
-      children.set(low, newChild);
-    } else {
-      throw new IllegalArgumentException("No child exists to be replaced");
+    if (latestSnapshot != null) {
+      final INodeDirectoryWithSnapshot dir
+          = INodeDirectoryWithSnapshot.replaceDir(this, latestSnapshot);
+      return dir.replaceChild(newChild, latestSnapshot);
     }
+
+    // find the old child and replace it
+    final int low = searchChildrenForExistingINode(newChild);
+    final INode oldChild = children.set(low, newChild);
+    // set the parent of the children of the child.
+    for(INode i : newChild.getChildrenList(null)) {
+      i.parent = newChild;
+    }
+    return oldChild;
   }
 
-  private INode getChild(byte[] name, Snapshot snapshot) {
+  public INode getChild(byte[] name, Snapshot snapshot) {
+    assertNull(snapshot);
+
     final ReadOnlyList<INode> c = getChildrenList(snapshot);
     final int i = ReadOnlyList.Util.binarySearch(c, name);
     return i < 0? null: c.get(i);
@@ -361,7 +385,14 @@ public class INodeDirectory extends INode {
    * @return false if the child with this name already exists; 
    *         otherwise, return true;
    */
-  public boolean addChild(final INode node, final boolean setModTime) {
+  public boolean addChild(final INode node, final boolean setModTime,
+      Snapshot latestSnapshot) {
+    if (latestSnapshot != null) {
+      final INodeDirectoryWithSnapshot dir
+          = INodeDirectoryWithSnapshot.replaceDir(this, latestSnapshot);
+      return dir.addChild(node, setModTime, latestSnapshot);
+    }
+
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
@@ -372,8 +403,9 @@ public class INodeDirectory extends INode {
     node.parent = this;
     children.add(-low - 1, node);
     // update modification time of the parent directory
-    if (setModTime)
-      setModificationTime(node.getModificationTime());
+    if (setModTime) {
+      updateModificationTime(node.getModificationTime());
+    }
     if (node.getGroupName() == null) {
       node.setGroup(getGroupName());
     }
@@ -400,20 +432,28 @@ public class INodeDirectory extends INode {
     }
     newNode.setLocalName(pathComponents[pathComponents.length - 1]);
     // insert into the parent children list
-    INodeDirectory parent = getParent(pathComponents);
-    return parent.addChild(newNode, true);
+    INodesInPath inodes =  getExistingPathINodes(pathComponents, 2, false);
+    INodeDirectory parent = INodeDirectory.valueOf(inodes.inodes[0], pathComponents);
+    return parent.addChild(newNode, true, inodes.getLatestSnapshot());
   }
 
   INodeDirectory getParent(byte[][] pathComponents
+      ) throws FileNotFoundException, PathIsNotDirectoryException,
+      UnresolvedLinkException {
+    return (INodeDirectory)getParentINodesInPath(pathComponents).getINode(0);
+  }
+
+  INodesInPath getParentINodesInPath(byte[][] pathComponents
       ) throws FileNotFoundException, PathIsNotDirectoryException,
       UnresolvedLinkException {
     if (pathComponents.length < 2)  // add root
       return null;
     // Gets the parent INode
     INodesInPath inodes =  getExistingPathINodes(pathComponents, 2, false);
-    return INodeDirectory.valueOf(inodes.inodes[0], pathComponents);
+    INodeDirectory.valueOf(inodes.inodes[0], pathComponents);
+    return inodes;
   }
-
+  
   @Override
   DirCounts spaceConsumedInTree(DirCounts counts) {
     counts.nsCount += 1;
@@ -462,10 +502,11 @@ public class INodeDirectory extends INode {
    *         Note that the returned list is never null.
    */
   public ReadOnlyList<INode> getChildrenList(final Snapshot snapshot) {
-    //TODO: use snapshot to select children list
+    assertNull(snapshot);
     return children == null ? EMPTY_READ_ONLY_LIST
         : ReadOnlyList.Util.asReadOnlyList(children);
   }
+
   /** Set the children list. */
   public void setChildren(List<INode> children) {
     this.children = children;
@@ -490,7 +531,7 @@ public class INodeDirectory extends INode {
    * {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)}.
    * Contains INodes information resolved from a given path.
    */
-  static class INodesInPath {
+  public static class INodesInPath {
     /**
      * Array with the specified number of INodes resolved for a given path.
      */
@@ -570,7 +611,7 @@ public class INodeDirectory extends INode {
     }
     
     /** @return the i-th inode. */
-    INode getINode(int i) {
+    public INode getINode(int i) {
       return inodes[i];
     }
     
@@ -675,5 +716,14 @@ public class INodeDirectory extends INode {
         prefix.setLength(prefix.length() - 2);
       }
     }
+  }
+
+  /** 
+   * Get last modification time of inode.
+   * @return access time
+   */
+  public long getModificationTime(Snapshot snapshot) {
+    assertNull(snapshot);
+    return getModificationTime();
   }
 }

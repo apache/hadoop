@@ -109,7 +109,7 @@ public class INodeFileWithLink extends INodeFile {
       this.setFileReplication(maxReplication);
       this.next = null;
       // clear parent
-      parent = null;
+      setParent(null);
     }
     return 1;
   }

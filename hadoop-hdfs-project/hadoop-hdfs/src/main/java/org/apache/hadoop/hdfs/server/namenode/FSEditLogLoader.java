@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.Holder;
 
@@ -246,7 +246,8 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      INodeFile oldFile = getINodeFile(fsDir, addCloseOp.path);
+      final INodesInPath inodesInPath = fsDir.getINodesInPath(addCloseOp.path);
+      INodeFile oldFile = toINodeFile(inodesInPath.getINode(0), addCloseOp.path);
       INodeFile newFile = oldFile;
       if (oldFile == null) { // this is OP_ADD on a new file (case 1)
         // versions > 0 support per file replication
@@ -272,7 +273,7 @@ public class FSEditLogLoader {
           }
           fsNamesys.prepareFileForWrite(addCloseOp.path, oldFile,
               addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false);
+              false, inodesInPath.getLatestSnapshot());
           newFile = getINodeFile(fsDir, addCloseOp.path);
         }
       }
@@ -282,7 +283,7 @@ public class FSEditLogLoader {
       
       // Update the salient file attributes.
       newFile.setAccessTime(addCloseOp.atime);
-      newFile.setModificationTimeForce(addCloseOp.mtime);
+      newFile.setModificationTime(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
     }
@@ -296,7 +297,8 @@ public class FSEditLogLoader {
             " clientMachine " + addCloseOp.clientMachine);
       }
 
-      INodeFile oldFile = getINodeFile(fsDir, addCloseOp.path);
+      final INodesInPath inodesInPath = fsDir.getINodesInPath(addCloseOp.path);
+      INodeFile oldFile = toINodeFile(inodesInPath.getINode(0), addCloseOp.path);
       if (oldFile == null) {
         throw new IOException("Operation trying to close non-existent file " +
             addCloseOp.path);
@@ -304,7 +306,7 @@ public class FSEditLogLoader {
       
       // Update the salient file attributes.
       oldFile.setAccessTime(addCloseOp.atime);
-      oldFile.setModificationTimeForce(addCloseOp.mtime);
+      oldFile.setModificationTime(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file
@@ -322,7 +324,8 @@ public class FSEditLogLoader {
         INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
         fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
         INodeFile newFile = ucFile.convertToInodeFile();
-        fsDir.replaceNode(addCloseOp.path, ucFile, newFile);
+        fsDir.replaceNode(addCloseOp.path, ucFile, newFile,
+            inodesInPath.getLatestSnapshot());
       }
       break;
     }
@@ -360,10 +363,8 @@ public class FSEditLogLoader {
     }
     case OP_RENAME_OLD: {
       RenameOldOp renameOp = (RenameOldOp)op;
-      HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp);
-      fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
       break;
     }
     case OP_DELETE: {
@@ -433,11 +434,8 @@ public class FSEditLogLoader {
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-
-      HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp, renameOp.options);
-      fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
       break;
     }
     case OP_GET_DELEGATION_TOKEN: {
@@ -512,7 +510,11 @@ public class FSEditLogLoader {
   
   private static INodeFile getINodeFile(FSDirectory fsDir, String path)
       throws IOException {
-    INode inode = fsDir.getINode(path);
+    return toINodeFile(fsDir.getINode(path), path);
+  }
+
+  private static INodeFile toINodeFile(INode inode, String path)
+      throws IOException {
     if (inode != null) {
       if (!(inode instanceof INodeFile)) {
         throw new IOException("Operation trying to get non-file " + path);

@@ -158,7 +158,7 @@ public class TestFsLimits {
     Class<?> generated = null;
     try {
       fs.verifyFsLimits(inodes, 1, child);
-      rootInode.addChild(child, false);
+      rootInode.addChild(child, false, null);
     } catch (QuotaExceededException e) {
       generated = e.getClass();
     }

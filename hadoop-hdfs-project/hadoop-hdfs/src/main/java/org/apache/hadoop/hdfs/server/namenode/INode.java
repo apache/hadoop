@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
 
@@ -46,8 +47,33 @@ import com.google.common.primitives.SignedBytes;
  */
 @InterfaceAudience.Private
 public abstract class INode implements Comparable<byte[]> {
+  /** A dummy INode which can be used as a probe object. */
+  public static final INode DUMMY = new INode() {
+    @Override
+    int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    long[] computeContentSummary(long[] summary) {
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    DirCounts spaceConsumedInTree(DirCounts counts) {
+      throw new UnsupportedOperationException();
+    }
+  };
   static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
       = ReadOnlyList.Util.emptyList();
+  /**
+   * Assert that the snapshot parameter must be null since
+   * this class only take care current state. 
+   * Subclasses should override the methods for handling the snapshot states.
+   */
+  static void assertNull(Snapshot snapshot) {
+    if (snapshot != null) {
+      throw new AssertionError("snapshot is not null: " + snapshot);
+    }
+  }
 
 
   /** Wrapper of two counters for namespace consumed and diskspace consumed. */
@@ -120,9 +146,12 @@ public abstract class INode implements Comparable<byte[]> {
    * should not modify it.
    */
   private long permission = 0L;
-  protected INodeDirectory parent = null;
-  protected long modificationTime = 0L;
-  protected long accessTime = 0L;
+  INodeDirectory parent = null;
+  private long modificationTime = 0L;
+  private long accessTime = 0L;
+  
+  /** For creating the a {@link #DUMMY} object. */
+  private INode() {}
 
   private INode(byte[] name, long permission, INodeDirectory parent,
       long modificationTime, long accessTime) {
@@ -149,8 +178,8 @@ public abstract class INode implements Comparable<byte[]> {
   
   /** @param other Other node to be copied */
   INode(INode other) {
-    this(other.getLocalNameBytes(), other.permission, other.getParent(), 
-        other.getModificationTime(), other.getAccessTime());
+    this(other.name, other.permission, other.parent, 
+        other.modificationTime, other.accessTime);
   }
 
   /**
@@ -290,13 +319,13 @@ public abstract class INode implements Comparable<byte[]> {
    * Set local file name
    */
   public void setLocalName(String name) {
-    this.name = DFSUtil.string2Bytes(name);
+    setLocalName(DFSUtil.string2Bytes(name));
   }
 
   /**
    * Set local file name
    */
-  void setLocalName(byte[] name) {
+  public void setLocalName(byte[] name) {
     this.name = name;
   }
 
@@ -316,7 +345,7 @@ public abstract class INode implements Comparable<byte[]> {
    * Get parent directory 
    * @return parent INode
    */
-  INodeDirectory getParent() {
+  public INodeDirectory getParent() {
     return this.parent;
   }
 
@@ -336,17 +365,21 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Set last modification time of inode.
    */
-  public void setModificationTime(long modtime) {
+  public void updateModificationTime(long modtime) {
     assert isDirectory();
     if (this.modificationTime <= modtime) {
-      this.modificationTime = modtime;
+      setModificationTime(modtime);
     }
+  }
+
+  void cloneModificationTime(INode that) {
+    this.modificationTime = that.modificationTime;
   }
 
   /**
    * Always set the last modification time of inode.
    */
-  void setModificationTimeForce(long modtime) {
+  void setModificationTime(long modtime) {
     this.modificationTime = modtime;
   }
 
@@ -431,11 +464,11 @@ public abstract class INode implements Comparable<byte[]> {
     return buf.toString();
   }
 
-  public boolean removeNode() {
+  public boolean removeNode(Snapshot latestSnapshot) {
     if (parent == null) {
       return false;
     } else {
-      parent.removeChild(this);
+      parent.removeChild(this, latestSnapshot);
       parent = null;
       return true;
     }

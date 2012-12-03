@@ -430,10 +430,10 @@ public class TestSnapshotPathINodes {
     // The number of inodes should be equal to components.length
     assertEquals(newInodes.length, components.length);
     // The last INode should be associated with file1
-    assertEquals(newInodes[components.length - 1].getFullPathName(),
-        file1.toString());
+    final int last = components.length - 1;
+    assertEquals(newInodes[last].getFullPathName(), file1.toString());
     // The modification time of the INode for file3 should have been changed
-    Assert.assertFalse(inodes[components.length - 1].getModificationTime() ==
-        newInodes[components.length - 1].getModificationTime());
+    Assert.assertFalse(inodes[last].getModificationTime()
+        == newInodes[last].getModificationTime());
   }
 }

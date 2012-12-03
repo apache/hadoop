@@ -44,7 +44,7 @@ public class Snapshot implements Comparable<byte[]> {
 
   Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
     this.id = id;
-    this.root = new INodeDirectoryWithSnapshot(name, dir);
+    this.root = new INodeDirectoryWithSnapshot(name, dir, this);
   }
 
   /** @return the root directory of the snapshot. */
@@ -55,6 +55,21 @@ public class Snapshot implements Comparable<byte[]> {
   @Override
   public int compareTo(byte[] bytes) {
     return root.compareTo(bytes);
+  }
+  
+  @Override
+  public boolean equals(Object that) {
+    if (this == that) {
+      return true;
+    } else if (that == null || !(that instanceof Snapshot)) {
+      return false;
+    }
+    return this.id == ((Snapshot)that).id;
+  }
+  
+  @Override
+  public int hashCode() {
+    return id;
   }
   
   @Override
