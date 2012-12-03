@@ -80,6 +80,17 @@ public abstract class MetricsSystem implements MetricsSystemMXBean {
   public abstract void register(Callback callback);
 
   /**
+   * Requests an immediate publish of all metrics from sources to sinks.
+   * 
+   * This is a "soft" request: the expectation is that a best effort will be
+   * done to synchronously snapshot the metrics from all the sources and put
+   * them in all the sinks (including flushing the sinks) before returning to
+   * the caller. If this can't be accomplished in reasonable time it's OK to
+   * return to the caller before everything is done. 
+   */
+  public abstract void publishMetricsNow();
+
+  /**
    * Shutdown the metrics system completely (usually during server shutdown.)
    * The MetricsSystemMXBean will be unregistered.
    * @return true if shutdown completed
