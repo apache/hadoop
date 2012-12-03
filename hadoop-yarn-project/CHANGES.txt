@@ -18,6 +18,9 @@ Release 0.23.6 - UNRELEASED
     YARN-251. Proxy URI generation fails for blank tracking URIs (Tom White
     via jlowe)
 
+    YARN-72. NM should handle cleaning up containers when it shuts down.
+    (Sandy Ryza via tomwhite)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
