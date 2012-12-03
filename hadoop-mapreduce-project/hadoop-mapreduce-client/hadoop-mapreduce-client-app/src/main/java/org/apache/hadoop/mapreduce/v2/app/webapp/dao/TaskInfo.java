@@ -59,12 +59,11 @@ public class TaskInfo {
     TaskReport report = task.getReport();
     this.startTime = report.getStartTime();
     this.finishTime = report.getFinishTime();
-    this.state = report.getTaskState();
-    this.elapsedTime = Times.elapsed(this.startTime, this.finishTime,
-      this.state == TaskState.RUNNING);
+    this.elapsedTime = Times.elapsed(this.startTime, this.finishTime, false);
     if (this.elapsedTime == -1) {
       this.elapsedTime = 0;
     }
+    this.state = report.getTaskState();
     this.progress = report.getProgress() * 100;
     this.id = MRApps.toString(task.getID());
     this.taskNum = task.getID().getId();

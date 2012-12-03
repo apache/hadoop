@@ -65,19 +65,6 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
     }
     return (INodeDirectorySnapshottable)dir;
   }
-  
-  public static Snapshot findLatestSnapshot(INode inode) {
-    Snapshot latest = null;
-    for(; inode != null; inode = inode.getParent()) {
-      if (inode instanceof INodeDirectorySnapshottable) {
-        final Snapshot s = ((INodeDirectorySnapshottable)inode).getLastSnapshot();
-        if (Snapshot.ID_COMPARATOR.compare(latest, s) < 0) {
-          latest = s;
-        }
-      }
-    }
-    return latest;
-  }
 
   /** Snapshots of this directory in ascending order of snapshot id. */
   private final List<Snapshot> snapshots = new ArrayList<Snapshot>();
@@ -209,8 +196,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
 
     //set modification time
     final long timestamp = Time.now();
-    s.getRoot().updateModificationTime(timestamp);
-    updateModificationTime(timestamp);
+    s.getRoot().setModificationTime(timestamp);
+    setModificationTime(timestamp);
     return s;
   }
   

@@ -331,19 +331,22 @@ public class LeaseManager {
     }
   }
 
-  synchronized void changeLease(String src, String dst) {
+  synchronized void changeLease(String src, String dst,
+      String overwrite, String replaceBy) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".changelease: " +
-               " src=" + src + ", dest=" + dst);
+               " src=" + src + ", dest=" + dst + 
+               ", overwrite=" + overwrite +
+               ", replaceBy=" + replaceBy);
     }
 
-    final int len = src.length();
+    final int len = overwrite.length();
     for(Map.Entry<String, Lease> entry
         : findLeaseWithPrefixPath(src, sortedLeasesByPath).entrySet()) {
       final String oldpath = entry.getKey();
       final Lease lease = entry.getValue();
-      // replace stem of src with new destination
-      final String newpath = dst + oldpath.substring(len);
+      //overwrite must be a prefix of oldpath
+      final String newpath = replaceBy + oldpath.substring(len);
       if (LOG.isDebugEnabled()) {
         LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
       }
@@ -426,26 +429,6 @@ public class LeaseManager {
     }
   }
 
-  /**
-   * Get the list of inodes corresponding to valid leases.
-   * @return list of inodes
-   * @throws UnresolvedLinkException
-   */
-  Map<String, INodeFileUnderConstruction> getINodesUnderConstruction() {
-    Map<String, INodeFileUnderConstruction> inodes =
-        new TreeMap<String, INodeFileUnderConstruction>();
-    for (String p : sortedLeasesByPath.keySet()) {
-      // verify that path exists in namespace
-      try {
-        INode node = fsnamesystem.dir.getINode(p);
-        inodes.put(p, INodeFileUnderConstruction.valueOf(node, p));
-      } catch (IOException ioe) {
-        LOG.error(ioe);
-      }
-    }
-    return inodes;
-  }
-  
   /** Check the leases beginning from the oldest.
    *  @return true is sync is needed.
    */

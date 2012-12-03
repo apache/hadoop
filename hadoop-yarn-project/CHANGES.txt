@@ -117,11 +117,7 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-229. Remove old unused RM recovery code. (Bikas Saha via acmurthy) 
 
-    YARN-187. Add hierarchical queues to the fair scheduler.
-    (Sandy Ryza via tomwhite)
-
-    YARN-72. NM should handle cleaning up containers when it shuts down.
-    (Sandy Ryza via tomwhite)
+    YARN-187. Add hierarchical queues to the fair scheduler. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 

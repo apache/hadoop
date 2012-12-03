@@ -24,8 +24,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -64,9 +68,7 @@ public class SnapshotManager implements SnapshotStats {
    */
   public void setSnapshottable(final String path, final int snapshotQuota
       ) throws IOException {
-    final INodesInPath inodesInPath = fsdir.getINodesInPath(path);
-    final INodeDirectory d = INodeDirectory.valueOf(
-        inodesInPath.getINode(0), path);
+    final INodeDirectory d = INodeDirectory.valueOf(fsdir.getINode(path), path);
     if (d.isSnapshottable()) {
       //The directory is already a snapshottable directory.
       ((INodeDirectorySnapshottable)d).setSnapshotQuota(snapshotQuota);
@@ -75,7 +77,7 @@ public class SnapshotManager implements SnapshotStats {
 
     final INodeDirectorySnapshottable s
         = INodeDirectorySnapshottable.newInstance(d, snapshotQuota);
-    fsdir.replaceINodeDirectory(path, d, s, inodesInPath.getLatestSnapshot());
+    fsdir.replaceINodeDirectory(path, d, s);
     snapshottables.add(s);
 
     numSnapshottableDirs.getAndIncrement();
@@ -88,16 +90,15 @@ public class SnapshotManager implements SnapshotStats {
    */
   public void resetSnapshottable(final String path
       ) throws IOException {
-    final INodesInPath inodesInPath = fsdir.getINodesInPath(path);
     final INodeDirectorySnapshottable s = INodeDirectorySnapshottable.valueOf(
-        inodesInPath.getINode(0), path);
+        fsdir.getINode(path), path);
     if (s.getNumSnapshots() > 0) {
       throw new SnapshotException("The directory " + path + " has snapshot(s). "
           + "Please redo the operation after removing all the snapshots.");
     }
 
     final INodeDirectory d = new INodeDirectory(s);
-    fsdir.replaceINodeDirectory(path, s, d, inodesInPath.getLatestSnapshot());
+    fsdir.replaceINodeDirectory(path, s, d);
     snapshottables.remove(s);
 
     numSnapshottableDirs.getAndDecrement();
@@ -120,8 +121,9 @@ public class SnapshotManager implements SnapshotStats {
     // Find the source root directory path where the snapshot is taken.
     final INodeDirectorySnapshottable srcRoot
         = INodeDirectorySnapshottable.valueOf(fsdir.getINode(path), path);
-    srcRoot.addSnapshot(snapshotID, snapshotName);
-
+    final Snapshot s = srcRoot.addSnapshot(snapshotID, snapshotName);
+    new SnapshotCreation().processRecursively(srcRoot, s.getRoot());
+      
     //create success, update id
     snapshotID++;
     numSnapshots.getAndIncrement();
@@ -152,6 +154,85 @@ public class SnapshotManager implements SnapshotStats {
     srcRoot.renameSnapshot(path, oldSnapshotName, newSnapshotName);
   }
   
+  /**
+   * Create a snapshot of subtrees by recursively coping the directory
+   * structure from the source directory to the snapshot destination directory.
+   * This creation algorithm requires O(N) running time and O(N) memory,
+   * where N = # files + # directories + # symlinks. 
+   */
+  class SnapshotCreation {
+    /** Process snapshot creation recursively. */
+    private void processRecursively(final INodeDirectory srcDir,
+        final INodeDirectory dstDir) throws IOException {
+      final ReadOnlyList<INode> children = srcDir.getChildrenList(null);
+      if (!children.isEmpty()) {
+        final List<INode> inodes = new ArrayList<INode>(children.size());
+        for(final INode c : new ArrayList<INode>(ReadOnlyList.Util.asList(children))) {
+          final INode i;
+          if (c == null) {
+            i = null;
+          } else if (c instanceof INodeDirectory) {
+            //also handle INodeDirectoryWithQuota
+            i = processINodeDirectory((INodeDirectory)c);
+          } else if (c instanceof INodeFileUnderConstruction) {
+            //TODO: support INodeFileUnderConstruction
+            throw new IOException("Not yet supported.");
+          } else if (c instanceof INodeFile) {
+            i = processINodeFile(srcDir, (INodeFile)c);
+          } else if (c instanceof INodeSymlink) {
+            i = new INodeSymlink((INodeSymlink)c);
+          } else {
+            throw new AssertionError("Unknow INode type: " + c.getClass()
+                + ", inode = " + c);
+          }
+          i.setParent(dstDir);
+          inodes.add(i);
+        }
+        dstDir.setChildren(inodes);
+      }
+    }
+    
+    /**
+     * Create destination INodeDirectory and make the recursive call. 
+     * @return destination INodeDirectory.
+     */
+    private INodeDirectory processINodeDirectory(final INodeDirectory srcChild
+        ) throws IOException {
+      final INodeDirectory dstChild = new INodeDirectory(srcChild);
+      dstChild.setChildren(null);
+      processRecursively(srcChild, dstChild);
+      return dstChild;
+    }
+
+    /**
+     * Create destination INodeFileSnapshot and update source INode type.
+     * @return destination INodeFileSnapshot.
+     */
+    private INodeFileSnapshot processINodeFile(final INodeDirectory parent,
+        final INodeFile file) {
+      final INodeFileSnapshot snapshot = new INodeFileSnapshot(
+          file, file.computeFileSize(true)); 
+
+      final INodeFileWithLink srcWithLink;
+      //check source INode type
+      if (file instanceof INodeFileWithLink) {
+        srcWithLink = (INodeFileWithLink)file;
+      } else {
+        //source is an INodeFile, replace the source.
+        srcWithLink = new INodeFileWithLink(file);
+        file.removeNode();
+        parent.addChild(srcWithLink, false);
+
+        //update block map
+        namesystem.getBlockManager().addBlockCollection(srcWithLink);
+      }
+      
+      //insert the snapshot to src's linked list.
+      srcWithLink.insert(snapshot);
+      return snapshot;
+    }
+  }
+
   @Override
   public long getNumSnapshottableDirs() {
     return numSnapshottableDirs.get();

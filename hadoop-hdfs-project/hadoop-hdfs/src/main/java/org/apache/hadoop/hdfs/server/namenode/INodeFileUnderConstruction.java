@@ -72,8 +72,9 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(name, perm, modificationTime, modificationTime,
-        blocks, blockReplication, preferredBlockSize);
+    super(perm, blocks, blockReplication, modificationTime, modificationTime,
+          preferredBlockSize);
+    setLocalName(name);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;

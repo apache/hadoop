@@ -176,9 +176,6 @@ Trunk (Unreleased)
     HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
     FSDirectory and INodeDirectory. (szetszwo)
 
-    HDFS-3358. Specify explicitly that the NN UI status total is talking
-    of persistent objects on heap. (harsh)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -648,8 +645,6 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
     of it is undefined after the iteration or modifications of the map.
     (szetszwo)
-
-    HDFS-4231. BackupNode: Introduce BackupState. (shv)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -2039,11 +2034,6 @@ Release 0.23.6 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HDFS-4247. saveNamespace should be tolerant of dangling lease (daryn)
-
-    HDFS-4248. Renaming directories may incorrectly remove the paths in leases
-    under the tree.  (daryn via szetszwo)
 
 Release 0.23.5 - UNRELEASED
 

@@ -89,22 +89,16 @@ public class INodeFile extends INode implements BlockCollection {
   INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
                       long atime, long preferredBlockSize) {
-    this(null, permissions, modificationTime, atime, blklist, replication,
-        preferredBlockSize);
-  }
-
-  INodeFile(byte[] name, PermissionStatus permissions, long mtime, long atime,
-      BlockInfo[] blklist, short replication, long preferredBlockSize) {
-    super(name, permissions, null, mtime, atime);
+    super(permissions, modificationTime, atime);
     header = HeaderFormat.combineReplication(header, replication);
     header = HeaderFormat.combinePreferredBlockSize(header, preferredBlockSize);
     this.blocks = blklist;
   }
 
-  protected INodeFile(INodeFile that) {
-    super(that);
-    this.header = that.header;
-    this.blocks = that.blocks;
+  protected INodeFile(INodeFile f) {
+    this(f.getPermissionStatus(), f.getBlocks(), f.getFileReplication(),
+        f.getModificationTime(), f.getAccessTime(), f.getPreferredBlockSize());
+    this.setLocalName(f.getLocalNameBytes());
   }
 
   /** @return true unconditionally. */

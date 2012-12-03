@@ -363,8 +363,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                 .getContainersToCleanupList();
             if (containersToCleanup.size() != 0) {
               dispatcher.getEventHandler().handle(
-                  new CMgrCompletedContainersEvent(containersToCleanup, 
-                      CMgrCompletedContainersEvent.Reason.BY_RESOURCEMANAGER));
+                  new CMgrCompletedContainersEvent(containersToCleanup));
             }
             List<ApplicationId> appsToCleanup =
                 response.getApplicationsToCleanupList();

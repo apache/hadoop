@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
@@ -203,7 +202,7 @@ class FSImageFormat {
     if (nsQuota != -1 || dsQuota != -1) {
       fsDir.rootDir.setQuota(nsQuota, dsQuota);
     }
-    fsDir.rootDir.cloneModificationTime(root);
+    fsDir.rootDir.setModificationTime(root.getModificationTime());
     fsDir.rootDir.clonePermissionStatus(root);    
   }
 
@@ -306,7 +305,7 @@ class FSImageFormat {
    */
   void addToParent(INodeDirectory parent, INode child) {
     // NOTE: This does not update space counts for parents
-    if (!parent.addChild(child, false, null)) {
+    if (!parent.addChild(child, false)) {
       return;
     }
     namesystem.dir.cacheName(child);
@@ -389,9 +388,8 @@ class FSImageFormat {
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
-        final INodesInPath inodesInPath = fsDir.getINodesInPath(path);
-        INodeFile oldnode = INodeFile.valueOf(inodesInPath.getINode(0), path);
-        fsDir.replaceNode(path, oldnode, cons, inodesInPath.getLatestSnapshot());
+        INodeFile oldnode = INodeFile.valueOf(fsDir.getINode(path), path);
+        fsDir.replaceNode(path, oldnode, cons);
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }
