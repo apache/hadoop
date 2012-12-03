@@ -321,7 +321,7 @@ public class FSEditLogLoader {
         INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
         fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
         INodeFile newFile = ucFile.convertToInodeFile();
-        fsDir.replaceNode(addCloseOp.path, ucFile, newFile);
+        fsDir.unprotectedReplaceNode(addCloseOp.path, ucFile, newFile);
       }
       break;
     }

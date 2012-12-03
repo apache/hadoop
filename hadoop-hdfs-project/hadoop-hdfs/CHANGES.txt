@@ -655,6 +655,10 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4231. BackupNode: Introduce BackupState. (shv)
 
+    HDFS-4243. When replacing an INodeDirectory, the parent pointers of the
+    children of the child have to be updated to the new child.  (Jing Zhao
+    via szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
