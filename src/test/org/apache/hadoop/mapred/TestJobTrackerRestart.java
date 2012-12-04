@@ -17,18 +17,22 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.UtilsForTests;
-import org.apache.hadoop.mapred.QueueManager.QueueACL;
-import org.apache.hadoop.security.UserGroupInformation;
+import static org.junit.Assert.*;
 
-import junit.framework.TestCase;
-import java.io.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.*;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
+import org.apache.hadoop.mapred.UtilsForTests.HalfWaitingMapper;
+import org.apache.hadoop.mapred.UtilsForTests.WaitingReducer;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Ignore;
+import org.junit.Test;
 /** 
  * TestJobTrackerRestart checks if the jobtracker can restart. JobTracker 
  * should be able to continue running the previously running jobs and also 
@@ -37,7 +41,7 @@ import org.junit.*;
 /**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
  */
 @Ignore
-public class TestJobTrackerRestart extends TestCase {
+public class TestJobTrackerRestart {
   static final Path testDir = 
     new Path(System.getProperty("test.build.data","/tmp"), 
              "jt-restart-testing");
@@ -96,6 +100,7 @@ public class TestJobTrackerRestart extends TestCase {
    * 
    * Check if the job is missing
    */
+  @Test
   public void testRestartWithoutRecovery(MiniDFSCluster dfs, 
                                          MiniMRCluster mr) 
   throws IOException {
@@ -190,6 +195,7 @@ public class TestJobTrackerRestart extends TestCase {
    *    - Check if the counters can be accessed
    *    - Check if the history files are (re)named properly
    */
+  @Test
   public void testTaskEventsAndReportsWithRecovery(MiniDFSCluster dfs, 
                                                    MiniMRCluster mr) 
   throws IOException {
@@ -404,6 +410,7 @@ public class TestJobTrackerRestart extends TestCase {
    * 
    * Assumption that map slots are given first for setup.
    */
+  @Test
   public void testJobRecoveryWithEmptyHistory(MiniDFSCluster dfs, 
                                               MiniMRCluster mr) 
   throws IOException {
@@ -495,6 +502,7 @@ public class TestJobTrackerRestart extends TestCase {
     assertFalse("Old jobconf file is not deleted", historyFS.exists(confPath));
   }
   
+  @Test
   public void testJobTrackerRestart() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;

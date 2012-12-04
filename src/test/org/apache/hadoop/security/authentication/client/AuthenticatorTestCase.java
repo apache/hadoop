@@ -13,18 +13,9 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import junit.framework.TestCase;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.ServletHolder;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,7 +28,19 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.util.Properties;
 
-public abstract class AuthenticatorTestCase extends TestCase {
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.FilterHolder;
+import org.mortbay.jetty.servlet.ServletHolder;
+
+public abstract class AuthenticatorTestCase {
   private Server server;
   private String host = null;
   private int port = -1;

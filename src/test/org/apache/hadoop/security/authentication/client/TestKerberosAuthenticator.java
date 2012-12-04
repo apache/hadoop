@@ -13,11 +13,14 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import static org.junit.Assert.*;
+
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.junit.Ignore;
+import org.junit.Test;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -38,6 +41,7 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
     return props;
   }
 
+  @Test
   public void testFallbacktoPseudoAuthenticator() throws Exception {
     Properties props = new Properties();
     props.setProperty(AuthenticationFilter.AUTH_TYPE, "simple");
@@ -46,6 +50,7 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
     _testAuthentication(new KerberosAuthenticator(), false);
   }
 
+  @Test
   public void testNotAuthenticated() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     start();
@@ -60,7 +65,7 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
     }
   }
 
-
+  @Test
   public void testAuthentication() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {
@@ -72,6 +77,7 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
     });
   }
 
+  @Test
   public void testAuthenticationPost() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {

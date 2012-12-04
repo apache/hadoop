@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.net.URL;
+
+import org.junit.Test;
 
 public class TestCapacitySchedulerServlet extends
     ClusterWithCapacityScheduler {
@@ -32,6 +36,7 @@ public class TestCapacitySchedulerServlet extends
    * 
    * @throws IOException
    */
+  @Test
   public void testCapacitySchedulerServlet() throws IOException {
     Properties schedulerProps = new Properties();
     String[] queues = new String[] { "Q1", "Q2" };

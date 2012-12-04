@@ -25,6 +25,9 @@ Release 1.1.2 - 2012.11.18
     HDFS-4208. NameNode could be stuck in SafeMode due to never-created
     blocks. (Brandon Li via suresh)
 
+    HADOOP-9111. Change some JUnit 3 tests to JUnit 4 so that @Ignore tests can
+    be run with ant 1.8.x.  (Jing Zhao via szetszwo)
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
