@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,7 +50,7 @@ public class TestLocalizationWithLinuxTaskController extends
   }
 
   @Override
-  protected void setUp()
+  public void setUp()
       throws Exception {
 
     if (!canRun()) {
@@ -62,7 +64,7 @@ public class TestLocalizationWithLinuxTaskController extends
   }
 
   @Override
-  protected void tearDown()
+  public void tearDown()
       throws Exception {
     if (!canRun()) {
       return;

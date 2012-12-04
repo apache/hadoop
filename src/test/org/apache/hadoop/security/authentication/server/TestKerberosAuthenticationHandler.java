@@ -13,34 +13,37 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import static org.junit.Assert.*;
+
+import java.util.Properties;
+import java.util.concurrent.Callable;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
-import junit.framework.TestCase;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
-import org.junit.Ignore;
-import org.mockito.Mockito;
 import org.ietf.jgss.Oid;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.Field;
-import java.util.Properties;
-import java.util.concurrent.Callable;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 //Disabled because kerberos setup and valid keytabs are required.
 @Ignore("requires kerberos setup")
-public class TestKerberosAuthenticationHandler extends TestCase {
+public class TestKerberosAuthenticationHandler {
 
   private KerberosAuthenticationHandler handler;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     handler = new KerberosAuthenticationHandler();
     Properties props = new Properties();
     props.setProperty(KerberosAuthenticationHandler.PRINCIPAL, KerberosTestUtils.getServerPrincipal());
@@ -55,25 +58,27 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     }
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (handler != null) {
       handler.destroy();
       handler = null;
     }
-    super.tearDown();
   }
 
+  @Test
   public void testInit() throws Exception {
     assertEquals(KerberosTestUtils.getServerPrincipal(), handler.getPrincipal());
     assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());
   }
 
+  @Test
   public void testType() throws Exception {
     KerberosAuthenticationHandler handler = new KerberosAuthenticationHandler();
     assertEquals(KerberosAuthenticationHandler.TYPE, handler.getType());
   }
 
+  @Test
   public void testRequestWithoutAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -83,6 +88,7 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
+  @Test
   public void testRequestWithInvalidAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -93,6 +99,7 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
+  @Test
   public void testRequestWithIncompleteAuthorization() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -109,7 +116,7 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     }
   }
 
-
+  @Test
   public void testRequestWithAuthorization() throws Exception {
     String token = KerberosTestUtils.doAsClient(new Callable<String>() {
       @Override
@@ -163,6 +170,7 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     }
   }
 
+  @Test
   public void testRequestWithInvalidKerberosAuthorization() throws Exception {
 
     String token = new Base64(0).encodeToString(new byte[]{0, 1, 2});

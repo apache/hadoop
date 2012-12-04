@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
 import org.apache.hadoop.mapred.ControlledMapReduceJob.ControlledMapReduceJobRunner;
 import org.junit.*;
@@ -37,6 +39,7 @@ public class TestJobTrackerRestartWithCS extends ClusterWithCapacityScheduler {
    *
    * @throws Exception
    */
+  @Test
   public void testJobTrackerRestartWithCS()
           throws Exception {
     try {

@@ -17,31 +17,32 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-import junit.framework.TestCase;
-import org.junit.Ignore;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Class to test mapred debug Script
  */
 @Ignore //disabled until we fix the issues in running debug scripts
-public class TestMiniMRMapRedDebugScript extends TestCase {
+public class TestMiniMRMapRedDebugScript {
   private static final Log LOG =
     LogFactory.getLog(TestMiniMRMapRedDebugScript.class.getName());
 
@@ -185,6 +186,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
    * the output of debug out log. 
    *
    */
+  @Test
   public void testMapDebugScript() throws Exception {
     try {
       
