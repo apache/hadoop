@@ -124,9 +124,6 @@ Release 1.2.0 - unreleased
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
     (suresh)
 
-    HDFS-4252. Improve confusing log message that prints exception when editlog 
-    read is completed. (Jing Zhao via suresh)
-
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
@@ -136,9 +133,6 @@ Release 1.2.0 - unreleased
     (Backport of HADOOP-8926) (Gopal V via suresh)
 
   BUG FIXES
-
-    MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
-    race conditions.  (Sam Liu via eyang)
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
     HADOOP_SECURE_DN_PID_DIR (bobby)
@@ -202,9 +196,6 @@ Release 1.2.0 - unreleased
     HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
     even for short reads.  (Brandon Li via szetszwo)
 
-    HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
-    principal. (atm)
-
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
@@ -219,9 +210,6 @@ Release 1.2.0 - unreleased
 
     HADOOP-8611. Allow fall-back to the shell-based implementation when
     JNI-based users-group mapping fails (Robert Parker via bobby)
-
-    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
-    via atm)
 
     HADOOP-4572. Can not access user logs - Jetty is not configured by default 
     to serve aliases/symlinks (ahmed via tucu)
@@ -322,19 +310,45 @@ Release 1.2.0 - unreleased
     handles hostname starting with a numeric character.  (Jing Zhao via
     szetszwo)
 
-    HDFS-4208. NameNode could be stuck in SafeMode due to never-created
-    blocks. (Brandon Li via suresh)
-
     HADOOP-9099. TestNetUtils fails if "UnknownHost" is resolved as a valid
     hostname.  (Ivan Mitic via szetszwo)
 
     MAPREDUCE-4778. Fair scheduler event log is only written if directory
     exists on HDFS. (Sandy Ryza via tomwhite)
 
+Release 1.1.2 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-4252. Improve confusing log message that prints exception when editlog 
+    read is completed. (Jing Zhao via suresh)
+
+  BUG FIXES
+
+    MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
+    race conditions.  (Sam Liu via eyang)
+
+    HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
+    principal. (atm)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
+    HDFS-4208. NameNode could be stuck in SafeMode due to never-created
+    blocks. (Brandon Li via suresh)
+
     HADOOP-9111. Change some JUnit 3 tests to JUnit 4 so that @Ignore tests can
     be run with ant 1.8.x.  (Jing Zhao via szetszwo)
 
-Release 1.1.1 - Unreleased
+    HADOOP-9115. Backport HADOOP-7082 and HDFS-1542: Configuration.writeXML
+    should not hold lock while outputting and add a test for a deadlock writing
+    Configuration to HDFS.  (Jing Zhao via szetszwo)
+
+Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
 
