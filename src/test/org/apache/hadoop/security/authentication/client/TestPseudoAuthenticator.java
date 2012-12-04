@@ -13,8 +13,11 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import static org.junit.Assert.*;
+
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.junit.Test;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -29,11 +32,13 @@ public class TestPseudoAuthenticator extends AuthenticatorTestCase {
     return props;
   }
 
+  @Test
   public void testGetUserName() throws Exception {
     PseudoAuthenticator authenticator = new PseudoAuthenticator();
     assertEquals(System.getProperty("user.name"), authenticator.getUserName());
   }
 
+  @Test
   public void testAnonymousAllowed() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(true));
     start();
@@ -47,6 +52,7 @@ public class TestPseudoAuthenticator extends AuthenticatorTestCase {
     }
   }
 
+  @Test
   public void testAnonymousDisallowed() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(false));
     start();
@@ -60,21 +66,25 @@ public class TestPseudoAuthenticator extends AuthenticatorTestCase {
     }
   }
 
+  @Test
   public void testAuthenticationAnonymousAllowed() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(true));
     _testAuthentication(new PseudoAuthenticator(), false);
   }
 
+  @Test
   public void testAuthenticationAnonymousDisallowed() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(false));
     _testAuthentication(new PseudoAuthenticator(), false);
   }
 
+  @Test
   public void testAuthenticationAnonymousAllowedWithPost() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(true));
     _testAuthentication(new PseudoAuthenticator(), true);
   }
 
+  @Test
   public void testAuthenticationAnonymousDisallowedWithPost() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration(false));
     _testAuthentication(new PseudoAuthenticator(), true);

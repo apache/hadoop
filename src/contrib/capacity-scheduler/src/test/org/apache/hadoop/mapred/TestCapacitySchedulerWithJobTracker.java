@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Properties;
 
 import org.apache.hadoop.examples.SleepJob;
+import org.junit.Test;
 
 
 public class TestCapacitySchedulerWithJobTracker extends
@@ -33,6 +38,7 @@ public class TestCapacitySchedulerWithJobTracker extends
    * 
    * @throws Exception
    */
+  @Test
   public void testFailingJobInitalization() throws Exception {
     Properties schedulerProps = new Properties();
     schedulerProps.put("mapred.capacity-scheduler.queue.default.capacity",
@@ -72,6 +78,7 @@ public class TestCapacitySchedulerWithJobTracker extends
    * 
    * @throws Exception
    */
+  @Test
   public void testJobTrackerIntegration() throws Exception {
 
     Properties schedulerProps = new Properties();

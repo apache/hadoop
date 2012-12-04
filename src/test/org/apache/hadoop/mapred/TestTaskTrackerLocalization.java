@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -26,9 +29,6 @@ import java.util.TreeMap;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
-import junit.framework.TestCase;
-import org.junit.Ignore;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.mapred.TaskTracker.RunningJob;
@@ -49,6 +48,10 @@ import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test to verify localization of a job and localization of a task on a
@@ -56,7 +59,7 @@ import org.apache.hadoop.util.Shell;
  * 
  */
 @Ignore // test relies on deprecated functionality/lifecycle
-public class TestTaskTrackerLocalization extends TestCase {
+public class TestTaskTrackerLocalization {
 
   private File TEST_ROOT_DIR;
   private File ROOT_MAPRED_LOCAL_DIR;
@@ -92,8 +95,8 @@ public class TestTaskTrackerLocalization extends TestCase {
     return true;
   }
 
-  @Override
-  protected void setUp()
+  @Before
+  public void setUp()
       throws Exception {
     if (!canRun()) {
       return;
@@ -261,8 +264,8 @@ public class TestTaskTrackerLocalization extends TestCase {
         TokenCache.JOB_TOKEN_HDFS_FILE), new Configuration());
   }
 
-  @Override
-  protected void tearDown()
+  @After
+  public void tearDown()
       throws Exception {
     if (!canRun()) {
       return;
@@ -296,6 +299,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testTaskControllerSetup()
       throws IOException {
     if (!canRun()) {
@@ -322,6 +326,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testUserLocalization()
       throws IOException {
     if (!canRun()) {
@@ -397,6 +402,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testJobLocalization()
       throws Exception {
     if (!canRun()) {
@@ -513,6 +519,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testTaskLocalization()
       throws Exception {
     if (!canRun()) {
@@ -640,6 +647,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
+  @Test
   public void testTaskFilesRemoval()
       throws Exception {
     if (!canRun()) {
@@ -652,6 +660,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a task that is not succeeded
    * @throws IOException
    */
+  @Test
   public void testFailedTaskFilesRemoval()
   throws Exception {
     if (!canRun()) {
@@ -673,6 +682,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
+  @Test
   public void testTaskFilesRemovalWithJvmUse()
       throws Exception {
     if (!canRun()) {
@@ -782,6 +792,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    *   - create files with no write permissions to TT under job-work-dir
    *   - create files with no write permissions to TT under task-work-dir
    */
+  @Test
   public void testJobFilesRemoval() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
@@ -873,6 +884,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    * @throws InterruptedException
    */
+  @Test
   public void testTrackerRestart() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
@@ -914,6 +926,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    * @throws InterruptedException
    */
+  @Test
   public void testTrackerReinit() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
@@ -949,6 +962,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws InterruptedException 
    * @throws IOException 
    */
+  @Test
   public void testCleanupTaskLocalization() throws IOException,
       InterruptedException {
     if (!canRun()) {

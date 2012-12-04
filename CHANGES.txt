@@ -331,6 +331,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4778. Fair scheduler event log is only written if directory
     exists on HDFS. (Sandy Ryza via tomwhite)
 
+    HADOOP-9111. Change some JUnit 3 tests to JUnit 4 so that @Ignore tests can
+    be run with ant 1.8.x.  (Jing Zhao via szetszwo)
+
 Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
