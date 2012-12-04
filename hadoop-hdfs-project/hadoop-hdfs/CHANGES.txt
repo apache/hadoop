@@ -179,6 +179,8 @@ Trunk (Unreleased)
     HDFS-3358. Specify explicitly that the NN UI status total is talking
     of persistent objects on heap. (harsh)
 
+    HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
