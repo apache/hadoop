@@ -348,6 +348,9 @@ Release 1.1.2 - Unreleased
     should not hold lock while outputting and add a test for a deadlock writing
     Configuration to HDFS.  (Jing Zhao via szetszwo)
 
+    HADOOP-8880. Missing jersey jars as dependency in the pom causes hive tests 
+    to fail.  (gkesavan via mattf)
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
