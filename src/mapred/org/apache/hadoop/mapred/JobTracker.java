@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -1896,8 +1897,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       conf.setBoolean(DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_KEY, false);
     }
   }
-  
-  private void initializeFilesystem() throws IOException, InterruptedException {
+ 
+  @InterfaceAudience.Private
+  void initializeFilesystem() throws IOException, InterruptedException {
     // Connect to HDFS NameNode
     while (!Thread.currentThread().isInterrupted() && fs == null) {
       try {
@@ -1925,7 +1927,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
   
-  private void initialize() 
+  @InterfaceAudience.Private
+  void initialize() 
       throws IOException, InterruptedException {
     // initialize history parameters.
     final JobTracker jtFinal = this;

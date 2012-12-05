@@ -843,6 +843,10 @@ public class UtilsForTests {
     JobConf conf = new JobConf();
     conf.set("mapred.job.tracker", "localhost:0");
     conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+    return getJobTracker(conf, qm);
+  }
+
+  static JobTracker getJobTracker(JobConf conf, QueueManager qm) {
     JobTracker jt;
     try {
       if (qm == null) {
@@ -850,6 +854,10 @@ public class UtilsForTests {
       } else {
         jt = new JobTracker(conf, qm);
       }
+      jt.setSafeModeInternal(JobTracker.SafeModeAction.SAFEMODE_ENTER);
+      jt.initializeFilesystem();
+      jt.setSafeModeInternal(JobTracker.SafeModeAction.SAFEMODE_LEAVE);
+      jt.initialize();
       return jt;
     } catch (Exception e) {
       throw new RuntimeException("Could not start jt", e);
