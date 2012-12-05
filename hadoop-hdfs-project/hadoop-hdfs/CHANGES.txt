@@ -141,6 +141,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
 
+    HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES 
