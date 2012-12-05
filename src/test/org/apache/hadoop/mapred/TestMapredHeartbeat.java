@@ -58,7 +58,8 @@ public class TestMapredHeartbeat extends TestCase {
       
       // test configured heartbeat interval is capped with min value
       taskTrackers = 5;
-      conf.setInt(JobTracker.JT_HEARTBEATS_IN_SECOND, 10);
+      conf.setInt(JobTracker.JT_HEARTBEATS_IN_SECOND, 
+          (int)Math.ceil((taskTrackers * 1000.0) / MRConstants.HEARTBEAT_INTERVAL_MIN) );
       mr = new MiniMRCluster(taskTrackers, "file:///", 3, 
           null, null, conf);
       jc = new JobClient(mr.createJobConf());
