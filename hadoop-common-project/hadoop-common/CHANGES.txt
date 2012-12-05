@@ -165,6 +165,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9064. Augment DelegationTokenRenewer API to cancel the tokens on 
     calls to removeRenewAction. (kkambatl via tucu)
 
+    HADOOP-9103. UTF8 class does not properly decode Unicode characters
+    outside the basic multilingual plane. (todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
