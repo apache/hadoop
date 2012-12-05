@@ -305,6 +305,7 @@ message BlocksWithLocationsProto {
 message RemoteEditLogProto {
   required uint64 startTxId = 1;  // Starting available edit log transaction
   required uint64 endTxId = 2;    // Ending available edit log transaction
+  optional bool isInProgress = 3 [default = false];
 }
 
 /**

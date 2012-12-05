@@ -1220,7 +1220,7 @@ public class TestEditLog {
       elfos.create();
       elfos.writeRaw(garbage, 0, garbage.length);
       elfos.setReadyToFlush();
-      elfos.flushAndSync();
+      elfos.flushAndSync(true);
       elfos.close();
       elfos = null;
       file = new File(TEST_LOG_NAME);

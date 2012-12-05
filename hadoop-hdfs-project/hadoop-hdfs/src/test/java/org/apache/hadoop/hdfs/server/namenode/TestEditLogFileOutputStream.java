@@ -55,7 +55,7 @@ public class TestEditLogFileOutputStream {
   static void flushAndCheckLength(EditLogFileOutputStream elos,
       long expectedLength) throws IOException {
     elos.setReadyToFlush();
-    elos.flushAndSync();
+    elos.flushAndSync(true);
     assertEquals(expectedLength, elos.getFile().length());
   }
   

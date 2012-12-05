@@ -74,6 +74,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -86,14 +87,6 @@ import com.google.protobuf.ServiceException;
 public class TestBlockToken {
   public static final Log LOG = LogFactory.getLog(TestBlockToken.class);
   private static final String ADDRESS = "0.0.0.0";
-
-  static final String SERVER_PRINCIPAL_KEY = "test.ipc.server.principal";
-  private static Configuration conf;
-  static {
-    conf = new Configuration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(conf);
-  }
 
   static {
     ((Log4JLogger) Client.LOG).getLogger().setLevel(Level.ALL);
@@ -111,6 +104,13 @@ public class TestBlockToken {
   ExtendedBlock block1 = new ExtendedBlock("0", 0L);
   ExtendedBlock block2 = new ExtendedBlock("10", 10L);
   ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
+  
+  @Before
+  public void disableKerberos() {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(conf);
+  }
 
   private static class GetLengthAnswer implements
       Answer<GetReplicaVisibleLengthResponseProto> {
@@ -215,8 +215,9 @@ public class TestBlockToken {
     tokenGenerationAndVerification(masterHandler, slaveHandler);
   }
 
-  private Server createMockDatanode(BlockTokenSecretManager sm,
-      Token<BlockTokenIdentifier> token) throws IOException, ServiceException {
+  private static Server createMockDatanode(BlockTokenSecretManager sm,
+      Token<BlockTokenIdentifier> token, Configuration conf)
+      throws IOException, ServiceException {
     ClientDatanodeProtocolPB mockDN = mock(ClientDatanodeProtocolPB.class);
 
     BlockTokenIdentifier id = sm.createIdentifier();
@@ -237,12 +238,16 @@ public class TestBlockToken {
 
   @Test
   public void testBlockTokenRpc() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
         blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
 
-    final Server server = createMockDatanode(sm, token);
+    final Server server = createMockDatanode(sm, token, conf);
 
     server.start();
 
@@ -271,13 +276,17 @@ public class TestBlockToken {
    */
   @Test
   public void testBlockTokenRpcLeak() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    
     Assume.assumeTrue(FD_DIR.exists());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
         blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
 
-    final Server server = createMockDatanode(sm, token);
+    final Server server = createMockDatanode(sm, token, conf);
     server.start();
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
