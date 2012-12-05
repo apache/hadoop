@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.1.2 - 2012.11.18
+Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
 
@@ -10,6 +10,9 @@ Release 1.1.2 - 2012.11.18
 
     HDFS-4252. Improve confusing log message that prints exception when editlog 
     read is completed. (Jing Zhao via suresh)
+
+    HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
+    (Jing Zhao via suresh)
 
   BUG FIXES
 
