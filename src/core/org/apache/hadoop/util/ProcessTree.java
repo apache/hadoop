@@ -237,6 +237,8 @@ public class ProcessTree {
         shexec.execute();
         String result = shexec.getOutput();
         return (result.contains("IsAlive"));
+      } catch (ExitCodeException ee) {
+        return false;
       } catch (IOException ioe) {
         LOG.warn("Error executing shell command", ioe);
         return false;

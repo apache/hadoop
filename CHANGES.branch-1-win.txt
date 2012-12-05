@@ -234,3 +234,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9110. HADOOP-9110. winutils ls off-by-one error indexing MONTHS array
     can cause access violation. (Chris Nauroth via suresh)
+
+    HADOOP-9102. winutils task isAlive does not return a non-zero exit code if
+    the requested task is not alive. (Chris Nauroth via suresh)

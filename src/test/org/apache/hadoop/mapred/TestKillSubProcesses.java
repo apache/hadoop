@@ -284,8 +284,12 @@ public class TestKillSubProcesses extends TestCase {
     // Checking if the descendant processes of map task are killed properly
     if(ProcessTree.isSetsidAvailable) {
       if(Shell.WINDOWS) {
-        String result = runAliveCommand(pid);
-        assertTrue("Map process tree not alive", !result.contains("IsAlive"));
+        try {
+          runAliveCommand(pid);
+          fail("Map process tree not alive");
+        } catch (ExitCodeException e) {
+          // expected
+        }
       } else {
         for(int i=0; i <= numLevelsOfSubProcesses; i++) {
           String childPid = UtilsForTests.getPidFromPidFile(
