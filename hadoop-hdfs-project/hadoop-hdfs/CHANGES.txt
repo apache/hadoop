@@ -292,6 +292,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4231. BackupNode: Introduce BackupState. (shv)
 
+    HDFS-4238. Standby namenode should not do purging of shared
+    storage edits. (todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
