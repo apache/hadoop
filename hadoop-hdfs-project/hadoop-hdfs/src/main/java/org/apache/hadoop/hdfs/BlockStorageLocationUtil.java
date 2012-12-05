@@ -202,7 +202,7 @@ class BlockStorageLocationUtil {
       ArrayList<VolumeId> l = new ArrayList<VolumeId>(b.getLocations().length);
       // Start off all IDs as invalid, fill it in later with results from RPCs
       for (int i = 0; i < b.getLocations().length; i++) {
-        l.add(new HdfsVolumeId(null, false));
+        l.add(VolumeId.INVALID_VOLUME_ID);
       }
       blockVolumeIds.put(b, l);
     }
@@ -236,7 +236,7 @@ class BlockStorageLocationUtil {
         // Get the VolumeId by indexing into the list of VolumeIds
         // provided by the datanode
         byte[] volumeId = metaVolumeIds.get(volumeIndex);
-        HdfsVolumeId id = new HdfsVolumeId(volumeId, true);
+        HdfsVolumeId id = new HdfsVolumeId(volumeId);
         // Find out which index we are in the LocatedBlock's replicas
         LocatedBlock locBlock = extBlockToLocBlock.get(extBlock);
         DatanodeInfo[] dnInfos = locBlock.getLocations();

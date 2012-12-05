@@ -502,6 +502,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4214. OfflineEditsViewer should print out the offset at which it
     encountered an error. (Colin Patrick McCabe via atm)
 
+    HDFS-4199. Provide test for HdfsVolumeId. (Ivan A. Veselovsky via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
