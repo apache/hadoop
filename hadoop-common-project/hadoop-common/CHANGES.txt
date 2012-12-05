@@ -460,6 +460,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8958. ViewFs:Non absolute mount name failures when running 
     multiple tests on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9103. UTF8 class does not properly decode Unicode characters
+    outside the basic multilingual plane. (todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
