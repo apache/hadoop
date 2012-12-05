@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.1.1 Release Notes</title>
+<title>Hadoop 1.1.2 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,88 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.1.1 Release Notes</h1>
+<h1>Hadoop 1.1.2 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+
+<h2>Changes since Hadoop 1.1.1</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8567">HADOOP-8567</a>.
+     Major new feature reported by djp and fixed by jingzhao (conf)<br>
+     <b>Port conf servlet to dump running configuration  to branch 1.x</b><br>
+     <blockquote>                    Users can use the conf servlet to get the server-side configuration. Users can<br/>
+
+<br/>
+
+1) connect to http_server_url/conf or http_server_url/conf?format=xml and get XML-based configuration description;<br/>
+
+2) connect to http_server_url/conf?format=json and get JSON-based configuration description.
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9115">HADOOP-9115</a>.
+     Blocker bug reported by arpitgupta and fixed by jingzhao <br>
+     <b>Deadlock in configuration when writing configuration to hdfs</b><br>
+     <blockquote>                                          This fixes a bug where Hive could trigger a deadlock condition in the Hadoop configuration management code.
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4478">MAPREDUCE-4478</a>.
+     Major bug reported by liangly and fixed by liangly <br>
+     <b>TaskTracker&apos;s heartbeat is out of control</b><br>
+     <blockquote>                                          Fixed a bug in TaskTracker&#39;s heartbeat to keep it under control.
+
+      
+</blockquote></li>
+
+</ul>
+
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8880">HADOOP-8880</a>.
+     Major bug reported by gkesavan and fixed by gkesavan <br>
+     <b>Missing jersey jars as dependency in the pom causes hive tests to fail</b><br>
+     <blockquote>ivy.xml has the dependency included where as the same dependency is not updated in the pom template.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9111">HADOOP-9111</a>.
+     Minor improvement reported by jingzhao and fixed by jingzhao (test)<br>
+     <b>Fix failed testcases with @ignore annotation In branch-1</b><br>
+     <blockquote>Currently in branch-1, several failed testcases have @ignore annotation which does not take effect because these testcases are still using JUnit3. This jira plans to change these testcases to JUnit4 to let @ignore work.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3727">HDFS-3727</a>.
+     Major bug reported by atm and fixed by atm (namenode)<br>
+     <b>When using SPNEGO, NN should not try to log in using KSSL principal</b><br>
+     <blockquote>When performing a checkpoint with security enabled, the NN will attempt to relogin from its keytab before making an HTTP request back to the 2NN to fetch the newly-merged image. However, it always attempts to log in using the KSSL principal, even if SPNEGO is configured to be used.<br><br>This issue was discovered by Stephen Chu.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4208">HDFS-4208</a>.
+     Critical bug reported by brandonli and fixed by brandonli (namenode)<br>
+     <b>NameNode could be stuck in SafeMode due to never-created blocks</b><br>
+     <blockquote>In one test case, NameNode allocated a block and then was killed before the client got the addBlock response. After NameNode restarted, it couldn&apos;t get out of SafeMode waiting for the block which was never created. In trunk, NameNode can get out of SafeMode since it only counts complete blocks. However branch-1 doesn&apos;t have the clear notion of under-constructioned-block in Namenode. <br><br>JIRA HDFS-4212 is to track the never-created-block issue and this JIRA is to fix NameNode in branch-1 so it c...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4252">HDFS-4252</a>.
+     Major improvement reported by sureshms and fixed by jingzhao (namenode)<br>
+     <b>Improve confusing log message that prints exception when editlog read is completed</b><br>
+     <blockquote>Namenode prints a log with an exception to indicate successful completion of reading of logs. This causes misunderstanding where people have interpreted it as failure to load editlog. The log message could be better.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2374">MAPREDUCE-2374</a>.
+     Major bug reported by tlipcon and fixed by adi2 <br>
+     <b>&quot;Text File Busy&quot; errors launching MR tasks</b><br>
+     <blockquote>Some very small percentage of tasks fail with a &quot;Text file busy&quot; error.<br><br>The following was the original diagnosis:<br>{quote}<br>Our use of PrintWriter in TaskController.writeCommand is unsafe, since that class swallows all IO exceptions. We&apos;re not currently checking for errors, which I&apos;m seeing result in occasional task failures with the message &quot;Text file busy&quot; - assumedly because the close() call is failing silently for some reason.<br>{quote}<br>.. but turned out to be another issue as well (see below)</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4798">MAPREDUCE-4798</a>.
+     Minor bug reported by sam liu and fixed by  (jobhistoryserver, test)<br>
+     <b>TestJobHistoryServer fails some times with &apos;java.lang.AssertionError: Address already in use&apos;</b><br>
+     <blockquote>UT Failure in IHC 1.0.3: org.apache.hadoop.mapred.TestJobHistoryServer. This UT fails sometimes.<br><br>The error message is:<br>&apos;Testcase: testHistoryServerStandalone took 5.376 sec<br>	Caused an ERROR<br>Address already in use<br>java.lang.AssertionError: Address already in use<br>	at org.apache.hadoop.mapred.TestJobHistoryServer.testHistoryServerStandalone(TestJobHistoryServer.java:113)&apos;</blockquote></li>
+
+
+</ul>
+
 
 <h2>Changes since Hadoop 1.1.0</h2>
 
