@@ -137,6 +137,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3571. Allow EditLogFileInputStream to read from a remote URL (todd)
 
+    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
