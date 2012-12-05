@@ -561,6 +561,9 @@ Release 2.0.3-alpha - Unreleased
     children of the child have to be updated to the new child.  (Jing Zhao
     via szetszwo)
 
+    HDFS-4238. Standby namenode should not do purging of shared
+    storage edits. (todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
