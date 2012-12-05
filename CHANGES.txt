@@ -41,6 +41,9 @@ Release 1.1.2 - 2012.12.05
     MAPREDUCE-4478. Fixed a bug in TaskTracker's heartbeat to keep it under
     control. (Liyin Liang via vinodkv)
 
+    MAPREDUCE-4696. Fixed a failing unit test - TestMRServerPorts
+    (Gopal V via sseth)
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
