@@ -559,6 +559,10 @@ public class TestFairScheduler extends TestCase {
     clock = new FakeClock();
     try {
       jobTracker = new JobTracker(conf, clock);
+      jobTracker.setSafeModeInternal(JobTracker.SafeModeAction.SAFEMODE_ENTER);
+      jobTracker.initializeFilesystem();
+      jobTracker.setSafeModeInternal(JobTracker.SafeModeAction.SAFEMODE_LEAVE);
+      jobTracker.initialize();
     } catch (Exception e) {
       throw new RuntimeException("Could not start JT", e);
     }
