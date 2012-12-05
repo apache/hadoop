@@ -139,6 +139,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
 
+    HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 
