@@ -128,6 +128,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4199. Provide test for HdfsVolumeId. (Ivan A. Veselovsky via atm)
 
+    HDFS-3049. During the normal NN startup process, fall back on a different
+    edit log if we see one that is corrupt (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES 

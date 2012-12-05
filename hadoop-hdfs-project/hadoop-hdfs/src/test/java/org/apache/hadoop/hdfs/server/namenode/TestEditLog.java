@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -531,21 +532,29 @@ public class TestEditLog {
     FSImage fsimage = namesystem.getFSImage();
     final FSEditLog editLog = fsimage.getEditLog();
     fileSys.mkdirs(new Path("/tmp"));
-    StorageDirectory sd = fsimage.getStorage().dirIterator(NameNodeDirType.EDITS).next();
+
+    Iterator<StorageDirectory> iter = fsimage.getStorage().
+      dirIterator(NameNodeDirType.EDITS);
+    LinkedList<StorageDirectory> sds = new LinkedList<StorageDirectory>();
+    while (iter.hasNext()) {
+      sds.add(iter.next());
+    }
     editLog.close();
     cluster.shutdown();
 
-    File editFile = NNStorage.getFinalizedEditsFile(sd, 1, 3);
-    assertTrue(editFile.exists());
-
-    long fileLen = editFile.length();
-    System.out.println("File name: " + editFile + " len: " + fileLen);
-    RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
-    rwf.seek(fileLen-4); // seek to checksum bytes
-    int b = rwf.readInt();
-    rwf.seek(fileLen-4);
-    rwf.writeInt(b+1);
-    rwf.close();
+    for (StorageDirectory sd : sds) {
+      File editFile = NNStorage.getFinalizedEditsFile(sd, 1, 3);
+      assertTrue(editFile.exists());
+  
+      long fileLen = editFile.length();
+      LOG.debug("Corrupting Log File: " + editFile + " len: " + fileLen);
+      RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
+      rwf.seek(fileLen-4); // seek to checksum bytes
+      int b = rwf.readInt();
+      rwf.seek(fileLen-4);
+      rwf.writeInt(b+1);
+      rwf.close();
+    }
     
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).format(false).build();
@@ -1261,6 +1270,113 @@ public class TestEditLog {
       byte[] garbage = new byte[r.nextInt(MAX_GARBAGE_LENGTH)];
       r.nextBytes(garbage);
       validateNoCrash(garbage);
+    }
+  }
+
+  private static long readAllEdits(Collection<EditLogInputStream> streams,
+      long startTxId) throws IOException {
+    FSEditLogOp op;
+    long nextTxId = startTxId;
+    long numTx = 0;
+    for (EditLogInputStream s : streams) {
+      while (true) {
+        op = s.readOp();
+        if (op == null)
+          break;
+        if (op.getTransactionId() != nextTxId) {
+          throw new IOException("out of order transaction ID!  expected " +
+              nextTxId + " but got " + op.getTransactionId() + " when " +
+              "reading " + s.getName());
+        }
+        numTx++;
+        nextTxId = op.getTransactionId() + 1;
+      }
+    }
+    return numTx;
+  }
+
+  /**
+   * Test edit log failover.  If a single edit log is missing, other 
+   * edits logs should be used instead.
+   */
+  @Test
+  public void testEditLogFailOverFromMissing() throws IOException {
+    File f1 = new File(TEST_DIR + "/failover0");
+    File f2 = new File(TEST_DIR + "/failover1");
+    List<URI> editUris = ImmutableList.of(f1.toURI(), f2.toURI());
+
+    NNStorage storage = setupEdits(editUris, 3);
+    
+    final long startErrorTxId = 1*TXNS_PER_ROLL + 1;
+    final long endErrorTxId = 2*TXNS_PER_ROLL;
+
+    File[] files = new File(f1, "current").listFiles(new FilenameFilter() {
+        public boolean accept(File dir, String name) {
+          if (name.startsWith(NNStorage.getFinalizedEditsFileName(startErrorTxId, 
+                                  endErrorTxId))) {
+            return true;
+          }
+          return false;
+        }
+      });
+    assertEquals(1, files.length);
+    assertTrue(files[0].delete());
+
+    FSEditLog editlog = getFSEditLog(storage);
+    editlog.initJournalsForWrite();
+    long startTxId = 1;
+    try {
+      readAllEdits(editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL),
+          startTxId);
+    } catch (IOException e) {
+      LOG.error("edit log failover didn't work", e);
+      fail("Edit log failover didn't work");
+    }
+  }
+
+  /** 
+   * Test edit log failover from a corrupt edit log
+   */
+  @Test
+  public void testEditLogFailOverFromCorrupt() throws IOException {
+    File f1 = new File(TEST_DIR + "/failover0");
+    File f2 = new File(TEST_DIR + "/failover1");
+    List<URI> editUris = ImmutableList.of(f1.toURI(), f2.toURI());
+
+    NNStorage storage = setupEdits(editUris, 3);
+    
+    final long startErrorTxId = 1*TXNS_PER_ROLL + 1;
+    final long endErrorTxId = 2*TXNS_PER_ROLL;
+
+    File[] files = new File(f1, "current").listFiles(new FilenameFilter() {
+        public boolean accept(File dir, String name) {
+          if (name.startsWith(NNStorage.getFinalizedEditsFileName(startErrorTxId, 
+                                  endErrorTxId))) {
+            return true;
+          }
+          return false;
+        }
+      });
+    assertEquals(1, files.length);
+
+    long fileLen = files[0].length();
+    LOG.debug("Corrupting Log File: " + files[0] + " len: " + fileLen);
+    RandomAccessFile rwf = new RandomAccessFile(files[0], "rw");
+    rwf.seek(fileLen-4); // seek to checksum bytes
+    int b = rwf.readInt();
+    rwf.seek(fileLen-4);
+    rwf.writeInt(b+1);
+    rwf.close();
+    
+    FSEditLog editlog = getFSEditLog(storage);
+    editlog.initJournalsForWrite();
+    long startTxId = 1;
+    try {
+      readAllEdits(editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL),
+          startTxId);
+    } catch (IOException e) {
+      LOG.error("edit log failover didn't work", e);
+      fail("Edit log failover didn't work");
     }
   }
 

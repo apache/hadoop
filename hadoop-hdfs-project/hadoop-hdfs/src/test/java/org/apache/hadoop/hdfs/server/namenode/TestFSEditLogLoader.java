@@ -31,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.util.Map;
 import java.util.SortedMap;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -50,6 +51,7 @@ import org.apache.log4j.Level;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
+import com.google.common.io.Files;
 
 public class TestFSEditLogLoader {
   
@@ -317,6 +319,56 @@ public class TestFSEditLogLoader {
     }
     EditLogValidation validation = EditLogFileInputStream.validateEditLog(logFile);
     assertTrue(validation.hasCorruptHeader());
+  }
+
+  @Test
+  public void testValidateEditLogWithCorruptBody() throws IOException {
+    File testDir = new File(TEST_DIR, "testValidateEditLogWithCorruptBody");
+    SortedMap<Long, Long> offsetToTxId = Maps.newTreeMap();
+    final int NUM_TXNS = 20;
+    File logFile = prepareUnfinalizedTestEditLog(testDir, NUM_TXNS,
+        offsetToTxId);
+    // Back up the uncorrupted log
+    File logFileBak = new File(testDir, logFile.getName() + ".bak");
+    Files.copy(logFile, logFileBak);
+    EditLogValidation validation =
+        EditLogFileInputStream.validateEditLog(logFile);
+    assertTrue(!validation.hasCorruptHeader());
+    // We expect that there will be an OP_START_LOG_SEGMENT, followed by
+    // NUM_TXNS opcodes, followed by an OP_END_LOG_SEGMENT.
+    assertEquals(NUM_TXNS + 1, validation.getEndTxId());
+    // Corrupt each edit and verify that validation continues to work
+    for (Map.Entry<Long, Long> entry : offsetToTxId.entrySet()) {
+      long txOffset = entry.getKey();
+      long txId = entry.getValue();
+
+      // Restore backup, corrupt the txn opcode
+      Files.copy(logFileBak, logFile);
+      corruptByteInFile(logFile, txOffset);
+      validation = EditLogFileInputStream.validateEditLog(logFile);
+      long expectedEndTxId = (txId == (NUM_TXNS + 1)) ?
+          NUM_TXNS : (NUM_TXNS + 1);
+      assertEquals("Failed when corrupting txn opcode at " + txOffset,
+          expectedEndTxId, validation.getEndTxId());
+      assertTrue(!validation.hasCorruptHeader());
+    }
+
+    // Truncate right before each edit and verify that validation continues
+    // to work
+    for (Map.Entry<Long, Long> entry : offsetToTxId.entrySet()) {
+      long txOffset = entry.getKey();
+      long txId = entry.getValue();
+
+      // Restore backup, corrupt the txn opcode
+      Files.copy(logFileBak, logFile);
+      truncateFile(logFile, txOffset);
+      validation = EditLogFileInputStream.validateEditLog(logFile);
+      long expectedEndTxId = (txId == 0) ?
+          HdfsConstants.INVALID_TXID : (txId - 1);
+      assertEquals("Failed when corrupting txid " + txId + " txn opcode " +
+        "at " + txOffset, expectedEndTxId, validation.getEndTxId());
+      assertTrue(!validation.hasCorruptHeader());
+    }
   }
 
   @Test

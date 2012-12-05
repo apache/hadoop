@@ -24,7 +24,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +45,6 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeMultiset;
 
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is
@@ -232,8 +233,9 @@ public class JournalSet implements JournalManager {
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxId, boolean inProgressOk) throws IOException {
-    final TreeMultiset<EditLogInputStream> allStreams =
-        TreeMultiset.create(EDIT_LOG_INPUT_STREAM_COMPARATOR);
+    final PriorityQueue<EditLogInputStream> allStreams = 
+        new PriorityQueue<EditLogInputStream>(64,
+            EDIT_LOG_INPUT_STREAM_COMPARATOR);
     for (JournalAndStream jas : journals) {
       if (jas.isDisabled()) {
         LOG.info("Skipping jas " + jas + " since it's disabled");
@@ -249,7 +251,8 @@ public class JournalSet implements JournalManager {
     // transaction ID.
     LinkedList<EditLogInputStream> acc =
         new LinkedList<EditLogInputStream>();
-    for (EditLogInputStream elis : allStreams) {
+    EditLogInputStream elis;
+    while ((elis = allStreams.poll()) != null) {
       if (acc.isEmpty()) {
         acc.add(elis);
       } else {
@@ -257,7 +260,7 @@ public class JournalSet implements JournalManager {
         if (accFirstTxId == elis.getFirstTxId()) {
           acc.add(elis);
         } else if (accFirstTxId < elis.getFirstTxId()) {
-          streams.add(acc.get(0));
+          streams.add(new RedundantEditLogInputStream(acc, fromTxId));
           acc.clear();
           acc.add(elis);
         } else if (accFirstTxId > elis.getFirstTxId()) {
@@ -268,7 +271,7 @@ public class JournalSet implements JournalManager {
       }
     }
     if (!acc.isEmpty()) {
-      streams.add(acc.get(0));
+      streams.add(new RedundantEditLogInputStream(acc, fromTxId));
       acc.clear();
     }
   }

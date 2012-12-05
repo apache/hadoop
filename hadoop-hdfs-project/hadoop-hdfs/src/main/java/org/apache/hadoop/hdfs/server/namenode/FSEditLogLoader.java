@@ -665,7 +665,9 @@ public class FSEditLogLoader {
         FSImage.LOG.warn("Caught exception after reading " + numValid +
             " ops from " + in + " while determining its valid length." +
             "Position was " + lastPos, t);
-        break;
+        in.resync();
+        FSImage.LOG.warn("After resync, position is " + in.getPosition());
+        continue;
       }
       if (lastTxId == HdfsConstants.INVALID_TXID
           || op.getTransactionId() > lastTxId) {
