@@ -231,28 +231,34 @@ public abstract class FSImageTestUtil {
    */
   public static EnumMap<FSEditLogOpCodes,Holder<Integer>> countEditLogOpTypes(
       File editLog) throws Exception {
-    EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
-      new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
-
     EditLogInputStream elis = new EditLogFileInputStream(editLog);
     try {
-      FSEditLogOp op;
-      while ((op = elis.readOp()) != null) {
-        Holder<Integer> i = opCounts.get(op.opCode);
-        if (i == null) {
-          i = new Holder<Integer>(0);
-          opCounts.put(op.opCode, i);
-        }
-        i.held++;
-      }
+      return countEditLogOpTypes(elis);
     } finally {
       IOUtils.closeStream(elis);
     }
+  }
+
+  /**
+   * @see #countEditLogOpTypes(File)
+   */
+  public static EnumMap<FSEditLogOpCodes, Holder<Integer>> countEditLogOpTypes(
+      EditLogInputStream elis) throws IOException {
+    EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
+        new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
     
+    FSEditLogOp op;
+    while ((op = elis.readOp()) != null) {
+      Holder<Integer> i = opCounts.get(op.opCode);
+      if (i == null) {
+        i = new Holder<Integer>(0);
+        opCounts.put(op.opCode, i);
+      }
+      i.held++;
+    }
     return opCounts;
   }
 
-  
   /**
    * Assert that all of the given directories have the same newest filename
    * for fsimage that they hold the same data.

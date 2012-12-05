@@ -131,6 +131,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3049. During the normal NN startup process, fall back on a different
     edit log if we see one that is corrupt (Colin Patrick McCabe via todd)
 
+    HDFS-3571. Allow EditLogFileInputStream to read from a remote URL (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES 

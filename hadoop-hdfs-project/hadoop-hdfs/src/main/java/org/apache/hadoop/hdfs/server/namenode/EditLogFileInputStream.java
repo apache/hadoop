@@ -18,18 +18,25 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.BufferedInputStream;
-import java.io.EOFException;
-import java.io.DataInputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.security.SecurityUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -37,10 +44,12 @@ import com.google.common.base.Throwables;
 
 /**
  * An implementation of the abstract class {@link EditLogInputStream}, which
- * reads edits from a local file.
+ * reads edits from a file. That file may be either on the local disk or
+ * accessible via a URL.
  */
+@InterfaceAudience.Private
 public class EditLogFileInputStream extends EditLogInputStream {
-  private final File file;
+  private final LogSource log;
   private final long firstTxId;
   private final long lastTxId;
   private final boolean isInProgress;
@@ -50,7 +59,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     CLOSED
   }
   private State state = State.UNINIT;
-  private FileInputStream fStream = null;
+  private InputStream fStream = null;
   private int logVersion = 0;
   private FSEditLogOp.Reader reader = null;
   private FSEditLogLoader.PositionTrackingInputStream tracker = null;
@@ -83,7 +92,29 @@ public class EditLogFileInputStream extends EditLogInputStream {
    */
   public EditLogFileInputStream(File name, long firstTxId, long lastTxId,
       boolean isInProgress) {
-    this.file = name;
+    this(new FileLog(name), firstTxId, lastTxId, isInProgress);
+  }
+  
+  /**
+   * Open an EditLogInputStream for the given URL.
+   *
+   * @param url the url hosting the log
+   * @param startTxId the expected starting txid
+   * @param endTxId the expected ending txid
+   * @param inProgress whether the log is in-progress
+   * @return a stream from which edits may be read
+   */
+  public static EditLogInputStream fromUrl(URL url, long startTxId,
+      long endTxId, boolean inProgress) {
+    return new EditLogFileInputStream(new URLLog(url),
+        startTxId, endTxId, inProgress);
+  }
+  
+  private EditLogFileInputStream(LogSource log,
+      long firstTxId, long lastTxId,
+      boolean isInProgress) {
+      
+    this.log = log;
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
     this.isInProgress = isInProgress;
@@ -93,7 +124,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     Preconditions.checkState(state == State.UNINIT);
     BufferedInputStream bin = null;
     try {
-      fStream = new FileInputStream(file);
+      fStream = log.getInputStream();
       bin = new BufferedInputStream(fStream);
       tracker = new FSEditLogLoader.PositionTrackingInputStream(bin);
       dataIn = new DataInputStream(tracker);
@@ -124,7 +155,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
 
   @Override
   public String getName() {
-    return file.getPath();
+    return log.getName();
   }
 
   private FSEditLogOp nextOpImpl(boolean skipBrokenEdits) throws IOException {
@@ -162,7 +193,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
           // we were supposed to read out of the stream.
           // So we force an EOF on all subsequent reads.
           //
-          long skipAmt = file.length() - tracker.getPos();
+          long skipAmt = log.length() - tracker.getPos();
           if (skipAmt > 0) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("skipping " + skipAmt + " bytes at the end " +
@@ -224,7 +255,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
   @Override
   public long length() throws IOException {
     // file size + size of both buffers
-    return file.length();
+    return log.length();
   }
   
   @Override
@@ -295,4 +326,85 @@ public class EditLogFileInputStream extends EditLogInputStream {
       super(msg);
     }
   }
+  
+  private interface LogSource {
+    public InputStream getInputStream() throws IOException;
+    public long length();
+    public String getName();
+  }
+  
+  private static class FileLog implements LogSource {
+    private final File file;
+    
+    public FileLog(File file) {
+      this.file = file;
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+      return new FileInputStream(file);
+    }
+
+    @Override
+    public long length() {
+      return file.length();
+    }
+
+    @Override
+    public String getName() {
+      return file.getPath();
+    }
+  }
+
+  private static class URLLog implements LogSource {
+    private final URL url;
+    private long advertisedSize = -1;
+
+    private final static String CONTENT_LENGTH = "Content-Length";
+
+    public URLLog(URL url) {
+      this.url = url;
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+      HttpURLConnection connection = (HttpURLConnection)
+          SecurityUtil.openSecureHttpConnection(url);
+      
+      if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+        throw new HttpGetFailedException(
+            "Fetch of " + url +
+            " failed with status code " + connection.getResponseCode() +
+            "\nResponse message:\n" + connection.getResponseMessage(),
+            connection);
+      }
+
+      String contentLength = connection.getHeaderField(CONTENT_LENGTH);
+      if (contentLength != null) {
+        advertisedSize = Long.parseLong(contentLength);
+        if (advertisedSize <= 0) {
+          throw new IOException("Invalid " + CONTENT_LENGTH + " header: " +
+              contentLength);
+        }
+      } else {
+        throw new IOException(CONTENT_LENGTH + " header is not provided " +
+                              "by the server when trying to fetch " + url);
+      }
+
+      return connection.getInputStream();
+    }
+
+    @Override
+    public long length() {
+      Preconditions.checkState(advertisedSize != -1,
+          "must get input stream before length is available");
+      return advertisedSize;
+    }
+
+    @Override
+    public String getName() {
+      return url.toString();
+    }
+  }
+  
 }
