@@ -203,6 +203,9 @@ Release 0.23.6 - UNRELEASED
     YARN-251. Proxy URI generation fails for blank tracking URIs (Tom White
     via jlowe)
 
+    YARN-258. RM web page UI shows Invalid Date for start and finish times
+    (Ravi Prakash via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
