@@ -145,6 +145,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4268. Remove redundant enum NNHAStatusHeartbeat.State. (shv)
 
+    HDFS-3680. Allow customized audit logging in HDFS FSNamesystem. (Marcelo
+    Vanzin via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 
