@@ -19,31 +19,26 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class NNHAStatusHeartbeat {
 
-  private State state;
+  private HAServiceState state;
   private long txid = HdfsConstants.INVALID_TXID;
   
-  public NNHAStatusHeartbeat(State state, long txid) {
+  public NNHAStatusHeartbeat(HAServiceState state, long txid) {
     this.state = state;
     this.txid = txid;
   }
 
-  public State getState() {
+  public HAServiceState getState() {
     return state;
   }
   
   public long getTxId() {
     return txid;
-  }
-  
-  @InterfaceAudience.Private
-  public enum State {
-    ACTIVE,
-    STANDBY;
   }
 }
