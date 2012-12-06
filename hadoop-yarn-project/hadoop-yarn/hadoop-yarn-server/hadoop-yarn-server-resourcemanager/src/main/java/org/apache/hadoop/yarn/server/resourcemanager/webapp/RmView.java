@@ -60,9 +60,8 @@ public class RmView extends TwoColumnLayout {
   }
 
   private String appsTableInit() {
-    AppsList list = getInstance(AppsList.class);
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
-    StringBuilder init = tableInit()
+    return tableInit()
       .append(", 'aaData': appsTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
@@ -78,18 +77,6 @@ public class RmView extends TwoColumnLayout {
       .append(", 'mRender': parseHadoopProgress }]")
 
       // Sort by id upon page load
-      .append(", aaSorting: [[0, 'desc']]");
-
-    String rows = $("rowlimit");
-    int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);
-    if (list.apps.size() < rowLimit) {
-      list.rendering = Render.HTML;
-      return init.append('}').toString();
-    }
-    if (list.apps.size() > MAX_FAST_ROWS) {
-      tableInitProgress(init, list.apps.size() * 6);
-    }
-    list.rendering = Render.JS_ARRAY;
-    return init.append(", aaData:appsData}").toString();
+      .append(", aaSorting: [[0, 'desc']]}").toString();
   }
 }
