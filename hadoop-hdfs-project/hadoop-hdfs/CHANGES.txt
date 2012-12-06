@@ -143,6 +143,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
 
+    HDFS-4268. Remove redundant enum NNHAStatusHeartbeat.State. (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
