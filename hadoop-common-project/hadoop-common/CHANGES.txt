@@ -463,6 +463,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9103. UTF8 class does not properly decode Unicode characters
     outside the basic multilingual plane. (todd)
 
+    HADOOP-9070. Kerberos SASL server cannot find kerberos key. (daryn via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
