@@ -119,10 +119,7 @@ public class TestMRWithDistributedCache extends TestCase {
           context.getConfiguration().get("mapred.job.tracker"))) {
         File symlinkFile = new File("distributed.first.symlink");
         TestCase.assertTrue(symlinkFile.exists());
-        // Java 6 File#length returns zero for symbolic links on Windows
-        // FIXME: File#length for symbolic links may be due to change in Java 7
-        int expectedValue = Shell.WINDOWS ? 0 : 1;
-        TestCase.assertEquals(expectedValue, symlinkFile.length());
+        TestCase.assertEquals(1, symlinkFile.length());
       }
     }
   }

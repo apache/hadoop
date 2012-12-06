@@ -28,6 +28,10 @@
       name="commons-cli"
       rev="${commons-cli.version}"
       conf="common->default"/>
+    <dependency org="commons-io"
+      name="commons-io"
+      rev="${commons-io.version}"
+      conf="common->default"/>
     <dependency org="commons-logging"
       name="commons-logging"
       rev="${commons-logging.version}"

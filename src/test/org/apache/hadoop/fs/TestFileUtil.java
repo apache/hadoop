@@ -351,7 +351,7 @@ public class TestFileUtil {
 
     //ensure that symlink length is correctly reported by Java
     Assert.assertEquals(data.length, file.length());
-    Assert.assertEquals(Shell.WINDOWS ? 0 : data.length, link.length());
+    Assert.assertEquals(data.length, link.length());
 
     //ensure that we can read from link.
     FileInputStream in = new FileInputStream(link);
@@ -364,10 +364,66 @@ public class TestFileUtil {
   }
 
   /**
-   * Test the value of File's length extracted using FileUtil.
+   * Test that rename on a symlink works as expected.
    */
   @Test
-  public void testGetLengthFollowSymlink() throws Exception {
+  public void testSymlinkRenameTo() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    file.createNewFile();
+    File link = new File(del, "_link");
+
+    // create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertTrue(file.exists());
+    Assert.assertTrue(link.exists());
+
+    File link2 = new File(del, "_link2");
+
+    // Rename the symlink
+    Assert.assertTrue(link.renameTo(link2));
+
+    // Make sure the file still exists
+    // (NOTE: this would fail on Java6 on Windows if we didn't
+    // copy the file in FileUtil#symlink)
+    Assert.assertTrue(file.exists());
+
+    Assert.assertTrue(link2.exists());
+    Assert.assertFalse(link.exists());
+  }
+
+  /**
+   * Test that deletion of a symlink works as expected.
+   */
+  @Test
+  public void testSymlinkDelete() throws Exception {
+    Assert.assertFalse(del.exists());
+    del.mkdirs();
+
+    File file = new File(del, FILE);
+    file.createNewFile();
+    File link = new File(del, "_link");
+
+    // create the symlink
+    FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
+
+    Assert.assertTrue(file.exists());
+    Assert.assertTrue(link.exists());
+
+    // make sure that deleting a symlink works properly
+    Assert.assertTrue(link.delete());
+    Assert.assertFalse(link.exists());
+    Assert.assertTrue(file.exists());
+  }
+
+  /**
+   * Test that length on a symlink works as expected.
+   */
+  @Test
+  public void testSymlinkLength() throws Exception {
     Assert.assertFalse(del.exists());
     del.mkdirs();
 
@@ -381,37 +437,30 @@ public class TestFileUtil {
     os.write(data);
     os.close();
 
-    // ensure that getLengthFollowSymlink returns zero if a file
-    // does not exist
-    Assert.assertEquals(0, FileUtil.getLengthFollowSymlink(link));
+    Assert.assertEquals(0, link.length());
 
     // create the symlink
     FileUtil.symLink(file.getAbsolutePath(), link.getAbsolutePath());
 
-    // ensure that getLengthFollowSymlink returns the target file and link size
-    Assert.assertEquals(data.length, FileUtil.getLengthFollowSymlink(file));
-    Assert.assertEquals(data.length, FileUtil.getLengthFollowSymlink(link));
+    // ensure that File#length returns the target file and link size
+    Assert.assertEquals(data.length, file.length());
+    Assert.assertEquals(data.length, link.length());
 
-    // ensure that getLengthFollowSymlink returns the target file and link
-    // size when NativeIO is not used (tests the fallback functionality
-    // on Windows)
-    Assert.assertEquals(
-      data.length, FileUtil.getLengthFollowSymlink(file, true));
-    Assert.assertEquals(
-      data.length, FileUtil.getLengthFollowSymlink(link, true));
-
-    // Make sure that files can be deleted (no remaining open handles)
     file.delete();
     Assert.assertFalse(file.exists());
 
-    // Link size should be zero when it's pointing to nothing
-    Assert.assertEquals(0, FileUtil.getLengthFollowSymlink(link));
+    if (Shell.WINDOWS && !Shell.isJava7OrAbove()) {
+      // On Java6 on Windows, we copied the file
+      Assert.assertEquals(data.length, link.length());
+    } else {
+      // Otherwise, the target file size is zero
+      Assert.assertEquals(0, link.length());
+    }
 
     link.delete();
     Assert.assertFalse(link.exists());
-
   }
-  
+
   private void doUntarAndVerify(File tarFile, File untarDir) 
                                  throws IOException {
     if (untarDir.exists() && !FileUtil.fullyDelete(untarDir)) {

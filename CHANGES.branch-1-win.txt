@@ -237,3 +237,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9102. winutils task isAlive does not return a non-zero exit code if
     the requested task is not alive. (Chris Nauroth via suresh)
+
+    HADOOP-9061. Java6+Windows does not work well with symlinks.
+    (Ivan Mitic via suresh)

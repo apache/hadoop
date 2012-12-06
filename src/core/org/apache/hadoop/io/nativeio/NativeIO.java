@@ -177,10 +177,6 @@ public class NativeIO {
     /** Windows only methods used for getOwner() implementation */
     private static native String getOwner(FileDescriptor fd) throws IOException;
 
-    /** Windows only method used for getting the file length */
-    public static native long getLengthFollowSymlink(
-        String path) throws IOException;
-
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
