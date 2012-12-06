@@ -21,6 +21,9 @@ Release 0.23.6 - UNRELEASED
     YARN-72. NM should handle cleaning up containers when it shuts down.
     (Sandy Ryza via tomwhite)
 
+    YARN-258. RM web page UI shows Invalid Date for start and finish times
+    (Ravi Prakash via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
