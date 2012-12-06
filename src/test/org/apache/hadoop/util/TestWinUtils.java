@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
@@ -267,10 +269,9 @@ public class TestWinUtils {
     // - Change mode to 677 so owner does not have execute permission.
     // - Verify the owner truly does not have the permissions to execute the file.
 
-    File winutilsFile = new File(Shell.WINUTILS + ".exe");
+    File winutilsFile = new File(Shell.WINUTILS);
     File aExe = new File(TEST_DIR, "a.exe");
-    Shell.execCommand("cmd", "/c", "copy", winutilsFile.getCanonicalPath(),
-      aExe.getCanonicalPath());
+    FileUtils.copyFile(winutilsFile, aExe);
     chmod("677", aExe);
 
     try {

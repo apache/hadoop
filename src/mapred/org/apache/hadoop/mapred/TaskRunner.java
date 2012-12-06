@@ -77,6 +77,7 @@ abstract class TaskRunner extends Thread {
       System.getenv(Shell.WINDOWS ? "USERPROFILE" : "HOME");
   
   static final String HADOOP_WORK_DIR = "HADOOP_WORK_DIR";
+  static final String HADOOP_HOME_DIR = "HADOOP_HOME";
   
   static final String MAPRED_ADMIN_USER_ENV =
     "mapreduce.admin.user.env";
@@ -584,6 +585,16 @@ abstract class TaskRunner extends Thread {
     }
     env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
     env.put(HADOOP_WORK_DIR, workDir.toString());
+
+    try {
+      // When launching tasks, the child may rely on HADOOP_HOME
+      // Make sure it is set even when home is set by 
+      // the -Dhadoop.home.dir flag.
+      env.put(HADOOP_HOME_DIR, Shell.getHadoopHome());
+    } catch (IOException ioe) {
+      LOG.warn("Failed to propagate HADOOP_HOME_DIR to child ENV " + ioe);
+    }
+
     //update user configured login-shell properties
     updateUserLoginEnv(errorInfo, user, conf, env);
     // put jobTokenFile name into env

@@ -240,3 +240,6 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-9061. Java6+Windows does not work well with symlinks.
     (Ivan Mitic via suresh)
+
+    HADOOP-8645. HADOOP_HOME and -Dhadoop.home (from hadoop wrapper script) are
+    not uniformly handled. (John Gordon via suresh)
