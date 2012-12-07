@@ -178,4 +178,71 @@ Configuration
 </web-app>
 +---+
 
+** AltKerberos Configuration
+
+  <<IMPORTANT>>: A KDC must be configured and running.
+
+  The AltKerberos authentication mechanism is a partially implemented derivative
+  of the Kerberos SPNEGO authentication mechanism which allows a "mixed" form of
+  authentication where Kerberos SPNEGO is used by non-browsers while an
+  alternate form of authentication (to be implemented by the user) is used for
+  browsers.  To use AltKerberos as the authentication mechanism (besides
+  providing an implementation), the authentication filter must be configured
+  with the following init parameters, in addition to the previously mentioned
+  Kerberos SPNEGO ones:
+
+    * <<<[PREFIX.]type>>>: the full class name of the implementation of
+      AltKerberosAuthenticationHandler to use.
+
+    * <<<[PREFIX.]alt-kerberos.non-browser.user-agents>>>: a comma-separated
+      list of which user-agents should be considered non-browsers.
+
+  <<Example>>:
+
++---+
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee">
+    ...
+
+    <filter>
+        <filter-name>kerberosFilter</filter-name>
+        <filter-class>org.apache.hadoop.security.auth.server.AuthenticationFilter</filter-class>
+        <init-param>
+            <param-name>type</param-name>
+            <param-value>org.my.subclass.of.AltKerberosAuthenticationHandler</param-value>
+        </init-param>
+        <init-param>
+            <param-name>alt-kerberos.non-browser.user-agents</param-name>
+            <param-value>java,curl,wget,perl</param-value>
+        </init-param>
+        <init-param>
+            <param-name>token.validity</param-name>
+            <param-value>30</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cookie.domain</param-name>
+            <param-value>.foo.com</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cookie.path</param-name>
+            <param-value>/</param-value>
+        </init-param>
+        <init-param>
+            <param-name>kerberos.principal</param-name>
+            <param-value>HTTP/localhost@LOCALHOST</param-value>
+        </init-param>
+        <init-param>
+            <param-name>kerberos.keytab</param-name>
+            <param-value>/tmp/auth.keytab</param-value>
+        </init-param>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>kerberosFilter</filter-name>
+        <url-pattern>/kerberos/*</url-pattern>
+    </filter-mapping>
+
+    ...
+</web-app>
++---+
+
   \[ {{{./index.html}Go Back}} \]
