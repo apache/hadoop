@@ -1050,6 +1050,9 @@ public class NameNode {
 
   private static void doRecovery(StartupOption startOpt, Configuration conf)
       throws IOException {
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    initializeGenericKeys(conf, nsId, namenodeId);
     if (startOpt.getForce() < MetaRecoveryContext.FORCE_ALL) {
       if (!confirmPrompt("You have selected Metadata Recovery mode.  " +
           "This mode is intended to recover lost metadata on a corrupt " +
