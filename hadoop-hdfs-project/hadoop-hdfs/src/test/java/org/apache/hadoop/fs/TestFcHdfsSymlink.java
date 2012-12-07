@@ -86,6 +86,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
 
   @BeforeClass
   public static void testSetUp() throws Exception {
+    FileContextTestHelper.TEST_ROOT_DIR = "/tmp/TestFcHdfsSymlink";
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.set(FsPermission.UMASK_LABEL, "000");

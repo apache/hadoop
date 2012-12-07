@@ -28,6 +28,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -53,6 +54,10 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
   @BeforeClass
   public static void setupCluster() {
+    // Initialize the test root directory to a DFS like path
+    // since we are testing based on the MiniDFSCluster.
+    FileSystemTestHelper.TEST_ROOT_DIR = "/tmp/TestFSMainOperationsWebHdfs";
+
     final Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     try {

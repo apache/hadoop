@@ -51,6 +51,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
+    FileSystemTestHelper.TEST_ROOT_DIR = "/tmp/TestViewFileSystemHdfs";
     SupportsBlocks = true;
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
