@@ -46,8 +46,8 @@ import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -119,12 +119,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected RMDelegationTokenSecretManager rmDTSecretManager;
   private WebApp webApp;
   protected RMContext rmContext;
-  private final Store store;
+  private final RMStateStore store;
   protected ResourceTrackerService resourceTracker;
 
   private Configuration conf;
 
-  public ResourceManager(Store store) {
+  public ResourceManager(RMStateStore store) {
     super("ResourceManager");
     this.store = store;
   }
@@ -161,7 +161,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
     
     this.rmContext =
-        new RMContextImpl(this.store, this.rmDispatcher,
+        new RMContextImpl(this.rmDispatcher,
           this.containerAllocationExpirer, amLivelinessMonitor,
           amFinishingMonitor, tokenRenewer, this.appTokenSecretManager,
           this.containerTokenSecretManager, this.clientToAMSecretManager);
@@ -643,8 +643,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Override
   public void recover(RMState state) throws Exception {
-    resourceTracker.recover(state);
-    scheduler.recover(state);
   }
   
   public static void main(String argv[]) {
@@ -652,14 +650,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
     try {
       Configuration conf = new YarnConfiguration();
-      Store store =  StoreFactory.getStore(conf);
+      RMStateStore store =  StoreFactory.getStore(conf);
       ResourceManager resourceManager = new ResourceManager(store);
       ShutdownHookManager.get().addShutdownHook(
         new CompositeServiceShutdownHook(resourceManager),
         SHUTDOWN_HOOK_PRIORITY);
       resourceManager.init(conf);
       //resourceManager.recover(store.restore());
-      //store.doneWithRecovery();
       resourceManager.start();
     } catch (Throwable t) {
       LOG.fatal("Error starting ResourceManager", t);

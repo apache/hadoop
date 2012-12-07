@@ -25,8 +25,11 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -38,7 +41,6 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
 
 import com.google.inject.Inject;
 
@@ -47,15 +49,15 @@ import com.google.inject.Inject;
  * scheduler as part of the fair scheduler page.
  */
 public class FairSchedulerAppsBlock extends HtmlBlock {
-  final AppsList list;
+  final ConcurrentMap<ApplicationId, RMApp> apps;
   final FairSchedulerInfo fsinfo;
   
-  @Inject public FairSchedulerAppsBlock(AppsList list, 
+  @Inject public FairSchedulerAppsBlock(RMContext rmContext, 
       ResourceManager rm, ViewContext ctx) {
     super(ctx);
-    this.list = list;
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     fsinfo = new FairSchedulerInfo(scheduler);
+    apps = rmContext.getRMApps();
   }
   
   @Override public void render(Block html) {
@@ -75,7 +77,6 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
-    int i = 0;
     Collection<RMAppState> reqAppStates = null;
     String reqStateString = $(APP_STATE);
     if (reqStateString != null && !reqStateString.isEmpty()) {
@@ -85,7 +86,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         reqAppStates.add(RMAppState.valueOf(stateString));
       }
     }
-    for (RMApp app : list.apps.values()) {
+    for (RMApp app : apps.values()) {
       if (reqAppStates != null && !reqAppStates.contains(app.getState())) {
         continue;
       }
@@ -122,15 +123,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
           td().
             a(!appInfo.isTrackingUrlReady()?
               "#" : appInfo.getTrackingUrlPretty(), appInfo.getTrackingUI())._()._();
-      if (list.rendering != Render.HTML && ++i >= 20) break;
     }
     tbody._()._();
-
-    if (list.rendering == Render.JS_ARRAY) {
-      echo("<script type='text/javascript'>\n",
-           "var appsData=");
-      list.toDataTableArrays(reqAppStates, writer());
-      echo("\n</script>\n");
-    }
   }
 }

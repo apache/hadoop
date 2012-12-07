@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 public class FairSchedulerInfo {
@@ -32,9 +32,9 @@ public class FairSchedulerInfo {
   
   public FairSchedulerInfo(FairScheduler fs) {
     scheduler = fs;
-    Collection<FSQueue> queues = fs.getQueueManager().getQueues();
+    Collection<FSLeafQueue> queues = fs.getQueueManager().getLeafQueues();
     queueInfos = new ArrayList<FairSchedulerQueueInfo>();
-    for (FSQueue queue : queues) {
+    for (FSLeafQueue queue : queues) {
       queueInfos.add(new FairSchedulerQueueInfo(queue, fs));
     }
   }

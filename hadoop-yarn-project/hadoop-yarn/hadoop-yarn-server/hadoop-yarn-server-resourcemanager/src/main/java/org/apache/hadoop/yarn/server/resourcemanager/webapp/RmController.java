@@ -93,8 +93,4 @@ public class RmController extends Controller {
   public void submit() {
     setTitle("Application Submission Not Allowed");
   }
-
-  public void json() {
-    renderJSON(AppsList.class);
-  }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,7 +51,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -75,6 +76,25 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
+/**
+ * A scheduler that schedules resources between a set of queues. The scheduler
+ * keeps track of the resources used by each queue, and attempts to maintain
+ * fairness by scheduling tasks at queues whose allocations are farthest below
+ * an ideal fair distribution.
+ * 
+ * The fair scheduler supports hierarchical queues. All queues descend from a
+ * queue named "root". Available resources are distributed among the children
+ * of the root queue in the typical fair scheduling fashion. Then, the children
+ * distribute the resources assigned to them to their children in the same
+ * fashion.  Applications may only be scheduled on leaf queues. Queues can be
+ * specified as children of other queues by placing them as sub-elements of their
+ * parents in the fair scheduler configuration file.
+ * 
+ * A queue's name starts with the names of its parents, with periods as
+ * separators.  So a queue named "queue1" under the root named, would be 
+ * referred to as "root.queue1", and a queue named "queue2" under a queue
+ * named "parent1" would be referred to as "root.parent1.queue2".
+ */
 @LimitedPrivate("yarn")
 @Unstable
 @SuppressWarnings("unchecked")
@@ -105,23 +125,22 @@ public class FairScheduler implements ResourceScheduler {
   // Aggregate metrics
   QueueMetrics rootMetrics;
 
-  //Time when we last updated preemption vars
+  // Time when we last updated preemption vars
   protected long lastPreemptionUpdateTime;
-  //Time we last ran preemptTasksIfNecessary
+  // Time we last ran preemptTasksIfNecessary
   private long lastPreemptCheckTime;
-
 
   // This stores per-application scheduling information, indexed by
   // attempt ID's for fast lookup.
-  protected Map<ApplicationAttemptId, FSSchedulerApp> applications
-  = new HashMap<ApplicationAttemptId, FSSchedulerApp>();
+  protected Map<ApplicationAttemptId, FSSchedulerApp> applications = 
+      new HashMap<ApplicationAttemptId, FSSchedulerApp>();
 
   // Nodes in the cluster, indexed by NodeId
-  private Map<NodeId, FSSchedulerNode> nodes =
+  private Map<NodeId, FSSchedulerNode> nodes = 
       new ConcurrentHashMap<NodeId, FSSchedulerNode>();
 
   // Aggregate capacity of the cluster
-  private Resource clusterCapacity =
+  private Resource clusterCapacity = 
       RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Resource.class);
 
   // How often tasks are preempted (must be longer than a couple
@@ -131,10 +150,11 @@ public class FairScheduler implements ResourceScheduler {
   protected boolean preemptionEnabled;
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
   protected WeightAdjuster weightAdjuster; // Can be null for no weight adjuster
-  protected double nodeLocalityThreshold;   // Cluster threshold for node locality
-  protected double rackLocalityThreshold;   // Cluster threshold for rack locality
-  private FairSchedulerEventLog eventLog;   // Machine-readable event log
-  protected boolean assignMultiple; // Allocate multiple containers per heartbeat
+  protected double nodeLocalityThreshold; // Cluster threshold for node locality
+  protected double rackLocalityThreshold; // Cluster threshold for rack locality
+  private FairSchedulerEventLog eventLog; // Machine-readable event log
+  protected boolean assignMultiple; // Allocate multiple containers per
+                                    // heartbeat
   protected int maxAssign; // Max containers to assign per heartbeat
   
   public FairScheduler() {
@@ -150,16 +170,8 @@ public class FairScheduler implements ResourceScheduler {
     return queueMgr;
   }
 
-  public List<FSQueueSchedulable> getQueueSchedulables() {
-    List<FSQueueSchedulable> scheds = new ArrayList<FSQueueSchedulable>();
-    for (FSQueue queue: queueMgr.getQueues()) {
-      scheds.add(queue.getQueueSchedulable());
-    }
-    return scheds;
-  }
-
   private RMContainer getRMContainer(ContainerId containerId) {
-    FSSchedulerApp application =
+    FSSchedulerApp application = 
         applications.get(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
@@ -183,34 +195,24 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   /**
-  * Recompute the internal variables used by the scheduler - per-job weights,
-  * fair shares, deficits, minimum slot allocations, and amount of used and
-  * required resources per job.
-  */
+   * Recompute the internal variables used by the scheduler - per-job weights,
+   * fair shares, deficits, minimum slot allocations, and amount of used and
+   * required resources per job.
+   */
   protected synchronized void update() {
     queueMgr.reloadAllocsIfNecessary(); // Relaod alloc file
     updateRunnability(); // Set job runnability based on user/queue limits
     updatePreemptionVariables(); // Determine if any queues merit preemption
 
-    // Update demands of apps and queues
-    for (FSQueue queue: queueMgr.getQueues()) {
-      queue.getQueueSchedulable().updateDemand();
-    }
+    FSQueue rootQueue = queueMgr.getRootQueue();
 
-    // Compute fair shares based on updated demands
-    List<FSQueueSchedulable> queueScheds = getQueueSchedulables();
-    SchedulingAlgorithms.computeFairShares(
-        queueScheds, clusterCapacity);
+    // Recursively update demands for all queues
+    rootQueue.updateDemand();
 
-    // Update queue metrics for this queue
-    for (FSQueueSchedulable sched : queueScheds) {
-      sched.getMetrics().setAvailableResourcesToQueue(sched.getFairShare());
-    }
-
-    // Use the computed shares to assign shares within each queue
-    for (FSQueue queue: queueMgr.getQueues()) {
-      queue.getQueueSchedulable().redistributeShare();
-    }
+    rootQueue.setFairShare(clusterCapacity);
+    // Recursively compute fair shares for all queues
+    // and update metrics
+    rootQueue.recomputeFairShares();
 
     // Update recorded capacity of root queue (child queues are updated
     // when fair share is calculated).
@@ -225,7 +227,7 @@ public class FairScheduler implements ResourceScheduler {
   private void updatePreemptionVariables() {
     long now = clock.getTime();
     lastPreemptionUpdateTime = now;
-    for (FSQueueSchedulable sched: getQueueSchedulables()) {
+    for (FSLeafQueue sched : queueMgr.getLeafQueues()) {
       if (!isStarvedForMinShare(sched)) {
         sched.setLastTimeAtMinShare(now);
       }
@@ -238,16 +240,16 @@ public class FairScheduler implements ResourceScheduler {
   /**
    * Is a queue below its min share for the given task type?
    */
-  boolean isStarvedForMinShare(FSQueueSchedulable sched) {
+  boolean isStarvedForMinShare(FSLeafQueue sched) {
     Resource desiredShare = Resources.min(sched.getMinShare(), sched.getDemand());
     return Resources.lessThan(sched.getResourceUsage(), desiredShare);
   }
 
   /**
-   * Is a queue being starved for fair share for the given task type?
-   * This is defined as being below half its fair share.
+   * Is a queue being starved for fair share for the given task type? This is
+   * defined as being below half its fair share.
    */
-  boolean isStarvedForFairShare(FSQueueSchedulable sched) {
+  boolean isStarvedForFairShare(FSLeafQueue sched) {
     Resource desiredFairShare = Resources.max(
         Resources.multiply(sched.getFairShare(), .5), sched.getDemand());
     return Resources.lessThan(sched.getResourceUsage(), desiredFairShare);
@@ -255,10 +257,10 @@ public class FairScheduler implements ResourceScheduler {
 
   /**
    * Check for queues that need tasks preempted, either because they have been
-   * below their guaranteed share for minSharePreemptionTimeout or they
-   * have been below half their fair share for the fairSharePreemptionTimeout.
-   * If such queues exist, compute how many tasks of each type need to be
-   * preempted and then select the right ones using preemptTasks.
+   * below their guaranteed share for minSharePreemptionTimeout or they have
+   * been below half their fair share for the fairSharePreemptionTimeout. If
+   * such queues exist, compute how many tasks of each type need to be preempted
+   * and then select the right ones using preemptTasks.
    */
   protected synchronized void preemptTasksIfNecessary() {
     if (!preemptionEnabled) {
@@ -273,35 +275,37 @@ public class FairScheduler implements ResourceScheduler {
 
     Resource resToPreempt = Resources.none();
 
-    for (FSQueueSchedulable sched: getQueueSchedulables()) {
+    for (FSLeafQueue sched : queueMgr.getLeafQueues()) {
       resToPreempt = Resources.add(resToPreempt, resToPreempt(sched, curTime));
     }
     if (Resources.greaterThan(resToPreempt, Resources.none())) {
-      preemptResources(getQueueSchedulables(), resToPreempt);
+      preemptResources(queueMgr.getLeafQueues(), resToPreempt);
     }
   }
 
   /**
-   * Preempt a quantity of resources from a list of QueueSchedulables.
-   * The policy for this is to pick apps from queues that are over their fair
-   * share, but make sure that no queue is placed below its fair share in the
-   * process. We further prioritize preemption by choosing containers with
-   * lowest priority to preempt.
+   * Preempt a quantity of resources from a list of QueueSchedulables. The
+   * policy for this is to pick apps from queues that are over their fair share,
+   * but make sure that no queue is placed below its fair share in the process.
+   * We further prioritize preemption by choosing containers with lowest
+   * priority to preempt.
    */
-  protected void preemptResources(List<FSQueueSchedulable> scheds, Resource toPreempt) {
+  protected void preemptResources(Collection<FSLeafQueue> scheds,
+      Resource toPreempt) {
     if (scheds.isEmpty() || Resources.equals(toPreempt, Resources.none())) {
       return;
     }
 
     Map<RMContainer, FSSchedulerApp> apps = 
         new HashMap<RMContainer, FSSchedulerApp>();
-    Map<RMContainer, FSQueueSchedulable> queues = new HashMap<RMContainer, FSQueueSchedulable>();
+    Map<RMContainer, FSLeafQueue> queues = 
+        new HashMap<RMContainer, FSLeafQueue>();
 
     // Collect running containers from over-scheduled queues
     List<RMContainer> runningContainers = new ArrayList<RMContainer>();
-    for (FSQueueSchedulable sched: scheds) {
+    for (FSLeafQueue sched : scheds) {
       if (Resources.greaterThan(sched.getResourceUsage(), sched.getFairShare())) {
-        for (AppSchedulable as: sched.getAppSchedulables()) {
+        for (AppSchedulable as : sched.getAppSchedulables()) {
           for (RMContainer c : as.getApp().getLiveContainers()) {
             runningContainers.add(c);
             apps.put(c, as.getApp());
@@ -321,12 +325,12 @@ public class FairScheduler implements ResourceScheduler {
 
     // Scan down the sorted list of task statuses until we've killed enough
     // tasks, making sure we don't kill too many from any queue
-    for (RMContainer container: runningContainers) {
-     FSQueueSchedulable sched = queues.get(container);
+    for (RMContainer container : runningContainers) {
+      FSLeafQueue sched = queues.get(container);
       if (Resources.greaterThan(sched.getResourceUsage(), sched.getFairShare())) {
         LOG.info("Preempting container (prio=" + container.getContainer().getPriority() +
             "res=" + container.getContainer().getResource() +
-            ") from queue " + sched.getQueue().getName());
+            ") from queue " + sched.getName());
         ContainerStatus status = SchedulerUtils.createAbnormalContainerStatus(
             container.getContainerId(), SchedulerUtils.PREEMPTED_CONTAINER);
 
@@ -348,12 +352,12 @@ public class FairScheduler implements ResourceScheduler {
    * If the queue has been below its min share for at least its preemption
    * timeout, it should preempt the difference between its current share and
    * this min share. If it has been below half its fair share for at least the
-   * fairSharePreemptionTimeout, it should preempt enough tasks to get up to
-   * its full fair share. If both conditions hold, we preempt the max of the
-   * two amounts (this shouldn't happen unless someone sets the timeouts to
-   * be identical for some reason).
+   * fairSharePreemptionTimeout, it should preempt enough tasks to get up to its
+   * full fair share. If both conditions hold, we preempt the max of the two
+   * amounts (this shouldn't happen unless someone sets the timeouts to be
+   * identical for some reason).
    */
-  protected Resource resToPreempt(FSQueueSchedulable sched, long curTime) {
+  protected Resource resToPreempt(FSLeafQueue sched, long curTime) {
     String queue = sched.getName();
     long minShareTimeout = queueMgr.getMinSharePreemptionTimeout(queue);
     long fairShareTimeout = queueMgr.getFairSharePreemptionTimeout();
@@ -362,7 +366,7 @@ public class FairScheduler implements ResourceScheduler {
     if (curTime - sched.getLastTimeAtMinShare() > minShareTimeout) {
       Resource target = Resources.min(sched.getMinShare(), sched.getDemand());
       resDueToMinShare = Resources.max(Resources.none(),
-                            Resources.subtract(target, sched.getResourceUsage()));
+          Resources.subtract(target, sched.getResourceUsage()));
     }
     if (curTime - sched.getLastTimeAtHalfFairShare() > fairShareTimeout) {
       Resource target = Resources.min(sched.getFairShare(), sched.getDemand());
@@ -380,15 +384,15 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   /**
-   * This updates the runnability of all apps based on whether or not
-   * any users/queues have exceeded their capacity.
+   * This updates the runnability of all apps based on whether or not any
+   * users/queues have exceeded their capacity.
    */
   private void updateRunnability() {
     List<AppSchedulable> apps = new ArrayList<AppSchedulable>();
 
     // Start by marking everything as not runnable
-    for (FSQueue p: queueMgr.getQueues()) {
-      for (AppSchedulable a: p.getQueueSchedulable().getAppSchedulables()) {
+    for (FSLeafQueue leafQueue : queueMgr.getLeafQueues()) {
+      for (AppSchedulable a : leafQueue.getAppSchedulables()) {
         a.setRunnable(false);
         apps.add(a);
       }
@@ -400,7 +404,7 @@ public class FairScheduler implements ResourceScheduler {
     Map<String, Integer> userApps = new HashMap<String, Integer>();
     Map<String, Integer> queueApps = new HashMap<String, Integer>();
 
-    for (AppSchedulable app: apps) {
+    for (AppSchedulable app : apps) {
       String user = app.getApp().getUser();
       String queue = app.getApp().getQueueName();
       int userCount = userApps.containsKey(user) ? userApps.get(user) : 0;
@@ -473,22 +477,25 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   /**
-   * Add a new application to the scheduler, with a given id, queue name,
-   * and user. This will accept a new app even if the user or queue is above
+   * Add a new application to the scheduler, with a given id, queue name, and
+   * user. This will accept a new app even if the user or queue is above
    * configured limits, but the app will not be marked as runnable.
    */
-  protected synchronized void
-  addApplication(ApplicationAttemptId applicationAttemptId,
-      String queueName, String user) {
+  protected synchronized void addApplication(
+      ApplicationAttemptId applicationAttemptId, String queueName, String user) {
 
-    FSQueue queue = queueMgr.getQueue(queueName);
+    FSLeafQueue queue = queueMgr.getLeafQueue(queueName);
+    if (queue == null) {
+      // queue is not an existing or createable leaf queue
+      queue = queueMgr.getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+    }
 
     FSSchedulerApp schedulerApp =
         new FSSchedulerApp(applicationAttemptId, user,
-            queue.getQueueSchedulable(), new ActiveUsersManager(getRootQueueMetrics()),
-            rmContext, null);
-
-    // Inforce ACLs
+            queue, new ActiveUsersManager(getRootQueueMetrics()),
+            rmContext);
+    
+    // Enforce ACLs
     UserGroupInformation userUgi;
     try {
       userUgi = UserGroupInformation.getCurrentUser();
@@ -497,8 +504,8 @@ public class FairScheduler implements ResourceScheduler {
       return;
     }
 
-    List<QueueUserACLInfo> info = queue.getQueueSchedulable().getQueueUserAclInfo(
-        userUgi); // Always a signleton list
+    // Always a singleton list
+    List<QueueUserACLInfo> info = queue.getQueueUserAclInfo(userUgi);
     if (!info.get(0).getUserAcls().contains(QueueACL.SUBMIT_APPLICATIONS)) {
       LOG.info("User " + userUgi.getUserName() +
           " cannot submit" + " applications to queue " + queue.getName());
@@ -506,14 +513,13 @@ public class FairScheduler implements ResourceScheduler {
     }
 
     queue.addApp(schedulerApp);
-    queue.getQueueSchedulable().getMetrics().submitApp(user,
-    		applicationAttemptId.getAttemptId());
+    queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
     rootMetrics.submitApp(user, applicationAttemptId.getAttemptId());
 
     applications.put(applicationAttemptId, schedulerApp);
 
     LOG.info("Application Submission: " + applicationAttemptId +
-        ", user: " + user +
+        ", user: "+ user +
         ", currently active: " + applications.size());
 
     rmContext.getDispatcher().getEventHandler().handle(
@@ -540,10 +546,10 @@ public class FairScheduler implements ResourceScheduler {
           SchedulerUtils.createAbnormalContainerStatus(
               rmContainer.getContainerId(),
               SchedulerUtils.COMPLETED_APPLICATION),
-          RMContainerEventType.KILL);
+              RMContainerEventType.KILL);
     }
 
-     // Release all reserved containers
+    // Release all reserved containers
     for (RMContainer rmContainer : application.getReservedContainers()) {
       completedContainer(rmContainer,
           SchedulerUtils.createAbnormalContainerStatus(
@@ -556,7 +562,8 @@ public class FairScheduler implements ResourceScheduler {
     application.stop(rmAppAttemptFinalState);
 
     // Inform the queue
-    FSQueue queue = queueMgr.getQueue(application.getQueue().getQueueName());
+    FSLeafQueue queue = queueMgr.getLeafQueue(application.getQueue()
+        .getQueueName());
     queue.removeApp(application);
 
     // Remove from our data-structure
@@ -658,11 +665,11 @@ public class FairScheduler implements ResourceScheduler {
     for (ContainerId releasedContainerId : release) {
       RMContainer rmContainer = getRMContainer(releasedContainerId);
       if (rmContainer == null) {
-         RMAuditLogger.logFailure(application.getUser(),
-             AuditConstants.RELEASE_CONTAINER,
-             "Unauthorized access or invalid container", "FairScheduler",
-             "Trying to release container not owned by app or with invalid id",
-             application.getApplicationId(), releasedContainerId);
+        RMAuditLogger.logFailure(application.getUser(),
+            AuditConstants.RELEASE_CONTAINER,
+            "Unauthorized access or invalid container", "FairScheduler",
+            "Trying to release container not owned by app or with invalid id",
+            application.getApplicationId(), releasedContainerId);
       }
       completedContainer(rmContainer,
           SchedulerUtils.createAbnormalContainerStatus(
@@ -675,8 +682,8 @@ public class FairScheduler implements ResourceScheduler {
       if (!ask.isEmpty()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("allocate: pre-update" +
-            " applicationAttemptId=" + appAttemptId +
-            " application=" + application.getApplicationId());
+              " applicationAttemptId=" + appAttemptId +
+              " application=" + application.getApplicationId());
         }
         application.showRequests();
 
@@ -689,19 +696,17 @@ public class FairScheduler implements ResourceScheduler {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("allocate:" +
-          " applicationAttemptId=" + appAttemptId +
-          " #ask=" + ask.size());
+            " applicationAttemptId=" + appAttemptId +
+            " #ask=" + ask.size());
       }
 
-      return new Allocation(
-          application.pullNewlyAllocatedContainers(),
+      return new Allocation(application.pullNewlyAllocatedContainers(),
           application.getHeadroom());
     }
   }
 
   /**
-   * Process a container which has launched on a node, as reported by the
-   * node.
+   * Process a container which has launched on a node, as reported by the node.
    */
   private void containerLaunchedOnNode(ContainerId containerId, FSSchedulerNode node) {
     // Get the application for the finished container
@@ -757,20 +762,20 @@ public class FairScheduler implements ResourceScheduler {
       LOG.info("Trying to fulfill reservation for application " +
           reservedApplication.getApplicationId() + " on node: " + nm);
 
-      FSQueue queue = queueMgr.getQueue(reservedApplication.getQueueName());
-      queue.getQueueSchedulable().assignContainer(node, true);
+      FSLeafQueue queue = queueMgr.getLeafQueue(reservedApplication.getQueueName());
+      queue.assignContainer(node, true);
     }
-
 
     // Otherwise, schedule at queue which is furthest below fair share
     else {
       int assignedContainers = 0;
       while (true) {
         // At most one task is scheduled each iteration of this loop
-        List<FSQueueSchedulable> scheds = getQueueSchedulables();
+        List<FSLeafQueue> scheds = new ArrayList<FSLeafQueue>(
+            queueMgr.getLeafQueues());
         Collections.sort(scheds, new SchedulingAlgorithms.FairShareComparator());
         boolean assignedContainer = false;
-        for (FSQueueSchedulable sched : scheds) {
+        for (FSLeafQueue sched : scheds) {
           Resource assigned = sched.assignContainer(node, false);
           if (Resources.greaterThan(assigned, Resources.none())) {
             eventLog.log("ASSIGN", nm.getHostName(), assigned);
@@ -813,7 +818,7 @@ public class FairScheduler implements ResourceScheduler {
 
   @Override
   public void handle(SchedulerEvent event) {
-    switch(event.getType()) {
+    switch (event.getType()) {
     case NODE_ADDED:
       if (!(event instanceof NodeAddedSchedulerEvent)) {
         throw new RuntimeException("Unexpected event type: " + event);
@@ -832,8 +837,7 @@ public class FairScheduler implements ResourceScheduler {
       if (!(event instanceof NodeUpdateSchedulerEvent)) {
         throw new RuntimeException("Unexpected event type: " + event);
       }
-      NodeUpdateSchedulerEvent nodeUpdatedEvent =
-      (NodeUpdateSchedulerEvent)event;
+      NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
       nodeUpdate(nodeUpdatedEvent.getRMNode(),
           nodeUpdatedEvent.getNewlyLaunchedContainers(),
           nodeUpdatedEvent.getCompletedContainers());
@@ -842,7 +846,7 @@ public class FairScheduler implements ResourceScheduler {
       if (!(event instanceof AppAddedSchedulerEvent)) {
         throw new RuntimeException("Unexpected event type: " + event);
       }
-      AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
+      AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent)event;
       String queue = appAddedEvent.getQueue();
 
       // Potentially set queue to username if configured to do so
@@ -867,7 +871,7 @@ public class FairScheduler implements ResourceScheduler {
         throw new RuntimeException("Unexpected event type: " + event);
       }
       ContainerExpiredSchedulerEvent containerExpiredEvent =
-          (ContainerExpiredSchedulerEvent) event;
+          (ContainerExpiredSchedulerEvent)event;
       ContainerId containerId = containerExpiredEvent.getContainerId();
       completedContainer(getRMContainer(containerId),
           SchedulerUtils.createAbnormalContainerStatus(
@@ -886,8 +890,8 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   @Override
-  public synchronized void
-      reinitialize(Configuration conf, RMContext rmContext) throws IOException {
+  public synchronized void reinitialize(Configuration conf, RMContext rmContext)
+      throws IOException {
     if (!initialized) {
       this.conf = new FairSchedulerConfiguration(conf);
       rootMetrics = QueueMetrics.forQueue("root", null, true, conf);
@@ -909,11 +913,10 @@ public class FairScheduler implements ResourceScheduler {
 
       try {
         queueMgr.initialize();
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         throw new IOException("Failed to start FairScheduler", e);
       }
-      
+
       Thread updateThread = new Thread(new UpdateThread());
       updateThread.setName("FairSchedulerUpdateThread");
       updateThread.setDaemon(true);
@@ -925,10 +928,9 @@ public class FairScheduler implements ResourceScheduler {
       rackLocalityThreshold = this.conf.getLocalityThresholdRack();
       preemptionEnabled = this.conf.getPreemptionEnabled();
       try {
-       queueMgr.reloadAllocs();
+        queueMgr.reloadAllocs();
 
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         throw new IOException("Failed to initialize FairScheduler", e);
       }
     }
@@ -940,8 +942,8 @@ public class FairScheduler implements ResourceScheduler {
     if (!queueMgr.exists(queueName)) {
       return null;
     }
-    return queueMgr.getQueue(queueName).getQueueSchedulable().getQueueInfo(
-        includeChildQueues, recursive);
+    return queueMgr.getQueue(queueName).getQueueInfo(includeChildQueues,
+        recursive);
   }
 
   @Override
@@ -953,12 +955,7 @@ public class FairScheduler implements ResourceScheduler {
       return new ArrayList<QueueUserACLInfo>();
     }
 
-    List<QueueUserACLInfo> userAcls = new ArrayList<QueueUserACLInfo>();
-
-    for (FSQueue queue : queueMgr.getQueues()) {
-      userAcls.addAll(queue.getQueueSchedulable().getQueueUserAclInfo(user));
-    }
-    return userAcls;
+    return queueMgr.getRootQueue().getQueueUserAclInfo(user);
   }
 
   @Override

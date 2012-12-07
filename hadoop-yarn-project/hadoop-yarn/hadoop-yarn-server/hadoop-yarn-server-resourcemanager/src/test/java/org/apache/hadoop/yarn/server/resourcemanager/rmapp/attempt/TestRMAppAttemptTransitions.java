@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -162,7 +161,7 @@ public class TestRMAppAttemptTransitions {
     amFinishingMonitor = mock(AMLivelinessMonitor.class);
     Configuration conf = new Configuration();
     rmContext =
-        new RMContextImpl(new MemStore(), rmDispatcher,
+        new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new ApplicationTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
@@ -637,6 +636,14 @@ public class TestRMAppAttemptTransitions {
     unregisterApplicationAttempt(amContainer,
         FinalApplicationStatus.KILLED, "newtrackingurl",
         "Killed by user");
+  }
+
+
+  @Test
+  public void testNoTrackingUrl() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "");
   }
 
   @Test

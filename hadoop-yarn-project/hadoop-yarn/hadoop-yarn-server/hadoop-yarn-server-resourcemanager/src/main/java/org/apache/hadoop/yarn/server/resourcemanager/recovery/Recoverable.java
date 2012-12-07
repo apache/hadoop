@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 
 public interface Recoverable {
   public void recover(RMState state) throws Exception;

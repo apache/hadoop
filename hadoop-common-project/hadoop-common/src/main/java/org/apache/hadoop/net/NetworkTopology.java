@@ -28,6 +28,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** The class represents a cluster of computer with a tree hierarchical
  * network topology.
@@ -51,6 +54,19 @@ public class NetworkTopology {
     public InvalidTopologyException(String msg) {
       super(msg);
     }
+  }
+  
+  /**
+   * Get an instance of NetworkTopology based on the value of the configuration
+   * parameter net.topology.impl.
+   * 
+   * @param conf the configuration to be used
+   * @return an instance of NetworkTopology
+   */
+  public static NetworkTopology getInstance(Configuration conf){
+    return ReflectionUtils.newInstance(
+        conf.getClass(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
+        NetworkTopology.class, NetworkTopology.class), conf);
   }
 
   /** InnerNode represents a switch/router of a data center or rack.

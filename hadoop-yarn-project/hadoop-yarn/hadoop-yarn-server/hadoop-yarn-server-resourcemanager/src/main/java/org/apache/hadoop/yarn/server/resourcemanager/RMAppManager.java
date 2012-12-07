@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -251,17 +250,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
             YarnConfiguration.DEFAULT_APPLICATION_NAME);
       }
 
-      // Store application for recovery
-      ApplicationStore appStore = rmContext.getApplicationsStore()
-          .createApplicationStore(submissionContext.getApplicationId(),
-          submissionContext);
-
       // Create RMApp
       application =
           new RMAppImpl(applicationId, rmContext, this.conf,
             submissionContext.getApplicationName(),
             submissionContext.getUser(), submissionContext.getQueue(),
-            submissionContext, clientTokenStr, appStore, this.scheduler,
+            submissionContext, clientTokenStr, this.scheduler,
             this.masterService, submitTime);
 
       // Sanity check - duplicate?

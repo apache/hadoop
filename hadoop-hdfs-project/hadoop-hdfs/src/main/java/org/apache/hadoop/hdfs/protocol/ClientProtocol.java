@@ -815,14 +815,15 @@ public interface ClientProtocol {
    * The file must be currently open for writing.
    * @param src The string representation of the path
    * @param client The string representation of the client
-   * 
+   * @param lastBlockLength The length of the last block (under construction) 
+   *                        to be reported to NameNode 
    * @throws AccessControlException permission denied
    * @throws FileNotFoundException file <code>src</code> is not found
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink. 
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public void fsync(String src, String client) 
+  public void fsync(String src, String client, long lastBlockLength) 
       throws AccessControlException, FileNotFoundException, 
       UnresolvedLinkException, IOException;
 

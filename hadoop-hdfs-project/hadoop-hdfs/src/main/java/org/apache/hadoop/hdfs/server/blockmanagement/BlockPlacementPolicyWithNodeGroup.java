@@ -240,6 +240,27 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     String nodeGroupString = cur.getNetworkLocation();
     return NetworkTopology.getFirstHalf(nodeGroupString);
   }
+  
+  /**
+   * Find other nodes in the same nodegroup of <i>localMachine</i> and add them
+   * into <i>excludeNodes</i> as replica should not be duplicated for nodes 
+   * within the same nodegroup
+   * @return number of new excluded nodes
+   */
+  protected int addToExcludedNodes(DatanodeDescriptor localMachine,
+      HashMap<Node, Node> excludedNodes) {
+    int countOfExcludedNodes = 0;
+    String nodeGroupScope = localMachine.getNetworkLocation();
+    List<Node> leafNodes = clusterMap.getLeaves(nodeGroupScope);
+    for (Node leafNode : leafNodes) {
+      Node node = excludedNodes.put(leafNode, leafNode);
+      if (node == null) {
+        // not a existing node in excludedNodes
+        countOfExcludedNodes++;
+      }
+    }
+    return countOfExcludedNodes;
+  }
 
   /**
    * Pick up replica node set for deleting replica as over-replicated. 
