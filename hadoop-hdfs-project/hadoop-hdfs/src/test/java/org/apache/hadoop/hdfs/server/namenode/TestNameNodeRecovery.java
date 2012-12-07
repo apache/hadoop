@@ -30,11 +30,16 @@ import java.io.RandomAccessFile;
 import java.util.HashSet;
 import java.util.Set;
 
+import junit.framework.Assert;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -432,6 +437,39 @@ public class TestNameNodeRecovery {
     }
   }
 
+  /**
+   * Create a test configuration that will exercise the initializeGenericKeys
+   * code path.  This is a regression test for HDFS-4279.
+   */
+  static void setupRecoveryTestConf(Configuration conf) throws IOException {
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
+    conf.set(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY, "nn1");
+    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
+      "ns1"), "nn1,nn2");
+    String baseDir = System.getProperty(
+        MiniDFSCluster.PROP_TEST_BUILD_DATA, "build/test/data") + "/dfs/";
+    File nameDir = new File(baseDir, "nameR");
+    File secondaryDir = new File(baseDir, "namesecondaryR");
+    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.
+        DFS_NAMENODE_NAME_DIR_KEY, "ns1", "nn1"),
+        nameDir.getCanonicalPath());
+    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.
+        DFS_NAMENODE_CHECKPOINT_DIR_KEY, "ns1", "nn1"),
+        secondaryDir.getCanonicalPath());
+    conf.unset(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+    conf.unset(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
+    FileUtils.deleteQuietly(nameDir);
+    if (!nameDir.mkdirs()) {
+      throw new RuntimeException("failed to make directory " +
+        nameDir.getAbsolutePath());
+    }
+    FileUtils.deleteQuietly(secondaryDir);
+    if (!secondaryDir.mkdirs()) {
+      throw new RuntimeException("failed to make directory " +
+        secondaryDir.getAbsolutePath());
+    }
+  }
+
   static void testNameNodeRecoveryImpl(Corruptor corruptor, boolean finalize)
       throws IOException {
     final String TEST_PATH = "/test/path/dir";
@@ -440,12 +478,13 @@ public class TestNameNodeRecovery {
 
     // start a cluster
     Configuration conf = new HdfsConfiguration();
+    setupRecoveryTestConf(conf);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     StorageDirectory sd = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .enableManagedDfsDirsRedundancy(false).build();
+          .manageNameDfsDirs(false).build();
       cluster.waitActive();
       if (!finalize) {
         // Normally, the in-progress edit log would be finalized by
