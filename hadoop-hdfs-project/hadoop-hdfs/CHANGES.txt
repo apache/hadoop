@@ -303,6 +303,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4282. TestEditLog.testFuzzSequences FAILED in all pre-commit test
     (todd)
 
+    HDFS-4236. Remove artificial limit on username length introduced in
+    HDFS-4171. (tucu via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

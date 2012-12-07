@@ -38,10 +38,9 @@ public class UserParam extends StringParam {
         MessageFormat.format("Parameter [{0}], cannot be NULL", NAME));
     }
     int len = str.length();
-    if (len < 1 || len > 31) {
+    if (len < 1) {
       throw new IllegalArgumentException(MessageFormat.format(
-        "Parameter [{0}], invalid value [{1}], it's length must be between 1 and 31",
-        NAME, str));
+        "Parameter [{0}], it's length must be at least 1", NAME));
     }
     return str;
   }
