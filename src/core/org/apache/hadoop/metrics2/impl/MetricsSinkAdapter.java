@@ -19,6 +19,7 @@
 package org.apache.hadoop.metrics2.impl;
 
 import java.util.Random;
+import java.util.concurrent.*;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterInt;
@@ -28,6 +29,7 @@ import org.apache.hadoop.metrics2.util.Contracts;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.metrics2.Metric;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSink;
 
@@ -45,6 +47,7 @@ class MetricsSinkAdapter {
   private volatile boolean stopping = false;
   private volatile boolean inError = false;
   private final int period, firstRetryDelay, retryCount;
+  private final long oobPutTimeout;
   private final float retryBackoff;
   private final MetricsRegistry registry = new MetricsRegistry("sinkadapter");
   private final MetricMutableStat latency;
@@ -75,6 +78,8 @@ class MetricsSinkAdapter {
         Contracts.checkArg(retryDelay, retryDelay > 0, "retry delay");
     this.retryBackoff =
         Contracts.checkArg(retryBackoff, retryBackoff > 1, "backoff factor");
+    oobPutTimeout = (long)
+        (firstRetryDelay * Math.pow(retryBackoff, retryCount) * 1000);
     this.retryCount = retryCount;
     this.queue = new SinkQueue<MetricsBuffer>(
         Contracts.checkArg(queueCapacity, queueCapacity > 0, "queue capacity"));
@@ -91,6 +96,23 @@ class MetricsSinkAdapter {
     };
     sinkThread.setName(name);
     sinkThread.setDaemon(true);
+  }
+
+  public boolean putMetricsImmediate(MetricsBuffer buffer) {
+    WaitableMetricsBuffer waitableBuffer =
+        new WaitableMetricsBuffer(buffer);
+    if (!queue.enqueue(waitableBuffer)) {
+      LOG.warn(name + " has a full queue and can't consume the given metrics.");
+      dropped.incr();
+      return false;
+    }
+    if (!waitableBuffer.waitTillNotified(oobPutTimeout)) {
+      LOG.warn(name +
+          " couldn't fulfill an immediate putMetrics request in time." +
+          " Abandoning.");
+      return false;
+    }
+    return true;
   }
 
   boolean putMetrics(MetricsBuffer buffer, long logicalTime) {
@@ -167,6 +189,9 @@ class MetricsSinkAdapter {
       sink.flush();
       latency.add(System.currentTimeMillis() - ts);
     }
+    if (buffer instanceof WaitableMetricsBuffer) {
+      ((WaitableMetricsBuffer)buffer).notifyAnyWaiters();
+    }
     LOG.debug("Done");
   }
 
@@ -200,6 +225,28 @@ class MetricsSinkAdapter {
 
   MetricsSink sink() {
     return sink;
+  }
+
+  static class WaitableMetricsBuffer extends MetricsBuffer {
+    private final Semaphore notificationSemaphore =
+        new Semaphore(0);
+
+    public WaitableMetricsBuffer(MetricsBuffer metricsBuffer) {
+      super(metricsBuffer);
+    }
+
+    public boolean waitTillNotified(long millisecondsToWait) {
+      try {
+        return notificationSemaphore.tryAcquire(millisecondsToWait,
+            TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        return false;
+      }
+    }
+
+    public void notifyAnyWaiters() {
+      notificationSemaphore.release();
+    }
   }
 
 }

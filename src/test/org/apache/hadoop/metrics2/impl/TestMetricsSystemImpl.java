@@ -23,7 +23,10 @@ import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableStat;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.AbstractMetricsSource;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+ 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
@@ -52,7 +55,7 @@ public class TestMetricsSystemImpl {
   private static String hostname = MetricsSystemImpl.getHostname();
 
   @Test public void testInitFirst() throws Exception {
-    ConfigBuilder cb = new ConfigBuilder().add("default.period", 8)
+    new ConfigBuilder().add("default.period", 8)
         .add("source.filter.class",
              "org.apache.hadoop.metrics2.filter.GlobFilter")
         .add("test.*.source.filter.class", "${source.filter.class}")
@@ -74,8 +77,9 @@ public class TestMetricsSystemImpl {
     ms.register("sink1", "sink1 desc", sink1);
     ms.register("sink2", "sink2 desc", sink2);
     ms.register("sink3", "sink3 desc", sink3);
-    ms.onTimerEvent();  // trigger something interesting
+    ms.publishMetricsNow(); // publish the metrics
     ms.stop();
+    ms.shutdown();
 
     verify(sink1, times(3)).putMetrics(r1.capture()); // 2 + 1 sys source
     List<MetricsRecord> mr1 = r1.getAllValues();
@@ -86,6 +90,178 @@ public class TestMetricsSystemImpl {
     checkMetricsRecords(mr1, "s2rec");
     assertEquals("output", mr1, mr2);
     checkMetricsRecords(mr3, "s3rec");
+  }
+
+  @Test public void testMultiThreadedPublish() throws Exception {
+    new ConfigBuilder().add("*.period", 80)
+      .add("test.sink.Collector.queue.capacity", "20")
+      .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
+    final MetricsSystemImpl ms = new MetricsSystemImpl("Test");
+    ms.start();
+    final int numThreads = 10;
+    final CollectingSink sink = new CollectingSink(numThreads);
+    ms.registerSink("Collector",
+        "Collector of values from all threads.", sink);
+    final TestSource[] sources = new TestSource[numThreads];
+    final Thread[] threads = new Thread[numThreads];
+    final String[] results = new String[numThreads];
+    final CyclicBarrier barrier1 = new CyclicBarrier(numThreads),
+        barrier2 = new CyclicBarrier(numThreads);
+    for (int i = 0; i < numThreads; i++) {
+      sources[i] = ms.register("threadSource" + i,
+          "A source of my threaded goodness.",
+          new TestSource("threadSourceRec" + i));
+      threads[i] = new Thread(new Runnable() {
+        private boolean safeAwait(int mySource, CyclicBarrier barrier) {
+          try {
+            barrier1.await(2, TimeUnit.SECONDS);
+          } catch (InterruptedException e) {
+            results[mySource] = "Interrupted";
+            return false;
+          } catch (BrokenBarrierException e) {
+            results[mySource] = "Broken Barrier";
+            return false;
+          } catch (TimeoutException e) {
+            results[mySource] = "Timed out on barrier";
+            return false;
+          }
+          return true;
+        }
+        
+        @Override
+        public void run() {
+          int mySource = Integer.parseInt(Thread.currentThread().getName());
+          if (sink.collected[mySource].get() != 0L) {
+            results[mySource] = "Someone else collected my metric!";
+            return;
+          }
+          // There is a race between setting the source value and
+          // which thread takes a snapshot first. Set the value here
+          // before any thread starts publishing so they all start
+          // with the right value.
+          sources[mySource].g1.set(230);
+          // Wait for all the threads to come here so we can hammer
+          // the system at the same time
+          if (!safeAwait(mySource, barrier1)) return;
+          ms.publishMetricsNow();
+          // Since some other thread may have snatched my metric,
+          // I need to wait for the threads to finish before checking.
+          if (!safeAwait(mySource, barrier2)) return;
+          if (sink.collected[mySource].get() != 230L) {
+            results[mySource] = "Metric not collected!";
+            return;
+          }
+          results[mySource] = "Passed";
+        }
+      }, "" + i);
+    }
+    for (Thread t : threads)
+      t.start();
+    for (Thread t : threads)
+      t.join();
+    boolean pass = true;
+    String allResults = "";
+    for (String r : results) {
+      allResults += r + "\n";
+      pass = pass && r.equalsIgnoreCase("Passed");
+    }
+    assertTrue(allResults, pass);
+    ms.stop();
+    ms.shutdown();
+  }
+
+  private static class CollectingSink implements MetricsSink {
+    private final AtomicLong[] collected;
+    
+    public CollectingSink(int capacity) {
+      collected = new AtomicLong[capacity];
+      for (int i = 0; i < capacity; i++) {
+        collected[i] = new AtomicLong();
+      }
+    }
+    
+    @Override
+    public void init(SubsetConfiguration conf) {
+    }
+
+    @Override
+    public void putMetrics(MetricsRecord record) {
+      final String prefix = "threadSourceRec";
+      if (record.name().startsWith(prefix)) {
+        final int recordNumber = Integer.parseInt(
+            record.name().substring(prefix.length()));
+        ArrayList<String> names = new ArrayList<String>();
+        for (Metric m : record.metrics()) {
+          if (m.name().equalsIgnoreCase("g1")) {
+            collected[recordNumber].set(m.value().longValue());
+            return;
+          }
+          names.add(m.name());
+        }
+      }
+    }
+
+    @Override
+    public void flush() {
+    }
+  }
+
+  @Test public void testHangingSink() {
+    new ConfigBuilder().add("*.period", 8)
+      .add("test.sink.hanging.retry.delay", "1")
+      .add("test.sink.hanging.retry.backoff", "1.01")
+      .add("test.sink.hanging.retry.count", "0")
+      .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
+    MetricsSystemImpl ms = new MetricsSystemImpl("Test");
+    ms.start();
+    TestSource s = ms.register("s3", "s3 desc", new TestSource("s3rec"));
+    s.c1.incr();
+    HangingSink hanging = new HangingSink();
+    ms.registerSink("hanging", "Hang the sink!", hanging);
+    ms.publishMetricsNow();
+    assertFalse(hanging.getInterrupted());
+    ms.stop();
+    ms.shutdown();
+    assertTrue(hanging.getInterrupted());
+    assertTrue("The sink didn't get called after its first hang " +
+               "for subsequent records.", hanging.getGotCalledSecondTime());
+  }
+
+  private static class HangingSink implements MetricsSink {
+    private volatile boolean interrupted;
+    private boolean gotCalledSecondTime;
+    private boolean firstTime = true;
+
+    public boolean getGotCalledSecondTime() {
+      return gotCalledSecondTime;
+    }
+
+    public boolean getInterrupted() {
+      return interrupted;
+    }
+
+    @Override
+    public void init(SubsetConfiguration conf) {
+    }
+
+    @Override
+    public void putMetrics(MetricsRecord record) {
+      // No need to hang every time, just the first record.
+      if (!firstTime) {
+        gotCalledSecondTime = true;
+        return;
+      }
+      firstTime = false;
+      try {
+        Thread.sleep(10 * 1000);
+      } catch (InterruptedException ex) {
+        interrupted = true;
+      }
+    }
+
+    @Override
+    public void flush() {
+    }
   }
 
   static void checkMetricsRecords(List<MetricsRecord> recs, String expected) {

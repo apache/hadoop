@@ -76,6 +76,11 @@ public enum DefaultMetricsSystem implements MetricsSystem {
     impl.register(callback);
   }
 
+  @Override
+  public void publishMetricsNow() {
+    impl.publishMetricsNow();
+  }
+
   public void start() {
     impl.start();
   }
@@ -95,5 +100,4 @@ public enum DefaultMetricsSystem implements MetricsSystem {
   public void shutdown() {
     impl.shutdown();
   }
-
 }

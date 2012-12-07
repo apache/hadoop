@@ -243,3 +243,8 @@ Branch-hadoop-1-win - unreleased
 
     HADOOP-8645. HADOOP_HOME and -Dhadoop.home (from hadoop wrapper script) are
     not uniformly handled. (John Gordon via suresh)
+
+  Merged from branch-1
+
+    HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
+    suresh)

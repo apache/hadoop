@@ -306,8 +306,18 @@ public class MetricsSystemImpl implements MetricsSystem {
   synchronized void onTimerEvent() {
     logicalTime += period;
     if (sinks.size() > 0) {
-      publishMetrics(snapshotMetrics());
+      publishMetrics(snapshotMetrics(), false);
     }
+  }
+  
+  /**
+   * Requests an immediate publish of all metrics from sources to sinks.
+   */
+  @Override
+  public void publishMetricsNow() {
+    if (sinks.size() > 0) {
+      publishMetrics(snapshotMetrics(), true);
+    }    
   }
 
   /**
@@ -342,12 +352,20 @@ public class MetricsSystemImpl implements MetricsSystem {
   /**
    * Publish a metrics snapshot to all the sinks
    * @param buffer  the metrics snapshot to publish
+   * @param immediate  indicates that we should publish metrics immediately
+   *                   instead of using a separate thread.
    */
-  synchronized void publishMetrics(MetricsBuffer buffer) {
+  synchronized void publishMetrics(MetricsBuffer buffer, boolean immediate) {
     int dropped = 0;
     for (MetricsSinkAdapter sa : sinks.values()) {
       long startTime = System.currentTimeMillis();
-      dropped += sa.putMetrics(buffer, logicalTime) ? 0 : 1;
+      boolean result;
+      if (immediate) {
+        result = sa.putMetricsImmediate(buffer); 
+      } else {
+        result = sa.putMetrics(buffer, logicalTime);
+      }
+      dropped += result ? 0 : 1;
       publishStat.add(System.currentTimeMillis() - startTime);
     }
     dropStat.incr(dropped);
