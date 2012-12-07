@@ -1858,10 +1858,10 @@ public class SequenceFile {
         UTF8 className = new UTF8();
 
         className.readFields(in);
-        keyClassName = className.toString(); // key class name
+        keyClassName = className.toStringChecked(); // key class name
 
         className.readFields(in);
-        valClassName = className.toString(); // val class name
+        valClassName = className.toStringChecked(); // val class name
       } else {
         keyClassName = Text.readString(in);
         valClassName = Text.readString(in);

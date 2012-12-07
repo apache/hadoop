@@ -20,6 +20,7 @@ package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
 import java.io.IOException;
+import java.io.UTFDataFormatException;
 import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -126,9 +127,9 @@ public class TestUTF8 extends TestCase {
     try {
       UTF8.fromBytes(invalid);
       fail("did not throw an exception");
-    } catch (IOException ioe) {
+    } catch (UTFDataFormatException utfde) {
       GenericTestUtils.assertExceptionContains(
-          "Invalid UTF8 at ffff01020304", ioe);
+          "Invalid UTF8 at ffff01020304", utfde);
     }
   }
 
@@ -142,9 +143,27 @@ public class TestUTF8 extends TestCase {
     try {
       UTF8.fromBytes(invalid);
       fail("did not throw an exception");
-    } catch (IOException ioe) {
+    } catch (UTFDataFormatException utfde) {
       GenericTestUtils.assertExceptionContains(
-          "Invalid UTF8 at f88880808004", ioe);
+          "Invalid UTF8 at f88880808004", utfde);
+    }
+  }
+  
+  /**
+   * Test that decoding invalid UTF8 due to truncation yields the correct
+   * exception type.
+   */
+  public void testInvalidUTF8Truncated() throws Exception {
+    // Truncated CAT FACE character -- this is a 4-byte sequence, but we
+    // only have the first three bytes.
+    byte[] truncated = new byte[] {
+        (byte)0xF0, (byte)0x9F, (byte)0x90 };
+    try {
+      UTF8.fromBytes(truncated);
+      fail("did not throw an exception");
+    } catch (UTFDataFormatException utfde) {
+      GenericTestUtils.assertExceptionContains(
+          "Truncated UTF8 at f09f90", utfde);
     }
   }
 }

@@ -300,6 +300,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4238. Standby namenode should not do purging of shared
     storage edits. (todd)
 
+    HDFS-4282. TestEditLog.testFuzzSequences FAILED in all pre-commit test
+    (todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
