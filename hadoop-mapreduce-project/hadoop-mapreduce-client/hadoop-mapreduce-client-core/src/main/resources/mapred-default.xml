@@ -748,6 +748,16 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
+  <value>org.apache.hadoop.mapreduce.task.reduce.Shuffle</value>
+  <description> 
+  Name of the class whose instance will be used 
+  to send shuffle requests by reducetasks of this job.
+  The class must be an instance of org.apache.hadoop.mapred.ShuffleConsumerPlugin.
+  </description>
+</property>
+
 <!-- MR YARN Application properties -->
 
 <property>
