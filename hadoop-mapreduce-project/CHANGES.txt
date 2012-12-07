@@ -7,6 +7,8 @@ Branch MR-2454
 
     MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
 
+    MAPREDUCE-4049. plugin for generic shuffle service. (avnerb via tucu)
+
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
