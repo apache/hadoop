@@ -782,9 +782,6 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         "true");
     props.setProperty(PolicyProvider.POLICY_PROVIDER_CONFIG, 
         HadoopPolicyProvider.class.getName());
-    props.setProperty(
-        CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, 
-        "true");
     props.setProperty(JobConf.MR_ADMINS, mrAdminUser + " " + mrAdminGroup);
 
     startCluster(true, props);
