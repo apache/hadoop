@@ -312,6 +312,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
     suresh)
 
+    HADOOP-9054. Add AuthenticationHandler that uses Kerberos but allows for 
+    an alternate form of authentication for browsers. (rkanter via tucu)
 
   IMPROVEMENTS
 

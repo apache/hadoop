@@ -110,6 +110,7 @@
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>
             <exclude>**/TestKerberosAuth*.java</exclude>
+            <exclude>**/TestAltKerberosAuth*.java</exclude>
             <exclude>**/Test*$*.java</exclude>
           </excludes>
         </configuration>
