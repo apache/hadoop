@@ -84,6 +84,21 @@
      <b>&quot;Text File Busy&quot; errors launching MR tasks</b><br>
      <blockquote>Some very small percentage of tasks fail with a &quot;Text file busy&quot; error.<br><br>The following was the original diagnosis:<br>{quote}<br>Our use of PrintWriter in TaskController.writeCommand is unsafe, since that class swallows all IO exceptions. We&apos;re not currently checking for errors, which I&apos;m seeing result in occasional task failures with the message &quot;Text file busy&quot; - assumedly because the close() call is failing silently for some reason.<br>{quote}<br>.. but turned out to be another issue as well (see below)</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4696">MAPREDUCE-4696</a>.
+     Minor bug reported by gopalv and fixed by gopalv <br>
+     <b>TestMRServerPorts throws NullReferenceException</b><br>
+     <blockquote>TestMRServerPorts throws <br><br>{code}<br>java.lang.NullPointerException<br>    at org.apache.hadoop.mapred.TestMRServerPorts.canStartJobTracker(TestMRServerPorts.java:99)<br>    at org.apache.hadoop.mapred.TestMRServerPorts.testJobTrackerPorts(TestMRServerPorts.java:152)<br>{code}<br><br>Use the JobTracker.startTracker(string, string, boolean initialize) factory method to get a pre-initialized JobTracker for the test.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4697">MAPREDUCE-4697</a>.
+     Minor bug reported by gopalv and fixed by gopalv <br>
+     <b>TestMapredHeartbeat fails assertion on HeartbeatInterval</b><br>
+     <blockquote>TestMapredHeartbeat fails test on heart beat interval<br><br>{code}<br>    FAILED<br>expected:&lt;300&gt; but was:&lt;500&gt;<br>junit.framework.AssertionFailedError: expected:&lt;300&gt; but was:&lt;500&gt;<br>    at org.apache.hadoop.mapred.TestMapredHeartbeat.testJobDirCleanup(TestMapredHeartbeat.java:68)<br>{code}<br><br>Replicate math for getNextHeartbeatInterval() in the test-case to ensure MRConstants changes do not break test-case.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4699">MAPREDUCE-4699</a>.
+     Minor bug reported by gopalv and fixed by gopalv <br>
+     <b>TestFairScheduler &amp; TestCapacityScheduler fails due to JobHistory exception</b><br>
+     <blockquote>TestFairScheduler fails due to exception from mapred.JobHistory<br><br>{code}<br>null<br>java.lang.NullPointerException<br>	at org.apache.hadoop.mapred.JobHistory$JobInfo.logJobPriority(JobHistory.java:1975)<br>	at org.apache.hadoop.mapred.JobInProgress.setPriority(JobInProgress.java:895)<br>	at org.apache.hadoop.mapred.TestFairScheduler.testFifoPool(TestFairScheduler.java:2617)<br>{code}<br><br>TestCapacityScheduler fails due to<br><br>{code}<br>java.lang.NullPointerException<br>    at org.apache.hadoop.mapred.JobHistory$JobInfo.log...</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4798">MAPREDUCE-4798</a>.
      Minor bug reported by sam liu and fixed by  (jobhistoryserver, test)<br>
      <b>TestJobHistoryServer fails some times with &apos;java.lang.AssertionError: Address already in use&apos;</b><br>
@@ -91,7 +106,6 @@
 
 
 </ul>
-
 
 <h2>Changes since Hadoop 1.1.0</h2>
 
