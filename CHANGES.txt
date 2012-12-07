@@ -366,6 +366,8 @@ Release 1.1.2 - Unreleased
     MAPREDUCE-4699. Fixed unit test failures - TestFairScheduler and 
     TestCapacityScheduler. (Gopal V via sseth)
 
+    MAPREDUCE-4858. Fixed TestWebUIAuthorization. (acmurthy) 
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES

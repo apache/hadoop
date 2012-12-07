@@ -45,6 +45,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.junit.Test;
 
 public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
@@ -780,7 +782,13 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     Properties props = new Properties();
     props.setProperty("hadoop.http.filter.initializers",
         DummyFilterInitializer.class.getName());
-    props.setProperty(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, "true");
+    props.setProperty(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
+        "true");
+    props.setProperty(PolicyProvider.POLICY_PROVIDER_CONFIG, 
+        HadoopPolicyProvider.class.getName());
+    props.setProperty(
+        CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, 
+        "true");
     props.setProperty(JobConf.MR_ADMINS, mrAdminUser + " " + mrAdminGroup);
 
     startCluster(true, props);
