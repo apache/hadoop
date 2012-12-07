@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
@@ -107,14 +108,18 @@ public class TestProcfsBasedProcessTree {
   @Test
   public void testProcessTree() throws Exception {
 
+    if (!Shell.LINUX) {
+      System.out
+          .println("ProcfsBasedProcessTree is not available on this system. Not testing");
+      return;
+
+    }
     try {
-      if (!ProcfsBasedProcessTree.isAvailable()) {
-        System.out
-            .println("ProcfsBasedProcessTree is not available on this system. Not testing");
-        return;
-      }
+      Assert.assertTrue(ProcfsBasedProcessTree.isAvailable());
     } catch (Exception e) {
       LOG.info(StringUtils.stringifyException(e));
+      Assert.assertTrue("ProcfsBaseProcessTree should be available on Linux",
+        false);
       return;
     }
     // create shell script
