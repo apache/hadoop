@@ -12,3 +12,7 @@ branch-trunk-win changes - unreleased
 
   YARN-213. YARN build script would be more readable using abspath.
   (Chris Nauroth via suresh)
+
+  YARN-233. Added support for running containers in MS Windows to YARN. (Chris
+  Nauroth via acmurthy)
+

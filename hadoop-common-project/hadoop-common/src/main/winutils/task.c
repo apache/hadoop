@@ -22,6 +22,8 @@
 #define PSAPI_VERSION 1
 #pragma comment(lib, "psapi.lib")
 
+#define ERROR_TASK_NOT_ALIVE 1
+
 // List of different task related command line options supported by
 // winutils.
 typedef enum TaskCommandOptionType
@@ -400,6 +402,12 @@ int Task(int argc, wchar_t *argv[])
     if(isAlive == TRUE)
     {
       fwprintf(stdout, L"IsAlive,%d\n", numProcs);
+    }
+    else
+    {
+      dwErrorCode = ERROR_TASK_NOT_ALIVE;
+      ReportErrorCode(L"isTaskAlive returned false", dwErrorCode);
+      goto TaskExit;
     }
   } else if (command == TaskKill)
   {

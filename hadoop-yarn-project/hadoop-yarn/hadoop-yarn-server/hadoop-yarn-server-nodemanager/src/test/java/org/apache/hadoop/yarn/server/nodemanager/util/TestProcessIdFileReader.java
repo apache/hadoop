@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import junit.framework.Assert;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.junit.Test;
 
@@ -49,17 +50,20 @@ public class TestProcessIdFileReader {
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();
     File testFile = null;
+    String expectedProcessId = Shell.WINDOWS ?
+      "container_1353742680940_0002_01_000001" :
+      "56789";
     
     try {
       testFile = new File(rootDir, "temp.txt");
       PrintWriter fileWriter = new PrintWriter(testFile);
-      fileWriter.println("56789");
+      fileWriter.println(expectedProcessId);
       fileWriter.close();      
       String processId = null; 
                   
       processId = ProcessIdFileReader.getProcessId(
           new Path(rootDir + Path.SEPARATOR + "temp.txt"));
-      Assert.assertEquals("56789", processId);      
+      Assert.assertEquals(expectedProcessId, processId);      
       
     } finally {
       if (testFile != null
@@ -75,7 +79,10 @@ public class TestProcessIdFileReader {
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();
     File testFile = null;
-    
+    String processIdInFile = Shell.WINDOWS ?
+      " container_1353742680940_0002_01_000001 " :
+      " 23 ";
+    String expectedProcessId = processIdInFile.trim();
     try {
       testFile = new File(rootDir, "temp.txt");
       PrintWriter fileWriter = new PrintWriter(testFile);
@@ -84,14 +91,14 @@ public class TestProcessIdFileReader {
       fileWriter.println("abc");
       fileWriter.println("-123");
       fileWriter.println("-123 ");
-      fileWriter.println(" 23 ");
+      fileWriter.println(processIdInFile);
       fileWriter.println("6236");
       fileWriter.close();      
       String processId = null; 
                   
       processId = ProcessIdFileReader.getProcessId(
           new Path(rootDir + Path.SEPARATOR + "temp.txt"));
-      Assert.assertEquals("23", processId);      
+      Assert.assertEquals(expectedProcessId, processId);
       
     } finally {
       if (testFile != null

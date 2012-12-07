@@ -119,6 +119,32 @@ abstract public class Shell {
     return WINDOWS ? new String[] { WINUTILS, "symlink", link, target }
                    : new String[] { "ln", "-s", target, link };
   }
+  
+  /** Return a command to execute the given command in OS shell.
+   *  On Windows, the passed in groupId can be used to launch
+   *  and associate the given groupId in a process group. On
+   *  non-Windows, groupId is ignored. */
+  public static String[] getRunCommand(String command,
+                                       String groupId) {
+    if (WINDOWS) {
+      return new String[] { WINUTILS, "task", "create", groupId,
+        "cmd /c " + command };
+    } else {
+      return new String[] { "bash", "-c", command };
+    }
+  }
+
+  /** Return a command for determining if process with specified pid is alive. */
+  public static String[] getCheckProcessIsAliveCommand(String pid) {
+    return WINDOWS ? new String[] { WINUTILS, "task", "isAlive", pid } :
+      new String[] { "kill", "-0", isSetsidAvailable ? "-" + pid : pid };
+  }
+
+  /** Return a command to send a signal to a given pid */
+  public static String[] getSignalKillCommand(int code, String pid) {
+    return WINDOWS ? new String[] { WINUTILS, "task", "kill", pid } :
+      new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
+  }
 
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
@@ -140,7 +166,30 @@ abstract public class Shell {
   /** Set to true on Windows platforms */
   public static final boolean WINDOWS /* borrowed from Path.WINDOWS */
                 = System.getProperty("os.name").startsWith("Windows");
+
+  public static final boolean LINUX
+                = System.getProperty("os.name").startsWith("Linux");
   
+  public static final boolean isSetsidAvailable = isSetsidSupported();
+  private static boolean isSetsidSupported() {
+    if (WINDOWS) {
+      return true;
+    }
+    ShellCommandExecutor shexec = null;
+    boolean setsidSupported = true;
+    try {
+      String[] args = {"setsid", "bash", "-c", "echo $$"};
+      shexec = new ShellCommandExecutor(args);
+      shexec.execute();
+    } catch (IOException ioe) {
+      LOG.warn("setsid is not available on this machine. So not using it.");
+      setsidSupported = false;
+    } finally { // handle the exit code
+      LOG.info("setsid exited with exit code " + shexec.getExitCode());
+    }
+    return setsidSupported;
+  }
+
   private long    interval;   // refresh interval in msec
   private long    lastTime;   // last time the command was performed
   private Map<String, String> environment; // env for the command execution
