@@ -1,4 +1,4 @@
-Branch-hadoop-1-win - unreleased
+Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-8223 Initial patch for branch-1-win. (David Lao via Sanjay)
 
@@ -128,6 +128,9 @@ Branch-hadoop-1-win - unreleased
     HADOOP-8457. Address file ownership issue for users in Admin group on
     windows. (Ivan Mitic via suresh)
 
+    MAPREDUCE-4400. Avoid task finish sleep to improve small job/workflow
+    latency. (llu)
+
     HADOOP-8733. Fix the tests TestStreamingTaskLog, TestJvmManager
     and TestLinuxTaskControllerLaunchArgs to not fail on Windows. (Ivan Mitic via
     vinodkv)
@@ -246,5 +249,43 @@ Branch-hadoop-1-win - unreleased
 
   Merged from branch-1
 
+    HDFS-385. Backport: Add support for an experimental API that allows a
+    module external to HDFS to specify how HDFS blocks should be placed.
+    (Sumadhur Reddy Bolli via szetszwo)
+
+    HADOOP-8820. Backport HADOOP-8469 and HADOOP-8470: Make NetworkTopology
+    class pluggable and add NetworkTopologyWithNodeGroup, a 4-layer
+    implementation of NetworkTopology.  (Junping Du and Jing Zhao via szetszwo)
+
+    HDFS-3941. Backport HDFS-3498 and HDFS-3601: Support replica removal in
+    BlockPlacementPolicy and make BlockPlacementPolicyDefault extensible for
+    reusing code in subclasses, and add BlockPlacementPolicyWithNodeGroup to
+    support block placement with 4-layer network topology.  (Junping Du and
+    Jing Zhao via szetszwo)
+
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via eli)
+
+    HADOOP-6496. HttpServer sends wrong content-type for CSS files.
+    (Todd Lipcon, Backport by Ivan Mitic via suresh).
+
+    HADOOP-7827. jsp pages missing DOCTYPE tags. (Dave Vronay, Backport by
+    Ivan Mitic via suresh)
+
+    HADOOP-8900. BuiltInGzipDecompressor throws IOException - stored gzip size
+    doesn't match decompressed size. (Andy Isaacson via suresh)
+
+    HADOOP-9036. Fix racy test case TestSinkQueue (Backport HADOOP-7292).
+    (Luke Lu backport by suresh)
+
+    HADOOP-9095. Backport HADOOP-8372: NetUtils.normalizeHostName() incorrectly
+    handles hostname starting with a numeric character.  (Jing Zhao via
+    szetszwo)
+
+    HADOOP-9099. TestNetUtils fails if "UnknownHost" is resolved as a valid
+    hostname.  (Ivan Mitic via szetszwo)
+
+    HADOOP-9111. Change some JUnit 3 tests to JUnit 4 so that @Ignore tests can
+    be run with ant 1.8.x.  (Jing Zhao via szetszwo)
     HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
     suresh)
