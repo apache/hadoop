@@ -105,6 +105,9 @@ Release 2.0.3-alpha - Unreleased
 
   BUG FIXES
 
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
+
     HADOOP-8795. BASH tab completion doesn't look in PATH, assumes path to
     executable is specified. (Sean Mackrory via atm)
 
