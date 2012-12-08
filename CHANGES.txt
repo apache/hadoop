@@ -137,6 +137,9 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
+
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
     HADOOP_SECURE_DN_PID_DIR (bobby)
 
