@@ -16,6 +16,9 @@ Release 1.1.2 - 2012.12.07
 
   BUG FIXES
 
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
+
     MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
     race conditions.  (Sam Liu via eyang)
 
