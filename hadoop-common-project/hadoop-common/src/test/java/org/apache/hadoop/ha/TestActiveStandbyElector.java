@@ -42,6 +42,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
 import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
+import org.apache.hadoop.test.GenericTestUtils;
 
 public class TestActiveStandbyElector {
 
@@ -56,7 +57,8 @@ public class TestActiveStandbyElector {
     private int sleptFor = 0;
     
     ActiveStandbyElectorTester(String hostPort, int timeout, String parent,
-        List<ACL> acl, ActiveStandbyElectorCallback app) throws IOException {
+        List<ACL> acl, ActiveStandbyElectorCallback app) throws IOException,
+        KeeperException {
       super(hostPort, timeout, parent, acl,
           Collections.<ZKAuthInfo>emptyList(), app);
     }
@@ -83,7 +85,7 @@ public class TestActiveStandbyElector {
       ActiveStandbyElector.BREADCRUMB_FILENAME;
 
   @Before
-  public void init() throws IOException {
+  public void init() throws IOException, KeeperException {
     count = 0;
     mockZK = Mockito.mock(ZooKeeper.class);
     mockApp = Mockito.mock(ActiveStandbyElectorCallback.class);
@@ -704,5 +706,19 @@ public class TestActiveStandbyElector {
     Mockito.verify(mockZK, Mockito.times(3)).create(
         Mockito.eq(ZK_PARENT_NAME), Mockito.<byte[]>any(),
         Mockito.eq(Ids.OPEN_ACL_UNSAFE), Mockito.eq(CreateMode.PERSISTENT));
+  }
+
+  /**
+   * verify the zookeeper connection establishment
+   */
+  @Test
+  public void testWithoutZKServer() throws Exception {
+    try {
+      new ActiveStandbyElector("127.0.0.1", 2000, ZK_PARENT_NAME,
+          Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), mockApp);
+      Assert.fail("Did not throw zookeeper connection loss exceptions!");
+    } catch (KeeperException ke) {
+      GenericTestUtils.assertExceptionContains( "ConnectionLoss", ke);
+    }
   }
 }
