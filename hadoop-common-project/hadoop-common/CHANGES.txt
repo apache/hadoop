@@ -143,6 +143,9 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
+
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
     (Devaraj K via umamahesh)
 
@@ -289,6 +292,9 @@ Trunk (Unreleased)
     HADOOP-9037. Bug in test-patch.sh and precommit build process (Kihwal Lee
     via jlowe)
 
+    HADOOP-9121. InodeTree.java has redundant check for vName while 
+    throwing exception. (Arup Malakar via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -305,6 +311,12 @@ Release 2.0.3-alpha - Unreleased
     (Ivan Vladimirov Ivanov via cutting)
 
     HADOOP-9020. Add a SASL PLAIN server (daryn via bobby)
+
+    HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
+    suresh)
+
+    HADOOP-9054. Add AuthenticationHandler that uses Kerberos but allows for 
+    an alternate form of authentication for browsers. (rkanter via tucu)
 
   IMPROVEMENTS
 
@@ -455,6 +467,11 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8958. ViewFs:Non absolute mount name failures when running 
     multiple tests on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-9103. UTF8 class does not properly decode Unicode characters
+    outside the basic multilingual plane. (todd)
+
+    HADOOP-9070. Kerberos SASL server cannot find kerberos key. (daryn via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 

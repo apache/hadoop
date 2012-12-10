@@ -49,6 +49,8 @@ public class TestHDFSFileContextMainOperations extends
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
+    FileContextTestHelper.TEST_ROOT_DIR =
+      "/tmp/TestHDFSFileContextMainOperations";
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);

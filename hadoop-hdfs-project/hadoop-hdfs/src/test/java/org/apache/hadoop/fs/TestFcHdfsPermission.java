@@ -41,6 +41,7 @@ public class TestFcHdfsPermission extends FileContextPermissionBase {
   @BeforeClass
   public static void clusterSetupAtBegining()
                                     throws IOException, LoginException, URISyntaxException  {
+    FileContextTestHelper.TEST_ROOT_DIR = "/tmp/TestFcHdfsPermission";
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fc = FileContext.getFileContext(cluster.getURI(0), conf);

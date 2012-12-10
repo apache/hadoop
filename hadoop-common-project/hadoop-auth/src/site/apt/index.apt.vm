@@ -24,6 +24,11 @@ Hadoop Auth, Java HTTP SPNEGO ${project.version}
   Hadoop Auth also supports additional authentication mechanisms on the client
   and the server side via 2 simple interfaces.
 
+  Additionally, it provides a partially implemented derivative of the Kerberos
+  SPNEGO authentication to allow a "mixed" form of authentication where Kerberos
+  SPNEGO is used by non-browsers while an alternate form of authentication
+  (to be implemented by the user) is used for browsers.
+
 * License
 
   Hadoop Auth is distributed under {{{http://www.apache.org/licenses/}Apache

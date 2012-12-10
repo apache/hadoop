@@ -80,6 +80,11 @@ public class INodeDirectory extends INode {
   public INodeDirectory(INodeDirectory other) {
     super(other);
     this.children = other.children;
+    if (this.children != null) {
+      for (INode child : children) {
+        child.parent = this;
+      }
+    }
   }
   
   /** @return true unconditionally. */
@@ -118,6 +123,7 @@ public class INodeDirectory extends INode {
 
     final int low = searchChildren(newChild);
     if (low>=0) { // an old child exists so replace by the newChild
+      children.get(low).parent = null;
       children.set(low, newChild);
     } else {
       throw new IllegalArgumentException("No child exists to be replaced");

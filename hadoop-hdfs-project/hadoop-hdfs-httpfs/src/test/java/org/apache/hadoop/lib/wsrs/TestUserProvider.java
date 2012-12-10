@@ -110,13 +110,6 @@ public class TestUserProvider {
 
   @Test
   @TestException(exception = IllegalArgumentException.class)
-  public void userNameTooLong() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    userParam.parseParam("a123456789012345678901234567890x");
-  }
-
-  @Test
-  @TestException(exception = IllegalArgumentException.class)
   public void userNameInvalidStart() {
     UserProvider.UserParam userParam = new UserProvider.UserParam("username");
     userParam.parseParam("1x");
@@ -133,12 +126,6 @@ public class TestUserProvider {
   public void userNameMinLength() {
     UserProvider.UserParam userParam = new UserProvider.UserParam("username");
     assertNotNull(userParam.parseParam("a"));
-  }
-
-  @Test
-  public void userNameMaxLength() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    assertNotNull(userParam.parseParam("a123456789012345678901234567890"));
   }
 
   @Test

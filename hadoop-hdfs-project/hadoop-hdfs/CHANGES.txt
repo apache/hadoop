@@ -92,16 +92,11 @@ Trunk (Unreleased)
     HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
     via atm)
 
-    HDFS-3049. During the normal NN startup process, fall back on a different
-    edit log if we see one that is corrupt (Colin Patrick McCabe via todd)
-
     HDFS-3478. Test quotas with Long.Max_Value. (Sujay Rau via eli)
 
     HDFS-3498. Support replica removal in BlockPlacementPolicy and make
     BlockPlacementPolicyDefault extensible for reusing code in subclasses.
     (Junping Du via szetszwo)
-
-    HDFS-3571. Allow EditLogFileInputStream to read from a remote URL (todd)
 
     HDFS-3510.  Editlog pre-allocation is performed prior to writing edits
     to avoid partial edits case disk out of space.(Colin McCabe via suresh)
@@ -146,8 +141,6 @@ Trunk (Unreleased)
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
-    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
-
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
     returning more than INode array. (Jing Zhao via suresh)
 
@@ -160,10 +153,6 @@ Trunk (Unreleased)
     HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
     INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
 
-    HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
-
-    HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
-
     HDFS-4206. Change the fields in INode and its subclasses to private.
     (szetszwo)
 
@@ -175,6 +164,11 @@ Trunk (Unreleased)
 
     HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
     FSDirectory and INodeDirectory. (szetszwo)
+
+    HDFS-3358. Specify explicitly that the NN UI status total is talking
+    of persistent objects on heap. (harsh)
+
+    HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
   OPTIMIZATIONS
 
@@ -268,107 +262,12 @@ Trunk (Unreleased)
     HDFS-4105. The SPNEGO user for secondary namenode should use the web 
     keytab. (Arpit Gupta via jitendra)
 
-  BREAKDOWN OF HDFS-3077 SUBTASKS
+    HDFS-4240. For nodegroup-aware block placement, when a node is excluded,
+    the nodes in the same nodegroup should also be excluded.  (Junping Du
+    via szetszwo)
 
-    HDFS-3077. Quorum-based protocol for reading and writing edit logs.
-    (todd, Brandon Li, and Hari Mankude via todd)
-    
-    HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary (todd)
-    
-    HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs
-    (todd)
-    
-    HDFS-3693. JNStorage should read its storage info even before a writer
-    becomes active (todd)
-    
-    HDFS-3725. Fix QJM startup when individual JNs have gaps (todd)
-    
-    HDFS-3741. Exhaustive failure injection test for skipped RPCs (todd)
-    
-    HDFS-3773. TestNNWithQJM fails after HDFS-3741. (atm)
-    
-    HDFS-3793. Implement genericized format() in QJM (todd)
-    
-    HDFS-3795. QJM: validate journal dir at startup (todd)
-    
-    HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid
-    segment (todd)
-    
-    HDFS-3799. QJM: handle empty log segments during recovery (todd)
-    
-    HDFS-3797. QJM: add segment txid as a parameter to journal() RPC (todd)
-    
-    HDFS-3800. improvements to QJM fault testing (todd)
-    
-    HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed
-    setting of HTTP port. (todd and atm)
-    
-    HDFS-3826. QJM: Some trivial logging / exception text improvements. (todd
-    and atm)
-    
-    HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode"
-    (eli)
-    
-    HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)
-    
-    HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address (eli)
-    
-    HDFS-3863. Track last "committed" txid in QJM (todd)
-    
-    HDFS-3869. Expose non-file journal manager details in web UI (todd)
-    
-    HDFS-3884. Journal format() should reset cached values (todd)
-    
-    HDFS-3870. Add metrics to JournalNode (todd)
-    
-    HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)
-    
-    HDFS-3726. If a logger misses an RPC, don't retry that logger until next
-    segment (todd)
-    
-    HDFS-3893. QJM: Make QJM work with security enabled. (atm)
-    
-    HDFS-3897. QJM: TestBlockToken fails after HDFS-3893. (atm)
-    
-    HDFS-3898. QJM: enable TCP_NODELAY for IPC (todd)
-    
-    HDFS-3885. QJM: optimize log sync when JN is lagging behind (todd)
-    
-    HDFS-3900. QJM: avoid validating log segments on log rolls (todd)
-    
-    HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are
-    out-of-sync (todd)
-    
-    HDFS-3899. QJM: Add client-side metrics (todd)
-    
-    HDFS-3914. QJM: acceptRecovery should abort current segment (todd)
-    
-    HDFS-3915. QJM: Failover fails with auth error in secure cluster (todd)
-    
-    HDFS-3906. QJM: quorum timeout on failover with large log segment (todd)
-    
-    HDFS-3840. JournalNodes log JournalNotFormattedException backtrace error
-    before being formatted (todd)
-    
-    HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC
-    client caching (todd)
-    
-    HDFS-3926. QJM: Add user documentation for QJM. (atm)
-    
-    HDFS-3943. QJM: remove currently-unused md5sum field (todd)
-    
-    HDFS-3950. QJM: misc TODO cleanup, improved log messages, etc. (todd)
-    
-    HDFS-3955. QJM: Make acceptRecovery() atomic. (todd)
-    
-    HDFS-3956. QJM: purge temporary files when no longer within retention
-    period (todd)
-    
-    HDFS-4004. TestJournalNode#testJournal fails because of test case execution
-    order (Chao Shi via todd)
-    
-    HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
-    (Chao Shi via todd)
+    HDFS-4260 Fix HDFS tests to set test dir to a valid HDFS path as opposed
+    to the local build path (Chri Nauroth via Sanjay)
 
 Release 2.0.3-alpha - Unreleased 
 
@@ -492,6 +391,24 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4214. OfflineEditsViewer should print out the offset at which it
     encountered an error. (Colin Patrick McCabe via atm)
+
+    HDFS-4199. Provide test for HdfsVolumeId. (Ivan A. Veselovsky via atm)
+
+    HDFS-3049. During the normal NN startup process, fall back on a different
+    edit log if we see one that is corrupt (Colin Patrick McCabe via todd)
+
+    HDFS-3571. Allow EditLogFileInputStream to read from a remote URL (todd)
+
+    HDFS-4110. Refine a log printed in JNStorage. (Liang Xie via suresh)
+
+    HDFS-4153. Add START_MSG/SHUTDOWN_MSG for JournalNode. (liang xie via atm)
+
+    HDFS-3935. Add JournalNode to the start/stop scripts (Andy Isaacson via todd)
+
+    HDFS-4268. Remove redundant enum NNHAStatusHeartbeat.State. (shv)
+
+    HDFS-3680. Allow customized audit logging in HDFS FSNamesystem. (Marcelo
+    Vanzin via atm)
 
   OPTIMIZATIONS
 
@@ -645,6 +562,127 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4242. Map.Entry is incorrectly used in LeaseManager since the behavior
     of it is undefined after the iteration or modifications of the map.
     (szetszwo)
+
+    HDFS-4231. BackupNode: Introduce BackupState. (shv)
+
+    HDFS-4243. When replacing an INodeDirectory, the parent pointers of the
+    children of the child have to be updated to the new child.  (Jing Zhao
+    via szetszwo)
+
+    HDFS-4238. Standby namenode should not do purging of shared
+    storage edits. (todd)
+
+    HDFS-4282. TestEditLog.testFuzzSequences FAILED in all pre-commit test
+    (todd)
+
+    HDFS-4236. Remove artificial limit on username length introduced in
+    HDFS-4171. (tucu via suresh)
+
+    HDFS-4279. NameNode does not initialize generic conf keys when started
+    with -recover. (Colin Patrick McCabe via atm)
+
+  BREAKDOWN OF HDFS-3077 SUBTASKS
+
+    HDFS-3077. Quorum-based protocol for reading and writing edit logs.
+    (todd, Brandon Li, and Hari Mankude via todd)
+    
+    HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary (todd)
+    
+    HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs
+    (todd)
+    
+    HDFS-3693. JNStorage should read its storage info even before a writer
+    becomes active (todd)
+    
+    HDFS-3725. Fix QJM startup when individual JNs have gaps (todd)
+    
+    HDFS-3741. Exhaustive failure injection test for skipped RPCs (todd)
+    
+    HDFS-3773. TestNNWithQJM fails after HDFS-3741. (atm)
+    
+    HDFS-3793. Implement genericized format() in QJM (todd)
+    
+    HDFS-3795. QJM: validate journal dir at startup (todd)
+    
+    HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid
+    segment (todd)
+    
+    HDFS-3799. QJM: handle empty log segments during recovery (todd)
+    
+    HDFS-3797. QJM: add segment txid as a parameter to journal() RPC (todd)
+    
+    HDFS-3800. improvements to QJM fault testing (todd)
+    
+    HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed
+    setting of HTTP port. (todd and atm)
+    
+    HDFS-3826. QJM: Some trivial logging / exception text improvements. (todd
+    and atm)
+    
+    HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode"
+    (eli)
+    
+    HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)
+    
+    HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address (eli)
+    
+    HDFS-3863. Track last "committed" txid in QJM (todd)
+    
+    HDFS-3869. Expose non-file journal manager details in web UI (todd)
+    
+    HDFS-3884. Journal format() should reset cached values (todd)
+    
+    HDFS-3870. Add metrics to JournalNode (todd)
+    
+    HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)
+    
+    HDFS-3726. If a logger misses an RPC, don't retry that logger until next
+    segment (todd)
+    
+    HDFS-3893. QJM: Make QJM work with security enabled. (atm)
+    
+    HDFS-3897. QJM: TestBlockToken fails after HDFS-3893. (atm)
+    
+    HDFS-3898. QJM: enable TCP_NODELAY for IPC (todd)
+    
+    HDFS-3885. QJM: optimize log sync when JN is lagging behind (todd)
+    
+    HDFS-3900. QJM: avoid validating log segments on log rolls (todd)
+    
+    HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are
+    out-of-sync (todd)
+    
+    HDFS-3899. QJM: Add client-side metrics (todd)
+    
+    HDFS-3914. QJM: acceptRecovery should abort current segment (todd)
+    
+    HDFS-3915. QJM: Failover fails with auth error in secure cluster (todd)
+    
+    HDFS-3906. QJM: quorum timeout on failover with large log segment (todd)
+    
+    HDFS-3840. JournalNodes log JournalNotFormattedException backtrace error
+    before being formatted (todd)
+    
+    HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC
+    client caching (todd)
+    
+    HDFS-3926. QJM: Add user documentation for QJM. (atm)
+    
+    HDFS-3943. QJM: remove currently-unused md5sum field (todd)
+    
+    HDFS-3950. QJM: misc TODO cleanup, improved log messages, etc. (todd)
+    
+    HDFS-3955. QJM: Make acceptRecovery() atomic. (todd)
+    
+    HDFS-3956. QJM: purge temporary files when no longer within retention
+    period (todd)
+    
+    HDFS-4004. TestJournalNode#testJournal fails because of test case execution
+    order (Chao Shi via todd)
+    
+    HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
+    (Chao Shi via todd)
+
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -2034,6 +2072,11 @@ Release 0.23.6 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-4247. saveNamespace should be tolerant of dangling lease (daryn)
+
+    HDFS-4248. Renaming directories may incorrectly remove the paths in leases
+    under the tree.  (daryn via szetszwo)
 
 Release 0.23.5 - UNRELEASED
 

@@ -82,6 +82,7 @@ public class TestFcHdfsSetUMask {
   @BeforeClass
   public static void clusterSetupAtBegining()
         throws IOException, LoginException, URISyntaxException  {
+    FileContextTestHelper.TEST_ROOT_DIR = "/tmp/TestFcHdfsSetUMask";
     Configuration conf = new HdfsConfiguration();
     // set permissions very restrictive
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,  "077");

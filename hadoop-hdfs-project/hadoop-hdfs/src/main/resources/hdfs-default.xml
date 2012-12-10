@@ -1184,4 +1184,17 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.audit.loggers</name>
+  <value>default</value>
+  <description>
+    List of classes implementing audit loggers that will receive audit events.
+    These should be implementations of org.apache.hadoop.hdfs.server.namenode.AuditLogger.
+    The special value "default" can be used to reference the default audit
+    logger, which uses the configured log system. Installing custom audit loggers
+    may affect the performance and stability of the NameNode. Refer to the custom
+    logger's documentation for more details.
+  </description>
+</property>
+
 </configuration>

@@ -25,13 +25,23 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 public class CMgrCompletedContainersEvent extends ContainerManagerEvent {
 
   private List<ContainerId> containerToCleanup;
-
-  public CMgrCompletedContainersEvent(List<ContainerId> containersToCleanup) {
+  private Reason reason;
+  
+  public CMgrCompletedContainersEvent(List<ContainerId> containersToCleanup, Reason reason) {
     super(ContainerManagerEventType.FINISH_CONTAINERS);
     this.containerToCleanup = containersToCleanup;
+    this.reason = reason;
   }
 
   public List<ContainerId> getContainersToCleanup() {
     return this.containerToCleanup;
+  }
+  
+  public Reason getReason() {
+    return reason;
+  }
+  
+  public static enum Reason {
+    ON_SHUTDOWN, BY_RESOURCEMANAGER
   }
 }

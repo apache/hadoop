@@ -28,17 +28,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.*;
 import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.HTML;
 
 public class JQueryUI extends HtmlBlock {
-  // Render choices (mostly for dataTables)
-  public enum Render {
-    /** small (<~100 rows) table as html, most gracefully degradable */
-    HTML,
-    /** medium (<~2000 rows) table as js array */
-    JS_ARRAY,
-    /** large (<~10000 rows) table loading from server */
-    JS_LOAD,
-    /** huge (>~10000 rows) table processing from server */
-    JS_SERVER
-  };
 
   // UI params
   public static final String ACCORDION = "ui.accordion";
@@ -196,13 +185,5 @@ public class JQueryUI extends HtmlBlock {
     return new StringBuilder("{bJQueryUI:true, ").
         append("sPaginationType: 'full_numbers', iDisplayLength:20, ").
         append("aLengthMenu:[20, 40, 60, 80, 100]");
-  }
-
-  public static StringBuilder tableInitProgress(StringBuilder init,
-                                                long numCells) {
-    return init.append(", bProcessing:true, ").
-        append("oLanguage:{sProcessing:'Processing ").
-        append(numCells).append(" cells...").
-        append("<p><img src=\"/static/busy.gif\">'}");
   }
 }
