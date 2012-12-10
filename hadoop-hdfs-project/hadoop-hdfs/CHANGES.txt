@@ -423,6 +423,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
     (Chao Shi via todd)
 
+    HDFS-4294. Backwards compatibility is not maintained for TestVolumeId.
+    (Ivan A. Veselovsky and Robert Parker via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
