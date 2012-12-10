@@ -59,6 +59,8 @@ import com.google.common.collect.Sets;
 public class TestNameNodeRecovery {
   private static final Log LOG = LogFactory.getLog(TestNameNodeRecovery.class);
   private static StartupOption recoverStartOpt = StartupOption.RECOVER;
+  private static final File TEST_DIR = new File(
+      System.getProperty("test.build.data","build/test/data"));
 
   static {
     recoverStartOpt.setForce(MetaRecoveryContext.FORCE_ALL);
@@ -66,15 +68,13 @@ public class TestNameNodeRecovery {
   }
 
   static void runEditLogTest(EditLogTestSetup elts) throws IOException {
-    final String TEST_LOG_NAME = "test_edit_log";
+    final File TEST_LOG_NAME = new File(TEST_DIR, "test_edit_log");
     final OpInstanceCache cache = new OpInstanceCache();
     
     EditLogFileOutputStream elfos = null;
-    File file = null;
     EditLogFileInputStream elfis = null;
     try {
-      file = new File(TEST_LOG_NAME);
-      elfos = new EditLogFileOutputStream(file, 0);
+      elfos = new EditLogFileOutputStream(TEST_LOG_NAME, 0);
       elfos.create();
 
       elts.addTransactionsToLog(elfos, cache);
@@ -82,8 +82,7 @@ public class TestNameNodeRecovery {
       elfos.flushAndSync(true);
       elfos.close();
       elfos = null;
-      file = new File(TEST_LOG_NAME);
-      elfis = new EditLogFileInputStream(file);
+      elfis = new EditLogFileInputStream(TEST_LOG_NAME);
       
       // reading through normally will get you an exception
       Set<Long> validTxIds = elts.getValidTxIds();
