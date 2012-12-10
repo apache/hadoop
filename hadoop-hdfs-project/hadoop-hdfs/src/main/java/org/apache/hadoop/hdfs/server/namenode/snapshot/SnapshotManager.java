@@ -97,7 +97,7 @@ public class SnapshotManager implements SnapshotStats {
           + "Please redo the operation after removing all the snapshots.");
     }
 
-    final INodeDirectory d = new INodeDirectory(s);
+    final INodeDirectory d = new INodeDirectory(s, true);
     fsdir.replaceINodeDirectory(path, s, d);
     snapshottables.remove(s);
 
@@ -198,7 +198,7 @@ public class SnapshotManager implements SnapshotStats {
      */
     private INodeDirectory processINodeDirectory(final INodeDirectory srcChild
         ) throws IOException {
-      final INodeDirectory dstChild = new INodeDirectory(srcChild);
+      final INodeDirectory dstChild = new INodeDirectory(srcChild, false);
       dstChild.setChildren(null);
       processRecursively(srcChild, dstChild);
       return dstChild;

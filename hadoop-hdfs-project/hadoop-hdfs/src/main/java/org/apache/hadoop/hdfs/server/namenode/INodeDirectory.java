@@ -73,14 +73,16 @@ public class INodeDirectory extends INode {
     super(name, permissions, null, mtime, 0L);
   }
   
-  /** copy constructor
-   * 
-   * @param other
+  /**
+   * Copy constructor
+   * @param other The INodeDirectory to be copied
+   * @param adopt Indicate whether or not need to set the parent field of child
+   *              INodes to the new node
    */
-  public INodeDirectory(INodeDirectory other) {
+  public INodeDirectory(INodeDirectory other, boolean adopt) {
     super(other);
     this.children = other.children;
-    if (this.children != null) {
+    if (adopt && this.children != null) {
       for (INode child : children) {
         child.parent = this;
       }

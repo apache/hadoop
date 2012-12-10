@@ -81,3 +81,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4175. Additional snapshot tests for more complicated directory
   structure and modifications. (Jing Zhao via suresh)
+
+  HDFS-4293. Fix TestSnapshot failure. (Jing Zhao via suresh)

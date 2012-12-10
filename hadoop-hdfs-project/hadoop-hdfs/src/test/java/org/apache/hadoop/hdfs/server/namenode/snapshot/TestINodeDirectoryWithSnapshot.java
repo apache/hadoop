@@ -220,7 +220,7 @@ public class TestINodeDirectoryWithSnapshot {
     final int i = Diff.search(current, inode);
     Assert.assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);
-    final INodeDirectory newinode = new INodeDirectory(oldinode);
+    final INodeDirectory newinode = new INodeDirectory(oldinode, true);
     newinode.setModificationTime(oldinode.getModificationTime() + 1);
 
     current.set(i, newinode);

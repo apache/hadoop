@@ -2008,7 +2008,7 @@ public class FSDirectory implements Closeable {
         ((INodeDirectoryWithQuota)dirNode).setQuota(nsQuota, dsQuota);
         if (!dirNode.isQuotaSet()) {
           // will not come here for root because root's nsQuota is always set
-          INodeDirectory newNode = new INodeDirectory(dirNode);
+          INodeDirectory newNode = new INodeDirectory(dirNode, true);
           INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
           dirNode = newNode;
           parent.replaceChild(newNode);

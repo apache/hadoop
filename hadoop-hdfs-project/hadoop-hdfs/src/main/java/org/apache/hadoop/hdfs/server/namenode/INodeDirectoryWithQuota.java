@@ -44,7 +44,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    */
   protected INodeDirectoryWithQuota(long nsQuota, long dsQuota,
       INodeDirectory other) {
-    super(other);
+    super(other, true);
     INode.DirCounts counts = new INode.DirCounts();
     other.spaceConsumedInTree(counts);
     this.nsCount = counts.getNsCount();
