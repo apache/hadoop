@@ -597,6 +597,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4295. Using port 1023 should be valid when starting Secure DataNode
     (Stephen Chu via todd)
 
+    HDFS-4294. Backwards compatibility is not maintained for TestVolumeId.
+    (Ivan A. Veselovsky and Robert Parker via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
