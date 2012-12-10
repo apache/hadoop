@@ -322,6 +322,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4778. Fair scheduler event log is only written if directory
     exists on HDFS. (Sandy Ryza via tomwhite)
 
+    HADOOP-8164. Handle paths using back slash as path separator for windows
+    only. (Daryn Sharp, backported by Jing Zhao via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

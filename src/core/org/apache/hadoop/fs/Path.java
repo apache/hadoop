@@ -154,7 +154,7 @@ public class Path implements Comparable {
     if (path.indexOf("//") != -1) {
       path = path.replace("//", "/");
     }
-    if (path.indexOf("\\") != -1) {	
+    if (Path.WINDOWS && path.indexOf("\\") != -1) {	
       path = path.replace("\\", "/");
     }
     

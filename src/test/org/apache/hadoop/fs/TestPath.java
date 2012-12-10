@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -177,5 +178,58 @@ public class TestPath extends TestCase {
     assertEquals("foo://bar/fud#boo", new Path(new Path(new URI(
         "foo://bar/baz#bud")), new Path(new URI("/fud#boo"))).toString());
  }
+  
+  public void testGlobEscapeStatus() throws Exception {
+    FileSystem lfs = FileSystem.getLocal(new Configuration());
+    Path testRoot = lfs.makeQualified(new Path(System.getProperty(
+        "test.build.data", "test/build/data"), "testPathGlob"));
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+    assertTrue(lfs.getFileStatus(testRoot).isDir());
+    lfs.setWorkingDirectory(testRoot);
+
+    // create a couple dirs with file in them
+    Path paths[] = new Path[] { new Path(testRoot, "*/f"),
+        new Path(testRoot, "d1/f"), new Path(testRoot, "d2/f") };
+    Arrays.sort(paths);
+    for (Path p : paths) {
+      lfs.create(p).close();
+      assertTrue(lfs.exists(p));
+    }
+    // try the non-globbed listStatus
+    FileStatus stats[] = lfs.listStatus(new Path(testRoot, "*"));
+    assertEquals(1, stats.length);
+    assertEquals(new Path(testRoot, "*/f"), stats[0].getPath());
+
+    // ensure globStatus with "*" finds all dir contents
+    stats = lfs.globStatus(new Path(testRoot, "*"));
+    Arrays.sort(stats);
+    assertEquals(paths.length, stats.length);
+    for (int i = 0; i < paths.length; i++) {
+      assertEquals(paths[i].getParent(), stats[i].getPath());
+    }
+
+    // ensure that globStatus with an escaped "\*" only finds "*"
+    stats = lfs.globStatus(new Path(testRoot, "\\*"));
+    assertEquals(1, stats.length);
+    assertEquals(new Path(testRoot, "*"), stats[0].getPath());
+
+    // try to glob the inner file for all dirs
+    stats = lfs.globStatus(new Path(testRoot, "*/f"));
+    assertEquals(paths.length, stats.length);
+    for (int i = 0; i < paths.length; i++) {
+      assertEquals(paths[i], stats[i].getPath());
+    }
+
+    // try to get the inner file for only the "*" dir
+    stats = lfs.globStatus(new Path(testRoot, "\\*/f"));
+    assertEquals(1, stats.length);
+    assertEquals(new Path(testRoot, "*/f"), stats[0].getPath());
+
+    // try to glob all the contents of the "*" dir
+    stats = lfs.globStatus(new Path(testRoot, "\\*/*"));
+    assertEquals(1, stats.length);
+    assertEquals(new Path(testRoot, "*/f"), stats[0].getPath());
+  }
 
 }
