@@ -588,6 +588,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4279. NameNode does not initialize generic conf keys when started
     with -recover. (Colin Patrick McCabe via atm)
 
+    HDFS-4291. edit log unit tests leave stray test_edit_log_file around
+    (Colin Patrick McCabe via todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
