@@ -175,6 +175,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9070. Kerberos SASL server cannot find kerberos key. (daryn via atm)
 
+    HADOOP-6762. Exception while doing RPC I/O closes channel
+    (Sam Rash and todd via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

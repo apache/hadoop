@@ -38,6 +38,11 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,6 +83,8 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
  * a port and is defined by a parameter class and a value class.
@@ -100,6 +107,19 @@ public class Client {
   private int refCount = 1;
   
   final static int PING_CALL_ID = -1;
+  
+  /**
+   * Executor on which IPC calls' parameters are sent. Deferring
+   * the sending of parameters to a separate thread isolates them
+   * from thread interruptions in the calling code.
+   */
+  private static final ExecutorService SEND_PARAMS_EXECUTOR = 
+    Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+        .setDaemon(true)
+        .setNameFormat("IPC Parameter Sending Thread #%d")
+        .build());
+
   
   /**
    * set the ping interval value in configuration
@@ -243,6 +263,8 @@ public class Client {
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
+    
+    private final Object sendParamsLock = new Object();
 
     public Connection(ConnectionId remoteId) throws IOException {
       this.remoteId = remoteId;
@@ -829,43 +851,76 @@ public class Client {
      * Note: this is not called from the Connection thread, but by other
      * threads.
      */
-    public void sendParam(Call call) {
+    public void sendParam(final Call call)
+        throws InterruptedException, IOException {
       if (shouldCloseConnection.get()) {
         return;
       }
 
-      DataOutputBuffer d=null;
-      try {
-        synchronized (this.out) {
-          if (LOG.isDebugEnabled())
-            LOG.debug(getName() + " sending #" + call.id);
+      // Serialize the call to be sent. This is done from the actual
+      // caller thread, rather than the SEND_PARAMS_EXECUTOR thread,
+      // so that if the serialization throws an error, it is reported
+      // properly. This also parallelizes the serialization.
+      //
+      // Format of a call on the wire:
+      // 0) Length of rest below (1 + 2)
+      // 1) PayloadHeader  - is serialized Delimited hence contains length
+      // 2) the Payload - the RpcRequest
+      //
+      // Items '1' and '2' are prepared here. 
+      final DataOutputBuffer d = new DataOutputBuffer();
+      RpcPayloadHeaderProto header = ProtoUtil.makeRpcPayloadHeader(
+         call.rpcKind, RpcPayloadOperationProto.RPC_FINAL_PAYLOAD, call.id);
+      header.writeDelimitedTo(d);
+      call.rpcRequest.write(d);
+
+      synchronized (sendParamsLock) {
+        Future<?> senderFuture = SEND_PARAMS_EXECUTOR.submit(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              synchronized (Connection.this.out) {
+                if (shouldCloseConnection.get()) {
+                  return;
+                }
+                
+                if (LOG.isDebugEnabled())
+                  LOG.debug(getName() + " sending #" + call.id);
+         
+                byte[] data = d.getData();
+                int totalLength = d.getLength();
+                out.writeInt(totalLength); // Total Length
+                out.write(data, 0, totalLength);//PayloadHeader + RpcRequest
+                out.flush();
+              }
+            } catch (IOException e) {
+              // exception at this point would leave the connection in an
+              // unrecoverable state (eg half a call left on the wire).
+              // So, close the connection, killing any outstanding calls
+              markClosed(e);
+            } finally {
+              //the buffer is just an in-memory buffer, but it is still polite to
+              // close early
+              IOUtils.closeStream(d);
+            }
+          }
+        });
+      
+        try {
+          senderFuture.get();
+        } catch (ExecutionException e) {
+          Throwable cause = e.getCause();
           
-          // Serializing the data to be written.
-          // Format:
-          // 0) Length of rest below (1 + 2)
-          // 1) PayloadHeader  - is serialized Delimited hence contains length
-          // 2) the Payload - the RpcRequest
-          //
-          d = new DataOutputBuffer();
-          RpcPayloadHeaderProto header = ProtoUtil.makeRpcPayloadHeader(
-             call.rpcKind, RpcPayloadOperationProto.RPC_FINAL_PAYLOAD, call.id);
-          header.writeDelimitedTo(d);
-          call.rpcRequest.write(d);
-          byte[] data = d.getData();
-   
-          int totalLength = d.getLength();
-          out.writeInt(totalLength); // Total Length
-          out.write(data, 0, totalLength);//PayloadHeader + RpcRequest
-          out.flush();
+          // cause should only be a RuntimeException as the Runnable above
+          // catches IOException
+          if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
+          } else {
+            throw new RuntimeException("unexpected checked exception", cause);
+          }
         }
-      } catch(IOException e) {
-        markClosed(e);
-      } finally {
-        //the buffer is just an in-memory buffer, but it is still polite to
-        // close early
-        IOUtils.closeStream(d);
       }
-    }  
+    }
 
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
@@ -1136,7 +1191,16 @@ public class Client {
       ConnectionId remoteId) throws InterruptedException, IOException {
     Call call = new Call(rpcKind, rpcRequest);
     Connection connection = getConnection(remoteId, call);
-    connection.sendParam(call);                 // send the parameter
+    try {
+      connection.sendParam(call);                 // send the parameter
+    } catch (RejectedExecutionException e) {
+      throw new IOException("connection has been closed", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.warn("interrupted waiting to send params to server", e);
+      throw new IOException(e);
+    }
+
     boolean interrupted = false;
     synchronized (call) {
       while (!call.done) {
