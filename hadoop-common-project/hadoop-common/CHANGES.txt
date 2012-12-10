@@ -178,6 +178,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-6762. Exception while doing RPC I/O closes channel
     (Sam Rash and todd via todd)
 
+    HADOOP-9126. FormatZK and ZKFC startup can fail due to zkclient connection
+    establishment delay. (Rakesh R and todd via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
