@@ -318,6 +318,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4292. Sanity check not correct in RemoteBlockReader2.newBlockReader
     (Binglin Chang via todd)
 
+    HDFS-4295. Using port 1023 should be valid when starting Secure DataNode
+    (Stephen Chu via todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
