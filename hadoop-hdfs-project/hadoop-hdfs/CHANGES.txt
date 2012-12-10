@@ -591,6 +591,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4291. edit log unit tests leave stray test_edit_log_file around
     (Colin Patrick McCabe via todd)
 
+    HDFS-4292. Sanity check not correct in RemoteBlockReader2.newBlockReader
+    (Binglin Chang via todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
