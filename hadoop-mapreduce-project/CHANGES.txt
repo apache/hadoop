@@ -171,6 +171,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4723. Fix warnings found by findbugs 2. (Sandy Ryza via eli)
 
+    MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using 
+    the configurations used before it is being stopped. (ahmed.radwan via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
