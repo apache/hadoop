@@ -20,6 +20,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8911. CRLF characters in source and text files.
     (Raja Aluri via suresh)
 
+    MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using 
+    the configurations used before it is being stopped. (ahmed.radwan via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

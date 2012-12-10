@@ -67,6 +67,10 @@ public class MiniMRClientClusterFactory {
 
     MiniMRYarnCluster miniMRYarnCluster = new MiniMRYarnCluster(caller
         .getName(), noOfNMs);
+    job.getConfiguration().set("minimrclientcluster.caller.name",
+        caller.getName());
+    job.getConfiguration().setInt("minimrclientcluster.nodemanagers.number",
+        noOfNMs);
     miniMRYarnCluster.init(job.getConfiguration());
     miniMRYarnCluster.start();
 

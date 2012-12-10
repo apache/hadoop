@@ -32,6 +32,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -89,6 +91,65 @@ public class TestMiniMRClientCluster {
     }
     // stopping the mini cluster
     mrCluster.stop();
+  }
+
+  @Test
+  public void testRestart() throws Exception {
+
+    String rmAddress1 = mrCluster.getConfig().get(YarnConfiguration.RM_ADDRESS);
+    String rmAdminAddress1 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_ADMIN_ADDRESS);
+    String rmSchedAddress1 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_SCHEDULER_ADDRESS);
+    String rmRstrackerAddress1 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
+    String rmWebAppAddress1 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_WEBAPP_ADDRESS);
+
+    String mrHistAddress1 = mrCluster.getConfig().get(
+        JHAdminConfig.MR_HISTORY_ADDRESS);
+    String mrHistWebAppAddress1 = mrCluster.getConfig().get(
+        JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS);
+
+    mrCluster.restart();
+
+    String rmAddress2 = mrCluster.getConfig().get(YarnConfiguration.RM_ADDRESS);
+    String rmAdminAddress2 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_ADMIN_ADDRESS);
+    String rmSchedAddress2 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_SCHEDULER_ADDRESS);
+    String rmRstrackerAddress2 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
+    String rmWebAppAddress2 = mrCluster.getConfig().get(
+        YarnConfiguration.RM_WEBAPP_ADDRESS);
+
+    String mrHistAddress2 = mrCluster.getConfig().get(
+        JHAdminConfig.MR_HISTORY_ADDRESS);
+    String mrHistWebAppAddress2 = mrCluster.getConfig().get(
+        JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS);
+
+    assertEquals("Address before restart: " + rmAddress1
+        + " is different from new address: " + rmAddress2, rmAddress1,
+        rmAddress2);
+    assertEquals("Address before restart: " + rmAdminAddress1
+        + " is different from new address: " + rmAdminAddress2,
+        rmAdminAddress1, rmAdminAddress2);
+    assertEquals("Address before restart: " + rmSchedAddress1
+        + " is different from new address: " + rmSchedAddress2,
+        rmSchedAddress1, rmSchedAddress2);
+    assertEquals("Address before restart: " + rmRstrackerAddress1
+        + " is different from new address: " + rmRstrackerAddress2,
+        rmRstrackerAddress1, rmRstrackerAddress2);
+    assertEquals("Address before restart: " + rmWebAppAddress1
+        + " is different from new address: " + rmWebAppAddress2,
+        rmWebAppAddress1, rmWebAppAddress2);
+    assertEquals("Address before restart: " + mrHistAddress1
+        + " is different from new address: " + mrHistAddress2, mrHistAddress1,
+        mrHistAddress2);
+    assertEquals("Address before restart: " + mrHistWebAppAddress1
+        + " is different from new address: " + mrHistWebAppAddress2,
+        mrHistWebAppAddress1, mrHistWebAppAddress2);
+
   }
 
   @Test

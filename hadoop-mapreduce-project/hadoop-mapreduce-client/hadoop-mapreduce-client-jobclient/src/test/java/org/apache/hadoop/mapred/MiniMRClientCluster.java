@@ -31,6 +31,11 @@ public interface MiniMRClientCluster {
 
   public void start() throws IOException;
 
+  /**
+   * Stop and start back the cluster using the same configuration.
+   */
+  public void restart() throws IOException;
+
   public void stop() throws IOException;
 
   public Configuration getConfig() throws IOException;
