@@ -92,7 +92,8 @@ public class TestMetaSave {
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
     String line = reader.readLine();
-    assertTrue(line.equals("3 files and directories, 2 blocks = 5 total"));
+    assertTrue(line.equals(
+      "3 files and directories, 2 blocks = 5 total filesystem objects"));
     line = reader.readLine();
     assertTrue(line.equals("Live Datanodes: 1"));
     line = reader.readLine();

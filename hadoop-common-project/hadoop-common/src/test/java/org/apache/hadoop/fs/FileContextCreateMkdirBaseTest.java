@@ -52,6 +52,8 @@ import org.apache.commons.logging.impl.Log4JLogger;
 public abstract class FileContextCreateMkdirBaseTest {
    
   protected static FileContext fc;
+
+  private final FileContextTestHelper fileContextTestHelper;
       
   {
     try {
@@ -63,6 +65,15 @@ public abstract class FileContextCreateMkdirBaseTest {
     }
   }
   
+  public FileContextCreateMkdirBaseTest() {
+    this(new FileContextTestHelper());
+  }
+
+  public FileContextCreateMkdirBaseTest(
+      FileContextTestHelper fileContextTestHelper) {
+
+    this.fileContextTestHelper = fileContextTestHelper;
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -127,7 +138,8 @@ public abstract class FileContextCreateMkdirBaseTest {
   @Test
   public void testCreateNonRecursiveWithNonExistingDir() {
     try {
-      createFileNonRecursive(fc, getTestRootPath(fc, "NonExisting/foo"));
+      fileContextTestHelper.createFileNonRecursive(fc,
+        getTestRootPath(fc, "NonExisting/foo"));
       Assert.fail("Create with non existing parent dir should have failed");
     } catch (IOException e) {
       // As expected
@@ -148,5 +160,13 @@ public abstract class FileContextCreateMkdirBaseTest {
     Path f = getTestRootPath(fc,"NonExisting/foo");
     createFile(fc, f);
     Assert.assertTrue(isFile(fc, f));
+  }
+
+  private Path getTestRootPath(FileContext fc) {
+    return fileContextTestHelper.getTestRootPath(fc);
+  }
+
+  private Path getTestRootPath(FileContext fc, String pathString) {
+    return fileContextTestHelper.getTestRootPath(fc, pathString);
   }
 }

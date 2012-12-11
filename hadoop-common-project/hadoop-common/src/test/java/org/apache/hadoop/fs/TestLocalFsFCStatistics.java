@@ -25,8 +25,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
-import static org.apache.hadoop.fs.FileContextTestHelper.*;
-
 /**
  * <p>
  *    Tests the File Context Statistics for {@link LocalFileSystem}

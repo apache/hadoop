@@ -878,6 +878,11 @@ public class FSEditLog implements LogsPurgeable {
     return journalSet;
   }
   
+  @VisibleForTesting
+  synchronized void setJournalSetForTesting(JournalSet js) {
+    this.journalSet = js;
+  }
+  
   /**
    * Used only by tests.
    */
@@ -1031,9 +1036,18 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Archive any log files that are older than the given txid.
+   * 
+   * If the edit log is not open for write, then this call returns with no
+   * effect.
    */
   @Override
   public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
+    // Should not purge logs unless they are open for write.
+    // This prevents the SBN from purging logs on shared storage, for example.
+    if (!isOpenForWrite()) {
+      return;
+    }
+    
     assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
       minTxIdToKeep <= curSegmentTxId :
       "cannot purge logs older than txid " + minTxIdToKeep +

@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.service.Service.STATE;
 
 /**
  * An adapter for MiniMRYarnCluster providing a MiniMRClientCluster interface.
@@ -28,6 +33,8 @@ import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 public class MiniMRYarnClusterAdapter implements MiniMRClientCluster {
 
   private MiniMRYarnCluster miniMRYarnCluster;
+
+  private static final Log LOG = LogFactory.getLog(MiniMRYarnClusterAdapter.class);
 
   public MiniMRYarnClusterAdapter(MiniMRYarnCluster miniMRYarnCluster) {
     this.miniMRYarnCluster = miniMRYarnCluster;
@@ -46,6 +53,24 @@ public class MiniMRYarnClusterAdapter implements MiniMRClientCluster {
   @Override
   public void stop() {
     miniMRYarnCluster.stop();
+  }
+
+  @Override
+  public void restart() {
+    if (!miniMRYarnCluster.getServiceState().equals(STATE.STARTED)){
+      LOG.warn("Cannot restart the mini cluster, start it first");
+      return;
+    }
+    Configuration oldConf = new Configuration(getConfig());
+    String callerName = oldConf.get("minimrclientcluster.caller.name",
+        this.getClass().getName());
+    int noOfNMs = oldConf.getInt("minimrclientcluster.nodemanagers.number", 1);
+    oldConf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
+    oldConf.setBoolean(JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS, true);
+    stop();
+    miniMRYarnCluster = new MiniMRYarnCluster(callerName, noOfNMs);
+    miniMRYarnCluster.init(oldConf);
+    miniMRYarnCluster.start();
   }
 
 }

@@ -28,6 +28,7 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
@@ -315,13 +316,13 @@ public class TestBookKeeperJournalManager {
     out.close();
     bkjm.finalizeLogSegment(1, numTransactions);
 
-     
-    EditLogInputStream in = bkjm.getInputStream(1, true);
+    List<EditLogInputStream> in = new ArrayList<EditLogInputStream>();
+    bkjm.selectInputStreams(in, 1, true);
     try {
       assertEquals(numTransactions, 
-                   FSEditLogTestUtil.countTransactionsInStream(in));
+                   FSEditLogTestUtil.countTransactionsInStream(in.get(0)));
     } finally {
-      in.close();
+      in.get(0).close();
     }
   }
 

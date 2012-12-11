@@ -78,10 +78,14 @@ public class TestFcHdfsSetUMask {
 
   private static final FsPermission WIDE_OPEN_TEST_UMASK = FsPermission
       .createImmutable((short) (0777 ^ 0777));
-  
+
+  private final FileContextTestHelper fileContextTestHelper =
+    new FileContextTestHelper(true);
+
   @BeforeClass
   public static void clusterSetupAtBegining()
         throws IOException, LoginException, URISyntaxException  {
+    FileContextTestHelper.TEST_ROOT_DIR = "/tmp/TestFcHdfsSetUMask";
     Configuration conf = new HdfsConfiguration();
     // set permissions very restrictive
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,  "077");
@@ -226,7 +230,7 @@ public class TestFcHdfsSetUMask {
       FsPermission expectedPerms) throws IOException {
     Path f = getTestRootPath(fc,"foo");
     fc.setUMask(umask);
-    createFile(fc, f);
+    fileContextTestHelper.createFile(fc, f);
     Assert.assertTrue(isFile(fc, f));
     Assert.assertEquals("permissions on file are wrong",  
         expectedPerms , fc.getFileStatus(f).getPermission());
@@ -240,12 +244,19 @@ public class TestFcHdfsSetUMask {
     Path fParent = getTestRootPath(fc, "NonExisting");
     Assert.assertFalse(exists(fc, fParent));
     fc.setUMask(umask);
-    createFile(fc, f);
+    fileContextTestHelper.createFile(fc, f);
     Assert.assertTrue(isFile(fc, f));
     Assert.assertEquals("permissions on file are wrong",  
         expectedFilePerms, fc.getFileStatus(f).getPermission());
     Assert.assertEquals("permissions on parent directory are wrong",  
         expectedDirPerms, fc.getFileStatus(fParent).getPermission());
   }
- 
+
+  private Path getTestRootPath(FileContext fc) {
+    return fileContextTestHelper.getTestRootPath(fc);
+  }
+
+  private Path getTestRootPath(FileContext fc, String pathString) {
+    return fileContextTestHelper.getTestRootPath(fc, pathString);
+  }
 }

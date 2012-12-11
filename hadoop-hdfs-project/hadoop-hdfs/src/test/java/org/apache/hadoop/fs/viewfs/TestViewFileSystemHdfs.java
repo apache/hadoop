@@ -51,6 +51,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
+    FileSystemTestHelper.TEST_ROOT_DIR = "/tmp/TestViewFileSystemHdfs";
     SupportsBlocks = true;
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
@@ -80,13 +81,17 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     cluster.shutdown();   
   }
 
+  public TestViewFileSystemHdfs() {
+    super(new FileSystemTestHelper(true));
+  }
+
   @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs
     fsTarget = fHdfs;
     fsTarget2 = fHdfs2;
-    targetTestRoot2 = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget2);
+    targetTestRoot2 = getAbsoluteTestRootPath(fsTarget2);
     super.setUp();
   }
 

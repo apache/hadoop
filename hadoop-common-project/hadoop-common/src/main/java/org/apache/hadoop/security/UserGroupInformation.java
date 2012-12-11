@@ -299,13 +299,17 @@ public class UserGroupInformation {
   
   private static String OS_LOGIN_MODULE_NAME;
   private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
-  private static final boolean windows = 
-                           System.getProperty("os.name").startsWith("Windows");
+  private static final boolean windows =
+      System.getProperty("os.name").startsWith("Windows");
+  private static final boolean is64Bit =
+      System.getProperty("os.arch").contains("64");
   /* Return the OS login module class name */
   private static String getOSLoginModuleName() {
     if (System.getProperty("java.vendor").contains("IBM")) {
-      return windows ? "com.ibm.security.auth.module.NTLoginModule"
-       : "com.ibm.security.auth.module.LinuxLoginModule";
+      return windows ? (is64Bit
+          ? "com.ibm.security.auth.module.Win64LoginModule"
+          : "com.ibm.security.auth.module.NTLoginModule")
+        : "com.ibm.security.auth.module.LinuxLoginModule";
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
         : "com.sun.security.auth.module.UnixLoginModule";
@@ -319,13 +323,13 @@ public class UserGroupInformation {
     try {
       if (System.getProperty("java.vendor").contains("IBM")) {
         if (windows) {
-          return (Class<? extends Principal>)
-            cl.loadClass("com.ibm.security.auth.UsernamePrincipal");
+          return (Class<? extends Principal>) (is64Bit
+            ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
+            : cl.loadClass("com.ibm.security.auth.NTUserPrincipal"));
         } else {
-          return (Class<? extends Principal>)
-            (System.getProperty("os.arch").contains("64")
-             ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
-             : cl.loadClass("com.ibm.security.auth.LinuxPrincipal"));
+          return (Class<? extends Principal>) (is64Bit
+            ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
+            : cl.loadClass("com.ibm.security.auth.LinuxPrincipal"));
         }
       } else {
         return (Class<? extends Principal>) (windows

@@ -65,6 +65,8 @@ public abstract class FSMainOperationsBaseTest  {
   
   
   protected static FileSystem fSys;
+
+  private final FileSystemTestHelper fileSystemTestHelper;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
@@ -72,6 +74,14 @@ public abstract class FSMainOperationsBaseTest  {
       return true;
     }
   };
+
+  public FSMainOperationsBaseTest() {
+    this(new FileSystemTestHelper());
+  }
+
+  public FSMainOperationsBaseTest(FileSystemTestHelper fileSystemTestHelper) {
+    this.fileSystemTestHelper = fileSystemTestHelper;
+  }
 
   //A test filter with returns any path containing a "b" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
@@ -1134,4 +1144,12 @@ public abstract class FSMainOperationsBaseTest  {
       }
     return false;
  }
+  
+  protected Path getAbsoluteTestRootPath(FileSystem fSys) throws IOException {
+    return fileSystemTestHelper.getAbsoluteTestRootPath(fSys);
+  }
+
+  protected Path getTestRootPath(FileSystem fSys, String pathString) {
+    return fileSystemTestHelper.getTestRootPath(fSys, pathString);
+  }
 }

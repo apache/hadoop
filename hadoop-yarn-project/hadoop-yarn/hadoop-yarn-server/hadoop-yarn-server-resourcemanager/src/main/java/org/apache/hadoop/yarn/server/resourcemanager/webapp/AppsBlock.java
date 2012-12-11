@@ -25,26 +25,27 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
 
 import com.google.inject.Inject;
 
 class AppsBlock extends HtmlBlock {
-  final AppsList list;
+  final ConcurrentMap<ApplicationId, RMApp> apps;
 
-  @Inject AppsBlock(AppsList list, ViewContext ctx) {
+@Inject AppsBlock(RMContext rmContext, ViewContext ctx) {
     super(ctx);
-    this.list = list;
+    apps = rmContext.getRMApps();
   }
 
   @Override public void render(Block html) {
@@ -63,7 +64,6 @@ class AppsBlock extends HtmlBlock {
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
-    int i = 0;
     Collection<RMAppState> reqAppStates = null;
     String reqStateString = $(APP_STATE);
     if (reqStateString != null && !reqStateString.isEmpty()) {
@@ -74,7 +74,7 @@ class AppsBlock extends HtmlBlock {
       }
     }
     StringBuilder appsTableData = new StringBuilder("[\n");
-    for (RMApp app : list.apps.values()) {
+    for (RMApp app : apps.values()) {
       if (reqAppStates != null && !reqAppStates.contains(app.getState())) {
         continue;
       }
@@ -84,12 +84,12 @@ class AppsBlock extends HtmlBlock {
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeHtml(appInfo.getUser()))
-      .append("\",\"")
-      .append(StringEscapeUtils.escapeHtml(appInfo.getName()))
-      .append("\",\"")
-      .append(StringEscapeUtils.escapeHtml(appInfo.getQueue()))
-      .append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getUser()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getName()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getQueue()))).append("\",\"")
       .append(appInfo.getStartTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
@@ -108,7 +108,6 @@ class AppsBlock extends HtmlBlock {
       appsTableData.append(trackingURL).append("'>")
       .append(appInfo.getTrackingUI()).append("</a>\"],\n");
 
-      if (list.rendering != Render.HTML && ++i >= 20) break;
     }
     if(appsTableData.charAt(appsTableData.length() - 2) == ',') {
       appsTableData.delete(appsTableData.length()-2, appsTableData.length()-1);
@@ -118,12 +117,5 @@ class AppsBlock extends HtmlBlock {
     _("var appsTableData=" + appsTableData)._();
 
     tbody._()._();
-
-    if (list.rendering == Render.JS_ARRAY) {
-      echo("<script type='text/javascript'>\n",
-           "var appsData=");
-      list.toDataTableArrays(reqAppStates, writer());
-      echo("\n</script>\n");
-    }
   }
 }

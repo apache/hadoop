@@ -197,7 +197,7 @@ public class FSImageSerialization {
   public static String readString(DataInputStream in) throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     ustr.readFields(in);
-    return ustr.toString();
+    return ustr.toStringChecked();
   }
 
   static String readString_EmptyAsNull(DataInputStream in) throws IOException {

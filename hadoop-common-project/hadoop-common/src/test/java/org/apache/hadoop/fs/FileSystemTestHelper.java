@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -34,15 +35,23 @@ import static org.mockito.Mockito.mock;
  */
 public final class FileSystemTestHelper {
   // The test root is relative to the <wd>/build/test/data by default
-  public static final String TEST_ROOT_DIR = 
+  public static String TEST_ROOT_DIR = 
     System.getProperty("test.build.data", "target/test/data") + "/test";
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final int DEFAULT_NUM_BLOCKS = 2;
   private static final short DEFAULT_NUM_REPL = 1;
   private static String absTestRootDir = null;
 
+  private final boolean stripDriveSpec;
+
   /** Hidden constructor */
-  private FileSystemTestHelper() {}
+  public FileSystemTestHelper() {
+    this(false);
+  }
+
+  public FileSystemTestHelper(boolean stripDriveSpec) {
+    this.stripDriveSpec = stripDriveSpec;
+  }
   
   public static void addFileSystemForTesting(URI uri, Configuration conf,
       FileSystem fs) throws IOException {
@@ -65,15 +74,17 @@ public final class FileSystemTestHelper {
   /*
    * get testRootPath qualified for fSys
    */
-  public static Path getTestRootPath(FileSystem fSys) {
-    return fSys.makeQualified(new Path(TEST_ROOT_DIR));
+  public Path getTestRootPath(FileSystem fSys) {
+    return fSys.makeQualified(new Path(stripDriveSpec(TEST_ROOT_DIR,
+      this.stripDriveSpec)));
   }
 
   /*
    * get testRootPath + pathString qualified for fSys
    */
-  public static Path getTestRootPath(FileSystem fSys, String pathString) {
-    return fSys.makeQualified(new Path(TEST_ROOT_DIR, pathString));
+  public Path getTestRootPath(FileSystem fSys, String pathString) {
+    return fSys.makeQualified(new Path(
+      stripDriveSpec(TEST_ROOT_DIR, this.stripDriveSpec), pathString));
   }
   
   
@@ -82,26 +93,25 @@ public final class FileSystemTestHelper {
   // is often relative to the working directory of process
   // running the unit tests.
 
-  static String getAbsoluteTestRootDir(FileSystem fSys)
-      throws IOException {
+  String getAbsoluteTestRootDir(FileSystem fSys) throws IOException {
     // NOTE: can't cache because of different filesystems!
     //if (absTestRootDir == null) 
-      if (new Path(TEST_ROOT_DIR).isAbsolute()) {
-        absTestRootDir = TEST_ROOT_DIR;
+      String testRootDir = stripDriveSpec(TEST_ROOT_DIR, this.stripDriveSpec);
+      if (new Path(testRootDir).isAbsolute()) {
+        absTestRootDir = testRootDir;
       } else {
         absTestRootDir = fSys.getWorkingDirectory().toString() + "/"
-            + TEST_ROOT_DIR;
+            + testRootDir;
       }
     //}
     return absTestRootDir;
   }
   
-  public static Path getAbsoluteTestRootPath(FileSystem fSys) throws IOException {
+  public Path getAbsoluteTestRootPath(FileSystem fSys) throws IOException {
     return fSys.makeQualified(new Path(getAbsoluteTestRootDir(fSys)));
   }
 
-  public static Path getDefaultWorkingDirectory(FileSystem fSys)
-      throws IOException {
+  public Path getDefaultWorkingDirectory(FileSystem fSys) throws IOException {
     return getTestRootPath(fSys, "/user/" + System.getProperty("user.name"))
         .makeQualified(fSys.getUri(),
             fSys.getWorkingDirectory());
@@ -136,7 +146,7 @@ public final class FileSystemTestHelper {
     return createFile(fSys, path, DEFAULT_NUM_BLOCKS, DEFAULT_BLOCK_SIZE, DEFAULT_NUM_REPL, true);
   }
 
-  public static long createFile(FileSystem fSys, String name) throws IOException {
+  public long createFile(FileSystem fSys, String name) throws IOException {
     Path path = getTestRootPath(fSys, name);
     return createFile(fSys, path);
   }
@@ -188,7 +198,7 @@ public final class FileSystemTestHelper {
     return s;
   }
 
-  public static FileStatus containsPath(FileSystem fSys, Path path,
+  public FileStatus containsPath(FileSystem fSys, Path path,
       FileStatus[] dirList)
     throws IOException {
     for(int i = 0; i < dirList.length; i ++) { 
@@ -199,8 +209,7 @@ public final class FileSystemTestHelper {
     return null;
   }
   
-  public static FileStatus containsPath(Path path,
-      FileStatus[] dirList)
+  public static FileStatus containsPath(Path path, FileStatus[] dirList)
     throws IOException {
     for(int i = 0; i < dirList.length; i ++) { 
       if (path.equals(dirList[i].getPath()))
@@ -210,7 +219,7 @@ public final class FileSystemTestHelper {
   }
   
   
-  public static FileStatus containsPath(FileSystem fSys, String path, FileStatus[] dirList)
+  public FileStatus containsPath(FileSystem fSys, String path, FileStatus[] dirList)
      throws IOException {
     return containsPath(fSys, new Path(path), dirList);
   }
@@ -263,5 +272,16 @@ public final class FileSystemTestHelper {
     public Token<?> getDelegationToken(String renewer) throws IOException {
       return fs.getDelegationToken(renewer);
     }    
+  }
+
+  private static String stripDriveSpec(String pathString, boolean strip) {
+    if (strip && Shell.WINDOWS && pathString.length() >= 2 &&
+        Character.toUpperCase(pathString.charAt(0)) >= 'A' &&
+        Character.toUpperCase(pathString.charAt(0)) <= 'Z' &&
+        pathString.charAt(1) == ':') {
+
+      return pathString.substring(2);
+    }
+    return pathString;
   }
 }

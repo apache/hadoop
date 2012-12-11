@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +45,7 @@ import org.junit.Test;
 /**
  * This class tests if a balancer schedules tasks correctly.
  */
-public class TestBalancerWithNodeGroup extends TestCase {
+public class TestBalancerWithNodeGroup {
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBalancerWithNodeGroup");
   

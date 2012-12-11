@@ -603,6 +603,24 @@ public class TestSaveNamespace {
     }
   }
   
+  @Test
+  public void testSaveNamespaceWithDanglingLease() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
+        .numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    try {
+      cluster.getNamesystem().leaseManager.addLease("me", "/non-existent");      
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   private void doAnEdit(FSNamesystem fsn, int id) throws IOException {
     // Make an edit
     fsn.mkdirs(

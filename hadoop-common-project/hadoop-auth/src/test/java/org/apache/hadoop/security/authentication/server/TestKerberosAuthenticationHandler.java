@@ -28,23 +28,37 @@ import org.ietf.jgss.Oid;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.Field;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
 public class TestKerberosAuthenticationHandler extends TestCase {
 
-  private KerberosAuthenticationHandler handler;
+  protected KerberosAuthenticationHandler handler;
+
+  protected KerberosAuthenticationHandler getNewAuthenticationHandler() {
+    return new KerberosAuthenticationHandler();
+  }
+
+  protected String getExpectedType() {
+    return KerberosAuthenticationHandler.TYPE;
+  }
+
+  protected Properties getDefaultProperties() {
+    Properties props = new Properties();
+    props.setProperty(KerberosAuthenticationHandler.PRINCIPAL,
+            KerberosTestUtils.getServerPrincipal());
+    props.setProperty(KerberosAuthenticationHandler.KEYTAB,
+            KerberosTestUtils.getKeytabFile());
+    props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
+            "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
+    return props;
+  }
 
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    handler = new KerberosAuthenticationHandler();
-    Properties props = new Properties();
-    props.setProperty(KerberosAuthenticationHandler.PRINCIPAL, KerberosTestUtils.getServerPrincipal());
-    props.setProperty(KerberosAuthenticationHandler.KEYTAB, KerberosTestUtils.getKeytabFile());
-    props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
-                      "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
+    handler = getNewAuthenticationHandler();
+    Properties props = getDefaultProperties();
     try {
       handler.init(props);
     } catch (Exception ex) {
@@ -71,10 +85,8 @@ public class TestKerberosAuthenticationHandler extends TestCase {
 
     KerberosName.setRules("RULE:[1:$1@$0](.*@FOO)s/@.*//\nDEFAULT");
     
-    handler = new KerberosAuthenticationHandler();
-    Properties props = new Properties();
-    props.setProperty(KerberosAuthenticationHandler.PRINCIPAL, KerberosTestUtils.getServerPrincipal());
-    props.setProperty(KerberosAuthenticationHandler.KEYTAB, KerberosTestUtils.getKeytabFile());
+    handler = getNewAuthenticationHandler();
+    Properties props = getDefaultProperties();
     props.setProperty(KerberosAuthenticationHandler.NAME_RULES, "RULE:[1:$1@$0](.*@BAR)s/@.*//\nDEFAULT");
     try {
       handler.init(props);
@@ -97,8 +109,7 @@ public class TestKerberosAuthenticationHandler extends TestCase {
   }
 
   public void testType() throws Exception {
-    KerberosAuthenticationHandler handler = new KerberosAuthenticationHandler();
-    assertEquals(KerberosAuthenticationHandler.TYPE, handler.getType());
+    assertEquals(getExpectedType(), handler.getType());
   }
 
   public void testRequestWithoutAuthorization() throws Exception {
@@ -182,7 +193,7 @@ public class TestKerberosAuthenticationHandler extends TestCase {
 
       assertEquals(KerberosTestUtils.getClientPrincipal(), authToken.getName());
       assertTrue(KerberosTestUtils.getClientPrincipal().startsWith(authToken.getUserName()));
-      assertEquals(KerberosAuthenticationHandler.TYPE, authToken.getType());
+      assertEquals(getExpectedType(), authToken.getType());
     } else {
       Mockito.verify(response).setHeader(Mockito.eq(KerberosAuthenticator.WWW_AUTHENTICATE),
                                          Mockito.matches(KerberosAuthenticator.NEGOTIATE + " .*"));

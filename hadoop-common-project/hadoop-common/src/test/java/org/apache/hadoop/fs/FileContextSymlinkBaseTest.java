@@ -45,6 +45,8 @@ public abstract class FileContextSymlinkBaseTest {
  
   protected static FileContext fc;
 
+  private final FileContextTestHelper fileContextTestHelper;
+
   abstract protected String getScheme();
   abstract protected String testBaseDir1() throws IOException;
   abstract protected String testBaseDir2() throws IOException;
@@ -77,6 +79,16 @@ public abstract class FileContextSymlinkBaseTest {
   protected static void appendToFile(Path p) throws IOException {
     FileContextTestHelper.appendToFile(fc, p, fileSize / blockSize, 
         CreateOpts.blockSize(blockSize));
+  }
+
+  public FileContextSymlinkBaseTest() {
+    this(new FileContextTestHelper());
+  }
+
+  public FileContextSymlinkBaseTest(
+      FileContextTestHelper fileContextTestHelper) {
+
+    this.fileContextTestHelper = fileContextTestHelper;
   }
 
   @Before
@@ -1352,5 +1364,9 @@ public abstract class FileContextSymlinkBaseTest {
       assertEquals(3, fc.getFileStatus(file).getAccessTime());
       assertEquals(2, fc.getFileStatus(file).getModificationTime());
     }
+  }
+
+  protected String getAbsoluteTestRootDir(FileContext fc) throws IOException {
+    return fileContextTestHelper.getAbsoluteTestRootDir(fc);
   }
 }

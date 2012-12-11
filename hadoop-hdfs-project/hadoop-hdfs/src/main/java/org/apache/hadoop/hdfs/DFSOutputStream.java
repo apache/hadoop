@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1487,9 +1488,14 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   @Override
   public void hflush() throws IOException {
-    flushOrSync(false);
+    flushOrSync(false, EnumSet.noneOf(SyncFlag.class));
   }
 
+  @Override
+  public void hsync() throws IOException {
+    hsync(EnumSet.noneOf(SyncFlag.class));
+  }
+  
   /**
    * The expected semantics is all data have flushed out to all replicas 
    * and all replicas have done posix fsync equivalent - ie the OS has 
@@ -1498,17 +1504,35 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    * Note that only the current block is flushed to the disk device.
    * To guarantee durable sync across block boundaries the stream should
    * be created with {@link CreateFlag#SYNC_BLOCK}.
+   * 
+   * @param syncFlags
+   *          Indicate the semantic of the sync. Currently used to specify
+   *          whether or not to update the block length in NameNode.
    */
-  @Override
-  public void hsync() throws IOException {
-    flushOrSync(true);
+  public void hsync(EnumSet<SyncFlag> syncFlags) throws IOException {
+    flushOrSync(true, syncFlags);
   }
 
-  private void flushOrSync(boolean isSync) throws IOException {
+  /**
+   * Flush/Sync buffered data to DataNodes.
+   * 
+   * @param isSync
+   *          Whether or not to require all replicas to flush data to the disk
+   *          device
+   * @param syncFlags
+   *          Indicate extra detailed semantic of the flush/sync. Currently
+   *          mainly used to specify whether or not to update the file length in
+   *          the NameNode
+   * @throws IOException
+   */
+  private void flushOrSync(boolean isSync, EnumSet<SyncFlag> syncFlags)
+      throws IOException {
     dfsClient.checkOpen();
     isClosed();
     try {
       long toWaitFor;
+      long lastBlockLength = -1L;
+      boolean updateLength = syncFlags.contains(SyncFlag.UPDATE_LENGTH);
       synchronized (this) {
         /* Record current blockOffset. This might be changed inside
          * flushBuffer() where a partial checksum chunk might be flushed.
@@ -1572,13 +1596,20 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       } // end synchronized
 
       waitForAckedSeqno(toWaitFor);
-
-      // If any new blocks were allocated since the last flush, 
-      // then persist block locations on namenode. 
-      //
-      if (persistBlocks.getAndSet(false)) {
+      
+      if (updateLength) {
+        synchronized (this) {
+          if (streamer != null && streamer.block != null) {
+            lastBlockLength = streamer.block.getNumBytes();
+          }
+        }
+      }
+      // If 1) any new blocks were allocated since the last flush, or 2) to
+      // update length in NN is requried, then persist block locations on
+      // namenode.
+      if (persistBlocks.getAndSet(false) || updateLength) {
         try {
-          dfsClient.namenode.fsync(src, dfsClient.clientName);
+          dfsClient.namenode.fsync(src, dfsClient.clientName, lastBlockLength);
         } catch (IOException ioe) {
           DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src, ioe);
           // If we got an error here, it might be because some other thread called

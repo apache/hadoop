@@ -68,6 +68,7 @@ public class TestIPC {
    * of the various writables.
    **/
   static boolean WRITABLE_FAULTS_ENABLED = true;
+  static int WRITABLE_FAULTS_SLEEP = 0;
   
   static {
     Client.setPingInterval(conf, PING_INTERVAL);
@@ -206,13 +207,24 @@ public class TestIPC {
   
   static void maybeThrowIOE() throws IOException {
     if (WRITABLE_FAULTS_ENABLED) {
+      maybeSleep();
       throw new IOException("Injected fault");
     }
   }
 
   static void maybeThrowRTE() {
     if (WRITABLE_FAULTS_ENABLED) {
+      maybeSleep();
       throw new RuntimeException("Injected fault");
+    }
+  }
+
+  private static void maybeSleep() {
+    if (WRITABLE_FAULTS_SLEEP > 0) {
+      try {
+        Thread.sleep(WRITABLE_FAULTS_SLEEP);
+      } catch (InterruptedException ie) {
+      }
     }
   }
 
@@ -368,6 +380,27 @@ public class TestIPC {
         LongWritable.class,
         LongWritable.class,
         RTEOnReadWritable.class);
+  }
+  
+  /**
+   * Test case that fails a write, but only after taking enough time
+   * that a ping should have been sent. This is a reproducer for a
+   * deadlock seen in one iteration of HADOOP-6762.
+   */
+  @Test
+  public void testIOEOnWriteAfterPingClient() throws Exception {
+    // start server
+    Client.setPingInterval(conf, 100);
+
+    try {
+      WRITABLE_FAULTS_SLEEP = 1000;
+      doErrorTest(IOEOnWriteWritable.class,
+          LongWritable.class,
+          LongWritable.class,
+          LongWritable.class);
+    } finally {
+      WRITABLE_FAULTS_SLEEP = 0;
+    }
   }
   
   private static void assertExceptionContains(

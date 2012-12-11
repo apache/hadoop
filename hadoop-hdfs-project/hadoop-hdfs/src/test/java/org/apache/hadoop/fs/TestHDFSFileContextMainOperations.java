@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.exists;
-import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -49,6 +48,8 @@ public class TestHDFSFileContextMainOperations extends
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
+    FileContextTestHelper.TEST_ROOT_DIR =
+      "/tmp/TestHDFSFileContextMainOperations";
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
@@ -76,6 +77,10 @@ public class TestHDFSFileContextMainOperations extends
     cluster.shutdown();   
   }
   
+  public TestHDFSFileContextMainOperations() {
+    super(new FileContextTestHelper(true));
+  }
+
   @Override
   @Before
   public void setUp() throws Exception {

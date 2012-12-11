@@ -50,6 +50,8 @@ public class ViewFsTestSetup {
   
   static public String ViewFSTestDir = "/testDir";
 
+  private static final FileContextTestHelper FILE_CONTEXT_TEST_HELPER =
+    new FileContextTestHelper();
 
    /* 
    * return the ViewFS File context to be used for tests
@@ -59,7 +61,7 @@ public class ViewFsTestSetup {
      * create the test root on local_fs - the  mount table will point here
      */
     FileContext fsTarget = FileContext.getLocalFSFileContext();
-    Path targetOfTests = FileContextTestHelper.getTestRootPath(fsTarget);
+    Path targetOfTests = FILE_CONTEXT_TEST_HELPER.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
     fsTarget.delete(targetOfTests, true);
     
@@ -67,7 +69,7 @@ public class ViewFsTestSetup {
     Configuration conf = new Configuration();
     
     // Set up viewfs link for test dir as described above
-    String testDir = FileContextTestHelper.getTestRootPath(fsTarget).toUri()
+    String testDir = FILE_CONTEXT_TEST_HELPER.getTestRootPath(fsTarget).toUri()
         .getPath();
     linkUpFirstComponents(conf, testDir, fsTarget, "test dir");
     
@@ -94,7 +96,7 @@ public class ViewFsTestSetup {
    */
   static public void tearDownForViewFsLocalFs() throws Exception {
     FileContext fclocal = FileContext.getLocalFSFileContext();
-    Path targetOfTests = FileContextTestHelper.getTestRootPath(fclocal);
+    Path targetOfTests = FILE_CONTEXT_TEST_HELPER.getTestRootPath(fclocal);
     fclocal.delete(targetOfTests, true);
   }
   
