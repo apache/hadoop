@@ -78,12 +78,12 @@ public class HsJobsBlock extends HtmlBlock {
       .append(dateFormat.format(new Date(job.getFinishTime()))).append("\",\"")
       .append("<a href='").append(url("job", job.getId())).append("'>")
       .append(job.getId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeHtml(job.getName()))
-      .append("\",\"")
-      .append(StringEscapeUtils.escapeHtml(job.getUserName()))
-      .append("\",\"")
-      .append(StringEscapeUtils.escapeHtml(job.getQueueName()))
-      .append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        job.getName()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        job.getUserName()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        job.getQueueName()))).append("\",\"")
       .append(job.getState()).append("\",\"")
       .append(String.valueOf(job.getMapsTotal())).append("\",\"")
       .append(String.valueOf(job.getMapsCompleted())).append("\",\"")
