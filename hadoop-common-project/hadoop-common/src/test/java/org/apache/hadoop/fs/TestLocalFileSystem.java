@@ -19,12 +19,14 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.util.Shell;
 
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -262,6 +264,7 @@ public class TestLocalFileSystem {
 
   @Test
   public void testListStatusWithColons() throws IOException {
+    assumeTrue(!Shell.WINDOWS);
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);
     File colonFile = new File(TEST_ROOT_DIR, "foo:bar");
