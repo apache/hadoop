@@ -289,3 +289,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     be run with ant 1.8.x.  (Jing Zhao via szetszwo)
     HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
     suresh)
+
+    HADOOP-8617. Backport HADOOP-6148, HADOOP-6166 and HADOOP-7333 for a pure
+    Java CRC32 calculator implementation.  (Brandon Li via szetszwo)
