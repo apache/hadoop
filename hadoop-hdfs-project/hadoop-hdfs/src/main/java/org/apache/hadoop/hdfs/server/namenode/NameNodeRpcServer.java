@@ -326,11 +326,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
         "Unexpected not positive size: "+size);
     }
     namesystem.checkOperation(OperationCategory.READ);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getBlockManager().getBlocks(datanode, size); 
   }
 
   @Override // NamenodeProtocol
   public ExportedBlockKeys getBlockKeys() throws IOException {
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getBlockManager().getBlockKeys();
   }
 
@@ -339,6 +341,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                           int errorCode, 
                           String msg) throws IOException {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
     verifyRequest(registration);
     LOG.info("Error report from " + registration + ": " + msg);
     if (errorCode == FATAL) {
@@ -349,6 +352,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public NamenodeRegistration register(NamenodeRegistration registration)
   throws IOException {
+    namesystem.checkSuperuserPrivilege();
     verifyLayoutVersion(registration.getVersion());
     NamenodeRegistration myRegistration = nn.setRegistration();
     namesystem.registerBackupNode(registration, myRegistration);
@@ -358,6 +362,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
   throws IOException {
+    namesystem.checkSuperuserPrivilege();
     verifyRequest(registration);
     if(!nn.isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke startCheckpoint.");
@@ -367,6 +372,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
+    namesystem.checkSuperuserPrivilege();
     namesystem.endCheckpoint(registration, sig);
   }
 
@@ -743,17 +749,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public long getTransactionID() throws IOException {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
   }
   
   @Override // NamenodeProtocol
   public long getMostRecentCheckpointTxId() throws IOException {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getFSImage().getMostRecentCheckpointTxId();
   }
   
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
+    namesystem.checkSuperuserPrivilege();
     return namesystem.rollEditLog();
   }
   
@@ -761,6 +770,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
   throws IOException {
     namesystem.checkOperation(OperationCategory.READ);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getEditLog().getEditLogManifest(sinceTxId);
   }
     
@@ -937,6 +947,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     
   @Override // DatanodeProtocol, NamenodeProtocol
   public NamespaceInfo versionRequest() throws IOException {
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getNamespaceInfo();
   }
 

@@ -426,6 +426,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4294. Backwards compatibility is not maintained for TestVolumeId.
     (Ivan A. Veselovsky and Robert Parker via atm)
 
+    HDFS-2264. NamenodeProtocol has the wrong value for clientPrincipal in
+    KerberosInfo annotation. (atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
