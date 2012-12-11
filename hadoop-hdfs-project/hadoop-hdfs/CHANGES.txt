@@ -269,10 +269,6 @@ Trunk (Unreleased)
     HDFS-4260 Fix HDFS tests to set test dir to a valid HDFS path as opposed
     to the local build path (Chri Nauroth via Sanjay)
 
-    HDFS-4261. Fix bugs in Balancer that it does not terminate in some cases
-    and it checks BlockPlacementPolicy instance incorrectly.  (Junping Du via
-    szetszwo)
-
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
