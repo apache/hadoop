@@ -84,12 +84,12 @@ class AppsBlock extends HtmlBlock {
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeHtml(appInfo.getUser()))
-      .append("\",\"")
-      .append(StringEscapeUtils.escapeHtml(appInfo.getName()))
-      .append("\",\"")
-      .append(StringEscapeUtils.escapeHtml(appInfo.getQueue()))
-      .append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getUser()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getName()))).append("\",\"")
+      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+        appInfo.getQueue()))).append("\",\"")
       .append(appInfo.getStartTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
