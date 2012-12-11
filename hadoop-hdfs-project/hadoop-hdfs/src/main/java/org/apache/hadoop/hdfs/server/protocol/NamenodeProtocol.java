@@ -32,8 +32,7 @@ import org.apache.hadoop.security.KerberosInfo;
  * It's used to get part of the name node state
  *****************************************************************************/
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
-    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
 public interface NamenodeProtocol {
   /**
