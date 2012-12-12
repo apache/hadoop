@@ -488,6 +488,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9113. o.a.h.fs.TestDelegationTokenRenewer is failing intermittently.
     (Karthik Kambatla via eli)
 
+    HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
+    rather than info during fallback. (Colin Patrick McCabe via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

@@ -37,7 +37,7 @@ public class JniBasedUnixGroupsMappingWithFallback implements
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       this.impl = new JniBasedUnixGroupsMapping();
     } else {
-      LOG.info("Falling back to shell based");
+      LOG.debug("Falling back to shell based");
       this.impl = new ShellBasedUnixGroupsMapping();
     }
     if (LOG.isDebugEnabled()){
