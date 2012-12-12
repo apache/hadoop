@@ -181,6 +181,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9126. FormatZK and ZKFC startup can fail due to zkclient connection
     establishment delay. (Rakesh R and todd via todd)
 
+    HADOOP-9113. o.a.h.fs.TestDelegationTokenRenewer is failing intermittently.
+    (Karthik Kambatla via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
