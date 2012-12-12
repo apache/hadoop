@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
+import org.apache.hadoop.yarn.webapp.view.HtmlPage.Page;
+import org.apache.hadoop.yarn.webapp.view.HtmlPage._;
 
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
@@ -159,13 +161,16 @@ public class FairSchedulerPage extends RmView {
           "#cs a { font-weight: normal; margin: 2px; position: relative }",
           "#cs a span { font-weight: normal; font-size: 80% }",
           "#cs-wrapper .ui-widget-header { padding: 0.2em 0.5em }",
+          ".qstats { font-weight: normal; font-size: 80%; position: absolute }",
+          ".qlegend { font-weight: normal; padding: 0 1em; margin: 1em }",
           "table.info tr th {width: 50%}")._(). // to center info table
       script("/static/jt/jquery.jstree.js").
       script().$type("text/javascript").
         _("$(function() {",
           "  $('#cs a span').addClass('ui-corner-all').css('position', 'absolute');",
           "  $('#cs').bind('loaded.jstree', function (e, data) {",
-          "    data.inst.open_all(); }).",
+          "    data.inst.open_node('#pq', true);",
+          "   }).",
           "    jstree({",
           "    core: { animation: 188, html_titles: true },",
           "    plugins: ['themeroller', 'html_data', 'ui'],",
@@ -175,8 +180,9 @@ public class FairSchedulerPage extends RmView {
           "  });",
           "  $('#cs').bind('select_node.jstree', function(e, data) {",
           "    var q = $('.q', data.rslt.obj).first().text();",
-            "    if (q == 'root') q = '';",
-          "    $('#apps').dataTable().fnFilter(q, 3);",
+          "    if (q == 'root') q = '';",
+          "    else q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
+          "    $('#apps').dataTable().fnFilter(q, 3, true);",
           "  });",
           "  $('#cs').show();",
           "});")._();
@@ -196,5 +202,20 @@ public class FairSchedulerPage extends RmView {
 
   static String left(float f) {
     return String.format("left:%.1f%%", f * 100);
+  }
+  
+  @Override
+  protected String getAppsTableColumnDefs() {
+    StringBuilder sb = new StringBuilder();
+    return sb
+      .append("[\n")
+      .append("{'sType':'numeric', 'aTargets': [0]")
+      .append(", 'mRender': parseHadoopID }")
+
+      .append("\n, {'sType':'numeric', 'aTargets': [5, 6]")
+      .append(", 'mRender': renderHadoopDate }")
+
+      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [9]")
+      .append(", 'mRender': parseHadoopProgress }]").toString();
   }
 }

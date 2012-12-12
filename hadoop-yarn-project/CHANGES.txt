@@ -106,6 +106,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-72. NM should handle cleaning up containers when it shuts down.
     (Sandy Ryza via tomwhite)
 
+    YARN-267. Fix fair scheduler web UI. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
