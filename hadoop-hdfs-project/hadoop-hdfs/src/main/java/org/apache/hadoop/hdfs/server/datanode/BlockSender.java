@@ -319,9 +319,9 @@ class BlockSender implements java.io.Closeable {
     if (blockInFd != null && shouldDropCacheBehindRead && isLongRead()) {
       // drop the last few MB of the file from cache
       try {
-        NativeIO.posixFadviseIfPossible(
+        NativeIO.POSIX.posixFadviseIfPossible(
             blockInFd, lastCacheDropOffset, offset - lastCacheDropOffset,
-            NativeIO.POSIX_FADV_DONTNEED);
+            NativeIO.POSIX.POSIX_FADV_DONTNEED);
       } catch (Exception e) {
         LOG.warn("Unable to drop cache on file close", e);
       }
@@ -618,7 +618,8 @@ class BlockSender implements java.io.Closeable {
 
     if (isLongRead() && blockInFd != null) {
       // Advise that this file descriptor will be accessed sequentially.
-      NativeIO.posixFadviseIfPossible(blockInFd, 0, 0, NativeIO.POSIX_FADV_SEQUENTIAL);
+      NativeIO.POSIX.posixFadviseIfPossible(
+          blockInFd, 0, 0, NativeIO.POSIX.POSIX_FADV_SEQUENTIAL);
     }
     
     // Trigger readahead of beginning of file if configured.
@@ -703,9 +704,9 @@ class BlockSender implements java.io.Closeable {
         offset >= nextCacheDropOffset) {
       long dropLength = offset - lastCacheDropOffset;
       if (dropLength >= 1024) {
-        NativeIO.posixFadviseIfPossible(blockInFd,
+        NativeIO.POSIX.posixFadviseIfPossible(blockInFd,
             lastCacheDropOffset, dropLength,
-            NativeIO.POSIX_FADV_DONTNEED);
+            NativeIO.POSIX.POSIX_FADV_DONTNEED);
       }
       lastCacheDropOffset += CACHE_DROP_INTERVAL_BYTES;
     }

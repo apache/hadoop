@@ -182,6 +182,30 @@ if not defined HADOOP_POLICYFILE (
 )
 
 @rem
+@rem Determine the JAVA_PLATFORM
+@rem
+
+for /f "delims=" %%A in ('%JAVA% -Xmx32m %HADOOP_JAVA_PLATFORM_OPTS% -classpath "%CLASSPATH%" org.apache.hadoop.util.PlatformName') do set JAVA_PLATFORM=%%A
+@rem replace space with underscore
+set JAVA_PLATFORM=%JAVA_PLATFORM: =_%
+
+@rem
+@rem setup 'java.library.path' for native hadoop code if necessary
+@rem
+
+mkdir c:\tmp\dir1
+@rem Check if we're running hadoop directly from the build
+set JAVA_LIBRARY_PATH=
+if exist %HADOOP_CORE_HOME%\target\bin (
+  set JAVA_LIBRARY_PATH=%HADOOP_CORE_HOME%\target\bin
+)
+
+@rem For the distro case, check the bin folder
+if exist %HADOOP_CORE_HOME%\bin (
+  set JAVA_LIBRARY_PATH=%JAVA_LIBRARY_PATH%;%HADOOP_CORE_HOME%\bin
+)
+
+@rem
 @rem setup a default TOOL_PATH
 @rem
 set TOOL_PATH=%HADOOP_HOME%\share\hadoop\tools\lib\*

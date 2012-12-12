@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include "org_apache_hadoop.h"
+
 #include "bulk_crc32.h"
 
 #include <stdint.h>

@@ -32,9 +32,10 @@ public class PlatformName {
    * The complete platform 'name' to identify the platform as 
    * per the java-vm.
    */
-  private static final String platformName = System.getProperty("os.name") + "-" + 
-    System.getProperty("os.arch") + "-" +
-    System.getProperty("sun.arch.data.model");
+  private static final String platformName =
+      (Shell.WINDOWS ? System.getenv("os") : System.getProperty("os.name"))
+      + "-" + System.getProperty("os.arch")
+      + "-" + System.getProperty("sun.arch.data.model");
   
   /**
    * Get the complete platform as per the java-vm.

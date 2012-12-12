@@ -145,7 +145,7 @@ static BOOL IsPrefixedAlready(__in PCWSTR path)
 {
   static const PCWSTR LongPathPrefix = L"\\\\?\\";
   int Prefixlen = (int)wcslen(LongPathPrefix);
-  int i = 0;
+  size_t i = 0;
 
   if (path == NULL || wcslen(path) < Prefixlen)
   {

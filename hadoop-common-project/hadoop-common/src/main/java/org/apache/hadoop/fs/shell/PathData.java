@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -56,11 +57,17 @@ public class PathData implements Comparable<PathData> {
 
   /* True if the URI scheme was not present in the pathString but inferred.
    */
-  private boolean inferredSchemeFromPath;
+  private boolean inferredSchemeFromPath = false;
 
-  /* True if backslashes in a raw Windows path were replaced.
+  /**
+   *  Pre-compiled regular expressions to detect path formats.
    */
-  private boolean restoreBackslashes;
+  private static final Pattern potentialUri =
+      Pattern.compile("^[a-zA-Z][a-zA-Z0-9+-.]+:");
+  private static final Pattern windowsNonUriAbsolutePath1 =
+      Pattern.compile("^/?[a-zA-Z]:\\\\");
+  private static final Pattern windowsNonUriAbsolutePath2 =
+      Pattern.compile("^/?[a-zA-Z]:/");
 
   /**
    * Creates an object to wrap the given parameters as fields.  The string
@@ -98,6 +105,39 @@ public class PathData implements Comparable<PathData> {
   }
 
   /**
+   * Validates the given Windows path.
+   * Throws IOException on failure.
+   * @param pathString a String of the path suppliued by the user.
+   */
+  private void ValidateWindowsPath(String pathString)
+  throws IOException
+  {
+    if (windowsNonUriAbsolutePath1.matcher(pathString).find()) {
+      // Forward slashes disallowed in a backslash-separated path.
+      if (pathString.indexOf('/') != -1) {
+        throw new IOException("Invalid path string " + pathString);
+      }
+
+      inferredSchemeFromPath = true;
+      return;
+    }
+
+    // Is it a forward slash-separated absolute path?
+    if (windowsNonUriAbsolutePath2.matcher(pathString).find()) {
+      inferredSchemeFromPath = true;
+      return;
+    }
+
+    // Does it look like a URI? If so then just leave it alone.
+    if (potentialUri.matcher(pathString).find()) {
+      return;
+    }
+
+    // Looks like a relative path on Windows.
+    return;
+  }
+
+  /**
    * Creates an object to wrap the given parameters as fields.  The string
    * used to create the path will be recorded since the Path object does not
    * return exactly the same string used to initialize it.
@@ -112,13 +152,8 @@ public class PathData implements Comparable<PathData> {
     this.path = fs.makeQualified(new Path(uri));
     setStat(stat);
 
-    if (Path.isWindowsAbsolutePath(pathString, false) ||
-        Path.isWindowsAbsolutePath(pathString, true)) {
-      inferredSchemeFromPath = true;
-    }
-
-    if (Path.WINDOWS && (pathString.indexOf('\\') != -1)) {
-      restoreBackslashes = true;
+    if (Path.WINDOWS) {
+      ValidateWindowsPath(pathString);
     }
   }
 
@@ -409,17 +444,11 @@ public class PathData implements Comparable<PathData> {
     // Drop the scheme if it was inferred to ensure fidelity between
     // the input and output path strings.
     if ((scheme == null) || (inferredSchemeFromPath)) {
-
       if (Path.isWindowsAbsolutePath(decodedRemainder, true)) {
         // Strip the leading '/' added in stringToUri so users see a valid
         // Windows path.
         decodedRemainder = decodedRemainder.substring(1);
       }
-
-      if (restoreBackslashes) {
-        decodedRemainder = decodedRemainder.replace('\\', '/');
-      }
-
       return decodedRemainder;
     } else {
       StringBuilder buffer = new StringBuilder();
@@ -442,13 +471,56 @@ public class PathData implements Comparable<PathData> {
     return ((LocalFileSystem)fs).pathToFile(path);
   }
 
+  /** Normalize the given Windows path string. This does the following:
+   *    1. Adds "file:" scheme for absolute paths.
+   *    2. Ensures the scheme-specific part starts with '/' per RFC2396.
+   *    3. Replaces backslash path separators with forward slashes.
+   *    @param pathString Path string supplied by the user.
+   *    @return normalized absolute path string. Returns the input string
+   *            if it is not a Windows absolute path.
+   */
+  private static String normalizeWindowsPath(String pathString)
+  throws IOException
+  {
+    if (!Path.WINDOWS) {
+      return pathString;
+    }
+
+    boolean slashed =
+        ((pathString.length() >= 1) && (pathString.charAt(0) == '/'));
+
+    // Is it a backslash-separated absolute path?
+    if (windowsNonUriAbsolutePath1.matcher(pathString).find()) {
+      // Forward slashes disallowed in a backslash-separated path.
+      if (pathString.indexOf('/') != -1) {
+        throw new IOException("Invalid path string " + pathString);
+      }
+
+      pathString = pathString.replace('\\', '/');
+      return "file:" + (slashed ? "" : "/") + pathString;
+    }
+
+    // Is it a forward slash-separated absolute path?
+    if (windowsNonUriAbsolutePath2.matcher(pathString).find()) {
+      return "file:" + (slashed ? "" : "/") + pathString;
+    }
+
+    // Is it a backslash-separated relative file path (no scheme and
+    // no drive-letter specifier)?
+    if ((pathString.indexOf(':') == -1) && (pathString.indexOf('\\') != -1)) {
+      pathString = pathString.replace('\\', '/');
+    }
+
+    return pathString;
+  }
+
   /** Construct a URI from a String with unescaped special characters
-   *  that have non-standard sematics. e.g. /, ?, #. A custom parsing
-   *  is needed to prevent misbihaviors.
+   *  that have non-standard semantics. e.g. /, ?, #. A custom parsing
+   *  is needed to prevent misbehavior.
    *  @param pathString The input path in string form
    *  @return URI
    */
-  private static URI stringToUri(String pathString) {
+  private static URI stringToUri(String pathString) throws IOException {
     // We can't use 'new URI(String)' directly. Since it doesn't do quoting
     // internally, the internal parser may fail or break the string at wrong
     // places. Use of multi-argument ctors will quote those chars for us,
@@ -457,44 +529,28 @@ public class PathData implements Comparable<PathData> {
     // parse uri components
     String scheme = null;
     String authority = null;
-
     int start = 0;
 
-    if (Path.WINDOWS) {
-      // Convert backslashes to prevent URI from escaping them.
-      pathString = pathString.replace('\\', '/');
+    pathString = normalizeWindowsPath(pathString);
+
+    // parse uri scheme, if any
+    int colon = pathString.indexOf(':');
+    int slash = pathString.indexOf('/');
+    if (colon > 0 && (slash == colon +1)) {
+      // has a non zero-length scheme
+      scheme = pathString.substring(0, colon);
+      start = colon + 1;
     }
 
-    if (Path.isWindowsAbsolutePath(pathString, false)) {
-      // So we don't attempt to parse the drive specifier as a scheme.
-      // Prefix a '/' to the scheme-specific part per RFC2936.
-      scheme = "file";
-      pathString = "/" + pathString;
-    } else if (Path.isWindowsAbsolutePath(pathString, true)){
-      // So we don't attempt to parse the drive specifier as a scheme.
-      // The scheme-specific part already begins with a '/'.
-      scheme = "file";
-    } else {
-      // parse uri scheme, if any
-      int colon = pathString.indexOf(':');
-      int slash = pathString.indexOf('/');
-      if (colon > 0 && (slash == colon +1)) {
-        // has a non zero-length scheme
-        scheme = pathString.substring(0, colon);
-        start = colon + 1;
-      }
-
-      // parse uri authority, if any
-      if (pathString.startsWith("//", start) &&
-          (pathString.length()-start > 2)) {
-        start += 2;
-        int nextSlash = pathString.indexOf('/', start);
-        int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
-        authority = pathString.substring(start, authEnd);
-        start = authEnd;
-      }
+    // parse uri authority, if any
+    if (pathString.startsWith("//", start) &&
+        (pathString.length()-start > 2)) {
+      start += 2;
+      int nextSlash = pathString.indexOf('/', start);
+      int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
+      authority = pathString.substring(start, authEnd);
+      start = authEnd;
     }
-
     // uri path is the rest of the string. ? or # are not interpreted,
     // but any occurrence of them will be quoted by the URI ctor.
     String path = pathString.substring(start, pathString.length());

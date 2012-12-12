@@ -29,6 +29,8 @@ import org.apache.hadoop.util.Shell;
 
 import junit.framework.TestCase;
 
+import static org.junit.Assert.fail;
+
 public class TestPath extends TestCase {
   public void testToString() {
     toStringTest("/");
@@ -163,6 +165,37 @@ public class TestPath extends TestCase {
 
     assertEquals(new Path("foo/bar/baz","../../..").toString(), "");
     assertEquals(new Path("foo/bar/baz","../../../../..").toString(), "../..");
+  }
+
+  /** Test that Windows paths are correctly handled */
+  public void testWindowsPaths() throws URISyntaxException, IOException {
+    if (!Path.WINDOWS) {
+      return;
+    }
+
+    assertEquals(new Path("c:\\foo\\bar").toString(), "c:/foo/bar");
+    assertEquals(new Path("c:/foo/bar").toString(), "c:/foo/bar");
+    assertEquals(new Path("/c:/foo/bar").toString(), "c:/foo/bar");
+    assertEquals(new Path("file://c:/foo/bar").toString(), "file://c:/foo/bar");
+  }
+
+  /** Test invalid paths on Windows are correctly rejected */
+  public void testInvalidWindowsPaths() throws URISyntaxException, IOException {
+    if (!Path.WINDOWS) {
+      return;
+    }
+
+    String [] invalidPaths = {
+        "hdfs:\\\\\\tmp"
+    };
+
+    for (String path : invalidPaths) {
+      try {
+        Path item = new Path(path);
+        fail("Did not throw for invalid path " + path);
+      } catch (IllegalArgumentException iae) {
+      }
+    }
   }
 
   /** Test Path objects created from other Path objects */

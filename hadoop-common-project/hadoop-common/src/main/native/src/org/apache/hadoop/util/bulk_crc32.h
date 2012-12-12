@@ -19,7 +19,10 @@
 #define BULK_CRC32_H_INCLUDED
 
 #include <stdint.h>
+
+#ifdef UNIX
 #include <unistd.h> /* for size_t */
+#endif // UNIX
 
 // Constants for different CRC algorithms
 #define CRC32C_POLYNOMIAL 1

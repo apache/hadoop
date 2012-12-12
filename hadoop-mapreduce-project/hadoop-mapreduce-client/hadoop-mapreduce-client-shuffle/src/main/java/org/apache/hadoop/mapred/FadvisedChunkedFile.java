@@ -69,8 +69,10 @@ public class FadvisedChunkedFile extends ChunkedFile {
     }
     if (manageOsCache && getEndOffset() - getStartOffset() > 0) {
       try {
-        NativeIO.posixFadviseIfPossible(fd, getStartOffset(), getEndOffset()
-            - getStartOffset(), NativeIO.POSIX_FADV_DONTNEED);
+        NativeIO.POSIX.posixFadviseIfPossible(
+            fd,
+            getStartOffset(), getEndOffset() - getStartOffset(),
+            NativeIO.POSIX.POSIX_FADV_DONTNEED);
       } catch (Throwable t) {
         LOG.warn("Failed to manage OS cache for " + identifier, t);
       }

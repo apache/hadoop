@@ -589,6 +589,34 @@
           </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>compile</phase>
+                <goals>
+                  <goal>javah</goal>
+                </goals>
+                <configuration>
+                  <javahPath>${env.JAVA_HOME}/bin/javah</javahPath>
+                  <javahClassNames>
+                    <javahClassName>org.apache.hadoop.io.compress.zlib.ZlibCompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.zlib.ZlibDecompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsMapping</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.nativeio.NativeIO</javahClassName>
+                    <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Compressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
+                    <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>
+                  </javahClassNames>
+                  <javahOutputDirectory>${project.build.directory}/native/javah</javahOutputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
               <execution>
@@ -601,7 +629,25 @@
                   <executable>msbuild</executable>
                   <arguments>
                     <argument>${basedir}/src/main/winutils/winutils.sln</argument>
-                    <argument>/p:Configuration=Release;OutDir=${project.build.directory}/bin/</argument>
+                    <argument>/nologo</argument>
+                    <argument>/p:Configuration=Release</argument>
+                    <argument>/p:OutDir=${project.build.directory}/bin/</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>compile-ms-native-dll</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>msbuild</executable>
+                  <arguments>
+                    <argument>${basedir}/src/main/native/native.sln</argument>
+                    <argument>/nologo</argument>
+                    <argument>/p:Configuration=Release</argument>
+                    <argument>/p:OutDir=${project.build.directory}/bin/</argument>
                   </arguments>
                 </configuration>
               </execution>

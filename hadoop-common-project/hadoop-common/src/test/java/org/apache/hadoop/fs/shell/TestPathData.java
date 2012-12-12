@@ -19,8 +19,10 @@ package org.apache.hadoop.fs.shell;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
@@ -122,17 +124,45 @@ public class TestPathData {
     }
 
     // Can we handle raw Windows paths? The files need not exist for
-    // the tests to succeed.
+    // these tests to succeed.
     String[] winPaths = {
         "n:\\",
         "N:\\",
         "N:\\foo",
-        "N:\\foo\\bar"
+        "N:\\foo\\bar",
+        "N:/",
+        "N:/foo",
+        "N:/foo/bar"
+    };
+
+    PathData item;
+
+    for (String path : winPaths) {
+      item = new PathData(path, conf);
+      assertEquals(new File(path), item.toFile());
+    }
+
+    item = new PathData("foo\\bar", conf);
+    assertEquals(new File(testDir + "\\foo\\bar"), item.toFile());
+  }
+
+  @Test
+  public void testInvalidWindowsPath() throws Exception {
+    if (!Path.WINDOWS) {
+      return;
+    }
+
+    // Verify that the following invalid paths are rejected.
+    String [] winPaths = {
+        "N:\\foo/bar"
     };
 
     for (String path : winPaths) {
-      PathData item = new PathData(path, conf);
-      assertEquals(new File(path), item.toFile());
+      try {
+        PathData item = new PathData(path, conf);
+        fail("Did not throw for invalid path " + path);
+      } catch (IOException ioe) {
+      }
     }
   }
 
