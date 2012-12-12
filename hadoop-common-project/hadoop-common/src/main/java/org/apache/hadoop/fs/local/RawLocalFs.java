@@ -159,6 +159,14 @@ public class RawLocalFs extends DelegateToFileSystem {
     }
   }
   
+   @Override
+   public boolean isValidName(String src) {
+     // Different local file systems have different validation rules.  Skip
+     // validation here and just let the OS handle it.  This is consistent with
+     // RawLocalFileSystem.
+     return true;
+   }
+  
   @Override
   public Path getLinkTarget(Path f) throws IOException {
     /* We should never get here. Valid local links are resolved transparently

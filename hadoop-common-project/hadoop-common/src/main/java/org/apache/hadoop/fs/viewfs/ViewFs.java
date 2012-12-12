@@ -597,6 +597,12 @@ public class ViewFs extends AbstractFileSystem {
     return result;
   }
 
+  @Override
+  public boolean isValidName(String src) {
+    // Prefix validated at mount time and rest of path validated by mount target.
+    return true;
+  }
+
   
   
   /*

@@ -274,6 +274,10 @@ Trunk (Unreleased)
     HDFS-4269. Datanode rejects all datanode registrations from localhost
     in single-node developer setup on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-8957 HDFS tests for AbstractFileSystem#IsValidName should be overridden for
+    embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES

@@ -298,6 +298,9 @@ Trunk (Unreleased)
     HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
     Windows. (Chris Nauroth via suresh)
 
+    HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
+    embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
