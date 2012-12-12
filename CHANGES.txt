@@ -130,6 +130,8 @@ Release 1.2.0 - unreleased
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
     (suresh)
 
+    HADOOP-9098. Add missing license headers. (Arpit Agarwal via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
