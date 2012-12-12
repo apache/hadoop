@@ -20,6 +20,8 @@ Trunk (Unreleased)
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
 
+    HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->

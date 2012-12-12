@@ -82,10 +82,11 @@ public class LayoutVersion {
     EDITS_CHESKUM(-28, "Support checksum for editlog"),
     UNUSED(-29, "Skipped version"),
     FSIMAGE_NAME_OPTIMIZATION(-30, "Store only last part of path in fsimage"),
-    RESERVED_REL20_203(-31, -19, "Reserved for release 0.20.203"),
-    RESERVED_REL20_204(-32, "Reserved for release 0.20.204"),
-    RESERVED_REL22(-33, -27, "Reserved for release 0.22"),
-    RESERVED_REL23(-34, -30, "Reserved for release 0.23"),
+    RESERVED_REL20_203(-31, -19, "Reserved for release 0.20.203", true,
+        DELEGATION_TOKEN),
+    RESERVED_REL20_204(-32, -31, "Reserved for release 0.20.204", true),
+    RESERVED_REL22(-33, -27, "Reserved for release 0.22", true),
+    RESERVED_REL23(-34, -30, "Reserved for release 0.23", true),
     FEDERATION(-35, "Support for namenode federation"),
     LEASE_REASSIGNMENT(-36, "Support for persisting lease holder reassignment"),
     STORED_TXIDS(-37, "Transaction IDs are stored in edits log and image files"),
@@ -94,33 +95,40 @@ public class LayoutVersion {
         "Use LongWritable and ShortWritable directly instead of ArrayWritable of UTF8"),
     OPTIMIZE_PERSIST_BLOCKS(-40,
         "Serialize block lists with delta-encoded variable length ints, " +
-        "add OP_UPDATE_BLOCKS");
+        "add OP_UPDATE_BLOCKS"),
+    RESERVED_REL1_2_0(-41, -32, "Reserved for release 1.2.0", true, CONCAT);
     
     final int lv;
     final int ancestorLV;
     final String description;
+    final boolean reserved;
+    final Feature[] specialFeatures;
     
     /**
-     * Feature that is added at {@code currentLV}. 
+     * Feature that is added at layout version {@code lv} - 1. 
      * @param lv new layout version with the addition of this feature
      * @param description description of the feature
      */
     Feature(final int lv, final String description) {
-      this(lv, lv + 1, description);
+      this(lv, lv + 1, description, false);
     }
 
     /**
-     * Feature that is added at {@code currentLV}.
+     * Feature that is added at layout version {@code ancestoryLV}.
      * @param lv new layout version with the addition of this feature
-     * @param ancestorLV layout version from which the new lv is derived
-     *          from.
+     * @param ancestorLV layout version from which the new lv is derived from.
      * @param description description of the feature
+     * @param reserved true when this is a layout version reserved for previous
+     *          verions
+     * @param features set of features that are to be enabled for this version
      */
-    Feature(final int lv, final int ancestorLV,
-        final String description) {
+    Feature(final int lv, final int ancestorLV, final String description,
+        boolean reserved, Feature... features) {
       this.lv = lv;
       this.ancestorLV = ancestorLV;
       this.description = description;
+      this.reserved = reserved;
+      specialFeatures = features;
     }
     
     /** 
@@ -145,6 +153,10 @@ public class LayoutVersion {
      */
     public String getDescription() {
       return description;
+    }
+    
+    public boolean isReservedForOldRelease() {
+      return reserved;
     }
   }
   
@@ -171,19 +183,14 @@ public class LayoutVersion {
         map.put(f.ancestorLV, ancestorSet);
       }
       EnumSet<Feature> featureSet = EnumSet.copyOf(ancestorSet);
+      if (f.specialFeatures != null) {
+        for (Feature specialFeature : f.specialFeatures) {
+          featureSet.add(specialFeature);
+        }
+      }
       featureSet.add(f);
       map.put(f.lv, featureSet);
     }
-    
-    // Special initialization for 0.20.203 and 0.20.204
-    // to add Feature#DELEGATION_TOKEN
-    specialInit(Feature.RESERVED_REL20_203.lv, Feature.DELEGATION_TOKEN);
-    specialInit(Feature.RESERVED_REL20_204.lv, Feature.DELEGATION_TOKEN);
-  }
-  
-  private static void specialInit(int lv, Feature f) {
-    EnumSet<Feature> set = map.get(lv);
-    set.add(f);
   }
   
   /**
@@ -222,6 +229,11 @@ public class LayoutVersion {
    */
   public static int getCurrentLayoutVersion() {
     Feature[] values = Feature.values();
-    return values[values.length - 1].lv;
+    for (int i = values.length -1; i >= 0; i--) {
+      if (!values[i].isReservedForOldRelease()) {
+        return values[i].lv;
+      }
+    }
+    throw new AssertionError("All layout versions are reserved.");
   }
 }
