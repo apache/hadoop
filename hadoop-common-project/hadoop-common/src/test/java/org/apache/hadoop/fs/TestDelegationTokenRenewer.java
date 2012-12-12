@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -133,6 +134,8 @@ public class TestDelegationTokenRenewer {
       InterruptedException {
     TestFileSystem tfs = new TestFileSystem();
     renewer.addRenewAction(tfs);
+    assertEquals("FileSystem not added to DelegationTokenRenewer", 1,
+        renewer.getRenewQueueLength());
 
     for (int i = 0; i < 60; i++) {
       Thread.sleep(RENEW_CYCLE);
@@ -144,7 +147,8 @@ public class TestDelegationTokenRenewer {
 
     assertTrue("Token not renewed even after 1 minute",
         (tfs.testToken.renewCount > 0));
-    assertTrue("Token not removed", (tfs.testToken.renewCount < MAX_RENEWALS));
+    assertEquals("FileSystem not removed from DelegationTokenRenewer", 0,
+        renewer.getRenewQueueLength());
     assertTrue("Token not cancelled", tfs.testToken.cancelled);
   }
 }

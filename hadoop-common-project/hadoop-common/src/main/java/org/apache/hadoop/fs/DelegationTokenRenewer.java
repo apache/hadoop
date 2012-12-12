@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.DelayQueue;
@@ -147,6 +149,12 @@ public class DelegationTokenRenewer
   /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
   private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
   
+  /** For testing purposes */
+  @VisibleForTesting
+  protected int getRenewQueueLength() {
+    return queue.size();
+  }
+
   /**
    * Create the singleton instance. However, the thread can be started lazily in
    * {@link #addRenewAction(FileSystem)}
