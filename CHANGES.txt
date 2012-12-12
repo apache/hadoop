@@ -45,6 +45,9 @@ Release 1.2.0 - unreleased
     HADOOP-9090. Support on-demand publish of metrics. (Mostafa Elhemali via
     suresh)
 
+    HADOOP-7096. Allow setting of end-of-record delimiter for TextInputFormat
+    (Ahmed Radwan, backported by suresh)
+
   IMPROVEMENTS
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)
