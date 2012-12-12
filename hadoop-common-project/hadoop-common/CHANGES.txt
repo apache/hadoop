@@ -31,6 +31,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via tgraves)
 
+    HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
+    rather than info during fallback. (Colin Patrick McCabe via todd)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
