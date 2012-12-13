@@ -20,6 +20,8 @@ Trunk (Unreleased)
     HDFS-3495. Update Balancer to support new NetworkTopology with NodeGroup.
     (Junping Du via szetszwo)
 
+    HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -271,6 +273,10 @@ Trunk (Unreleased)
 
     HDFS-4269. Datanode rejects all datanode registrations from localhost
     in single-node developer setup on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-8957 HDFS tests for AbstractFileSystem#IsValidName should be overridden for
+    embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
 
 Release 2.0.3-alpha - Unreleased 
 

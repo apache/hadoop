@@ -624,8 +624,11 @@ public class TestDFSUtil {
   @Test
   public void testIsValidName() {
     assertFalse(DFSUtil.isValidName("/foo/../bar"));
+    assertFalse(DFSUtil.isValidName("/foo/./bar"));
     assertFalse(DFSUtil.isValidName("/foo//bar"));
     assertTrue(DFSUtil.isValidName("/"));
     assertTrue(DFSUtil.isValidName("/bar/"));
+    assertFalse(DFSUtil.isValidName("/foo/:/bar"));
+    assertFalse(DFSUtil.isValidName("/foo:bar"));
   }
 }

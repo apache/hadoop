@@ -66,7 +66,17 @@ public class RmView extends TwoColumnLayout {
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
 
-      .append("\n, aoColumnDefs: [\n")
+      .append("\n, aoColumnDefs: ")
+      .append(getAppsTableColumnDefs())
+
+      // Sort by id upon page load
+      .append(", aaSorting: [[0, 'desc']]}").toString();
+  }
+  
+  protected String getAppsTableColumnDefs() {
+    StringBuilder sb = new StringBuilder();
+    return sb
+      .append("[\n")
       .append("{'sType':'numeric', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
 
@@ -74,9 +84,6 @@ public class RmView extends TwoColumnLayout {
       .append(", 'mRender': renderHadoopDate }")
 
       .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [8]")
-      .append(", 'mRender': parseHadoopProgress }]")
-
-      // Sort by id upon page load
-      .append(", aaSorting: [[0, 'desc']]}").toString();
+      .append(", 'mRender': parseHadoopProgress }]").toString();
   }
 }
