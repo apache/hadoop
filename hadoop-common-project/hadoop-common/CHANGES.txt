@@ -92,6 +92,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
     (suresh)
 
+    HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
+    (Daisuke Kobayashi via atm)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
