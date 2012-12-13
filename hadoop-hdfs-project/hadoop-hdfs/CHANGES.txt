@@ -321,6 +321,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4295. Using port 1023 should be valid when starting Secure DataNode
     (Stephen Chu via todd)
 
+    HDFS-4307. SocketCache should use monotonic time. (Colin Patrick McCabe
+    via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

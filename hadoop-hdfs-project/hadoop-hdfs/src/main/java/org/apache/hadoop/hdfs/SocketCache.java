@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * A cache of input stream sockets to Data Node.
@@ -53,7 +54,7 @@ class SocketCache {
     public SocketAndStreams(Socket s, IOStreamPair ioStreams) {
       this.sock = s;
       this.ioStreams = ioStreams;
-      this.createTime = System.currentTimeMillis();
+      this.createTime = Time.monotonicNow();
     }
     
     @Override
@@ -205,7 +206,7 @@ class SocketCache {
       Entry<SocketAddress, SocketAndStreams> entry = iter.next();
       // if oldest socket expired, remove it
       if (entry == null || 
-        System.currentTimeMillis() - entry.getValue().getCreateTime() < 
+        Time.monotonicNow() - entry.getValue().getCreateTime() < 
         expiryPeriod) {
         break;
       }
@@ -236,13 +237,13 @@ class SocketCache {
    * older than expiryPeriod minutes
    */
   private void run() throws InterruptedException {
-    for(long lastExpiryTime = System.currentTimeMillis();
+    for(long lastExpiryTime = Time.monotonicNow();
         !Thread.interrupted();
         Thread.sleep(expiryPeriod)) {
-      final long elapsed = System.currentTimeMillis() - lastExpiryTime;
+      final long elapsed = Time.monotonicNow() - lastExpiryTime;
       if (elapsed >= expiryPeriod) {
         evictExpired(expiryPeriod);
-        lastExpiryTime = System.currentTimeMillis();
+        lastExpiryTime = Time.monotonicNow();
       }
     }
     clear();
