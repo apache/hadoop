@@ -277,6 +277,8 @@ Trunk (Unreleased)
     HADOOP-8957 HDFS tests for AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
 
+    HDFS-4310. fix test org.apache.hadoop.hdfs.server.datanode.
+    TestStartSecureDataNode (Ivan A. Veselovsky via atm)
 
 Release 2.0.3-alpha - Unreleased 
 
