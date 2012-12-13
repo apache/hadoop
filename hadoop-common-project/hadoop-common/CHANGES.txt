@@ -401,6 +401,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9042. Add a test for umask in FileSystemContractBaseTest.
     (Colin McCabe via eli)
 
+    HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
+    (Daisuke Kobayashi via atm)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
