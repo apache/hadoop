@@ -330,6 +330,9 @@ Release 1.2.0 - unreleased
     HADOOP-8164. Handle paths using back slash as path separator for windows
     only. (Daryn Sharp, backported by Jing Zhao via suresh)
 
+    MAPREDUCE-4860. DelegationTokenRenewal attempts to renew token even after
+    a job is removed. (kkambatl via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
