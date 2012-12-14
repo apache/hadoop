@@ -8,6 +8,9 @@ Release 1.0.5 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-4396. Port support private distributed cache to
+    LocalJobRunner from branch-1-win. (Yu Gao via eyang)
+
     HADOOP-8418. Update UGI Principal classes name for running with
     IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
 
