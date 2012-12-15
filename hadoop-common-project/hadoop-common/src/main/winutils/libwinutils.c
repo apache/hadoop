@@ -144,7 +144,7 @@ static BOOL IsLongWindowsPath(__in PCWSTR path)
 static BOOL IsPrefixedAlready(__in PCWSTR path)
 {
   static const PCWSTR LongPathPrefix = L"\\\\?\\";
-  int Prefixlen = (int)wcslen(LongPathPrefix);
+  size_t Prefixlen = wcslen(LongPathPrefix);
   size_t i = 0;
 
   if (path == NULL || wcslen(path) < Prefixlen)
@@ -413,10 +413,13 @@ DWORD GetSidFromAcctNameW(LPCWSTR acctName, PSID *ppSid)
   assert (acctName != NULL && ppSid != NULL);
 
   // Empty name is invalid. However, LookupAccountName() function will return a
-  // false Sid for an empty name instead failing.
+  // false Sid, i.e. Sid for 'BUILDIN', for an empty name instead failing. We
+  // report the error before calling LookupAccountName() function for this
+  // special case. The error code returned here is the same as the last error
+  // code set by LookupAccountName() function for an invalid name.
   //
   if (wcslen(acctName) == 0)
-    return FALSE;
+    return ERROR_NONE_MAPPED;
 
   // First pass to retrieve the buffer size.
   //
@@ -478,7 +481,7 @@ DWORD GetSidFromAcctNameW(LPCWSTR acctName, PSID *ppSid)
 //	Compute the 3 bit Unix mask for the owner, group, or, others
 //
 // Returns:
-//	The 3 bit Unix mask in USHORT
+//	The 3 bit Unix mask in INT
 //
 // Notes:
 //
@@ -613,8 +616,11 @@ GetEffectiveRightsForSidEnd:
 //  Error code otherwise
 //
 // Notes:
-//  Caller needs to destroy the memeory of owner and group names by calling
-//  LocalFree() function.
+//  - Caller needs to destroy the memeory of owner and group names by calling
+//    LocalFree() function.
+//
+//  - If the user or group name does not exist, the user or group SID will be
+//    returned as the name.
 //
 DWORD FindFileOwnerAndPermission(
   __in LPCWSTR pathName,
@@ -830,7 +836,17 @@ static void GetWindowsAccessMask(INT unixMask,
 //  Error code: otherwise
 //
 // Notes:
-//  none
+//  - Administrators and SYSTEM are always given full permission to the file,
+//    unless Administrators or SYSTEM itself is the file owner and the user
+//    explictly set the permission to something else. For example, file 'foo'
+//    belongs to Administrators, 'chmod 000' on the file will not directly
+//    assign Administrators full permission on the file.
+//  - Only full permission for Administrators and SYSTEM are inheritable.
+//  - CREATOR OWNER is always given full permission and the permission is
+//    inheritable, more specifically OBJECT_INHERIT_ACE, CONTAINER_INHERIT_ACE
+//    flags are set. The reason is to give the creator of child file full
+//    permission, i.e., the child file will have permission mode 700 for
+//    a user other than Administrator or SYSTEM.
 //
 static DWORD GetWindowsDACLs(__in INT unixMask,
   __in PSID pOwnerSid, __in PSID pGroupSid, __out PACL *ppNewDACL)
@@ -842,11 +858,21 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
   DWORD winOtherAccessAllowMask;
 
   PSID pEveryoneSid = NULL;
+  DWORD cbEveryoneSidSize = SECURITY_MAX_SID_SIZE;
+
+  PSID pSystemSid = NULL;
+  DWORD cbSystemSidSize = SECURITY_MAX_SID_SIZE;
+  BOOL bAddSystemAcls = FALSE;
+
+  PSID pAdministratorsSid = NULL;
+  DWORD cbAdministratorsSidSize = SECURITY_MAX_SID_SIZE;
+  BOOL bAddAdministratorsAcls = FALSE;
+
+  PSID pCreatorOwnerSid = NULL;
+  DWORD cbCreatorOwnerSidSize = SECURITY_MAX_SID_SIZE;
 
   PACL pNewDACL = NULL;
   DWORD dwNewAclSize = 0;
-
-  SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
 
   DWORD ret = ERROR_SUCCESS;
 
@@ -857,12 +883,63 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
 
   // Create a well-known SID for the Everyone group
   //
-  if(!AllocateAndInitializeSid(&SIDAuthWorld, 1,
-    SECURITY_WORLD_RID,
-    0, 0, 0, 0, 0, 0, 0,
-    &pEveryoneSid))
+  if ((pEveryoneSid = LocalAlloc(LPTR, cbEveryoneSidSize)) == NULL)
   {
-    return GetLastError();
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+  if (!CreateWellKnownSid(WinWorldSid, NULL, pEveryoneSid, &cbEveryoneSidSize))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+
+  // Create a well-known SID for the Administrators group
+  //
+  if ((pAdministratorsSid = LocalAlloc(LPTR, cbAdministratorsSidSize)) == NULL)
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+  if (!CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL,
+    pAdministratorsSid, &cbAdministratorsSidSize))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+  if (!EqualSid(pAdministratorsSid, pOwnerSid)
+    && !EqualSid(pAdministratorsSid, pGroupSid))
+    bAddAdministratorsAcls = TRUE;
+
+  // Create a well-known SID for the SYSTEM
+  //
+  if ((pSystemSid = LocalAlloc(LPTR, cbSystemSidSize)) == NULL)
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+  if (!CreateWellKnownSid(WinLocalSystemSid, NULL,
+    pSystemSid, &cbSystemSidSize))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+  if (!EqualSid(pSystemSid, pOwnerSid)
+    && !EqualSid(pSystemSid, pGroupSid))
+    bAddSystemAcls = TRUE;
+
+  // Create a well-known SID for the Creator Owner
+  //
+  if ((pCreatorOwnerSid = LocalAlloc(LPTR, cbCreatorOwnerSidSize)) == NULL)
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+  if (!CreateWellKnownSid(WinCreatorOwnerSid, NULL,
+    pCreatorOwnerSid, &cbCreatorOwnerSidSize))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
   }
 
   // Create the new DACL
@@ -880,6 +957,22 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
     GetLengthSid(pGroupSid) - sizeof(DWORD);
   dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
     GetLengthSid(pEveryoneSid) - sizeof(DWORD);
+
+  if (bAddSystemAcls)
+  {
+    dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
+      cbSystemSidSize - sizeof(DWORD);
+  }
+
+  if (bAddAdministratorsAcls)
+  {
+    dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
+      cbAdministratorsSidSize - sizeof(DWORD);
+  }
+
+  dwNewAclSize += sizeof(ACCESS_ALLOWED_ACE) +
+    cbCreatorOwnerSidSize - sizeof(DWORD);
+
   pNewDACL = (PACL)LocalAlloc(LPTR, dwNewAclSize);
   if (pNewDACL == NULL)
   {
@@ -892,33 +985,64 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
     goto GetWindowsDACLsEnd;
   }
 
+  if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
+    GENERIC_ALL, pCreatorOwnerSid))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+
+  if (bAddSystemAcls &&
+    !AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
+    GENERIC_ALL, pSystemSid))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+
+  if (bAddAdministratorsAcls &&
+    !AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
+    GENERIC_ALL, pAdministratorsSid))
+  {
+    ret = GetLastError();
+    goto GetWindowsDACLsEnd;
+  }
+
   if (winUserAccessDenyMask &&
-    !AddAccessDeniedAce(pNewDACL, ACL_REVISION,
+    !AddAccessDeniedAceEx(pNewDACL, ACL_REVISION,
+    NO_PROPAGATE_INHERIT_ACE,
     winUserAccessDenyMask, pOwnerSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
-  if (!AddAccessAllowedAce(pNewDACL, ACL_REVISION,
+  if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
+    NO_PROPAGATE_INHERIT_ACE,
     winUserAccessAllowMask, pOwnerSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
   if (winGroupAccessDenyMask &&
-    !AddAccessDeniedAce(pNewDACL, ACL_REVISION,
+    !AddAccessDeniedAceEx(pNewDACL, ACL_REVISION,
+    NO_PROPAGATE_INHERIT_ACE,
     winGroupAccessDenyMask, pGroupSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
-  if (!AddAccessAllowedAce(pNewDACL, ACL_REVISION,
+  if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
+    NO_PROPAGATE_INHERIT_ACE,
     winGroupAccessAllowMask, pGroupSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
-  if (!AddAccessAllowedAce(pNewDACL, ACL_REVISION,
+  if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
+    NO_PROPAGATE_INHERIT_ACE,
     winOtherAccessAllowMask, pEveryoneSid))
   {
     ret = GetLastError();
@@ -928,7 +1052,10 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
   *ppNewDACL = pNewDACL;
 
 GetWindowsDACLsEnd:
-  if (pEveryoneSid) FreeSid(pEveryoneSid);
+  LocalFree(pEveryoneSid);
+  LocalFree(pAdministratorsSid);
+  LocalFree(pSystemSid);
+  LocalFree(pCreatorOwnerSid);
   if (ret != ERROR_SUCCESS) LocalFree(pNewDACL);
   
   return ret;
@@ -952,7 +1079,6 @@ GetWindowsDACLsEnd:
 DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode)
 {
   LPWSTR longPathName = NULL;
-  PACL pOldDACL = NULL;
   PACL pNewDACL = NULL;
   PSID pOwnerSid = NULL;
   PSID pGroupSid = NULL;
@@ -984,11 +1110,10 @@ DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode)
   dwRtnCode = GetNamedSecurityInfoW(
     longPathName,
     SE_FILE_OBJECT, 
-    OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION |
-    DACL_SECURITY_INFORMATION,
+    OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION,
     &pOwnerSid,
     &pGroupSid,
-    &pOldDACL,
+    NULL,
     NULL,
     &pSD);
   if (ERROR_SUCCESS != dwRtnCode)
@@ -1221,12 +1346,15 @@ GetAccntNameFromSidEnd:
 //  Other error code on failure
 //
 // Notes:
-// - Because NetUserGetLocalGroups() only accepts full user name, we wil try
-//   to find full user name given the user input if NetUserGetLocalGroups()
-//   fails on first time with error code NERR_UserNotFound. It is not always
-//   to find full user name given only user name. For example, a computer named
-//   'win1' joint domain 'redmond' can have both 'win1\alex' and
-//   'redmond\alex'. Given only alex, we cannot tell which one is correct.
+// - NetUserGetLocalGroups() function only accepts full user name in the format
+//   [domain name]\[username]. The user input to this function can be only the
+//   username. In this case, NetUserGetLocalGroups() will fail on the first try,
+//   and we will try to find full user name using LookupAccountNameW() method,
+//   and call NetUserGetLocalGroups() function again with full user name.
+//   However, it is not always possible to find full user name given only user
+//   name. For example, a computer named 'win1' joined domain 'redmond' can have
+//   two different users, 'win1\alex' and 'redmond\alex'. Given only 'alex', we
+//   cannot tell which one is correct.
 //
 // - Caller needs to destroy the memory of groups by using the
 //   NetApiBufferFree() function
@@ -1304,6 +1432,51 @@ GetLocalGroupsForUserEnd:
   LocalFree(pUserSid);
   LocalFree(fullName);
   return ret;
+}
+
+//----------------------------------------------------------------------------
+// Function: EnablePrivilege
+//
+// Description:
+//	Check if the process has the given privilege. If yes, enable the privilege
+//  to the process's access token.
+//
+// Returns:
+//	TRUE: on success
+//
+// Notes:
+//
+BOOL EnablePrivilege(__in LPCWSTR privilegeName)
+{
+  HANDLE hToken = INVALID_HANDLE_VALUE;
+  TOKEN_PRIVILEGES tp = { 0 };
+  DWORD dwErrCode = ERROR_SUCCESS;
+
+  if (!OpenProcessToken(GetCurrentProcess(),
+    TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+  {
+    ReportErrorCode(L"OpenProcessToken", GetLastError());
+    return FALSE;
+  }
+
+  tp.PrivilegeCount = 1;
+  if (!LookupPrivilegeValueW(NULL,
+    privilegeName, &(tp.Privileges[0].Luid)))
+  {
+    ReportErrorCode(L"LookupPrivilegeValue", GetLastError());
+    CloseHandle(hToken);
+    return FALSE;
+  }
+  tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+  // As stated on MSDN, we need to use GetLastError() to check if
+  // AdjustTokenPrivileges() adjusted all of the specified privileges.
+  //
+  AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL);
+  dwErrCode = GetLastError();
+  CloseHandle(hToken);
+
+  return dwErrCode == ERROR_SUCCESS;
 }
 
 //----------------------------------------------------------------------------

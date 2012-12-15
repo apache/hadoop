@@ -494,9 +494,9 @@ public class RawLocalFileSystem extends FileSystem {
       return !super.getOwner().isEmpty(); 
     }
     
-    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
+    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-            f.lastModified(), fs.makeQualified(new Path(f.getPath())));
+          f.lastModified(), new Path(f.getPath()).makeQualified(fs));
     }
     
     @Override
@@ -527,9 +527,10 @@ public class RawLocalFileSystem extends FileSystem {
     private void loadPermissionInfo() {
       IOException e = null;
       try {
-        StringTokenizer t = new StringTokenizer(
-            FileUtil.execCommand(new File(getPath().toUri()), 
-                                          Shell.getGetPermissionCommand()));
+        String output = FileUtil.execCommand(new File(getPath().toUri()), 
+            Shell.getGetPermissionCommand());
+        StringTokenizer t =
+            new StringTokenizer(output, Shell.TOKEN_SEPARATOR_REGEX);
         //expected format
         //-rw-------    1 username groupname ...
         String permission = t.nextToken();
@@ -549,7 +550,6 @@ public class RawLocalFileSystem extends FileSystem {
         }
         setOwner(owner);
 
-        // FIXME: Group names could have spaces on Windows
         setGroup(t.nextToken());
       } catch (Shell.ExitCodeException ioe) {
         if (ioe.getExitCode() != 1) {
@@ -585,17 +585,7 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public void setOwner(Path p, String username, String groupname)
     throws IOException {
-    if (username == null && groupname == null) {
-      throw new IOException("username == null && groupname == null");
-    }
-
-    if (username == null) {
-      FileUtil.execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
-    } else {
-      //OWNER[:[GROUP]]
-      String s = username + (groupname == null? "": ":" + groupname);
-      FileUtil.execCommand(pathToFile(p), Shell.getSetOwnerCommand(s));
-    }
+    FileUtil.setOwner(pathToFile(p), username, groupname);
   }
 
   /**

@@ -811,46 +811,6 @@ cleanup:
 #endif
 }
 
-/*
- * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
- * Method:    getLengthFollowSymlink
- * Signature: (Ljava/lang/String;)J
- *
- * The "00024" in the function name is an artifact of how JNI encodes
- * special characters. U+0024 is '$'.
- */
-JNIEXPORT jlong JNICALL
-Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_getLengthFollowSymlink
-  (JNIEnv *env, jclass clazz, jstring j_path)
-{
-#ifdef UNIX
-  THROW(env, "java/io/IOException",
-    "The function getLengthFollowSymlink(String) is not supported on Unix");
-  return 0;
-#endif
-
-#ifdef WINDOWS
-  DWORD dwRtnCode = ERROR_SUCCESS;
-  BY_HANDLE_FILE_INFORMATION fileInfo = { 0 };
-  LARGE_INTEGER fileSize = { 0 };
-
-  const wchar_t *path = (const wchar_t*) (*env)->GetStringChars(env, j_path, NULL);
-  if (path == NULL) return 0; // JVM throws Exception for us
-
-  dwRtnCode = GetFileInformationByName(path, TRUE, &fileInfo);
-  if (dwRtnCode != ERROR_SUCCESS) {
-    throw_ioe(env, dwRtnCode);
-  }
-
-  (*env)->ReleaseStringChars(env, j_path, path);
-
-  fileSize.HighPart = fileInfo.nFileSizeHigh;
-  fileSize.LowPart = fileInfo.nFileSizeLow;
-
-  return (jlong)(fileSize.QuadPart);
-#endif
-}
-
 /**
  * vim: sw=2: ts=2: et:
  */

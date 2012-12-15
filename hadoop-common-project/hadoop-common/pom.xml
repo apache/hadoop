@@ -241,6 +241,11 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.4</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -326,6 +331,23 @@
 
                 <copy toDir="${project.build.directory}/test-classes">
                   <fileset dir="${basedir}/src/main/conf"/>
+                </copy>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-test-tarballs</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy toDir="${test.cache.data}">
+                  <fileset dir="${basedir}/src/test/java/org/apache/hadoop/fs">
+                    <include name="test-untar.tar"/>
+                    <include name="test-untar.tgz"/>
+                  </fileset>
                 </copy>
               </target>
             </configuration>

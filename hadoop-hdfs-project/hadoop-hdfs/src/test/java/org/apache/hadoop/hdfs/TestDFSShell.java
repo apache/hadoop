@@ -1438,66 +1438,87 @@ public class TestDFSShell {
   @Test
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
+
+    final String fname = "testGet.txt";
+    Path root = new Path("/test/get");
+    final Path remotef = new Path(root, fname);
     final Configuration conf = new HdfsConfiguration();
-    // Race can happen here: block scanner is reading the file when test tries
-    // to corrupt the test file, which will fail the test on Windows platform.
-    // Disable block scanner to avoid this race.
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
-    
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+    TestGetRunner runner = new TestGetRunner() {
+    	private int count = 0;
+    	private FsShell shell = new FsShell(conf);
+
+    	public String run(int exitcode, String... options) throws IOException {
+    	  String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
+    	  String[] args = new String[options.length + 3];
+    	  args[0] = "-get"; 
+    	  args[args.length - 2] = remotef.toString();
+    	  args[args.length - 1] = dst;
+    	  for(int i = 0; i < options.length; i++) {
+    	    args[i + 1] = options[i];
+    	  }
+    	  show("args=" + Arrays.asList(args));
+
+    	  try {
+    	    assertEquals(exitcode, shell.run(args));
+    	  } catch (Exception e) {
+    	    assertTrue(StringUtils.stringifyException(e), false); 
+    	  }
+    	  return exitcode == 0? DFSTestUtil.readFile(new File(dst)): null; 
+    	}
+    };
+
+    File localf = createLocalFile(new File(TEST_ROOT_DIR, fname));
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem dfs = null;
 
     try {
-      final String fname = "testGet.txt";
-      final File localf = createLocalFile(new File(TEST_ROOT_DIR, fname));
-      final String localfcontent = DFSTestUtil.readFile(localf);
-      final Path root = mkdir(dfs, new Path("/test/get"));
-      final Path remotef = new Path(root, fname);
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+      mkdir(dfs, root);
       dfs.copyFromLocalFile(false, false, new Path(localf.getPath()), remotef);
-
-      final FsShell shell = new FsShell();
-      shell.setConf(conf);
-      TestGetRunner runner = new TestGetRunner() {
-        private int count = 0;
-
-        @Override
-        public String run(int exitcode, String... options) throws IOException {
-          String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
-          String[] args = new String[options.length + 3];
-          args[0] = "-get"; 
-          args[args.length - 2] = remotef.toString();
-          args[args.length - 1] = dst;
-          for(int i = 0; i < options.length; i++) {
-            args[i + 1] = options[i];
-          }
-          show("args=" + Arrays.asList(args));
-          
-          try {
-            assertEquals(exitcode, shell.run(args));
-          } catch (Exception e) {
-            assertTrue(StringUtils.stringifyException(e), false); 
-          }
-          return exitcode == 0? DFSTestUtil.readFile(new File(dst)): null; 
-        }
-      };
+      String localfcontent = DFSTestUtil.readFile(localf);
 
       assertEquals(localfcontent, runner.run(0));
       assertEquals(localfcontent, runner.run(0, "-ignoreCrc"));
 
-      //find and modify the block files
+      // find block files to modify later
       List<File> files = getBlockFiles(cluster);
+
+      // Shut down cluster and then corrupt the block files by overwriting a
+      // portion with junk data.  We must shut down the cluster so that threads
+      // in the data node do not hold locks on the block files while we try to
+      // write into them.  Particularly on Windows, the data node's use of the
+      // FileChannel.transferTo method can cause block files to be memory mapped
+      // in read-only mode during the transfer to a client, and this causes a
+      // locking conflict.  The call to shutdown the cluster blocks until all
+      // DataXceiver threads exit, preventing this problem.
+      dfs.close();
+      cluster.shutdown();
+
       show("files=" + files);
       corrupt(files);
+
+      // Start the cluster again, but do not reformat, so prior files remain.
+      cluster = new MiniDFSCluster(conf, 2, false, null);
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       assertEquals(null, runner.run(1));
       String corruptedcontent = runner.run(0, "-ignoreCrc");
       assertEquals(localfcontent.substring(1), corruptedcontent.substring(1));
       assertEquals(localfcontent.charAt(0)+1, corruptedcontent.charAt(0));
-
-      localf.delete();
     } finally {
-      try {dfs.close();} catch (Exception e) {}
-      cluster.shutdown();
+      if (null != dfs) {
+        try {
+          dfs.close();
+        } catch (Exception e) {
+        }
+      }
+      if (null != cluster) {
+        cluster.shutdown();
+      }
+      localf.delete();
     }
   }
 

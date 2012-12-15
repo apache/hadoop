@@ -45,9 +45,12 @@ abstract public class Shell {
   
   public static final Log LOG = LogFactory.getLog(Shell.class);
   
-  /** a Windows utility to emulate Unix commands */
-  public static final String WINUTILS = System.getenv("HADOOP_HOME")
-                                        + "\\bin\\winutils";
+  private static boolean IS_JAVA7_OR_ABOVE =
+      System.getProperty("java.version").substring(0, 3).compareTo("1.7") >= 0;
+
+  public static boolean isJava7OrAbove() {
+    return IS_JAVA7_OR_ABOVE;
+  }
 
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
@@ -64,7 +67,7 @@ abstract public class Shell {
   /** a Unix command to get a given user's groups list */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String[] { WINUTILS, "groups", user}
+    return (WINDOWS)? new String[] { WINUTILS, "groups", "-F", "\"" + user + "\""}
                     : new String [] {"bash", "-c", "id -Gn " + user};
   }
 
@@ -77,7 +80,7 @@ abstract public class Shell {
 
   /** Return a command to get permission information. */
   public static String[] getGetPermissionCommand() {
-    return (WINDOWS) ? new String[] { WINUTILS, "ls" }
+    return (WINDOWS) ? new String[] { WINUTILS, "ls", "-F" }
                      : new String[] { "/bin/ls", "-ld" };
   }
 
@@ -110,10 +113,10 @@ abstract public class Shell {
 
   /** Return a command to set owner */
   public static String[] getSetOwnerCommand(String owner) {
-    return (WINDOWS) ? new String[] { WINUTILS, "chown", owner }
+    return (WINDOWS) ? new String[] { WINUTILS, "chown", "\"" + owner + "\"" }
                      : new String[] { "chown", owner };
   }
-
+  
   /** Return a command to create symbolic links */
   public static String[] getSymlinkCommand(String target, String link) {
     return WINDOWS ? new String[] { WINUTILS, "symlink", link, target }
@@ -163,6 +166,84 @@ abstract public class Shell {
   /** If or not script timed out*/
   private AtomicBoolean timedOut;
 
+
+  /** Centralized logic to discover and validate the sanity of the Hadoop 
+   *  home directory. Returns either NULL or a directory that exists and 
+   *  was specified via either -Dhadoop.home.dir or the HADOOP_HOME ENV 
+   *  variable.  This does a lot of work so it should only be called 
+   *  privately for initialization once per process.
+   **/
+  private static String checkHadoopHome() {
+
+    // first check the Dflag hadoop.home.dir with JVM scope
+    String home = System.getProperty("hadoop.home.dir");
+
+    // fall back to the system/user-global env variable
+    if (home == null) {
+      home = System.getenv("HADOOP_HOME");
+    }
+
+    try {
+       // couldn't find either setting for hadoop's home directory
+       if (home == null) {
+         throw new IOException("HADOOP_HOME or hadoop.home.dir are not set.");
+       }
+
+       if (home.startsWith("\"") && home.endsWith("\"")) {
+         home = home.substring(1, home.length()-1);
+       }
+
+       // check that the home setting is actually a directory that exists
+       File homedir = new File(home);
+       if (!homedir.isAbsolute() || !homedir.exists() || !homedir.isDirectory()) {
+         throw new IOException("Hadoop home directory " + homedir
+           + " does not exist, is not a directory, or is not an absolute path.");
+       }
+
+       home = homedir.getCanonicalPath();
+
+    } catch (IOException ioe) {
+       LOG.error("Failed to detect a valid hadoop home directory", ioe);
+       home = null;
+    }
+    
+    return home;
+  }
+  private static String HADOOP_HOME_DIR = checkHadoopHome();
+
+  // Public getter, throws an exception if HADOOP_HOME failed validation
+  // checks and is being referenced downstream.
+  public static final String getHadoopHome() throws IOException {
+    if (HADOOP_HOME_DIR == null) {
+      throw new IOException("Misconfigured HADOOP_HOME cannot be referenced.");
+    }
+
+    return HADOOP_HOME_DIR;
+  }
+
+  /** fully qualify the path to a binary that should be in a known hadoop 
+   *  bin location. This is primarily useful for disambiguating call-outs 
+   *  to executable sub-components of Hadoop to avoid clashes with other 
+   *  executables that may be in the path.  Caveat:  this call doesn't 
+   *  just format the path to the bin directory.  It also checks for file 
+   *  existence of the composed path. The output of this call should be 
+   *  cached by callers.
+   * */
+  public static final String getQualifiedBinPath(String executable) 
+  throws IOException {
+    // construct hadoop bin path to the specified executable
+    String fullExeName = HADOOP_HOME_DIR + File.separator + "bin" 
+      + File.separator + executable;
+
+    File exeFile = new File(fullExeName);
+    if (!exeFile.exists()) {
+      throw new IOException("Could not locate executable " + fullExeName
+        + " in the Hadoop binaries.");
+    }
+
+    return exeFile.getCanonicalPath();
+  }
+
   /** Set to true on Windows platforms */
   public static final boolean WINDOWS /* borrowed from Path.WINDOWS */
                 = System.getProperty("os.name").startsWith("Windows");
@@ -170,6 +251,28 @@ abstract public class Shell {
   public static final boolean LINUX
                 = System.getProperty("os.name").startsWith("Linux");
   
+  /** a Windows utility to emulate Unix commands */
+  public static final String WINUTILS = getWinUtilsPath();
+
+  public static final String getWinUtilsPath() {
+    String winUtilsPath = null;
+
+    try {
+      if (WINDOWS) {
+        winUtilsPath = getQualifiedBinPath("winutils.exe");
+      }
+    } catch (IOException ioe) {
+       LOG.error("Failed to locate the winutils binary in the hadoop binary path",
+         ioe);
+    }
+
+    return winUtilsPath;
+  }
+
+  /** Token separator regex used to parse Shell tool outputs */
+  public static final String TOKEN_SEPARATOR_REGEX
+                = WINDOWS ? "[|\n\r]" : "[ \t\n\r\f]";
+
   public static final boolean isSetsidAvailable = isSetsidSupported();
   private static boolean isSetsidSupported() {
     if (WINDOWS) {
