@@ -280,6 +280,9 @@ Trunk (Unreleased)
     HDFS-4310. fix test org.apache.hadoop.hdfs.server.datanode.
     TestStartSecureDataNode (Ivan A. Veselovsky via atm)
 
+    HDFS-4274. BlockPoolSliceScanner does not close verification log during
+    shutdown. (Chris Nauroth via suresh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
