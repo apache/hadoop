@@ -283,6 +283,9 @@ Trunk (Unreleased)
     HDFS-4274. BlockPoolSliceScanner does not close verification log during
     shutdown. (Chris Nauroth via suresh)
 
+    HDFS-4275. MiniDFSCluster-based tests fail on Windows due to failure
+    to delete test namenode directory. (Chris Nauroth via suresh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
