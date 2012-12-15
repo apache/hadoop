@@ -64,3 +64,5 @@ branch-trunk-win changes - unreleased
   suresh)
 
   HADOOP-9144. Fix findbugs warnings. (Chris Nauroth via suresh)
+
+  HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong via suresh)
