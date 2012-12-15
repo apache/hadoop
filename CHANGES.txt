@@ -142,6 +142,8 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-9051 Fix ant clean/test with circular symlinks in build dir. (llu)
+
     MAPREDUCE-4396. Port support private distributed cache to 
     LocalJobRunner from branch-1-win. (Yu Gao via eyang)
 
