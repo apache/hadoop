@@ -62,3 +62,5 @@ branch-trunk-win changes - unreleased
 
   HADOOP-9056. Build native library on Windows. (Chuan Liu, Arpit Agarwal via
   suresh)
+
+  HADOOP-9144. Fix findbugs warnings. (Chris Nauroth via suresh)

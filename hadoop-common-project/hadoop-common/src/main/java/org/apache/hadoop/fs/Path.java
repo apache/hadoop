@@ -202,8 +202,8 @@ public class Path implements Comparable {
     if (WINDOWS &&
         (hasWindowsDrive(path) ||
          (scheme == null) ||
-         (scheme == "") ||
-         (scheme == "file"))) {
+         (scheme.isEmpty()) ||
+         (scheme.equals("file")))) {
       path = StringUtils.replace(path, "\\", "/");
     }
     

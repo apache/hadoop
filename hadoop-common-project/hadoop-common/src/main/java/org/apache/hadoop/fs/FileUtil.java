@@ -694,7 +694,7 @@ public class FileUtil {
     rv = f.setReadable(group.implies(FsAction.READ), false);
     checkReturnValue(rv, f, permission);
     if (group.implies(FsAction.READ) != user.implies(FsAction.READ)) {
-      f.setReadable(user.implies(FsAction.READ), true);
+      rv = f.setReadable(user.implies(FsAction.READ), true);
       checkReturnValue(rv, f, permission);
     }
 
@@ -702,7 +702,7 @@ public class FileUtil {
     rv = f.setWritable(group.implies(FsAction.WRITE), false);
     checkReturnValue(rv, f, permission);
     if (group.implies(FsAction.WRITE) != user.implies(FsAction.WRITE)) {
-      f.setWritable(user.implies(FsAction.WRITE), true);
+      rv = f.setWritable(user.implies(FsAction.WRITE), true);
       checkReturnValue(rv, f, permission);
     }
 
@@ -710,7 +710,7 @@ public class FileUtil {
     rv = f.setExecutable(group.implies(FsAction.EXECUTE), false);
     checkReturnValue(rv, f, permission);
     if (group.implies(FsAction.EXECUTE) != user.implies(FsAction.EXECUTE)) {
-      f.setExecutable(user.implies(FsAction.EXECUTE), true);
+      rv = f.setExecutable(user.implies(FsAction.EXECUTE), true);
       checkReturnValue(rv, f, permission);
     }
   }
