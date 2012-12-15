@@ -71,6 +71,9 @@ Trunk (Unreleased)
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
 
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
+
   BUG FIXES
 
     MAPREDUCE-4356. [Rumen] Provide access to the method
