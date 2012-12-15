@@ -97,6 +97,7 @@ public class TestBlockRecovery {
     MiniDFSCluster.getBaseDirectory() + "data";
   private DataNode dn;
   private Configuration conf;
+  private boolean tearDownDone;
   private final static long RECOVERY_ID = 3000L;
   private final static String CLUSTER_ID = "testClusterID";
   private final static String POOL_ID = "BP-TEST";
@@ -121,6 +122,7 @@ public class TestBlockRecovery {
    */
   @Before
   public void startUp() throws IOException {
+    tearDownDone = false;
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, DATA_DIR);
     conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
@@ -177,7 +179,7 @@ public class TestBlockRecovery {
    */
   @After
   public void tearDown() throws IOException {
-    if (dn != null) {
+    if (!tearDownDone && dn != null) {
       try {
         dn.shutdown();
       } catch(Exception e) {
@@ -188,6 +190,7 @@ public class TestBlockRecovery {
           Assert.assertTrue(
               "Cannot delete data-node dirs", FileUtil.fullyDelete(dir));
       }
+      tearDownDone = true;
     }
   }
 

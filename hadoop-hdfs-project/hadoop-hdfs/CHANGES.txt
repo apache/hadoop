@@ -277,6 +277,14 @@ Trunk (Unreleased)
     HADOOP-8957 HDFS tests for AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
 
+    HDFS-4310. fix test org.apache.hadoop.hdfs.server.datanode.
+    TestStartSecureDataNode (Ivan A. Veselovsky via atm)
+
+    HDFS-4274. BlockPoolSliceScanner does not close verification log during
+    shutdown. (Chris Nauroth via suresh)
+
+    HDFS-4275. MiniDFSCluster-based tests fail on Windows due to failure
+    to delete test namenode directory. (Chris Nauroth via suresh)
 
 Release 2.0.3-alpha - Unreleased 
 
@@ -607,6 +615,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-2264. NamenodeProtocol has the wrong value for clientPrincipal in
     KerberosInfo annotation. (atm)
+
+    HDFS-4307. SocketCache should use monotonic time. (Colin Patrick McCabe
+    via atm)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 

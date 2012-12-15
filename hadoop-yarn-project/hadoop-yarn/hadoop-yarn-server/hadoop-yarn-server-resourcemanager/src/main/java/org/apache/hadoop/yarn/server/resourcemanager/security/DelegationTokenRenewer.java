@@ -301,13 +301,18 @@ public class DelegationTokenRenewer extends AbstractService {
    */
   private class RenewalTimerTask extends TimerTask {
     private DelegationTokenToRenew dttr;
+    private boolean cancelled = false;
     
     RenewalTimerTask(DelegationTokenToRenew t) {  
       dttr = t;  
     }
     
     @Override
-    public void run() {
+    public synchronized void run() {
+      if (cancelled) {
+        return;
+      }
+
       Token<?> token = dttr.token;
       try {
         // need to use doAs so that http can find the kerberos tgt
@@ -330,6 +335,12 @@ public class DelegationTokenRenewer extends AbstractService {
         LOG.error("Exception renewing token" + token + ". Not rescheduled", e);
         removeFailedDelegationToken(dttr);
       }
+    }
+
+    @Override
+    public synchronized boolean cancel() {
+      cancelled = true;
+      return super.cancel();
     }
   }
   
