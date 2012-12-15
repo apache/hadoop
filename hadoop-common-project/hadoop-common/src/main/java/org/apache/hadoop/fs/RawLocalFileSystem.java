@@ -36,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -592,7 +593,23 @@ public class RawLocalFileSystem extends FileSystem {
    * Use the command chmod to set permission.
    */
   @Override
-  public void setPermission(Path p, FsPermission permission) throws IOException {
-    FileUtil.setPermission(pathToFile(p), permission);
+  public void setPermission(Path p, FsPermission permission)
+    throws IOException {
+    if (NativeIO.isAvailable()) {
+      NativeIO.POSIX.chmod(pathToFile(p).getCanonicalPath(),
+                     permission.toShort());
+    } else {
+      execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
+          String.format("%05o", permission.toShort()));
+    }
   }
+
+  private static String execCommand(File f, String... cmd) throws IOException {
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = FileUtil.makeShellPath(f, true);
+    String output = Shell.execCommand(args);
+    return output;
+  }
+
 }

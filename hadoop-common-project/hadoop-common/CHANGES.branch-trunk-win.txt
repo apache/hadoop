@@ -69,3 +69,6 @@ branch-trunk-win changes - unreleased
 
   HADOOP-9081. Add TestWinUtils. (Chuan Liu, Ivan Mitic, Chris Nauroth, 
   and Bikas Saha via suresh)
+
+  HADOOP-9146. Fix sticky bit regression on branch-trunk-win.
+  (Chris Nauroth via suresh)
