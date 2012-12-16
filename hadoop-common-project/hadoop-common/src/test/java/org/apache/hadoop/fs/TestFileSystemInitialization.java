@@ -15,16 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.task.reduce;
+package org.apache.hadoop.fs;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 
-/**
- * An interface for reporting exceptions to other threads
- */
-@InterfaceAudience.LimitedPrivate({"MapReduce"})
-@InterfaceStability.Unstable
-public interface ExceptionReporter {
-  void reportException(Throwable t);
+import java.io.IOException;
+import java.net.URL;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class TestFileSystemInitialization {
+
+ /**
+   * Check if FileSystem can be properly initialized if URLStreamHandlerFactory
+   * is registered.
+   */
+  @Test
+  public void testInitializationWithRegisteredStreamFactory() {
+    Configuration conf = new Configuration();
+    URL.setURLStreamHandlerFactory(new FsUrlStreamHandlerFactory(conf));
+    try {
+      FileSystem.getFileSystemClass("file", conf);
+    }
+    catch (IOException ok) {
+      // we might get an exception but this not related to infinite loop problem
+      assertFalse(false);
+    }
+  }
 }

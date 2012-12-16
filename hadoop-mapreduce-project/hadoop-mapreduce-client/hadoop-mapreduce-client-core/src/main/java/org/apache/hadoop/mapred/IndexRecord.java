@@ -15,16 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.task.reduce;
+package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/**
- * An interface for reporting exceptions to other threads
- */
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
-public interface ExceptionReporter {
-  void reportException(Throwable t);
+public class IndexRecord {
+  public long startOffset;
+  public long rawLength;
+  public long partLength;
+
+  public IndexRecord() { }
+
+  public IndexRecord(long startOffset, long rawLength, long partLength) {
+    this.startOffset = startOffset;
+    this.rawLength = rawLength;
+    this.partLength = partLength;
+  }
 }
