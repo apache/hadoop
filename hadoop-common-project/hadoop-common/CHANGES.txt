@@ -6,6 +6,9 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
     HADOOP-8597. Permit FsShell's text command to read Avro files.
     (Ivan Vladimirov Ivanov via cutting)
 
@@ -107,6 +110,9 @@ Release 2.0.3-alpha - Unreleased
     (Colin McCabe via eli)
 
   BUG FIXES
+
+    HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
+    FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
     HADOOP-8418. Update UGI Principal classes name for running with
     IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
