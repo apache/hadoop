@@ -6,6 +6,9 @@ Release 1.2.0 - unreleased
 
   NEW FEATURES
 
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
     HADOOP-8023. Add unset() method to Configuration (tucu)
 
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
