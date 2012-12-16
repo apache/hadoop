@@ -524,9 +524,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
               DFSUtil.getInvalidateWorkPctPerIteration(conf);
 
     this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
-    this.clusterMap = (NetworkTopology) ReflectionUtils.newInstance(
-        conf.getClass("net.topology.impl", NetworkTopology.class,
-            NetworkTopology.class), conf);
+    this.clusterMap = NetworkTopology.getInstance(conf);
 
     this.maxCorruptFilesReturned = conf.getInt(
         DFSConfigKeys.DFS_MAX_CORRUPT_FILES_RETURNED_KEY,
@@ -3863,7 +3861,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     // Is the block being reported the last block of an underconstruction file?
     boolean blockUnderConstruction = false;
     if (fileINode.isUnderConstruction()) {
-      INodeFileUnderConstruction cons = (INodeFileUnderConstruction) fileINode;
       Block last = fileINode.getLastBlock();
       if (last == null) {
         // This should never happen, but better to handle it properly than to throw

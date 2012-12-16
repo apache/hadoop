@@ -27,6 +27,7 @@ import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -69,13 +70,12 @@ public class MiniDFSCluster {
   }
 
   private Configuration conf;
-  private NameNode nameNode;
-  private int numDataNodes;
-  private ArrayList<DataNodeProperties> dataNodes = 
+  protected NameNode nameNode;
+  protected int numDataNodes;
+  protected List<DataNodeProperties> dataNodes = 
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
-  private File data_dir;
-  
+  protected File data_dir;
   
   /**
    * This null constructor is used only when wishing to start a data node cluster
@@ -438,8 +438,6 @@ public class MiniDFSCluster {
     this.numDataNodes += numDataNodes;
     waitActive();
   }
-  
-  
   
   /**
    * Modify the config and start up the DataNodes.  The info port for

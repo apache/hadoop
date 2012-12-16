@@ -51,6 +51,10 @@ Release 1.2.0 - unreleased
     HADOOP-7096. Allow setting of end-of-record delimiter for TextInputFormat
     (Ahmed Radwan, backported by suresh)
 
+    HDFS-3942. Backport HDFS-3495 and HDFS-4234: Update Balancer to support new
+    NetworkTopology with NodeGroup and use generic code for choosing datanode
+    in Balancer.  (Junping Du via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)
