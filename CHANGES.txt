@@ -6,6 +6,9 @@ Release 1.1.2 - 2012.12.07
 
   NEW FEATURES
 
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
   IMPROVEMENTS
 
     HDFS-4252. Improve confusing log message that prints exception when editlog 
