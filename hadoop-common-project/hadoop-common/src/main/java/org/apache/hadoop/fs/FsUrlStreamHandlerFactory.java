@@ -56,6 +56,12 @@ public class FsUrlStreamHandlerFactory implements
 
   public FsUrlStreamHandlerFactory(Configuration conf) {
     this.conf = new Configuration(conf);
+    // force init of FileSystem code to avoid HADOOP-9041
+    try {
+      FileSystem.getFileSystemClass("file", conf);
+    } catch (IOException io) {
+      throw new RuntimeException(io);
+    }
     this.handler = new FsUrlStreamHandler(this.conf);
   }
 
