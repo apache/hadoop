@@ -484,9 +484,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
     
-    this.clusterMap = (NetworkTopology) ReflectionUtils.newInstance(
-        conf.getClass("net.topology.impl", NetworkTopology.class,
-            NetworkTopology.class), conf);
+    this.clusterMap = NetworkTopology.getInstance(conf);
 
     this.replicator = BlockPlacementPolicy.getInstance(conf, this, clusterMap);
     
@@ -3598,7 +3596,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     // Is the block being reported the last block of an underconstruction file?
     boolean blockUnderConstruction = false;
     if (fileINode.isUnderConstruction()) {
-      INodeFileUnderConstruction cons = (INodeFileUnderConstruction) fileINode;
       Block last = fileINode.getLastBlock();
       if (last == null) {
         // This should never happen, but better to handle it properly than to throw

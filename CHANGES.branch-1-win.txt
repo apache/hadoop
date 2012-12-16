@@ -295,3 +295,7 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-7096. Allow setting of end-of-record delimiter for TextInputFormat
     (Ahmed Radwan, backported by suresh)
+
+    HDFS-3942. Backport HDFS-3495 and HDFS-4234: Update Balancer to support new
+    NetworkTopology with NodeGroup and use generic code for choosing datanode
+    in Balancer.  (Junping Du via szetszwo)
