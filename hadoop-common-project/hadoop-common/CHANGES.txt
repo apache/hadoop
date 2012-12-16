@@ -19,6 +19,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
     not covered (Eric Charles via bobby)
 
@@ -142,6 +145,9 @@ Trunk (Unreleased)
     (suresh)
 
   BUG FIXES
+
+    HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
+    FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
     HADOOP-8418. Update UGI Principal classes name for running with
     IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
