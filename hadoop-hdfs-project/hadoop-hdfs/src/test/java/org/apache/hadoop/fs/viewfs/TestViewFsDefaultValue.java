@@ -81,7 +81,7 @@ public class TestViewFsDefaultValue {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(DFS_REPLICATION_DEFAULT + 1).build();
     cluster.waitClusterUp();
     fHdfs = cluster.getFileSystem();
-    new FileSystemTestHelper(true).createFile(fHdfs, testFileName);
+    FileSystemTestHelper.createFile(fHdfs, testFileName);
     Configuration conf = ViewFileSystemTestSetup.createConfig();
     ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri().toString() +
       "/tmp"));

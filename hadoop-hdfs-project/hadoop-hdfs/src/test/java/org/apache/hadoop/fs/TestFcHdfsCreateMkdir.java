@@ -37,11 +37,7 @@ public class TestFcHdfsCreateMkdir extends
   
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
-
-  public TestFcHdfsCreateMkdir() {
-    super(new FileContextTestHelper(true));
-  }
-
+  
   @BeforeClass
   public static void clusterSetupAtBegining()
                                     throws IOException, LoginException, URISyntaxException  {

@@ -25,7 +25,6 @@ import java.util.EnumSet;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 
 /**
@@ -39,16 +38,9 @@ public final class FileContextTestHelper {
   private static final int DEFAULT_NUM_BLOCKS = 2;
   private static String absTestRootDir = null;
 
-  private final boolean stripDriveSpec;
-
-  public FileContextTestHelper() {
-    this(false);
-  }
+  /** Hidden constructor */
+  private FileContextTestHelper() {}
   
-  public FileContextTestHelper(boolean stripDriveSpec) {
-    this.stripDriveSpec = stripDriveSpec;
-  }
-
   public static int getDefaultBlockSize() {
     return DEFAULT_BLOCK_SIZE;
   }
@@ -60,40 +52,38 @@ public final class FileContextTestHelper {
     }
     return data;
   }
-
-  public Path getTestRootPath(FileContext fc) {
-    return fc.makeQualified(new Path(stripDriveSpec(TEST_ROOT_DIR,
-      stripDriveSpec)));
+  
+  public static Path getTestRootPath(FileContext fc) {
+    return fc.makeQualified(new Path(TEST_ROOT_DIR));
   }
 
-  public Path getTestRootPath(FileContext fc, String pathString) {
-    return fc.makeQualified(new Path(
-      stripDriveSpec(TEST_ROOT_DIR, stripDriveSpec), pathString));
+  public static Path getTestRootPath(FileContext fc, String pathString) {
+    return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
   }
   
   
   // the getAbsolutexxx method is needed because the root test dir
   // can be messed up by changing the working dir.
 
-  public String getAbsoluteTestRootDir(FileContext fc)
+  public static String getAbsoluteTestRootDir(FileContext fc)
       throws IOException {
     if (absTestRootDir == null) {
-      String testRootDir = stripDriveSpec(TEST_ROOT_DIR, stripDriveSpec);
-      if (new Path(testRootDir).isAbsolute()) {
-        absTestRootDir = testRootDir;
+      if (new Path(TEST_ROOT_DIR).isAbsolute()) {
+        absTestRootDir = TEST_ROOT_DIR;
       } else {
         absTestRootDir = fc.getWorkingDirectory().toString() + "/"
-            + testRootDir;
+            + TEST_ROOT_DIR;
       }
     }
     return absTestRootDir;
   }
   
-  public Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
+  public static Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
     return fc.makeQualified(new Path(getAbsoluteTestRootDir(fc)));
   }
 
-  public Path getDefaultWorkingDirectory(FileContext fc) throws IOException {
+  public static Path getDefaultWorkingDirectory(FileContext fc)
+      throws IOException {
     return getTestRootPath(fc, "/user/" + System.getProperty("user.name"))
         .makeQualified(fc.getDefaultFileSystem().getUri(),
             fc.getWorkingDirectory());
@@ -126,12 +116,12 @@ public final class FileContextTestHelper {
     return createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.createParent());
   }
 
-  public long createFile(FileContext fc, String name) throws IOException {
+  public static long createFile(FileContext fc, String name) throws IOException {
     Path path = getTestRootPath(fc, name);
     return createFile(fc, path);
   }
   
-  public long createFileNonRecursive(FileContext fc, String name)
+  public static long createFileNonRecursive(FileContext fc, String name)
   throws IOException {
     Path path = getTestRootPath(fc, name);
     return createFileNonRecursive(fc, path);
@@ -200,12 +190,14 @@ public final class FileContextTestHelper {
     return buffer;
   }
 
-  public FileStatus containsPath(FileContext fc, Path path, FileStatus[] dirList)
+  public static FileStatus containsPath(FileContext fc, Path path,
+      FileStatus[] dirList)
     throws IOException {
     return containsPath(getTestRootPath(fc, path.toString()), dirList);
   }
   
-  public FileStatus containsPath(Path path, FileStatus[] dirList)
+  public static FileStatus containsPath(Path path,
+      FileStatus[] dirList)
     throws IOException {
     for(int i = 0; i < dirList.length; i ++) { 
       if (path.equals(dirList[i].getPath()))
@@ -214,7 +206,7 @@ public final class FileContextTestHelper {
     return null;
   }
   
-  public FileStatus containsPath(FileContext fc, String path,
+  public static FileStatus containsPath(FileContext fc, String path,
       FileStatus[] dirList)
      throws IOException {
     return containsPath(fc, new Path(path), dirList);
@@ -248,16 +240,5 @@ public final class FileContextTestHelper {
       Assert.assertTrue(s.isSymlink());
     }
     Assert.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
-  }
-
-  private static String stripDriveSpec(String pathString, boolean strip) {
-    if (strip && Shell.WINDOWS && pathString.length() >= 2 &&
-        Character.toUpperCase(pathString.charAt(0)) >= 'A' &&
-        Character.toUpperCase(pathString.charAt(0)) <= 'Z' &&
-        pathString.charAt(1) == ':') {
-
-      return pathString.substring(2);
-    }
-    return pathString;
   }
 }

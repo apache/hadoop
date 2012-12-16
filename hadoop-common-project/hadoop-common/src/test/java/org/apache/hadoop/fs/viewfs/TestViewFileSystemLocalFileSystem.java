@@ -51,7 +51,7 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
   @Override
   @After
   public void tearDown() throws Exception {
-    fsTarget.delete(getTestRootPath(fsTarget), true);
+    fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
     super.tearDown();
   }
 }

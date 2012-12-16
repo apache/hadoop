@@ -66,10 +66,6 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
     }
   }
 
-  public TestViewFileSystemAtHdfsRoot() {
-    super(new FileSystemTestHelper(true));
-  }
-
   @Override
   @Before
   public void setUp() throws Exception {

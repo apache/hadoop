@@ -56,10 +56,6 @@ public class TestFcHdfsPermission extends FileContextPermissionBase {
     cluster.shutdown();   
   }
   
-  public TestFcHdfsPermission() {
-    super(new FileContextTestHelper(true));
-  }
-
   @Override
   @Before
   public void setUp() throws Exception {

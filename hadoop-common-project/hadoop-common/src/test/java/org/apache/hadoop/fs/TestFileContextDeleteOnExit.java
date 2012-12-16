@@ -36,9 +36,6 @@ public class TestFileContextDeleteOnExit {
   private static int numBlocks = 2;
   
   private FileContext fc;
-
-  private final FileContextTestHelper fileContextTestHelper =
-    new FileContextTestHelper();
   
   @Before
   public void setup() throws IOException {
@@ -88,13 +85,5 @@ public class TestFileContextDeleteOnExit {
     Assert.assertFalse(exists(fc, file1));
     Assert.assertFalse(exists(fc, file2));
     Assert.assertFalse(exists(fc, dir));
-  }
-
-  private Path getTestRootPath(FileContext fc) {
-    return this.fileContextTestHelper.getTestRootPath(fc);
-  }
-
-  private Path getTestRootPath(FileContext fc, String pathString) {
-    return this.fileContextTestHelper.getTestRootPath(fc, pathString);
   }
 }

@@ -69,15 +69,6 @@ public class ViewFileSystemBaseTest {
   Path targetTestRoot;
   Configuration conf;
 
-  private final FileSystemTestHelper fileSystemTestHelper;
-
-  public ViewFileSystemBaseTest() {
-    this(new FileSystemTestHelper());
-  }
-
-  public ViewFileSystemBaseTest(FileSystemTestHelper fileSystemTestHelper) {
-    this.fileSystemTestHelper = fileSystemTestHelper;
-  }
 
   @Before
   public void setUp() throws Exception {
@@ -103,11 +94,11 @@ public class ViewFileSystemBaseTest {
 
   @After
   public void tearDown() throws Exception {
-    fsTarget.delete(getTestRootPath(fsTarget), true);
+    fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
   }
   
   void initializeTargetTestRoot() throws IOException {
-    targetTestRoot = getAbsoluteTestRootPath(fsTarget);
+    targetTestRoot = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
     fsTarget.delete(targetTestRoot, true);
     
@@ -208,7 +199,7 @@ public class ViewFileSystemBaseTest {
   @Test
   public void testOperationsThroughMountLinks() throws IOException {
     // Create file 
-    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    FileSystemTestHelper.createFile(fsView, "/user/foo");
     Assert.assertTrue("Created file should be type file",
         fsView.isFile(new Path("/user/foo")));
     Assert.assertTrue("Target of created file should be type file",
@@ -223,7 +214,7 @@ public class ViewFileSystemBaseTest {
         fsTarget.exists(new Path(targetTestRoot,"user/foo")));
     
     // Create file with a 2 component dirs
-    fileSystemTestHelper.createFile(fsView, "/internalDir/linkToDir2/foo");
+    FileSystemTestHelper.createFile(fsView, "/internalDir/linkToDir2/foo");
     Assert.assertTrue("Created file should be type file",
         fsView.isFile(new Path("/internalDir/linkToDir2/foo")));
     Assert.assertTrue("Target of created file should be type file",
@@ -239,15 +230,14 @@ public class ViewFileSystemBaseTest {
     
     
     // Create file with a 3 component dirs
-    fileSystemTestHelper.createFile(fsView,
-      "/internalDir/internalDir2/linkToDir3/foo");
+    FileSystemTestHelper.createFile(fsView, "/internalDir/internalDir2/linkToDir3/foo");
     Assert.assertTrue("Created file should be type file",
         fsView.isFile(new Path("/internalDir/internalDir2/linkToDir3/foo")));
     Assert.assertTrue("Target of created file should be type file",
         fsTarget.isFile(new Path(targetTestRoot,"dir3/foo")));
     
     // Recursive Create file with missing dirs
-    fileSystemTestHelper.createFile(fsView,
+    FileSystemTestHelper.createFile(fsView,
         "/internalDir/linkToDir2/missingDir/miss2/foo");
     Assert.assertTrue("Created file should be type file",
         fsView.isFile(new Path("/internalDir/linkToDir2/missingDir/miss2/foo")));
@@ -266,13 +256,14 @@ public class ViewFileSystemBaseTest {
     
       
     // mkdir
-    fsView.mkdirs(getTestRootPath(fsView, "/user/dirX"));
+    fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView, "/user/dirX"));
     Assert.assertTrue("New dir should be type dir", 
         fsView.isDirectory(new Path("/user/dirX")));
     Assert.assertTrue("Target of new dir should be of type dir",
         fsTarget.isDirectory(new Path(targetTestRoot,"user/dirX")));
     
-    fsView.mkdirs(getTestRootPath(fsView, "/user/dirX/dirY"));
+    fsView.mkdirs(
+        FileSystemTestHelper.getTestRootPath(fsView, "/user/dirX/dirY"));
     Assert.assertTrue("New dir should be type dir", 
         fsView.isDirectory(new Path("/user/dirX/dirY")));
     Assert.assertTrue("Target of new dir should be of type dir",
@@ -294,14 +285,14 @@ public class ViewFileSystemBaseTest {
     Assert.assertFalse(fsTarget.exists(new Path(targetTestRoot,"user/dirX")));
     
     // Rename a file 
-    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    FileSystemTestHelper.createFile(fsView, "/user/foo");
     fsView.rename(new Path("/user/foo"), new Path("/user/fooBar"));
     Assert.assertFalse("Renamed src should not exist", 
         fsView.exists(new Path("/user/foo")));
     Assert.assertFalse("Renamed src should not exist in target",
         fsTarget.exists(new Path(targetTestRoot,"user/foo")));
     Assert.assertTrue("Renamed dest should  exist as file",
-        fsView.isFile(getTestRootPath(fsView, "/user/fooBar")));
+        fsView.isFile(FileSystemTestHelper.getTestRootPath(fsView,"/user/fooBar")));
     Assert.assertTrue("Renamed dest should  exist as file in target",
         fsTarget.isFile(new Path(targetTestRoot,"user/fooBar")));
     
@@ -312,7 +303,7 @@ public class ViewFileSystemBaseTest {
     Assert.assertFalse("Renamed src should not exist in target",
         fsTarget.exists(new Path(targetTestRoot,"user/dirFoo")));
     Assert.assertTrue("Renamed dest should  exist as dir",
-        fsView.isDirectory(getTestRootPath(fsView, "/user/dirFooBar")));
+        fsView.isDirectory(FileSystemTestHelper.getTestRootPath(fsView,"/user/dirFooBar")));
     Assert.assertTrue("Renamed dest should  exist as dir in target",
         fsTarget.isDirectory(new Path(targetTestRoot,"user/dirFooBar")));
     
@@ -331,12 +322,12 @@ public class ViewFileSystemBaseTest {
   // rename across mount points that point to same target also fail 
   @Test(expected=IOException.class) 
   public void testRenameAcrossMounts1() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    FileSystemTestHelper.createFile(fsView, "/user/foo");
     fsView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
     /* - code if we had wanted this to suceed
     Assert.assertFalse(fSys.exists(new Path("/user/foo")));
     Assert.assertFalse(fSysLocal.exists(new Path(targetTestRoot,"user/foo")));
-    Assert.assertTrue(fSys.isFile(getTestRootPath(fSys, "/user2/fooBarBar")));
+    Assert.assertTrue(fSys.isFile(FileSystemTestHelper.getTestRootPath(fSys,"/user2/fooBarBar")));
     Assert.assertTrue(fSysLocal.isFile(new Path(targetTestRoot,"user/fooBarBar")));
     */
   }
@@ -347,7 +338,7 @@ public class ViewFileSystemBaseTest {
 
   @Test(expected=IOException.class) 
   public void testRenameAcrossMounts2() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    FileSystemTestHelper.createFile(fsView, "/user/foo");
     fsView.rename(new Path("/user/foo"), new Path("/data/fooBar"));
   }
   
@@ -356,7 +347,8 @@ public class ViewFileSystemBaseTest {
   @Test
   public void testGetBlockLocations() throws IOException {
     Path targetFilePath = new Path(targetTestRoot,"data/largeFile");
-    fileSystemTestHelper.createFile(fsTarget,  targetFilePath, 10, 1024);
+    FileSystemTestHelper.createFile(fsTarget, 
+        targetFilePath, 10, 1024);
     Path viewFilePath = new Path("/data/largeFile");
     Assert.assertTrue("Created File should be type File",
         fsView.isFile(viewFilePath));
@@ -402,22 +394,19 @@ public class ViewFileSystemBaseTest {
     FileStatus[] dirPaths = fsView.listStatus(new Path("/"));
     FileStatus fs;
     Assert.assertEquals(getExpectedDirPaths(), dirPaths.length);
-    fs = fileSystemTestHelper.containsPath(fsView, "/user", dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/user", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-    fs = fileSystemTestHelper.containsPath(fsView, "/data", dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/data", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-    fs = fileSystemTestHelper.containsPath(fsView, "/internalDir",
-      dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/internalDir", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isDirectory());
-    fs = fileSystemTestHelper.containsPath(fsView, "/danglingLink",
-      dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/danglingLink", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-    fs = fileSystemTestHelper.containsPath(fsView, "/linkToAFile",
-      dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/linkToAFile", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
       
@@ -427,12 +416,11 @@ public class ViewFileSystemBaseTest {
       dirPaths = fsView.listStatus(new Path("/internalDir"));
       Assert.assertEquals(2, dirPaths.length);
 
-      fs = fileSystemTestHelper.containsPath(fsView, "/internalDir/internalDir2",
-        dirPaths);
+      fs = FileSystemTestHelper.containsPath(fsView, "/internalDir/internalDir2", dirPaths);
         Assert.assertNotNull(fs);
         Assert.assertTrue("A mount should appear as symlink", fs.isDirectory());
-      fs = fileSystemTestHelper.containsPath(fsView, "/internalDir/linkToDir2",
-        dirPaths);
+      fs = FileSystemTestHelper.containsPath(fsView, "/internalDir/linkToDir2",
+          dirPaths);
         Assert.assertNotNull(fs);
         Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
   }
@@ -448,22 +436,22 @@ public class ViewFileSystemBaseTest {
     Assert.assertEquals(0, dirPaths.length);
     
     // add a file
-    long len = fileSystemTestHelper.createFile(fsView, "/data/foo");
+    long len = FileSystemTestHelper.createFile(fsView, "/data/foo");
     dirPaths = fsView.listStatus(new Path("/data"));
     Assert.assertEquals(1, dirPaths.length);
-    fs = fileSystemTestHelper.containsPath(fsView, "/data/foo", dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/data/foo", dirPaths);
     Assert.assertNotNull(fs);
     Assert.assertTrue("Created file shoudl appear as a file", fs.isFile());
     Assert.assertEquals(len, fs.getLen());
     
     // add a dir
-    fsView.mkdirs(getTestRootPath(fsView, "/data/dirX"));
+    fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView, "/data/dirX"));
     dirPaths = fsView.listStatus(new Path("/data"));
     Assert.assertEquals(2, dirPaths.length);
-    fs = fileSystemTestHelper.containsPath(fsView, "/data/foo", dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/data/foo", dirPaths);
     Assert.assertNotNull(fs);
     Assert.assertTrue("Created file shoudl appear as a file", fs.isFile());
-    fs = fileSystemTestHelper.containsPath(fsView, "/data/dirX", dirPaths);
+    fs = FileSystemTestHelper.containsPath(fsView, "/data/dirX", dirPaths);
     Assert.assertNotNull(fs);
     Assert.assertTrue("Created dir should appear as a dir", fs.isDirectory()); 
   }
@@ -516,16 +504,18 @@ public class ViewFileSystemBaseTest {
   
   @Test
   public void testResolvePathThroughMountPoints() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/user/foo");
+    FileSystemTestHelper.createFile(fsView, "/user/foo");
     Assert.assertEquals(new Path(targetTestRoot,"user/foo"),
                           fsView.resolvePath(new Path("/user/foo")));
     
-    fsView.mkdirs(getTestRootPath(fsView, "/user/dirX"));
+    fsView.mkdirs(
+        FileSystemTestHelper.getTestRootPath(fsView, "/user/dirX"));
     Assert.assertEquals(new Path(targetTestRoot,"user/dirX"),
         fsView.resolvePath(new Path("/user/dirX")));
 
     
-    fsView.mkdirs(getTestRootPath(fsView, "/user/dirX/dirY"));
+    fsView.mkdirs(
+        FileSystemTestHelper.getTestRootPath(fsView, "/user/dirX/dirY"));
     Assert.assertEquals(new Path(targetTestRoot,"user/dirX/dirY"),
         fsView.resolvePath(new Path("/user/dirX/dirY")));
   }
@@ -543,7 +533,8 @@ public class ViewFileSystemBaseTest {
 
   @Test(expected=FileNotFoundException.class) 
   public void testResolvePathMissingThroughMountPoints2() throws IOException {
-    fsView.mkdirs(getTestRootPath(fsView, "/user/dirX"));
+    fsView.mkdirs(
+        FileSystemTestHelper.getTestRootPath(fsView, "/user/dirX"));
     fsView.resolvePath(new Path("/user/dirX/nonExisting"));
   }
   
@@ -559,55 +550,57 @@ public class ViewFileSystemBaseTest {
   // Mkdir on existing internal mount table succeed except for /
   @Test(expected=AccessControlException.class) 
   public void testInternalMkdirSlash() throws IOException {
-    fsView.mkdirs(getTestRootPath(fsView, "/"));
+    fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView, "/"));
   }
   
   public void testInternalMkdirExisting1() throws IOException {
     Assert.assertTrue("mkdir of existing dir should succeed", 
-        fsView.mkdirs(getTestRootPath(fsView, "/internalDir")));
+        fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView,
+        "/internalDir")));
   }
 
   public void testInternalMkdirExisting2() throws IOException {
     Assert.assertTrue("mkdir of existing dir should succeed", 
-        fsView.mkdirs(getTestRootPath(fsView, "/internalDir/linkToDir2")));
+        fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView,
+        "/internalDir/linkToDir2")));
   }
   
   // Mkdir for new internal mount table should fail
   @Test(expected=AccessControlException.class) 
   public void testInternalMkdirNew() throws IOException {
-    fsView.mkdirs(getTestRootPath(fsView, "/dirNew"));
+    fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView, "/dirNew"));
   }
   @Test(expected=AccessControlException.class) 
   public void testInternalMkdirNew2() throws IOException {
-    fsView.mkdirs(getTestRootPath(fsView, "/internalDir/dirNew"));
+    fsView.mkdirs(FileSystemTestHelper.getTestRootPath(fsView, "/internalDir/dirNew"));
   }
   
   // Create File on internal mount table should fail
   
   @Test(expected=AccessControlException.class) 
   public void testInternalCreate1() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/foo"); // 1 component
+    FileSystemTestHelper.createFile(fsView, "/foo"); // 1 component
   }
   
   @Test(expected=AccessControlException.class) 
   public void testInternalCreate2() throws IOException {  // 2 component
-    fileSystemTestHelper.createFile(fsView, "/internalDir/foo");
+    FileSystemTestHelper.createFile(fsView, "/internalDir/foo");
   }
   
   @Test(expected=AccessControlException.class) 
   public void testInternalCreateMissingDir() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/missingDir/foo");
+    FileSystemTestHelper.createFile(fsView, "/missingDir/foo");
   }
   
   @Test(expected=AccessControlException.class) 
   public void testInternalCreateMissingDir2() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/missingDir/miss2/foo");
+    FileSystemTestHelper.createFile(fsView, "/missingDir/miss2/foo");
   }
   
   
   @Test(expected=AccessControlException.class) 
   public void testInternalCreateMissingDir3() throws IOException {
-    fileSystemTestHelper.createFile(fsView, "/internalDir/miss2/foo");
+    FileSystemTestHelper.createFile(fsView, "/internalDir/miss2/foo");
   }
   
   // Delete on internal mount table should fail
@@ -668,19 +661,5 @@ public class ViewFileSystemBaseTest {
   @Test(expected=AccessControlException.class) 
   public void testInternalSetOwner() throws IOException {
     fsView.setOwner(new Path("/internalDir"), "foo", "bar");
-  }
-
-  protected Path getAbsoluteTestRootPath(FileSystem fSys) throws IOException {
-    return fileSystemTestHelper.getAbsoluteTestRootPath(fSys);
-  }
-
-  protected Path getTestRootPath(FileSystem fSys) throws IOException {
-    return fileSystemTestHelper.getTestRootPath(fSys);
-  }
-
-  protected Path getTestRootPath(FileSystem fSys, String pathString)
-      throws IOException {
-
-    return fileSystemTestHelper.getTestRootPath(fSys, pathString);
   }
 }

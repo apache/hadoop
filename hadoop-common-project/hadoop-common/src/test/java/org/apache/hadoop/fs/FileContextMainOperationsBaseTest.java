@@ -73,8 +73,6 @@ public abstract class FileContextMainOperationsBaseTest  {
   }
   
   protected static FileContext fc;
-
-  private final FileContextTestHelper fileContextTestHelper;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
@@ -97,16 +95,6 @@ public abstract class FileContextMainOperationsBaseTest  {
   private static byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
-  public FileContextMainOperationsBaseTest() {
-    this(new FileContextTestHelper());
-  }
-  
-  public FileContextMainOperationsBaseTest(
-      FileContextTestHelper fileContextTestHelper) {
-
-    this.fileContextTestHelper = fileContextTestHelper;
-  }
-
   @Before
   public void setUp() throws Exception {
     fc.mkdir(getTestRootPath(fc, "test"), FileContext.DEFAULT_PERM, true);
@@ -1202,12 +1190,4 @@ public abstract class FileContextMainOperationsBaseTest  {
       }
     return false;
  }
-
-  protected Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
-    return fileContextTestHelper.getAbsoluteTestRootPath(fc);
-  }
-
-  protected Path getTestRootPath(FileContext fc, String pathString) {
-    return fileContextTestHelper.getTestRootPath(fc, pathString);
-  }
 }

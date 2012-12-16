@@ -81,17 +81,13 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     cluster.shutdown();   
   }
 
-  public TestViewFileSystemHdfs() {
-    super(new FileSystemTestHelper(true));
-  }
-
   @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs
     fsTarget = fHdfs;
     fsTarget2 = fHdfs2;
-    targetTestRoot2 = getAbsoluteTestRootPath(fsTarget2);
+    targetTestRoot2 = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget2);
     super.setUp();
   }
 

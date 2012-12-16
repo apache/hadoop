@@ -41,9 +41,6 @@ public abstract class FCStatisticsBaseTest {
   
   //fc should be set appropriately by the deriving test.
   protected static FileContext fc = null;
-
-  private final FileContextTestHelper fileContextTestHelper =
-    new FileContextTestHelper();
   
   @Test
   public void testStatistics() throws IOException, URISyntaxException {
@@ -99,9 +96,5 @@ public abstract class FCStatisticsBaseTest {
       SchemeAuthString += uri.getAuthority();
     }
     return URI.create(SchemeAuthString);
-  }
-
-  protected Path getTestRootPath(FileContext fc, String pathString){
-    return fileContextTestHelper.getTestRootPath(fc, pathString);
   }
 }

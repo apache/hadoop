@@ -62,10 +62,6 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     cluster.shutdown();   
   }
 
-  public TestViewFsHdfs() {
-    super(new FileContextTestHelper(true));
-  }
-
   @Override
   @Before
   public void setUp() throws Exception {

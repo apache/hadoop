@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.exists;
+import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -77,10 +78,6 @@ public class TestHDFSFileContextMainOperations extends
     cluster.shutdown();   
   }
   
-  public TestHDFSFileContextMainOperations() {
-    super(new FileContextTestHelper(true));
-  }
-
   @Override
   @Before
   public void setUp() throws Exception {

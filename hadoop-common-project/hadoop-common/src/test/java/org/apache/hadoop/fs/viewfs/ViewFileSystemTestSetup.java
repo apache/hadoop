@@ -50,9 +50,6 @@ public class ViewFileSystemTestSetup {
   
   static public String ViewFSTestDir = "/testDir";
 
-  private static final FileSystemTestHelper FILE_SYSTEM_TEST_HELPER =
-    new FileSystemTestHelper();
-
   /**
    * 
    * @param fsTarget - the target fs of the view fs.
@@ -63,14 +60,14 @@ public class ViewFileSystemTestSetup {
     /**
      * create the test root on local_fs - the  mount table will point here
      */
-    Path targetOfTests = FILE_SYSTEM_TEST_HELPER.getTestRootPath(fsTarget);
+    Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
     fsTarget.delete(targetOfTests, true);
     fsTarget.mkdirs(targetOfTests);
 
 
     // Set up viewfs link for test dir as described above
-    String testDir = FILE_SYSTEM_TEST_HELPER.getTestRootPath(fsTarget).toUri()
+    String testDir = FileSystemTestHelper.getTestRootPath(fsTarget).toUri()
         .getPath();
     linkUpFirstComponents(conf, testDir, fsTarget, "test dir");
     
@@ -96,7 +93,7 @@ public class ViewFileSystemTestSetup {
    * delete the test directory in the target  fs
    */
   static public void tearDown(FileSystem fsTarget) throws Exception {
-    Path targetOfTests = FILE_SYSTEM_TEST_HELPER.getTestRootPath(fsTarget);
+    Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
     fsTarget.delete(targetOfTests, true);
   }
   

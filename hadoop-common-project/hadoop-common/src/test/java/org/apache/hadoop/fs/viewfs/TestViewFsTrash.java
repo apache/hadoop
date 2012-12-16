@@ -36,9 +36,6 @@ public class TestViewFsTrash {
   FileSystem fsView;
   Configuration conf;
 
-  private final FileSystemTestHelper fileSystemTestHelper =
-    new FileSystemTestHelper();
-
   static class TestLFS extends LocalFileSystem {
     Path home;
     TestLFS() throws IOException {
@@ -57,8 +54,8 @@ public class TestViewFsTrash {
   @Before
   public void setUp() throws Exception {
     fsTarget = FileSystem.getLocal(new Configuration());
-    fsTarget.mkdirs(new Path(fileSystemTestHelper.getTestRootPath(fsTarget),
-      "dir1"));
+    fsTarget.mkdirs(new Path(FileSystemTestHelper.
+        getTestRootPath(fsTarget), "dir1"));
     conf = ViewFileSystemTestSetup.createConfig();
     fsView = ViewFileSystemTestSetup.setupForViewFileSystem(conf, fsTarget);
     conf.set("fs.defaultFS", FsConstants.VIEWFS_URI.toString());
@@ -73,7 +70,7 @@ public class TestViewFsTrash {
   
   @Test
   public void testTrash() throws IOException {
-    TestTrash.trashShell(conf, fileSystemTestHelper.getTestRootPath(fsView),
+    TestTrash.trashShell(conf, FileSystemTestHelper.getTestRootPath(fsView),
         fsTarget, new Path(fsTarget.getHomeDirectory(), ".Trash/Current"));
   }
   

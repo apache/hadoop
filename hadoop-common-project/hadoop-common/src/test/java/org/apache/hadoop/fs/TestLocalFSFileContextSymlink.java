@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.Before;
