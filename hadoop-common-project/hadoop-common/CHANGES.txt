@@ -11,6 +11,9 @@ Trunk (Unreleased)
 
   NEW FEATURES
     
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
     HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
     szetszwo)
 
@@ -18,9 +21,6 @@ Trunk (Unreleased)
     of NetworkTopology.  (Junping Du via szetszwo)
 
   IMPROVEMENTS
-
-    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
-    hadoop client processes. (Yu Gao via llu)
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
     not covered (Eric Charles via bobby)
