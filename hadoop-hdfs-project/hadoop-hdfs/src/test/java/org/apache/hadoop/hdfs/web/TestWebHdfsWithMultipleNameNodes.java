@@ -56,7 +56,6 @@ public class TestWebHdfsWithMultipleNameNodes {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.OFF);
-    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
   }
 
   private static final Configuration conf = new HdfsConfiguration();
