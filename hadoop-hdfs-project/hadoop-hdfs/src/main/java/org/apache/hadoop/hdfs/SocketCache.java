@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * A cache of input stream sockets to Data Node.
@@ -54,7 +55,7 @@ class SocketCache {
     public SocketProp(Socket s)
     {
       this.s=s;
-      this.createTime = System.currentTimeMillis();
+      this.createTime = Time.monotonicNow();
     }
 
     public long getCreateTime() {
@@ -184,7 +185,7 @@ class SocketCache {
 
       // if oldest socket expired, remove it
       if (entry == null || 
-        System.currentTimeMillis() - entry.getValue().getCreateTime() < 
+        Time.monotonicNow() - entry.getValue().getCreateTime() < 
         expiryPeriod) {
         break;
       }
@@ -214,13 +215,13 @@ class SocketCache {
    * older than expiryPeriod minutes
    */
   private void run() throws InterruptedException {
-    for(long lastExpiryTime = System.currentTimeMillis();
+    for(long lastExpiryTime = Time.monotonicNow();
         !Thread.interrupted();
         Thread.sleep(expiryPeriod)) {
-      final long elapsed = System.currentTimeMillis() - lastExpiryTime;
+      final long elapsed = Time.monotonicNow() - lastExpiryTime;
       if (elapsed >= expiryPeriod) {
         evictExpired(expiryPeriod);
-        lastExpiryTime = System.currentTimeMillis();
+        lastExpiryTime = Time.monotonicNow();
       }
     }
     clear();

@@ -26,6 +26,9 @@ Release 0.23.6 - UNRELEASED
     HDFS-4248. Renaming directories may incorrectly remove the paths in leases
     under the tree.  (daryn via szetszwo)
 
+    HDFS-4307. SocketCache should use monotonic time (Colin Patrick McCabe
+    via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
