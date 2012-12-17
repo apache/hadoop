@@ -610,7 +610,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         LOG.warn("Unknown job " + jobId + " being deleted.");
       } else {
         synchronized (rjob) {
-          rjob.tasks.remove(tip);
+          // Only remove the TIP if it is identical to the one that is finished
+          // Job recovery means that it is possible to have two task attempts
+          // with the same ID, which is used for TIP equals/hashcode.
+          for (TaskInProgress t : rjob.tasks) {
+            if (tip == t) {
+              rjob.tasks.remove(tip);
+              break;
+            }
+          }
         }
       }
     }
