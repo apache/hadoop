@@ -29,6 +29,9 @@ Release 0.23.6 - UNRELEASED
     HDFS-4307. SocketCache should use monotonic time (Colin Patrick McCabe
     via tgraves)
 
+    HDFS-4315. DNs with multiple BPs can have BPOfferServices fail to start
+    due to unsynchronized map access. (atm via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

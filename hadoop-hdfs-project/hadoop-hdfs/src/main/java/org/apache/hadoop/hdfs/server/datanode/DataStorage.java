@@ -26,6 +26,7 @@ import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -84,7 +85,7 @@ public class DataStorage extends Storage {
   
   // BlockPoolStorage is map of <Block pool Id, BlockPoolStorage>
   private Map<String, BlockPoolSliceStorage> bpStorageMap
-    = new HashMap<String, BlockPoolSliceStorage>();
+      = Collections.synchronizedMap(new HashMap<String, BlockPoolSliceStorage>());
 
 
   DataStorage() {
