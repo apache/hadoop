@@ -17,11 +17,13 @@
  */
 
 /**
- * These are the messages used by Hadoop RPC to marshal the
- * request and response in the RPC layer.
+ * These are the messages used by Hadoop RPC for the Rpc Engine Protocol Buffer
+ * to marshal the request and response in the RPC layer.
+ * The messages are sent in addition to the normal RPC header as 
+ * defined in RpcHeader.proto
  */
 option java_package = "org.apache.hadoop.ipc.protobuf";
-option java_outer_classname = "HadoopRpcProtos";
+option java_outer_classname = "ProtobufRpcEngineProtos";
 option java_generate_equals_and_hash = true;
 package hadoop.common;
 
@@ -29,10 +31,11 @@ package hadoop.common;
  * This message is used for Protobuf Rpc Engine.
  * The message is used to marshal a Rpc-request
  * from RPC client to the RPC server.
- * The Response to the Rpc call (including errors) are handled
- * as part of the standard Rpc response. 
+ *
+ * No special header is needed for the Rpc Response for Protobuf Rpc Engine.
+ * The normal RPC response header (see RpcHeader.proto) are sufficient. 
  */
-message HadoopRpcRequestProto {
+message RequestProto {
   /** Name of the RPC method */
   required string methodName = 1;
 

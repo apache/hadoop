@@ -39,7 +39,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
-import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcRequestProto;
+import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestProto;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -128,10 +128,10 @@ public class ProtobufRpcEngine implements RpcEngine {
           .getProtocolVersion(protocol);
     }
 
-    private HadoopRpcRequestProto constructRpcRequest(Method method,
+    private RequestProto constructRpcRequest(Method method,
         Object[] params) throws ServiceException {
-      HadoopRpcRequestProto rpcRequest;
-      HadoopRpcRequestProto.Builder builder = HadoopRpcRequestProto
+      RequestProto rpcRequest;
+      RequestProto.Builder builder = RequestProto
           .newBuilder();
       builder.setMethodName(method.getName());
 
@@ -190,7 +190,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         startTime = Time.now();
       }
 
-      HadoopRpcRequestProto rpcRequest = constructRpcRequest(method, args);
+      RequestProto rpcRequest = constructRpcRequest(method, args);
       RpcResponseWritable val = null;
       
       if (LOG.isTraceEnabled()) {
@@ -271,13 +271,13 @@ public class ProtobufRpcEngine implements RpcEngine {
    * Writable Wrapper for Protocol Buffer Requests
    */
   private static class RpcRequestWritable implements Writable {
-    HadoopRpcRequestProto message;
+    RequestProto message;
 
     @SuppressWarnings("unused")
     public RpcRequestWritable() {
     }
 
-    RpcRequestWritable(HadoopRpcRequestProto message) {
+    RpcRequestWritable(RequestProto message) {
       this.message = message;
     }
 
@@ -292,7 +292,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       int length = ProtoUtil.readRawVarint32(in);
       byte[] bytes = new byte[length];
       in.readFully(bytes);
-      message = HadoopRpcRequestProto.parseFrom(bytes);
+      message = RequestProto.parseFrom(bytes);
     }
     
     @Override
@@ -426,7 +426,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       public Writable call(RPC.Server server, String connectionProtocolName,
           Writable writableRequest, long receiveTime) throws Exception {
         RpcRequestWritable request = (RpcRequestWritable) writableRequest;
-        HadoopRpcRequestProto rpcRequest = request.message;
+        RequestProto rpcRequest = request.message;
         String methodName = rpcRequest.getMethodName();
         
         
