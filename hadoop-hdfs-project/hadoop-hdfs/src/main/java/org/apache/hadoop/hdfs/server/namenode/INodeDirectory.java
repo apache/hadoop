@@ -32,11 +32,13 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * Directory INode class.
@@ -88,6 +90,12 @@ public class INodeDirectory extends INode {
       }
     }
   }
+
+  @Override
+  public Pair<INodeDirectory, INodeDirectory> createSnapshotCopy() {
+    return new Pair<INodeDirectory, INodeDirectory>(this,
+        new INodeDirectory(this, false));
+  }
   
   /** @return true unconditionally. */
   @Override
@@ -106,13 +114,27 @@ public class INodeDirectory extends INode {
     }
   }
 
-  private int searchChildren(INode inode) {
-    return Collections.binarySearch(children, inode.getLocalNameBytes());
+  private int searchChildren(byte[] name) {
+    return Collections.binarySearch(children, name);
+  }
+
+  protected int searchChildrenForExistingINode(byte[] name) {
+    assertChildrenNonNull();
+    final int i = searchChildren(name);
+    if (i < 0) {
+      throw new AssertionError("Child not found: name="
+          + DFSUtil.bytes2String(name));
+    }
+    return i;
+  }
+  
+  protected INode getExistingChild(int i) {
+    return children.get(i);
   }
 
   INode removeChild(INode node) {
     assertChildrenNonNull();
-    final int i = searchChildren(node);
+    final int i = searchChildren(node.getLocalNameBytes());
     return i >= 0? children.remove(i): null;
   }
 
@@ -123,13 +145,25 @@ public class INodeDirectory extends INode {
   void replaceChild(INode newChild) {
     assertChildrenNonNull();
 
-    final int low = searchChildren(newChild);
+    final int low = searchChildren(newChild.getLocalNameBytes());
     if (low>=0) { // an old child exists so replace by the newChild
       children.get(low).parent = null;
       children.set(low, newChild);
     } else {
       throw new IllegalArgumentException("No child exists to be replaced");
     }
+  }
+
+  /** Replace a child {@link INodeFile} with an {@link INodeFileWithLink}. */
+  INodeFileWithLink replaceINodeFile(final INodeFile child) {
+    assertChildrenNonNull();
+    Preconditions.checkArgument(!(child instanceof INodeFileWithLink),
+        "Child file is already an INodeFileWithLink, child=" + child);
+
+    final INodeFileWithLink newChild = new INodeFileWithLink(child);
+    final int i = searchChildrenForExistingINode(newChild.getLocalNameBytes());
+    children.set(i, newChild);
+    return newChild;
   }
 
   private INode getChild(byte[] name, Snapshot snapshot) {
@@ -236,7 +270,7 @@ public class INodeDirectory extends INode {
         "Incorrect name " + getLocalName() + " expected "
         + (components[0] == null? null: DFSUtil.bytes2String(components[0]));
 
-    INodesInPath existing = new INodesInPath(numOfINodes);
+    INodesInPath existing = new INodesInPath(components, numOfINodes);
     INode curNode = this;
     int count = 0;
     int index = numOfINodes - components.length;
@@ -373,7 +407,7 @@ public class INodeDirectory extends INode {
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
-    final int low = searchChildren(node);
+    final int low = searchChildren(node.getLocalNameBytes());
     if (low >= 0) {
       return false;
     }
@@ -381,7 +415,7 @@ public class INodeDirectory extends INode {
     children.add(-low - 1, node);
     // update modification time of the parent directory
     if (setModTime)
-      setModificationTime(node.getModificationTime());
+      updateModificationTime(node.getModificationTime());
     if (node.getGroupName() == null) {
       node.setGroup(getGroupName());
     }
@@ -408,18 +442,10 @@ public class INodeDirectory extends INode {
     }
     newNode.setLocalName(pathComponents[pathComponents.length - 1]);
     // insert into the parent children list
-    INodeDirectory parent = getParent(pathComponents);
+    final INodesInPath iip =  getExistingPathINodes(pathComponents, 2, false);
+    final INodeDirectory parent = INodeDirectory.valueOf(iip.getINode(0),
+        pathComponents);
     return parent.addChild(newNode, true);
-  }
-
-  INodeDirectory getParent(byte[][] pathComponents
-      ) throws FileNotFoundException, PathIsNotDirectoryException,
-      UnresolvedLinkException {
-    if (pathComponents.length < 2)  // add root
-      return null;
-    // Gets the parent INode
-    INodesInPath inodes =  getExistingPathINodes(pathComponents, 2, false);
-    return INodeDirectory.valueOf(inodes.inodes[0], pathComponents);
   }
 
   @Override
@@ -465,12 +491,14 @@ public class INodeDirectory extends INode {
   }
 
   /**
+   * @param snapshot
+   *          if it is not null, get the result from the given snapshot;
+   *          otherwise, get the result from the current directory.
    * @return the current children list if the specified snapshot is null;
    *         otherwise, return the children list corresponding to the snapshot.
    *         Note that the returned list is never null.
    */
   public ReadOnlyList<INode> getChildrenList(final Snapshot snapshot) {
-    //TODO: use snapshot to select children list
     return children == null ? EMPTY_READ_ONLY_LIST
         : ReadOnlyList.Util.asReadOnlyList(children);
   }
@@ -499,6 +527,7 @@ public class INodeDirectory extends INode {
    * Contains INodes information resolved from a given path.
    */
   static class INodesInPath {
+    private final byte[][] path;
     /**
      * Array with the specified number of INodes resolved for a given path.
      */
@@ -528,7 +557,8 @@ public class INodeDirectory extends INode {
      */
     private Snapshot snapshot = null; 
 
-    INodesInPath(int number) {
+    private INodesInPath(byte[][] path, int number) {
+      this.path = path;
       assert (number >= 0);
       inodes = new INode[number];
       capacity = number;
@@ -578,8 +608,13 @@ public class INodeDirectory extends INode {
     }
     
     /** @return the i-th inode. */
-    INode getINode(int i) {
+    public INode getINode(int i) {
       return inodes[i];
+    }
+    
+    /** @return the last inode. */
+    public INode getLastINode() {
+      return inodes[inodes.length - 1];
     }
     
     /**
@@ -621,8 +656,17 @@ public class INodeDirectory extends INode {
 
     @Override
     public String toString() {
+      return toString(true);
+    }
+
+    private String toString(boolean vaildateObject) {
+      if (vaildateObject) {
+        vaildate();
+      }
+
       final StringBuilder b = new StringBuilder(getClass().getSimpleName())
-          .append(":\n  inodes = ");
+          .append(": path = ").append(DFSUtil.byteArray2PathString(path))
+          .append("\n  inodes = ");
       if (inodes == null) {
         b.append("null");
       } else if (inodes.length == 0) {
@@ -640,6 +684,31 @@ public class INodeDirectory extends INode {
        .append("\n  snapshotRootIndex = ").append(snapshotRootIndex)
        .append("\n  snapshot          = ").append(snapshot);
       return b.toString();
+    }
+
+    void vaildate() {
+      // check parent up to snapshotRootIndex or numNonNull
+      final int n = snapshotRootIndex >= 0? snapshotRootIndex + 1: numNonNull;  
+      int i = 0;
+      if (inodes[i] != null) {
+        for(i++; i < n && inodes[i] != null; i++) {
+          final INodeDirectory parent_i = inodes[i].getParent();
+          final INodeDirectory parent_i_1 = inodes[i-1].getParent();
+          if (parent_i != inodes[i-1] &&
+              (parent_i_1 == null || !parent_i_1.isSnapshottable()
+                  || parent_i != parent_i_1)) {
+            throw new AssertionError(
+                "inodes[" + i + "].getParent() != inodes[" + (i-1)
+                + "]\n  inodes[" + i + "]=" + inodes[i].toDetailString()
+                + "\n  inodes[" + (i-1) + "]=" + inodes[i-1].toDetailString()
+                + "\n this=" + toString(false));
+          }
+        }
+      }
+      if (i != n) {
+        throw new AssertionError("i = " + i + " != " + n
+            + ", this=" + toString(false));
+      }
     }
   }
 

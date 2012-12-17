@@ -37,6 +37,12 @@ public class INodeFileWithLink extends INodeFile {
     next = this;
   }
 
+  @Override
+  public Pair<INodeFileWithLink, INodeFileSnapshot> createSnapshotCopy() {
+    return new Pair<INodeFileWithLink, INodeFileSnapshot>(this,
+        new INodeFileSnapshot(this));
+  }
+
   void setNext(INodeFileWithLink next) {
     this.next = next;
   }

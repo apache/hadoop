@@ -42,9 +42,9 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @param dsQuota Diskspace quota to be assigned to this indoe
    * @param other The other inode from which all other properties are copied
    */
-  protected INodeDirectoryWithQuota(long nsQuota, long dsQuota,
-      INodeDirectory other) {
-    super(other, true);
+  protected INodeDirectoryWithQuota(INodeDirectory other, boolean adopt,
+      long nsQuota, long dsQuota) {
+    super(other, adopt);
     INode.DirCounts counts = new INode.DirCounts();
     other.spaceConsumedInTree(counts);
     this.nsCount = counts.getNsCount();

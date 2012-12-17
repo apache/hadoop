@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,6 +37,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -44,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
@@ -202,7 +206,7 @@ class FSImageFormat {
     if (nsQuota != -1 || dsQuota != -1) {
       fsDir.rootDir.setQuota(nsQuota, dsQuota);
     }
-    fsDir.rootDir.setModificationTime(root.getModificationTime());
+    fsDir.rootDir.cloneModificationTime(root);
     fsDir.rootDir.clonePermissionStatus(root);    
   }
 
@@ -288,7 +292,7 @@ class FSImageFormat {
       }
       // check if the new inode belongs to the same parent
       if(!isParent(pathComponents, parentPath)) {
-        parentINode = fsDir.rootDir.getParent(pathComponents);
+        parentINode = getParentINodeDirectory(pathComponents);
         parentPath = getParent(pathComponents);
       }
 
@@ -298,12 +302,24 @@ class FSImageFormat {
     }
   }
 
+  private INodeDirectory getParentINodeDirectory(byte[][] pathComponents
+      ) throws FileNotFoundException, PathIsNotDirectoryException,
+      UnresolvedLinkException {
+    if (pathComponents.length < 2) { // root
+      return null;
+    }
+    // Gets the parent INode
+    final INodesInPath inodes = namesystem.dir.rootDir.getExistingPathINodes(
+        pathComponents, 2, false);
+    return INodeDirectory.valueOf(inodes.getINode(0), pathComponents);
+  }
+
   /**
    * Add the child node to parent and, if child is a file, update block map.
    * This method is only used for image loading so that synchronization,
    * modification time update and space count update are not needed.
    */
-  void addToParent(INodeDirectory parent, INode child) {
+  private void addToParent(INodeDirectory parent, INode child) {
     // NOTE: This does not update space counts for parents
     if (!parent.addChild(child, false)) {
       return;
@@ -389,7 +405,7 @@ class FSImageFormat {
         // verify that file exists in namespace
         String path = cons.getLocalName();
         INodeFile oldnode = INodeFile.valueOf(fsDir.getINode(path), path);
-        fsDir.replaceNode(path, oldnode, cons);
+        fsDir.replaceINodeFile(path, oldnode, cons);
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }

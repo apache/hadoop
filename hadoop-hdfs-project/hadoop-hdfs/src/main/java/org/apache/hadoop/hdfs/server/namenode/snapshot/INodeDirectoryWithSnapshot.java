@@ -23,9 +23,12 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+
+import com.google.common.base.Preconditions;
 
 /** The directory with snapshots. */
-public class INodeDirectoryWithSnapshot extends INodeDirectory {
+public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   /**
    * The difference between the current state and a previous snapshot
    * of an INodeDirectory.
@@ -79,6 +82,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
       return inodes == null? -1: Collections.binarySearch(inodes, name);
     }
 
+    private static void remove(final List<INode> inodes, final int i,
+        final INode expected) {
+      final INode removed = inodes.remove(-i - 1);
+      Preconditions.checkState(removed == expected,
+          "removed != expected=%s, removed=%s.", expected, removed);
+    }
+
     /** c-list: inode(s) created in current. */
     private List<INode> created;
     /** d-list: inode(s) deleted from current. */
@@ -116,82 +126,126 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
       deleted.add(-i - 1, inode);
     }
 
-    /** Create an inode in current state. */
-    void create(final INode inode) {
+    /**
+     * Create an inode in current state.
+     * @return the c-list insertion point for undo.
+     */
+    int create(final INode inode) {
       final int c = search(created, inode);
       insertCreated(inode, c);
+      return c;
     }
 
-    /** Delete an inode from current state. */
-    void delete(final INode inode) {
+    void undoCreate(final INode inode, final int insertionPoint) {
+      remove(created, insertionPoint, inode);
+    }
+
+    /**
+     * Delete an inode from current state.
+     * @return a triple for undo.
+     */
+    Triple<Integer, INode, Integer> delete(final INode inode) {
       final int c = search(created, inode);
+      INode previous = null;
+      Integer d = null;
       if (c >= 0) {
         // remove a newly created inode
-        created.remove(c);
+        previous = created.remove(c);
       } else {
         // not in c-list, it must be in previous
-        final int d = search(deleted, inode);
+        d = search(deleted, inode);
         insertDeleted(inode, d);
+      }
+      return new Triple<Integer, INode, Integer>(c, previous, d);
+    }
+    
+    void undoDelete(final INode inode,
+        final Triple<Integer, INode, Integer> undoInfo) {
+      final int c = undoInfo.left;
+      if (c >= 0) {
+        created.add(c, undoInfo.middle);
+      } else {
+        remove(deleted, undoInfo.right, inode);
       }
     }
 
-    /** Modify an inode in current state. */
-    void modify(final INode oldinode, final INode newinode) {
+    /**
+     * Modify an inode in current state.
+     * @return a triple for undo.
+     */
+    Triple<Integer, INode, Integer> modify(final INode oldinode, final INode newinode) {
       if (!oldinode.equals(newinode)) {
         throw new AssertionError("The names do not match: oldinode="
             + oldinode + ", newinode=" + newinode);
       }
       final int c = search(created, newinode);
+      INode previous = null;
+      Integer d = null;
       if (c >= 0) {
         // inode is already in c-list,
-        created.set(c, newinode);
+        previous = created.set(c, newinode);
       } else {
-        final int d = search(deleted, oldinode);
+        d = search(deleted, oldinode);
         if (d < 0) {
           // neither in c-list nor d-list
           insertCreated(newinode, c);
           insertDeleted(oldinode, d);
         }
       }
+      return new Triple<Integer, INode, Integer>(c, previous, d);
     }
 
-    /**
-     * Given an inode in current state, find the corresponding inode in previous
-     * snapshot. The inodes in current state and previous snapshot can possibly
-     * be the same.
-     *
-     * @param inodeInCurrent The inode, possibly null, in current state.
-     * @return null if the inode is not found in previous snapshot;
-     *         otherwise, return the corresponding inode in previous snapshot.
-     */
-    INode accessPrevious(byte[] name, INode inodeInCurrent) {
-      return accessPrevious(name, inodeInCurrent, created, deleted);
-    }
-
-    private static INode accessPrevious(byte[] name, INode inodeInCurrent,
-        final List<INode> clist, final List<INode> dlist) {
-      final int d = search(dlist, name);
-      if (d >= 0) {
-        // the inode was in previous and was once deleted in current.
-        return dlist.get(d);
+    void undoModify(final INode oldinode, final INode newinode,
+        final Triple<Integer, INode, Integer> undoInfo) {
+      final int c = undoInfo.left;
+      if (c >= 0) {
+        created.set(c, undoInfo.middle);
       } else {
-        final int c = search(clist, name);
-        // When c >= 0, the inode in current is a newly created inode.
-        return c >= 0? null: inodeInCurrent;
+        final int d = undoInfo.right;
+        if (d < 0) {
+          remove(created, c, newinode);
+          remove(deleted, d, oldinode);
+        }
       }
     }
 
     /**
-     * Given an inode in previous snapshot, find the corresponding inode in
-     * current state. The inodes in current state and previous snapshot can
-     * possibly be the same.
-     *
-     * @param inodeInPrevious The inode, possibly null, in previous snapshot.
-     * @return null if the inode is not found in current state;
-     *         otherwise, return the corresponding inode in current state.
+     * Find an inode in the previous snapshot.
+     * @return null if the inode cannot be determined in the previous snapshot
+     *         since no change is recorded and it should be determined in the
+     *         current snapshot; otherwise, return an array with size one
+     *         containing the inode in the previous snapshot. Note that the
+     *         inode can possibly be null which means that the inode is not
+     *         found in the previous snapshot.
      */
-    INode accessCurrent(byte[] name, INode inodeInPrevious) {
-      return accessPrevious(name, inodeInPrevious, deleted, created);
+    INode[] accessPrevious(byte[] name) {
+      return accessPrevious(name, created, deleted);
+    }
+
+    private static INode[] accessPrevious(byte[] name,
+        final List<INode> clist, final List<INode> dlist) {
+      final int d = search(dlist, name);
+      if (d >= 0) {
+        // the inode was in previous and was once deleted in current.
+        return new INode[]{dlist.get(d)};
+      } else {
+        final int c = search(clist, name);
+        // When c >= 0, the inode in current is a newly created inode.
+        return c >= 0? new INode[]{null}: null;
+      }
+    }
+
+    /**
+     * Find an inode in the current snapshot.
+     * @return null if the inode cannot be determined in the current snapshot
+     *         since no change is recorded and it should be determined in the
+     *         previous snapshot; otherwise, return an array with size one
+     *         containing the inode in the current snapshot. Note that the
+     *         inode can possibly be null which means that the inode is not
+     *         found in the current snapshot.
+     */
+    INode[] accessCurrent(byte[] name) {
+      return accessPrevious(name, deleted, created);
     }
 
     /**
@@ -230,15 +284,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
 
     /** Convert the inode list to a compact string. */
     static String toString(List<INode> inodes) {
-      if (inodes == null) {
-        return null;
-      } else if (inodes.isEmpty()) {
-        return "[]";
+      if (inodes == null || inodes.isEmpty()) {
+        return "<empty>";
       }
       final StringBuilder b = new StringBuilder("[")
-          .append(inodes.get(0).getLocalName());
+          .append(inodes.get(0));
       for(int i = 1; i < inodes.size(); i++) {
-        b.append(", ").append(inodes.get(i).getLocalName());
+        b.append(", ").append(inodes.get(i));
       }
       return b.append("]").toString();
     }
@@ -246,13 +298,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
     @Override
     public String toString() {
       return getClass().getSimpleName()
-          + ":\n  created=" + toString(created)
-          + "\n  deleted=" + toString(deleted);
+          + "{created=" + toString(created)
+          + ", deleted=" + toString(deleted) + "}";
     }
   }
 
-  INodeDirectoryWithSnapshot(String name, INodeDirectory dir) {
-    super(name, dir.getPermissionStatus());
-    parent = dir;
+  public INodeDirectoryWithSnapshot(INodeDirectory that, boolean adopt) {
+    super(that, adopt, that.getNsQuota(), that.getDsQuota());
   }
 }

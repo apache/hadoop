@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
@@ -46,9 +48,31 @@ import com.google.common.primitives.SignedBytes;
  */
 @InterfaceAudience.Private
 public abstract class INode implements Comparable<byte[]> {
+  public static final Log LOG = LogFactory.getLog(INode.class);
+
   static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
       = ReadOnlyList.Util.emptyList();
 
+  /** A pair of objects. */
+  public static class Pair<L, R> {
+    public final L left;
+    public final R right;
+
+    public Pair(L left, R right) {
+      this.left = left;
+      this.right = right;
+    }
+  }
+
+  /** A triple of objects. */
+  public static class Triple<L, M, R> extends Pair<L, R> {
+    public final M middle;
+    
+    public Triple(L left, M middle, R right) {
+      super(left, right);
+      this.middle = middle;
+    }
+  }
 
   /** Wrapper of two counters for namespace consumed and diskspace consumed. */
   static class DirCounts {
@@ -154,6 +178,17 @@ public abstract class INode implements Comparable<byte[]> {
   }
 
   /**
+   * Create a copy of this inode for snapshot.
+   * 
+   * @return a pair of inodes, where the left inode is the current inode and
+   *         the right inode is the snapshot copy. The current inode usually is
+   *         the same object of this inode. However, in some cases, the inode
+   *         may be replaced with a new inode for maintaining snapshot data.
+   *         Then, the current inode is the new inode.
+   */
+  public abstract Pair<? extends INode, ? extends INode> createSnapshotCopy();
+
+  /**
    * Check whether this is the root inode.
    */
   boolean isRoot() {
@@ -246,11 +281,11 @@ public abstract class INode implements Comparable<byte[]> {
    * Get the quota set for this inode
    * @return the quota if it is set; -1 otherwise
    */
-  long getNsQuota() {
+  public long getNsQuota() {
     return -1;
   }
 
-  long getDsQuota() {
+  public long getDsQuota() {
     return -1;
   }
   
@@ -307,9 +342,24 @@ public abstract class INode implements Comparable<byte[]> {
 
   @Override
   public String toString() {
-    return "\"" + getFullPathName() + "\":"
-    + getUserName() + ":" + getGroupName() + ":"
-    + (isDirectory()? "d": "-") + getFsPermission();
+    return name == null? "<name==null>": getFullPathName();
+  }
+
+  @VisibleForTesting
+  public String getObjectString() {
+    final String s = super.toString();
+    return s.substring(s.lastIndexOf(getClass().getSimpleName()));
+  }
+
+  @VisibleForTesting
+  public String toStringWithObjectType() {
+    return toString() + "(" + getObjectString() + ")";
+  }
+
+  @VisibleForTesting
+  public String toDetailString() {
+    return toStringWithObjectType()
+        + ", parent=" + (parent == null? null: parent.toStringWithObjectType());
   }
 
   /**
@@ -333,20 +383,22 @@ public abstract class INode implements Comparable<byte[]> {
     return this.modificationTime;
   }
 
-  /**
-   * Set last modification time of inode.
-   */
-  public void setModificationTime(long modtime) {
+  /** Update modification time if it is larger than the current value. */
+  public void updateModificationTime(long modtime) {
     assert isDirectory();
     if (this.modificationTime <= modtime) {
       this.modificationTime = modtime;
     }
   }
 
+  void cloneModificationTime(INode that) {
+    this.modificationTime = that.modificationTime;
+  }
+
   /**
    * Always set the last modification time of inode.
    */
-  void setModificationTimeForce(long modtime) {
+  void setModificationTime(long modtime) {
     this.modificationTime = modtime;
   }
 
@@ -525,9 +577,9 @@ public abstract class INode implements Comparable<byte[]> {
     out.print(" ");
     out.print(getLocalName());
     out.print("   (");
-    final String s = super.toString();
-    out.print(s.substring(s.lastIndexOf(getClass().getSimpleName())));
-    out.println(")");
+    out.print(getObjectString());
+    out.print("), parent=");
+    out.println(parent == null? null: parent.getLocalName());
   }
   
   /**

@@ -150,6 +150,7 @@ public class SnapshotTestHelper {
       list.add(node);
     }
 
+    int id = 0;
     /**
      * Recursively generate the tree based on the height.
      * 
@@ -162,9 +163,9 @@ public class SnapshotTestHelper {
         return;
       }
       parent.leftChild = new Node(new Path(parent.nodePath,
-          "leftChild"), height - level, parent, fs);
+          "left" + ++id), height - level, parent, fs);
       parent.rightChild = new Node(new Path(parent.nodePath,
-          "rightChild"), height - level, parent, fs);
+          "right" + ++id), height - level, parent, fs);
       addDirNode(parent.leftChild, parent.leftChild.level);
       addDirNode(parent.rightChild, parent.rightChild.level);
       genChildren(parent.leftChild, level - 1);
@@ -254,11 +255,11 @@ public class SnapshotTestHelper {
        * Create files and add them in the fileList. Initially the last element
        * in the fileList is set to null (where we start file creation).
        */
-      void initFileList(long fileLen, short replication, long seed, int numFiles)
+      void initFileList(String namePrefix, long fileLen, short replication, long seed, int numFiles)
           throws Exception {
         fileList = new ArrayList<Path>(numFiles);
         for (int i = 0; i < numFiles; i++) {
-          Path file = new Path(nodePath, "file" + i);
+          Path file = new Path(nodePath, namePrefix + "-f" + i);
           fileList.add(file);
           if (i < numFiles - 1) {
             DFSTestUtil.createFile(fs, file, fileLen, replication, seed);

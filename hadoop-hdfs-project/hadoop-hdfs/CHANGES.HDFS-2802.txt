@@ -83,3 +83,5 @@ Branch-2802 Snapshot (Unreleased)
   structure and modifications. (Jing Zhao via suresh)
 
   HDFS-4293. Fix TestSnapshot failure. (Jing Zhao via suresh)
+
+  HDFS-4317. Change INode and its subclasses to support HDFS-4103. (szetszwo)

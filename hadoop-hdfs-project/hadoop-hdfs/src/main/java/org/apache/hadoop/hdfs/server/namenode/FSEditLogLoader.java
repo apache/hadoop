@@ -281,7 +281,7 @@ public class FSEditLogLoader {
       
       // Update the salient file attributes.
       newFile.setAccessTime(addCloseOp.atime);
-      newFile.setModificationTimeForce(addCloseOp.mtime);
+      newFile.setModificationTime(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
     }
@@ -303,7 +303,7 @@ public class FSEditLogLoader {
       
       // Update the salient file attributes.
       oldFile.setAccessTime(addCloseOp.atime);
-      oldFile.setModificationTimeForce(addCloseOp.mtime);
+      oldFile.setModificationTime(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file
@@ -320,8 +320,8 @@ public class FSEditLogLoader {
       if (oldFile.isUnderConstruction()) {
         INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
         fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
-        INodeFile newFile = ucFile.convertToInodeFile();
-        fsDir.unprotectedReplaceNode(addCloseOp.path, ucFile, newFile);
+        INodeFile newFile = ucFile.convertToInodeFile(ucFile.getModificationTime());
+        fsDir.unprotectedReplaceINodeFile(addCloseOp.path, ucFile, newFile);
       }
       break;
     }

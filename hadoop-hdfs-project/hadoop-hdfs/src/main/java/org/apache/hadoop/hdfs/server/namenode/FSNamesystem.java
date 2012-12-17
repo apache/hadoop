@@ -1952,7 +1952,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                     leaseHolder,
                                     clientMachine,
                                     clientNode);
-    dir.replaceNode(src, file, cons);
+    dir.replaceINodeFile(src, file, cons);
     leaseManager.addLease(cons.getClientName(), src);
     
     LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
@@ -3261,8 +3261,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
-    INodeFile newFile = pendingFile.convertToInodeFile();
-    dir.replaceNode(src, pendingFile, newFile);
+    INodeFile newFile = pendingFile.convertToInodeFile(now());
+    dir.replaceINodeFile(src, pendingFile, newFile);
 
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);

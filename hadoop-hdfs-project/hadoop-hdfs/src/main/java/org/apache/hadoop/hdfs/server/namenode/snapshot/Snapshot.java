@@ -44,7 +44,8 @@ public class Snapshot implements Comparable<byte[]> {
 
   Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
     this.id = id;
-    this.root = new INodeDirectoryWithSnapshot(name, dir);
+    this.root = new INodeDirectoryWithSnapshot(dir, false);
+    this.root.setLocalName(name);
   }
 
   /** @return the root directory of the snapshot. */

@@ -43,6 +43,12 @@ public class INodeSymlink extends INode {
   }
 
   @Override
+  public Pair<INodeSymlink, INodeSymlink> createSnapshotCopy() {
+    return new Pair<INodeSymlink, INodeSymlink>(this, new INodeSymlink(this));
+  }
+
+  /** @return true unconditionally. */
+  @Override
   public boolean isSymlink() {
     return true;
   }

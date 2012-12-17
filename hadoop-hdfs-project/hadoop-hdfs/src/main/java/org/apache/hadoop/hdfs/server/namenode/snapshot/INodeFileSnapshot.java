@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 
 /**
  *  INode representing a snapshot of a file.
@@ -28,9 +27,10 @@ public class INodeFileSnapshot extends INodeFileWithLink {
   /** The file size at snapshot creation time. */
   final long size;
 
-  public INodeFileSnapshot(INodeFile f, long size) {
+  INodeFileSnapshot(INodeFileWithLink f) {
     super(f);
-    this.size = size;
+    this.size = f.computeFileSize(true);
+    f.insert(this);
   }
 
   @Override

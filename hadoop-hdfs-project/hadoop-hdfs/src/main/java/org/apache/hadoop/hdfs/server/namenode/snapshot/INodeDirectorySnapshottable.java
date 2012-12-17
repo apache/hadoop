@@ -29,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -41,18 +40,10 @@ import com.google.common.annotations.VisibleForTesting;
  * by the namesystem and FSDirectory locks.
  */
 @InterfaceAudience.Private
-public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
+public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   static public INodeDirectorySnapshottable newInstance(
       final INodeDirectory dir, final int snapshotQuota) {
-    long nsq = -1L;
-    long dsq = -1L;
-
-    if (dir instanceof INodeDirectoryWithQuota) {
-      final INodeDirectoryWithQuota q = (INodeDirectoryWithQuota)dir;
-      nsq = q.getNsQuota();
-      dsq = q.getDsQuota();
-    }
-    return new INodeDirectorySnapshottable(nsq, dsq, dir, snapshotQuota);
+    return new INodeDirectorySnapshottable(dir, snapshotQuota);
   }
 
   /** Cast INode to INodeDirectorySnapshottable. */
@@ -90,9 +81,9 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
   /** Number of snapshots allowed. */
   private int snapshotQuota;
 
-  private INodeDirectorySnapshottable(long nsQuota, long dsQuota,
-      INodeDirectory dir, final int snapshotQuota) {
-    super(nsQuota, dsQuota, dir);
+  private INodeDirectorySnapshottable(INodeDirectory dir,
+      final int snapshotQuota) {
+    super(dir, true);
     setSnapshotQuota(snapshotQuota);
   }
   
@@ -196,8 +187,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithQuota {
 
     //set modification time
     final long timestamp = Time.now();
-    s.getRoot().setModificationTime(timestamp);
-    setModificationTime(timestamp);
+    s.getRoot().updateModificationTime(timestamp);
+    updateModificationTime(timestamp);
     return s;
   }
   

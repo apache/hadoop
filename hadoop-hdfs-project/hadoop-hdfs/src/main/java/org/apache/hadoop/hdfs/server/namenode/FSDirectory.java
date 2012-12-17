@@ -383,7 +383,7 @@ public class FSDirectory implements Closeable {
     writeLock();
     try {
       // file is closed
-      file.setModificationTimeForce(now);
+      file.setModificationTime(now);
       fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
@@ -585,8 +585,8 @@ public class FSDirectory implements Closeable {
               + src + " is renamed to " + dst);
         }
         // update modification time of dst and the parent of src
-        srcInodes[srcInodes.length-2].setModificationTime(timestamp);
-        dstInodes[dstInodes.length-2].setModificationTime(timestamp);
+        srcInodes[srcInodes.length-2].updateModificationTime(timestamp);
+        dstInodes[dstInodes.length-2].updateModificationTime(timestamp);
         // update moved leases with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);        
         return true;
@@ -752,8 +752,8 @@ public class FSDirectory implements Closeable {
               "DIR* FSDirectory.unprotectedRenameTo: " + src
               + " is renamed to " + dst);
         }
-        srcInodes[srcInodes.length - 2].setModificationTime(timestamp);
-        dstInodes[dstInodes.length - 2].setModificationTime(timestamp);
+        srcInodes[srcInodes.length - 2].updateModificationTime(timestamp);
+        dstInodes[dstInodes.length - 2].updateModificationTime(timestamp);
         // update moved lease with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);
 
@@ -994,8 +994,8 @@ public class FSDirectory implements Closeable {
       count++;
     }
     
-    trgInode.setModificationTimeForce(timestamp);
-    trgParent.setModificationTime(timestamp);
+    trgInode.setModificationTime(timestamp);
+    trgParent.updateModificationTime(timestamp);
     // update quota on the parent directory ('count' files removed, 0 space)
     unprotectedUpdateCount(trgINodesInPath, trgINodes.length-1, -count, 0);
   }
@@ -1133,7 +1133,7 @@ public class FSDirectory implements Closeable {
       return 0;
     }
     // set the parent's modification time
-    inodes[inodes.length - 2].setModificationTime(mtime);
+    inodes[inodes.length - 2].updateModificationTime(mtime);
     int filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
@@ -1167,35 +1167,14 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Replaces the specified INode.
-   */
-  private void replaceINodeUnsynced(String path, INode oldnode, INode newnode
-      ) throws IOException {    
-    //remove the old node from the namespace 
-    if (!oldnode.removeNode()) {
-      final String mess = "FSDirectory.replaceINodeUnsynced: failed to remove "
-          + path;
-      NameNode.stateChangeLog.warn("DIR* " + mess);
-      throw new IOException(mess);
-    } 
-    
-    //add the new node
-    rootDir.addINode(path, newnode); 
-  }
-
-  /**
    * Replaces the specified INodeDirectory.
    */
   public void replaceINodeDirectory(String path, INodeDirectory oldnode,
       INodeDirectory newnode) throws IOException {    
     writeLock();
     try {
-      replaceINodeUnsynced(path, oldnode, newnode);
-
-      //update children's parent directory
-      for(INode i : newnode.getChildrenList(null)) {
-        i.parent = newnode;
-      }
+      unprotectedReplaceINode(path, oldnode, newnode);
+      // Note that the parent of the children of the oldnode is already updated
     } finally {
       writeUnlock();
     }
@@ -1204,32 +1183,44 @@ public class FSDirectory implements Closeable {
   /**
    * Replaces the specified INodeFile with the specified one.
    */
-  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode
-      ) throws IOException {    
+  public void replaceINodeFile(String path, INodeFile oldnode,
+      INodeFile newnode) throws IOException {    
     writeLock();
     try {
-      unprotectedReplaceNode(path, oldnode, newnode);
+      unprotectedReplaceINodeFile(path, oldnode, newnode);
     } finally {
       writeUnlock();
     }
   }
-  
-  void unprotectedReplaceNode(String path, INodeFile oldnode, INodeFile newnode)
-      throws IOException, UnresolvedLinkException {
-    assert hasWriteLock();
-    INodeDirectory parent = oldnode.parent;
+
+  private void unprotectedReplaceINode(String path, INode oldnode,
+      INode newnode) throws IOException {    
+    Preconditions.checkState(hasWriteLock());
+
+    INodeDirectory parent = oldnode.getParent();
     // Remove the node from the namespace 
-    if (!oldnode.removeNode()) {
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
-                                   "failed to remove " + path);
-      throw new IOException("FSDirectory.replaceNode: " +
-                            "failed to remove " + path);
-    } 
+    if (parent == null) {
+      final String mess
+          = "FSDirectory.unprotectedReplaceINode: failed to remove " + path;
+      NameNode.stateChangeLog.warn("DIR* " + mess);
+      throw new IOException(mess);
+    }
     
-    // Parent should be non-null, otherwise oldnode.removeNode() will return
-    // false
-    newnode.setLocalName(oldnode.getLocalNameBytes());
+    final INode removed = parent.removeChild(oldnode);
+    Preconditions.checkState(removed == oldnode,
+        "removed != oldnode=%s, removed=%s", oldnode, removed);
+
+    parent = oldnode.getParent();
+    oldnode.setParent(null);
     parent.addChild(newnode, true);
+
+  }
+
+  void unprotectedReplaceINodeFile(String path, INodeFile oldnode,
+      INodeFile newnode)
+      throws IOException, UnresolvedLinkException {
+    unprotectedReplaceINode(path, oldnode, newnode);
+    newnode.setLocalName(oldnode.getLocalNameBytes());
     
     /* Currently oldnode and newnode are assumed to contain the same
      * blocks. Otherwise, blocks need to be removed from the blocksMap.
@@ -1326,14 +1317,34 @@ public class FSDirectory implements Closeable {
    * Get {@link INode} associated with the file / directory.
    */
   public INode getINode(String src) throws UnresolvedLinkException {
+    return getINodesInPath(src).getINode(0);
+  }
+
+  /**
+   * Get {@link INode} associated with the file / directory.
+   */
+  public INodesInPath getINodesInPath(String src) throws UnresolvedLinkException {
     readLock();
     try {
-      return rootDir.getNode(src, true);
+      return rootDir.getINodesInPath(src, true);
     } finally {
       readUnlock();
     }
   }
   
+  /**
+   * Get {@link INode} associated with the file / directory.
+   */
+  public INodesInPath getMutableINodesInPath(String src
+      ) throws UnresolvedLinkException, SnapshotAccessControlException {
+    readLock();
+    try {
+      return rootDir.getMutableINodesInPath(src, true);
+    } finally {
+      readUnlock();
+    }
+  }
+
   /**
    * Get {@link INode} associated with the file / directory.
    * @throws SnapshotAccessControlException if path is in RO snapshot
@@ -2015,8 +2026,8 @@ public class FSDirectory implements Closeable {
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota
-        INodeDirectoryWithQuota newNode = 
-          new INodeDirectoryWithQuota(nsQuota, dsQuota, dirNode);
+        final INodeDirectoryWithQuota newNode = new INodeDirectoryWithQuota(
+            dirNode, true, nsQuota, dsQuota);
         // non-root directory node; parent != null
         INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
         dirNode = newNode;
@@ -2084,7 +2095,7 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
-      inode.setModificationTimeForce(mtime);
+      inode.setModificationTime(mtime);
       status = true;
     }
     if (atime != -1) {

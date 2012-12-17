@@ -24,6 +24,7 @@ import java.util.Random;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INode.Triple;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.Diff;
 import org.junit.Assert;
@@ -33,7 +34,8 @@ import org.junit.Test;
  * Test {@link INodeDirectoryWithSnapshot}, especially, {@link Diff}.
  */
 public class TestINodeDirectoryWithSnapshot {
-  private static Random RANDOM = new Random();
+  private static final Random RANDOM = new Random();
+  private static final int UNDO_TEST_P = 10;
   private static final PermissionStatus PERM = PermissionStatus.createImmutable(
       "user", "group", FsPermission.createImmutable((short)0));
 
@@ -139,10 +141,14 @@ public class TestINodeDirectoryWithSnapshot {
       for(int m = 0; m < n; m++) {
         final INode inode = newINode(m, width);
         {// test accessPrevious
-          final int i = Diff.search(current, inode);
-          final INode inodeInCurrent = i < 0? null: current.get(i);
-          final INode computed = diff.accessPrevious(
-              inode.getLocalNameBytes(), inodeInCurrent);
+          final INode[] array = diff.accessPrevious(inode.getLocalNameBytes());
+          final INode computed;
+          if (array != null) {
+            computed = array[0];
+          } else {
+            final int i = Diff.search(current, inode);
+            computed = i < 0? null: current.get(i);
+          }
 
           final int j = Diff.search(previous, inode);
           final INode expected = j < 0? null: previous.get(j);
@@ -151,10 +157,14 @@ public class TestINodeDirectoryWithSnapshot {
         }
 
         {// test accessCurrent
-          final int i = Diff.search(previous, inode);
-          final INode inodeInPrevious = i < 0? null: previous.get(i);
-          final INode computed = diff.accessCurrent(
-              inode.getLocalNameBytes(), inodeInPrevious);
+          final INode[] array = diff.accessCurrent(inode.getLocalNameBytes());
+          final INode computed;
+          if (array != null) {
+            computed = array[0]; 
+          } else {
+            final int i = Diff.search(previous, inode);
+            computed = i < 0? null: previous.get(i);
+          }
 
           final int j = Diff.search(current, inode);
           final INode expected = j < 0? null: current.get(j);
@@ -182,6 +192,10 @@ public class TestINodeDirectoryWithSnapshot {
     return true;
   }
 
+  static String toString(Diff diff) {
+    return diff.toString();
+  }
+
   static String toString(INode inode) {
     return inode == null? null
         : inode.getLocalName() + ":" + inode.getModificationTime();
@@ -202,7 +216,24 @@ public class TestINodeDirectoryWithSnapshot {
     Assert.assertTrue(i < 0);
     current.add(-i - 1, inode);
     if (diff != null) {
-      diff.create(inode);
+      //test undo with 1/UNDO_TEST_P probability
+      final boolean testUndo = RANDOM.nextInt(UNDO_TEST_P) == 0;
+      String before = null;
+      if (testUndo) {
+        before = toString(diff);
+      }
+
+      final int undoInfo = diff.create(inode);
+
+      if (testUndo) {
+        final String after = toString(diff);
+        //undo
+        diff.undoCreate(inode, undoInfo);
+        assertDiff(before, diff);
+        //re-do
+        diff.create(inode);
+        assertDiff(after, diff);
+      }
     }
   }
 
@@ -212,7 +243,24 @@ public class TestINodeDirectoryWithSnapshot {
         i >= 0);
     current.remove(i);
     if (diff != null) {
-      diff.delete(inode);
+      //test undo with 1/UNDO_TEST_P probability
+      final boolean testUndo = RANDOM.nextInt(UNDO_TEST_P) == 0;
+      String before = null;
+      if (testUndo) {
+        before = toString(diff);
+      }
+
+      final Triple<Integer, INode, Integer> undoInfo = diff.delete(inode);
+
+      if (testUndo) {
+        final String after = toString(diff);
+        //undo
+        diff.undoDelete(inode, undoInfo);
+        assertDiff(before, diff);
+        //re-do
+        diff.delete(inode);
+        assertDiff(after, diff);
+      }
     }
   }
 
@@ -220,13 +268,34 @@ public class TestINodeDirectoryWithSnapshot {
     final int i = Diff.search(current, inode);
     Assert.assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);
-    final INodeDirectory newinode = new INodeDirectory(oldinode, true);
-    newinode.setModificationTime(oldinode.getModificationTime() + 1);
+    final INodeDirectory newinode = oldinode.createSnapshotCopy().right;
+    newinode.updateModificationTime(oldinode.getModificationTime() + 1);
 
     current.set(i, newinode);
     if (diff != null) {
-      diff.modify(oldinode, newinode);
+      //test undo with 1/UNDO_TEST_P probability
+      final boolean testUndo = RANDOM.nextInt(UNDO_TEST_P) == 0;
+      String before = null;
+      if (testUndo) {
+        before = toString(diff);
+      }
+
+      final Triple<Integer, INode, Integer> undoInfo = diff.modify(oldinode, newinode);
+
+      if (testUndo) {
+        final String after = toString(diff);
+        //undo
+        diff.undoModify(oldinode, newinode, undoInfo);
+        assertDiff(before, diff);
+        //re-do
+        diff.modify(oldinode, newinode);
+        assertDiff(after, diff);
+      }
     }
+  }
+  
+  static void assertDiff(String s, Diff diff) {
+    Assert.assertEquals(s, toString(diff));
   }
 
   /**

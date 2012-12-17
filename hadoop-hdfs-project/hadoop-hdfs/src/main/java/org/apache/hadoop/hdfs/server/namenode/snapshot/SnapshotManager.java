@@ -210,9 +210,6 @@ public class SnapshotManager implements SnapshotStats {
      */
     private INodeFileSnapshot processINodeFile(final INodeDirectory parent,
         final INodeFile file) {
-      final INodeFileSnapshot snapshot = new INodeFileSnapshot(
-          file, file.computeFileSize(true)); 
-
       final INodeFileWithLink srcWithLink;
       //check source INode type
       if (file instanceof INodeFileWithLink) {
@@ -228,6 +225,7 @@ public class SnapshotManager implements SnapshotStats {
       }
       
       //insert the snapshot to src's linked list.
+      final INodeFileSnapshot snapshot = new INodeFileSnapshot(srcWithLink); 
       srcWithLink.insert(snapshot);
       return snapshot;
     }

@@ -234,9 +234,10 @@ public class DFSUtil {
    * Given a list of path components returns a path as a UTF8 String
    */
   public static String byteArray2PathString(byte[][] pathComponents) {
-    if (pathComponents.length == 0)
+    if (pathComponents.length == 0) {
       return "";
-    if (pathComponents.length == 1 && pathComponents[0].length == 0) {
+    } else if (pathComponents.length == 1
+        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
       return Path.SEPARATOR;
     }
     try {
@@ -249,9 +250,8 @@ public class DFSUtil {
       }
       return result.toString();
     } catch (UnsupportedEncodingException ex) {
-      assert false : "UTF8 encoding is not supported ";
+      throw new AssertionError("UTF-8 encoding is not supported.");
     }
-    return null;
   }
 
   /** Convert an object representing a path to a string. */
