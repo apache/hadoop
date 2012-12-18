@@ -336,4 +336,29 @@ public class FileStatus implements Writable, Comparable {
   public int hashCode() {
     return getPath().hashCode();
   }
+  
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(getClass().getSimpleName()); 
+    sb.append("{");
+    sb.append("path=" + path);
+    sb.append("; isDirectory=" + isdir);
+    if(!isDirectory()){
+      sb.append("; length=" + length);
+      sb.append("; replication=" + block_replication);
+      sb.append("; blocksize=" + blocksize);
+    }
+    sb.append("; modification_time=" + modification_time);
+    sb.append("; access_time=" + access_time);
+    sb.append("; owner=" + owner);
+    sb.append("; group=" + group);
+    sb.append("; permission=" + permission);
+    sb.append("; isSymlink=" + isSymlink());
+    if(isSymlink()) {
+      sb.append("; symlink=" + symlink);
+    }
+    sb.append("}");
+    return sb.toString();
+  }
 }
