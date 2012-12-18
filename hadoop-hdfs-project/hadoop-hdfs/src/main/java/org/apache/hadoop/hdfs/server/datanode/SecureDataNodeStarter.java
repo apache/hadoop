@@ -38,6 +38,8 @@ import org.mortbay.jetty.security.SslSocketConnector;
 
 import javax.net.ssl.SSLServerSocketFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Utility class to start a datanode in a secure cluster, first obtaining 
  * privileged resources before main startup and handing them to the datanode.
@@ -73,6 +75,25 @@ public class SecureDataNodeStarter implements Daemon {
     // Stash command-line arguments for regular datanode
     args = context.getArguments();
     
+    sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
+    resources = getSecureResources(sslFactory, conf);
+  }
+
+  @Override
+  public void start() throws Exception {
+    System.err.println("Starting regular datanode initialization");
+    DataNode.secureMain(args, resources);
+  }
+  
+  @Override public void destroy() {
+    sslFactory.destroy();
+  }
+
+  @Override public void stop() throws Exception { /* Nothing to do */ }
+
+  @VisibleForTesting
+  public static SecureResources getSecureResources(final SSLFactory sslFactory,
+                                  Configuration conf) throws Exception {
     // Obtain secure port for data streaming to datanode
     InetSocketAddress streamingAddr  = DataNode.getStreamingAddr(conf);
     int socketWriteTimeout = conf.getInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
@@ -85,13 +106,12 @@ public class SecureDataNodeStarter implements Daemon {
     // Check that we got the port we need
     if (ss.getLocalPort() != streamingAddr.getPort()) {
       throw new RuntimeException("Unable to bind on specified streaming port in secure " +
-      		"context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
+          "context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
     }
 
     // Obtain secure listener for web server
     Connector listener;
     if (HttpConfig.isSecure()) {
-      sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
       try {
         sslFactory.init();
       } catch (GeneralSecurityException ex) {
@@ -126,18 +146,7 @@ public class SecureDataNodeStarter implements Daemon {
     }
     System.err.println("Opened streaming server at " + streamingAddr);
     System.err.println("Opened info server at " + infoSocAddr);
-    resources = new SecureResources(ss, listener);
+    return new SecureResources(ss, listener);
   }
 
-  @Override
-  public void start() throws Exception {
-    System.err.println("Starting regular datanode initialization");
-    DataNode.secureMain(args, resources);
-  }
-  
-  @Override public void destroy() {
-    sslFactory.destroy();
-  }
-
-  @Override public void stop() throws Exception { /* Nothing to do */ }
 }

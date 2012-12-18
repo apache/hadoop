@@ -98,6 +98,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
     (Daisuke Kobayashi via atm)
 
+    HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
+    via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
