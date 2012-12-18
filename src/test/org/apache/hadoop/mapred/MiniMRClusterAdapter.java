@@ -20,7 +20,11 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 
 /**
  * An adapter for MiniMRCluster providing a MiniMRClientCluster interface. This
@@ -29,6 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 public class MiniMRClusterAdapter implements MiniMRClientCluster {
 
   private MiniMRCluster miniMRCluster;
+
+  private static final Log LOG = LogFactory.getLog(MiniMRClusterAdapter.class);
 
   public MiniMRClusterAdapter(MiniMRCluster miniMRCluster) {
     this.miniMRCluster = miniMRCluster;
@@ -48,6 +54,39 @@ public class MiniMRClusterAdapter implements MiniMRClientCluster {
   @Override
   public void stop() throws IOException {
     miniMRCluster.shutdown();
+  }
+
+  @Override
+  public void restart() throws IOException {
+    if (!miniMRCluster.getJobTrackerRunner().isActive()) {
+      LOG.warn("Cannot restart the mini cluster, start it first");
+      return;
+    }
+
+    int jobTrackerPort = miniMRCluster.getJobTrackerPort();
+    int taskTrackerPort = getConfig().getInt(
+        "mapred.task.tracker.report.address", 0);
+    int numtaskTrackers = miniMRCluster.getNumTaskTrackers();
+    String namenode = getConfig().get(FileSystem.FS_DEFAULT_NAME_KEY);
+
+    stop();
+    
+    // keep retrying to start the cluster for a max. of 30 sec.
+    for (int i = 0; i < 30; i++) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+      try {
+        miniMRCluster = new MiniMRCluster(jobTrackerPort, taskTrackerPort,
+            numtaskTrackers, namenode, 1);
+        break;
+      } catch (Exception e) {
+        LOG.info("Retrying to start the cluster");
+      }
+    }
+
   }
 
 }

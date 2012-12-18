@@ -139,6 +139,9 @@ Release 1.2.0 - unreleased
 
     HADOOP-9098. Add missing license headers. (Arpit Agarwal via suresh)
 
+    MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using the 
+    configurations used before it is being stopped. (ahmed.radwan via tucu)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
