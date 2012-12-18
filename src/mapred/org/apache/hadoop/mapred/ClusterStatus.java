@@ -329,6 +329,7 @@ public class ClusterStatus implements Writable {
    * 
    * @return the size of heap memory used by the <code>JobTracker</code>
    */
+  @Deprecated
   public long getUsedMemory() {
     return used_memory;
   }
@@ -338,6 +339,7 @@ public class ClusterStatus implements Writable {
    * 
    * @return the configured size of max heap memory that can be used by the <code>JobTracker</code>
    */
+  @Deprecated
   public long getMaxMemory() {
     return max_memory;
   }

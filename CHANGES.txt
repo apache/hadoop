@@ -142,6 +142,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using the 
     configurations used before it is being stopped. (ahmed.radwan via tucu)
 
+    MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in
+    MR1 but not MR2. (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
