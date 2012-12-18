@@ -622,6 +622,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4315. DNs with multiple BPs can have BPOfferServices fail to start
     due to unsynchronized map access. (atm)
 
+    HDFS-4140. fuse-dfs handles open(O_TRUNC) poorly. (Colin Patrick McCabe
+    via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
