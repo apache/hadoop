@@ -308,7 +308,7 @@ char ** extract_values(char *value) {
       tempTok = strtok_r(NULL, ",", &tempstr);
     }
   }
-  if (size > 0) {
+  if (toPass != NULL) {
     toPass[size] = NULL;
   }
   return toPass;
@@ -322,4 +322,53 @@ void free_values(char** values) {
   if (values != NULL) {
     free(values);
   }
+}
+
+/**
+ * If str is a string of the form key=val, find 'key'
+ */
+int get_kv_key(const char *input, char *out, size_t out_len) {
+
+  if (input == NULL)
+    return -EINVAL;
+
+  char *split = strchr(input, '=');
+
+  if (split == NULL)
+    return -EINVAL;
+
+  int key_len = split - input;
+
+  if (out_len < (key_len + 1) || out == NULL)
+    return -ENAMETOOLONG;
+
+  memcpy(out, input, key_len);
+  out[key_len] = '\0';
+
+  return 0;
+}
+
+/**
+ * If str is a string of the form key=val, find 'val'
+ */
+int get_kv_value(const char *input, char *out, size_t out_len) {
+
+  if (input == NULL)
+    return -EINVAL;
+
+  char *split = strchr(input, '=');
+
+  if (split == NULL)
+    return -EINVAL;
+
+  split++; // advance past '=' to the value
+  int val_len = (input + strlen(input)) - split;
+
+  if (out_len < (val_len + 1) || out == NULL)
+    return -ENAMETOOLONG;
+
+  memcpy(out, split, val_len);
+  out[val_len] = '\0';
+
+  return 0;
 }

@@ -46,13 +46,16 @@ void display_usage(FILE *stream) {
   fprintf(stream,
           "Usage: container-executor --checksetup\n");
   fprintf(stream,
+          "Usage: container-executor --mount-cgroups "\
+          "hierarchy controller=path...\n");
+  fprintf(stream,
       "Usage: container-executor user command command-args\n");
   fprintf(stream, "Commands:\n");
   fprintf(stream, "   initialize container: %2d appid tokens " \
    "nm-local-dirs nm-log-dirs cmd app...\n", INITIALIZE_CONTAINER);
   fprintf(stream,
       "   launch container:    %2d appid containerid workdir "\
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs\n",
+      "container-script tokens pidfile nm-local-dirs nm-log-dirs resources\n",
 	  LAUNCH_CONTAINER);
   fprintf(stream, "   signal container:    %2d container-pid signal\n",
 	  SIGNAL_CONTAINER);
@@ -63,14 +66,21 @@ void display_usage(FILE *stream) {
 int main(int argc, char **argv) {
   int invalid_args = 0; 
   int do_check_setup = 0;
+  int do_mount_cgroups = 0;
   
   LOGFILE = stdout;
   ERRORFILE = stderr;
 
+  if (argc > 1) {
+    if (strcmp("--mount-cgroups", argv[1]) == 0) {
+      do_mount_cgroups = 1;
+    }
+  }
+
   // Minimum number of arguments required to run 
   // the std. container-executor commands is 4
   // 4 args not needed for checksetup option
-  if (argc < 4) {
+  if (argc < 4 && !do_mount_cgroups) {
     invalid_args = 1;
     if (argc == 2) {
       const char *arg1 = argv[1];
@@ -103,6 +113,7 @@ int main(int argc, char **argv) {
   char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
   char *conf_file = resolve_config_path(orig_conf_file, argv[0]);
   char *local_dirs, *log_dirs;
+  char *resources, *resources_key, *resources_value;
 
   if (conf_file == NULL) {
     fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
@@ -145,6 +156,18 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  if (do_mount_cgroups) {
+    optind++;
+    char *hierarchy = argv[optind++];
+    int result = 0;
+
+    while (optind < argc && result == 0) {
+      result = mount_cgroup(argv[optind++], hierarchy);
+    }
+
+    return result;
+  }
+
   //checks done for user name
   if (argv[optind] == NULL) {
     fprintf(ERRORFILE, "Invalid user name.\n");
@@ -180,8 +203,8 @@ int main(int argc, char **argv) {
                                extract_values(log_dirs), argv + optind);
     break;
   case LAUNCH_CONTAINER:
-    if (argc != 11) {
-      fprintf(ERRORFILE, "Too few arguments (%d vs 11) for launch container\n",
+    if (argc != 12) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 12) for launch container\n",
 	      argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -194,10 +217,26 @@ int main(int argc, char **argv) {
     pid_file = argv[optind++];
     local_dirs = argv[optind++];// good local dirs as a comma separated list
     log_dirs = argv[optind++];// good log dirs as a comma separated list
+    resources = argv[optind++];// key,value pair describing resources
+    char *resources_key = malloc(strlen(resources));
+    char *resources_value = malloc(strlen(resources));
+    if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
+        get_kv_value(resources, resources_value, strlen(resources)) < 0) {
+        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
+                           resources);
+        fflush(ERRORFILE);
+        free(resources_key);
+        free(resources_value);
+        return INVALID_ARGUMENT_NUMBER;
+    }
+    char** resources_values = extract_values(resources_value);
     exit_code = launch_container_as_user(user_detail->pw_name, app_id,
                     container_id, current_dir, script_file, cred_file,
                     pid_file, extract_values(local_dirs),
-                    extract_values(log_dirs));
+                    extract_values(log_dirs), resources_key,
+                    resources_values);
+    free(resources_key);
+    free(resources_value);
     break;
   case SIGNAL_CONTAINER:
     if (argc != 5) {

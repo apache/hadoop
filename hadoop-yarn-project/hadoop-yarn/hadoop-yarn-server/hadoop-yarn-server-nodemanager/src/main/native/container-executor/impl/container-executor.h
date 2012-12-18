@@ -53,7 +53,8 @@ enum errorcodes {
   // PREPARE_JOB_LOGS_FAILED (NOT USED) 23
   INVALID_CONFIG_FILE =  24,
   SETSID_OPER_FAILED = 25,
-  WRITE_PIDFILE_FAILED = 26
+  WRITE_PIDFILE_FAILED = 26,
+  WRITE_CGROUP_FAILED = 27
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -111,13 +112,16 @@ int initialize_app(const char *user, const char *app_id,
  * @param pid_file file where pid of process should be written to
  * @param local_dirs nodemanager-local-directories to be used
  * @param log_dirs nodemanager-log-directories to be used
+ * @param resources_key type of resource enforcement (none, cgroups)
+ * @param resources_value values needed to apply resource enforcement
  * @return -1 or errorcode enum value on error (should never return on success).
  */
 int launch_container_as_user(const char * user, const char *app_id,
                      const char *container_id, const char *work_dir,
                      const char *script_name, const char *cred_file,
                      const char *pid_file, char* const* local_dirs,
-                     char* const* log_dirs);
+                     char* const* log_dirs, const char *resources_key,
+                     char* const* resources_value);
 
 /**
  * Function used to signal a container launched by the user.
@@ -196,3 +200,5 @@ int initialize_user(const char *user, char* const* local_dirs);
 int create_directory_for_user(const char* path);
 
 int change_user(uid_t user, gid_t group);
+
+int mount_cgroup(const char *pair, const char *hierarchy);

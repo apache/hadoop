@@ -237,4 +237,11 @@
     <Bug pattern="EI_EXPOSE_REP2" />
   </Match>
   
+   <!-- /proc/mounts is always in the same place -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler" />
+    <Method name="parseMtab" />
+    <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
+  </Match>
+
 </FindBugsFilter>
