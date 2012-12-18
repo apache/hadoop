@@ -175,6 +175,8 @@ public class ClusterStatus implements Writable {
     
   }
   
+  public static final int UNINITIALIZED_MEMORY_VALUE = -1;
+  
   private int numActiveTrackers;
   private Collection<String> activeTrackers = new ArrayList<String>();
   private int numBlacklistedTrackers;
@@ -383,6 +385,22 @@ public class ClusterStatus implements Writable {
    */
   public JobTrackerStatus getJobTrackerStatus() {
     return status;
+  }
+  
+  /**
+   * Returns UNINITIALIZED_MEMORY_VALUE (-1)
+   */
+  @Deprecated
+  public long getMaxMemory() {
+    return UNINITIALIZED_MEMORY_VALUE;
+  }
+  
+  /**
+   * Returns UNINITIALIZED_MEMORY_VALUE (-1)
+   */
+  @Deprecated
+  public long getUsedMemory() {
+    return UNINITIALIZED_MEMORY_VALUE;
   }
 
   /**
