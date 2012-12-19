@@ -263,6 +263,8 @@ public class ApplicationMasterService extends AbstractService implements
     } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
       LOG.error("Invalid responseid from appAttemptId " + appAttemptId);
       // Oh damn! Sending reboot isn't enough. RM state is corrupted. TODO:
+      // Reboot is not useful since after AM reboots, it will send register and 
+      // get an exception. Might as well throw an exception here.
       allocateResponse.setAMResponse(reboot);
       return allocateResponse;
     } 

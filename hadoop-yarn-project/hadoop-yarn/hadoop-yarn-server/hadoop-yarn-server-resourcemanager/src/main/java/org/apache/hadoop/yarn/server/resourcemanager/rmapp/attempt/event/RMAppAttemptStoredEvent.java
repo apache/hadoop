@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
 
-public enum RMAppAttemptState {
-  NEW, SUBMITTED, SCHEDULED, ALLOCATED, LAUNCHED, FAILED, RUNNING, FINISHING, 
-  FINISHED, KILLED, ALLOCATED_SAVING, LAUNCHED_UNMANAGED_SAVING, RECOVERED
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+
+public class RMAppAttemptStoredEvent extends RMAppAttemptEvent {
+
+  final Exception storedException;
+  
+  public RMAppAttemptStoredEvent(ApplicationAttemptId appAttemptId,
+                                 Exception storedException) {
+    super(appAttemptId, RMAppAttemptEventType.ATTEMPT_SAVED);
+    this.storedException = storedException;
+  }
+  
+  public Exception getStoredException() {
+    return storedException;
+  }
+
 }

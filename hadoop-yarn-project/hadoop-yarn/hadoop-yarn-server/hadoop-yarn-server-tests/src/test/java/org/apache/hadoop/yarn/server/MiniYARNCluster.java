@@ -48,8 +48,6 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 
@@ -154,8 +152,7 @@ public class MiniYARNCluster extends CompositeService {
           getConfig().set(YarnConfiguration.RM_WEBAPP_ADDRESS,
               MiniYARNCluster.getHostname() + ":0");
         }
-        RMStateStore store = StoreFactory.getStore(getConfig());
-        resourceManager = new ResourceManager(store) {
+        resourceManager = new ResourceManager() {
           @Override
           protected void doSecureLogin() throws IOException {
             // Don't try to login using keytab in the testcase.

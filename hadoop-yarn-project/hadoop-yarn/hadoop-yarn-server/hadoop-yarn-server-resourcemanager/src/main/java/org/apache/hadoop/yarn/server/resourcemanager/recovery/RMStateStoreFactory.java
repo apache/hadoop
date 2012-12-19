@@ -21,12 +21,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-public class StoreFactory {
+public class RMStateStoreFactory {
   
   public static RMStateStore getStore(Configuration conf) {
     RMStateStore store = ReflectionUtils.newInstance(
         conf.getClass(YarnConfiguration.RM_STORE, 
-            FileRMStateStore.class, RMStateStore.class), 
+            MemoryRMStateStore.class, RMStateStore.class), 
             conf);
     return store;
   }

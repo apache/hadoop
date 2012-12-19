@@ -205,6 +205,13 @@
   </property>
 
   <property>
+    <description>Enable RM to recover state after starting. If true, then 
+    yarn.resourcemanager.store.class must be specified</description>
+    <name>yarn.resourcemanager.recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The class to use as the persistent store.</description>
     <name>yarn.resourcemanager.store.class</name>
   </property>
