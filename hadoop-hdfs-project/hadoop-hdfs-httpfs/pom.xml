@@ -34,7 +34,7 @@
   <description>Apache Hadoop HttpFS</description>
 
   <properties>
-    <tomcat.version>6.0.32</tomcat.version>
+    <tomcat.version>6.0.36</tomcat.version>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.revision>REVISION NOT AVAIL</httpfs.source.revision>
