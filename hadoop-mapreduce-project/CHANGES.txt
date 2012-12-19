@@ -16,6 +16,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
 
+    MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
+    with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
+
   IMPROVEMENTS
 
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
