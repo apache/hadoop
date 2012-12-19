@@ -662,4 +662,15 @@ public class ViewFileSystemBaseTest {
   public void testInternalSetOwner() throws IOException {
     fsView.setOwner(new Path("/internalDir"), "foo", "bar");
   }
+  
+  @Test
+  public void testCreateNonRecursive() throws IOException {
+    Path path = FileSystemTestHelper.getTestRootPath(fsView, "/user/foo");
+    fsView.createNonRecursive(path, false, 1024, (short)1, 1024L, null);
+    FileStatus status = fsView.getFileStatus(new Path("/user/foo"));
+    Assert.assertTrue("Created file should be type file",
+        fsView.isFile(new Path("/user/foo")));
+    Assert.assertTrue("Target of created file should be type file",
+        fsTarget.isFile(new Path(targetTestRoot,"user/foo")));
+  }
 }
