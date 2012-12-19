@@ -76,6 +76,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-129. Simplify classpath construction for mini YARN tests. (tomwhite)
 
+    YARN-254. Update fair scheduler web UI for hierarchical queues. 
+    (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
