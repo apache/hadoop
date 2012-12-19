@@ -50,6 +50,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -66,7 +69,7 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
-public class RMAppImpl implements RMApp {
+public class RMAppImpl implements RMApp, Recoverable {
 
   private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
   private static final String UNAVAILABLE = "N/A";
@@ -242,6 +245,11 @@ public class RMAppImpl implements RMApp {
   @Override
   public ApplicationId getApplicationId() {
     return this.applicationId;
+  }
+  
+  @Override
+  public ApplicationSubmissionContext getApplicationSubmissionContext() {
+    return this.submissionContext;
   }
 
   @Override
@@ -512,9 +520,22 @@ public class RMAppImpl implements RMApp {
       this.writeLock.unlock();
     }
   }
+  
+  @Override
+  public void recover(RMState state) {
+    ApplicationState appState = state.getApplicationState().get(getApplicationId());
+    LOG.info("Recovering app: " + getApplicationId() + " with " + 
+            + appState.getAttemptCount() + " attempts");
+    for(int i=0; i<appState.getAttemptCount(); ++i) {
+      // create attempt
+      createNewAttempt(false);
+      // recover attempt
+      ((RMAppAttemptImpl) currentAttempt).recover(state);
+    }
+  }
 
   @SuppressWarnings("unchecked")
-  private void createNewAttempt() {
+  private void createNewAttempt(boolean startAttempt) {
     ApplicationAttemptId appAttemptId = Records
         .newRecord(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(applicationId);
@@ -525,8 +546,10 @@ public class RMAppImpl implements RMApp {
         submissionContext, conf);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
-    handler.handle(
-        new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
+    if(startAttempt) {
+      handler.handle(
+          new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
+    }
   }
   
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
@@ -553,7 +576,7 @@ public class RMAppImpl implements RMApp {
   
   private static final class StartAppAttemptTransition extends RMAppTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.createNewAttempt();
+      app.createNewAttempt(true);
     };
   }
 
@@ -647,7 +670,7 @@ public class RMAppImpl implements RMApp {
         msg = "Unmanaged application " + app.getApplicationId()
             + " failed due to " + failedEvent.getDiagnostics()
             + ". Failing the application.";
-      } else if (app.attempts.size() == app.maxRetries) {
+      } else if (app.attempts.size() >= app.maxRetries) {
         retryApp = false;
         msg = "Application " + app.getApplicationId() + " failed "
             + app.maxRetries + " times due to " + failedEvent.getDiagnostics()
@@ -655,7 +678,7 @@ public class RMAppImpl implements RMApp {
       }
 
       if (retryApp) {
-        app.createNewAttempt();
+        app.createNewAttempt(true);
         return initialState;
       } else {
         LOG.info(msg);

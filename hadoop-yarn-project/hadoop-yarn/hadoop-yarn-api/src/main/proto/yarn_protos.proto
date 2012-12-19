@@ -329,3 +329,15 @@ message StringBytesMapProto {
   optional bytes value = 2;
 }
 
+////////////////////////////////////////////////////////////////////////
+////// From recovery////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ApplicationStateDataProto {
+  optional int64 submit_time = 1;
+  optional ApplicationSubmissionContextProto application_submission_context = 2;
+}
+
+message ApplicationAttemptStateDataProto {
+  optional ApplicationAttemptIdProto attemptId = 1;
+  optional ContainerProto master_container = 2;
+}

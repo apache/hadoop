@@ -39,9 +39,10 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -63,10 +64,17 @@ public class MockRM extends ResourceManager {
   }
 
   public MockRM(Configuration conf) {
-    super(StoreFactory.getStore(conf));    
+    this(conf, null);    
+  }
+  
+  public MockRM(Configuration conf, RMStateStore store) {
+    super();    
     init(conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
+    if(store != null) {
+      setRMStateStore(store);
+    }
     Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    rootLogger.setLevel(Level.DEBUG);    
   }
 
   public void waitForState(ApplicationId appId, RMAppState finalState)
@@ -75,13 +83,31 @@ public class MockRM extends ResourceManager {
     Assert.assertNotNull("app shouldn't be null", app);
     int timeoutSecs = 0;
     while (!finalState.equals(app.getState()) && timeoutSecs++ < 20) {
-      System.out.println("App State is : " + app.getState()
+      System.out.println("App : " + appId + " State is : " + app.getState()
           + " Waiting for state : " + finalState);
       Thread.sleep(500);
     }
     System.out.println("App State is : " + app.getState());
     Assert.assertEquals("App state is not correct (timedout)", finalState,
         app.getState());
+  }
+  
+  public void waitForState(ApplicationAttemptId attemptId, 
+                           RMAppAttemptState finalState)
+      throws Exception {
+    RMApp app = getRMContext().getRMApps().get(attemptId.getApplicationId());
+    Assert.assertNotNull("app shouldn't be null", app);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    int timeoutSecs = 0;
+    while (!finalState.equals(attempt.getAppAttemptState()) && timeoutSecs++ < 20) {
+      System.out.println("AppAttempt : " + attemptId 
+          + " State is : " + attempt.getAppAttemptState()
+          + " Waiting for state : " + finalState);
+      Thread.sleep(500);
+    }
+    System.out.println("Attempt State is : " + attempt.getAppAttemptState());
+    Assert.assertEquals("Attempt state is not correct (timedout)", finalState,
+        attempt.getAppAttemptState());
   }
 
   // get new application id
@@ -97,11 +123,16 @@ public class MockRM extends ResourceManager {
 
   // client
   public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
-    return submitApp(masterMemory, name, user, null);
+    return submitApp(masterMemory, name, user, null, false);
   }
-
+  
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls) throws Exception {
+    return submitApp(masterMemory, name, user, acls, false);
+  }  
+
+  public RMApp submitApp(int masterMemory, String name, String user,
+      Map<ApplicationAccessType, String> acls, boolean unmanaged) throws Exception {
     ClientRMProtocol client = getClientRMService();
     GetNewApplicationResponse resp = client.getNewApplication(Records
         .newRecord(GetNewApplicationRequest.class));
@@ -114,6 +145,9 @@ public class MockRM extends ResourceManager {
     sub.setApplicationId(appId);
     sub.setApplicationName(name);
     sub.setUser(user);
+    if(unmanaged) {
+      sub.setUnmanagedAM(true);
+    }
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
     Resource capability = Records.newRecord(Resource.class);

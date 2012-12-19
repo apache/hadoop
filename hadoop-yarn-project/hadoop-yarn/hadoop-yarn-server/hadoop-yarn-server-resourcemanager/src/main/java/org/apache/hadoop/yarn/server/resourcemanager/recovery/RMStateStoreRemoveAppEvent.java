@@ -16,9 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
+package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMAppAttemptState {
-  NEW, SUBMITTED, SCHEDULED, ALLOCATED, LAUNCHED, FAILED, RUNNING, FINISHING, 
-  FINISHED, KILLED, ALLOCATED_SAVING, LAUNCHED_UNMANAGED_SAVING, RECOVERED
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+
+public class RMStateStoreRemoveAppEvent extends RMStateStoreEvent {
+  ApplicationState appState;
+  
+  RMStateStoreRemoveAppEvent(ApplicationState appState) {
+    super(RMStateStoreEventType.REMOVE_APP);
+    this.appState = appState;
+  }
+  
+  public ApplicationState getAppState() {
+    return appState;
+  }
 }

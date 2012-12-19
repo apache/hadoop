@@ -47,7 +47,7 @@ public class MockAM {
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
   private final RMContext context;
-  private final AMRMProtocol amRMProtocol;
+  private AMRMProtocol amRMProtocol;
 
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
   private final List<ContainerId> releases = new ArrayList<ContainerId>();
@@ -58,6 +58,10 @@ public class MockAM {
     this.amRMProtocol = amRMProtocol;
     this.attemptId = attemptId;
   }
+  
+  void setAMRMProtocol(AMRMProtocol amRMProtocol) {
+    this.amRMProtocol = amRMProtocol;
+  }
 
   public void waitForState(RMAppAttemptState finalState) throws Exception {
     RMApp app = context.getRMApps().get(attemptId.getApplicationId());
@@ -66,7 +70,8 @@ public class MockAM {
     while (!finalState.equals(attempt.getAppAttemptState())
         && timeoutSecs++ < 20) {
       System.out
-          .println("AppAttempt State is : " + attempt.getAppAttemptState()
+          .println("AppAttempt : " + attemptId + " State is : " 
+              + attempt.getAppAttemptState()
               + " Waiting for state : " + finalState);
       Thread.sleep(500);
     }
