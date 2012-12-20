@@ -145,6 +145,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in
     MR1 but not MR2. (Sandy Ryza via tomwhite)
 
+    HDFS-4320. Add a separate configuration for namenode rpc address instead
+    of using fs.default.name. (Mostafa Elhemali via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

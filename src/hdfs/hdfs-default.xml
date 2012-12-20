@@ -16,6 +16,16 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.rpc-address</name>
+  <value></value>
+  <description>
+    RPC address that handles all clients requests. If empty then we'll get the
+    value from fs.default.name.
+    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+  </description>
+</property>
+
+<property>
   <name>dfs.secondary.http.address</name>
   <value>0.0.0.0:50090</value>
   <description>
