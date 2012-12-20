@@ -13,9 +13,6 @@ Trunk - Unreleased
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
-    YARN-57. Allow process-tree based resource calculation et al. to be
-    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
-
   OPTIMAZATIONS
 
   BUG FIXES
@@ -32,6 +29,12 @@ Release 2.0.3-alpha - Unreleased
     applications on an RM bounce. (Bikas Saha via acmurthy)
 
   IMPROVEMENTS
+
+    YARN-223. Update process tree instead of getting new process trees.
+    (Radim Kolar via llu)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
 
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
     vinodkv)
