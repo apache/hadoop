@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
+import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 
 /** Various commands for moving files */
@@ -49,7 +50,21 @@ class MoveCommands {
 
     @Override
     protected void processPath(PathData src, PathData target) throws IOException {
-      target.fs.moveFromLocalFile(src.path, target.path);
+      // unlike copy, don't merge existing dirs during move
+      if (target.exists && target.stat.isDirectory()) {
+        throw new PathExistsException(target.toString());
+      }
+      super.processPath(src, target);
+    }
+    
+    @Override
+    protected void postProcessPath(PathData src) throws IOException {
+      if (!src.fs.delete(src.path, false)) {
+        // we have no way to know the actual error...
+        PathIOException e = new PathIOException(src.toString());
+        e.setOperation("remove");
+        throw e;
+      }
     }
   }
 

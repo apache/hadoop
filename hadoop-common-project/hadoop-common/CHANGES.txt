@@ -34,6 +34,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
     rather than info during fallback. (Colin Patrick McCabe via todd)
 
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
