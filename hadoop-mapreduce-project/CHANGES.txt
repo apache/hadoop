@@ -63,6 +63,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4856. TestJobOutputCommitter uses same directory as
     TestJobCleanup. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4895. Fix compilation failure of org.apache.hadoop.mapred.
+    gridmix.TestResourceUsageEmulators (Dennis Y via tgraves)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
