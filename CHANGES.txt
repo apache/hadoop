@@ -354,6 +354,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4860. DelegationTokenRenewal attempts to renew token even after
     a job is removed. (kkambatl via tucu)
 
+    MAPREDUCE-4806. Some private methods in JobTracker.RecoveryManager are not
+    used anymore after MAPREDUCE-3837. (Karthik Kambatla via tomwhite)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
