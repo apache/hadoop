@@ -138,11 +138,6 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
      </Match>
-     <Match>
-       <Class name="org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal$DelegationTokenCancelThread" />
-       <Method name="run" />
-       <Bug pattern="DM_EXIT" />
-    </Match>
      <!--
        We need to cast objects between old and new api objects
      -->
