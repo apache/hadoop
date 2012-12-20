@@ -11,6 +11,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4811. JobHistoryServer should show when it was started in WebUI
     About page (Ravi Prakash via jlowe)
 
+    MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in 
+    MR1 but not MR2 (Sandy Ryza via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
