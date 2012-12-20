@@ -34,8 +34,7 @@ public class TestResourceCalculatorProcessTree {
       super(pid);
     }
 
-    public ResourceCalculatorProcessTree getProcessTree() {
-      return this;
+    public void updateProcessTree() {
     }
 
     public String getProcessTreeDump() {

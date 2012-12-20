@@ -396,9 +396,7 @@ public class ContainersMonitorImpl extends AbstractService implements
             LOG.debug("Constructing ProcessTree for : PID = " + pId
                 + " ContainerId = " + containerId);
             ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
-            pTree = pTree.getProcessTree(); // get the updated process-tree
-            ptInfo.setProcessTree(pTree); // update ptInfo with proces-tree of
-                                          // updated state
+            pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getCumulativeVmem();
             long currentPmemUsage = pTree.getCumulativeRssmem();
             // as processes begin with an age 1, we want to see if there
