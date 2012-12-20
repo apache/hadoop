@@ -43,16 +43,14 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
   }
 
   /**
-   * Get the process-tree with latest state. If the root-process is not alive,
-   * an empty tree will be returned.
+   * Update the process-tree with latest state.
    *
    * Each call to this function should increment the age of the running
    * processes that already exist in the process tree. Age is used other API's
    * of the interface.
    *
-   * @return the process-tree with latest state.
    */
-  public abstract ResourceCalculatorProcessTree getProcessTree();
+  public abstract void updateProcessTree();
 
   /**
    * Get a dump of the process-tree.
