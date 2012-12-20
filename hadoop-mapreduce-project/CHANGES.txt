@@ -32,6 +32,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4861. Cleanup: Remove unused mapreduce.security.token.
     DelegationTokenRenewal  (Karthik Kambatla via tgraves)
 
+    MAPREDUCE-4856. TestJobOutputCommitter uses same directory as TestJobCleanup 
+    (Sandy Ryza via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
