@@ -32,7 +32,6 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin.ProcResourceValues;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.mapred.DummyResourceCalculatorPlugin;
 import org.apache.hadoop.mapred.gridmix.LoadJob.ResourceUsageMatcherRunner;

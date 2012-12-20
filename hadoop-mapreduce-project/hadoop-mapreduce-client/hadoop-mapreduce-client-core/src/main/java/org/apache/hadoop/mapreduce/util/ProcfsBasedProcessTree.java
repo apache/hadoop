@@ -163,12 +163,10 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   }
 
   /**
-   * Get the process-tree with latest state. If the root-process is not alive,
-   * an empty tree will be returned.
-   * 
-   * @return the process-tree with latest state.
+   * Update the process-tree with latest state. If the root-process is not alive,
+   * tree will become empty.
    */
-  public ProcfsBasedProcessTree getProcessTree() {
+  public void updateProcessTree() {
     if (!pid.equals(deadPid)) {
       // Get the list of processes
       List<String> processList = getProcessList();
@@ -194,7 +192,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       }
 
       if (me == null) {
-        return this; 
+        return;
       }
 
       // Add each process to its parent.
@@ -236,7 +234,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
         LOG.debug(this.toString());
       }
     }
-    return this;
   }
 
   /**

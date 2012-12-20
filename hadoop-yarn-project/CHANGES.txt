@@ -27,6 +27,9 @@ Release 0.23.6 - UNRELEASED
     YARN-266. RM and JHS Web UIs are blank because AppsBlock is not escaping
     string properly (Ravi Prakash via jlowe)
 
+    YARN-223. Change processTree interface to work better with native code
+    (Radim Kolar via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

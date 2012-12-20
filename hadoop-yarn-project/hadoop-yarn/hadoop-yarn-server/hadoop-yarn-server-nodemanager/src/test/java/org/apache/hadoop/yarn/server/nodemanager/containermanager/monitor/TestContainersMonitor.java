@@ -134,7 +134,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       ProcfsBasedProcessTree pTree = new ProcfsBasedProcessTree(
                                           "100",
                                           procfsRootDir.getAbsolutePath());
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertTrue("tree rooted at 100 should be over limit " +
                     "after first iteration.",
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
@@ -142,13 +142,13 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       // the tree rooted at 200 is initially below limit.
       pTree = new ProcfsBasedProcessTree("200",
                                           procfsRootDir.getAbsolutePath());
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertFalse("tree rooted at 200 shouldn't be over limit " +
                     "after one iteration.",
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
       // second iteration - now the tree has been over limit twice,
       // hence it should be declared over limit.
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertTrue(
           "tree rooted at 200 should be over limit after 2 iterations",
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
@@ -156,12 +156,12 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       // the tree rooted at 600 is never over limit.
       pTree = new ProcfsBasedProcessTree("600",
                                             procfsRootDir.getAbsolutePath());
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertFalse("tree rooted at 600 should never be over limit.",
                     test.isProcessTreeOverLimit(pTree, "dummyId", limit));
 
       // another iteration does not make any difference.
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertFalse("tree rooted at 600 should never be over limit.",
                     test.isProcessTreeOverLimit(pTree, "dummyId", limit));
     } finally {

@@ -55,8 +55,8 @@ public interface MRConfig {
   public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
     7*24*60*60*1000; // 7 days
   
-  public static final String RESOURCE_CALCULATOR_PLUGIN = 
-    "mapreduce.job.resourcecalculatorplugin";
+  public static final String RESOURCE_CALCULATOR_PROCESS_TREE =
+    "mapreduce.job.process-tree.class";
   public static final String STATIC_RESOLUTIONS = 
     "mapreduce.job.net.static.resolutions";
 
