@@ -15,6 +15,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9108. Add a method to clear terminateCalled to ExitUtil for test 
     cases (Kihwal Lee via tgraves)
 
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in 
+    child hadoop client processes (Yu Gao via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
