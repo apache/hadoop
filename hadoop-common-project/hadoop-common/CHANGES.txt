@@ -919,6 +919,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
     Veselovsky via bobby)
 
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

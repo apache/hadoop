@@ -307,6 +307,7 @@ abstract public class Command extends Configured {
         if (recursive && item.stat.isDirectory()) {
           recursePath(item);
         }
+        postProcessPath(item);
       } catch (IOException e) {
         displayError(e);
       }
@@ -323,6 +324,15 @@ abstract public class Command extends Configured {
    */  
   protected void processPath(PathData item) throws IOException {
     throw new RuntimeException("processPath() is not implemented");    
+  }
+
+  /**
+   * Hook for commands to implement an operation to be applied on each
+   * path for the command after being processed successfully
+   * @param item a {@link PathData} object
+   * @throws IOException if anything goes wrong...
+   */
+  protected void postProcessPath(PathData item) throws IOException {    
   }
 
   /**
