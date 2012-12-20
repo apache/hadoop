@@ -13,6 +13,12 @@ Release 2.0.3-alpha - Unreleased
 
   IMPROVEMENTS
 
+    YARN-223. Update process tree instead of getting new process trees.
+    (Radim Kolar via llu)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
     vinodkv)
 
