@@ -51,6 +51,11 @@ public class TestDefaultNameNodePort {
     assertEquals(NameNode.getAddress(conf).getPort(), 555);
     FileSystem.setDefaultUri(conf, "foo");
     assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, "hdfs://bar:222");
+    assertEquals("bar", NameNode.getAddress(conf).getHostName());
+    assertEquals(222, NameNode.getAddress(conf).getPort());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, "");
+    assertEquals(NameNode.getAddress(conf).getPort(), NameNode.DEFAULT_PORT);
   }
 
   public void testGetUri() {

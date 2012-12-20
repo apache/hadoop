@@ -225,7 +225,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   public static InetSocketAddress getAddress(Configuration conf) {
-    return getAddress(FileSystem.getDefaultUri(conf).toString());
+    String addr = conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    if (addr == null || addr.isEmpty()) {
+      return getAddress(FileSystem.getDefaultUri(conf).toString());
+    }
+    return getAddress(addr);
   }
 
   public static URI getUri(InetSocketAddress namenode) {
