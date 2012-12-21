@@ -227,6 +227,9 @@ public class QueueManager {
    * Return whether a queue exists already.
    */
   public boolean exists(String name) {
+    if (!name.startsWith(ROOT_QUEUE + ".") && !name.equals(ROOT_QUEUE)) {
+      name = ROOT_QUEUE + "." + name;
+    }
     synchronized (queues) {
       return queues.containsKey(name);
     }
