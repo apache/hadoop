@@ -20,8 +20,10 @@ package org.apache.hadoop.mapreduce.task.reduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,8 +32,8 @@ abstract class MergeThread<T,K,V> extends Thread {
   
   private static final Log LOG = LogFactory.getLog(MergeThread.class);
 
-  private volatile boolean inProgress = false;
-  private List<T> inputs = new ArrayList<T>();
+  private AtomicInteger numPending = new AtomicInteger(0);
+  private LinkedList<List<T>> pendingToBeMerged;
   protected final MergeManager<K,V> manager;
   private final ExceptionReporter reporter;
   private boolean closed = false;
@@ -39,6 +41,7 @@ abstract class MergeThread<T,K,V> extends Thread {
   
   public MergeThread(MergeManager<K,V> manager, int mergeFactor,
                      ExceptionReporter reporter) {
+    this.pendingToBeMerged = new LinkedList<List<T>>();
     this.manager = manager;
     this.mergeFactor = mergeFactor;
     this.reporter = reporter;
@@ -50,53 +53,55 @@ abstract class MergeThread<T,K,V> extends Thread {
     interrupt();
   }
 
-  public synchronized boolean isInProgress() {
-    return inProgress;
-  }
-  
-  public synchronized void startMerge(Set<T> inputs) {
+  public void startMerge(Set<T> inputs) {
     if (!closed) {
-      inProgress = true;
-      this.inputs = new ArrayList<T>();
+      numPending.incrementAndGet();
+      List<T> toMergeInputs = new ArrayList<T>();
       Iterator<T> iter=inputs.iterator();
       for (int ctr = 0; iter.hasNext() && ctr < mergeFactor; ++ctr) {
-        this.inputs.add(iter.next());
+        toMergeInputs.add(iter.next());
         iter.remove();
       }
-      LOG.info(getName() + ": Starting merge with " + this.inputs.size() + 
+      LOG.info(getName() + ": Starting merge with " + toMergeInputs.size() + 
                " segments, while ignoring " + inputs.size() + " segments");
-      notifyAll();
+      synchronized(pendingToBeMerged) {
+        pendingToBeMerged.addLast(toMergeInputs);
+        pendingToBeMerged.notifyAll();
+      }
     }
   }
 
   public synchronized void waitForMerge() throws InterruptedException {
-    while (inProgress) {
+    while (numPending.get() > 0) {
       wait();
     }
   }
 
   public void run() {
     while (true) {
+      List<T> inputs = null;
       try {
         // Wait for notification to start the merge...
-        synchronized (this) {
-          while (!inProgress) {
-            wait();
+        synchronized (pendingToBeMerged) {
+          while(pendingToBeMerged.size() <= 0) {
+            pendingToBeMerged.wait();
           }
+          // Pickup the inputs to merge.
+          inputs = pendingToBeMerged.removeFirst();
         }
 
         // Merge
         merge(inputs);
       } catch (InterruptedException ie) {
+        numPending.set(0);
         return;
       } catch(Throwable t) {
+        numPending.set(0);
         reporter.reportException(t);
         return;
       } finally {
         synchronized (this) {
-          // Clear inputs
-          inputs = null;
-          inProgress = false;        
+          numPending.decrementAndGet();
           notifyAll();
         }
       }

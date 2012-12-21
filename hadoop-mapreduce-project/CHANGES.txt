@@ -38,6 +38,8 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4856. TestJobOutputCommitter uses same directory as TestJobCleanup 
     (Sandy Ryza via tgraves)
 
+    MAPREDUCE-4842. Shuffle race can hang reducer (Mariappan Asokan via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
