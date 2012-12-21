@@ -39,6 +39,9 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
+    HADOOP-9152. HDFS can report negative DFS Used on clusters with very 
+    small amounts of data (Brock Noland via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

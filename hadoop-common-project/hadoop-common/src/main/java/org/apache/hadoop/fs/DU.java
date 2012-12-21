@@ -135,7 +135,7 @@ public class DU extends Shell {
       }
     }
     
-    return used.longValue();
+    return Math.max(used.longValue(), 0L);
   }
 
   /**
