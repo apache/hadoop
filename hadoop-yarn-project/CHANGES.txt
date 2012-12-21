@@ -135,6 +135,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-282. Fair scheduler web UI double counts Apps Submitted. 
     (sandyr via tucu)
 
+    YARN-283. Fair scheduler fails to get queue info without root prefix. 
+    (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
