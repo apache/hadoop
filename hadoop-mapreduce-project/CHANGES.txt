@@ -30,6 +30,9 @@ Release 2.0.3-alpha - Unreleased
 
   BUG FIXES
 
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
+
     MAPREDUCE-4607. Race condition in ReduceTask completion can result in Task
     being incorrectly failed. (Bikas Saha via tomwhite)
 
