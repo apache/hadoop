@@ -281,6 +281,27 @@ void test_check_user() {
   }
 }
 
+void test_get_config_path() {
+  printf("\nTesting get_config_path\n");
+  char conf_file_1[PATH_MAX];
+  char conf_file_2[PATH_MAX];
+  get_config_path(conf_file_1, PATH_MAX, TEST_ROOT, "test.cfg");
+  char *conf_dir = getenv("HADOOP_SECURITY_CONF_DIR");
+  if (conf_dir == NULL) {
+    if (strcmp(conf_file_1, TEST_ROOT "/test.cfg") != 0) {
+      printf("FAIL: got wrong configuration file path\n");
+      exit(1);
+    }
+  }
+  else {
+    snprintf(conf_file_2, PATH_MAX, "%s/%s", conf_dir, "test.cfg");
+    if (strcmp(conf_file_1, conf_file_2) != 0) {
+      printf("FAIL: got wrong configuration file path\n");
+      exit(1);
+    }
+  }
+}
+
 void test_check_configuration_permissions() {
   printf("\nTesting check_configuration_permissions\n");
   if (check_configuration_permissions("/etc/passwd") != 0) {
@@ -821,6 +842,8 @@ int main(int argc, char **argv) {
 
   printf("\nTesting get_job_log_dir()\n");
   test_get_job_log_dir();
+
+  test_get_config_path();
 
   test_check_configuration_permissions();
 

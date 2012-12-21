@@ -88,6 +88,29 @@ static int is_only_root_writable(const char *file) {
 }
 
 /**
+ * Get the full path of the configuration file.
+ * Use $HADOOP_SECURITY_CONF_DIR for the configuration directory, and if
+ * it's not set, use the default value in default_conf_dir.
+ */
+void get_config_path(char* conf_file_path, int size,
+                     char* default_conf_dir,
+                     const char* conf_file_name) {
+  if (conf_file_name == NULL) {
+    fprintf(LOGFILE, "Null configuration filename passed in\n");
+    exit(INVALID_CONFIG_FILE);
+  }
+  char *orig_conf_dir = getenv("HADOOP_SECURITY_CONF_DIR");
+  if (orig_conf_dir == NULL) {
+    if (default_conf_dir == NULL) {
+      fprintf(LOGFILE, "Null default configuration directory passed in\n");
+      exit(INVALID_CONFIG_FILE);
+    }
+    orig_conf_dir = default_conf_dir;
+  }
+  snprintf(conf_file_path, size, "%s/%s", orig_conf_dir, conf_file_name);
+}
+
+/**
  * Ensure that the configuration file and all of the containing directories
  * are only writable by root. Otherwise, an attacker can change the 
  * configuration and potentially cause damage.

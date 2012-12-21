@@ -6,6 +6,9 @@ Release 1.2.0 - unreleased
 
   NEW FEATURES
 
+    MAPREUDCE-4397. Introduce HADOOP_SECURITY_CONF_DIR for task-controller.
+    (Yu Gao via llu)
+
     MAPREDUCE-4660. Update task placement policy for network topology
     with node group. (Junping Du via llu)
 
