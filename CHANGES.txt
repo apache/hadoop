@@ -411,6 +411,9 @@ Release 1.1.2 - Unreleased
 
     MAPREDUCE-4859. Fixed TestRecoveryManager. (acmurthy) 
 
+    MAPREDUCE-4888. Fixed NLineInputFormat one-off error which dropped data.
+    (vinodkv via acmurthy) 
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
