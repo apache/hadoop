@@ -1098,4 +1098,31 @@ public class TestFairScheduler {
     assertTrue(Resources.equals(
         Resources.createResource(1536), scheduler.resToPreempt(schedD, clock.getTime())));
   }
+  
+  @Test
+  public void testMultipleContainersWaitingForReservation() {
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Request full capacity of node
+    createSchedulingRequest(1024, "queue1", "user1", 1);
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+    scheduler.handle(updateEvent);
+
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue2", "user2", 1);
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue3", "user3", 1);
+    
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    // One container should get reservation and the other should get nothing
+    assertEquals(1024,
+        scheduler.applications.get(attId1).getCurrentReservation().getMemory());
+    assertEquals(0,
+        scheduler.applications.get(attId2).getCurrentReservation().getMemory());
+  }
 }
