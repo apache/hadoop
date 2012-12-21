@@ -61,5 +61,10 @@ public class PriorityPBImpl extends Priority {
     maybeInitBuilder();
     builder.setPriority((priority));
   }
+  
+  @Override
+  public String toString() {
+    return Integer.valueOf(getPriority()).toString();
+  }
 
 }  

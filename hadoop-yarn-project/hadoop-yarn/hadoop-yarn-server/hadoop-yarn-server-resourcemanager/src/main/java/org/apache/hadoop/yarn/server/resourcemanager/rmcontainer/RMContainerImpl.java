@@ -199,6 +199,11 @@ public class RMContainerImpl implements RMContainer {
   }
   
   @Override
+  public String toString() {
+    return containerId.toString();
+  }
+  
+  @Override
   public void handle(RMContainerEvent event) {
     LOG.debug("Processing " + event.getContainerId() + " of type " + event.getType());
     try {
@@ -221,7 +226,7 @@ public class RMContainerImpl implements RMContainer {
       writeLock.unlock();
     }
   }
-
+  
   private static class BaseTransition implements
       SingleArcTransition<RMContainerImpl, RMContainerEvent> {
 
