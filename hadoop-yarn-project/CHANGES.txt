@@ -143,6 +143,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-271. Fair scheduler hits IllegalStateException trying to reserve
     different apps on same node. (Sandy Ryza via tomwhite)
 
+    YARN-272. Fair scheduler log messages try to print objects without 
+    overridden toString methods. (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
