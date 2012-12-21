@@ -514,7 +514,6 @@ public class FairScheduler implements ResourceScheduler {
 
     queue.addApp(schedulerApp);
     queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
-    rootMetrics.submitApp(user, applicationAttemptId.getAttemptId());
 
     applications.put(applicationAttemptId, schedulerApp);
 
