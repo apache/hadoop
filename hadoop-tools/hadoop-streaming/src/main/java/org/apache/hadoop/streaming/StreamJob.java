@@ -306,7 +306,13 @@ public class StreamJob implements Tool {
             throw new IllegalArgumentException(e);
           }
         }
-        config_.set("tmpfiles", config_.get("tmpfiles", "") + fileList);
+        String tmpFiles = config_.get("tmpfiles", "");
+        if (tmpFiles.isEmpty()) {
+          tmpFiles = fileList.toString();
+        } else {
+          tmpFiles = tmpFiles + "," + fileList;
+        }
+        config_.set("tmpfiles", tmpFiles);
         validate(packageFiles_);
       }
 
