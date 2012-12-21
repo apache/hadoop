@@ -777,7 +777,8 @@ public class FairScheduler implements ResourceScheduler {
         boolean assignedContainer = false;
         for (FSLeafQueue sched : scheds) {
           Resource assigned = sched.assignContainer(node, false);
-          if (Resources.greaterThan(assigned, Resources.none())) {
+          if (Resources.greaterThan(assigned, Resources.none()) ||
+              node.getReservedContainer() != null) {
             eventLog.log("ASSIGN", nm.getHostName(), assigned);
             assignedContainers++;
             assignedContainer = true;

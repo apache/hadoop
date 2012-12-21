@@ -123,6 +123,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-264. y.s.rm.DelegationTokenRenewer attempts to renew token even 
     after removing an app. (kkambatl via tucu)
 
+    YARN-271. Fair scheduler hits IllegalStateException trying to reserve
+    different apps on same node. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
