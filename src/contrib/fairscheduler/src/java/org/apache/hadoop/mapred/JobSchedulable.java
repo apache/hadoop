@@ -25,9 +25,9 @@ import org.apache.hadoop.mapred.FairScheduler.JobInfo;
 import org.apache.hadoop.mapreduce.TaskType;
 
 public class JobSchedulable extends Schedulable {
-  private FairScheduler scheduler;
-  private JobInProgress job;
-  private TaskType taskType;
+  protected FairScheduler scheduler;
+  protected JobInProgress job;
+  protected TaskType taskType;
   private int demand = 0;
 
   public JobSchedulable(FairScheduler scheduler, JobInProgress job, 
@@ -36,6 +36,18 @@ public class JobSchedulable extends Schedulable {
     this.job = job;
     this.taskType = taskType;
     
+    initMetrics();
+  }
+
+  public JobSchedulable() {
+  }
+
+  public void init(FairScheduler scheduler, JobInProgress job,
+      TaskType taskType) {
+    this.scheduler = scheduler;
+    this.job = job;
+    this.taskType = taskType;
+
     initMetrics();
   }
   
@@ -87,7 +99,7 @@ public class JobSchedulable extends Schedulable {
     }
   }
 
-  private boolean isRunnable() {
+  protected boolean isRunnable() {
     JobInfo info = scheduler.getJobInfo(job);
     int runState = job.getStatus().getRunState();
     return (info != null && info.runnable && runState == JobStatus.RUNNING);

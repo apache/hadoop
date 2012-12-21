@@ -6,6 +6,9 @@ Release 1.2.0 - unreleased
 
   NEW FEATURES
 
+    MAPREDUCE-4660. Update task placement policy for network topology
+    with node group. (Junping Du via llu)
+
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
     hadoop client processes. (Yu Gao via llu)
 

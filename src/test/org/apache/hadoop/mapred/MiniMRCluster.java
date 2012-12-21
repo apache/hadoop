@@ -56,7 +56,7 @@ public class MiniMRCluster {
     
   private String namenode;
   private UserGroupInformation ugi = null;
-  private JobConf conf;
+  protected JobConf conf;
   private int numTrackerToExclude;
     
   private JobConf job;

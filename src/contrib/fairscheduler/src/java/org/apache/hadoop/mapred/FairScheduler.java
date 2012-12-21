@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -327,8 +328,17 @@ public class FairScheduler extends TaskScheduler {
     public void jobAdded(JobInProgress job) {
       synchronized (FairScheduler.this) {
         eventLog.log("JOB_ADDED", job.getJobID());
-        JobInfo info = new JobInfo(new JobSchedulable(FairScheduler.this, job, TaskType.MAP),
-            new JobSchedulable(FairScheduler.this, job, TaskType.REDUCE));
+        JobSchedulable mapSched = ReflectionUtils.newInstance(
+            conf.getClass("mapred.jobtracker.jobSchedulable", JobSchedulable.class,
+                JobSchedulable.class), conf);
+        mapSched.init(FairScheduler.this, job, TaskType.MAP);
+
+        JobSchedulable redSched = ReflectionUtils.newInstance(
+            conf.getClass("mapred.jobtracker.jobSchedulable", JobSchedulable.class,
+                JobSchedulable.class), conf);
+        redSched.init(FairScheduler.this, job, TaskType.REDUCE);
+
+        JobInfo info = new JobInfo(mapSched, redSched);
         infos.put(job, info);
         poolMgr.addJob(job); // Also adds job into the right PoolScheduable
         update();
@@ -585,8 +595,10 @@ public class FairScheduler extends TaskScheduler {
   private void updateLastMapLocalityLevel(JobInProgress job,
       Task mapTaskLaunched, TaskTrackerStatus tracker) {
     JobInfo info = infos.get(job);
+    boolean isNodeGroupAware = conf.getBoolean(
+        "net.topology.nodegroup.aware", false);
     LocalityLevel localityLevel = LocalityLevel.fromTask(
-        job, mapTaskLaunched, tracker);
+        job, mapTaskLaunched, tracker, isNodeGroupAware);
     info.lastMapLocalityLevel = localityLevel;
     info.timeWaitedForLocalMap = 0;
     eventLog.log("ASSIGNED_LOC_LEVEL", job.getJobID(), localityLevel);
