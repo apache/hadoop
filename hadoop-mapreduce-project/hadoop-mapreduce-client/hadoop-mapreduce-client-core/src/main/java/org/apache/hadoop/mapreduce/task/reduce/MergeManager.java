@@ -58,7 +58,9 @@ import org.apache.hadoop.mapreduce.task.reduce.MapOutput.MapOutputComparator;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 
-@SuppressWarnings(value={"unchecked", "deprecation"})
+import com.google.common.annotations.VisibleForTesting;
+
+@SuppressWarnings(value={"unchecked"})
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class MergeManager<K, V> {
@@ -85,7 +87,7 @@ public class MergeManager<K, V> {
 
   Set<MapOutput<K, V>> inMemoryMapOutputs = 
     new TreeSet<MapOutput<K,V>>(new MapOutputComparator<K, V>());
-  private final InMemoryMerger inMemoryMerger;
+  private final MergeThread<MapOutput<K,V>, K,V> inMemoryMerger;
   
   Set<Path> onDiskMapOutputs = new TreeSet<Path>();
   private final OnDiskMerger onDiskMerger;
@@ -179,6 +181,8 @@ public class MergeManager<K, V> {
           + singleShuffleMemoryLimitPercent);
     }
 
+    usedMemory = 0L;
+    commitMemory = 0L;
     this.maxSingleShuffleLimit = 
       (long)(memoryLimit * singleShuffleMemoryLimitPercent);
     this.memToMemMergeOutputsThreshold = 
@@ -210,7 +214,7 @@ public class MergeManager<K, V> {
       this.memToMemMerger = null;
     }
     
-    this.inMemoryMerger = new InMemoryMerger(this);
+    this.inMemoryMerger = createInMemoryMerger();
     this.inMemoryMerger.start();
     
     this.onDiskMerger = new OnDiskMerger(this);
@@ -219,9 +223,17 @@ public class MergeManager<K, V> {
     this.mergePhase = mergePhase;
   }
   
+  protected MergeThread<MapOutput<K,V>, K,V> createInMemoryMerger() {
+    return new InMemoryMerger(this);
+  }
 
   TaskAttemptID getReduceId() {
     return reduceId;
+  }
+
+  @VisibleForTesting
+  ExceptionReporter getExceptionReporter() {
+    return exceptionReporter;
   }
 
   public void waitForInMemoryMerge() throws InterruptedException {
@@ -288,7 +300,6 @@ public class MergeManager<K, V> {
   }
   
   synchronized void unreserve(long size) {
-    commitMemory -= size;
     usedMemory -= size;
   }
 
@@ -300,24 +311,20 @@ public class MergeManager<K, V> {
 
     commitMemory+= mapOutput.getSize();
 
-    synchronized (inMemoryMerger) {
-      // Can hang if mergeThreshold is really low.
-      if (!inMemoryMerger.isInProgress() && commitMemory >= mergeThreshold) {
-        LOG.info("Starting inMemoryMerger's merge since commitMemory=" +
-            commitMemory + " > mergeThreshold=" + mergeThreshold + 
-            ". Current usedMemory=" + usedMemory);
-        inMemoryMapOutputs.addAll(inMemoryMergedMapOutputs);
-        inMemoryMergedMapOutputs.clear();
-        inMemoryMerger.startMerge(inMemoryMapOutputs);
-      } 
+    // Can hang if mergeThreshold is really low.
+    if (commitMemory >= mergeThreshold) {
+      LOG.info("Starting inMemoryMerger's merge since commitMemory=" +
+          commitMemory + " > mergeThreshold=" + mergeThreshold + 
+          ". Current usedMemory=" + usedMemory);
+      inMemoryMapOutputs.addAll(inMemoryMergedMapOutputs);
+      inMemoryMergedMapOutputs.clear();
+      inMemoryMerger.startMerge(inMemoryMapOutputs);
+      commitMemory = 0L;  // Reset commitMemory.
     }
     
     if (memToMemMerger != null) {
-      synchronized (memToMemMerger) {
-        if (!memToMemMerger.isInProgress() && 
-            inMemoryMapOutputs.size() >= memToMemMergeOutputsThreshold) {
-          memToMemMerger.startMerge(inMemoryMapOutputs);
-        }
+      if (inMemoryMapOutputs.size() >= memToMemMergeOutputsThreshold) { 
+        memToMemMerger.startMerge(inMemoryMapOutputs);
       }
     }
   }
@@ -333,11 +340,8 @@ public class MergeManager<K, V> {
   public synchronized void closeOnDiskFile(Path file) {
     onDiskMapOutputs.add(file);
     
-    synchronized (onDiskMerger) {
-      if (!onDiskMerger.isInProgress() && 
-          onDiskMapOutputs.size() >= (2 * ioSortFactor - 1)) {
-        onDiskMerger.startMerge(onDiskMapOutputs);
-      }
+    if (onDiskMapOutputs.size() >= (2 * ioSortFactor - 1)) {
+      onDiskMerger.startMerge(onDiskMapOutputs);
     }
   }
   

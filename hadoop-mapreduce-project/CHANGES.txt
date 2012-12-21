@@ -473,6 +473,8 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4836. Elapsed time for running tasks on AM web UI tasks page is 0
     (Ravi Prakash via jeagles)
 
+    MAPREDUCE-4842. Shuffle race can hang reducer (Mariappan Asokan via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
