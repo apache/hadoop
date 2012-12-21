@@ -161,6 +161,9 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
+
     HADOOP-9051 Fix ant clean/test with circular symlinks in build dir. (llu)
 
     MAPREDUCE-4396. Port support private distributed cache to 
