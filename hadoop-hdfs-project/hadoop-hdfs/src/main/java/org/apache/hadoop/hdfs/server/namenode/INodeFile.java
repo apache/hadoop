@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -126,8 +127,8 @@ public class INodeFile extends INode implements BlockCollection {
    * the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
   @Override
-  void setPermission(FsPermission permission) {
-    super.setPermission(permission.applyUMask(UMASK));
+  void setPermission(FsPermission permission, Snapshot latest) {
+    super.setPermission(permission.applyUMask(UMASK), latest);
   }
 
   /** @return the replication factor of the file. */
@@ -140,7 +141,15 @@ public class INodeFile extends INode implements BlockCollection {
     return getFileReplication();
   }
 
-  protected void setFileReplication(short replication) {
+  protected void setFileReplication(short replication, Snapshot latest) {
+    if (latest != null) {
+      final Pair<? extends INode, ? extends INode> p = recordModification(latest);
+      if (p != null) {
+        ((INodeFile)p.left).setFileReplication(replication, null);
+        return;
+      }
+    }
+
     header = HeaderFormat.combineReplication(header, replication);
   }
 

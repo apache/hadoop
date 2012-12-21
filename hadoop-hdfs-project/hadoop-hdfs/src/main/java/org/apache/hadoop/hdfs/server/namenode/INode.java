@@ -35,10 +35,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.SignedBytes;
 
 /**
@@ -52,6 +54,17 @@ public abstract class INode implements Comparable<byte[]> {
 
   static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
       = ReadOnlyList.Util.emptyList();
+  
+  /**
+   * Assert that the snapshot parameter must be null since this class only take
+   * care current state. Subclasses should override the methods for handling the
+   * snapshot states.
+   */
+  static void assertNull(Snapshot snapshot) {
+    if (snapshot != null) {
+      throw new AssertionError("snapshot is not null: " + snapshot);
+    }
+  }
 
   /** A pair of objects. */
   public static class Pair<L, R> {
@@ -144,9 +157,9 @@ public abstract class INode implements Comparable<byte[]> {
    * should not modify it.
    */
   private long permission = 0L;
-  protected INodeDirectory parent = null;
-  protected long modificationTime = 0L;
-  protected long accessTime = 0L;
+  INodeDirectory parent = null;
+  private long modificationTime = 0L;
+  private long accessTime = 0L;
 
   private INode(byte[] name, long permission, INodeDirectory parent,
       long modificationTime, long accessTime) {
@@ -173,8 +186,8 @@ public abstract class INode implements Comparable<byte[]> {
   
   /** @param other Other node to be copied */
   INode(INode other) {
-    this(other.getLocalNameBytes(), other.permission, other.getParent(), 
-        other.getModificationTime(), other.getAccessTime());
+    this(other.name, other.permission, other.parent, 
+        other.modificationTime, other.accessTime);
   }
 
   /**
@@ -186,7 +199,10 @@ public abstract class INode implements Comparable<byte[]> {
    *         may be replaced with a new inode for maintaining snapshot data.
    *         Then, the current inode is the new inode.
    */
-  public abstract Pair<? extends INode, ? extends INode> createSnapshotCopy();
+  public Pair<? extends INode, ? extends INode> createSnapshotCopy() {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " does not support createSnapshotCopy().");
+  }
 
   /**
    * Check whether this is the root inode.
@@ -200,43 +216,92 @@ public abstract class INode implements Comparable<byte[]> {
     this.permission = that.permission;
   }
   /** Get the {@link PermissionStatus} */
-  public PermissionStatus getPermissionStatus() {
-    return new PermissionStatus(getUserName(),getGroupName(),getFsPermission());
+  public PermissionStatus getPermissionStatus(Snapshot snapshot) {
+    return new PermissionStatus(getUserName(snapshot), getGroupName(snapshot),
+        getFsPermission(snapshot));
   }
-  private void updatePermissionStatus(PermissionStatusFormat f, long n) {
+  /** The same as getPermissionStatus(null). */
+  public PermissionStatus getPermissionStatus() {
+    return getPermissionStatus(null);
+  }
+  private void updatePermissionStatus(PermissionStatusFormat f, long n,
+      Snapshot latest) {
+    recordModification(latest);
     permission = f.combine(n, permission);
   }
-  /** Get user name */
-  public String getUserName() {
+  /**
+   * @param snapshot
+   *          if it is not null, get the result from the given snapshot;
+   *          otherwise, get the result from the current inode.
+   * @return user name
+   */
+  public String getUserName(Snapshot snapshot) {
     int n = (int)PermissionStatusFormat.USER.retrieve(permission);
     return SerialNumberManager.INSTANCE.getUser(n);
   }
-  /** Set user */
-  protected void setUser(String user) {
-    int n = SerialNumberManager.INSTANCE.getUserSerialNumber(user);
-    updatePermissionStatus(PermissionStatusFormat.USER, n);
+  /** The same as getUserName(null). */
+  public String getUserName() {
+    return getUserName(null);
   }
-  /** Get group name */
-  public String getGroupName() {
+  /** Set user */
+  protected void setUser(String user, Snapshot latest) {
+    int n = SerialNumberManager.INSTANCE.getUserSerialNumber(user);
+    updatePermissionStatus(PermissionStatusFormat.USER, n, latest);
+  }
+  /**
+   * @param snapshot
+   *          if it is not null, get the result from the given snapshot;
+   *          otherwise, get the result from the current inode.
+   * @return group name
+   */
+  public String getGroupName(Snapshot snapshot) {
     int n = (int)PermissionStatusFormat.GROUP.retrieve(permission);
     return SerialNumberManager.INSTANCE.getGroup(n);
   }
-  /** Set group */
-  protected void setGroup(String group) {
-    int n = SerialNumberManager.INSTANCE.getGroupSerialNumber(group);
-    updatePermissionStatus(PermissionStatusFormat.GROUP, n);
+  /** The same as getGroupName(null). */
+  public String getGroupName() {
+    return getGroupName(null);
   }
-  /** Get the {@link FsPermission} */
-  public FsPermission getFsPermission() {
+  /** Set group */
+  protected void setGroup(String group, Snapshot latest) {
+    int n = SerialNumberManager.INSTANCE.getGroupSerialNumber(group);
+    updatePermissionStatus(PermissionStatusFormat.GROUP, n, latest);
+  }
+  /**
+   * @param snapshot
+   *          if it is not null, get the result from the given snapshot;
+   *          otherwise, get the result from the current inode.
+   * @return permission.
+   */
+  public FsPermission getFsPermission(Snapshot snapshot) {
     return new FsPermission(
         (short)PermissionStatusFormat.MODE.retrieve(permission));
+  }
+  /** The same as getFsPermission(null). */
+  public FsPermission getFsPermission() {
+    return getFsPermission(null);
   }
   protected short getFsPermissionShort() {
     return (short)PermissionStatusFormat.MODE.retrieve(permission);
   }
   /** Set the {@link FsPermission} of this {@link INode} */
-  void setPermission(FsPermission permission) {
-    updatePermissionStatus(PermissionStatusFormat.MODE, permission.toShort());
+  void setPermission(FsPermission permission, Snapshot latest) {
+    final short mode = permission.toShort();
+    updatePermissionStatus(PermissionStatusFormat.MODE, mode, latest);
+  }
+
+  /**
+   * This inode is being modified.  The previous version of the inode needs to
+   * be recorded in the latest snapshot.
+   *
+   * @param latest the latest snapshot that has been taken.
+   *        Note that it is null if no snapshots have been taken.
+   * @return see {@link #createSnapshotCopy()}. 
+   */
+  Pair<? extends INode, ? extends INode> recordModification(Snapshot latest) {
+    Preconditions.checkState(!isDirectory(),
+        "this is an INodeDirectory, this=%s", this);
+    return latest == null? null: parent.saveChild2Snapshot(this, latest);
   }
 
   /**
@@ -325,13 +390,13 @@ public abstract class INode implements Comparable<byte[]> {
    * Set local file name
    */
   public void setLocalName(String name) {
-    this.name = DFSUtil.string2Bytes(name);
+    setLocalName(DFSUtil.string2Bytes(name));
   }
 
   /**
    * Set local file name
    */
-  void setLocalName(byte[] name) {
+  public void setLocalName(byte[] name) {
     this.name = name;
   }
 
@@ -366,7 +431,7 @@ public abstract class INode implements Comparable<byte[]> {
    * Get parent directory 
    * @return parent INode
    */
-  INodeDirectory getParent() {
+  public INodeDirectory getParent() {
     return this.parent;
   }
 
@@ -375,19 +440,26 @@ public abstract class INode implements Comparable<byte[]> {
     this.parent = parent;
   }
   
-  /** 
-   * Get last modification time of inode.
-   * @return access time
+  /**
+   * @param snapshot
+   *          if it is not null, get the result from the given snapshot;
+   *          otherwise, get the result from the current inode.
+   * @return modification time.
    */
-  public long getModificationTime() {
+  public long getModificationTime(Snapshot snapshot) {
     return this.modificationTime;
   }
 
+  /** The same as getModificationTime(null). */
+  public long getModificationTime() {
+    return getModificationTime(null);
+  }
+
   /** Update modification time if it is larger than the current value. */
-  public void updateModificationTime(long modtime) {
+  public void updateModificationTime(long mtime, Snapshot latest) {
     assert isDirectory();
-    if (this.modificationTime <= modtime) {
-      this.modificationTime = modtime;
+    if (mtime > modificationTime) {
+      setModificationTime(mtime, latest);
     }
   }
 
@@ -398,22 +470,31 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Always set the last modification time of inode.
    */
-  void setModificationTime(long modtime) {
+  public void setModificationTime(long modtime, Snapshot latest) {
+    recordModification(latest);
     this.modificationTime = modtime;
   }
 
   /**
-   * Get access time of inode.
+   * @param snapshot
+   *          if it is not null, get the result from the given snapshot;
+   *          otherwise, get the result from the current inode.
    * @return access time
    */
-  public long getAccessTime() {
+  public long getAccessTime(Snapshot snapshot) {
     return accessTime;
+  }
+
+  /** The same as getAccessTime(null). */
+  public long getAccessTime() {
+    return getAccessTime(null);
   }
 
   /**
    * Set last access time of inode.
    */
-  void setAccessTime(long atime) {
+  void setAccessTime(long atime, Snapshot latest) {
+    recordModification(latest);
     accessTime = atime;
   }
 
@@ -481,16 +562,6 @@ public abstract class INode implements Comparable<byte[]> {
       }
     }
     return buf.toString();
-  }
-
-  public boolean removeNode() {
-    if (parent == null) {
-      return false;
-    } else {
-      parent.removeChild(this);
-      parent = null;
-      return true;
-    }
   }
 
   private static final byte[] EMPTY_BYTES = {};
@@ -561,9 +632,9 @@ public abstract class INode implements Comparable<byte[]> {
    * @return a text representation of the tree.
    */
   @VisibleForTesting
-  public StringBuffer dumpTreeRecursively() {
+  public final StringBuffer dumpTreeRecursively() {
     final StringWriter out = new StringWriter(); 
-    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder());
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(), null);
     return out.getBuffer();
   }
 
@@ -572,14 +643,20 @@ public abstract class INode implements Comparable<byte[]> {
    * @param prefix The prefix string that each line should print.
    */
   @VisibleForTesting
-  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix) {
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix, Snapshot snapshot) {
     out.print(prefix);
     out.print(" ");
     out.print(getLocalName());
     out.print("   (");
     out.print(getObjectString());
     out.print("), parent=");
-    out.println(parent == null? null: parent.getLocalName());
+    out.print(parent == null? null: parent.getLocalName() + "/");
+    if (!this.isDirectory()) {
+      out.println();
+    } else {
+      final INodeDirectory dir = (INodeDirectory)this;
+      out.println(", size=" + dir.getChildrenList(snapshot).size());
+    }
   }
   
   /**

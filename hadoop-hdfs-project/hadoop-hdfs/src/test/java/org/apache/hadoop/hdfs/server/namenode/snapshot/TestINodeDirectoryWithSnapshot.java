@@ -268,8 +268,8 @@ public class TestINodeDirectoryWithSnapshot {
     final int i = Diff.search(current, inode);
     Assert.assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);
-    final INodeDirectory newinode = oldinode.createSnapshotCopy().right;
-    newinode.updateModificationTime(oldinode.getModificationTime() + 1);
+    final INodeDirectory newinode = new INodeDirectory(oldinode, false);
+    newinode.updateModificationTime(oldinode.getModificationTime() + 1, null);
 
     current.set(i, newinode);
     if (diff != null) {
@@ -305,7 +305,7 @@ public class TestINodeDirectoryWithSnapshot {
   public void testIdCmp() {
     final INodeDirectory dir = new INodeDirectory("foo", PERM);
     final INodeDirectorySnapshottable snapshottable
-        = INodeDirectorySnapshottable.newInstance(dir, 100);
+        = new INodeDirectorySnapshottable(dir);
     final Snapshot[] snapshots = {
       new Snapshot(1, "s1", snapshottable),
       new Snapshot(1, "s1", snapshottable),

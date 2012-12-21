@@ -176,6 +176,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -547,7 +548,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(fsImage, this, conf);
-      this.snapshotManager = new SnapshotManager(this, dir);
+      this.snapshotManager = new SnapshotManager(dir);
       this.safeMode = new SafeModeInfo(conf);
       this.auditLoggers = initAuditLoggers(conf);
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
@@ -1322,7 +1323,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
 
         long now = now();
-        final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
+        final INodesInPath iip = dir.getMutableINodesInPath(src);
+        final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
         if (doAccessTime && isAccessTimeSupported()) {
           if (now <= inode.getAccessTime() + getAccessTimePrecision()) {
             // if we have to set access time but we only have the readlock, then
@@ -1331,7 +1333,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
               continue;
             }
           }
-          dir.setTimes(src, inode, -1, now, false);
+          dir.setTimes(src, inode, -1, now, false, iip.getLatestSnapshot());
         }
         return blockManager.createLocatedBlocks(inode.getBlocks(),
             inode.computeFileSize(false), inode.isUnderConstruction(),
@@ -1559,9 +1561,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkPathAccess(src, FsAction.WRITE);
       }
-      INode inode = dir.getMutableINode(src);
+      final INodesInPath iip = dir.getMutableINodesInPath(src);
+      final INode inode = iip.getLastINode();
       if (inode != null) {
-        dir.setTimes(src, inode, mtime, atime, true);
+        dir.setTimes(src, inode, mtime, atime, true, iip.getLatestSnapshot());
         if (isAuditEnabled() && isExternalInvocation()) {
           final HdfsFileStatus stat = dir.getFileInfo(src, false);
           logAuditEvent(UserGroupInformation.getCurrentUser(),
@@ -1864,7 +1867,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       blockManager.verifyReplication(src, replication, clientMachine);
       boolean create = flag.contains(CreateFlag.CREATE);
-      final INode myFile = dir.getINode(src);
+      
+      final INodesInPath iip = dir.getINodesInPath(src);
+      final INode myFile = iip.getINode(0);
       if (myFile == null) {
         if (!create) {
           throw new FileNotFoundException("failed to overwrite or append to non-existent file "
@@ -1891,8 +1896,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       if (append && myFile != null) {
         final INodeFile f = INodeFile.valueOf(myFile, src); 
-        return prepareFileForWrite(
-            src, f, holder, clientMachine, clientNode, true);
+        return prepareFileForWrite(src, f, holder, clientMachine, clientNode,
+            true, iip.getLatestSnapshot());
       } else {
        // Now we can add the name to the filesystem. This file has no
        // blocks associated with it.
@@ -1940,7 +1945,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
-      boolean writeToEditLog) throws IOException {
+      boolean writeToEditLog, Snapshot latestSnapshot) throws IOException {
     //TODO SNAPSHOT: INodeFileUnderConstruction with link
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                                     file.getLocalNameBytes(),
@@ -1952,7 +1957,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                     leaseHolder,
                                     clientMachine,
                                     clientNode);
-    dir.replaceINodeFile(src, file, cons);
+    dir.replaceINodeFile(src, file, cons, latestSnapshot);
     leaseManager.addLease(cons.getClientName(), src);
     
     LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
@@ -2288,17 +2293,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot add block to " + src, safeMode);
       }
 
-      final INodesInPath inodesInPath = dir.rootDir.getExistingPathINodes(src, true);
-      final INode[] inodes = inodesInPath.getINodes();
+      final INodesInPath iip = dir.rootDir.getExistingPathINodes(src, true);
       final INodeFileUnderConstruction pendingFile
-          = checkLease(src, clientName, inodes[inodes.length - 1]);
+          = checkLease(src, clientName, iip.getLastINode());
                                                            
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
 
       // allocate new block record block locations in INode.
-      newBlock = allocateBlock(src, inodesInPath, targets);
+      newBlock = allocateBlock(src, iip, targets);
       
       for (DatanodeDescriptor dn : targets) {
         dn.incBlocksScheduled();
@@ -2401,10 +2405,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
   
-  // make sure that we still have the lease on this file.
+  /** make sure that we still have the lease on this file. */
   private INodeFileUnderConstruction checkLease(String src, String holder) 
       throws LeaseExpiredException, UnresolvedLinkException {
-    assert hasReadOrWriteLock();
     return checkLease(src, holder, dir.getINode(src));
   }
 
@@ -2468,9 +2471,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new SafeModeException("Cannot complete file " + src, safeMode);
     }
 
-    INodeFileUnderConstruction pendingFile;
+    final INodesInPath iip = dir.getINodesInPath(src);
+    final INodeFileUnderConstruction pendingFile;
     try {
-      pendingFile = checkLease(src, holder);
+      pendingFile = checkLease(src, holder, iip.getINode(0)); 
     } catch (LeaseExpiredException lee) {
       final INode inode = dir.getINode(src);
       if (inode != null && inode instanceof INodeFile && !inode.isUnderConstruction()) {
@@ -2498,7 +2502,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return false;
     }
 
-    finalizeINodeFileUnderConstruction(src, pendingFile);
+    finalizeINodeFileUnderConstruction(src, pendingFile,
+        iip.getLatestSnapshot());
 
     NameNode.stateChangeLog.info("DIR* completeFile: " + src + " is closed by "
         + holder);
@@ -3110,8 +3115,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert !isInSafeMode();
     assert hasWriteLock();
 
+    final INodesInPath iip = dir.getINodesInPath(src);
     final INodeFileUnderConstruction pendingFile
-        = INodeFileUnderConstruction.valueOf(dir.getINode(src), src);
+        = INodeFileUnderConstruction.valueOf(iip.getINode(0), src);
     int nrBlocks = pendingFile.numBlocks();
     BlockInfo[] blocks = pendingFile.getBlocks();
 
@@ -3128,7 +3134,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // If there are no incomplete blocks associated with this file,
     // then reap lease immediately and close the file.
     if(nrCompleteBlocks == nrBlocks) {
-      finalizeINodeFileUnderConstruction(src, pendingFile);
+      finalizeINodeFileUnderConstruction(src, pendingFile,
+          iip.getLatestSnapshot());
       NameNode.stateChangeLog.warn("BLOCK*"
         + " internalReleaseLease: All existing blocks are COMPLETE,"
         + " lease removed, file closed.");
@@ -3176,7 +3183,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // Close file if committed blocks are minimally replicated
       if(penultimateBlockMinReplication &&
           blockManager.checkMinReplication(lastBlock)) {
-        finalizeINodeFileUnderConstruction(src, pendingFile);
+        finalizeINodeFileUnderConstruction(src, pendingFile,
+            iip.getLatestSnapshot());
         NameNode.stateChangeLog.warn("BLOCK*"
           + " internalReleaseLease: Committed blocks are minimally replicated,"
           + " lease removed, file closed.");
@@ -3254,7 +3262,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private void finalizeINodeFileUnderConstruction(String src, 
-      INodeFileUnderConstruction pendingFile) 
+      INodeFileUnderConstruction pendingFile, Snapshot latestSnapshot) 
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
@@ -3262,7 +3270,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // The file is no longer pending.
     // Create permanent INode, update blocks
     INodeFile newFile = pendingFile.convertToInodeFile(now());
-    dir.replaceINodeFile(src, pendingFile, newFile);
+    dir.replaceINodeFile(src, pendingFile, newFile, latestSnapshot);
 
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);
@@ -3354,7 +3362,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         commitOrCompleteLastBlock(pendingFile, storedBlock);
 
         //remove lease, close file
-        finalizeINodeFileUnderConstruction(src, pendingFile);
+        finalizeINodeFileUnderConstruction(src, pendingFile,
+            Snapshot.findLatestSnapshot(pendingFile));
       } else {
         // If this commit does not want to close the file, persist blocks
         dir.persistBlocks(src, pendingFile);
@@ -5625,8 +5634,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       checkOwner(path);
 
-      //TODO: do not hardcode snapshot quota value
-      snapshotManager.setSnapshottable(path, 256);
+      snapshotManager.setSnapshottable(path);
       getEditLog().logAllowSnapshot(path);
     } finally {
       writeUnlock();

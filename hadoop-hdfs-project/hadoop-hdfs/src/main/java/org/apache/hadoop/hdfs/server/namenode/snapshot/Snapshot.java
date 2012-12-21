@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
@@ -37,19 +40,52 @@ public class Snapshot implements Comparable<byte[]> {
     }
   };
 
+  /** @return the latest snapshot taken on the given inode. */
+  public static Snapshot findLatestSnapshot(INode inode) {
+    Snapshot latest = null;
+    for(; inode != null; inode = inode.getParent()) {
+      if (inode instanceof INodeDirectorySnapshottable) {
+        final Snapshot s = ((INodeDirectorySnapshottable)inode).getLastSnapshot();
+        if (ID_COMPARATOR.compare(latest, s) < 0) {
+          latest = s;
+        }
+      }
+    }
+    return latest;
+  }
+
+  /** The root directory of the snapshot. */
+  public class Root extends INodeDirectory {
+    Root(INodeDirectory other) {
+      super(other, false);
+    }
+
+    @Override
+    public ReadOnlyList<INode> getChildrenList(Snapshot snapshot) {
+      return getParent().getChildrenList(snapshot);
+    }
+
+    @Override
+    public INode getChild(byte[] name, Snapshot snapshot) {
+      return getParent().getChild(name, snapshot);
+    }
+  }
+
   /** Snapshot ID. */
   private final int id;
   /** The root directory of the snapshot. */
-  private final INodeDirectoryWithSnapshot root;
+  private final Root root;
 
   Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
     this.id = id;
-    this.root = new INodeDirectoryWithSnapshot(dir, false);
+    this.root = new Root(dir);
+
     this.root.setLocalName(name);
+    this.root.setParent(dir);
   }
 
   /** @return the root directory of the snapshot. */
-  public INodeDirectoryWithSnapshot getRoot() {
+  public Root getRoot() {
     return root;
   }
 
@@ -59,7 +95,22 @@ public class Snapshot implements Comparable<byte[]> {
   }
   
   @Override
+  public boolean equals(Object that) {
+    if (this == that) {
+      return true;
+    } else if (that == null || !(that instanceof Snapshot)) {
+      return false;
+    }
+    return this.id == ((Snapshot)that).id;
+  }
+  
+  @Override
+  public int hashCode() {
+    return id;
+  }
+  
+  @Override
   public String toString() {
-    return getClass().getSimpleName() + ":" + root.getLocalName();
+    return getClass().getSimpleName() + "." + root.getLocalName();
   }
 }

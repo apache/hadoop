@@ -204,7 +204,7 @@ class FSImageFormat {
     long dsQuota = root.getDsQuota();
     FSDirectory fsDir = namesystem.dir;
     if (nsQuota != -1 || dsQuota != -1) {
-      fsDir.rootDir.setQuota(nsQuota, dsQuota);
+      fsDir.rootDir.setQuota(nsQuota, dsQuota, null);
     }
     fsDir.rootDir.cloneModificationTime(root);
     fsDir.rootDir.clonePermissionStatus(root);    
@@ -321,7 +321,7 @@ class FSImageFormat {
    */
   private void addToParent(INodeDirectory parent, INode child) {
     // NOTE: This does not update space counts for parents
-    if (!parent.addChild(child, false)) {
+    if (!parent.addChild(child, false, null)) {
       return;
     }
     namesystem.dir.cacheName(child);
@@ -404,8 +404,10 @@ class FSImageFormat {
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
-        INodeFile oldnode = INodeFile.valueOf(fsDir.getINode(path), path);
-        fsDir.replaceINodeFile(path, oldnode, cons);
+        final INodesInPath iip = fsDir.getINodesInPath(path);
+        INodeFile oldnode = INodeFile.valueOf(iip.getINode(0), path);
+        fsDir.unprotectedReplaceINodeFile(path, oldnode, cons,
+            iip.getLatestSnapshot());
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }

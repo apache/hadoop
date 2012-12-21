@@ -85,3 +85,5 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4293. Fix TestSnapshot failure. (Jing Zhao via suresh)
 
   HDFS-4317. Change INode and its subclasses to support HDFS-4103. (szetszwo)
+
+  HDFS-4103. Support O(1) snapshot creation. (szetszwo)

@@ -116,6 +116,11 @@ public class TestSnapshotReplication {
         (short) (REPLICATION - 1));
   }
   
+  INodeFile getINodeFile(Path p) throws Exception {
+    final String s = p.toString();
+    return INodeFile.valueOf(fsdir.getINode(s), s);
+  }
+ 
   /**
    * Check the replication for both the current file and all its prior snapshots
    * 
@@ -133,13 +138,11 @@ public class TestSnapshotReplication {
   private void checkSnapshotFileReplication(Path currentFile,
       Map<Path, Short> snapshotRepMap, short expectedBlockRep) throws Exception {
     // First check the getBlockReplication for the INode of the currentFile
-    INodeFileWithLink inodeOfCurrentFile = (INodeFileWithLink) fsdir
-        .getINode(currentFile.toString());
+    final INodeFile inodeOfCurrentFile = getINodeFile(currentFile);
     assertEquals(expectedBlockRep, inodeOfCurrentFile.getBlockReplication());
     // Then check replication for every snapshot
     for (Path ss : snapshotRepMap.keySet()) {
-      INodeFileWithLink ssInode = (INodeFileWithLink) fsdir.getINode(ss
-          .toString());
+      final INodeFile ssInode = getINodeFile(ss);
       // The replication number derived from the
       // INodeFileWithLink#getBlockReplication should always == expectedBlockRep
       assertEquals(expectedBlockRep, ssInode.getBlockReplication());
@@ -167,9 +170,7 @@ public class TestSnapshotReplication {
       Path snapshot = new Path(snapshotRoot, file1.getName());
       
       // Check the replication stored in the INode of the snapshot of file1
-      INode inode = fsdir.getINode(snapshot.toString());
-      assertTrue(inode instanceof INodeFileWithLink);
-      assertEquals(fileRep, ((INodeFileWithLink) inode).getFileReplication());
+      assertEquals(fileRep, getINodeFile(snapshot).getFileReplication());
       snapshotRepMap.put(snapshot, fileRep);
       
       // Increase the replication factor by 1
@@ -215,8 +216,7 @@ public class TestSnapshotReplication {
     hdfs.delete(file1, true);
     // Check replication of snapshots
     for (Path ss : snapshotRepMap.keySet()) {
-      INodeFileWithLink ssInode = (INodeFileWithLink) fsdir.getINode(ss
-          .toString());
+      final INodeFile ssInode = getINodeFile(ss);
       // The replication number derived from the
       // INodeFileWithLink#getBlockReplication should always == expectedBlockRep
       assertEquals(REPLICATION, ssInode.getBlockReplication());

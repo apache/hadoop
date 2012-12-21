@@ -19,12 +19,16 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /** The directory with snapshots. */
@@ -182,12 +186,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       INode previous = null;
       Integer d = null;
       if (c >= 0) {
-        // inode is already in c-list,
+        // Case 1.1.3: inode is already in c-list,
         previous = created.set(c, newinode);
       } else {
         d = search(deleted, oldinode);
         if (d < 0) {
-          // neither in c-list nor d-list
+          // Case 2.3: neither in c-list nor d-list
           insertCreated(newinode, c);
           insertDeleted(oldinode, d);
         }
@@ -302,8 +306,356 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           + ", deleted=" + toString(deleted) + "}";
     }
   }
+  
+  /**
+   * The difference between two snapshots. {@link INodeDirectoryWithSnapshot}
+   * maintains a list of snapshot diffs,
+   * <pre>
+   *   d_1 -> d_2 -> ... -> d_n -> null,
+   * </pre>
+   * where -> denotes the {@link SnapshotDiff#posteriorDiff} reference. The
+   * current directory state is stored in the field of {@link INodeDirectory}.
+   * The snapshot state can be obtained by applying the diffs one-by-one in
+   * reversed chronological order.  Let s_1, s_2, ..., s_n be the corresponding
+   * snapshots.  Then,
+   * <pre>
+   *   s_n                     = (current state) - d_n;
+   *   s_{n-1} = s_n - d_{n-1} = (current state) - d_n - d_{n-1};
+   *   ...
+   *   s_k     = s_{k+1} - d_k = (current state) - d_n - d_{n-1} - ... - d_k.
+   * </pre>
+   */
+  class SnapshotDiff implements Comparable<Snapshot> {
+    /** The snapshot will be obtained after this diff is applied. */
+    final Snapshot snapshot;
+    /** The size of the children list at snapshot creation time. */
+    final int childrenSize;
+    /**
+     * Posterior diff is the diff happened after this diff.
+     * The posterior diff should be first applied to obtain the posterior
+     * snapshot and then apply this diff in order to obtain this snapshot.
+     * If the posterior diff is null, the posterior state is the current state. 
+     */
+    private SnapshotDiff posteriorDiff;
+    /** The children list diff. */
+    private final Diff diff = new Diff();
+    /** The snapshot inode data.  It is null when there is no change. */
+    private INodeDirectory snapshotINode = null;
 
-  public INodeDirectoryWithSnapshot(INodeDirectory that, boolean adopt) {
+    private SnapshotDiff(Snapshot snapshot, INodeDirectory dir) {
+      Preconditions.checkNotNull(snapshot, "snapshot is null");
+
+      this.snapshot = snapshot;
+      this.childrenSize = dir.getChildrenList(null).size();
+    }
+
+    /** Compare diffs with snapshot ID. */
+    @Override
+    public int compareTo(final Snapshot that_snapshot) {
+      return Snapshot.ID_COMPARATOR.compare(this.snapshot, that_snapshot);
+    }
+    
+    /** Is the inode the root of the snapshot? */
+    boolean isSnapshotRoot() {
+      return snapshotINode == snapshot.getRoot();
+    }
+
+    /** Copy the INode state to the snapshot if it is not done already. */
+    private Pair<INodeDirectory, INodeDirectory> checkAndInitINode(
+        INodeDirectory snapshotCopy) {
+      if (snapshotINode != null) {
+        // already initialized.
+        return null;
+      }
+      final INodeDirectoryWithSnapshot dir = INodeDirectoryWithSnapshot.this;
+      if (snapshotCopy == null) {
+        snapshotCopy = new INodeDirectory(dir, false);
+      }
+      return new Pair<INodeDirectory, INodeDirectory>(dir, snapshotCopy);
+    }
+
+    /** @return the snapshot object of this diff. */
+    Snapshot getSnapshot() {
+      return snapshot;
+    }
+
+    private INodeDirectory getSnapshotINode() {
+      // get from this diff, then the posterior diff and then the current inode
+      return snapshotINode != null? snapshotINode
+          : posteriorDiff != null? posteriorDiff.getSnapshotINode()
+              : INodeDirectoryWithSnapshot.this; 
+    }
+
+    /**
+     * @return The children list of a directory in a snapshot.
+     *         Since the snapshot is read-only, the logical view of the list is
+     *         never changed although the internal data structure may mutate.
+     */
+    ReadOnlyList<INode> getChildrenList() {
+      return new ReadOnlyList<INode>() {
+        private List<INode> children = null;
+
+        private List<INode> initChildren() {
+          if (children == null) {
+            final ReadOnlyList<INode> posterior = posteriorDiff != null?
+                posteriorDiff.getChildrenList()
+                : INodeDirectoryWithSnapshot.this.getChildrenList(null);
+            children = diff.apply2Current(ReadOnlyList.Util.asList(posterior));
+          }
+          return children;
+        }
+
+        @Override
+        public Iterator<INode> iterator() {
+          return initChildren().iterator();
+        }
+    
+        @Override
+        public boolean isEmpty() {
+          return childrenSize == 0;
+        }
+    
+        @Override
+        public int size() {
+          return childrenSize;
+        }
+    
+        @Override
+        public INode get(int i) {
+          return initChildren().get(i);
+        }
+      };
+    }
+
+    /** @return the child with the given name. */
+    INode getChild(byte[] name, boolean checkPosterior) {
+      final INode[] array = diff.accessPrevious(name);
+      if (array != null) {
+        // this diff is able to find it
+        return array[0]; 
+      } else if (!checkPosterior) {
+        // Since checkPosterior is false, return null, i.e. not found.   
+        return null;
+      } else {
+        // return the posterior INode.
+        return posteriorDiff != null? posteriorDiff.getChild(name, true)
+            : INodeDirectoryWithSnapshot.this.getChild(name, null);
+      }
+    }
+    
+    @Override
+    public String toString() {
+      return "\n  " + snapshot + " (-> "
+          + (posteriorDiff == null? null: posteriorDiff.snapshot)
+          + ") childrenSize=" + childrenSize + ", " + diff;
+    }
+  }
+  
+  /** Create an {@link INodeDirectoryWithSnapshot} with the given snapshot.*/
+  public static INodeDirectoryWithSnapshot newInstance(INodeDirectory dir,
+      Snapshot latest) {
+    final INodeDirectoryWithSnapshot withSnapshot
+        = new INodeDirectoryWithSnapshot(dir, true, null);
+    if (latest != null) {
+      // add a diff for the latest snapshot
+      withSnapshot.addSnapshotDiff(latest, dir, false);
+    }
+    return withSnapshot;
+  }
+
+  /** Diff list sorted by snapshot IDs, i.e. in chronological order. */
+  private final List<SnapshotDiff> diffs;
+
+  INodeDirectoryWithSnapshot(INodeDirectory that, boolean adopt,
+      List<SnapshotDiff> diffs) {
     super(that, adopt, that.getNsQuota(), that.getDsQuota());
+    this.diffs = diffs != null? diffs: new ArrayList<SnapshotDiff>();
+  }
+
+  /** Add a {@link SnapshotDiff} for the given snapshot and directory. */
+  SnapshotDiff addSnapshotDiff(Snapshot snapshot, INodeDirectory dir,
+      boolean isSnapshotCreation) {
+    final SnapshotDiff last = getLastSnapshotDiff();
+    final SnapshotDiff d = new SnapshotDiff(snapshot, dir); 
+
+    if (isSnapshotCreation) {
+      //for snapshot creation, snapshotINode is the same as the snapshot root
+      d.snapshotINode = snapshot.getRoot();
+    }
+    diffs.add(d);
+    if (last != null) {
+      last.posteriorDiff = d;
+    }
+    return d;
+  }
+
+  SnapshotDiff getLastSnapshotDiff() {
+    final int n = diffs.size();
+    return n == 0? null: diffs.get(n - 1);
+  }
+
+  /** @return the last snapshot. */
+  public Snapshot getLastSnapshot() {
+    final SnapshotDiff last = getLastSnapshotDiff();
+    return last == null? null: last.getSnapshot();
+  }
+
+  /**
+   * Check if the latest snapshot diff exists.  If not, add it.
+   * @return the latest snapshot diff, which is never null.
+   */
+  private SnapshotDiff checkAndAddLatestSnapshotDiff(Snapshot latest) {
+    final SnapshotDiff last = getLastSnapshotDiff();
+    return last != null && last.snapshot.equals(latest)? last
+        : addSnapshotDiff(latest, this, false);
+  }
+  
+  /**
+   * Check if the latest {@link Diff} exists.  If not, add it.
+   * @return the latest {@link Diff}, which is never null.
+   */
+  Diff checkAndAddLatestDiff(Snapshot latest) {
+    return checkAndAddLatestSnapshotDiff(latest).diff;
+  }
+
+  /**
+   * @return {@link #snapshots}
+   */
+  @VisibleForTesting
+  List<SnapshotDiff> getSnapshotDiffs() {
+    return diffs;
+  }
+
+  /**
+   * @return the diff corresponding to the given snapshot.
+   *         When the diff is null, it means that the current state and
+   *         the corresponding snapshot state are the same. 
+   */
+  SnapshotDiff getSnapshotDiff(Snapshot snapshot) {
+    if (snapshot == null) {
+      // snapshot == null means the current state, therefore, return null.
+      return null;
+    }
+    final int i = Collections.binarySearch(diffs, snapshot);
+    if (i >= 0) {
+      // exact match
+      return diffs.get(i);
+    } else {
+      // Exact match not found means that there were no changes between
+      // given snapshot and the next state so that the diff for the given
+      // snapshot was not recorded.  Thus, return the next state.
+      final int j = -i - 1;
+      return j < diffs.size()? diffs.get(j): null;
+    }
+  }
+
+  @Override
+  public Pair<INodeDirectory, INodeDirectory> recordModification(Snapshot latest) {
+    return save2Snapshot(latest, null);
+  }
+
+  public Pair<INodeDirectory, INodeDirectory> save2Snapshot(Snapshot latest,
+      INodeDirectory snapshotCopy) {
+    return latest == null? null
+        : checkAndAddLatestSnapshotDiff(latest).checkAndInitINode(snapshotCopy);
+  }
+
+  @Override
+  public Pair<? extends INode, ? extends INode> saveChild2Snapshot(
+      INode child, Snapshot latest) {
+    Preconditions.checkArgument(!child.isDirectory(),
+        "child is a directory, child=%s", child);
+
+    final SnapshotDiff diff = checkAndAddLatestSnapshotDiff(latest);
+    if (diff.getChild(child.getLocalNameBytes(), false) != null) {
+      // it was already saved in the latest snapshot earlier.  
+      return null;
+    }
+
+    final Pair<? extends INode, ? extends INode> p = child.createSnapshotCopy();
+    diff.diff.modify(p.right, p.left);
+    return p;
+  }
+
+  @Override
+  public boolean addChild(INode inode, boolean setModTime, Snapshot latest) {
+    Diff diff = null;
+    Integer undoInfo = null;
+    if (latest != null) {
+      diff = checkAndAddLatestDiff(latest);
+      undoInfo = diff.create(inode);
+    }
+    final boolean added = super.addChild(inode, setModTime, null);
+    if (!added && undoInfo != null) {
+      diff.undoCreate(inode, undoInfo);
+    }
+    return added; 
+  }
+
+  @Override
+  public INode removeChild(INode child, Snapshot latest) {
+    Diff diff = null;
+    Triple<Integer, INode, Integer> undoInfo = null;
+    if (latest != null) {
+      diff = checkAndAddLatestDiff(latest);
+      undoInfo = diff.delete(child);
+    }
+    final INode removed = super.removeChild(child, null);
+    if (removed == null && undoInfo != null) {
+      diff.undoDelete(child, undoInfo);
+    }
+    return removed;
+  }
+
+  @Override
+  public ReadOnlyList<INode> getChildrenList(Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getChildrenList(): super.getChildrenList(null);
+  }
+
+  @Override
+  public INode getChild(byte[] name, Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getChild(name, true): super.getChild(name, null);
+  }
+
+  @Override
+  public String getUserName(Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getSnapshotINode().getUserName()
+        : super.getUserName(null);
+  }
+
+  @Override
+  public String getGroupName(Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getSnapshotINode().getGroupName()
+        : super.getGroupName(null);
+  }
+
+  @Override
+  public FsPermission getFsPermission(Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getSnapshotINode().getFsPermission()
+        : super.getFsPermission(null);
+  }
+
+  @Override
+  public long getAccessTime(Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getSnapshotINode().getAccessTime()
+        : super.getAccessTime(null);
+  }
+
+  @Override
+  public long getModificationTime(Snapshot snapshot) {
+    final SnapshotDiff diff = getSnapshotDiff(snapshot);
+    return diff != null? diff.getSnapshotINode().getModificationTime()
+        : super.getModificationTime(null);
+  }
+  
+  @Override
+  public String toString() {
+    return super.toString() + ", diffs=" + getSnapshotDiffs();
   }
 }

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -140,9 +139,6 @@ public class TestSnapshotBlocksMap {
     // Check the INode information
     BlockCollection bcAfterDeletion = blockInfoAfterDeletion
         .getBlockCollection();
-    // The INode in the blocksMap should be no longer the original INode for
-    // file0
-    assertFalse(bcAfterDeletion == inode);
     
     // Compare the INode in the blocksMap with INodes for snapshots
     Path snapshot1File0 = SnapshotTestHelper.getSnapshotPath(sub1, "s1",

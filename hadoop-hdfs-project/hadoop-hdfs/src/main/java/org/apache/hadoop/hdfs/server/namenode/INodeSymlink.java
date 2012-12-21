@@ -34,7 +34,7 @@ public class INodeSymlink extends INode {
     this.symlink = DFSUtil.string2Bytes(value);
   }
   
-  public INodeSymlink(INodeSymlink that) {
+  INodeSymlink(INodeSymlink that) {
     super(that);
 
     //copy symlink

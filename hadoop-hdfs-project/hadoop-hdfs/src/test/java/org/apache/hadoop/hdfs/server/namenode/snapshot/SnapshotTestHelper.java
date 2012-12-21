@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 
 /**
  * Helper for writing snapshot related tests
@@ -281,6 +283,13 @@ public class SnapshotTestHelper {
       public int hashCode() {
         return nodePath.hashCode();
       }
+    }
+  }
+
+  static void dumpTreeRecursively(INode inode) {
+    if (INode.LOG.isDebugEnabled()) {
+      inode.dumpTreeRecursively(
+          new PrintWriter(System.out, true), new StringBuilder(), null);
     }
   }
 }

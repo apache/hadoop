@@ -52,7 +52,7 @@ public class INodeFileWithLink extends INodeFile {
   }
   
   /** Insert inode to the circular linked list. */
-  public void insert(INodeFileWithLink inode) {
+  void insert(INodeFileWithLink inode) {
     inode.setNext(this.getNext());
     this.setNext(inode);
   }
@@ -112,10 +112,10 @@ public class INodeFileWithLink extends INodeFile {
       // linked INodes, so that in case the current INode is retrieved from the
       // blocksMap before it is removed or updated, the correct replication
       // number can be retrieved.
-      this.setFileReplication(maxReplication);
+      this.setFileReplication(maxReplication, null);
       this.next = null;
       // clear parent
-      parent = null;
+      setParent(null);
     }
     return 1;
   }

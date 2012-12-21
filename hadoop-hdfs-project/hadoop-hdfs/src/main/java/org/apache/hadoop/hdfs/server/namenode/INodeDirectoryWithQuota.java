@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
  * Directory INode class that has a quota restriction
@@ -86,11 +87,11 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * 
    * @param nsQuota Namespace quota to be set
    * @param dsQuota diskspace quota to be set
-   *                                
    */
-  void setQuota(long newNsQuota, long newDsQuota) {
-    nsQuota = newNsQuota;
-    dsQuota = newDsQuota;
+  public void setQuota(long nsQuota, long dsQuota, Snapshot latest) {
+    recordModification(latest);
+    this.nsQuota = nsQuota;
+    this.dsQuota = dsQuota;
   }
   
   
