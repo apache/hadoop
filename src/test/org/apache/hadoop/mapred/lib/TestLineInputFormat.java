@@ -48,9 +48,6 @@ public class TestLineInputFormat extends TestCase {
     JobConf job = new JobConf();
     Path file = new Path(workDir, "test.txt");
 
-    int seed = new Random().nextInt();
-    Random random = new Random(seed);
-
     localFs.delete(workDir, true);
     FileInputFormat.setInputPaths(job, workDir);
     int numLinesPerMap = 5;
@@ -58,7 +55,8 @@ public class TestLineInputFormat extends TestCase {
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length += random.nextInt(MAX_LENGTH/10) + 1) {
+         length += 1) {
+      System.out.println("Processing file of length "+length);
       // create a file with length entries
       Writer writer = new OutputStreamWriter(localFs.create(file));
       try {
@@ -69,14 +67,21 @@ public class TestLineInputFormat extends TestCase {
       } finally {
         writer.close();
       }
-      checkFormat(job, numLinesPerMap);
+      int lastN = 0;
+      if (length != 0) {
+        lastN = length % numLinesPerMap;
+        if (lastN == 0) {
+          lastN = numLinesPerMap;
+        }
+      }
+      checkFormat(job, numLinesPerMap, lastN);
     }
   }
 
   // A reporter that does nothing
   private static final Reporter voidReporter = Reporter.NULL;
   
-  void checkFormat(JobConf job, int expectedN) throws IOException{
+  void checkFormat(JobConf job, int expectedN, int lastN) throws IOException{
     NLineInputFormat format = new NLineInputFormat();
     format.configure(job);
     int ignoredNumSplits = 1;
@@ -84,7 +89,8 @@ public class TestLineInputFormat extends TestCase {
 
     // check all splits except last one
     int count = 0;
-    for (int j = 0; j < splits.length -1; j++) {
+    for (int j = 0; j < splits.length; j++) {
+      System.out.println("Processing split "+splits[j]);
       assertEquals("There are no split locations", 0,
                    splits[j].getLocations().length);
       RecordReader<LongWritable, Text> reader =
@@ -102,16 +108,22 @@ public class TestLineInputFormat extends TestCase {
       try {
         count = 0;
         while (reader.next(key, value)) {
+          System.out.println("Got "+key+" "+value+" at count "+count+" of split "+j);
           count++;
         }
       } finally {
         reader.close();
       }
-      assertEquals("number of lines in split is " + expectedN ,
-                   expectedN, count);
+      if ( j == splits.length - 1) {
+        assertEquals("number of lines in split(" + j + ") is wrong" ,
+                     lastN, count);
+      } else {
+        assertEquals("number of lines in split(" + j + ") is wrong" ,
+                     expectedN, count);
+      }
     }
   }
-  
+
   public static void main(String[] args) throws Exception {
     new TestLineInputFormat().testFormat();
   }
