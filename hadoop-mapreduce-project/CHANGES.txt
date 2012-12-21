@@ -40,6 +40,9 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4842. Shuffle race can hang reducer (Mariappan Asokan via jlowe)
 
+    MAPREDUCE-4833. Task can get stuck in FAIL_CONTAINER_CLEANUP (Robert
+    Parker via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
