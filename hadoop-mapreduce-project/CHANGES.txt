@@ -43,6 +43,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4833. Task can get stuck in FAIL_CONTAINER_CLEANUP (Robert
     Parker via jlowe)
 
+    MAPREDUCE-4793. Problem with adding resources when using both -files and
+    -file to hadoop streaming (jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
