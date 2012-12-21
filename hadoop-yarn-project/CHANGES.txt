@@ -132,6 +132,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-278. Fair scheduler maxRunningApps config causes no apps to make
     progress. (sandyr via tucu)
 
+    YARN-282. Fair scheduler web UI double counts Apps Submitted. 
+    (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
