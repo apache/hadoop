@@ -484,6 +484,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4793. Problem with adding resources when using both -files and
     -file to hadoop streaming (jlowe)
 
+    MAPREDUCE-4890. Invalid TaskImpl state transitions when task fails while
+    speculating (jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

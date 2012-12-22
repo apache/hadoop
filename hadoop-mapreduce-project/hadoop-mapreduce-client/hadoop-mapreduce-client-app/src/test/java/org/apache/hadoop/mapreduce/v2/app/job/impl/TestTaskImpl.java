@@ -602,4 +602,73 @@ public class TestTaskImpl {
     assertTaskScheduledState();
     assertEquals(3, taskAttempts.size());
   }
+
+  @Test
+  public void testFailedTransitions() {
+    mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
+        remoteJobConfFile, conf, taskAttemptListener, committer, jobToken,
+        credentials, clock,
+        completedTasksFromPreviousRun, startCount,
+        metrics, appContext, TaskType.MAP) {
+          @Override
+          protected int getMaxAttempts() {
+            return 1;
+          }
+    };
+    TaskId taskId = getNewTaskID();
+    scheduleTaskAttempt(taskId);
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+
+    // add three more speculative attempts
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    assertEquals(4, taskAttempts.size());
+
+    // have the first attempt fail, verify task failed due to no retries
+    MockTaskAttemptImpl taskAttempt = taskAttempts.get(0);
+    taskAttempt.setState(TaskAttemptState.FAILED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+
+    // verify task can no longer be killed
+    mockTask.handle(new TaskEvent(taskId, TaskEventType.T_KILL));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+
+    // verify speculative doesn't launch new tasks
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ADD_SPEC_ATTEMPT));
+    mockTask.handle(new TaskTAttemptEvent(getLastAttempt().getAttemptId(),
+        TaskEventType.T_ATTEMPT_LAUNCHED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    assertEquals(4, taskAttempts.size());
+
+    // verify attempt events from active tasks don't knock task out of FAILED
+    taskAttempt = taskAttempts.get(1);
+    taskAttempt.setState(TaskAttemptState.COMMIT_PENDING);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_COMMIT_PENDING));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    taskAttempt.setState(TaskAttemptState.FAILED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_FAILED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    taskAttempt = taskAttempts.get(2);
+    taskAttempt.setState(TaskAttemptState.SUCCEEDED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_SUCCEEDED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+    taskAttempt = taskAttempts.get(3);
+    taskAttempt.setState(TaskAttemptState.KILLED);
+    mockTask.handle(new TaskTAttemptEvent(taskAttempt.getAttemptId(),
+        TaskEventType.T_ATTEMPT_KILLED));
+    assertEquals(TaskState.FAILED, mockTask.getState());
+  }
 }
