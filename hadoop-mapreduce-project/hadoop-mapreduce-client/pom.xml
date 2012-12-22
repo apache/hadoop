@@ -194,5 +194,6 @@
     <module>hadoop-mapreduce-client-app</module>
     <module>hadoop-mapreduce-client-jobclient</module>
     <module>hadoop-mapreduce-client-hs</module>
+    <module>hadoop-mapreduce-client-hs-plugins</module>
   </modules>
 </project>
