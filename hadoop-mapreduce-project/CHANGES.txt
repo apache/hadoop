@@ -26,6 +26,10 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in
     MR1 but not MR2. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4899. Implemented a MR specific plugin for tracking finished
+    applications that YARN's ResourceManager doesn't keep track off anymore
+    (Derek Dagit via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
