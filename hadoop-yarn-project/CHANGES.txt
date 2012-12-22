@@ -11,6 +11,10 @@ Release 2.0.3-alpha - Unreleased
     YARN-230. RM Restart phase 1 - includes support for saving/restarting all
     applications on an RM bounce. (Bikas Saha via acmurthy)
 
+    YARN-285. Added a temporary plugin interface for RM to be able to redirect
+    to JobHistory server for apps that it no longer tracks. (Derek Dagit via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.

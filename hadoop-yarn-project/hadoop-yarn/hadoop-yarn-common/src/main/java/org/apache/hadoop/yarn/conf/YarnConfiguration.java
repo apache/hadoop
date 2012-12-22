@@ -400,6 +400,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
+  
+  public static final String YARN_TRACKING_URL_GENERATOR = 
+      YARN_PREFIX + "tracking.url.generator";
 
   /** Amount of memory in GB that can be allocated for containers.*/
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
