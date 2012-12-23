@@ -143,6 +143,9 @@ Trunk (Unreleased)
 
     HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
 
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
+
   BUG FIXES
 
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
