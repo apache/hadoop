@@ -151,8 +151,6 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4130. BKJM: The reading for editlog at NN starting using bkjm is not efficient.
     (Han Xiao via umamahesh)
 
-    HDFS-4326. bump up Tomcat version for HttpFS to 6.0.36. (tucu)
-
   OPTIMIZATIONS
 
   BUG FIXES 
