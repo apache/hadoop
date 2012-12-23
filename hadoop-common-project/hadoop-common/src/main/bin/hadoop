@@ -31,6 +31,7 @@ function print_usage(){
   echo "  fs                   run a generic filesystem user client"
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
+  echo "  checknative [-a|-h]  check native hadoop and compression libraries availability"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  classpath            prints the class path needed to get the"
@@ -100,6 +101,8 @@ case $COMMAND in
       CLASS=org.apache.hadoop.util.VersionInfo
     elif [ "$COMMAND" = "jar" ] ; then
       CLASS=org.apache.hadoop.util.RunJar
+    elif [ "$COMMAND" = "checknative" ] ; then
+      CLASS=org.apache.hadoop.util.NativeLibraryChecker
     elif [ "$COMMAND" = "distcp" ] ; then
       CLASS=org.apache.hadoop.tools.DistCp
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}

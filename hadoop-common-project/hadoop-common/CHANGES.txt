@@ -104,6 +104,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9147. Add missing fields to FIleStatus.toString.
     (Jonathan Allen via suresh)
 
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
