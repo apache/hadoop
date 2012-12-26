@@ -42,6 +42,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9152. HDFS can report negative DFS Used on clusters with very 
     small amounts of data (Brock Noland via tgraves)
 
+    HADOOP-9169. Bring branch-0.23 ExitUtil up to same level as branch-2
+    (Robert Joseph Evans via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

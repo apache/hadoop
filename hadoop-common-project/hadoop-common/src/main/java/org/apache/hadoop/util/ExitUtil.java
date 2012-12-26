@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class ExitUtil {
   private final static Log LOG = LogFactory.getLog(ExitUtil.class.getName());
   private static volatile boolean systemExitDisabled = false;
-  private static volatile boolean terminateCalled = false;
+  private static volatile ExitException firstExitException;
 
   public static class ExitException extends RuntimeException {
     private static final long serialVersionUID = 1L;
@@ -50,17 +50,34 @@ public final class ExitUtil {
   }
 
   /**
-   * Clear the previous exit record.
-   */
-  public static void clearTerminateCalled() {
-    terminateCalled = false;
-  }
-
-  /**
    * @return true if terminate has been called
    */
   public static boolean terminateCalled() {
-    return terminateCalled;
+    // Either we set this member or we actually called System#exit
+    return firstExitException != null;
+  }
+
+  /**
+   * @return the first ExitException thrown, null if none thrown yet
+   */
+  public static ExitException getFirstExitException() {
+    return firstExitException;
+  }
+
+  /**
+   * Reset the tracking of process termination. This is for use
+   * in unit tests where one test in the suite expects an exit
+   * but others do not.
+   */
+  public static void resetFirstExitException() {
+    firstExitException = null;
+  }
+
+  /**
+   * Clear the previous exit record.
+   */
+  public static void clearTerminateCalled() {
+    resetFirstExitException();
   }
 
   /**
@@ -72,17 +89,32 @@ public final class ExitUtil {
    */
   public static void terminate(int status, String msg) throws ExitException {
     LOG.info("Exiting with status " + status);
-    terminateCalled = true;
     if (systemExitDisabled) {
-      throw new ExitException(status, msg);
+      ExitException ee = new ExitException(status, msg);
+      LOG.fatal("Terminate called", ee);
+      if (null == firstExitException) {
+        firstExitException = ee;
+      }
+      throw ee;
     }
     System.exit(status);
   }
 
   /**
+   * Like {@link terminate(int, String)} but uses the given throwable to
+   * initialize the ExitException.
+   * @param status
+   * @param t throwable used to create the ExitException
+   * @throws ExitException if System.exit is disabled for test purposes
+   */
+  public static void terminate(int status, Throwable t) throws ExitException {
+    terminate(status, StringUtils.stringifyException(t));
+  }
+
+  /**
    * Like {@link terminate(int, String)} without a message.
    * @param status
-   * @throws ExitException
+   * @throws ExitException if System.exit is disabled for test purposes
    */
   public static void terminate(int status) throws ExitException {
     terminate(status, "ExitException");
