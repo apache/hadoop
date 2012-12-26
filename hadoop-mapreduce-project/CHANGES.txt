@@ -648,6 +648,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4890. Invalid TaskImpl state transitions when task fails while
     speculating (jlowe)
 
+    MAPREDUCE-4902. Fix typo "receievd" should be "received" in log output
+    (Albert Chu via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
