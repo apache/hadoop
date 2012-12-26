@@ -246,7 +246,7 @@ class Fetcher<K,V> extends Thread {
       LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
       // verify that replyHash is HMac of encHash
       SecureShuffleUtils.verifyReply(replyHash, encHash, jobTokenSecret);
-      LOG.info("for url="+msgToEncode+" sent hash and receievd reply");
+      LOG.info("for url="+msgToEncode+" sent hash and received reply");
     } catch (IOException ie) {
       boolean connectExcpt = ie instanceof ConnectException;
       ioErrs.increment(1);
