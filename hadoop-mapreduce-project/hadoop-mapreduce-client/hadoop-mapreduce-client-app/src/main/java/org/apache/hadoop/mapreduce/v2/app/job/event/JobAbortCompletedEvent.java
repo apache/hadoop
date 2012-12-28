@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.app.job;
+package org.apache.hadoop.mapreduce.v2.app.job.event;
 
-public enum JobStateInternal {
-  NEW,
-  SETUP,
-  INITED,
-  RUNNING,
-  COMMITTING,
-  SUCCEEDED,
-  FAIL_ABORT,
-  FAILED,
-  KILL_WAIT,
-  KILL_ABORT,
-  KILLED,
-  ERROR
+import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+
+public class JobAbortCompletedEvent extends JobEvent {
+
+  private JobStatus.State finalState;
+
+  public JobAbortCompletedEvent(JobId jobID, JobStatus.State finalState) {
+    super(jobID, JobEventType.JOB_ABORT_COMPLETED);
+    this.finalState = finalState;
+  }
+
+  public JobStatus.State getFinalState() {
+    return finalState;
+  }
 }

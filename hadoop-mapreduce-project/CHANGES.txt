@@ -56,6 +56,8 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4902. Fix typo "receievd" should be "received" in log output
     (Albert Chu via jlowe)
 
+    MAPREDUCE-4813. AM timing out during job commit (jlowe via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
