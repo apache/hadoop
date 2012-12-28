@@ -11,3 +11,5 @@ branch-trunk-win changes - unreleased
 
   MAPREDUCE-4869. Fix TestMapReduceChildJVM. (Chris Nauroth via acmurthy)
 
+  MAPREDUCE-4870. Fix TestMRJobsWithHistoryService. (Chris Nauroth via acmurthy)
+
