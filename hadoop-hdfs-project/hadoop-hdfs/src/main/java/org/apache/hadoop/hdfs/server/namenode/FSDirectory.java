@@ -2022,7 +2022,7 @@ public class FSDirectory implements Closeable {
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota
-        return dirNode.replaceSelf4Quota(latest, oldNsQuota, oldDsQuota);
+        return dirNode.replaceSelf4Quota(latest, nsQuota, dsQuota);
       }
       return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
     }

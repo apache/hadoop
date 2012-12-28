@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SNAPSHOT_LIMIT;
+
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -56,6 +60,8 @@ public class TestNestedSnapshots {
   }
 
   private static final long SEED = 0;
+  private static Random RANDOM = new Random(SEED);
+
   private static final short REPLICATION = 3;
   private static final long BLOCKSIZE = 1024;
   
@@ -89,7 +95,7 @@ public class TestNestedSnapshots {
    */
   @Test
   public void testNestedSnapshots() throws Exception {
-    final Path foo = new Path("/test/foo");
+    final Path foo = new Path("/testNestedSnapshots/foo");
     final Path bar = new Path(foo, "bar");
     final Path file1 = new Path(bar, "file1");
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, SEED);
@@ -117,8 +123,8 @@ public class TestNestedSnapshots {
     assertFile(s1path, s2path, file2, true, false, false);
   }
 
-  private static void print(String mess) throws UnresolvedLinkException {
-    System.out.println("XXX " + mess);
+  private static void print(String message) throws UnresolvedLinkException {
+    System.out.println("XXX " + message);
     SnapshotTestHelper.dumpTreeRecursively(fsn.getFSDirectory().getINode("/"));
   }
 
@@ -133,6 +139,44 @@ public class TestNestedSnapshots {
     for(int i = 0; i < paths.length; i++) {
       final boolean computed = hdfs.exists(paths[i]);
       Assert.assertEquals("Failed on " + paths[i], expected[i], computed);
+    }
+  }
+
+  @Test
+  public void testSnapshotLimit() throws Exception {
+    final int step = 1000;
+    final String dirStr = "/testSnapshotLimit/dir";
+    final Path dir = new Path(dirStr);
+    hdfs.mkdirs(dir, new FsPermission((short)0777));
+    hdfs.allowSnapshot(dirStr);
+
+    int s = 0;
+    for(; s < SNAPSHOT_LIMIT; s++) {
+      final String snapshotName = "s" + s;
+      hdfs.createSnapshot(snapshotName, dirStr);
+
+      //create a file occasionally 
+      if (s % step == 0) {
+        final Path file = new Path(dirStr, "f" + s);
+        DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
+      }
+    }
+
+    try {
+      hdfs.createSnapshot("s" + s, dirStr);
+      Assert.fail("Expected to fail to create snapshot, but didn't.");
+    } catch(IOException ioe) {
+      SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
+    }
+
+    for(int f = 0; f < SNAPSHOT_LIMIT; f += step) {
+      final String file = "f" + f;
+      s = RANDOM.nextInt(step);
+      for(; s < SNAPSHOT_LIMIT; s += RANDOM.nextInt(step)) {
+        final Path p = SnapshotTestHelper.getSnapshotPath(dir, "s" + s, file);
+        //the file #f exists in snapshot #s iff s > f.
+        Assert.assertEquals(s > f, hdfs.exists(p));
+      }
     }
   }
 }

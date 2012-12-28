@@ -31,7 +31,11 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-/** The directory with snapshots. */
+/**
+ * The directory with snapshots. It maintains a list of snapshot diffs for
+ * storing snapshot data. When there are modifications to the directory, the old
+ * data is stored in the latest snapshot, if there is any.
+ */
 public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   /**
    * The difference between the current state and a previous snapshot
@@ -351,8 +355,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
     /** Compare diffs with snapshot ID. */
     @Override
-    public int compareTo(final Snapshot that_snapshot) {
-      return Snapshot.ID_COMPARATOR.compare(this.snapshot, that_snapshot);
+    public int compareTo(final Snapshot that) {
+      return Snapshot.ID_COMPARATOR.compare(this.snapshot, that);
     }
     
     /** Is the inode the root of the snapshot? */
@@ -381,9 +385,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
     private INodeDirectory getSnapshotINode() {
       // get from this diff, then the posterior diff and then the current inode
-      return snapshotINode != null? snapshotINode
-          : posteriorDiff != null? posteriorDiff.getSnapshotINode()
-              : INodeDirectoryWithSnapshot.this; 
+      for(SnapshotDiff d = this; ; d = d.posteriorDiff) {
+        if (d.snapshotINode != null) {
+          return d.snapshotINode;
+        } else if (d.posteriorDiff == null) {
+          return INodeDirectoryWithSnapshot.this;
+        }
+      }
     }
 
     /**
@@ -429,17 +437,18 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
     /** @return the child with the given name. */
     INode getChild(byte[] name, boolean checkPosterior) {
-      final INode[] array = diff.accessPrevious(name);
-      if (array != null) {
-        // this diff is able to find it
-        return array[0]; 
-      } else if (!checkPosterior) {
-        // Since checkPosterior is false, return null, i.e. not found.   
-        return null;
-      } else {
-        // return the posterior INode.
-        return posteriorDiff != null? posteriorDiff.getChild(name, true)
-            : INodeDirectoryWithSnapshot.this.getChild(name, null);
+      for(SnapshotDiff d = this; ; d = d.posteriorDiff) {
+        final INode[] array = d.diff.accessPrevious(name);
+        if (array != null) {
+          // the diff is able to find it
+          return array[0]; 
+        } else if (!checkPosterior) {
+          // Since checkPosterior is false, return null, i.e. not found.   
+          return null;
+        } else if (d.posteriorDiff == null) {
+          // no more posterior diff, get from current inode.
+          return INodeDirectoryWithSnapshot.this.getChild(name, null);
+        }
       }
     }
     
@@ -554,6 +563,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     return save2Snapshot(latest, null);
   }
 
+  /** Save the snapshot copy to the latest snapshot. */
   public Pair<INodeDirectory, INodeDirectory> save2Snapshot(Snapshot latest,
       INodeDirectory snapshotCopy) {
     return latest == null? null

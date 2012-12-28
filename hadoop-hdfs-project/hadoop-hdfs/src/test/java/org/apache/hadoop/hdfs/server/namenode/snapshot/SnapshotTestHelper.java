@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +40,8 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
  * Helper for writing snapshot related tests
  */
 public class SnapshotTestHelper {
+  public static final Log LOG = LogFactory.getLog(SnapshotTestHelper.class);
+
   private SnapshotTestHelper() {
     // Cannot be instantinatied
   }
