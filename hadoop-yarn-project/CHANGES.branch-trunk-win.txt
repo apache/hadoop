@@ -19,3 +19,6 @@ branch-trunk-win changes - unreleased
   YARN-234. Added support for process tree and resource calculator in MS Windows 
   to YARN. (Chris Nauroth via acmurthy)
 
+  YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
+  Gong via acmurthy) 
+
