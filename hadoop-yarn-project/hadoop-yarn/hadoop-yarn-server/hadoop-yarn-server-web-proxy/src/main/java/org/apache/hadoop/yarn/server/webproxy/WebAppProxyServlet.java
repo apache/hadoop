@@ -254,11 +254,14 @@ public class WebAppProxyServlet extends HttpServlet {
       
       if(securityEnabled) {
         String cookieName = getCheckCookieName(id); 
-        for(Cookie c: req.getCookies()) {
-          if(cookieName.equals(c.getName())) {
-            userWasWarned = true;
-            userApproved = userApproved || Boolean.valueOf(c.getValue());
-            break;
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+          for (Cookie c : cookies) {
+            if (cookieName.equals(c.getName())) {
+              userWasWarned = true;
+              userApproved = userApproved || Boolean.valueOf(c.getValue());
+              break;
+            }
           }
         }
       }
