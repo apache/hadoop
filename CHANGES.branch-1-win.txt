@@ -302,3 +302,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HDFS-4320. Add a separate configuration for namenode rpc address instead
     of using fs.default.name. (Mostafa Elhemali via suresh)
+
+    HDFS-4341. Set default data dir permission in MiniDFSClusterWithNodeGroup.
+    (Ivan Mitic via szetszwo)
