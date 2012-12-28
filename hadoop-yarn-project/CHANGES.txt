@@ -248,6 +248,9 @@ Release 0.23.6 - UNRELEASED
     YARN-280. RM does not reject app submission with invalid tokens 
     (Daryn Sharp via tgraves)
 
+    YARN-225. Proxy Link in RM UI thows NPE in Secure mode 
+    (Devaraj K via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
