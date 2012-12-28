@@ -15,20 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.mapreduce.v2.app.job.event;
 
-package org.apache.hadoop.mapreduce.v2.app.job;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 
-public enum JobStateInternal {
-  NEW,
-  SETUP,
-  INITED,
-  RUNNING,
-  COMMITTING,
-  SUCCEEDED,
-  FAIL_ABORT,
-  FAILED,
-  KILL_WAIT,
-  KILL_ABORT,
-  KILLED,
-  ERROR
+public class JobCommitCompletedEvent extends JobEvent {
+
+  public JobCommitCompletedEvent(JobId jobID) {
+    super(jobID, JobEventType.JOB_COMMIT_COMPLETED);
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.mapreduce.v2.app.job;
-
-public enum JobStateInternal {
-  NEW,
-  SETUP,
-  INITED,
-  RUNNING,
-  COMMITTING,
-  SUCCEEDED,
-  FAIL_ABORT,
-  FAILED,
-  KILL_WAIT,
-  KILL_ABORT,
-  KILLED,
-  ERROR
-}
+@InterfaceAudience.Private
+package org.apache.hadoop.mapreduce.v2.app.commit;
+import org.apache.hadoop.classification.InterfaceAudience;

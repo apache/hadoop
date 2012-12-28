@@ -16,19 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.app.job;
+package org.apache.hadoop.mapreduce.v2.app.commit;
 
-public enum JobStateInternal {
-  NEW,
-  SETUP,
-  INITED,
-  RUNNING,
-  COMMITTING,
-  SUCCEEDED,
-  FAIL_ABORT,
-  FAILED,
-  KILL_WAIT,
-  KILL_ABORT,
-  KILLED,
-  ERROR
+public enum CommitterEventType {
+  JOB_SETUP,
+  JOB_COMMIT,
+  JOB_ABORT,
+  TASK_ABORT
 }

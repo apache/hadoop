@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,6 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.mapreduce.v2.app.taskclean;
-import org.apache.hadoop.classification.InterfaceAudience;
+
+package org.apache.hadoop.mapreduce.v2.app.commit;
+
+import org.apache.hadoop.yarn.event.AbstractEvent;
+
+public class CommitterEvent extends AbstractEvent<CommitterEventType> {
+
+  public CommitterEvent(CommitterEventType type) {
+    super(type);
+  }
+}
