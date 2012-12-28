@@ -172,6 +172,8 @@ Trunk (Unreleased)
 
     HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
