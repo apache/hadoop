@@ -340,8 +340,8 @@ public class TestBackupNode {
       //
       // Take a checkpoint
       //
-      backup = startBackupNode(conf, op, 1);
       long txid = cluster.getNameNodeRpc().getTransactionID();
+      backup = startBackupNode(conf, op, 1);
       waitCheckpointDone(cluster, txid);
 
       for (int i = 0; i < 10; i++) {
