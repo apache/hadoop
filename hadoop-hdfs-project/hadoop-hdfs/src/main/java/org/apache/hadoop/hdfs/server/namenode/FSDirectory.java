@@ -394,19 +394,16 @@ public class FSDirectory implements Closeable {
   /**
    * Remove a block from the file.
    */
-  boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
+  void removeBlock(String path, INodeFileUnderConstruction fileNode,
                       Block block) throws IOException {
     waitForReady();
 
     writeLock();
     try {
       unprotectedRemoveBlock(path, fileNode, block);
-      // write modified block locations to log
-      fsImage.getEditLog().logOpenFile(path, fileNode);
     } finally {
       writeUnlock();
     }
-    return true;
   }
   
   void unprotectedRemoveBlock(String path, INodeFileUnderConstruction fileNode, 

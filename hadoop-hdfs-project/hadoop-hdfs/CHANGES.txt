@@ -629,6 +629,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4140. fuse-dfs handles open(O_TRUNC) poorly. (Colin Patrick McCabe
     via atm)
 
+    HDFS-4308. addBlock() should persist file blocks once.
+    (Plamen Jeliazkov via shv)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
