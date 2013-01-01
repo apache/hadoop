@@ -344,6 +344,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4347. Avoid infinite waiting checkpoint to complete in TestBackupNode.
     (Plamen Jeliazkov via shv)
 
+    HDFS-4349. Add test for reading files from BackupNode. (shv)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

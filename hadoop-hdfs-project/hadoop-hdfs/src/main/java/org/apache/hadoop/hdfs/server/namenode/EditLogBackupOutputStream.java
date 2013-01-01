@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -41,6 +43,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  *  int, int, byte[])
  */
 class EditLogBackupOutputStream extends EditLogOutputStream {
+  private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
   static int DEFAULT_BUFFER_SIZE = 256;
 
   private final JournalProtocol backupNode;  // RPC proxy to backup node
@@ -117,6 +120,11 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   protected void flushAndSync(boolean durable) throws IOException {
     assert out.getLength() == 0 : "Output buffer is not empty";
     
+    if (doubleBuf.isFlushed()) {
+      LOG.info("Nothing to flush");
+      return;
+    }
+
     int numReadyTxns = doubleBuf.countReadyTxns();
     long firstTxToFlush = doubleBuf.getFirstReadyTxId();
     
