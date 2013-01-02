@@ -376,6 +376,9 @@ Release 1.2.0 - unreleased
     HADOOP-9174. TestSecurityUtil fails with Open JDK 7. (Arpit Agarwal via
     suresh)
 
+    HADOOP-9175. TestWritableName fails with Open JDK 7. (Arpit Agarwal via
+    suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
