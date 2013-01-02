@@ -141,5 +141,14 @@
         </configuration>
        </plugin>
     </plugins>
+    <testResources>
+      <testResource>
+        <directory>${basedir}/../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/conf</directory>
+        <includes>
+          <include>capacity-scheduler.xml</include>
+        </includes>
+        <filtering>false</filtering>
+      </testResource>
+    </testResources>
   </build>
 </project>

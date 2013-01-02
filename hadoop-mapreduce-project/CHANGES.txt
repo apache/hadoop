@@ -160,6 +160,9 @@ Trunk (Unreleased)
     MAPREDUCE-4574. Fix TotalOrderParitioner to work with
     non-WritableComparable key types. (harsh)
 
+    MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
+    queue configuration. (Chris Nauroth via suresh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
