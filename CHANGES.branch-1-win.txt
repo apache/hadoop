@@ -310,3 +310,5 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     node is excluded, the nodes in the same nodegroup should also be excluded.
     (Meng Gong via szetszwo)
 
+    HADOOP-9174. TestSecurityUtil fails with Open JDK 7. (Arpit Agarwal via
+    suresh)
