@@ -130,8 +130,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       
     List<DatanodeDescriptor> results = 
       new ArrayList<DatanodeDescriptor>(chosenNodes);
-    for (Node node:chosenNodes) {
-      excludedNodes.put(node, node);
+    for (DatanodeDescriptor node:chosenNodes) {
+      // add localMachine and related nodes to excludedNodes
+      addToExcludedNodes(node, excludedNodes);
       adjustExcludedNodes(excludedNodes, node);
     }
       
@@ -241,6 +242,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       if (isGoodTarget(localMachine, blocksize, maxNodesPerRack, false,
           results, avoidStaleNodes)) {
         results.add(localMachine);
+        // add localMachine and related nodes to excludedNode
+        addToExcludedNodes(localMachine, excludedNodes);
         return localMachine;
       }
     } 
@@ -248,6 +251,17 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, blocksize,
         maxNodesPerRack, results, avoidStaleNodes);
+  }
+  /**
+    * Add <i>localMachine</i> and related nodes to <i>excludedNodes</i>
+    * for next replica choosing. In sub class, we can add more nodes within
+    * the same failure domain of localMachine
+    * @return number of new excluded nodes
+    */
+  protected int addToExcludedNodes(DatanodeDescriptor localMachine,
+      HashMap<Node, Node> excludedNodes) {
+    Node node = excludedNodes.put(localMachine, localMachine);
+    return node == null?1:0;
   }
     
   /* choose one node from the rack that <i>localMachine</i> is on.
@@ -347,6 +361,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         if (isGoodTarget(chosenNode, blocksize, maxNodesPerRack, results,
             avoidStaleNodes)) {
           results.add(chosenNode);
+          // add chosenNode and related nodes to excludedNode
+          addToExcludedNodes(chosenNode, excludedNodes);
           adjustExcludedNodes(excludedNodes, chosenNode);
           return chosenNode;
         }
@@ -381,6 +397,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
             avoidStaleNodes)) {
           numOfReplicas--;
           results.add(chosenNode);
+          // add chosenNode and related nodes to excludedNode
+          int newExcludedNodes = addToExcludedNodes(chosenNode, excludedNodes);
+          numOfAvailableNodes -= newExcludedNodes;
           adjustExcludedNodes(excludedNodes, chosenNode);
         }
       }
