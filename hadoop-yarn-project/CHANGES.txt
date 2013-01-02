@@ -251,6 +251,9 @@ Release 0.23.6 - UNRELEASED
     YARN-225. Proxy Link in RM UI thows NPE in Secure mode 
     (Devaraj K via bobby)
 
+    YARN-293. Node Manager leaks LocalizerRunner object for every Container
+    (Robert Joseph Evans via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

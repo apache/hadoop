@@ -328,6 +328,8 @@ public class TestResourceLocalizationService {
       
       //Send Cleanup Event
       spyService.handle(new ContainerLocalizationCleanupEvent(c, req));
+      verify(mockLocallilzerTracker)
+        .cleanupPrivLocalizers("container_314159265358979_0003_01_000042");
       req2.remove(LocalResourceVisibility.PRIVATE);
       spyService.handle(new ContainerLocalizationCleanupEvent(c, req2));
       dispatcher.await();
