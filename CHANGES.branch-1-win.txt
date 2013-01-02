@@ -305,3 +305,8 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HDFS-4341. Set default data dir permission in MiniDFSClusterWithNodeGroup.
     (Ivan Mitic via szetszwo)
+
+    HDFS-4337. Backport HDFS-4240: For nodegroup-aware block placement, when a
+    node is excluded, the nodes in the same nodegroup should also be excluded.
+    (Meng Gong via szetszwo)
+
