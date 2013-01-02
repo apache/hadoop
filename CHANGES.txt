@@ -373,6 +373,9 @@ Release 1.2.0 - unreleased
     node is excluded, the nodes in the same nodegroup should also be excluded.
     (Meng Gong via szetszwo)
 
+    HADOOP-9174. TestSecurityUtil fails with Open JDK 7. (Arpit Agarwal via
+    suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
