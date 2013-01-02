@@ -66,29 +66,25 @@ public class TestWritableName extends TestCase {
 
   public void testGoodName() throws Exception {
     Configuration conf = new Configuration();
-    Class<?> test = WritableName.getClass("long",conf);
+    Class<?> test = WritableName.getClass("long", conf);
     assertTrue(test != null);
   }
 
-  public void testSetName() throws Exception {
+  public void testAddNames() throws Exception {
     Configuration conf = new Configuration();
-    WritableName.setName(SimpleWritable.class, testName);
 
+    // Add a name, check it works.
+    WritableName.setName(SimpleWritable.class, testName);
     Class<?> test = WritableName.getClass(testName,conf);
     assertTrue(test.equals(SimpleWritable.class));
-  }
 
-
-  public void testAddName() throws Exception {
-    Configuration conf = new Configuration();
+    // Add a new name, check it works.
     String altName = testName + ".alt";
-
     WritableName.addName(SimpleWritable.class, altName);
-
-    Class<?> test = WritableName.getClass(altName, conf);
+    test = WritableName.getClass(altName, conf);
     assertTrue(test.equals(SimpleWritable.class));
 
-    // check original name still works
+    // Check that the original name still works.
     test = WritableName.getClass(testName, conf);
     assertTrue(test.equals(SimpleWritable.class));
 
@@ -103,5 +99,5 @@ public class TestWritableName extends TestCase {
       assertTrue(e.getMessage().matches(".*unknown_junk.*"));
     }
   }
-	
+
 }
