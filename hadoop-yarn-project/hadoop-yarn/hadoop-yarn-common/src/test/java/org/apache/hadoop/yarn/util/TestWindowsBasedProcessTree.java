@@ -50,7 +50,7 @@ public class TestWindowsBasedProcessTree extends TestCase {
     
     WindowsBasedProcessTreeTester pTree = new WindowsBasedProcessTreeTester("-1");
     pTree.infoStr = "3524,1024,1024,500\r\n2844,1024,1024,500\r\n";
-    pTree.getProcessTree();
+    pTree.updateProcessTree();
     assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getCumulativeVmem(0) == 2048);
     assertTrue(pTree.getCumulativeRssmem() == 2048);
@@ -58,7 +58,7 @@ public class TestWindowsBasedProcessTree extends TestCase {
     assertTrue(pTree.getCumulativeCpuTime() == 1000);
 
     pTree.infoStr = "3524,1024,1024,1000\r\n2844,1024,1024,1000\r\n1234,1024,1024,1000\r\n";
-    pTree.getProcessTree();
+    pTree.updateProcessTree();
     assertTrue(pTree.getCumulativeVmem() == 3072);
     assertTrue(pTree.getCumulativeVmem(1) == 2048);
     assertTrue(pTree.getCumulativeRssmem() == 3072);
@@ -66,7 +66,7 @@ public class TestWindowsBasedProcessTree extends TestCase {
     assertTrue(pTree.getCumulativeCpuTime() == 3000);    
 
     pTree.infoStr = "3524,1024,1024,1500\r\n2844,1024,1024,1500\r\n";
-    pTree.getProcessTree();
+    pTree.updateProcessTree();
     assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getCumulativeVmem(2) == 2048);
     assertTrue(pTree.getCumulativeRssmem() == 2048);

@@ -165,17 +165,4 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     refreshIfNeeded();
     return cpuUsage;
   }
-
-  /** {@inheritDoc} */
-  @Override
-  public ProcResourceValues getProcResourceValues() {
-    if(pTree == null) {
-      pTree = new WindowsBasedProcessTree(processPid);
-    }
-    pTree.getProcessTree();
-    long cpuTime = pTree.getCumulativeCpuTime();
-    long pMem = pTree.getCumulativeRssmem();
-    long vMem = pTree.getCumulativeVmem();
-    return new ProcResourceValues(cpuTime, pMem, vMem);
-  }
 }

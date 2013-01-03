@@ -118,7 +118,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
   
   @Override
-  public ResourceCalculatorProcessTree getProcessTree() {
+  public void updateProcessTree() {
     if(taskProcessId != null) {
       // taskProcessId can be null in some tests
       String processesInfoStr = getAllProcessInfoFromShell();
@@ -147,8 +147,6 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
         processTree.clear();
       }
     }
-
-    return this;
   }
 
   @Override

@@ -166,7 +166,7 @@ public class TestProcfsBasedProcessTree {
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
     ProcfsBasedProcessTree p = createProcessTree(pid);
-    p.getProcessTree(); // initialize
+    p.updateProcessTree(); // initialize
     LOG.info("ProcessTree: " + p.toString());
 
     File leaf = new File(lowestDescendant);
@@ -179,7 +179,7 @@ public class TestProcfsBasedProcessTree {
       }
     }
 
-    p.getProcessTree(); // reconstruct
+    p.updateProcessTree(); // reconstruct
     LOG.info("ProcessTree: " + p.toString());
 
     // Get the process-tree dump
@@ -218,7 +218,7 @@ public class TestProcfsBasedProcessTree {
     }
 
     // ProcessTree is gone now. Any further calls should be sane.
-    p.getProcessTree();
+    p.updateProcessTree();
     Assert.assertFalse("ProcessTree must have been gone", isAlive(pid));
     Assert.assertTrue("Cumulative vmem for the gone-process is "
         + p.getCumulativeVmem() + " . It should be zero.", p
@@ -363,7 +363,7 @@ public class TestProcfsBasedProcessTree {
       ProcfsBasedProcessTree processTree =
           createProcessTree("100", procfsRootDir.getAbsolutePath());
       // build the process tree.
-      processTree.getProcessTree();
+      processTree.updateProcessTree();
 
       // verify cumulative memory
       Assert.assertEquals("Cumulative virtual memory does not match", 600000L,
@@ -389,7 +389,7 @@ public class TestProcfsBasedProcessTree {
       writeStatFiles(procfsRootDir, pids, procInfos);
 
       // build the process tree.
-      processTree.getProcessTree();
+      processTree.updateProcessTree();
 
       // verify cumulative cpu time again
       cumuCpuTime = ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0 ?
@@ -436,7 +436,7 @@ public class TestProcfsBasedProcessTree {
       ProcfsBasedProcessTree processTree =
           createProcessTree("100", procfsRootDir.getAbsolutePath());
       // build the process tree.
-      processTree.getProcessTree();
+      processTree.updateProcessTree();
 
       // verify cumulative memory
       Assert.assertEquals("Cumulative memory does not match",
@@ -452,7 +452,7 @@ public class TestProcfsBasedProcessTree {
       writeStatFiles(procfsRootDir, newPids, newProcInfos);
 
       // check memory includes the new process.
-      processTree.getProcessTree();
+      processTree.updateProcessTree();
       Assert.assertEquals("Cumulative vmem does not include new process",
                    1200000L, processTree.getCumulativeVmem());
       long cumuRssMem = ProcfsBasedProcessTree.PAGE_SIZE > 0 ?
@@ -478,7 +478,7 @@ public class TestProcfsBasedProcessTree {
       writeStatFiles(procfsRootDir, newPids, newProcInfos);
 
       // refresh process tree
-      processTree.getProcessTree();
+      processTree.updateProcessTree();
 
       // processes older than 2 iterations should be same as before.
       Assert.assertEquals("Cumulative vmem shouldn't have included new processes",
@@ -582,7 +582,7 @@ public class TestProcfsBasedProcessTree {
       ProcfsBasedProcessTree processTree = createProcessTree(
           "100", procfsRootDir.getAbsolutePath());
       // build the process tree.
-      processTree.getProcessTree();
+      processTree.updateProcessTree();
 
       // Get the process-tree dump
       String processTreeDump = processTree.getProcessTreeDump();
