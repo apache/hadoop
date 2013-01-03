@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -116,6 +117,16 @@ public abstract class FSQueue extends Schedulable implements Queue {
   @Override
   public QueueMetrics getMetrics() {
     return metrics;
+  }
+  
+  public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
+    // Check if the leaf-queue allows access
+    if (queueMgr.getQueueAcls(getName()).get(acl).isUserAllowed(user)) {
+      return true;
+    }
+
+    // Check if parent-queue allows access
+    return parent != null && parent.hasAccess(acl, user);
   }
   
   /**

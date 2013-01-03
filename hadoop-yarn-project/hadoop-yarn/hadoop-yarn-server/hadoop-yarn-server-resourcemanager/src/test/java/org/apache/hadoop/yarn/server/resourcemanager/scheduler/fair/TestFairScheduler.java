@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -1242,5 +1244,35 @@ public class TestFairScheduler {
     for (RMContainer liveContainer : liveContainers) {
       Assert.assertEquals(2, liveContainer.getContainer().getPriority().getPriority());
     }
+  }
+  
+  @Test
+  public void testAclSubmitApplication() throws Exception {
+    // Set acl's
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<aclSubmitApps>norealuserhasthisname</aclSubmitApps>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
+        "norealuserhasthisname", 1);
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
+        "norealuserhasthisname2", 1);
+
+    FSSchedulerApp app1 = scheduler.applications.get(attId1);
+    assertNotNull("The application was not allowed", app1);
+    FSSchedulerApp app2 = scheduler.applications.get(attId2);
+    assertNull("The application was allowed", app2);
   }
 }
