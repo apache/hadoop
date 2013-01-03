@@ -382,6 +382,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-2217. The expire launching task should cover the UNASSIGNED task. 
     (schen and kkambatl via tucu)
 
+    MAPREDUCE-4909. TestKeyValueTextInputFormat fails with Open JDK 7 on
+    Windows. (Arpit Agarwal via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
