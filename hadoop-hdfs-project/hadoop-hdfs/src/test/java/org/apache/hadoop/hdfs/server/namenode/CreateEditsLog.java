@@ -54,7 +54,7 @@ public class CreateEditsLog {
   static final String EDITS_DIR = "/tmp/EditsLogOut";
   static String edits_dir = EDITS_DIR;
   static final public long BLOCK_GENERATION_STAMP =
-    GenerationStamp.FIRST_VALID_STAMP;
+      GenerationStamp.LAST_RESERVED_STAMP;
   
   static void addFiles(FSEditLog editLog, int numFiles, short replication, 
                          int blocksPerFile, long startingBlockId,

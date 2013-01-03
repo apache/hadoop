@@ -56,7 +56,7 @@ public class TestBlockInfo {
 
     LOG.info("Building block list...");
     for (int i = 0; i < MAX_BLOCKS; i++) {
-      blockList.add(new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP));
+      blockList.add(new Block(i, 0, GenerationStamp.LAST_RESERVED_STAMP));
       blockInfoList.add(new BlockInfo(blockList.get(i), 3));
       dd.addBlock(blockInfoList.get(i));
 
