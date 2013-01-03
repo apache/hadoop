@@ -28,6 +28,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-230. RM Restart phase 1 - includes support for saving/restarting all
     applications on an RM bounce. (Bikas Saha via acmurthy)
 
+    YARN-103. Add a yarn AM-RM client module. (Bikas Saha via sseth)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.
