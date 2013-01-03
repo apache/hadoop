@@ -123,10 +123,6 @@ public class FSEditLogLoader {
     long numTxns = (lastTxId - expectedStartingTxId) + 1;
     long lastLogTime = now();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("edit log length: " + in.length() + ", start txid: "
-          + expectedStartingTxId + ", last txid: " + lastTxId);
-    }
     try {
       while (true) {
         try {

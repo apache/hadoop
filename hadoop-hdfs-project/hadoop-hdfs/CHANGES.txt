@@ -346,6 +346,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4349. Add test for reading files from BackupNode. (shv)
 
+    HDFS-4302. Fix fatal exception when starting NameNode with DEBUG logs
+    (Eugene Koontz via todd)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
