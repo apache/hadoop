@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
@@ -494,24 +495,15 @@ public class FairScheduler implements ResourceScheduler {
         new FSSchedulerApp(applicationAttemptId, user,
             queue, new ActiveUsersManager(getRootQueueMetrics()),
             rmContext);
-    
+
     // Enforce ACLs
-    UserGroupInformation userUgi;
-    try {
-      userUgi = UserGroupInformation.getCurrentUser();
-    } catch (IOException ioe) {
-      LOG.info("Failed to get current user information");
-      return;
-    }
-
-    // Always a singleton list
-    List<QueueUserACLInfo> info = queue.getQueueUserAclInfo(userUgi);
-    if (!info.get(0).getUserAcls().contains(QueueACL.SUBMIT_APPLICATIONS)) {
+    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
+    if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)) {
       LOG.info("User " + userUgi.getUserName() +
-          " cannot submit" + " applications to queue " + queue.getName());
+          " cannot submit applications to queue " + queue.getName());
       return;
     }
-
+    
     queue.addApp(schedulerApp);
     queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
 
@@ -768,7 +760,7 @@ public class FairScheduler implements ResourceScheduler {
     // Otherwise, schedule at queue which is furthest below fair share
     else {
       int assignedContainers = 0;
-      while (true) {
+      while (node.getReservedContainer() == null) {
         // At most one task is scheduled each iteration of this loop
         List<FSLeafQueue> scheds = new ArrayList<FSLeafQueue>(
             queueMgr.getLeafQueues());

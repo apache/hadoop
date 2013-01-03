@@ -28,6 +28,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-230. RM Restart phase 1 - includes support for saving/restarting all
     applications on an RM bounce. (Bikas Saha via acmurthy)
 
+    YARN-103. Add a yarn AM-RM client module. (Bikas Saha via sseth)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.
@@ -154,6 +156,18 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-283. Fair scheduler fails to get queue info without root prefix. 
     (sandyr via tucu)
+
+    YARN-192. Node update causes NPE in the fair scheduler.
+    (Sandy Ryza via tomwhite)
+
+    YARN-288. Fair scheduler queue doesn't accept any jobs when ACLs are
+    configured. (Sandy Ryza via tomwhite)
+
+    YARN-300. After YARN-271, fair scheduler can infinite loop and not
+    schedule any application. (Sandy Ryza via tomwhite)
+
+    YARN-301. Fair scheduler throws ConcurrentModificationException when
+    iterating over app's priorities. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 

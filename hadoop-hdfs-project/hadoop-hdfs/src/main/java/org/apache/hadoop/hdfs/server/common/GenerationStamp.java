@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.SequentialNumber;
 
 /****************************************************************
  * A GenerationStamp is a Hadoop FS primitive, identified by a long.
  ****************************************************************/
 @InterfaceAudience.Private
-public class GenerationStamp implements Comparable<GenerationStamp> {
+public class GenerationStamp extends SequentialNumber {
   /**
-   * The first valid generation stamp.
+   * The last reserved generation stamp.
    */
-  public static final long FIRST_VALID_STAMP = 1000L;
+  public static final long LAST_RESERVED_STAMP = 1000L;
 
   /**
    * Generation stamp of blocks that pre-date the introduction
@@ -37,62 +36,10 @@ public class GenerationStamp implements Comparable<GenerationStamp> {
    */
   public static final long GRANDFATHER_GENERATION_STAMP = 0;
 
-  private AtomicLong genstamp = new AtomicLong();
-
   /**
-   * Create a new instance, initialized to FIRST_VALID_STAMP.
+   * Create a new instance, initialized to {@link #LAST_RESERVED_STAMP}.
    */
   public GenerationStamp() {
-    this(GenerationStamp.FIRST_VALID_STAMP);
-  }
-
-  /**
-   * Create a new instance, initialized to the specified value.
-   */
-  GenerationStamp(long stamp) {
-    genstamp.set(stamp);
-  }
-
-  /**
-   * Returns the current generation stamp
-   */
-  public long getStamp() {
-    return genstamp.get();
-  }
-
-  /**
-   * Sets the current generation stamp
-   */
-  public void setStamp(long stamp) {
-    genstamp.set(stamp);
-  }
-
-  /**
-   * First increments the counter and then returns the stamp 
-   */
-  public long nextStamp() {
-    return genstamp.incrementAndGet();
-  }
-
-  @Override // Comparable
-  public int compareTo(GenerationStamp that) {
-    long stamp1 = this.genstamp.get();
-    long stamp2 = that.genstamp.get();
-    return stamp1 < stamp2 ? -1 :
-           stamp1 > stamp2 ? 1 : 0;
-  }
-
-  @Override // Object
-  public boolean equals(Object o) {
-    if (!(o instanceof GenerationStamp)) {
-      return false;
-    }
-    return compareTo((GenerationStamp)o) == 0;
-  }
-
-  @Override // Object
-  public int hashCode() {
-    long stamp = genstamp.get();
-    return (int) (stamp^(stamp>>>32));
+    super(LAST_RESERVED_STAMP);
   }
 }

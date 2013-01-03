@@ -122,10 +122,6 @@ public class FSEditLogLoader {
     long lastLogTime = now();
     long lastInodeId = fsNamesys.getLastInodeId();
     
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("edit log length: " + in.length() + ", start txid: "
-          + expectedStartingTxId + ", last txid: " + lastTxId);
-    }
     try {
       while (true) {
         try {

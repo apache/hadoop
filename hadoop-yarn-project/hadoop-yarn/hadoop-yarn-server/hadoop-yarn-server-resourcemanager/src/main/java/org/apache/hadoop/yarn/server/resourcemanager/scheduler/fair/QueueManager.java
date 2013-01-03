@@ -387,6 +387,16 @@ public class QueueManager {
           queueMaxApps, userMaxApps, queueWeights, userMaxAppsDefault,
           queueMaxAppsDefault, defaultSchedulingMode, minSharePreemptionTimeouts,
           queueAcls, fairSharePreemptionTimeout, defaultMinSharePreemptionTimeout);
+      
+      // Root queue should have empty ACLs.  As a queue's ACL is the union of
+      // its ACL and all its parents' ACLs, setting the roots' to empty will
+      // neither allow nor prohibit more access to its children.
+      Map<QueueACL, AccessControlList> rootAcls =
+          new HashMap<QueueACL, AccessControlList>();
+      rootAcls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(" "));
+      rootAcls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(" "));
+      queueAcls.put(ROOT_QUEUE, rootAcls);
+
       for (String name: queueNamesInAllocFile) {
         FSLeafQueue queue = getLeafQueue(name);
         if (queueModes.containsKey(name)) {

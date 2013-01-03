@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -26,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -53,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -1186,5 +1190,89 @@ public class TestFairScheduler {
     
     // Request should be fulfilled
     assertEquals(2, scheduler.applications.get(attId1).getLiveContainers().size());
+  }
+  
+  @Test
+  public void testReservationWhileMultiplePriorities() {
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1",
+        "user1", 1, 2);
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+    scheduler.handle(updateEvent);
+    
+    FSSchedulerApp app = scheduler.applications.get(attId);
+    assertEquals(1, app.getLiveContainers().size());
+    
+    ContainerId containerId = scheduler.applications.get(attId)
+        .getLiveContainers().iterator().next().getContainerId();
+
+    // Cause reservation to be created
+    createSchedulingRequestExistingApplication(1024, 2, attId);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    assertEquals(1, app.getLiveContainers().size());
+    
+    // Create request at higher priority
+    createSchedulingRequestExistingApplication(1024, 1, attId);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    assertEquals(1, app.getLiveContainers().size());
+    // Reserved container should still be at lower priority
+    for (RMContainer container : app.getReservedContainers()) {
+      assertEquals(2, container.getReservedPriority().getPriority());
+    }
+    
+    // Complete container
+    scheduler.allocate(attId, new ArrayList<ResourceRequest>(),
+        Arrays.asList(containerId));
+    
+    // Schedule at opening
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    // Reserved container (at lower priority) should be run
+    Collection<RMContainer> liveContainers = app.getLiveContainers();
+    assertEquals(1, liveContainers.size());
+    for (RMContainer liveContainer : liveContainers) {
+      Assert.assertEquals(2, liveContainer.getContainer().getPriority().getPriority());
+    }
+  }
+  
+  @Test
+  public void testAclSubmitApplication() throws Exception {
+    // Set acl's
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<aclSubmitApps>norealuserhasthisname</aclSubmitApps>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
+        "norealuserhasthisname", 1);
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
+        "norealuserhasthisname2", 1);
+
+    FSSchedulerApp app1 = scheduler.applications.get(attId1);
+    assertNotNull("The application was not allowed", app1);
+    FSSchedulerApp app2 = scheduler.applications.get(attId2);
+    assertNull("The application was allowed", app2);
   }
 }
