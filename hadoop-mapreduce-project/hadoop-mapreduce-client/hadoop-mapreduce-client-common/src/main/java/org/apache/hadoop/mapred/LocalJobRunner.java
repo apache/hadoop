@@ -67,7 +67,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /** Implements MapReduce locally, in-process, for debugging. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@SuppressWarnings("deprecation")
 public class LocalJobRunner implements ClientProtocol {
   public static final Log LOG =
     LogFactory.getLog(LocalJobRunner.class);
@@ -686,7 +685,7 @@ public class LocalJobRunner implements ClientProtocol {
    */
   public TaskTrackerInfo[] getActiveTrackers() 
       throws IOException, InterruptedException {
-    return null;
+    return new TaskTrackerInfo[0];
   }
 
   /** 
@@ -695,7 +694,7 @@ public class LocalJobRunner implements ClientProtocol {
    */
   public TaskTrackerInfo[] getBlacklistedTrackers() 
       throws IOException, InterruptedException {
-    return null;
+    return new TaskTrackerInfo[0];
   }
 
   public TaskCompletionEvent[] getTaskCompletionEvents(
