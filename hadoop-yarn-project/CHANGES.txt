@@ -155,6 +155,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-283. Fair scheduler fails to get queue info without root prefix. 
     (sandyr via tucu)
 
+    YARN-192. Node update causes NPE in the fair scheduler.
+    (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
