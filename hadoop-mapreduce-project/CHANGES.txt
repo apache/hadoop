@@ -656,6 +656,9 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4813. AM timing out during job commit (jlowe via bobby)
 
+    MAPREDUCE-4279. getClusterStatus() fails with null pointer exception when
+    running jobs in local mode (Devaraj K via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
