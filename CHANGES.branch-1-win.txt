@@ -318,3 +318,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     MAPREDUCE-4909. TestKeyValueTextInputFormat fails with Open JDK 7 on
     Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4355. TestNameNodeMetrics.testCorruptBlock fails with open JDK7.
+    (Brandon Li via suresh)
