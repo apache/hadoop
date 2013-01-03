@@ -222,11 +222,9 @@ public class TestNameNodeMetrics {
       cluster.getNamesystem().writeUnlock();
     }
     BlockManagerTestUtil.getComputedDatanodeWork(bm);
-    BlockManagerTestUtil.updateState(bm);
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("CorruptBlocks", 1L, rb);
     assertGauge("PendingReplicationBlocks", 1L, rb);
-    assertGauge("ScheduledReplicationBlocks", 1L, rb);
     
     fs.delete(file, true);
     // During the file deletion, both BlockManager#corruptReplicas and
@@ -235,7 +233,7 @@ public class TestNameNodeMetrics {
     // corruptReplicas and pendingReplications. The corresponding
     // metrics (CorruptBlocks and PendingReplicationBlocks) will only be updated
     // when BlockManager#computeDatanodeWork is run where the
-    // BlockManager#udpateState is called. And in
+    // BlockManager#updateState is called. And in
     // BlockManager#computeDatanodeWork the metric ScheduledReplicationBlocks
     // will also be updated.
     rb = waitForDnMetricValue(NS_METRICS, "CorruptBlocks", 0L);

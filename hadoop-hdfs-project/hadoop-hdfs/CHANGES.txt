@@ -288,6 +288,9 @@ Trunk (Unreleased)
     HDFS-4275. MiniDFSCluster-based tests fail on Windows due to failure
     to delete test namenode directory. (Chris Nauroth via suresh)
 
+    HDFS-4338. TestNameNodeMetrics#testCorruptBlock is flaky. (Andrew Wang via
+    atm)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
