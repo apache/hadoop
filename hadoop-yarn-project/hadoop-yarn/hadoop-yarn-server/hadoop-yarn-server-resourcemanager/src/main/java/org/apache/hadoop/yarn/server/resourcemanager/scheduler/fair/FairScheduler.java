@@ -760,7 +760,7 @@ public class FairScheduler implements ResourceScheduler {
     // Otherwise, schedule at queue which is furthest below fair share
     else {
       int assignedContainers = 0;
-      while (true) {
+      while (node.getReservedContainer() == null) {
         // At most one task is scheduled each iteration of this loop
         List<FSLeafQueue> scheds = new ArrayList<FSLeafQueue>(
             queueMgr.getLeafQueues());

@@ -144,6 +144,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-288. Fair scheduler queue doesn't accept any jobs when ACLs are
     configured. (Sandy Ryza via tomwhite)
 
+    YARN-300. After YARN-271, fair scheduler can infinite loop and not
+    schedule any application. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
