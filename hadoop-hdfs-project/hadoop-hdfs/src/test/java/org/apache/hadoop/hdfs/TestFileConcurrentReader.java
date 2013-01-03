@@ -338,33 +338,33 @@ public class TestFileConcurrentReader {
     final AtomicBoolean writerDone = new AtomicBoolean(false);
     final AtomicBoolean writerStarted = new AtomicBoolean(false);
     final AtomicBoolean error = new AtomicBoolean(false);
-    final FSDataOutputStream initialOutputStream = fileSystem.create(file);
-    final Thread writer = new Thread(new Runnable() {
-      private FSDataOutputStream outputStream = initialOutputStream;
 
+    final Thread writer = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
-          for (int i = 0; !error.get() && i < numWrites; i++) {
-            try {
+          FSDataOutputStream outputStream = fileSystem.create(file);
+          if (syncType == SyncType.APPEND) {
+            outputStream.close();
+            outputStream = fileSystem.append(file);
+          }
+          try {
+            for (int i = 0; !error.get() && i < numWrites; i++) {
               final byte[] writeBuf =
-                DFSTestUtil.generateSequentialBytes(i * writeSize, writeSize);
+                  DFSTestUtil.generateSequentialBytes(i * writeSize, writeSize);
               outputStream.write(writeBuf);
               if (syncType == SyncType.SYNC) {
                 outputStream.hflush();
-              } else { // append
-                outputStream.close();
-                outputStream = fileSystem.append(file);
               }
               writerStarted.set(true);
-            } catch (IOException e) {
-              error.set(true);
-              LOG.error("error writing to file", e);
             }
+          } catch (IOException e) {
+            error.set(true);
+            LOG.error("error writing to file", e);
+          } finally {
+            outputStream.close();
           }
-
           writerDone.set(true);
-          outputStream.close();
         } catch (Exception e) {
           LOG.error("error in writer", e);
 
@@ -415,7 +415,6 @@ public class TestFileConcurrentReader {
 
       Thread.currentThread().interrupt();
     }
-    initialOutputStream.close();
   }
 
   private boolean validateSequentialBytes(byte[] buf, int startPos, int len) {

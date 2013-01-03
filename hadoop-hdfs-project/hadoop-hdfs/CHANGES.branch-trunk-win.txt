@@ -8,3 +8,6 @@ branch-trunk-win changes - unreleased
 
   HDFS-4316. branch-trunk-win contains test code accidentally added during 
   work on fixing tests on Windows. (Chris Nauroth via suresh)
+
+  HDFS-4297. Fix issues related to datanode concurrent reading and writing on
+  Windows. (Arpit Agarwal, Chuan Liu via suresh)
