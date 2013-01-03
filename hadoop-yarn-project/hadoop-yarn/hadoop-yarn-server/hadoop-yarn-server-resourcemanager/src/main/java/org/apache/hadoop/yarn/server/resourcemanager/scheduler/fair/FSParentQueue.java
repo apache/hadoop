@@ -99,20 +99,6 @@ public class FSParentQueue extends FSQueue {
     }    
   }
   
-  public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
-    synchronized (this) {
-      if (getQueueAcls().get(acl).isUserAllowed(user)) {
-        return true;
-      }
-    }
-    
-    if (parent != null) {
-      return parent.hasAccess(acl, user);
-    }
-    
-    return false;
-  }
-  
   private synchronized QueueUserACLInfo getUserAclInfo(
       UserGroupInformation user) {
     QueueUserACLInfo userAclInfo = 
