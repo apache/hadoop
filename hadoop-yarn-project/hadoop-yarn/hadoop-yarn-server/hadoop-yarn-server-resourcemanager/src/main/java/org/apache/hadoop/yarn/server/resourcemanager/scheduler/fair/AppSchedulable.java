@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -293,12 +296,16 @@ public class AppSchedulable extends Schedulable {
     } else {
       // If this app is over quota, don't schedule anything
       if (!(getRunnable())) { return Resources.none(); }
-
     }
+
+    Collection<Priority> prioritiesToTry = (reserved) ? 
+        Arrays.asList(node.getReservedContainer().getReservedPriority()) : 
+        app.getPriorities();
+    
     // For each priority, see if we can schedule a node local, rack local
     // or off-switch request. Rack of off-switch requests may be delayed
     // (not scheduled) in order to promote better locality.
-    for (Priority priority : app.getPriorities()) {
+    for (Priority priority : prioritiesToTry) {
       app.addSchedulingOpportunity(priority);
       NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
           scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
