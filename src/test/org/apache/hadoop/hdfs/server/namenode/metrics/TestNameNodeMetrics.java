@@ -103,7 +103,7 @@ public class TestNameNodeMetrics extends TestCase {
 
   /** Test metrics associated with addition of a file */
   public void testFileAdd() throws Exception {
-    // Add files with 100 blocks
+    // Add files with 32 blocks
     final Path file = getTestPath("testFileAdd");
     createFile(file, 3200, (short)3);
     final long blockCount = 32;
@@ -148,6 +148,7 @@ public class TestNameNodeMetrics extends TestCase {
   
   /** Corrupt a block and ensure metrics reflects it */
   public void testCorruptBlock() throws Exception {
+    fs.delete(new Path("/"), true);
     // Create a file with single block with two replicas
     final Path file = getTestPath("testCorruptBlock");
     createFile(file, 100, (short)2);
