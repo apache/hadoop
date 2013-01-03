@@ -47,10 +47,14 @@ public class TestKeyValueTextInputFormat extends TestCase {
   private static Path workDir = 
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestKeyValueTextInputFormat");
+
+  private static Path workDirFormat =
+      new Path(new Path(System.getProperty("test.build.data", "."), "data"),
+          "TestKeyValueTextInputFormat-testFormat");
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
-    Path file = new Path(workDir, "test.txt");
+    Path file = new Path(workDirFormat, "test.txt");
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
@@ -59,8 +63,8 @@ public class TestKeyValueTextInputFormat extends TestCase {
     LOG.info("seed = "+seed);
     Random random = new Random(seed);
 
-    localFs.delete(workDir, true);
-    FileInputFormat.setInputPaths(job, workDir);
+    localFs.delete(workDirFormat, true);
+    FileInputFormat.setInputPaths(job, workDirFormat);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
