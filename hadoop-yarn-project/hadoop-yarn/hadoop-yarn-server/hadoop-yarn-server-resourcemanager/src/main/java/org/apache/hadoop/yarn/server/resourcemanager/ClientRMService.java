@@ -37,6 +37,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
@@ -75,6 +76,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -254,6 +256,20 @@ public class ClientRMService extends AbstractService implements
       // So call handle directly and do not send an event.
       rmAppManager.handle(new RMAppManagerSubmitEvent(submissionContext, System
           .currentTimeMillis()));
+      
+      // If recovery is enabled then store the application information in a 
+      // blocking call so make sure that RM has stored the information needed 
+      // to restart the AM after RM restart without further client communication
+      RMStateStore stateStore = rmContext.getStateStore();
+      LOG.info("Storing Application with id " + applicationId);
+      try {
+        stateStore.storeApplication(rmContext.getRMApps().get(applicationId));
+      } catch (Exception e) {
+        // For HA this exception needs to be handled by giving up 
+        // master status if we got fenced
+        LOG.error("Failed to store application:" + applicationId, e);
+        ExitUtil.terminate(1, e);
+      }
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);

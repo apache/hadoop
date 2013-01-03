@@ -120,7 +120,8 @@ public class FSEditLogLoader {
     long lastTxId = in.getLastTxId();
     long numTxns = (lastTxId - expectedStartingTxId) + 1;
     long lastLogTime = now();
-
+    long lastInodeId = fsNamesys.getLastInodeId();
+    
     if (LOG.isDebugEnabled()) {
       LOG.debug("edit log length: " + in.length() + ", start txid: "
           + expectedStartingTxId + ", last txid: " + lastTxId);
@@ -170,7 +171,10 @@ public class FSEditLogLoader {
             }
           }
           try {
-            applyEditLogOp(op, fsDir, in.getVersion());
+            long inodeId = applyEditLogOp(op, fsDir, in.getVersion());
+            if (lastInodeId < inodeId) {
+              lastInodeId = inodeId;
+            }
           } catch (Throwable e) {
             LOG.error("Encountered exception on operation " + op, e);
             MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
@@ -205,6 +209,7 @@ public class FSEditLogLoader {
         }
       }
     } finally {
+      fsNamesys.resetLastInodeId(lastInodeId);
       if(closeOnExit) {
         in.close();
       }
@@ -223,9 +228,9 @@ public class FSEditLogLoader {
   }
   
   @SuppressWarnings("deprecation")
-  private void applyEditLogOp(FSEditLogOp op, FSDirectory fsDir,
+  private long applyEditLogOp(FSEditLogOp op, FSDirectory fsDir,
       int logVersion) throws IOException {
-
+    long inodeId = INodeId.GRANDFATHER_INODE_ID;
     if (LOG.isTraceEnabled()) {
       LOG.trace("replaying edit log: " + op);
     }
@@ -255,11 +260,11 @@ public class FSEditLogLoader {
         assert addCloseOp.blocks.length == 0;
 
         // add to the file tree
-        newFile = (INodeFile)fsDir.unprotectedAddFile(
-            addCloseOp.path, addCloseOp.permissions,
-            replication, addCloseOp.mtime,
-            addCloseOp.atime, addCloseOp.blockSize,
-            true, addCloseOp.clientName, addCloseOp.clientMachine);
+        inodeId = fsNamesys.allocateNewInodeId();
+        newFile = (INodeFile) fsDir.unprotectedAddFile(inodeId,
+            addCloseOp.path, addCloseOp.permissions, replication,
+            addCloseOp.mtime, addCloseOp.atime, addCloseOp.blockSize, true,
+            addCloseOp.clientName, addCloseOp.clientMachine);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
 
       } else { // This is OP_ADD on an existing file
@@ -370,7 +375,8 @@ public class FSEditLogLoader {
     }
     case OP_MKDIR: {
       MkdirOp mkdirOp = (MkdirOp)op;
-      fsDir.unprotectedMkdir(mkdirOp.path, mkdirOp.permissions,
+      inodeId = fsNamesys.allocateNewInodeId();
+      fsDir.unprotectedMkdir(inodeId, mkdirOp.path, mkdirOp.permissions,
                              mkdirOp.timestamp);
       break;
     }
@@ -423,9 +429,10 @@ public class FSEditLogLoader {
     }
     case OP_SYMLINK: {
       SymlinkOp symlinkOp = (SymlinkOp)op;
-      fsDir.unprotectedAddSymlink(symlinkOp.path, symlinkOp.value,
-                               symlinkOp.mtime, symlinkOp.atime,
-                               symlinkOp.permissionStatus);
+      inodeId = fsNamesys.allocateNewInodeId();
+      fsDir.unprotectedAddSymlink(inodeId, symlinkOp.path,
+                                  symlinkOp.value, symlinkOp.mtime, 
+                                  symlinkOp.atime, symlinkOp.permissionStatus);
       break;
     }
     case OP_RENAME: {
@@ -485,6 +492,7 @@ public class FSEditLogLoader {
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }
+    return inodeId;
   }
   
   private static String formatEditLogReplayError(EditLogInputStream in,

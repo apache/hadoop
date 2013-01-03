@@ -21,10 +21,15 @@ package org.apache.hadoop.yarn.server.webproxy;
 import static org.junit.Assert.*;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
 
 public class TestProxyUriUtils {
   @Test
@@ -82,5 +87,37 @@ public class TestProxyUriUtils {
     URI expected = new URI("http://proxy.net:8080/proxy/application_6384623_0005/");
     URI result = ProxyUriUtils.getProxyUri(originalUri, proxyUri, id);
     assertEquals(expected, result);
+  }
+
+  @Test
+  public void testGetProxyUriFromPluginsReturnsNullIfNoPlugins()
+      throws URISyntaxException {
+    ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
+    List<TrackingUriPlugin> list =
+        Lists.newArrayListWithExpectedSize(0);
+    assertNull(ProxyUriUtils.getUriFromTrackingPlugins(id, list));
+  }
+
+  @Test
+  public void testGetProxyUriFromPluginsReturnsValidUriWhenAble()
+      throws URISyntaxException {
+    ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
+    List<TrackingUriPlugin> list =
+        Lists.newArrayListWithExpectedSize(2);
+    // Insert a plugin that returns null.
+    list.add(new TrackingUriPlugin() {
+      public URI getTrackingUri(ApplicationId id) throws URISyntaxException {
+        return null;
+      }
+    });
+    // Insert a plugin that returns a valid URI.
+    list.add(new TrackingUriPlugin() {
+      public URI getTrackingUri(ApplicationId id) throws URISyntaxException {
+        return new URI("http://history.server.net/");
+      }
+    });
+    URI result = ProxyUriUtils.getUriFromTrackingPlugins(id, list);
+    assertNotNull(result);
+    
   }
 }

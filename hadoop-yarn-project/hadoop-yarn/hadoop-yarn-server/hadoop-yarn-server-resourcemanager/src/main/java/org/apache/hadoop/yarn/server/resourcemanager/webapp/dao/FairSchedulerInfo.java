@@ -18,33 +18,23 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 public class FairSchedulerInfo {
-  private List<FairSchedulerQueueInfo> queueInfos;
   private FairScheduler scheduler;
   
   public FairSchedulerInfo(FairScheduler fs) {
     scheduler = fs;
-    Collection<FSLeafQueue> queues = fs.getQueueManager().getLeafQueues();
-    queueInfos = new ArrayList<FairSchedulerQueueInfo>();
-    for (FSLeafQueue queue : queues) {
-      queueInfos.add(new FairSchedulerQueueInfo(queue, fs));
-    }
-  }
-  
-  public List<FairSchedulerQueueInfo> getQueueInfos() {
-    return queueInfos;
   }
   
   public int getAppFairShare(ApplicationAttemptId appAttemptId) {
     return scheduler.getSchedulerApp(appAttemptId).
         getAppSchedulable().getFairShare().getMemory();
+  }
+  
+  public FairSchedulerQueueInfo getRootQueueInfo() {
+    return new FairSchedulerQueueInfo(scheduler.getQueueManager().
+        getRootQueue(), scheduler);
   }
 }

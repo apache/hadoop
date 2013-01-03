@@ -20,21 +20,21 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-import java.util.List;
+import java.util.Collection;
 
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerQueueInfo;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
-import org.apache.hadoop.yarn.webapp.view.HtmlPage.Page;
-import org.apache.hadoop.yarn.webapp.view.HtmlPage._;
 
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
@@ -50,16 +50,15 @@ public class FairSchedulerPage extends RmView {
   
   @RequestScoped
   static class FSQInfo {
-    FairSchedulerInfo fsinfo;
     FairSchedulerQueueInfo qinfo;
   }
   
-  static class QueueInfoBlock extends HtmlBlock {
-    final FairSchedulerQueueInfo qinfo;
+  static class LeafQueueBlock extends HtmlBlock {
+    final FairSchedulerLeafQueueInfo qinfo;
 
-    @Inject QueueInfoBlock(ViewContext ctx, FSQInfo info) {
+    @Inject LeafQueueBlock(ViewContext ctx, FSQInfo info) {
       super(ctx);
-      qinfo = (FairSchedulerQueueInfo) info.qinfo;
+      qinfo = (FairSchedulerLeafQueueInfo)info.qinfo;
     }
 
     @Override
@@ -83,6 +82,47 @@ public class FairSchedulerPage extends RmView {
     }
   }
   
+  static class QueueBlock extends HtmlBlock {
+    final FSQInfo fsqinfo;
+
+    @Inject QueueBlock(FSQInfo info) {
+      fsqinfo = info;
+    }
+
+    @Override
+    public void render(Block html) {
+      Collection<FairSchedulerQueueInfo> subQueues = fsqinfo.qinfo.getChildQueues();
+      UL<Hamlet> ul = html.ul("#pq");
+      for (FairSchedulerQueueInfo info : subQueues) {
+        float capacity = info.getMaxResourcesFraction();
+        float fairShare = info.getFairShareFraction();
+        float used = info.getUsedFraction();
+        LI<UL<Hamlet>> li = ul.
+          li().
+            a(_Q).$style(width(capacity * Q_MAX_WIDTH)).
+              $title(join("Fair Share:", percent(fairShare))).
+              span().$style(join(Q_GIVEN, ";font-size:1px;", width(fairShare/capacity))).
+                _('.')._().
+              span().$style(join(width(used/capacity),
+                ";font-size:1px;left:0%;", used > fairShare ? Q_OVER : Q_UNDER)).
+                _('.')._().
+              span(".q", info.getQueueName())._().
+            span().$class("qstats").$style(left(Q_STATS_POS)).
+              _(join(percent(used), " used"))._();
+
+        fsqinfo.qinfo = info;
+        if (info instanceof FairSchedulerLeafQueueInfo) {
+          li.ul("#lq").li()._(LeafQueueBlock.class)._()._();
+        } else {
+          li._(QueueBlock.class);
+        }
+        li._();
+      }
+
+      ul._();
+    }
+  }
+  
   static class QueuesBlock extends HtmlBlock {
     final FairScheduler fs;
     final FSQInfo fsqinfo;
@@ -91,8 +131,9 @@ public class FairSchedulerPage extends RmView {
       fs = (FairScheduler)rm.getResourceScheduler();
       fsqinfo = info;
     }
-    
-    @Override public void render(Block html) {
+
+    @Override
+    public void render(Block html) {
       html._(MetricsOverviewTable.class);
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").
@@ -108,8 +149,8 @@ public class FairSchedulerPage extends RmView {
               span(".q", "default")._()._();
       } else {
         FairSchedulerInfo sinfo = new FairSchedulerInfo(fs);
-        fsqinfo.fsinfo = sinfo;
-        fsqinfo.qinfo = null;
+        fsqinfo.qinfo = sinfo.getRootQueueInfo();
+        float used = fsqinfo.qinfo.getUsedFraction();
 
         ul.
           li().$style("margin-bottom: 1em").
@@ -122,29 +163,15 @@ public class FairSchedulerPage extends RmView {
               _("Used (over fair share)")._().
             span().$class("qlegend ui-corner-all ui-state-default").
               _("Max Capacity")._().
-          _();
-        
-        List<FairSchedulerQueueInfo> subQueues = fsqinfo.fsinfo.getQueueInfos();
-        for (FairSchedulerQueueInfo info : subQueues) {
-          fsqinfo.qinfo = info;
-          float capacity = info.getMaxResourcesFraction();
-          float fairShare = info.getFairShareFraction();
-          float used = info.getUsedFraction();
-          ul.
-              li().
-                a(_Q).$style(width(capacity * Q_MAX_WIDTH)).
-                  $title(join("Fair Share:", percent(fairShare))).
-                  span().$style(join(Q_GIVEN, ";font-size:1px;", width(fairShare/capacity))).
-                    _('.')._().
-                  span().$style(join(width(used/capacity),
-                    ";font-size:1px;left:0%;", used > fairShare ? Q_OVER : Q_UNDER)).
-                    _('.')._().
-                  span(".q", info.getQueueName())._().
-                span().$class("qstats").$style(left(Q_STATS_POS)).
-                  _(join(percent(used), " used"))._().
-                ul("#lq").li()._(QueueInfoBlock.class)._()._().
-              _();
-        }
+        _().
+          li().
+            a(_Q).$style(width(Q_MAX_WIDTH)).
+              span().$style(join(width(used), ";left:0%;",
+                  used > 1 ? Q_OVER : Q_UNDER))._(".")._().
+              span(".q", "root")._().
+            span().$class("qstats").$style(left(Q_STATS_POS)).
+              _(join(percent(used), " used"))._().
+            _(QueueBlock.class)._();
       }
       ul._()._().
       script().$type("text/javascript").

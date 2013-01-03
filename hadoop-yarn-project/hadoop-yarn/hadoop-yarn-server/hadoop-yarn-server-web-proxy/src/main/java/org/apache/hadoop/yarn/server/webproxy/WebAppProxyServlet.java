@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -48,8 +49,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.StringHelper;
+import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 
@@ -61,8 +64,9 @@ public class WebAppProxyServlet extends HttpServlet {
         "Accept-Language", "Accept-Charset"));
   
   public static final String PROXY_USER_COOKIE_NAME = "proxy-user";
-  
-  
+
+  private final List<TrackingUriPlugin> trackingUriPlugins;
+
   private static class _ implements Hamlet._ {
     //Empty
   }
@@ -75,6 +79,18 @@ public class WebAppProxyServlet extends HttpServlet {
     public HTML<WebAppProxyServlet._> html() {
       return new HTML<WebAppProxyServlet._>("html", null, EnumSet.of(EOpt.ENDTAG));
     }
+  }
+
+  /**
+   * Default constructor
+   */
+  public WebAppProxyServlet()
+  {
+    super();
+    YarnConfiguration conf = new YarnConfiguration();
+    this.trackingUriPlugins =
+        conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
+            TrackingUriPlugin.class);
   }
 
   /**
@@ -238,11 +254,14 @@ public class WebAppProxyServlet extends HttpServlet {
       
       if(securityEnabled) {
         String cookieName = getCheckCookieName(id); 
-        for(Cookie c: req.getCookies()) {
-          if(cookieName.equals(c.getName())) {
-            userWasWarned = true;
-            userApproved = userApproved || Boolean.valueOf(c.getValue());
-            break;
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+          for (Cookie c : cookies) {
+            if (cookieName.equals(c.getName())) {
+              userWasWarned = true;
+              userApproved = userApproved || Boolean.valueOf(c.getValue());
+              break;
+            }
           }
         }
       }
@@ -253,6 +272,16 @@ public class WebAppProxyServlet extends HttpServlet {
       if(applicationReport == null) {
         LOG.warn(req.getRemoteUser()+" Attempting to access "+id+
             " that was not found");
+
+        URI toFetch =
+            ProxyUriUtils
+                .getUriFromTrackingPlugins(id, this.trackingUriPlugins);
+        if (toFetch != null)
+        {
+          resp.sendRedirect(resp.encodeRedirectURL(toFetch.toString()));
+          return;
+        }
+
         notFound(resp, "Application "+appId+" could not be found, " +
         		"please try the history server");
         return;

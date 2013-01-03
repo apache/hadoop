@@ -51,8 +51,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -102,8 +100,7 @@ public class TestFairScheduler {
     Configuration conf = createConfiguration();
     // All tests assume only one assignment per node update
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
-    RMStateStore store = StoreFactory.getStore(conf);
-    resourceManager = new ResourceManager(store);
+    resourceManager = new ResourceManager();
     resourceManager.init(conf);
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
@@ -163,6 +160,13 @@ public class TestFairScheduler {
     ask.add(request);
     scheduler.allocate(id, ask,  new ArrayList<ContainerId>());
     return id;
+  }
+  
+  private void createSchedulingRequestExistingApplication(int memory, int priority, ApplicationAttemptId attId) {
+    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
+    ResourceRequest request = createResourceRequest(memory, "*", priority, 1);
+    ask.add(request);
+    scheduler.allocate(attId, ask,  new ArrayList<ContainerId>());
   }
 
   // TESTS
@@ -1100,5 +1104,87 @@ public class TestFairScheduler {
         Resources.createResource(1536), scheduler.resToPreempt(schedC, clock.getTime())));
     assertTrue(Resources.equals(
         Resources.createResource(1536), scheduler.resToPreempt(schedD, clock.getTime())));
+  }
+  
+  @Test
+  public void testMultipleContainersWaitingForReservation() {
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Request full capacity of node
+    createSchedulingRequest(1024, "queue1", "user1", 1);
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+    scheduler.handle(updateEvent);
+
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue2", "user2", 1);
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue3", "user3", 1);
+    
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    // One container should get reservation and the other should get nothing
+    assertEquals(1024,
+        scheduler.applications.get(attId1).getCurrentReservation().getMemory());
+    assertEquals(0,
+        scheduler.applications.get(attId2).getCurrentReservation().getMemory());
+  }
+
+  @Test
+  public void testUserMaxRunningApps() throws Exception {
+    // Set max running apps
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<user name=\"user1\">");
+    out.println("<maxRunningApps>1</maxRunningApps>");
+    out.println("</user>");
+    out.println("</allocations>");
+    out.close();
+
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    // Add a node
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(8192));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    
+    // Request for app 1
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
+        "user1", 1);
+    
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+    scheduler.handle(updateEvent);
+    
+    // App 1 should be running
+    assertEquals(1, scheduler.applications.get(attId1).getLiveContainers().size());
+    
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
+        "user1", 1);
+    
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    // App 2 should not be running
+    assertEquals(0, scheduler.applications.get(attId2).getLiveContainers().size());
+    
+    // Request another container for app 1
+    createSchedulingRequestExistingApplication(1024, 1, attId1);
+    
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    // Request should be fulfilled
+    assertEquals(2, scheduler.applications.get(attId1).getLiveContainers().size());
   }
 }

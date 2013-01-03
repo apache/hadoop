@@ -23,7 +23,10 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -32,6 +35,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class RMContextImpl implements RMContext {
 
@@ -48,6 +53,7 @@ public class RMContextImpl implements RMContext {
 
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
+  private RMStateStore stateStore = null;
   private ContainerAllocationExpirer containerAllocationExpirer;
   private final DelegationTokenRenewer tokenRenewer;
   private final ApplicationTokenSecretManager appTokenSecretManager;
@@ -55,6 +61,7 @@ public class RMContextImpl implements RMContext {
   private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
 
   public RMContextImpl(Dispatcher rmDispatcher,
+      RMStateStore store,
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
@@ -63,6 +70,7 @@ public class RMContextImpl implements RMContext {
       RMContainerTokenSecretManager containerTokenSecretManager,
       ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
     this.rmDispatcher = rmDispatcher;
+    this.stateStore = store;
     this.containerAllocationExpirer = containerAllocationExpirer;
     this.amLivelinessMonitor = amLivelinessMonitor;
     this.amFinishingMonitor = amFinishingMonitor;
@@ -71,10 +79,38 @@ public class RMContextImpl implements RMContext {
     this.containerTokenSecretManager = containerTokenSecretManager;
     this.clientToAMTokenSecretManager = clientTokenSecretManager;
   }
+
+  @VisibleForTesting
+  // helper constructor for tests
+  public RMContextImpl(Dispatcher rmDispatcher,
+      ContainerAllocationExpirer containerAllocationExpirer,
+      AMLivelinessMonitor amLivelinessMonitor,
+      AMLivelinessMonitor amFinishingMonitor,
+      DelegationTokenRenewer tokenRenewer,
+      ApplicationTokenSecretManager appTokenSecretManager,
+      RMContainerTokenSecretManager containerTokenSecretManager,
+      ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
+    this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor, 
+          amFinishingMonitor, tokenRenewer, appTokenSecretManager, 
+          containerTokenSecretManager, clientTokenSecretManager);
+    RMStateStore nullStore = new NullRMStateStore();
+    nullStore.setDispatcher(rmDispatcher);
+    try {
+      nullStore.init(new YarnConfiguration());
+      setStateStore(nullStore);
+    } catch (Exception e) {
+      assert false;
+    }
+  }
   
   @Override
   public Dispatcher getDispatcher() {
     return this.rmDispatcher;
+  }
+  
+  @Override 
+  public RMStateStore getStateStore() {
+    return stateStore;
   }
 
   @Override
@@ -125,5 +161,10 @@ public class RMContextImpl implements RMContext {
   @Override
   public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
     return this.clientToAMTokenSecretManager;
+  }
+  
+  @VisibleForTesting
+  public void setStateStore(RMStateStore store) {
+    stateStore = store;
   }
 }

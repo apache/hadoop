@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -166,6 +168,9 @@ public class TestRMAppAttemptTransitions {
           null, new ApplicationTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
           new ClientToAMTokenSecretManagerInRM());
+    
+    RMStateStore store = mock(RMStateStore.class);
+    ((RMContextImpl) rmContext).setStateStore(store);
     
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);
@@ -294,6 +299,14 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
+  }
+  
+  /**
+   * {@link RMAppAttemptState#RECOVERED}
+   */
+  private void testAppAttemptRecoveredState() {
+    assertEquals(RMAppAttemptState.RECOVERED, 
+        applicationAttempt.getAppAttemptState());
   }
 
   /**
@@ -438,6 +451,15 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.APP_ACCEPTED));
+    
+    if(unmanagedAM){
+      assertEquals(RMAppAttemptState.LAUNCHED_UNMANAGED_SAVING, 
+          applicationAttempt.getAppAttemptState());
+      applicationAttempt.handle(
+          new RMAppAttemptStoredEvent(
+              applicationAttempt.getAppAttemptId(), null));
+    }
+    
     testAppAttemptScheduledState();
   }
 
@@ -462,6 +484,12 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptContainerAllocatedEvent(
             applicationAttempt.getAppAttemptId(), 
             container));
+    
+    assertEquals(RMAppAttemptState.ALLOCATED_SAVING, 
+        applicationAttempt.getAppAttemptState());
+    applicationAttempt.handle(
+        new RMAppAttemptStoredEvent(
+            applicationAttempt.getAppAttemptId(), null));
     
     testAppAttemptAllocatedState(container);
     
@@ -555,6 +583,15 @@ public class TestRMAppAttemptTransitions {
   } 
   
   @Test
+  public void testNewToRecovered() {
+    applicationAttempt.handle(
+        new RMAppAttemptEvent(
+            applicationAttempt.getAppAttemptId(), 
+            RMAppAttemptEventType.RECOVER));
+    testAppAttemptRecoveredState();
+  }
+  
+  @Test
   public void testSubmittedToFailed() {
     submitApplicationAttempt();
     String message = "Rejected";
@@ -604,7 +641,7 @@ public class TestRMAppAttemptTransitions {
             diagnostics));
     testAppAttemptFailedState(amContainer, diagnostics);
   }
-
+  
   @Test
   public void testRunningToFailed() {
     Container amContainer = allocateApplicationAttempt();

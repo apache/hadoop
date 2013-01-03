@@ -44,6 +44,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the {@link ApplicationId} for this {@link RMApp}.
    */
   ApplicationId getApplicationId();
+  
+  /**
+   * The application submission context for this {@link RMApp}
+   * @return the {@link ApplicationSubmissionContext} for this {@link RMApp}
+   */
+  ApplicationSubmissionContext getApplicationSubmissionContext();
 
   /**
    * The current state of the {@link RMApp}.

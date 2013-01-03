@@ -19,13 +19,15 @@
 #ifndef __FUSE_INIT_H__
 #define __FUSE_INIT_H__
 
+struct fuse_conn_info;
+
 /**
  * These are responsible for initializing connections to dfs and internal
  * data structures and then freeing them.
  * i.e., what happens on mount and unmount.
  *
  */
-void *dfs_init();
+void *dfs_init(struct fuse_conn_info *conn);
 void dfs_destroy (void *ptr);
 
 #endif

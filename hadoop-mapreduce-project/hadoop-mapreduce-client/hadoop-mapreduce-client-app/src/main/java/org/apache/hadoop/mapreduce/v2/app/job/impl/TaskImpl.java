@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -100,7 +99,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   protected final JobConf conf;
   protected final Path jobFile;
-  protected final OutputCommitter committer;
   protected final int partition;
   protected final TaskAttemptListener taskAttemptListener;
   protected final EventHandler eventHandler;
@@ -231,7 +229,12 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     // Transitions from FAILED state        
     .addTransition(TaskStateInternal.FAILED, TaskStateInternal.FAILED,
         EnumSet.of(TaskEventType.T_KILL,
-                   TaskEventType.T_ADD_SPEC_ATTEMPT))
+                   TaskEventType.T_ADD_SPEC_ATTEMPT,
+                   TaskEventType.T_ATTEMPT_COMMIT_PENDING,
+                   TaskEventType.T_ATTEMPT_FAILED,
+                   TaskEventType.T_ATTEMPT_KILLED,
+                   TaskEventType.T_ATTEMPT_LAUNCHED,
+                   TaskEventType.T_ATTEMPT_SUCCEEDED))
 
     // Transitions from KILLED state
     .addTransition(TaskStateInternal.KILLED, TaskStateInternal.KILLED,
@@ -273,7 +276,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   public TaskImpl(JobId jobId, TaskType taskType, int partition,
       EventHandler eventHandler, Path remoteJobConfFile, JobConf conf,
-      TaskAttemptListener taskAttemptListener, OutputCommitter committer,
+      TaskAttemptListener taskAttemptListener,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
@@ -296,7 +299,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     this.partition = partition;
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
-    this.committer = committer;
     this.credentials = credentials;
     this.jobToken = jobToken;
     this.metrics = metrics;
@@ -941,6 +943,13 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         task.handleTaskAttemptCompletion(
             taskAttemptId, 
             TaskAttemptCompletionEventStatus.TIPFAILED);
+
+        // issue kill to all non finished attempts
+        for (TaskAttempt taskAttempt : task.attempts.values()) {
+          task.killUnfinishedAttempt
+            (taskAttempt, "Task has failed. Killing attempt!");
+        }
+        task.inProgressAttempts.clear();
         
         if (task.historyTaskStartGenerated) {
         TaskFailedEvent taskFailedEvent = createTaskFailedEvent(task, attempt.getDiagnostics(),

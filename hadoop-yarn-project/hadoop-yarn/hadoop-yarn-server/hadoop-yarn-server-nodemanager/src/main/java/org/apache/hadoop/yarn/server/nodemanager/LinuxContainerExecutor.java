@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
@@ -38,6 +39,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
+import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class LinuxContainerExecutor extends ContainerExecutor {
@@ -46,11 +49,18 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       .getLog(LinuxContainerExecutor.class);
 
   private String containerExecutorExe;
+  private LCEResourcesHandler resourcesHandler;
+  
   
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
     containerExecutorExe = getContainerExecutorExecutablePath(conf);
+    
+    resourcesHandler = ReflectionUtils.newInstance(
+            conf.getClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
+              DefaultLCEResourcesHandler.class, LCEResourcesHandler.class), conf);
+    resourcesHandler.setConf(conf);
   }
 
   /**
@@ -81,7 +91,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
     INVALID_CONTAINER_PID(9),
     INVALID_CONTAINER_EXEC_PERMISSIONS(22),
-    INVALID_CONFIG_FILE(24);
+    INVALID_CONFIG_FILE(24),
+    WRITE_CGROUP_FAILED(27);
 
     private final int value;
     ResultCode(int value) {
@@ -124,6 +135,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       throw new IOException("Linux container executor not configured properly"
           + " (error=" + exitCode + ")", e);
     }
+   
+    resourcesHandler.init(this);
   }
   
   @Override
@@ -188,6 +201,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     ContainerId containerId = container.getContainerID();
     String containerIdStr = ConverterUtils.toString(containerId);
+    
+    resourcesHandler.preExecute(containerId,
+            container.getLaunchContext().getResource());
+    String resourcesOptions = resourcesHandler.getResourcesOption(
+            containerId);
 
     ShellCommandExecutor shExec = null;
 
@@ -202,7 +220,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             nmPrivateTokensPath.toUri().getPath().toString(),
             pidFilePath.toString(),
             StringUtils.join(",", localDirs),
-            StringUtils.join(",", logDirs)));
+            StringUtils.join(",", logDirs),
+            resourcesOptions));
         String[] commandArray = command.toArray(new String[command.size()]);
         shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env
@@ -241,7 +260,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
       return exitCode;
     } finally {
-      ; //
+      resourcesHandler.postExecute(containerId);
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Output from LinuxContainerExecutor's launchContainer follows:");
@@ -316,4 +335,27 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
     }
   }
+  
+  public void mountCgroups(List<String> cgroupKVs, String hierarchy)
+         throws IOException {
+    List<String> command = new ArrayList<String>(
+            Arrays.asList(containerExecutorExe, "--mount-cgroups", hierarchy));
+    command.addAll(cgroupKVs);
+    
+    String[] commandArray = command.toArray(new String[command.size()]);
+    ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
+
+    if (LOG.isDebugEnabled()) {
+        LOG.debug("mountCgroups: " + Arrays.toString(commandArray));
+    }
+
+    try {
+        shExec.execute();
+    } catch (IOException e) {
+        int ret_code = shExec.getExitCode();
+        logOutput(shExec.getOutput());
+        throw new IOException("Problem mounting cgroups " + cgroupKVs + 
+                  "; exit code = " + ret_code, e);
+    }
+  }  
 }

@@ -103,4 +103,12 @@ public class TestDU extends TestCase {
         duSize >= writtenSize &&
         writtenSize <= (duSize + slack));
   }
+  public void testDUGetUsedWillNotReturnNegative() throws IOException {
+    File file = new File(DU_DIR, "data");
+    assertTrue(file.createNewFile());
+    DU du = new DU(file, 10000);
+    du.decDfsUsed(Long.MAX_VALUE);
+    long duSize = du.getUsed();
+    assertTrue(String.valueOf(duSize), duSize >= 0L);
+  }
 }

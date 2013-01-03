@@ -28,9 +28,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 public class INodeSymlink extends INode {
   private final byte[] symlink; // The target URI
 
-  INodeSymlink(String value, long mtime, long atime,
-               PermissionStatus permissions) {
-    super(permissions, mtime, atime);
+  INodeSymlink(long id, String value, long mtime, long atime,
+      PermissionStatus permissions) {
+    super(id, permissions, mtime, atime);
     this.symlink = DFSUtil.string2Bytes(value);
   }
 

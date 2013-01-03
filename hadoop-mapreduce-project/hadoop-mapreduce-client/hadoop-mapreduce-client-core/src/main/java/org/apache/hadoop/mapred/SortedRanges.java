@@ -271,7 +271,7 @@ class SortedRanges implements Writable{
     }
     
     public boolean equals(Object o) {
-      if(o!=null && o instanceof Range) {
+      if (o instanceof Range) {
         Range range = (Range)o;
         return startIndex==range.startIndex &&
         length==range.length;
@@ -285,10 +285,11 @@ class SortedRanges implements Writable{
     }
     
     public int compareTo(Range o) {
-      if(this.equals(o)) {
-        return 0;
-      }
-      return (this.startIndex > o.startIndex) ? 1:-1;
+      // Ensure sgn(x.compareTo(y) == -sgn(y.compareTo(x))
+      return this.startIndex < o.startIndex ? -1 :
+          (this.startIndex > o.startIndex ? 1 :
+          (this.length < o.length ? -1 :
+          (this.length > o.length ? 1 : 0)));
     }
 
     public void readFields(DataInput in) throws IOException {

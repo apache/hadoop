@@ -76,8 +76,9 @@ import com.google.common.base.Preconditions;
  *************************************************/
 public class FSDirectory implements Closeable {
   private static INodeDirectoryWithQuota createRoot(FSNamesystem namesystem) {
-    return new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
-        namesystem.createFsOwnerPermissions(new FsPermission((short)0755)));
+    return new INodeDirectoryWithQuota(namesystem.allocateNewInodeId(),
+        INodeDirectory.ROOT_NAME,
+        namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)));
   }
 
   INodeDirectoryWithQuota rootDir;
@@ -253,7 +254,9 @@ public class FSDirectory implements Closeable {
     if (!mkdirs(parent.toString(), permissions, true, modTime)) {
       return null;
     }
+    long id = namesystem.allocateNewInodeId();
     INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(
+                                 id,
                                  permissions,replication,
                                  preferredBlockSize, modTime, clientName, 
                                  clientMachine, clientNode);
@@ -275,7 +278,8 @@ public class FSDirectory implements Closeable {
     return newNode;
   }
 
-  INode unprotectedAddFile( String path, 
+  INode unprotectedAddFile( long id,
+                            String path, 
                             PermissionStatus permissions,
                             short replication,
                             long modificationTime,
@@ -287,13 +291,11 @@ public class FSDirectory implements Closeable {
     final INode newNode;
     assert hasWriteLock();
     if (underConstruction) {
-      newNode = new INodeFileUnderConstruction(
-          permissions, replication,
-          preferredBlockSize, modificationTime, clientName, 
-          clientMachine, null);
+      newNode = new INodeFileUnderConstruction(id, permissions, replication,
+          preferredBlockSize, modificationTime, clientName, clientMachine, null);
     } else {
-      newNode = new INodeFile(permissions, BlockInfo.EMPTY_ARRAY, replication,
-                              modificationTime, atime, preferredBlockSize);
+      newNode = new INodeFile(id, permissions, BlockInfo.EMPTY_ARRAY,
+          replication, modificationTime, atime, preferredBlockSize);
     }
 
     try {
@@ -392,19 +394,16 @@ public class FSDirectory implements Closeable {
   /**
    * Remove a block from the file.
    */
-  boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
+  void removeBlock(String path, INodeFileUnderConstruction fileNode,
                       Block block) throws IOException {
     waitForReady();
 
     writeLock();
     try {
       unprotectedRemoveBlock(path, fileNode, block);
-      // write modified block locations to log
-      fsImage.getEditLog().logOpenFile(path, fileNode);
     } finally {
       writeUnlock();
     }
-    return true;
   }
   
   void unprotectedRemoveBlock(String path, INodeFileUnderConstruction fileNode, 
@@ -1428,8 +1427,9 @@ public class FSDirectory implements Closeable {
       // create directories beginning from the first null index
       for(; i < inodes.length; i++) {
         pathbuilder.append(Path.SEPARATOR + names[i]);
-        unprotectedMkdir(inodesInPath, i, components[i],
-            (i < lastInodeIndex) ? parentPermissions : permissions, now);
+        unprotectedMkdir(namesystem.allocateNewInodeId(), inodesInPath, i,
+            components[i], (i < lastInodeIndex) ? parentPermissions
+                : permissions, now);
         if (inodes[i] == null) {
           return false;
         }
@@ -1451,7 +1451,7 @@ public class FSDirectory implements Closeable {
     return true;
   }
 
-  INode unprotectedMkdir(String src, PermissionStatus permissions,
+  INode unprotectedMkdir(long inodeId, String src, PermissionStatus permissions,
                           long timestamp) throws QuotaExceededException,
                           UnresolvedLinkException {
     assert hasWriteLock();
@@ -1460,7 +1460,8 @@ public class FSDirectory implements Closeable {
         components.length, false);
     INode[] inodes = inodesInPath.getINodes();
     final int pos = inodes.length - 1;
-    unprotectedMkdir(inodesInPath, pos, components[pos], permissions, timestamp);
+    unprotectedMkdir(inodeId, inodesInPath, pos, components[pos], permissions,
+        timestamp);
     return inodes[pos];
   }
 
@@ -1468,11 +1469,12 @@ public class FSDirectory implements Closeable {
    * The parent path to the directory is at [0, pos-1].
    * All ancestors exist. Newly created one stored at index pos.
    */
-  private void unprotectedMkdir(INodesInPath inodesInPath, int pos,
-      byte[] name, PermissionStatus permission,
-      long timestamp) throws QuotaExceededException {
+  private void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
+      int pos, byte[] name, PermissionStatus permission, long timestamp)
+      throws QuotaExceededException {
     assert hasWriteLock();
-    final INodeDirectory dir = new INodeDirectory(name, permission, timestamp);
+    final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
+        timestamp);
     if (addChild(inodesInPath, pos, dir, true)) {
       inodesInPath.setINode(pos, dir);
     }
@@ -2042,9 +2044,10 @@ public class FSDirectory implements Closeable {
     }
     final String userName = dirPerms.getUserName();
     INodeSymlink newNode  = null;
+    long id = namesystem.allocateNewInodeId();
     writeLock();
     try {
-      newNode = unprotectedAddSymlink(path, target, modTime, modTime,
+      newNode = unprotectedAddSymlink(id, path, target, modTime, modTime,
           new PermissionStatus(userName, null, FsPermission.getDefault()));
     } finally {
       writeUnlock();
@@ -2064,12 +2067,13 @@ public class FSDirectory implements Closeable {
   /**
    * Add the specified path into the namespace. Invoked from edit log processing.
    */
-  INodeSymlink unprotectedAddSymlink(String path, String target, long mtime, 
-                                  long atime, PermissionStatus perm) 
+  INodeSymlink unprotectedAddSymlink(long id, String path, String target,
+      long mtime, long atime, PermissionStatus perm)
       throws UnresolvedLinkException, QuotaExceededException {
     assert hasWriteLock();
-    final INodeSymlink symlink = new INodeSymlink(target, mtime, atime, perm);
-    return addINode(path, symlink)? symlink: null;
+    final INodeSymlink symlink = new INodeSymlink(id, target, mtime, atime,
+        perm);
+    return addINode(path, symlink) ? symlink : null;
   }
   
   /**

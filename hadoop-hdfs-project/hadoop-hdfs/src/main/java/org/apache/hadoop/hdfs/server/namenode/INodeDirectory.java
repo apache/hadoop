@@ -53,17 +53,17 @@ class INodeDirectory extends INode {
 
   private List<INode> children = null;
 
-  INodeDirectory(String name, PermissionStatus permissions) {
-    super(name, permissions);
+  INodeDirectory(long id, String name, PermissionStatus permissions) {
+    super(id, name, permissions);
   }
 
-  public INodeDirectory(PermissionStatus permissions, long mTime) {
-    super(permissions, mTime, 0);
+  public INodeDirectory(long id, PermissionStatus permissions, long mTime) {
+    super(id, permissions, mTime, 0);
   }
-
+  
   /** constructor */
-  INodeDirectory(byte[] name, PermissionStatus permissions, long mtime) {
-    super(name, permissions, null, mtime, 0L);
+  INodeDirectory(long id, byte[] name, PermissionStatus permissions, long mtime) {
+    super(id, name, permissions, null, mtime, 0L);
   }
   
   /** copy constructor

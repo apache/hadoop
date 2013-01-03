@@ -15,14 +15,19 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-package org.apache.hadoop.mapreduce.v2.app.taskclean;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import org.apache.hadoop.yarn.event.EventHandler;
-
-public interface TaskCleaner extends EventHandler<TaskCleanupEvent> {
-
-  enum EventType {
-    TASK_CLEAN
+public class RMStateStoreFactory {
+  
+  public static RMStateStore getStore(Configuration conf) {
+    RMStateStore store = ReflectionUtils.newInstance(
+        conf.getClass(YarnConfiguration.RM_STORE, 
+            MemoryRMStateStore.class, RMStateStore.class), 
+            conf);
+    return store;
   }
 }

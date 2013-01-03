@@ -172,6 +172,8 @@ Trunk (Unreleased)
 
     HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
 
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -285,6 +287,9 @@ Trunk (Unreleased)
 
     HDFS-4275. MiniDFSCluster-based tests fail on Windows due to failure
     to delete test namenode directory. (Chris Nauroth via suresh)
+
+    HDFS-4338. TestNameNodeMetrics#testCorruptBlock is flaky. (Andrew Wang via
+    atm)
 
 Release 2.0.3-alpha - Unreleased 
 
@@ -429,6 +434,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4130. BKJM: The reading for editlog at NN starting using bkjm is not efficient.
     (Han Xiao via umamahesh)
+
+    HDFS-4326. bump up Tomcat version for HttpFS to 6.0.36. (tucu via acmurthy)
 
   OPTIMIZATIONS
 
@@ -621,6 +628,17 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4315. DNs with multiple BPs can have BPOfferServices fail to start
     due to unsynchronized map access. (atm)
+
+    HDFS-4140. fuse-dfs handles open(O_TRUNC) poorly. (Colin Patrick McCabe
+    via atm)
+
+    HDFS-4308. addBlock() should persist file blocks once.
+    (Plamen Jeliazkov via shv)
+
+    HDFS-4347. Avoid infinite waiting checkpoint to complete in TestBackupNode.
+    (Plamen Jeliazkov via shv)
+
+    HDFS-4349. Add test for reading files from BackupNode. (shv)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 

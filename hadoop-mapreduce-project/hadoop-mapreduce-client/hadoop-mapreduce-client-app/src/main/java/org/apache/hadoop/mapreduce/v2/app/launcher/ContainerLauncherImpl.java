@@ -191,12 +191,9 @@ public class ContainerLauncherImpl extends AbstractService implements
     @SuppressWarnings("unchecked")
     public synchronized void kill() {
 
-      if(isCompletelyDone()) { 
-        return;
-      }
       if(this.state == ContainerState.PREP) {
         this.state = ContainerState.KILLED_BEFORE_LAUNCH;
-      } else {
+      } else if (!isCompletelyDone()) {
         LOG.info("KILLING " + taskAttemptID);
 
         ContainerManager proxy = null;

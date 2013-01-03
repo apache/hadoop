@@ -340,8 +340,8 @@ public class TestBackupNode {
       //
       // Take a checkpoint
       //
-      backup = startBackupNode(conf, op, 1);
       long txid = cluster.getNameNodeRpc().getTransactionID();
+      backup = startBackupNode(conf, op, 1);
       waitCheckpointDone(cluster, txid);
 
       for (int i = 0; i < 10; i++) {
@@ -417,11 +417,65 @@ public class TestBackupNode {
       // verify that file2 exists
       assertTrue(fileSys.exists(file2));
     } catch(IOException e) {
-      LOG.error("Error in TestBackupNode:", e);
+      LOG.error("Error in TestBackupNode: ", e);
       assertTrue(e.getLocalizedMessage(), false);
     } finally {
       fileSys.close();
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * Verify that a file can be read both from NameNode and BackupNode.
+   */
+  @Test
+  public void testCanReadData() throws IOException {
+    Path file1 = new Path("/fileToRead.dat");
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
+    MiniDFSCluster cluster = null;
+    FileSystem fileSys = null;
+    BackupNode backup = null;
+    try {
+      // Start NameNode and BackupNode
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(0).format(true).build();
+      fileSys = cluster.getFileSystem();
+      long txid = cluster.getNameNodeRpc().getTransactionID();
+      backup = startBackupNode(conf, StartupOption.BACKUP, 1);
+      waitCheckpointDone(cluster, txid);
+
+      // Setup dual NameNode configuration for DataNodes
+      String rpcAddrKeyPreffix =
+          DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + ".bnCluster";
+      String nnAddr = cluster.getNameNode().getNameNodeAddressHostPortString();
+          conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+      String bnAddr = backup.getNameNodeAddressHostPortString();
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, "bnCluster");
+      conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, "bnCluster");
+      conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + ".bnCluster",
+          "nnActive, nnBackup");
+      conf.set(rpcAddrKeyPreffix + ".nnActive", nnAddr);
+      conf.set(rpcAddrKeyPreffix + ".nnBackup", bnAddr);
+      cluster.startDataNodes(conf, 3, true, StartupOption.REGULAR, null);
+
+      DFSTestUtil.createFile(
+          fileSys, file1, fileSize, fileSize, blockSize, (short)3, seed);
+
+      // Read the same file from file systems pointing to NN and BN
+      FileSystem bnFS = FileSystem.get(
+          new Path("hdfs://" + bnAddr).toUri(), conf);
+      String nnData = DFSTestUtil.readFile(fileSys, file1);
+      String bnData = DFSTestUtil.readFile(bnFS, file1);
+      assertEquals("Data read from BackupNode and NameNode is not the same.",
+          nnData, bnData);
+    } catch(IOException e) {
+      LOG.error("Error in TestBackupNode: ", e);
+      assertTrue(e.getLocalizedMessage(), false);
+    } finally {
+      if(fileSys != null) fileSys.close();
+      if(backup != null) backup.stop();
+      if(cluster != null) cluster.shutdown();
     }
   }
 }

@@ -166,6 +166,18 @@ public class FilterFileSystem extends FileSystem {
     return fs.create(f, permission,
         overwrite, bufferSize, replication, blockSize, progress);
   }
+  
+
+  
+  @Override
+  @Deprecated
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    
+    return fs.createNonRecursive(f, permission, flags, bufferSize, replication, blockSize,
+        progress);
+  }
 
   /**
    * Set replication for an existing file.

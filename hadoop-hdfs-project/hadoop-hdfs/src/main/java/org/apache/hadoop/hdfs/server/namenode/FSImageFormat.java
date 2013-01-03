@@ -166,7 +166,8 @@ class FSImageFormat {
         in = compression.unwrapInputStream(fin);
 
         LOG.info("Loading image file " + curFile + " using " + compression);
-
+        // reset INodeId. TODO: remove this after inodeId is persisted in fsimage
+        namesystem.resetLastInodeIdWithoutChecking(INodeId.LAST_RESERVED_ID); 
         // load all inodes
         LOG.info("Number of files = " + numFiles);
         if (LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
@@ -334,6 +335,8 @@ class FSImageFormat {
     long blockSize = 0;
     
     int imgVersion = getLayoutVersion();
+    long inodeId = namesystem.allocateNewInodeId();
+    
     short replication = in.readShort();
     replication = namesystem.getBlockManager().adjustReplication(replication);
     modificationTime = in.readLong();
@@ -371,7 +374,7 @@ class FSImageFormat {
     
     PermissionStatus permissions = PermissionStatus.read(in);
 
-    return INode.newINode(permissions, blocks, symlink, replication,
+    return INode.newINode(inodeId, permissions, blocks, symlink, replication,
         modificationTime, atime, nsQuota, dsQuota, blockSize);
   }
 

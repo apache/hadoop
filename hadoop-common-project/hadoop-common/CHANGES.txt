@@ -132,9 +132,6 @@ Trunk (Unreleased)
     HADOOP-8776. Provide an option in test-patch that can enable/disable
     compiling native code. (Chris Nauroth via suresh)
 
-    HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
-    via suresh)
-
     HADOOP-6616. Improve documentation for rack awareness. (Adam Faris via 
     jghoman)
 
@@ -143,6 +140,11 @@ Trunk (Unreleased)
 
     HADOOP-9093. Move all the Exception in PathExceptions to o.a.h.fs package.
     (suresh)
+
+    HADOOP-9140 Cleanup rpc PB protos (sanjay Radia)
+
+    HADOOP-9162. Add utility to check native library availability.
+    (Binglin Chang via suresh)
 
   BUG FIXES
 
@@ -410,6 +412,14 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9127. Update documentation for ZooKeeper Failover Controller.
     (Daisuke Kobayashi via atm)
 
+    HADOOP-9004. Allow security unit tests to use external KDC. (Stephen Chu
+    via suresh)
+
+    HADOOP-9147. Add missing fields to FIleStatus.toString.
+    (Jonathan Allen via suresh)
+
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -499,6 +509,12 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9135. JniBasedUnixGroupsMappingWithFallback should log at debug
     rather than info during fallback. (Colin Patrick McCabe via todd)
+
+    HADOOP-9152. HDFS can report negative DFS Used on clusters with very small
+    amounts of data. (Brock Noland via atm)
+
+    HADOOP-9153. Support createNonRecursive in ViewFileSystem.
+    (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1210,6 +1226,8 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9038. unit-tests for AllocatorPerContext.PathIterator (Ivan A.
     Veselovsky via bobby)
+
+    HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
 Release 0.23.5 - UNRELEASED
 

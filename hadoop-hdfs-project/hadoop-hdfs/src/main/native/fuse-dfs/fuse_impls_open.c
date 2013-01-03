@@ -24,12 +24,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static int get_hdfs_open_flags_from_info(hdfsFS fs, const char *path,
+                  int flags, int *outflags, const hdfsFileInfo *info);
+
+/**
+ * Given a set of FUSE flags, determine the libhdfs flags we need.
+ *
+ * This is complicated by two things:
+ * 1. libhdfs doesn't support O_RDWR at all;
+ * 2. when given O_WRONLY, libhdfs will truncate the file unless O_APPEND is
+ * also given.  In other words, there is an implicit O_TRUNC.
+ *
+ * Probably the next iteration of the libhdfs interface should not use the POSIX
+ * flags at all, since, as you can see, they don't really match up very closely
+ * to the POSIX meaning.  However, for the time being, this is the API.
+ *
+ * @param fs               The libhdfs object
+ * @param path             The path we're opening
+ * @param flags            The FUSE flags
+ *
+ * @return                 negative error code on failure; flags otherwise.
+ */
+static int64_t get_hdfs_open_flags(hdfsFS fs, const char *path, int flags)
+{
+  int hasContent;
+  int64_t ret;
+  hdfsFileInfo *info;
+
+  if ((flags & O_ACCMODE) == O_RDONLY) {
+    return O_RDONLY;
+  }
+  if (flags & O_TRUNC) {
+    /* If we're opening for write or read/write, O_TRUNC means we should blow
+     * away the file which is there and create our own file.
+     * */
+    return O_WRONLY;
+  }
+  info = hdfsGetPathInfo(fs, path);
+  if (info) {
+    if (info->mSize == 0) {
+      // If the file has zero length, we shouldn't feel bad about blowing it
+      // away.
+      ret = O_WRONLY;
+    } else if ((flags & O_ACCMODE) == O_RDWR) {
+      // HACK: translate O_RDWR requests into O_RDONLY if the file already
+      // exists and has non-zero length.
+      ret = O_RDONLY;
+    } else { // O_WRONLY
+      // HACK: translate O_WRONLY requests into append if the file already
+      // exists.
+      ret = O_WRONLY | O_APPEND;
+    }
+  } else { // !info
+    if (flags & O_CREAT) {
+      ret = O_WRONLY;
+    } else {
+      ret = -ENOENT;
+    }
+  }
+  if (info) {
+    hdfsFreeFileInfo(info, 1);
+  }
+  return ret;
+}
+
 int dfs_open(const char *path, struct fuse_file_info *fi)
 {
   hdfsFS fs = NULL;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
   dfs_fh *fh = NULL;
-  int mutexInit = 0, ret;
+  int mutexInit = 0, ret, flags = 0;
+  int64_t flagRet;
 
   TRACE1("open", path)
 
@@ -37,10 +102,6 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
   assert(path);
   assert('/' == *path);
   assert(dfs);
-
-  // 0x8000 is always passed in and hadoop doesn't like it, so killing it here
-  // bugbug figure out what this flag is and report problem to Hadoop JIRA
-  int flags = (fi->flags & 0x7FFF);
 
   // retrieve dfs specific data
   fh = (dfs_fh*)calloc(1, sizeof (dfs_fh));
@@ -57,22 +118,12 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     goto error;
   }
   fs = hdfsConnGetFs(fh->conn);
-
-  if (flags & O_RDWR) {
-    hdfsFileInfo *info = hdfsGetPathInfo(fs, path);
-    if (info == NULL) {
-      // File does not exist (maybe?); interpret it as a O_WRONLY
-      // If the actual error was something else, we'll get it again when
-      // we try to open the file.
-      flags ^= O_RDWR;
-      flags |= O_WRONLY;
-    } else {
-      // File exists; open this as read only.
-      flags ^= O_RDWR;
-      flags |= O_RDONLY;
-    }
+  flagRet = get_hdfs_open_flags(fs, path, fi->flags);
+  if (flagRet < 0) {
+    ret = -flagRet;
+    goto error;
   }
-
+  flags = flagRet;
   if ((fh->hdfsFH = hdfsOpenFile(fs, path, flags,  0, 0, 0)) == NULL) {
     ERROR("Could not open file %s (errno=%d)", path, errno);
     if (errno == 0 || errno == EINTERNAL) {
@@ -91,7 +142,7 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
   }
   mutexInit = 1;
 
-  if (fi->flags & O_WRONLY || fi->flags & O_CREAT) {
+  if ((flags & O_ACCMODE) == O_WRONLY) {
     fh->buf = NULL;
   } else  {
     assert(dfs->rdbuffer_size > 0);

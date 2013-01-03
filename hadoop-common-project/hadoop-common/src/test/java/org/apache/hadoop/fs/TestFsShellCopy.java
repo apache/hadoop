@@ -357,6 +357,66 @@ public class TestFsShellCopy {
     assertEquals(0, exit);
     assertEquals("f1\ndf1\ndf2\ndf3\nf2\n", readFile("out"));
   }
+
+
+  @Test
+  public void testMoveFileFromLocal() throws Exception {
+    Path testRoot = new Path(testRootDir, "testPutFile");
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+
+    Path target = new Path(testRoot, "target");    
+    Path srcFile = new Path(testRoot, new Path("srcFile"));
+    lfs.createNewFile(srcFile);
+
+    int exit = shell.run(new String[]{
+        "-moveFromLocal", srcFile.toString(), target.toString() });
+    assertEquals(0, exit);
+    assertFalse(lfs.exists(srcFile));
+    assertTrue(lfs.exists(target));
+    assertTrue(lfs.isFile(target));
+  }
+  
+  @Test
+  public void testMoveDirFromLocal() throws Exception {    
+    Path testRoot = new Path(testRootDir, "testPutDir");
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+    
+    Path srcDir = new Path(testRoot, "srcDir");
+    lfs.mkdirs(srcDir);
+    Path targetDir = new Path(testRoot, "target");    
+
+    int exit = shell.run(new String[]{
+        "-moveFromLocal", srcDir.toString(), targetDir.toString() });
+    assertEquals(0, exit);
+    assertFalse(lfs.exists(srcDir));
+    assertTrue(lfs.exists(targetDir));
+  }
+
+  @Test
+  public void testMoveDirFromLocalDestExists() throws Exception {    
+    Path testRoot = new Path(testRootDir, "testPutDir");
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+    
+    Path srcDir = new Path(testRoot, "srcDir");
+    lfs.mkdirs(srcDir);
+    Path targetDir = new Path(testRoot, "target");
+    lfs.mkdirs(targetDir);
+
+    int exit = shell.run(new String[]{
+        "-moveFromLocal", srcDir.toString(), targetDir.toString() });
+    assertEquals(0, exit);
+    assertFalse(lfs.exists(srcDir));
+    assertTrue(lfs.exists(new Path(targetDir, srcDir.getName())));
+    
+    lfs.mkdirs(srcDir);
+    exit = shell.run(new String[]{
+        "-moveFromLocal", srcDir.toString(), targetDir.toString() });
+    assertEquals(1, exit);
+    assertTrue(lfs.exists(srcDir));
+  }
   
   private void createFile(Path ... paths) throws IOException {
     for (Path path : paths) {

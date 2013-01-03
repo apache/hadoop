@@ -54,16 +54,16 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   }
   
   /** constructor with no quota verification */
-  INodeDirectoryWithQuota(PermissionStatus permissions, long modificationTime,
-      long nsQuota, long dsQuota) {
-    super(permissions, modificationTime);
+  INodeDirectoryWithQuota(long id, PermissionStatus permissions,
+      long modificationTime, long nsQuota, long dsQuota) {
+    super(id, permissions, modificationTime);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
   }
   
   /** constructor with no quota verification */
-  INodeDirectoryWithQuota(String name, PermissionStatus permissions) {
-    super(name, permissions);
+  INodeDirectoryWithQuota(long id, String name, PermissionStatus permissions) {
+    super(id, name, permissions);
   }
   
   /** Get this directory's namespace quota

@@ -126,7 +126,7 @@ public class TestLinuxContainerExecutorWithMocks {
     assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
         workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
         StringUtils.join(",", dirsHandler.getLocalDirs()),
-        StringUtils.join(",", dirsHandler.getLogDirs())),
+        StringUtils.join(",", dirsHandler.getLogDirs()), "cgroups=none"),
         readMockParams());
     
   }
@@ -211,7 +211,8 @@ public class TestLinuxContainerExecutorWithMocks {
     assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
         workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
         StringUtils.join(",", dirsHandler.getLocalDirs()),
-        StringUtils.join(",", dirsHandler.getLogDirs())), readMockParams());
+        StringUtils.join(",", dirsHandler.getLogDirs()),
+        "cgroups=none"), readMockParams());
 
   }
   
