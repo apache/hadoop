@@ -153,6 +153,11 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4326. bump up Tomcat version for HttpFS to 6.0.36. (tucu via acmurthy)
 
+    HDFS-4270. Introduce soft and hard limits for max replication so that
+    replications of the highest priority are allowed to choose a source datanode
+    that has reached its soft limit but not the hard limit.  (Derek Dagit via
+    szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
