@@ -177,6 +177,9 @@ Trunk (Unreleased)
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
 
+    HDFS-4352. Encapsulate arguments to BlockReaderFactory in a class
+    (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

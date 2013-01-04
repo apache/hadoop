@@ -200,7 +200,8 @@ public class DFSClient implements java.io.Closeable {
   /**
    * DFSClient configuration 
    */
-  static class Conf {
+  @InterfaceAudience.Private
+  public static class Conf {
     final int maxFailoverAttempts;
     final int failoverSleepBaseMillis;
     final int failoverSleepMaxMillis;
@@ -228,7 +229,7 @@ public class DFSClient implements java.io.Closeable {
     final int getFileBlockStorageLocationsNumThreads;
     final int getFileBlockStorageLocationsTimeout;
 
-    Conf(Configuration conf) {
+    public Conf(Configuration conf) {
       maxFailoverAttempts = conf.getInt(
           DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
           DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);

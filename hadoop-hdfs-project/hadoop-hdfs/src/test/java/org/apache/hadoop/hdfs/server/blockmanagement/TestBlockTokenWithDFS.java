@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -145,9 +146,10 @@ public class TestBlockTokenWithDFS {
       String file = BlockReaderFactory.getFileName(targetAddr, 
           "test-blockpoolid", block.getBlockId());
       blockReader = BlockReaderFactory.newBlockReader(
-          conf, s, file, block, 
-          lblock.getBlockToken(), 0, -1, null);
-
+          new BlockReaderFactory.Params(new Conf(conf)).
+            setSocket(s).setBlock(block).setFile(file).
+            setBlockToken(lblock.getBlockToken()).setStartOffset(0).
+            setLen(-1));
     } catch (IOException ex) {
       if (ex instanceof InvalidBlockTokenException) {
         assertFalse("OP_READ_BLOCK: access token is invalid, "

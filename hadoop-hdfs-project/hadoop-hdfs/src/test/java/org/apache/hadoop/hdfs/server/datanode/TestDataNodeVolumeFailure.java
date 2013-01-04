@@ -32,7 +32,9 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
+import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -277,13 +279,13 @@ public class TestDataNodeVolumeFailure {
     s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
-    String file = BlockReaderFactory.getFileName(targetAddr, 
-        "test-blockpoolid",
-        block.getBlockId());
-    BlockReaderFactory.newBlockReader(conf, s, file, block, lblock
-        .getBlockToken(), 0, -1, null);
-
-    // nothing - if it fails - it will throw and exception
+    BlockReader blockReader = BlockReaderFactory.
+        newBlockReader(new BlockReaderFactory.Params(new Conf(conf)).
+          setFile(BlockReaderFactory.getFileName(targetAddr, 
+              "test-blockpoolid", block.getBlockId())).
+          setBlock(block).setBlockToken(lblock.getBlockToken()).
+          setSocket(s));
+    blockReader.close();
   }
   
   /**

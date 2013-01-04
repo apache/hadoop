@@ -934,15 +934,15 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
 
       try {
         // The OP_READ_BLOCK request is sent as we make the BlockReader
-        BlockReader reader =
-            BlockReaderFactory.newBlockReader(dfsClient.getConf(),
-                                       sock, file, block,
-                                       blockToken,
-                                       startOffset, len,
-                                       bufferSize, verifyChecksum,
-                                       clientName,
-                                       dfsClient.getDataEncryptionKey(),
-                                       sockAndStreams == null ? null : sockAndStreams.ioStreams);
+        BlockReader reader = BlockReaderFactory.
+            newBlockReader(new BlockReaderFactory.Params(dfsClient.getConf()).
+                setFile(file).setBlock(block).setBlockToken(blockToken).
+                setStartOffset(startOffset).setLen(len).
+                setBufferSize(bufferSize).setVerifyChecksum(verifyChecksum).
+                setClientName(clientName).
+                setEncryptionKey(dfsClient.getDataEncryptionKey()).
+                setIoStreamPair(sockAndStreams == null ? null : sockAndStreams.ioStreams).
+                setSocket(sock));
         return reader;
       } catch (IOException ex) {
         // Our socket is no good.

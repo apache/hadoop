@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
+import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -201,14 +202,16 @@ public class JspHelper {
     s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       
     int amtToRead = (int)Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
-      
-      // Use the block name for file name. 
-    String file = BlockReaderFactory.getFileName(addr, poolId, blockId);
+
+    // Use the block name for file name. 
     BlockReader blockReader = BlockReaderFactory.newBlockReader(
-        conf, s, file,
-        new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
-        offsetIntoBlock, amtToRead, encryptionKey);
-        
+        new BlockReaderFactory.Params(new Conf(conf)).
+          setSocket(s).
+          setBlockToken(blockToken).setStartOffset(offsetIntoBlock).
+          setLen(amtToRead).
+          setEncryptionKey(encryptionKey).
+          setFile(BlockReaderFactory.getFileName(addr, poolId, blockId)).
+          setBlock(new ExtendedBlock(poolId, blockId, 0, genStamp)));
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
     int retries = 2;

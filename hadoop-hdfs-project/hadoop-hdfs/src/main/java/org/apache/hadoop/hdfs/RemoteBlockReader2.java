@@ -246,24 +246,22 @@ public class RemoteBlockReader2  implements BlockReader {
     }
   }
 
-  protected RemoteBlockReader2(String file, String bpid, long blockId,
-      ReadableByteChannel in, DataChecksum checksum, boolean verifyChecksum,
-      long startOffset, long firstChunkOffset, long bytesToRead, Socket dnSock,
-      IOStreamPair ioStreams) {
+  protected RemoteBlockReader2(BlockReaderFactory.Params params, 
+      DataChecksum checksum, long firstChunkOffset, ReadableByteChannel in) {
     // Path is used only for printing block and file information in debug
-    this.dnSock = dnSock;
-    this.ioStreams = ioStreams;
+    this.dnSock = params.getSocket();
+    this.ioStreams = params.getIoStreamPair();
     this.in = in;
     this.checksum = checksum;
-    this.verifyChecksum = verifyChecksum;
-    this.startOffset = Math.max( startOffset, 0 );
-    this.filename = file;
+    this.verifyChecksum = params.getVerifyChecksum();
+    this.startOffset = Math.max( params.getStartOffset(), 0 );
+    this.filename = params.getFile();
 
     // The total number of bytes that we need to transfer from the DN is
     // the amount that the user wants (bytesToRead), plus the padding at
     // the beginning in order to chunk-align. Note that the DN may elect
     // to send more than this amount if the read starts/ends mid-chunk.
-    this.bytesNeededToFinish = bytesToRead + (startOffset - firstChunkOffset);
+    this.bytesNeededToFinish = params.getLen() + (startOffset - firstChunkOffset);
     bytesPerChecksum = this.checksum.getBytesPerChecksum();
     checksumSize = this.checksum.getChecksumSize();
   }
@@ -373,16 +371,9 @@ public class RemoteBlockReader2  implements BlockReader {
    * @param clientName  Client name
    * @return New BlockReader instance, or null on error.
    */
-  public static BlockReader newBlockReader(Socket sock, String file,
-                                     ExtendedBlock block,
-                                     Token<BlockTokenIdentifier> blockToken,
-                                     long startOffset, long len,
-                                     int bufferSize, boolean verifyChecksum,
-                                     String clientName,
-                                     DataEncryptionKey encryptionKey,
-                                     IOStreamPair ioStreams)
+  public static BlockReader newBlockReader(BlockReaderFactory.Params params)
                                      throws IOException {
-    
+    IOStreamPair ioStreams = params.getIoStreamPair();
     ReadableByteChannel ch;
     if (ioStreams.in instanceof SocketInputWrapper) {
       ch = ((SocketInputWrapper)ioStreams.in).getReadableByteChannel();
@@ -393,7 +384,8 @@ public class RemoteBlockReader2  implements BlockReader {
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
           ioStreams.out));
-    new Sender(out).readBlock(block, blockToken, clientName, startOffset, len);
+    new Sender(out).readBlock(params.getBlock(), params.getBlockToken(), 
+        params.getClientName(), params.getStartOffset(), params.getLen());
 
     //
     // Get bytes in block
@@ -402,7 +394,8 @@ public class RemoteBlockReader2  implements BlockReader {
 
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         vintPrefixed(in));
-    checkSuccess(status, sock, block, file);
+    checkSuccess(status, params.getSocket(), params.getBlock(),
+        params.getFile());
     ReadOpChecksumInfoProto checksumInfo =
       status.getReadOpChecksumInfo();
     DataChecksum checksum = DataTransferProtoUtil.fromProto(
@@ -412,16 +405,14 @@ public class RemoteBlockReader2  implements BlockReader {
     // Read the first chunk offset.
     long firstChunkOffset = checksumInfo.getChunkOffset();
 
-    if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
-        firstChunkOffset <= (startOffset - checksum.getBytesPerChecksum())) {
+    if ( firstChunkOffset < 0 || firstChunkOffset > params.getStartOffset() ||
+        firstChunkOffset <= (params.getStartOffset() - checksum.getBytesPerChecksum())) {
       throw new IOException("BlockReader: error in first chunk offset (" +
-                            firstChunkOffset + ") startOffset is " +
-                            startOffset + " for file " + file);
+                    firstChunkOffset + ") startOffset is " +
+                    params.getStartOffset() + " for file " + params.getFile());
     }
 
-    return new RemoteBlockReader2(file, block.getBlockPoolId(), block.getBlockId(),
-        ch, checksum, verifyChecksum, startOffset, firstChunkOffset, len, sock,
-        ioStreams);
+    return new RemoteBlockReader2(params, checksum, firstChunkOffset, ch);
   }
 
   static void checkSuccess(
