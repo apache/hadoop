@@ -33,7 +33,6 @@ import org.apache.hadoop.mapreduce.QueueAclsInfo;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -41,9 +40,9 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ProtoUtils;
-import org.apache.hadoop.yarn.client.YarnClientImpl;
 
 public class ResourceMgrDelegate extends YarnClientImpl {
   private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
@@ -61,11 +60,6 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     this.conf = conf;
     init(conf);
     start();
-  }
-  
-  public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
-      throws IOException, InterruptedException {
-    return;
   }
 
   public TaskTrackerInfo[] getActiveTrackers() throws IOException,
@@ -168,13 +162,6 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     return 0;
   }
 
-  public long renewDelegationToken(Token<DelegationTokenIdentifier> arg0)
-      throws IOException, InterruptedException {
-    // TODO: Implement renewDelegationToken
-    LOG.warn("renewDelegationToken - Not implemented");
-    return 0;
-  }
-  
   public ApplicationId getApplicationId() {
     return applicationId;
   }

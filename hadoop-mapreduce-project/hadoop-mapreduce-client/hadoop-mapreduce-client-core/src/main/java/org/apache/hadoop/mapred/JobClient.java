@@ -496,36 +496,6 @@ public class JobClient extends CLI {
     clientUgi = UserGroupInformation.getCurrentUser();
   }
 
-  @InterfaceAudience.Private
-  public static class Renewer extends TokenRenewer {
-
-    @Override
-    public boolean handleKind(Text kind) {
-      return DelegationTokenIdentifier.MAPREDUCE_DELEGATION_KIND.equals(kind);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public long renew(Token<?> token, Configuration conf
-                      ) throws IOException, InterruptedException {
-      return new Cluster(conf).
-        renewDelegationToken((Token<DelegationTokenIdentifier>) token);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public void cancel(Token<?> token, Configuration conf
-                       ) throws IOException, InterruptedException {
-      new Cluster(conf).
-        cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
-    }
-
-    @Override
-    public boolean isManaged(Token<?> token) throws IOException {
-      return true;
-    }   
-  }
-
   /**
    * Build a job client, connect to the indicated job tracker.
    * 

@@ -107,3 +107,18 @@ message FailTaskAttemptRequestProto {
 }
 message FailTaskAttemptResponseProto {
 }
+
+message RenewDelegationTokenRequestProto {
+  required DelegationTokenProto delegation_token = 1;
+}
+
+message RenewDelegationTokenResponseProto {
+  required int64 next_expiry_ts = 1;
+}
+
+message CancelDelegationTokenRequestProto {
+  required DelegationTokenProto delegation_token = 1;
+}
+
+message CancelDelegationTokenResponseProto {
+}
