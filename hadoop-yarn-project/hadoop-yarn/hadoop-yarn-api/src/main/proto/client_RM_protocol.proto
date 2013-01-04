@@ -34,5 +34,7 @@ service ClientRMProtocolService {
   rpc getQueueInfo (GetQueueInfoRequestProto) returns (GetQueueInfoResponseProto);
   rpc getQueueUserAcls (GetQueueUserAclsInfoRequestProto) returns (GetQueueUserAclsInfoResponseProto);
   rpc getDelegationToken(GetDelegationTokenRequestProto) returns (GetDelegationTokenResponseProto);
+  rpc renewDelegationToken(RenewDelegationTokenRequestProto) returns (RenewDelegationTokenResponseProto);
+  rpc cancelDelegationToken(CancelDelegationTokenRequestProto) returns (CancelDelegationTokenResponseProto);
 }
 

@@ -25,11 +25,13 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -45,6 +47,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -72,7 +76,12 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   private static final String ROOT = "root";
 
   public YarnClientImpl() {
+    this(null);
+  }
+  
+  public YarnClientImpl(InetSocketAddress rmAddress) {
     super(YarnClientImpl.class.getName());
+    this.rmAddress = rmAddress;
   }
 
   private static InetSocketAddress getRmAddress(Configuration conf) {
@@ -82,7 +91,9 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   @Override
   public synchronized void init(Configuration conf) {
-    this.rmAddress = getRmAddress(conf);
+    if (this.rmAddress == null) {
+      this.rmAddress = getRmAddress(conf);
+    }
     super.init(conf);
   }
 
@@ -90,16 +101,19 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
   public synchronized void start() {
     YarnRPC rpc = YarnRPC.create(getConfig());
 
-    this.rmClient =
-        (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class, rmAddress,
-          getConfig());
-    LOG.debug("Connecting to ResourceManager at " + rmAddress);
+    this.rmClient = (ClientRMProtocol) rpc.getProxy(
+        ClientRMProtocol.class, rmAddress, getConfig());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to ResourceManager at " + rmAddress);
+    }
     super.start();
   }
 
   @Override
   public synchronized void stop() {
-    RPC.stopProxy(this.rmClient);
+    if (this.rmClient != null) {
+      RPC.stopProxy(this.rmClient);
+    }
     super.stop();
   }
 
@@ -182,6 +196,31 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
     GetDelegationTokenResponse response =
         rmClient.getDelegationToken(rmDTRequest);
     return response.getRMDelegationToken();
+  }
+
+
+  // Not part of YarnClient itself. Placed in YarnClientImpl while renew/cancel
+  // are part of ClientRMProtocol.
+  @Private
+  public long renewRMDelegationToken(DelegationToken rmToken)
+      throws YarnRemoteException {
+    RenewDelegationTokenRequest request = Records
+        .newRecord(RenewDelegationTokenRequest.class);
+    request.setDelegationToken(rmToken);
+    RenewDelegationTokenResponse response = rmClient
+        .renewDelegationToken(request);
+    return response.getNextExpirationTime();
+  }
+
+  // Not part of YarnClient itself. Placed in YarnClientImpl while renew/cancel
+  // are part of ClietnRMProtocol
+  @Private
+  public void cancelRMDelegationToken(DelegationToken rmToken)
+      throws YarnRemoteException {
+    CancelDelegationTokenRequest request = Records
+        .newRecord(CancelDelegationTokenRequest.class);
+    request.setDelegationToken(rmToken);
+    rmClient.cancelDelegationToken(request);
   }
 
   private GetQueueInfoRequest
