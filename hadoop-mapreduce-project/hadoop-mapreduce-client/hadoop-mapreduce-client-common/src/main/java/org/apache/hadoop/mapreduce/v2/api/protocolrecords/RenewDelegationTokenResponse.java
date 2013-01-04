@@ -16,8 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.api;
+package org.apache.hadoop.mapreduce.v2.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
-public interface HSClientProtocol extends MRClientProtocol {
+/**
+ * The response to a renewDelegationToken call to the {@code ResourceManager}.
+ */
+@Public
+@Evolving
+public interface RenewDelegationTokenResponse {
+  long getNextExpirationTime();
+  void setNextExpirationTime(long expTime);
 }

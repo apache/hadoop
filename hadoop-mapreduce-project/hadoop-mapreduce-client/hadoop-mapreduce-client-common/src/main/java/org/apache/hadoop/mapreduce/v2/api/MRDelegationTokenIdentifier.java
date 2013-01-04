@@ -20,6 +20,7 @@
 package org.apache.hadoop.mapreduce.v2.api;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -30,6 +31,8 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
  * issued by JobHistoryServer to delegate
  * MR tasks talking to the JobHistoryServer.
  */
+@Private
+// TODO Move to a different package.
 public class MRDelegationTokenIdentifier extends AbstractDelegationTokenIdentifier {
 
   public static final Text KIND_NAME = new Text("MR_DELEGATION_TOKEN");

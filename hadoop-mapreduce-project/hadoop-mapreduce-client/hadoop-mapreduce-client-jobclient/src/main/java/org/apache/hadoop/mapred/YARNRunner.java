@@ -158,7 +158,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
-    resMgrDelegate.cancelDelegationToken(arg0);
+    throw new UnsupportedOperationException("Use Token.renew instead");
   }
 
   @Override
@@ -195,7 +195,7 @@ public class YARNRunner implements ClientProtocol {
     return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
                                              hsProxy.getConnectAddress());
   }
-  
+
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException, InterruptedException {
@@ -466,7 +466,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public long renewDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
-    return resMgrDelegate.renewDelegationToken(arg0);
+    throw new UnsupportedOperationException("Use Token.renew instead");
   }
 
 
