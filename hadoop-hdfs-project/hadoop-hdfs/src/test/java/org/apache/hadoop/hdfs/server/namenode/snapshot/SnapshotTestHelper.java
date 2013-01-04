@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -107,7 +108,8 @@ public class SnapshotTestHelper {
     Path rootParent = snapshotRoot.getParent();
     if (rootParent != null && rootParent.getName().equals(".snapshot")) {
       Path snapshotDir = rootParent.getParent();
-      if (file.toString().contains(snapshotDir.toString())) {
+      if (file.toString().contains(snapshotDir.toString())
+          && !file.equals(snapshotDir)) {
         String fileName = file.toString().substring(
             snapshotDir.toString().length() + 1);
         Path snapshotFile = new Path(snapshotRoot, fileName);
@@ -186,14 +188,13 @@ public class SnapshotTestHelper {
      *          cannot be one of the nodes in this list.
      * @return a random node from the tree.
      */
-    Node getRandomDirNode(Random random,
-        ArrayList<Node> excludedList) {
+    Node getRandomDirNode(Random random, List<Node> excludedList) {
       while (true) {
         int level = random.nextInt(height);
         ArrayList<Node> levelList = levelMap.get(level);
         int index = random.nextInt(levelList.size());
         Node randomNode = levelList.get(index);
-        if (!excludedList.contains(randomNode)) {
+        if (excludedList == null || !excludedList.contains(randomNode)) {
           return randomNode;
         }
       }
@@ -261,8 +262,8 @@ public class SnapshotTestHelper {
        * Create files and add them in the fileList. Initially the last element
        * in the fileList is set to null (where we start file creation).
        */
-      void initFileList(String namePrefix, long fileLen, short replication, long seed, int numFiles)
-          throws Exception {
+      void initFileList(String namePrefix, long fileLen, short replication,
+          long seed, int numFiles) throws Exception {
         fileList = new ArrayList<Path>(numFiles);
         for (int i = 0; i < numFiles; i++) {
           Path file = new Path(nodePath, namePrefix + "-f" + i);

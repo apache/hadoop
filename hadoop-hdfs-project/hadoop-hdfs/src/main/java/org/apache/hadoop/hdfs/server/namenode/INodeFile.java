@@ -127,8 +127,8 @@ public class INodeFile extends INode implements BlockCollection {
    * the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
   @Override
-  void setPermission(FsPermission permission, Snapshot latest) {
-    super.setPermission(permission.applyUMask(UMASK), latest);
+  INode setPermission(FsPermission permission, Snapshot latest) {
+    return super.setPermission(permission.applyUMask(UMASK), latest);
   }
 
   /** @return the replication factor of the file. */

@@ -89,3 +89,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4103. Support O(1) snapshot creation. (szetszwo)
 
   HDFS-4330. Support snapshots up to the snapshot limit. (szetszwo)
+
+  HDFS-4357. Fix a bug that if an inode is replaced, further INode operations
+  should apply to the new inode. (Jing Zhao via szetszwo)

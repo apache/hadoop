@@ -928,12 +928,12 @@ public class FSDirectory implements Closeable {
       SnapshotAccessControlException {
     assert hasWriteLock();
     final INodesInPath inodesInPath = rootDir.getMutableINodesInPath(src, true);
-    final INode inode = inodesInPath.getLastINode();
+    INode inode = inodesInPath.getLastINode();
     if (inode == null) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
     if (username != null) {
-      inode.setUser(username, inodesInPath.getLatestSnapshot());
+      inode = inode.setUser(username, inodesInPath.getLatestSnapshot());
     }
     if (groupname != null) {
       inode.setGroup(groupname, inodesInPath.getLatestSnapshot());
@@ -1859,6 +1859,7 @@ public class FSDirectory implements Closeable {
     INode removedNode = ((INodeDirectory)inodes[pos-1]).removeChild(
         inodes[pos], inodesInPath.getLatestSnapshot());
     if (removedNode != null) {
+      inodesInPath.setINode(pos - 1, removedNode.getParent());
       INode.DirCounts counts = new INode.DirCounts();
       removedNode.spaceConsumedInTree(counts);
       updateCountNoQuotaCheck(inodesInPath, pos,
@@ -2088,7 +2089,7 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
-      inode.setModificationTime(mtime, latest);
+      inode = inode.setModificationTime(mtime, latest);
       status = true;
     }
     if (atime != -1) {

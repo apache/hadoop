@@ -375,6 +375,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (snapshotCopy == null) {
         snapshotCopy = new INodeDirectory(dir, false);
       }
+      snapshotINode = snapshotCopy;
       return new Pair<INodeDirectory, INodeDirectory>(dir, snapshotCopy);
     }
 

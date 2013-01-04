@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -145,10 +146,11 @@ public class TestSnapshot {
   
   /**
    * Main test, where we will go in the following loop:
-   * 
+   * <pre>
    *    Create snapshot and check the creation <--+  
    * -> Change the current/live files/dir         | 
    * -> Check previous snapshots -----------------+
+   * </pre>
    */
   @Test
   public void testSnapshot() throws Exception {
@@ -169,11 +171,46 @@ public class TestSnapshot {
       modNodes[modNodes.length - 1] = dirTree.getRandomDirNode(random,
           excludedList);
       Modification[] mods = prepareModifications(modNodes);
-      // make changes to the current directory
+      // make changes to the directories/files
       modifyCurrentDirAndCheckSnapshots(mods);
+      
+      // also update the metadata of directories
+      TestDirectoryTree.Node chmodDir = dirTree.getRandomDirNode(random, null);
+      Modification chmod = new FileChangePermission(chmodDir.nodePath, hdfs,
+          genRandomPermission());
+      String[] userGroup = genRandomOwner();
+      TestDirectoryTree.Node chownDir = dirTree.getRandomDirNode(random,
+          Arrays.asList(chmodDir));
+      Modification chown = new FileChown(chownDir.nodePath, hdfs, userGroup[0],
+          userGroup[1]);
+      modifyCurrentDirAndCheckSnapshots(new Modification[]{chmod, chown});
     }
     System.out.println("XXX done:");
     SnapshotTestHelper.dumpTreeRecursively(fsn.getFSDirectory().getINode("/"));
+  }
+  
+  /**
+   * A simple test that updates a sub-directory of a snapshottable directory
+   * with snapshots
+   */
+  @Test
+  public void testUpdateDirectory() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    FileStatus oldStatus = hdfs.getFileStatus(sub);
+
+    hdfs.allowSnapshot(dir.toString());
+    hdfs.createSnapshot("s1", dir.toString());
+    hdfs.setTimes(sub, 100L, 100L);
+
+    Path snapshotPath = SnapshotTestHelper.getSnapshotPath(dir, "s1", "sub");
+    FileStatus snapshotStatus = hdfs.getFileStatus(snapshotPath);
+    assertEquals(oldStatus.getModificationTime(),
+        snapshotStatus.getModificationTime());
+    assertEquals(oldStatus.getAccessTime(), snapshotStatus.getAccessTime());
   }
   
   /**

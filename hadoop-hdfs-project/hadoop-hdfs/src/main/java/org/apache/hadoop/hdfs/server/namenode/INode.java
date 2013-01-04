@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
@@ -224,10 +225,12 @@ public abstract class INode implements Comparable<byte[]> {
   public PermissionStatus getPermissionStatus() {
     return getPermissionStatus(null);
   }
-  private void updatePermissionStatus(PermissionStatusFormat f, long n,
+  private INode updatePermissionStatus(PermissionStatusFormat f, long n,
       Snapshot latest) {
-    recordModification(latest);
-    permission = f.combine(n, permission);
+    Pair<? extends INode, ? extends INode> pair = recordModification(latest);
+    INode nodeToUpdate = pair != null ? pair.left : this;
+    nodeToUpdate.permission = f.combine(n, permission);
+    return nodeToUpdate;
   }
   /**
    * @param snapshot
@@ -244,9 +247,9 @@ public abstract class INode implements Comparable<byte[]> {
     return getUserName(null);
   }
   /** Set user */
-  protected void setUser(String user, Snapshot latest) {
+  protected INode setUser(String user, Snapshot latest) {
     int n = SerialNumberManager.INSTANCE.getUserSerialNumber(user);
-    updatePermissionStatus(PermissionStatusFormat.USER, n, latest);
+    return updatePermissionStatus(PermissionStatusFormat.USER, n, latest);
   }
   /**
    * @param snapshot
@@ -263,9 +266,9 @@ public abstract class INode implements Comparable<byte[]> {
     return getGroupName(null);
   }
   /** Set group */
-  protected void setGroup(String group, Snapshot latest) {
+  protected INode setGroup(String group, Snapshot latest) {
     int n = SerialNumberManager.INSTANCE.getGroupSerialNumber(group);
-    updatePermissionStatus(PermissionStatusFormat.GROUP, n, latest);
+    return updatePermissionStatus(PermissionStatusFormat.GROUP, n, latest);
   }
   /**
    * @param snapshot
@@ -285,9 +288,9 @@ public abstract class INode implements Comparable<byte[]> {
     return (short)PermissionStatusFormat.MODE.retrieve(permission);
   }
   /** Set the {@link FsPermission} of this {@link INode} */
-  void setPermission(FsPermission permission, Snapshot latest) {
+  INode setPermission(FsPermission permission, Snapshot latest) {
     final short mode = permission.toShort();
-    updatePermissionStatus(PermissionStatusFormat.MODE, mode, latest);
+    return updatePermissionStatus(PermissionStatusFormat.MODE, mode, latest);
   }
 
   /**
@@ -470,9 +473,11 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Always set the last modification time of inode.
    */
-  public void setModificationTime(long modtime, Snapshot latest) {
-    recordModification(latest);
-    this.modificationTime = modtime;
+  public INode setModificationTime(long modtime, Snapshot latest) {
+    Pair<? extends INode, ? extends INode> pair = recordModification(latest);
+    INode nodeToUpdate = pair != null ? pair.left : this;
+    nodeToUpdate.modificationTime = modtime;
+    return nodeToUpdate;
   }
 
   /**
@@ -493,9 +498,11 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Set last access time of inode.
    */
-  void setAccessTime(long atime, Snapshot latest) {
-    recordModification(latest);
-    accessTime = atime;
+  INode setAccessTime(long atime, Snapshot latest) {
+    Pair<? extends INode, ? extends INode> pair = recordModification(latest);
+    INode nodeToUpdate = pair != null ? pair.left : this;    
+    nodeToUpdate.accessTime = atime;
+    return nodeToUpdate;
   }
 
   /**
