@@ -321,3 +321,5 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HDFS-4355. TestNameNodeMetrics.testCorruptBlock fails with open JDK7.
     (Brandon Li via suresh)
+
+    HDFS-4358. TestCheckpoint failure with JDK7. (Arpit Agarwal via suresh)
