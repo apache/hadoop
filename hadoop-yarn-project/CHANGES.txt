@@ -43,6 +43,9 @@ Release 0.23.6 - UNRELEASED
     YARN-293. Node Manager leaks LocalizerRunner object for every Container
     (Robert Joseph Evans via jlowe)
 
+    YARN-50. Implement renewal / cancellation of Delegation Tokens 
+    (Siddharth Seth via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
