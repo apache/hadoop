@@ -730,6 +730,8 @@ public class TestCheckpoint extends TestCase {
   public void testMultipleSecondaryNameNodes() throws IOException {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
+    SecondaryNameNode snn1 = null;
+
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 0, true, null);
@@ -742,7 +744,7 @@ public class TestCheckpoint extends TestCase {
       assertTrue(fs.mkdirs(testPath1));
       
       // Start up a 2NN and do a checkpoint.
-      SecondaryNameNode snn1 = startSecondaryNameNode(conf);
+      snn1 = startSecondaryNameNode(conf);
       snn1.doCheckpoint();
       
       assertTrue(testPath1 + " should still exist after good checkpoint",
@@ -788,6 +790,7 @@ public class TestCheckpoint extends TestCase {
       assertTrue(testPath2 + " should exist after bad checkpoint, after restart",
           fs.exists(testPath2));
     } finally {
+      if(snn1 != null) snn1.shutdown();
       if(fs != null) fs.close();
       if(cluster!= null) cluster.shutdown();
     }

@@ -388,6 +388,8 @@ Release 1.2.0 - unreleased
     HDFS-4355. TestNameNodeMetrics.testCorruptBlock fails with open JDK7.
     (Brandon Li via suresh)
 
+    HDFS-4358. TestCheckpoint failure with JDK7. (Arpit Agarwal via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
