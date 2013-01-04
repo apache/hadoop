@@ -13,6 +13,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-103. Add a yarn AM-RM client module. (Bikas Saha via sseth)
 
+    YARN-286. Add a YARN ApplicationClassLoader. (tomwhite)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.
