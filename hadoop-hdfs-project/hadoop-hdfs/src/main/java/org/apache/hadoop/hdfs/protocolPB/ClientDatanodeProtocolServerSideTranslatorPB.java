@@ -37,9 +37,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetRep
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
@@ -133,7 +133,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       }
       List<Token<BlockTokenIdentifier>> tokens = 
           new ArrayList<Token<BlockTokenIdentifier>>(request.getTokensCount());
-      for (BlockTokenIdentifierProto b : request.getTokensList()) {
+      for (TokenProto b : request.getTokensList()) {
         tokens.add(PBHelper.convert(b));
       }
       // Call the real implementation

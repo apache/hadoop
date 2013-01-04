@@ -117,40 +117,38 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </configuration>
         <executions>
           <execution>
-            <id>compile-proto</id>
-            <phase>generate-sources</phase>
+            <id>create-protobuf-generated-sources-directory</id>
+            <phase>initialize</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <target>
-                <echo file="target/compile-proto.sh">
-                    PROTO_DIR=src/main/proto
-                    INCLUDE_DIR=../../main/proto
-                    JAVA_DIR=target/generated-sources/java
-                    which cygpath 2&gt; /dev/null
-                    if [ $? = 1 ]; then
-                      IS_WIN=false
-                    else
-                      IS_WIN=true
-                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
-                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
-                      WIN_INCLUDE_DIR=`cygpath --windows $INCLUDE_DIR`
-                    fi
-                    mkdir -p $JAVA_DIR 2&gt; /dev/null
-                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
-                    do
-                        if [ "$IS_WIN" = "true" ]; then
-                          protoc -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
-                        else
-                          protoc -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
-                        fi
-                    done
-                </echo>
-                <exec executable="sh" dir="${basedir}" failonerror="true">
-                  <arg line="target/compile-proto.sh"/>
-                </exec>
+                <mkdir dir="target/generated-sources/java" />
               </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-proto</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>-I../../../../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
+                <argument>-Isrc/main/proto/</argument>
+                <argument>-I../../main/proto</argument>
+                <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/bkjournal.proto</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>

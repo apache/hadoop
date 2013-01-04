@@ -22,6 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
+import "Security.proto";
 import "hdfs.proto";
 
 /**
@@ -413,11 +414,11 @@ message GetDelegationTokenRequestProto {
 }
 
 message GetDelegationTokenResponseProto {
-  required BlockTokenIdentifierProto token = 1;
+  required hadoop.common.TokenProto token = 1;
 }
 
 message RenewDelegationTokenRequestProto {
-  required BlockTokenIdentifierProto token = 1;
+  required hadoop.common.TokenProto token = 1;
 }
 
 message RenewDelegationTokenResponseProto {
@@ -425,7 +426,7 @@ message RenewDelegationTokenResponseProto {
 }
 
 message CancelDelegationTokenRequestProto {
-  required BlockTokenIdentifierProto token = 1;
+  required hadoop.common.TokenProto token = 1;
 }
 
 message CancelDelegationTokenResponseProto { // void response

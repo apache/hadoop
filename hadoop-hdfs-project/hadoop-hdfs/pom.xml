@@ -415,8 +415,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
+                <argument>src/main/proto/hdfs.proto</argument>
                 <argument>src/main/proto/GetUserMappingsProtocol.proto</argument>
                 <argument>src/main/proto/HAZKInfo.proto</argument>
                 <argument>src/main/proto/InterDatanodeProtocol.proto</argument>
@@ -424,7 +426,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <argument>src/main/proto/RefreshAuthorizationPolicyProtocol.proto</argument>
                 <argument>src/main/proto/RefreshUserMappingsProtocol.proto</argument>
                 <argument>src/main/proto/datatransfer.proto</argument>
-                <argument>src/main/proto/hdfs.proto</argument>
               </arguments>
             </configuration>
           </execution>
@@ -437,6 +438,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
                 <argument>src/main/proto/ClientDatanodeProtocol.proto</argument>
@@ -453,6 +455,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
                 <argument>src/main/proto/ClientNamenodeProtocol.proto</argument>
@@ -469,6 +472,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/java</argument>
                 <argument>src/main/proto/QJournalProtocol.proto</argument>

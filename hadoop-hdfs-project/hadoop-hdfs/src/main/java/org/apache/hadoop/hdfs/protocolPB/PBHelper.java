@@ -64,7 +64,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageRepor
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DataEncryptionKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
@@ -130,6 +129,7 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
@@ -552,8 +552,8 @@ public class PBHelper {
     return lb;
   }
 
-  public static BlockTokenIdentifierProto convert(Token<?> tok) {
-    return BlockTokenIdentifierProto.newBuilder().
+  public static TokenProto convert(Token<?> tok) {
+    return TokenProto.newBuilder().
               setIdentifier(ByteString.copyFrom(tok.getIdentifier())).
               setPassword(ByteString.copyFrom(tok.getPassword())).
               setKind(tok.getKind().toString()).
@@ -561,7 +561,7 @@ public class PBHelper {
   }
   
   public static Token<BlockTokenIdentifier> convert(
-      BlockTokenIdentifierProto blockToken) {
+      TokenProto blockToken) {
     return new Token<BlockTokenIdentifier>(blockToken.getIdentifier()
         .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
         blockToken.getKind()), new Text(blockToken.getService()));
@@ -569,7 +569,7 @@ public class PBHelper {
 
   
   public static Token<DelegationTokenIdentifier> convertDelegationToken(
-      BlockTokenIdentifierProto blockToken) {
+      TokenProto blockToken) {
     return new Token<DelegationTokenIdentifier>(blockToken.getIdentifier()
         .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
         blockToken.getKind()), new Text(blockToken.getService()));

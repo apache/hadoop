@@ -158,6 +158,9 @@ Release 2.0.3-alpha - Unreleased
     that has reached its soft limit but not the hard limit.  (Derek Dagit via
     szetszwo)
 
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 

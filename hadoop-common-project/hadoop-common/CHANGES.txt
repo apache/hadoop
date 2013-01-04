@@ -109,6 +109,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9162. Add utility to check native library availability.
     (Binglin Chang via suresh)
 
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
 
   OPTIMIZATIONS
 

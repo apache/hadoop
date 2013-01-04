@@ -376,6 +376,7 @@
                 <argument>src/main/proto/RpcPayloadHeader.proto</argument>
                 <argument>src/main/proto/ZKFCProtocol.proto</argument>
                 <argument>src/main/proto/hadoop_rpc.proto</argument>
+                <argument>src/main/proto/Security.proto</argument>
               </arguments>
             </configuration>
           </execution>
