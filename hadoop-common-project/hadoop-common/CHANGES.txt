@@ -420,6 +420,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
 
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
