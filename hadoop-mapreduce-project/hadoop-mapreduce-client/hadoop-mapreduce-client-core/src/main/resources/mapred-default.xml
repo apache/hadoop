@@ -881,6 +881,15 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.job.committer.commit-window</name>
+  <value>10000</value>
+  <description>Defines a time window in milliseconds for output commit
+  operations.  If contact with the RM has occurred within this window then
+  commits are allowed, otherwise the AM will not allow output commits until
+  contact with the RM has been re-established.</description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms</name>
   <value>1000</value>
   <description>The interval in ms at which the MR AppMaster should send

@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -54,6 +55,7 @@ public class CommitterEventHandler extends AbstractService
 
   private final AppContext context;
   private final OutputCommitter committer;
+  private final RMHeartbeatHandler rmHeartbeatHandler;
   private ThreadPoolExecutor launcherPool;
   private Thread eventHandlingThread;
   private BlockingQueue<CommitterEvent> eventQueue =
@@ -61,11 +63,14 @@ public class CommitterEventHandler extends AbstractService
   private final AtomicBoolean stopped;
   private Thread jobCommitThread = null;
   private int commitThreadCancelTimeoutMs;
+  private long commitWindowMs;
 
-  public CommitterEventHandler(AppContext context, OutputCommitter committer) {
+  public CommitterEventHandler(AppContext context, OutputCommitter committer,
+      RMHeartbeatHandler rmHeartbeatHandler) {
     super("CommitterEventHandler");
     this.context = context;
     this.committer = committer;
+    this.rmHeartbeatHandler = rmHeartbeatHandler;
     this.stopped = new AtomicBoolean(false);
   }
 
@@ -75,6 +80,8 @@ public class CommitterEventHandler extends AbstractService
     commitThreadCancelTimeoutMs = conf.getInt(
         MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS,
         MRJobConfig.DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS);
+    commitWindowMs = conf.getLong(MRJobConfig.MR_AM_COMMIT_WINDOW_MS,
+        MRJobConfig.DEFAULT_MR_AM_COMMIT_WINDOW_MS);
   }
 
   @Override
@@ -210,6 +217,7 @@ public class CommitterEventHandler extends AbstractService
     protected void handleJobCommit(CommitterJobCommitEvent event) {
       try {
         jobCommitStarted();
+        waitForValidCommitWindow();
         committer.commitJob(event.getJobContext());
         context.getEventHandler().handle(
             new JobCommitCompletedEvent(event.getJobID()));
@@ -247,6 +255,27 @@ public class CommitterEventHandler extends AbstractService
       context.getEventHandler().handle(
           new TaskAttemptEvent(event.getAttemptID(),
               TaskAttemptEventType.TA_CLEANUP_DONE));
+    }
+
+    private synchronized void waitForValidCommitWindow()
+        throws InterruptedException {
+      long lastHeartbeatTime = rmHeartbeatHandler.getLastHeartbeatTime();
+      long now = context.getClock().getTime();
+
+      while (now - lastHeartbeatTime > commitWindowMs) {
+        rmHeartbeatHandler.runOnNextHeartbeat(new Runnable() {
+          @Override
+          public void run() {
+            synchronized (EventProcessor.this) {
+              EventProcessor.this.notify();
+            }
+          }
+        });
+
+        wait();
+        lastHeartbeatTime = rmHeartbeatHandler.getLastHeartbeatTime();
+        now = context.getClock().getTime();
+      }
     }
   }
 }

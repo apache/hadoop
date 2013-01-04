@@ -659,6 +659,8 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4279. getClusterStatus() fails with null pointer exception when
     running jobs in local mode (Devaraj K via bobby)
 
+    MAPREDUCE-4832. MR AM can get in a split brain situation (jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

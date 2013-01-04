@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -166,6 +167,11 @@ import org.junit.Test;
      }
 
      @Override
+     public RMHeartbeatHandler getRMHeartbeatHandler() {
+       return getStubbedHeartbeatHandler(getContext());
+     }
+
+     @Override
      protected void sysexit() {      
      }
 
@@ -177,6 +183,7 @@ import org.junit.Test;
      @Override
      protected void downloadTokensAndSetupUGI(Configuration conf) {
      }
+
    }
 
   private final class MRAppTestCleanup extends MRApp {
@@ -238,6 +245,11 @@ import org.junit.Test;
     }
 
     @Override
+    public RMHeartbeatHandler getRMHeartbeatHandler() {
+      return getStubbedHeartbeatHandler(getContext());
+    }
+
+    @Override
     public void cleanupStagingDir() throws IOException {
       cleanedBeforeContainerAllocatorStopped = !stoppedContainerAllocator;
     }
@@ -245,6 +257,20 @@ import org.junit.Test;
     @Override
     protected void sysexit() {
     }
+  }
+
+  private static RMHeartbeatHandler getStubbedHeartbeatHandler(
+      final AppContext appContext) {
+    return new RMHeartbeatHandler() {
+      @Override
+      public long getLastHeartbeatTime() {
+        return appContext.getClock().getTime();
+      }
+      @Override
+      public void runOnNextHeartbeat(Runnable callback) {
+        callback.run();
+      }
+    };
   }
 
   @Test
