@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -208,6 +209,16 @@ public class MRApp extends MRAppMaster {
 
   @Override
   public void init(Configuration conf) {
+    try {
+      //Create the staging directory if it does not exist
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      Path stagingDir = MRApps.getStagingAreaDir(conf, user);
+      FileSystem fs = getFileSystem(conf);
+      fs.mkdirs(stagingDir);
+    } catch (Exception e) {
+      throw new YarnException("Error creating staging dir", e);
+    }
+    
     super.init(conf);
     if (this.clusterInfo != null) {
       getContext().getClusterInfo().setMinContainerCapability(
@@ -388,7 +399,8 @@ public class MRApp extends MRAppMaster {
   }
 
   @Override
-  protected Job createJob(Configuration conf) {
+  protected Job createJob(Configuration conf, JobStateInternal forcedState, 
+      String diagnostic) {
     UserGroupInformation currentUser = null;
     try {
       currentUser = UserGroupInformation.getCurrentUser();
@@ -398,7 +410,8 @@ public class MRApp extends MRAppMaster {
     Job newJob = new TestJob(getJobId(), getAttemptID(), conf, 
     		getDispatcher().getEventHandler(),
             getTaskAttemptListener(), getContext().getClock(),
-            isNewApiCommitter(), currentUser.getUserName(), getContext());
+            isNewApiCommitter(), currentUser.getUserName(), getContext(),
+            forcedState, diagnostic);
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
@@ -631,13 +644,14 @@ public class MRApp extends MRAppMaster {
     public TestJob(JobId jobId, ApplicationAttemptId applicationAttemptId,
         Configuration conf, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Clock clock,
-        boolean newApiCommitter, String user, AppContext appContext) {
+        boolean newApiCommitter, String user, AppContext appContext, 
+        JobStateInternal forcedState, String diagnostic) {
       super(jobId, getApplicationAttemptId(applicationId, getStartCount()),
           conf, eventHandler, taskAttemptListener,
           new JobTokenSecretManager(), new Credentials(), clock,
           getCompletedTaskFromPreviousRun(), metrics,
           newApiCommitter, user, System.currentTimeMillis(), getAllAMInfos(),
-          appContext);
+          appContext, forcedState, diagnostic);
 
       // This "this leak" is okay because the retained pointer is in an
       //  instance variable.

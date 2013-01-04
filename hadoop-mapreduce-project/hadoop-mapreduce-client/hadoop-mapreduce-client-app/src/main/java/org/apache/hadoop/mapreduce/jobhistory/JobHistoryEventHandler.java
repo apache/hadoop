@@ -116,12 +116,15 @@ public class JobHistoryEventHandler extends AbstractService
    */
   @Override
   public void init(Configuration conf) {
-
+    String jobId =
+      TypeConverter.fromYarn(context.getApplicationID()).toString();
+    
     String stagingDirStr = null;
     String doneDirStr = null;
     String userDoneDirStr = null;
     try {
-      stagingDirStr = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+      stagingDirStr = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf,
+          jobId);
       doneDirStr =
           JobHistoryUtils.getConfiguredHistoryIntermediateDoneDirPrefix(conf);
       userDoneDirStr =
@@ -881,7 +884,7 @@ public class JobHistoryEventHandler extends AbstractService
   private void moveToDoneNow(Path fromPath, Path toPath) throws IOException {
     // check if path exists, in case of retries it may not exist
     if (stagingDirFS.exists(fromPath)) {
-      LOG.info("Moving " + fromPath.toString() + " to " + toPath.toString());
+      LOG.info("Copying " + fromPath.toString() + " to " + toPath.toString());
       // TODO temporarily removing the existing dst
       if (doneDirFS.exists(toPath)) {
         doneDirFS.delete(toPath, true);
@@ -892,11 +895,9 @@ public class JobHistoryEventHandler extends AbstractService
       if (copied)
         LOG.info("Copied to done location: " + toPath);
       else 
-          LOG.info("copy failed");
+        LOG.info("copy failed");
       doneDirFS.setPermission(toPath, new FsPermission(
           JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
-      
-      stagingDirFS.delete(fromPath, false);
     }
   }
 

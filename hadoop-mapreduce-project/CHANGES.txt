@@ -664,6 +664,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4894. Renewal / cancellation of JobHistory tokens (Siddharth
     Seth via tgraves)
 
+    MAPREDUCE-4819. AM can rerun job after reporting final job status to the
+    client (bobby and Bikas Saha via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -253,7 +253,26 @@ public class MRApps extends Apps {
     return jobFile.toString();
   }
   
-
+  public static Path getEndJobCommitSuccessFile(Configuration conf, String user,
+      JobId jobId) {
+    Path endCommitFile = new Path(MRApps.getStagingAreaDir(conf, user),
+        jobId.toString() + Path.SEPARATOR + "COMMIT_SUCCESS");
+    return endCommitFile;
+  }
+  
+  public static Path getEndJobCommitFailureFile(Configuration conf, String user,
+      JobId jobId) {
+    Path endCommitFile = new Path(MRApps.getStagingAreaDir(conf, user),
+        jobId.toString() + Path.SEPARATOR + "COMMIT_FAIL");
+    return endCommitFile;
+  }
+  
+  public static Path getStartJobCommitFile(Configuration conf, String user,
+      JobId jobId) {
+    Path startCommitFile = new Path(MRApps.getStagingAreaDir(conf, user),
+        jobId.toString() + Path.SEPARATOR + "COMMIT_STARTED");
+    return startCommitFile;
+  }
 
   private static long[] parseTimeStamps(String[] strs) {
     if (null == strs) {
