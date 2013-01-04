@@ -56,6 +56,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.InitTransition;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -502,13 +503,23 @@ public class TestJobImpl {
 
   private static CommitterEventHandler createCommitterEventHandler(
       Dispatcher dispatcher, OutputCommitter committer) {
-    SystemClock clock = new SystemClock();
+    final SystemClock clock = new SystemClock();
     AppContext appContext = mock(AppContext.class);
     when(appContext.getEventHandler()).thenReturn(
         dispatcher.getEventHandler());
     when(appContext.getClock()).thenReturn(clock);
+    RMHeartbeatHandler heartbeatHandler = new RMHeartbeatHandler() {
+      @Override
+      public long getLastHeartbeatTime() {
+        return clock.getTime();
+      }
+      @Override
+      public void runOnNextHeartbeat(Runnable callback) {
+        callback.run();
+      }
+    };
     CommitterEventHandler handler =
-        new CommitterEventHandler(appContext, committer);
+        new CommitterEventHandler(appContext, committer, heartbeatHandler);
     dispatcher.register(CommitterEventType.class, handler);
     return handler;
   }

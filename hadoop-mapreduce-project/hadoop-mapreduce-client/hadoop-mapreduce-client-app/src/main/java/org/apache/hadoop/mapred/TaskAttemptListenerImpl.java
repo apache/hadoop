@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -73,6 +74,8 @@ public class TaskAttemptListenerImpl extends CompositeService
   private AppContext context;
   private Server server;
   protected TaskHeartbeatHandler taskHeartbeatHandler;
+  private RMHeartbeatHandler rmHeartbeatHandler;
+  private long commitWindowMs;
   private InetSocketAddress address;
   private ConcurrentMap<WrappedJvmID, org.apache.hadoop.mapred.Task>
     jvmIDToActiveAttemptMap
@@ -83,15 +86,19 @@ public class TaskAttemptListenerImpl extends CompositeService
   private JobTokenSecretManager jobTokenSecretManager = null;
   
   public TaskAttemptListenerImpl(AppContext context,
-      JobTokenSecretManager jobTokenSecretManager) {
+      JobTokenSecretManager jobTokenSecretManager,
+      RMHeartbeatHandler rmHeartbeatHandler) {
     super(TaskAttemptListenerImpl.class.getName());
     this.context = context;
     this.jobTokenSecretManager = jobTokenSecretManager;
+    this.rmHeartbeatHandler = rmHeartbeatHandler;
   }
 
   @Override
   public void init(Configuration conf) {
    registerHeartbeatHandler(conf);
+   commitWindowMs = conf.getLong(MRJobConfig.MR_AM_COMMIT_WINDOW_MS,
+       MRJobConfig.DEFAULT_MR_AM_COMMIT_WINDOW_MS);
    super.init(conf);
   }
 
@@ -171,6 +178,13 @@ public class TaskAttemptListenerImpl extends CompositeService
         TypeConverter.toYarn(taskAttemptID);
 
     taskHeartbeatHandler.progressing(attemptID);
+
+    // tell task to retry later if AM has not heard from RM within the commit
+    // window to help avoid double-committing in a split-brain situation
+    long now = context.getClock().getTime();
+    if (now - rmHeartbeatHandler.getLastHeartbeatTime() > commitWindowMs) {
+      return false;
+    }
 
     Job job = context.getJob(attemptID.getTaskId().getJobId());
     Task task = job.getTask(attemptID.getTaskId());

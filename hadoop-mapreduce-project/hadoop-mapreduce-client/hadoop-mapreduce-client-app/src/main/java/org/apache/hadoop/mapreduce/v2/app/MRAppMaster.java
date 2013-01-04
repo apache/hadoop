@@ -87,6 +87,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.speculate.DefaultSpeculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.Speculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
@@ -264,17 +265,19 @@ public class MRAppMaster extends CompositeService {
       addIfService(dispatcher);
     }
 
+    //service to handle requests from JobClient
+    clientService = createClientService(context);
+    addIfService(clientService);
+
+    containerAllocator = createContainerAllocator(clientService, context);
+
     //service to handle requests to TaskUmbilicalProtocol
     taskAttemptListener = createTaskAttemptListener(context);
     addIfService(taskAttemptListener);
 
-    //service to do the task cleanup
+    //service to handle the output committer
     committerEventHandler = createCommitterEventHandler(context, committer);
     addIfService(committerEventHandler);
-
-    //service to handle requests from JobClient
-    clientService = createClientService(context);
-    addIfService(clientService);
 
     //service to log job history events
     EventHandler<JobHistoryEvent> historyService = 
@@ -303,7 +306,6 @@ public class MRAppMaster extends CompositeService {
         speculatorEventDispatcher);
 
     // service to allocate containers from RM (if non-uber) or to fake it (uber)
-    containerAllocator = createContainerAllocator(clientService, context);
     addIfService(containerAllocator);
     dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);
 
@@ -582,18 +584,24 @@ public class MRAppMaster extends CompositeService {
 
   protected TaskAttemptListener createTaskAttemptListener(AppContext context) {
     TaskAttemptListener lis =
-        new TaskAttemptListenerImpl(context, jobTokenSecretManager);
+        new TaskAttemptListenerImpl(context, jobTokenSecretManager,
+            getRMHeartbeatHandler());
     return lis;
   }
 
   protected EventHandler<CommitterEvent> createCommitterEventHandler(
       AppContext context, OutputCommitter committer) {
-    return new CommitterEventHandler(context, committer);
+    return new CommitterEventHandler(context, committer,
+        getRMHeartbeatHandler());
   }
 
   protected ContainerAllocator createContainerAllocator(
       final ClientService clientService, final AppContext context) {
     return new ContainerAllocatorRouter(clientService, context);
+  }
+
+  protected RMHeartbeatHandler getRMHeartbeatHandler() {
+    return (RMHeartbeatHandler) containerAllocator;
   }
 
   protected ContainerLauncher
@@ -663,7 +671,7 @@ public class MRAppMaster extends CompositeService {
    * happened.
    */
   private final class ContainerAllocatorRouter extends AbstractService
-      implements ContainerAllocator {
+      implements ContainerAllocator, RMHeartbeatHandler {
     private final ClientService clientService;
     private final AppContext context;
     private ContainerAllocator containerAllocator;
@@ -707,6 +715,16 @@ public class MRAppMaster extends CompositeService {
     
     public void setShouldUnregister(boolean shouldUnregister) {
       ((RMCommunicator) containerAllocator).setShouldUnregister(shouldUnregister);
+    }
+
+    @Override
+    public long getLastHeartbeatTime() {
+      return ((RMCommunicator) containerAllocator).getLastHeartbeatTime();
+    }
+
+    @Override
+    public void runOnNextHeartbeat(Runnable callback) {
+      ((RMCommunicator) containerAllocator).runOnNextHeartbeat(callback);
     }
   }
 
