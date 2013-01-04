@@ -36,16 +36,85 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
+import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+
+import java.io.File;
+import java.io.IOException;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitCompletedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitFailedEvent;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Event;
+import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestCommitterEventHandler {
+  public static class WaitForItHandler implements EventHandler {
 
+    private Event event = null;
+    
+    @Override
+    public synchronized void handle(Event event) {
+      this.event = event;
+      notifyAll();
+    }
+    
+    public synchronized Event getAndClearEvent() throws InterruptedException {
+      if (event == null) {
+        //Wait for at most 10 ms
+        wait(100);
+      }
+      Event e = event;
+      event = null;
+      return e;
+    }
+    
+  }
+  
+  static String stagingDir = "target/test-staging/";
+
+  @BeforeClass
+  public static void setup() {    
+    File dir = new File(stagingDir);
+    stagingDir = dir.getAbsolutePath();
+  }
+
+  @Before
+  public void cleanup() throws IOException {
+    File dir = new File(stagingDir);
+    if(dir.exists()) {
+      FileUtils.deleteDirectory(dir);
+    }
+    dir.mkdirs();
+  }
+  
   @Test
   public void testCommitWindow() throws Exception {
     Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
     dispatcher.start();
@@ -55,6 +124,10 @@ public class TestCommitterEventHandler {
 
     SystemClock clock = new SystemClock();
     AppContext appContext = mock(AppContext.class);
+    ApplicationAttemptId attemptid = 
+      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    when(appContext.getApplicationID()).thenReturn(attemptid.getApplicationId());
+    when(appContext.getApplicationAttemptId()).thenReturn(attemptid);
     when(appContext.getEventHandler()).thenReturn(
         dispatcher.getEventHandler());
     when(appContext.getClock()).thenReturn(clock);
@@ -91,6 +164,9 @@ public class TestCommitterEventHandler {
         1, jeh.numCommitCompletedEvents);
     verify(committer, times(1)).commitJob(any(JobContext.class));
 
+    //Clean up so we can try to commit again (Don't do this at home)
+    cleanup();
+    
     // try to commit again and verify it goes through since the heartbeat
     // is still fresh
     ceh.handle(new CommitterJobCommitEvent(null, null));
@@ -145,6 +221,105 @@ public class TestCommitterEventHandler {
       if (event.getType() == JobEventType.JOB_COMMIT_COMPLETED) {
         ++numCommitCompletedEvents;
       }
+    }
+  }
+
+  @Test
+  public void testBasic() throws Exception {
+    AppContext mockContext = mock(AppContext.class);
+    OutputCommitter mockCommitter = mock(OutputCommitter.class);
+    Clock mockClock = mock(Clock.class);
+    
+    CommitterEventHandler handler = new CommitterEventHandler(mockContext, 
+        mockCommitter, new TestingRMHeartbeatHandler());
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    JobContext mockJobContext = mock(JobContext.class);
+    ApplicationAttemptId attemptid = 
+      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    JobId jobId =  TypeConverter.toYarn(
+        TypeConverter.fromYarn(attemptid.getApplicationId()));
+    
+    WaitForItHandler waitForItHandler = new WaitForItHandler();
+    
+    when(mockContext.getApplicationID()).thenReturn(attemptid.getApplicationId());
+    when(mockContext.getApplicationAttemptId()).thenReturn(attemptid);
+    when(mockContext.getEventHandler()).thenReturn(waitForItHandler);
+    when(mockContext.getClock()).thenReturn(mockClock);
+    
+    handler.init(conf);
+    handler.start();
+    try {
+      handler.handle(new CommitterJobCommitEvent(jobId, mockJobContext));
+
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      Path startCommitFile = MRApps.getStartJobCommitFile(conf, user, jobId);
+      Path endCommitSuccessFile = MRApps.getEndJobCommitSuccessFile(conf, user, 
+          jobId);
+      Path endCommitFailureFile = MRApps.getEndJobCommitFailureFile(conf, user, 
+          jobId);
+
+      Event e = waitForItHandler.getAndClearEvent();
+      assertNotNull(e);
+      assertTrue(e instanceof JobCommitCompletedEvent);
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue(startCommitFile.toString(), fs.exists(startCommitFile));
+      assertTrue(endCommitSuccessFile.toString(), fs.exists(endCommitSuccessFile));
+      assertFalse(endCommitFailureFile.toString(), fs.exists(endCommitFailureFile));
+      verify(mockCommitter).commitJob(any(JobContext.class));
+    } finally {
+      handler.stop();
+    }
+  }
+
+  @Test
+  public void testFailure() throws Exception {
+    AppContext mockContext = mock(AppContext.class);
+    OutputCommitter mockCommitter = mock(OutputCommitter.class);
+    Clock mockClock = mock(Clock.class);
+    
+    CommitterEventHandler handler = new CommitterEventHandler(mockContext, 
+        mockCommitter, new TestingRMHeartbeatHandler());
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    JobContext mockJobContext = mock(JobContext.class);
+    ApplicationAttemptId attemptid = 
+      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    JobId jobId =  TypeConverter.toYarn(
+        TypeConverter.fromYarn(attemptid.getApplicationId()));
+    
+    WaitForItHandler waitForItHandler = new WaitForItHandler();
+    
+    when(mockContext.getApplicationID()).thenReturn(attemptid.getApplicationId());
+    when(mockContext.getApplicationAttemptId()).thenReturn(attemptid);
+    when(mockContext.getEventHandler()).thenReturn(waitForItHandler);
+    when(mockContext.getClock()).thenReturn(mockClock);
+    
+    doThrow(new YarnException("Intentional Failure")).when(mockCommitter)
+      .commitJob(any(JobContext.class));
+    
+    handler.init(conf);
+    handler.start();
+    try {
+      handler.handle(new CommitterJobCommitEvent(jobId, mockJobContext));
+
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      Path startCommitFile = MRApps.getStartJobCommitFile(conf, user, jobId);
+      Path endCommitSuccessFile = MRApps.getEndJobCommitSuccessFile(conf, user, 
+          jobId);
+      Path endCommitFailureFile = MRApps.getEndJobCommitFailureFile(conf, user, 
+          jobId);
+
+      Event e = waitForItHandler.getAndClearEvent();
+      assertNotNull(e);
+      assertTrue(e instanceof JobCommitFailedEvent);
+      FileSystem fs = FileSystem.get(conf);
+      assertTrue(fs.exists(startCommitFile));
+      assertFalse(fs.exists(endCommitSuccessFile));
+      assertTrue(fs.exists(endCommitFailureFile));
+      verify(mockCommitter).commitJob(any(JobContext.class));
+    } finally {
+      handler.stop();
     }
   }
 }

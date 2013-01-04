@@ -205,18 +205,18 @@ public class RecoveryService extends CompositeService implements Recovery {
       throws IOException {
     FSDataInputStream in = null;
     Path historyFile = null;
-    String jobName =
+    String jobId =
         TypeConverter.fromYarn(applicationAttemptId.getApplicationId())
           .toString();
     String jobhistoryDir =
-        JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+        JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf, jobId);
     Path histDirPath =
         FileContext.getFileContext(conf).makeQualified(new Path(jobhistoryDir));
     FileContext fc = FileContext.getFileContext(histDirPath.toUri(), conf);
     // read the previous history file
     historyFile =
         fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(histDirPath,
-          jobName, (applicationAttemptId.getAttemptId() - 1)));
+          jobId, (applicationAttemptId.getAttemptId() - 1)));
     LOG.info("History file is at " + historyFile);
     in = fc.open(historyFile);
     return in;

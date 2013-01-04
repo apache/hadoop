@@ -667,6 +667,9 @@ public class HistoryFileManager extends AbstractService {
             }
           });
         }
+      } else if (old != null && !old.isMovePending()) {
+        //This is a duplicate so just delete it
+        fileInfo.delete();
       }
     }
   }
