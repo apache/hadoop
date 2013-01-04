@@ -1788,20 +1788,26 @@ public class JobInProgress {
       boolean isNodeGroupAware) {
     switch (level) {
       case 0:
+        // level 0 means data-local
         logAndIncrDataLocalMaps(tip);
         break;
       case 1:
         if (isNodeGroupAware) {
+          // level 1 in case of with-NodeGroup means nodegroup-local
           logAndIncrNodeGroupLocalMaps(tip);
         } else {
+          // level 1 in case of without-NodeGroup means rack-local
           logAndIncrRackLocalMaps(tip);
         }
         break;
       case 2:
         if (isNodeGroupAware) {
+          // level 2 in case of with-NodeGroup means rack-local
           logAndIncrRackLocalMaps(tip);
+          break;
         }
-        break;
+        // in case of without-NodeGroup, level 2 falls through to other-local
+        // handled by default
       default:
         // check if there is any locality
         if (level != this.maxLevel) {

@@ -164,6 +164,9 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-4904. OTHER_LOCAL_MAPS counter is not correct.
+    (Junping Du via llu)
+
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
     (Yu Gao via llu)
 
