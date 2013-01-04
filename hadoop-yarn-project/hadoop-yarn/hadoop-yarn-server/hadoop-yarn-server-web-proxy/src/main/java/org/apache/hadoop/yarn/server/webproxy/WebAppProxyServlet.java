@@ -286,9 +286,12 @@ public class WebAppProxyServlet extends HttpServlet {
         		"please try the history server");
         return;
       }
-      URI trackingUri = ProxyUriUtils.getUriFromAMUrl(
-          applicationReport.getOriginalTrackingUrl());
-      if(applicationReport.getOriginalTrackingUrl().equals("N/A")) {
+      String original = applicationReport.getOriginalTrackingUrl();
+      URI trackingUri = null;
+      if (original != null) {
+        trackingUri = ProxyUriUtils.getUriFromAMUrl(original);
+      }
+      if(original == null || original.equals("N/A")) {
         String message;
         switch(applicationReport.getFinalApplicationStatus()) {
           case FAILED:

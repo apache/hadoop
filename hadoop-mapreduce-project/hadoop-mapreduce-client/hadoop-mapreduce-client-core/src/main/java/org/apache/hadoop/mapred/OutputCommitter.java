@@ -52,6 +52,14 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   Discard the task commit.
  *   </li>
  * </ol>
+ * The methods in this class can be called from several different processes and
+ * from several different contexts.  It is important to know which process and
+ * which context each is called from.  Each method should be marked accordingly
+ * in its documentation.  It is also important to note that not all methods are
+ * guaranteed to be called once and only once.  If a method is not guaranteed to
+ * have this property the output committer needs to handle this appropriately. 
+ * Also note it will only be in rare situations where they may be called 
+ * multiple times for the same task.
  * 
  * @see FileOutputCommitter 
  * @see JobContext
@@ -62,7 +70,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 public abstract class OutputCommitter 
                 extends org.apache.hadoop.mapreduce.OutputCommitter {
   /**
-   * For the framework to setup the job output during initialization
+   * For the framework to setup the job output during initialization.  This is
+   * called from the application master process for the entire job. This will be
+   * called multiple times, once per job attempt.
    * 
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException if temporary output could not be created
@@ -70,7 +80,9 @@ public abstract class OutputCommitter
   public abstract void setupJob(JobContext jobContext) throws IOException;
 
   /**
-   * For cleaning up the job's output after job completion
+   * For cleaning up the job's output after job completion.  This is called
+   * from the application master process for the entire job. This may be called
+   * multiple times.
    * 
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException
@@ -82,7 +94,10 @@ public abstract class OutputCommitter
 
   /**
    * For committing job's output after successful job completion. Note that this
-   * is invoked for jobs with final runstate as SUCCESSFUL.	
+   * is invoked for jobs with final runstate as SUCCESSFUL.  This is called
+   * from the application master process for the entire job. This is guaranteed
+   * to only be called once.  If it throws an exception the entire job will
+   * fail.
    * 
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException 
@@ -94,7 +109,8 @@ public abstract class OutputCommitter
   /**
    * For aborting an unsuccessful job's output. Note that this is invoked for 
    * jobs with final runstate as {@link JobStatus#FAILED} or 
-   * {@link JobStatus#KILLED}
+   * {@link JobStatus#KILLED}. This is called from the application
+   * master process for the entire job. This may be called multiple times.
    * 
    * @param jobContext Context of the job whose output is being written.
    * @param status final runstate of the job
@@ -106,7 +122,10 @@ public abstract class OutputCommitter
   }
   
   /**
-   * Sets up output for the task.
+   * Sets up output for the task. This is called from each individual task's
+   * process that will output to HDFS, and it is called just for that task. This
+   * may be called multiple times for the same task, but for different task
+   * attempts.
    * 
    * @param taskContext Context of the task whose output is being written.
    * @throws IOException
@@ -115,7 +134,9 @@ public abstract class OutputCommitter
   throws IOException;
   
   /**
-   * Check whether task needs a commit
+   * Check whether task needs a commit.  This is called from each individual
+   * task's process that will output to HDFS, and it is called just for that
+   * task.
    * 
    * @param taskContext
    * @return true/false
@@ -125,9 +146,16 @@ public abstract class OutputCommitter
   throws IOException;
 
   /**
-   * To promote the task's temporary output to final output location
-   * 
-   * The task's output is moved to the job's output directory.
+   * To promote the task's temporary output to final output location.
+   * If {@link #needsTaskCommit(TaskAttemptContext)} returns true and this
+   * task is the task that the AM determines finished first, this method
+   * is called to commit an individual task's output.  This is to mark
+   * that tasks output as complete, as {@link #commitJob(JobContext)} will 
+   * also be called later on if the entire job finished successfully. This
+   * is called from a task's process. This may be called multiple times for the
+   * same task, but different task attempts.  It should be very rare for this to
+   * be called multiple times and requires odd networking failures to make this
+   * happen. In the future the Hadoop framework may eliminate this race.
    * 
    * @param taskContext Context of the task whose output is being written.
    * @throws IOException if commit is not 
@@ -136,7 +164,9 @@ public abstract class OutputCommitter
   throws IOException;
   
   /**
-   * Discard the task output
+   * Discard the task output. This is called from a task's process to clean 
+   * up a single task's output that can not yet been committed. This may be
+   * called multiple times for the same task, but for different task attempts.
    * 
    * @param taskContext
    * @throws IOException
@@ -160,7 +190,8 @@ public abstract class OutputCommitter
    * The retry-count for the job will be passed via the 
    * {@link MRConstants#APPLICATION_ATTEMPT_ID} key in  
    * {@link TaskAttemptContext#getConfiguration()} for the 
-   * <code>OutputCommitter</code>.
+   * <code>OutputCommitter</code>. This is called from the application master
+   * process, but it is called individually for each task.
    * 
    * If an exception is thrown the task will be attempted again. 
    * 

@@ -509,6 +509,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Credentials fsTokens;
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
+  
+  private JobStateInternal forcedState = null;
 
   public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
@@ -517,7 +519,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       Credentials fsTokenCredentials, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, MRAppMetrics metrics,
       boolean newApiCommitter, String userName,
-      long appSubmitTime, List<AMInfo> amInfos, AppContext appContext) {
+      long appSubmitTime, List<AMInfo> amInfos, AppContext appContext,
+      JobStateInternal forcedState, String forcedDiagnostic) {
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
@@ -548,6 +551,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
     stateMachine = stateMachineFactory.make(this);
+    this.forcedState  = forcedState;
+    if(forcedDiagnostic != null) {
+      this.diagnostics.add(forcedDiagnostic);
+    }
   }
 
   protected StateMachine<JobStateInternal, JobEventType, JobEvent> getStateMachine() {
@@ -787,7 +794,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobState getState() {
     readLock.lock();
     try {
-      return getExternalState(getStateMachine().getCurrentState());
+      return getExternalState(getInternalState());
     } finally {
       readLock.unlock();
     }
@@ -837,6 +844,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobStateInternal getInternalState() {
     readLock.lock();
     try {
+      if(forcedState != null) {
+        return forcedState;
+      }
       return getStateMachine().getCurrentState();
     } finally {
       readLock.unlock();

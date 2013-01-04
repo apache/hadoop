@@ -140,14 +140,19 @@ public abstract class RMCommunicator extends AbstractService
 
   protected void register() {
     //Register
-    InetSocketAddress serviceAddr = clientService.getBindAddress();
+    InetSocketAddress serviceAddr = null;
+    if (clientService != null ) {
+      serviceAddr = clientService.getBindAddress();
+    }
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
       request.setApplicationAttemptId(applicationAttemptId);
-      request.setHost(serviceAddr.getHostName());
-      request.setRpcPort(serviceAddr.getPort());
-      request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+      if (serviceAddr != null) {
+        request.setHost(serviceAddr.getHostName());
+        request.setRpcPort(serviceAddr.getPort());
+        request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+      }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();
