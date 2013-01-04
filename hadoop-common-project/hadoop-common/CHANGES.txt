@@ -45,6 +45,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9169. Bring branch-0.23 ExitUtil up to same level as branch-2
     (Robert Joseph Evans via jlowe)
 
+    HADOOP-8427. Convert Forrest docs to APT, incremental. (adi2 via tucu)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

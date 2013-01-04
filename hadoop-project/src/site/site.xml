@@ -50,6 +50,8 @@
       <item name="Overview" href="index.html"/>
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
       <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
+      <item name="File System Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
+      <item name="Hadoop Commands Reference" href="hadoop-project-dist/hadoop-common/CommandsManual.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
