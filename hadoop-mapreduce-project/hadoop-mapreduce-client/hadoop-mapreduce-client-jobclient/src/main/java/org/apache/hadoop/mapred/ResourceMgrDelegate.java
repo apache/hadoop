@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.QueueAclsInfo;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -110,11 +109,6 @@ public class ResourceMgrDelegate {
     return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
                               YarnConfiguration.DEFAULT_RM_ADDRESS,
                               YarnConfiguration.DEFAULT_RM_PORT);
-  }
-  
-  public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
-      throws IOException, InterruptedException {
-    return;
   }
 
 
@@ -300,14 +294,6 @@ public class ResourceMgrDelegate {
     return 0;
   }
 
-  public long renewDelegationToken(Token<DelegationTokenIdentifier> arg0)
-      throws IOException, InterruptedException {
-    // TODO: Implement renewDelegationToken
-    LOG.warn("renewDelegationToken - Not implemented");
-    return 0;
-  }
-  
-  
   public ApplicationId submitApplication(
       ApplicationSubmissionContext appContext) 
   throws IOException {

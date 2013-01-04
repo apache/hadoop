@@ -18,6 +18,9 @@ Release 0.23.6 - UNRELEASED
     applications that YARN's ResourceManager doesn't keep track off anymore
     (Derek Dagit via vinodkv)
 
+    MAPREDUCE-4894. Renewal / cancellation of JobHistory tokens (Siddharth
+    Seth via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
