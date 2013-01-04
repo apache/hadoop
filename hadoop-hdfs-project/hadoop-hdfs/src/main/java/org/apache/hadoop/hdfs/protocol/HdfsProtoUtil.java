@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
@@ -47,8 +48,8 @@ public abstract class HdfsProtoUtil {
   
   //// Block Token ////
   
-  public static HdfsProtos.BlockTokenIdentifierProto toProto(Token<?> blockToken) {
-    return HdfsProtos.BlockTokenIdentifierProto.newBuilder()
+  public static TokenProto toProto(Token<?> blockToken) {
+    return TokenProto.newBuilder()
       .setIdentifier(ByteString.copyFrom(blockToken.getIdentifier()))
       .setPassword(ByteString.copyFrom(blockToken.getPassword()))
       .setKind(blockToken.getKind().toString())
@@ -56,7 +57,7 @@ public abstract class HdfsProtoUtil {
       .build();
   }
 
-  public static Token<BlockTokenIdentifier> fromProto(HdfsProtos.BlockTokenIdentifierProto proto) {
+  public static Token<BlockTokenIdentifier> fromProto(TokenProto proto) {
     return new Token<BlockTokenIdentifier>(proto.getIdentifier().toByteArray(),
         proto.getPassword().toByteArray(),
         new Text(proto.getKind()),
