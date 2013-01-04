@@ -29,6 +29,10 @@ Release 0.23.6 - UNRELEASED
     HDFS-4315. DNs with multiple BPs can have BPOfferServices fail to start
     due to unsynchronized map access. (atm via tgraves)
 
+    HDFS-4270. Replications of the highest priority should be allowed to 
+    choose a source datanode that has reached its max replication limit 
+    (Derek Dagit via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
