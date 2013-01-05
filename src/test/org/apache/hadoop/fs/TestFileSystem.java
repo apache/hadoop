@@ -19,6 +19,12 @@
 package org.apache.hadoop.fs;
 
 import static org.mockito.Mockito.mock;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -34,8 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -65,9 +69,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Progressable;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestFileSystem extends TestCase {
+public class TestFileSystem {
   private static final Log LOG = FileSystem.LOG;
 
   private static Configuration conf = new Configuration();
@@ -81,6 +86,11 @@ public class TestFileSystem extends TestCase {
   private static Path WRITE_DIR = new Path(ROOT, "fs_write");
   private static Path READ_DIR = new Path(ROOT, "fs_read");
   private static Path DATA_DIR = new Path(ROOT, "fs_data");
+
+  @BeforeClass
+  public static void initialize() throws Exception {
+    NetUtilsTestResolver.install();
+  }
 
   public void testFs() throws Exception {
     testFs(10 * MEGA, 100, 0);
