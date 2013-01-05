@@ -295,16 +295,20 @@ public class MRAppMaster extends CompositeService {
       dispatcher = createDispatcher();
       addIfService(dispatcher);
       
+      NoopEventHandler eater = new NoopEventHandler();
+      //We do not have a JobEventDispatcher in this path
+      dispatcher.register(JobEventType.class, eater);
+
       EventHandler<JobHistoryEvent> historyService = null;
       if (copyHistory) {
         historyService = 
           createJobHistoryHandler(context);
         dispatcher.register(org.apache.hadoop.mapreduce.jobhistory.EventType.class,
             historyService);
+      } else {
+        dispatcher.register(org.apache.hadoop.mapreduce.jobhistory.EventType.class,
+            eater);
       }
-      NoopEventHandler eater = new NoopEventHandler();
-      //We do not have a JobEventDispatcher in this path
-      dispatcher.register(JobEventType.class, eater);
       
       // service to allocate containers from RM (if non-uber) or to fake it (uber)
       containerAllocator = createContainerAllocator(null, context);
