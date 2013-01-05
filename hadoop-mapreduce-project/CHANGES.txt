@@ -507,6 +507,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4819. AM can rerun job after reporting final job status to the
     client (bobby and Bikas Saha via bobby)
 
+    MAPREDUCE-4913. TestMRAppMaster#testMRAppMasterMissingStaging occasionally 
+    exits (Jason Lowe via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
