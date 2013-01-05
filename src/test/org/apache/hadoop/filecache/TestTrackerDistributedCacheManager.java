@@ -92,9 +92,10 @@ public class TestTrackerDistributedCacheManager extends TestCase {
 
     // Prepare the tests' root dir
     File TEST_ROOT = new File(TEST_ROOT_DIR);
-    if (!TEST_ROOT.exists()) {
-      TEST_ROOT.mkdirs();
+    if (TEST_ROOT.exists()) {
+      FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
     }
+    TEST_ROOT.mkdirs();
 
     conf = new Configuration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");

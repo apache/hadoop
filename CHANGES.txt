@@ -395,6 +395,9 @@ Release 1.2.0 - unreleased
 
     HADOOP-9179. TestFileSystem fails with open JDK7. (Brandon Li via suresh)
 
+    MAPREDUCE-4916. Fix flaxy test TestTrackerDistributedCacheManager. (Xuan
+    Gong via acmurthy) 
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
