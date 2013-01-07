@@ -21,7 +21,7 @@ import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService;
 
 @ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.server.nodemanager.api.RMAdminProtocolPB",
+    protocolName = "org.apache.hadoop.yarn.api.RMAdminProtocolPB",
     protocolVersion = 1)
 public interface RMAdminProtocolPB extends RMAdminProtocolService.BlockingInterface {
 
