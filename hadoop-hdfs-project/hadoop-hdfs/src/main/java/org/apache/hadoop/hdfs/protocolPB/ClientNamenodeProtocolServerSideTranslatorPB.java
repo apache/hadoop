@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -87,6 +88,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPre
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
@@ -902,6 +905,26 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       server.renameSnapshot(request.getSnapshotRoot(),
           request.getSnapshotOldName(), request.getSnapshotNewName());
       return VOID_RENAME_SNAPSHOT_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  static final GetSnapshottableDirListingResponseProto NULL_GET_SNAPSHOTTABLE_DIR_LISTING_RESPONSE 
+             = GetSnapshottableDirListingResponseProto.newBuilder().build();
+  @Override
+  public GetSnapshottableDirListingResponseProto getSnapshottableDirListing(
+      RpcController controller, GetSnapshottableDirListingRequestProto request)
+      throws ServiceException {
+    try {
+      SnapshottableDirectoryStatus[] result = server
+          .getSnapshottableDirListing();
+      if (result != null) {
+        return GetSnapshottableDirListingResponseProto.newBuilder().
+            setSnapshottableDirList(PBHelper.convert(result)).build();
+      } else {
+        return NULL_GET_SNAPSHOTTABLE_DIR_LISTING_RESPONSE;
+      }
     } catch (IOException e) {
       throw new ServiceException(e);
     }

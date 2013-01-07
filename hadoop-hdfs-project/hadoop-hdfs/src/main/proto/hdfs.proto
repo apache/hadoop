@@ -152,7 +152,7 @@ message LocatedBlocksProto {
 
 
 /**
- * Status of a file, directory  or symlink
+ * Status of a file, directory or symlink
  * Optionally includes a file's block locations if requested by client on the rpc call.
  */
 message HdfsFileStatusProto {
@@ -211,6 +211,27 @@ message FsServerDefaultsProto {
 message DirectoryListingProto {
   repeated HdfsFileStatusProto partialListing = 1;
   required uint32 remainingEntries  = 2;
+}
+
+/**
+ * Status of a snapshottable directory: besides the normal information for 
+ * a directory status, also include snapshot quota, number of snapshots, and
+ * the full path of the parent directory. 
+ */
+message SnapshottableDirectoryStatusProto {
+  required HdfsFileStatusProto dirStatus = 1;
+
+  // Fields specific for snapshottable directory
+  required uint32 snapshot_quota = 2;
+  required uint32 snapshot_number = 3;
+  required bytes parent_fullpath = 4;
+}
+
+/**
+ * Snapshottable directory listing
+ */
+message SnapshottableDirectoryListingProto {
+  repeated SnapshottableDirectoryStatusProto snapshottableDirListing = 1;
 }
 
 /**

@@ -208,6 +208,12 @@ message GetListingResponseProto {
   optional DirectoryListingProto dirList = 1;
 }
 
+message GetSnapshottableDirListingRequestProto { // no input parameters
+}
+message GetSnapshottableDirListingResponseProto {
+  optional SnapshottableDirectoryListingProto snapshottableDirList = 1;
+}
+
 message RenewLeaseRequestProto {
   required string clientName = 1;
 }
@@ -557,4 +563,6 @@ service ClientNamenodeProtocol {
       returns(AllowSnapshotResponseProto);
   rpc disallowSnapshot(DisallowSnapshotRequestProto)
       returns(DisallowSnapshotResponseProto);   
+  rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
+      returns(GetSnapshottableDirListingResponseProto);
 }

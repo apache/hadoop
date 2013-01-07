@@ -65,6 +65,8 @@ public class NameNodeMetrics {
   MutableCounterLong createSnapshotOps;
   @Metric("Number of renameSnapshot operations")
   MutableCounterLong renameSnapshotOps;
+  @Metric("Number of listSnapshottableDirectory operations")
+  MutableCounterLong listSnapshottableDirOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -181,6 +183,10 @@ public class NameNodeMetrics {
   
   public void incrRenameSnapshotOps() {
     renameSnapshotOps.incr();
+  }
+  
+  public void incrListSnapshottableDirOps() {
+    listSnapshottableDirOps.incr();
   }
   
   public void addTransaction(long latency) {

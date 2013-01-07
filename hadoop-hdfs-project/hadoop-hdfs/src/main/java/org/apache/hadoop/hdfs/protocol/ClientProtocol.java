@@ -525,6 +525,16 @@ public interface ClientProtocol {
                                      boolean needLocation)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
+  
+  /**
+   * Get listing of all the snapshottable directories
+   * 
+   * @return Information about all the current snapshottable directory
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
+      throws IOException;
 
   ///////////////////////////////////////
   // System issues and management

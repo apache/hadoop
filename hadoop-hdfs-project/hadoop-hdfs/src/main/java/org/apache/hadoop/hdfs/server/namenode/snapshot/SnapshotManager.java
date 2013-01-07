@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -156,4 +158,35 @@ public class SnapshotManager implements SnapshotStats {
     return numSnapshots.get();
   }
   
+  /**
+   * @return All the current snapshottable directories
+   */
+  public SnapshottableDirectoryStatus[] getSnapshottableDirListing() {
+    if (snapshottables.isEmpty()) {
+      return null;
+    }
+    
+    SnapshottableDirectoryStatus[] status = 
+        new SnapshottableDirectoryStatus[snapshottables.size()];
+    for (int i = 0; i < snapshottables.size(); i++) {
+      INodeDirectorySnapshottable dir = snapshottables.get(i);
+      status[i] = new SnapshottableDirectoryStatus(dir.getModificationTime(),
+          dir.getAccessTime(), dir.getFsPermission(), dir.getUserName(),
+          dir.getGroupName(), dir.getLocalNameBytes(), dir.getNumSnapshots(),
+          dir.getSnapshotQuota(), dir.getParent() == null ? new byte[0]
+              : DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
+    }
+    return status;
+  }
+  
+  /**
+   * Remove snapshottable directories from {@link #snapshottables}
+   * @param toRemoveList A list of INodeDirectorySnapshottable to be removed
+   */
+  public void removeSnapshottableDirs(
+      List<INodeDirectorySnapshottable> toRemoveList) {
+    if (toRemoveList != null) {
+      this.snapshottables.removeAll(toRemoveList);
+    }
+  }
 }
