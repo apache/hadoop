@@ -75,6 +75,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-315. Using the common security token protobuf definition from hadoop
     common. (Suresh Srinivas via vinodkv) 
 
+    YARN-170. Change NodeManager stop to be reentrant. (Sandy Ryza via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
