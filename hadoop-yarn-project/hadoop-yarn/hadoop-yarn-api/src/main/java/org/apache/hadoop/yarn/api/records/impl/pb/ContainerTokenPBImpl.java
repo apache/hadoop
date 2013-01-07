@@ -23,14 +23,14 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTokenProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTokenProtoOrBuilder;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProtoOrBuilder;
 
 
     
-public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> implements ContainerToken {
-  private ContainerTokenProto proto = ContainerTokenProto.getDefaultInstance();
-  private ContainerTokenProto.Builder builder = null;
+public class ContainerTokenPBImpl extends ProtoBase<TokenProto> implements ContainerToken {
+  private TokenProto proto = TokenProto.getDefaultInstance();
+  private TokenProto.Builder builder = null;
   private boolean viaProto = false;
   
   private ByteBuffer identifier;
@@ -38,15 +38,15 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   
   
   public ContainerTokenPBImpl() {
-    builder = ContainerTokenProto.newBuilder();
+    builder = TokenProto.newBuilder();
   }
 
-  public ContainerTokenPBImpl(ContainerTokenProto proto) {
+  public ContainerTokenPBImpl(TokenProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public synchronized ContainerTokenProto getProto() {
+  public synchronized TokenProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -72,7 +72,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
 
   private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = ContainerTokenProto.newBuilder(proto);
+      builder = TokenProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -80,7 +80,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   
   @Override
   public synchronized ByteBuffer getIdentifier() {
-    ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (this.identifier != null) {
       return this.identifier;
     }
@@ -100,7 +100,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
   @Override
   public synchronized ByteBuffer getPassword() {
-    ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (this.password != null) {
       return this.password;
     }
@@ -120,7 +120,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
   @Override
   public synchronized String getKind() {
-    ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasKind()) {
       return null;
     }
@@ -138,7 +138,7 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
   }
   @Override
   public synchronized String getService() {
-    ContainerTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasService()) {
       return null;
     }

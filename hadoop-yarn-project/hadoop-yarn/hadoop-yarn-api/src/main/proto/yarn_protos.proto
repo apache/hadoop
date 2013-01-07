@@ -21,6 +21,8 @@ option java_outer_classname = "YarnProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
+
 message YarnRemoteExceptionProto {
   optional string message = 1;
   optional string trace = 2;
@@ -58,20 +60,6 @@ enum ContainerStateProto {
   C_COMPLETE = 3;
 }
 
-message ContainerTokenProto {
-  optional bytes identifier = 1;
-  optional bytes password = 2;
-  optional string kind = 3;
-  optional string service = 4;
-}
-
-message DelegationTokenProto {
-  optional bytes identifier = 1;
-  optional bytes password = 2;
-  optional string kind = 3;
-  optional string service = 4;
-}
-
 message ContainerProto {
   optional ContainerIdProto id = 1;
   optional NodeIdProto nodeId = 2;
@@ -79,7 +67,7 @@ message ContainerProto {
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
   optional ContainerStateProto state = 6;
-  optional ContainerTokenProto container_token = 7;
+  optional hadoop.common.TokenProto container_token = 7;
   optional ContainerStatusProto container_status = 8;
 }
 

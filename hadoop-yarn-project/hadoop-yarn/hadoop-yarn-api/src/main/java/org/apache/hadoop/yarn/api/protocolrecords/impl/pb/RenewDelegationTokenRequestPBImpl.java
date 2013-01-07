@@ -17,11 +17,11 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.DelegationTokenProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RenewDelegationTokenRequestProtoOrBuilder;
 
@@ -97,11 +97,11 @@ public class RenewDelegationTokenRequestPBImpl extends
   }
 
 
-  private DelegationTokenPBImpl convertFromProtoFormat(DelegationTokenProto p) {
+  private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
     return new DelegationTokenPBImpl(p);
   }
 
-  private DelegationTokenProto convertToProtoFormat(DelegationToken t) {
+  private TokenProto convertToProtoFormat(DelegationToken t) {
     return ((DelegationTokenPBImpl)t).getProto();
   }
 }
