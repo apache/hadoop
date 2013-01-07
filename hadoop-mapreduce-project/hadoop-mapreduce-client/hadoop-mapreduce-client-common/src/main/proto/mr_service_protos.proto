@@ -21,6 +21,7 @@ option java_outer_classname = "MRServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
 import "mr_protos.proto";
 import "yarn_protos.proto";
 
@@ -81,7 +82,7 @@ message GetDelegationTokenRequestProto {
 }
 
 message GetDelegationTokenResponseProto {
-  optional DelegationTokenProto m_r_delegation_token = 1;
+  optional hadoop.common.TokenProto m_r_delegation_token = 1;
 }
 
 message KillJobRequestProto {
@@ -109,7 +110,7 @@ message FailTaskAttemptResponseProto {
 }
 
 message RenewDelegationTokenRequestProto {
-  required DelegationTokenProto delegation_token = 1;
+  required hadoop.common.TokenProto delegation_token = 1;
 }
 
 message RenewDelegationTokenResponseProto {
@@ -117,7 +118,7 @@ message RenewDelegationTokenResponseProto {
 }
 
 message CancelDelegationTokenRequestProto {
-  required DelegationTokenProto delegation_token = 1;
+  required hadoop.common.TokenProto delegation_token = 1;
 }
 
 message CancelDelegationTokenResponseProto {

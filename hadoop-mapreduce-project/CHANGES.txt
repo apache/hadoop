@@ -195,6 +195,9 @@ Release 2.0.3-alpha - Unreleased
     applications that YARN's ResourceManager doesn't keep track off anymore
     (Derek Dagit via vinodkv)
 
+    MAPREDUCE-4920. Use security token protobuf definition from hadoop common.
+    (Suresh Srinivas via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
