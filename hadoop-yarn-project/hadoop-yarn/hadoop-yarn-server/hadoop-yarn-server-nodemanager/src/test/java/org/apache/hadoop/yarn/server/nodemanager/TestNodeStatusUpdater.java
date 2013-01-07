@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -97,7 +98,7 @@ public class TestNodeStatusUpdater {
   public void tearDown() {
     this.registeredNodes.clear();
     heartBeatID = 0;
-    if (nm != null) {
+    if (nm != null && nm.getServiceState() == STATE.STARTED) {
       nm.stop();
     }
     DefaultMetricsSystem.shutdown();
@@ -444,6 +445,52 @@ public class TestNodeStatusUpdater {
         this.registeredNodes.size());
 
     nm.stop();
+  }
+  
+  @Test
+  public void testStopReentrant() throws Exception {
+    final AtomicInteger numCleanups = new AtomicInteger(0);
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        MyNodeStatusUpdater myNodeStatusUpdater = new MyNodeStatusUpdater(
+            context, dispatcher, healthChecker, metrics);
+        MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
+        myResourceTracker2.heartBeatNodeAction = NodeAction.SHUTDOWN;
+        myNodeStatusUpdater.resourceTracker = myResourceTracker2;
+        return myNodeStatusUpdater;
+      }
+      
+      @Override
+      protected void cleanupContainers() {
+        super.cleanupContainers();
+        numCleanups.incrementAndGet();
+      }
+    };
+
+    YarnConfiguration conf = createNMConfig();
+    nm.init(conf);
+    nm.start();
+    
+    int waitCount = 0;
+    while (heartBeatID < 1 && waitCount++ != 20) {
+      Thread.sleep(500);
+    }
+    Assert.assertFalse(heartBeatID < 1);
+
+    // Meanwhile call stop directly as the shutdown hook would
+    nm.stop();
+    
+    // NM takes a while to reach the STOPPED state.
+    waitCount = 0;
+    while (nm.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to stop..");
+      Thread.sleep(1000);
+    }
+
+    Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
+    Assert.assertEquals(numCleanups.get(), 1);
   }
   
   @Test
