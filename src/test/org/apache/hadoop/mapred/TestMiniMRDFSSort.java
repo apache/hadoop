@@ -167,13 +167,10 @@ public class TestMiniMRDFSSort extends TestCase {
     // Run sort-validator to check if sort worked correctly
     runSortValidator(mrCluster.createJobConf(), SORT_INPUT_PATH, 
                      SORT_OUTPUT_PATH);
-  }
-  
-  public void testJvmReuse() throws Exception {
+    // test JVM reuse
     runJvmReuseTest(mrCluster.createJobConf(), true);
-  }
-
-  public void testNoJvmReuse() throws Exception {
+    
+    // test no JVM reuse
     runJvmReuseTest(mrCluster.createJobConf(), false);
   }
 }
