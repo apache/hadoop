@@ -234,13 +234,18 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                + totalReplicasExpected + "\n"
                + e.getMessage());
       if (avoidStaleNodes) {
-        // ecxludedNodes now has - initial excludedNodes, any nodes that were
-        // chosen and nodes that were tried but were not chosen because they
-        // were stale, decommissioned or for any other reason a node is not
-        // chosen for write. Retry again now not avoiding stale node
+        // Retry chooseTarget again, this time not avoiding stale nodes.
+
+        // excludedNodes contains the initial excludedNodes and nodes that were
+        // not chosen because they were stale, decommissioned, etc.
+        // We need to additionally exclude the nodes that were added to the 
+        // result list in the successful calls to choose*() above.
         for (Node node : results) {
           oldExcludedNodes.put(node, node);
         }
+        // Set numOfReplicas, since it can get out of sync with the result list
+        // if the NotEnoughReplicasException was thrown in chooseRandom().
+        numOfReplicas = totalReplicasExpected - results.size();
         return chooseTarget(numOfReplicas, writer, oldExcludedNodes, blocksize,
             maxNodesPerRack, results, false);
       }
@@ -505,7 +510,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         if (LOG.isDebugEnabled()) {
           threadLocalBuilder.get().append(node.toString()).append(": ")
               .append("Node ").append(NodeBase.getPath(node))
-              .append(" is not chosen because the node is staled ");
+              .append(" is not chosen because the node is stale ");
         }
         return false;
       }

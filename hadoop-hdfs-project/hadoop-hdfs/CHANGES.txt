@@ -459,6 +459,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
     (Chao Shi via todd)
 
+    HDFS-4351.  In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
+    needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
