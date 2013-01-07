@@ -325,3 +325,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HDFS-4358. TestCheckpoint failure with JDK7. (Arpit Agarwal via suresh)
 
     HADOOP-9179. TestFileSystem fails with open JDK7. (Brandon Li via suresh)
+
+    MAPREDUCE-4914. TestMiniMRDFSSort fails with openJDK7. (Brandon Li via
+    suresh)
