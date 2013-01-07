@@ -657,6 +657,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4302. Fix fatal exception when starting NameNode with DEBUG logs
     (Eugene Koontz via todd)
 
+    HDFS-3970. Fix bug causing rollback of HDFS upgrade to result in bad
+    VERSION file. (Vinay and Andrew Wang via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
