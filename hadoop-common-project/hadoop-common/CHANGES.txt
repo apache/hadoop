@@ -519,6 +519,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9153. Support createNonRecursive in ViewFileSystem.
     (Sandy Ryza via tomwhite)
 
+    HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
+    (Liang Xie via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
