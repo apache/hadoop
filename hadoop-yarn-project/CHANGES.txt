@@ -171,6 +171,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-301. Fair scheduler throws ConcurrentModificationException when
     iterating over app's priorities. (Sandy Ryza via tomwhite)
 
+    YARN-217. Fix RMAdmin protocol description to make it work in secure mode
+    also. (Devaraj K via vinodkv)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
