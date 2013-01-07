@@ -38,6 +38,10 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 
 public class TestReplicationPolicy extends TestCase {
   private static final int BLOCK_SIZE = 1024;
@@ -339,6 +343,84 @@ public class TestReplicationPolicy extends TestCase {
       }
     }
     return false;
+  }
+
+  /**
+   * In this testcase, it tries to choose more targets than available nodes and
+   * check the result, with stale node avoidance on the write path enabled.
+   * @throws Exception
+   */
+  public void testChooseTargetWithMoreThanAvailableNodesWithStaleness()
+      throws Exception {
+    try {
+      namenode.getNamesystem().setAvoidStaleDataNodesForWrite(true);
+      testChooseTargetWithMoreThanAvailableNodes();
+    } finally {
+      namenode.getNamesystem().setAvoidStaleDataNodesForWrite(false);
+    }
+  }
+  
+  /**
+   * In this testcase, it tries to choose more targets than available nodes and
+   * check the result. 
+   * @throws Exception
+   */
+  public void testChooseTargetWithMoreThanAvailableNodes() throws Exception {
+    // make data node 0 & 1 to be not qualified to choose: not enough disk space
+    for(int i=0; i<2; i++) {
+      dataNodes[i].updateHeartbeat(
+          2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+          (FSConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0);
+    }
+    
+    final TestAppender appender = new TestAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+    
+    // try to choose NUM_OF_DATANODES which is more than actually available
+    // nodes.
+    DatanodeDescriptor[] targets = replicator.chooseTarget(filename, 
+        NUM_OF_DATANODES, dataNodes[0], new ArrayList<DatanodeDescriptor>(),
+        BLOCK_SIZE);
+    assertEquals(targets.length, NUM_OF_DATANODES - 2);
+
+    final List<LoggingEvent> log = appender.getLog();
+    assertNotNull(log);
+    assertFalse(log.size() == 0);
+    final LoggingEvent lastLogEntry = log.get(log.size() - 1);
+    
+    assertEquals(lastLogEntry.getLevel(), Level.WARN);
+    // Suppose to place replicas on each node but two data nodes are not
+    // available for placing replica, so here we expect a short of 2
+    assertTrue(((String)lastLogEntry.getMessage()).contains("in need of 2"));
+    
+    for(int i=0; i<2; i++) {
+      dataNodes[i].updateHeartbeat(
+          2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+          FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0);
+    }
+  }
+  
+  class TestAppender extends AppenderSkeleton {
+    private final List<LoggingEvent> log = new ArrayList<LoggingEvent>();
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+
+    @Override
+    protected void append(final LoggingEvent loggingEvent) {
+      log.add(loggingEvent);
+    }
+
+    @Override
+    public void close() {
+    }
+
+    public List<LoggingEvent> getLog() {
+      return new ArrayList<LoggingEvent>(log);
+    }
   }
 
   public void testChooseTargetWithStaleNodes() throws Exception {

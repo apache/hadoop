@@ -404,6 +404,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4915. TestShuffleExceptionCount fails with open JDK7.
     (Brandon Li via suresh)
 
+    HDFS-4351.  In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
+    needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

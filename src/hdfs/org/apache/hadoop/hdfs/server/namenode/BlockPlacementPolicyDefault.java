@@ -161,6 +161,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return writer;
     }
+    int totalReplicasExpected = numOfReplicas + results.size();
       
     int numOfResults = results.size();
     boolean newBlock = (numOfResults==0);
@@ -206,15 +207,22 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           maxNodesPerRack, results, avoidStaleNodes);
     } catch (NotEnoughReplicasException e) {
       FSNamesystem.LOG.warn("Not able to place enough replicas, still in need of "
-               + numOfReplicas);
+               + (totalReplicasExpected - results.size()) + " to reach "
+               + totalReplicasExpected + "\n"
+               + e.getMessage());
       if (avoidStaleNodes) {
-        // excludedNodes now has - initial excludedNodes, any nodes that were
-        // chosen and nodes that were tried but were not chosen because they
-        // were stale, decommissioned or for any other reason a node is not
-        // chosen for write. Retry again now not avoiding stale node
+        // Retry chooseTarget again, this time not avoiding stale nodes.
+
+        // excludedNodes contains the initial excludedNodes and nodes that were
+        // not chosen because they were stale, decommissioned, etc.
+        // We need to additionally exclude the nodes that were added to the 
+        // result list in the successful calls to choose*() above.
         for (Node node : results) {
           oldExcludedNodes.put(node, node);
         }
+        // Set numOfReplicas, since it can get out of sync with the result list
+        // if the NotEnoughReplicasException was thrown in chooseRandom().
+        numOfReplicas = totalReplicasExpected - results.size();
         return chooseTarget(numOfReplicas, writer, oldExcludedNodes, blocksize,
             maxNodesPerRack, results, false);
       }
