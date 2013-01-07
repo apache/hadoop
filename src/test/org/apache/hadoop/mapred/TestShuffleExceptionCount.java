@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestShuffleExceptionCount {
@@ -30,6 +31,11 @@ public class TestShuffleExceptionCount {
   static boolean abortCalled = false;
   private final float epsilon = 1e-5f;
 
+  @BeforeClass
+  public static void initialize() throws Exception {
+    abortCalled = false;
+  }
+    
   public static class TestShuffleExceptionTracker extends ShuffleExceptionTracker {
     private static final long serialVersionUID = 1L;
 
