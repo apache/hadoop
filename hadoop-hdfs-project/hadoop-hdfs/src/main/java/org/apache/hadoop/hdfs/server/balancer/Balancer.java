@@ -1370,7 +1370,7 @@ public class Balancer {
             " in this iteration");
       }
 
-      formatter.format("%-24s %10d  %19s  %18s  %17s\n", 
+      formatter.format("%-24s %10d  %19s  %18s  %17s%n",
           DateFormat.getDateTimeInstance().format(new Date()),
           iteration,
           StringUtils.byteDesc(bytesMoved.get()),
