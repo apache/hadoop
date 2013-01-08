@@ -161,6 +161,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9173. Add security token protobuf definition to common and
     use it in hdfs. (suresh)
 
+    HDFS-4030. BlockManager excessBlocksCount and
+    postponedMisreplicatedBlocksCount should be AtomicLongs. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
