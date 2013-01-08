@@ -19,18 +19,17 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
+
+import com.google.common.base.Preconditions;
 
 
 /** 
@@ -47,18 +46,73 @@ public class BlockReaderFactory {
   @InterfaceAudience.Private
   public static class Params {
     private final Conf conf;
-    private Socket socket = null;
+    /**
+     * The peer that this BlockReader will be connected to.
+     * You must set this.
+     */
+    private Peer peer = null;
+    
+    /**
+     * The file name that this BlockReader pertains to.
+     * This is optional and only used for display and logging purposes.
+     */
     private String file = null;
+
+    /**
+     * The block that this BlockReader is reading.
+     * You must set this.
+     */
     private ExtendedBlock block = null;
+    
+    /**
+     * The BlockTokenIdentifier to use, or null to use none.
+     */
     private Token<BlockTokenIdentifier> blockToken = null;
+
+    /**
+     * The offset in the block to start reading at.
+     */
     private long startOffset = 0;
+    
+    /**
+     * The total number of bytes we might want to read, or -1 to assume no
+     * limit.
+     */
     private long len = -1;
+    
+    /**
+     * The buffer size to use.
+     *
+     * If this is not set, we will use the default from the Conf.
+     */
     private int bufferSize;
+    
+    /**
+     * Whether or not we should verify the checksum.
+     *
+     * This is used instead of conf.verifyChecksum, because there are some
+     * cases when we may want to explicitly turn off checksum verification,
+     * such as when the caller has explicitly asked for a file to be opened
+     * without checksum verification.
+     */
     private boolean verifyChecksum = true;
+
+    /**
+     * Whether or not we should try to use short circuit local reads.
+     */
     private boolean shortCircuitLocalReads = false;
+
+    /**
+     * The name of the client using this BlockReader, for logging and
+     * debugging purposes.
+     */
     private String clientName = "";
-    private DataEncryptionKey encryptionKey = null;
-    private IOStreamPair ioStreamPair = null;
+    
+    /**
+     * The DataNode on which this Block resides.
+     * You must set this.
+     */
+    private DatanodeID datanodeID = null;
 
     public Params(Conf conf) {
       this.conf = conf;
@@ -67,11 +121,11 @@ public class BlockReaderFactory {
     public Conf getConf() {
       return conf;
     }
-    public Socket getSocket() {
-      return socket;
+    public Peer getPeer() {
+      return peer;
     }
-    public Params setSocket(Socket socket) {
-      this.socket = socket;
+    public Params setPeer(Peer peer) {
+      this.peer = peer;
       return this;
     }
     public String getFile() {
@@ -137,19 +191,12 @@ public class BlockReaderFactory {
       this.clientName = clientName;
       return this;
     }
-    public Params setEncryptionKey(DataEncryptionKey encryptionKey) {
-      this.encryptionKey = encryptionKey;
+    public Params setDatanodeID(DatanodeID datanodeID) {
+      this.datanodeID = datanodeID;
       return this;
     }
-    public DataEncryptionKey getEncryptionKey() {
-      return encryptionKey;
-    }
-    public IOStreamPair getIoStreamPair() {
-      return ioStreamPair;
-    }
-    public Params setIoStreamPair(IOStreamPair ioStreamPair) {
-      this.ioStreamPair = ioStreamPair;
-      return this;
+    public DatanodeID getDatanodeID() {
+      return datanodeID;
     }
   }
 
@@ -164,24 +211,27 @@ public class BlockReaderFactory {
    */
   @SuppressWarnings("deprecation")
   public static BlockReader newBlockReader(Params params) throws IOException {
+    Preconditions.checkNotNull(params.getPeer());
+    Preconditions.checkNotNull(params.getBlock());
+    Preconditions.checkNotNull(params.getDatanodeID());
+    // First, let's set the read and write timeouts appropriately.
+    // This will keep us from blocking forever if something goes wrong during
+    // network communication.
+    Peer peer = params.getPeer();
+    peer.setReadTimeout(params.getConf().socketTimeout);
+    peer.setWriteTimeout(HdfsServerConstants.WRITE_TIMEOUT);
+
     if (params.getConf().useLegacyBlockReader) {
-      if (params.getEncryptionKey() != null) {
-        throw new RuntimeException("Encryption is not supported with the legacy block reader.");
-      }
+      // The legacy BlockReader doesn't require that the Peers it uses
+      // have associated ReadableByteChannels.  This makes it easier to use 
+      // with some older Socket classes like, say, SocksSocketImpl.
+      //
+      // TODO: create a wrapper class that makes channel-less sockets look like
+      // they have a channel, so that we can finally remove the legacy
+      // RemoteBlockReader.  See HDFS-2534.
       return RemoteBlockReader.newBlockReader(params);
     } else {
-      Socket sock = params.getSocket();
-      if (params.getIoStreamPair() == null) {
-        params.setIoStreamPair(new IOStreamPair(NetUtils.getInputStream(sock),
-            NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT)));
-        if (params.getEncryptionKey() != null) {
-          IOStreamPair encryptedStreams =
-              DataTransferEncryptor.getEncryptedStreams(
-                  params.getIoStreamPair().out, params.getIoStreamPair().in, 
-                  params.getEncryptionKey());
-          params.setIoStreamPair(encryptedStreams);
-        }
-      }
+      // The usual block reader.
       return RemoteBlockReader2.newBlockReader(params);
     }
   }

@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -559,13 +560,13 @@ public class NamenodeFsck {
         
         blockReader = BlockReaderFactory.newBlockReader(
           new BlockReaderFactory.Params(new Conf(conf)).
-            setSocket(s).setBlock(block).
+            setPeer(TcpPeerServer.peerFromSocketAndKey(s,
+                namenode.getRpcServer().getDataEncryptionKey())).
+            setBlock(block).
             setFile(BlockReaderFactory.getFileName(targetAddr, 
                 block.getBlockPoolId(), block.getBlockId())).
             setBlockToken(lblock.getBlockToken()).
-            setEncryptionKey(namenode.getRpcServer().getDataEncryptionKey()).
-            setLen(-1));
-        
+            setDatanodeID(chosenNode));
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue
         LOG.info("Failed to connect to " + targetAddr + ":" + ex);

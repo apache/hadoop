@@ -25,16 +25,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -42,12 +41,10 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
-import org.apache.hadoop.net.SocketInputWrapper;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This is a wrapper around connection to datanode
@@ -79,11 +76,8 @@ import org.apache.hadoop.util.DataChecksum;
 public class RemoteBlockReader2  implements BlockReader {
 
   static final Log LOG = LogFactory.getLog(RemoteBlockReader2.class);
-  
-  Socket dnSock;
-  // for now just sending the status code (e.g. checksumOk) after the read.
-  private IOStreamPair ioStreams;
-  private final ReadableByteChannel in;
+  private final DatanodeID datanodeID;
+  private final Peer peer;
   private DataChecksum checksum;
   
   private PacketReceiver packetReceiver = new PacketReceiver(true);
@@ -114,6 +108,11 @@ public class RemoteBlockReader2  implements BlockReader {
   ByteBuffer checksumBytes = null;
   /** Amount of unread data in the current received packet */
   int dataLeft = 0;
+  
+  @VisibleForTesting
+  public Peer getPeer() {
+    return peer;
+  }
   
   @Override
   public synchronized int read(byte[] buf, int off, int len) 
@@ -155,7 +154,7 @@ public class RemoteBlockReader2  implements BlockReader {
 
   private void readNextPacket() throws IOException {
     //Read packet headers.
-    packetReceiver.receiveNextPacket(in);
+    packetReceiver.receiveNextPacket(peer.getInputStreamChannel());
 
     PacketHeader curHeader = packetReceiver.getHeader();
     curDataSlice = packetReceiver.getDataSlice();
@@ -236,7 +235,7 @@ public class RemoteBlockReader2  implements BlockReader {
       LOG.trace("Reading empty packet at end of read");
     }
     
-    packetReceiver.receiveNextPacket(in);
+    packetReceiver.receiveNextPacket(peer.getInputStreamChannel());
 
     PacketHeader trailer = packetReceiver.getHeader();
     if (!trailer.isLastPacketInBlock() ||
@@ -247,11 +246,10 @@ public class RemoteBlockReader2  implements BlockReader {
   }
 
   protected RemoteBlockReader2(BlockReaderFactory.Params params, 
-      DataChecksum checksum, long firstChunkOffset, ReadableByteChannel in) {
+      DataChecksum checksum, long firstChunkOffset) {
     // Path is used only for printing block and file information in debug
-    this.dnSock = params.getSocket();
-    this.ioStreams = params.getIoStreamPair();
-    this.in = in;
+    this.datanodeID = params.getDatanodeID();
+    this.peer = params.getPeer();
     this.checksum = checksum;
     this.verifyChecksum = params.getVerifyChecksum();
     this.startOffset = Math.max( params.getStartOffset(), 0 );
@@ -268,37 +266,18 @@ public class RemoteBlockReader2  implements BlockReader {
 
 
   @Override
-  public synchronized void close() throws IOException {
+  public synchronized void close(PeerCache peerCache) throws IOException {
     packetReceiver.close();
     
     startOffset = -1;
     checksum = null;
-    if (dnSock != null) {
-      dnSock.close();
+    if (peerCache != null && sentStatusCode) {
+      peerCache.put(datanodeID, peer);
+    } else {
+      peer.close();
     }
 
     // in will be closed when its Socket is closed.
-  }
-  
-  /**
-   * Take the socket used to talk to the DN.
-   */
-  @Override
-  public Socket takeSocket() {
-    assert hasSentStatusCode() :
-      "BlockReader shouldn't give back sockets mid-read";
-    Socket res = dnSock;
-    dnSock = null;
-    return res;
-  }
-
-  /**
-   * Whether the BlockReader has reached the end of its input stream
-   * and successfully sent a status code back to the datanode.
-   */
-  @Override
-  public boolean hasSentStatusCode() {
-    return sentStatusCode;
   }
 
   /**
@@ -308,14 +287,14 @@ public class RemoteBlockReader2  implements BlockReader {
    * data correctness.
    */
   void sendReadResult(Status statusCode) {
-    assert !sentStatusCode : "already sent status code to " + dnSock;
+    assert !sentStatusCode : "already sent status code to " + peer;
     try {
-      writeReadResult(ioStreams.out, statusCode);
+      writeReadResult(peer.getOutputStream(), statusCode);
       sentStatusCode = true;
     } catch (IOException e) {
       // It's ok not to be able to send this. But something is probably wrong.
       LOG.info("Could not send read status (" + statusCode + ") to datanode " +
-               dnSock.getInetAddress() + ": " + e.getMessage());
+               peer.getRemoteAddressString() + ": " + e.getMessage());
     }
   }
 
@@ -373,29 +352,20 @@ public class RemoteBlockReader2  implements BlockReader {
    */
   public static BlockReader newBlockReader(BlockReaderFactory.Params params)
                                      throws IOException {
-    IOStreamPair ioStreams = params.getIoStreamPair();
-    ReadableByteChannel ch;
-    if (ioStreams.in instanceof SocketInputWrapper) {
-      ch = ((SocketInputWrapper)ioStreams.in).getReadableByteChannel();
-    } else {
-      ch = (ReadableByteChannel) ioStreams.in;
-    }
-    
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-          ioStreams.out));
+          params.getPeer().getOutputStream()));
     new Sender(out).readBlock(params.getBlock(), params.getBlockToken(), 
         params.getClientName(), params.getStartOffset(), params.getLen());
 
     //
     // Get bytes in block
     //
-    DataInputStream in = new DataInputStream(ioStreams.in);
+    DataInputStream in = new DataInputStream(params.getPeer().getInputStream());
 
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         vintPrefixed(in));
-    checkSuccess(status, params.getSocket(), params.getBlock(),
-        params.getFile());
+    checkSuccess(status, params.getPeer(), params.getBlock(), params.getFile());
     ReadOpChecksumInfoProto checksumInfo =
       status.getReadOpChecksumInfo();
     DataChecksum checksum = DataTransferProtoUtil.fromProto(
@@ -412,33 +382,28 @@ public class RemoteBlockReader2  implements BlockReader {
                     params.getStartOffset() + " for file " + params.getFile());
     }
 
-    return new RemoteBlockReader2(params, checksum, firstChunkOffset, ch);
+    return new RemoteBlockReader2(params, checksum, firstChunkOffset);
   }
 
   static void checkSuccess(
-      BlockOpResponseProto status, Socket sock,
+      BlockOpResponseProto status, Peer peer,
       ExtendedBlock block, String file)
       throws IOException {
     if (status.getStatus() != Status.SUCCESS) {
       if (status.getStatus() == Status.ERROR_ACCESS_TOKEN) {
         throw new InvalidBlockTokenException(
             "Got access token error for OP_READ_BLOCK, self="
-                + sock.getLocalSocketAddress() + ", remote="
-                + sock.getRemoteSocketAddress() + ", for file " + file
+                + peer.getLocalAddressString() + ", remote="
+                + peer.getRemoteAddressString() + ", for file " + file
                 + ", for pool " + block.getBlockPoolId() + " block " 
                 + block.getBlockId() + "_" + block.getGenerationStamp());
       } else {
         throw new IOException("Got error for OP_READ_BLOCK, self="
-            + sock.getLocalSocketAddress() + ", remote="
-            + sock.getRemoteSocketAddress() + ", for file " + file
+            + peer.getLocalAddressString() + ", remote="
+            + peer.getRemoteAddressString() + ", for file " + file
             + ", for pool " + block.getBlockPoolId() + " block " 
             + block.getBlockId() + "_" + block.getGenerationStamp());
       }
     }
-  }
-
-  @Override
-  public IOStreamPair getStreams() {
-    return ioStreams;
   }
 }

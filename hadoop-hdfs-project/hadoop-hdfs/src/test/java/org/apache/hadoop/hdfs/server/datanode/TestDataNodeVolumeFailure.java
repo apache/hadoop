@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -284,8 +285,9 @@ public class TestDataNodeVolumeFailure {
           setFile(BlockReaderFactory.getFileName(targetAddr, 
               "test-blockpoolid", block.getBlockId())).
           setBlock(block).setBlockToken(lblock.getBlockToken()).
-          setSocket(s));
-    blockReader.close();
+          setPeer(TcpPeerServer.peerFromSocket(s)).
+          setDatanodeID(datanode));
+    blockReader.close(null);
   }
   
   /**
