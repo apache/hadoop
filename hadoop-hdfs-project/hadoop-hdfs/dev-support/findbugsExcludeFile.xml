@@ -308,4 +308,20 @@
        <Field name="pendingReceivedRequests" />
        <Bug pattern="VO_VOLATILE_INCREMENT" />
      </Match>
+     <!-- The "LightWeight" classes are explicitly not thread safe -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.util.LightWeightGSet" />
+       <Field name="modification" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.util.LightWeightHashSet" />
+       <Field name="modification" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.util.LightWeightLinkedSet" />
+       <Field name="modification" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
  </FindBugsFilter>
