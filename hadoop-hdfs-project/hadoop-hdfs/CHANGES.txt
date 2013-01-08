@@ -457,6 +457,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4030. BlockManager excessBlocksCount and
     postponedMisreplicatedBlocksCount should be AtomicLongs. (eli)
 
+    HDFS-4031. Update findbugsExcludeFile.xml to include findbugs 2
+    exclusions. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
