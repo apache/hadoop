@@ -167,6 +167,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4031. Update findbugsExcludeFile.xml to include findbugs 2
     exclusions. (eli)
 
+    HDFS-4033. Miscellaneous findbugs 2 fixes. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 

@@ -693,7 +693,7 @@ class BlockPoolSliceScanner {
           (info.lastScanType == ScanType.VERIFICATION_SCAN) ? "local" : "none"; 
         buffer.append(String.format("%-26s : status : %-6s type : %-6s" +
                                     " scan time : " +
-                                    "%-15d %s\n", info.block, 
+                                    "%-15d %s%n", info.block, 
                                     (info.lastScanOk ? "ok" : "failed"),
                                     scanType, scanTime,
                                     (scanTime <= 0) ? "not yet verified" : 
@@ -706,21 +706,21 @@ class BlockPoolSliceScanner {
     double pctProgress = (totalBytesToScan == 0) ? 100 :
                          (totalBytesToScan-bytesLeft)*100.0/totalBytesToScan;
                          
-    buffer.append(String.format("\nTotal Blocks                 : %6d" +
-                                "\nVerified in last hour        : %6d" +
-                                "\nVerified in last day         : %6d" +
-                                "\nVerified in last week        : %6d" +
-                                "\nVerified in last four weeks  : %6d" +
-                                "\nVerified in SCAN_PERIOD      : %6d" +
-                                "\nNot yet verified             : %6d" +
-                                "\nVerified since restart       : %6d" +
-                                "\nScans since restart          : %6d" +
-                                "\nScan errors since restart    : %6d" +
-                                "\nTransient scan errors        : %6d" +
-                                "\nCurrent scan rate limit KBps : %6d" +
-                                "\nProgress this period         : %6.0f%%" +
-                                "\nTime left in cur period      : %6.2f%%" +
-                                "\n", 
+    buffer.append(String.format("%nTotal Blocks                 : %6d" +
+                                "%nVerified in last hour        : %6d" +
+                                "%nVerified in last day         : %6d" +
+                                "%nVerified in last week        : %6d" +
+                                "%nVerified in last four weeks  : %6d" +
+                                "%nVerified in SCAN_PERIOD      : %6d" +
+                                "%nNot yet verified             : %6d" +
+                                "%nVerified since restart       : %6d" +
+                                "%nScans since restart          : %6d" +
+                                "%nScan errors since restart    : %6d" +
+                                "%nTransient scan errors        : %6d" +
+                                "%nCurrent scan rate limit KBps : %6d" +
+                                "%nProgress this period         : %6.0f%%" +
+                                "%nTime left in cur period      : %6.2f%%" +
+                                "%n", 
                                 total, inOneHour, inOneDay, inOneWeek,
                                 inFourWeeks, inScanPeriod, neverScanned,
                                 totalScans, totalScans, 

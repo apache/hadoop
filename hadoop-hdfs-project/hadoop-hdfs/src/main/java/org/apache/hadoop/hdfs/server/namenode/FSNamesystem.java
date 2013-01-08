@@ -4234,6 +4234,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode(false);
         break;
+      default:
+        LOG.error("Unexpected safe mode action");
       }
     }
     return isInSafeMode();

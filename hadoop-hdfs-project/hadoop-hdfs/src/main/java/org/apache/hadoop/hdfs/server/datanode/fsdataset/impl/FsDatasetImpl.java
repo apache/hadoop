@@ -390,8 +390,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (ckoff > 0) {
       metaInFile.seek(ckoff);
     }
-    return new ReplicaInputStreams(new FileInputStream(blockInFile.getFD()),
-                                new FileInputStream(metaInFile.getFD()));
+    return new ReplicaInputStreams(blockInFile.getFD(), metaInFile.getFD());
   }
 
   static File moveBlockFiles(Block b, File srcfile, File destdir

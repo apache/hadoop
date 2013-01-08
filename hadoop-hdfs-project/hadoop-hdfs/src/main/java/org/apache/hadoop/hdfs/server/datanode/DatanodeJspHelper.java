@@ -79,9 +79,6 @@ public class DatanodeJspHelper {
            .getCanonicalHostName();
   }
 
-  private static final SimpleDateFormat lsDateFormat =
-    new SimpleDateFormat("yyyy-MM-dd HH:mm");
-
   /**
    * Get the default chunk size.
    * @param conf the configuration
@@ -205,8 +202,8 @@ public class DatanodeJspHelper {
               + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
             cols[0] = "<a href=\"" + datanodeUrl + "\">"
               + HtmlQuoting.quoteHtmlChars(localFileName) + "</a>";
-            cols[5] = lsDateFormat.format(new Date((files[i]
-              .getModificationTime())));
+            cols[5] = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(
+                new Date((files[i].getModificationTime())));
             cols[6] = files[i].getPermission().toString();
             cols[7] = files[i].getOwner();
             cols[8] = files[i].getGroup();

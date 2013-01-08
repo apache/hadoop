@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -178,7 +179,7 @@ public class JspHelper {
         s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       } catch (IOException e) {
         deadNodes.add(chosenNode);
-        s.close();
+        IOUtils.closeSocket(s);
         s = null;
         failures++;
       }
@@ -361,6 +362,8 @@ public class JspHelper {
         case FIELD_NAME: 
           ret = d1.getHostName().compareTo(d2.getHostName());
           break;
+        default:
+          throw new IllegalArgumentException("Invalid sortField");
         }
         return (sortOrder == SORT_ORDER_DSC) ? -ret : ret;
       }

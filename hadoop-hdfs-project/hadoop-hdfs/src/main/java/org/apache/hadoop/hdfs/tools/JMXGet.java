@@ -63,7 +63,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class JMXGet {
 
-  private static final String format = "%s=%s\n";
+  private static final String format = "%s=%s%n";
   private ArrayList<ObjectName> hadoopObjectNames;
   private MBeanServerConnection mbsc;
   private String service = "NameNode", port = "", server = "localhost";
@@ -126,7 +126,8 @@ public class JMXGet {
           continue;
         }
       }
-      err("Info: key = " + key + "; val = "+ val.getClass() +":"+ val);
+      err("Info: key = " + key + "; val = " +
+          (val == null ? "null" : val.getClass()) + ":" + val);
       break;
     }
 
