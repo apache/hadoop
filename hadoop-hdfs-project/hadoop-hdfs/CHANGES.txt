@@ -465,6 +465,8 @@ Release 2.0.3-alpha - Unreleased
     
     HDFS-4033. Miscellaneous findbugs 2 fixes. (eli)
 
+    HDFS-4034. Remove redundant null checks. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
