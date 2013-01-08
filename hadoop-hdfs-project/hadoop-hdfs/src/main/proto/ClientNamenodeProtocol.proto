@@ -414,7 +414,7 @@ message GetDelegationTokenRequestProto {
 }
 
 message GetDelegationTokenResponseProto {
-  required hadoop.common.TokenProto token = 1;
+  optional hadoop.common.TokenProto token = 1;
 }
 
 message RenewDelegationTokenRequestProto {

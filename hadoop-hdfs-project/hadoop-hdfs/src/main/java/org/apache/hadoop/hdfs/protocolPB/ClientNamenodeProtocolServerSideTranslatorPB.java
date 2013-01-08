@@ -129,8 +129,10 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -774,10 +776,14 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDelegationTokenRequestProto req)
       throws ServiceException {
     try {
-      TokenProto result = PBHelper.convert(server
-          .getDelegationToken(new Text(req.getRenewer())));
-      return GetDelegationTokenResponseProto.newBuilder().setToken(result)
-          .build();
+      Token<DelegationTokenIdentifier> token = server
+          .getDelegationToken(new Text(req.getRenewer()));
+      GetDelegationTokenResponseProto.Builder rspBuilder = 
+          GetDelegationTokenResponseProto.newBuilder();
+      if (token != null) {
+        rspBuilder.setToken(PBHelper.convert(token));
+      }
+      return rspBuilder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
