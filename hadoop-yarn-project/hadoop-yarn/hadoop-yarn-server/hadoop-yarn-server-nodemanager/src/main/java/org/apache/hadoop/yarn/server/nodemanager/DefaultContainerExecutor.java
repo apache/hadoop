@@ -124,7 +124,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       Path appCacheDir = new Path(userdir, ContainerLocalizer.APPCACHE);
       Path appDir = new Path(appCacheDir, appIdStr);
       Path containerDir = new Path(appDir, containerIdStr);
-      createDir(containerDir, dirPerm, false);
+      createDir(containerDir, dirPerm, true);
     }
 
     // Create the container log-dirs on all disks
