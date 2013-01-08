@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -107,8 +108,8 @@ public class BlockManager {
   private volatile long corruptReplicaBlocksCount = 0L;
   private volatile long underReplicatedBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
-  private volatile long excessBlocksCount = 0L;
-  private volatile long postponedMisreplicatedBlocksCount = 0L;
+  private AtomicLong excessBlocksCount = new AtomicLong(0L);
+  private AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
   
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
@@ -132,11 +133,11 @@ public class BlockManager {
   }
   /** Used by metrics */
   public long getExcessBlocksCount() {
-    return excessBlocksCount;
+    return excessBlocksCount.get();
   }
   /** Used by metrics */
   public long getPostponedMisreplicatedBlocksCount() {
-    return postponedMisreplicatedBlocksCount;
+    return postponedMisreplicatedBlocksCount.get();
   }
   /** Used by metrics */
   public int getPendingDataNodeMessageCount() {
@@ -1066,7 +1067,7 @@ public class BlockManager {
 
   private void postponeBlock(Block blk) {
     if (postponedMisreplicatedBlocks.add(blk)) {
-      postponedMisreplicatedBlocksCount++;
+      postponedMisreplicatedBlocksCount.incrementAndGet();
     }
   }
   
@@ -1598,7 +1599,7 @@ public class BlockManager {
               "in block map.");
         }
         it.remove();
-        postponedMisreplicatedBlocksCount--;
+        postponedMisreplicatedBlocksCount.decrementAndGet();
         continue;
       }
       MisReplicationResult res = processMisReplicatedBlock(bi);
@@ -1608,7 +1609,7 @@ public class BlockManager {
       }
       if (res != MisReplicationResult.POSTPONE) {
         it.remove();
-        postponedMisreplicatedBlocksCount--;
+        postponedMisreplicatedBlocksCount.decrementAndGet();
       }
     }
   }
@@ -2445,7 +2446,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       excessReplicateMap.put(dn.getStorageID(), excessBlocks);
     }
     if (excessBlocks.add(block)) {
-      excessBlocksCount++;
+      excessBlocksCount.incrementAndGet();
       if(blockLog.isDebugEnabled()) {
         blockLog.debug("BLOCK* addToExcessReplicate:"
             + " (" + dn + ", " + block
@@ -2493,7 +2494,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           .getStorageID());
       if (excessBlocks != null) {
         if (excessBlocks.remove(block)) {
-          excessBlocksCount--;
+          excessBlocksCount.decrementAndGet();
           if(blockLog.isDebugEnabled()) {
             blockLog.debug("BLOCK* removeStoredBlock: "
                 + block + " is removed from excessBlocks");
@@ -2838,7 +2839,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     // Remove the block from pendingReplications
     pendingReplications.remove(block);
     if (postponedMisreplicatedBlocks.remove(block)) {
-      postponedMisreplicatedBlocksCount--;
+      postponedMisreplicatedBlocksCount.decrementAndGet();
     }
   }
 
