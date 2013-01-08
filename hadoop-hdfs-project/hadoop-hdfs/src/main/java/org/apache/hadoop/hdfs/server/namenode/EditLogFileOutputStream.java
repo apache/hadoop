@@ -140,10 +140,8 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
         fc.close();
         fc = null;
       }
-      if (fp != null) {
-        fp.close();
-        fp = null;
-      }
+      fp.close();
+      fp = null;
     } finally {
       IOUtils.cleanup(FSNamesystem.LOG, fc, fp);
       doubleBuf = null;

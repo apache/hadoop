@@ -203,9 +203,6 @@ abstract public class ReplicaInfo extends Block implements Replica {
       throw new IOException("detachBlock:Block not found. " + this);
     }
     File meta = getMetaFile();
-    if (meta == null) {
-      throw new IOException("Meta file not found for block " + this);
-    }
 
     if (HardLink.getLinkCount(file) > numLinks) {
       DataNode.LOG.info("CopyOnWrite for block " + this);

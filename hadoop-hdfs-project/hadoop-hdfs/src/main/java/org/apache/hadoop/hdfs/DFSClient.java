@@ -1618,8 +1618,7 @@ public class DFSClient implements java.io.Closeable {
     if (shouldEncryptData()) {
       synchronized (this) {
         if (encryptionKey == null ||
-            (encryptionKey != null &&
-             encryptionKey.expiryDate < Time.now())) {
+            encryptionKey.expiryDate < Time.now()) {
           LOG.debug("Getting new encryption token from NN");
           encryptionKey = namenode.getDataEncryptionKey();
         }

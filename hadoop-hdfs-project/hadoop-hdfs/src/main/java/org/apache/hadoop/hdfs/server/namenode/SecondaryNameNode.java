@@ -605,7 +605,9 @@ public class SecondaryNameNode implements Runnable {
       terminate(ret);
     }
 
-    secondary.startCheckpointThread();
+    if (secondary != null) {
+      secondary.startCheckpointThread();
+    }
   }
   
   

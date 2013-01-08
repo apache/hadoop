@@ -1908,10 +1908,11 @@ public class DataNode extends Configured
   }
 
   /**
-   * Get namenode corresponding to a block pool
+   * Get the NameNode corresponding to the given block pool.
+   *
    * @param bpid Block pool Id
    * @return Namenode corresponding to the bpid
-   * @throws IOException
+   * @throws IOException if unable to get the corresponding NameNode
    */
   public DatanodeProtocolClientSideTranslatorPB getActiveNamenodeForBP(String bpid)
       throws IOException {
@@ -1935,11 +1936,6 @@ public class DataNode extends Configured
     final String bpid = block.getBlockPoolId();
     DatanodeProtocolClientSideTranslatorPB nn =
       getActiveNamenodeForBP(block.getBlockPoolId());
-    if (nn == null) {
-      throw new IOException(
-          "Unable to synchronize block " + rBlock + ", since this DN "
-          + " has not acknowledged any NN as active.");
-    }
     
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
