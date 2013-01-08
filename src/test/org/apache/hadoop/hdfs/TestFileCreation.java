@@ -853,6 +853,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       dfs.close();
     } finally {
       System.out.println("testFsClose successful");
+      cluster.shutdown();
     }
   }
 }

@@ -247,6 +247,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-8645. HADOOP_HOME and -Dhadoop.home (from hadoop wrapper script) are
     not uniformly handled. (John Gordon via suresh)
 
+    HADOOP-9185. TestFileCreation.testFsClose should clean up on exit.
+    (Arpit Agarwal via suresh)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
