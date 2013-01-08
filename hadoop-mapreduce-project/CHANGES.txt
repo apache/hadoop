@@ -76,6 +76,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4895. Fix compilation failure of org.apache.hadoop.mapred.
     gridmix.TestResourceUsageEmulators (Dennis Y via tgraves)
 
+    MAPREDUCE-4278. Cannot run two local jobs in parallel from the same
+    gateway. (Sandy Ryza via tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
