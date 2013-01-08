@@ -401,23 +401,9 @@ public class TestContainerManagerSecurity {
       UnsupportedFileSystemException, YarnRemoteException,
       InterruptedException {
 
-    // TODO: Use a resource to work around bugs. Today NM doesn't create local
-    // app-dirs if there are no file to download!!
-    String fileName = "testFile-" + appID.toString();
-    File testFile = new File(localDir.getAbsolutePath(), fileName);
-    FileWriter tmpFile = new FileWriter(testFile);
-    tmpFile.write("testing");
-    tmpFile.close();
-    URL testFileURL = ConverterUtils.getYarnUrlFromPath(FileContext
-        .getFileContext().makeQualified(
-            new Path(localDir.getAbsolutePath(), fileName)));
-    LocalResource rsrc = BuilderUtils.newLocalResource(testFileURL,
-        LocalResourceType.FILE, LocalResourceVisibility.PRIVATE, testFile
-            .length(), testFile.lastModified());
-
     ContainerLaunchContext amContainer = BuilderUtils
         .newContainerLaunchContext(null, "testUser", BuilderUtils
-            .newResource(1024), Collections.singletonMap(fileName, rsrc),
+            .newResource(1024), Collections.<String, LocalResource>emptyMap(),
             new HashMap<String, String>(), Arrays.asList("sleep", "100"),
             new HashMap<String, ByteBuffer>(), null,
             new HashMap<ApplicationAccessType, String>());
