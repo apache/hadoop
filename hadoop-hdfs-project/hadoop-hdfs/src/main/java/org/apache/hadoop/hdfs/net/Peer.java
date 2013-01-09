@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.ReadableByteChannel;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.net.unix.DomainSocket;
 
 /**
  * Represents a connection to a peer.
@@ -105,4 +106,10 @@ public interface Peer extends Closeable {
    *                       computer as we.
    */
   public boolean isLocal();
+
+  /**
+   * @return               The DomainSocket associated with the current
+   *                       peer, or null if there is none.
+   */
+  public DomainSocket getDomainSocket();
 }

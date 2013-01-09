@@ -20,88 +20,73 @@ package org.apache.hadoop.hdfs.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Socket;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.hadoop.net.SocketInputStream;
-import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Represents a peer that we communicate with by using non-blocking I/O 
- * on a Socket.
+ * Represents a peer that we communicate with by using blocking I/O 
+ * on a UNIX domain socket.
  */
-class NioInetPeer implements Peer {
-  private final Socket socket;
+@InterfaceAudience.Private
+public class DomainPeer implements Peer {
+  private final DomainSocket socket;
+  private final OutputStream out;
+  private final InputStream in;
+  private final ReadableByteChannel channel;
 
-  /**
-   * An InputStream which simulates blocking I/O with timeouts using NIO.
-   */
-  private final SocketInputStream in;
-  
-  /**
-   * An OutputStream which simulates blocking I/O with timeouts using NIO.
-   */
-  private final SocketOutputStream out;
-
-  private final boolean isLocal;
-
-  NioInetPeer(Socket socket) throws IOException {
+  public DomainPeer(DomainSocket socket) {
     this.socket = socket;
-    this.in = new SocketInputStream(socket.getChannel(), 0);
-    this.out = new SocketOutputStream(socket.getChannel(), 0);
-    this.isLocal = socket.getInetAddress().equals(socket.getLocalAddress());
+    this.out = socket.getOutputStream();
+    this.in = socket.getInputStream();
+    this.channel = socket.getChannel();
   }
 
   @Override
   public ReadableByteChannel getInputStreamChannel() {
-    return in;
+    return channel;
   }
 
   @Override
   public void setReadTimeout(int timeoutMs) throws IOException {
-    in.setTimeout(timeoutMs);
+    socket.setAttribute(DomainSocket.RCV_TIMEO, timeoutMs);
   }
 
   @Override
   public int getReceiveBufferSize() throws IOException {
-    return socket.getReceiveBufferSize();
+    return socket.getAttribute(DomainSocket.RCV_BUF_SIZE);
   }
 
   @Override
   public boolean getTcpNoDelay() throws IOException {
-    return socket.getTcpNoDelay();
+    /* No TCP, no TCP_NODELAY. */
+    return false;
   }
 
   @Override
   public void setWriteTimeout(int timeoutMs) throws IOException {
-    out.setTimeout(timeoutMs);
+    socket.setAttribute(DomainSocket.SND_TIMEO, timeoutMs);
   }
 
   @Override
   public boolean isClosed() {
-    return socket.isClosed();
+    return !socket.isOpen();
   }
 
   @Override
   public void close() throws IOException {
-    // We always close the outermost streams-- in this case, 'in' and 'out'
-    // Closing either one of these will also close the Socket.
-    try {
-      in.close();
-    } finally {
-      out.close();
-    }
+    socket.close();
   }
 
   @Override
   public String getRemoteAddressString() {
-    return socket.getRemoteSocketAddress().toString();
+    return "unix:" + socket.getPath();
   }
 
   @Override
   public String getLocalAddressString() {
-    return socket.getLocalSocketAddress().toString();
+    return "<local>";
   }
 
   @Override
@@ -116,16 +101,17 @@ class NioInetPeer implements Peer {
 
   @Override
   public boolean isLocal() {
-    return isLocal;
+    /* UNIX domain sockets can only be used for local communication. */
+    return true;
   }
 
   @Override
   public String toString() {
-    return "NioInetPeer(" + socket.toString() + ")";
+    return "DomainPeer(" + getRemoteAddressString() + ")";
   }
 
   @Override
   public DomainSocket getDomainSocket() {
-    return null;
+    return socket;
   }
 }

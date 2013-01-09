@@ -4,3 +4,6 @@ These will be integrated to trunk CHANGES.txt after merge
 
 HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
 (Colin Patrick McCabe via todd)
+
+HDFS-4354. Create DomainSocket and DomainPeer and associated unit tests.
+(Colin Patrick McCabe via todd)

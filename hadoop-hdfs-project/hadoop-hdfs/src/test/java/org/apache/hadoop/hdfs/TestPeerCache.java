@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.net.unix.DomainSocket;
 import org.junit.Test;
 
 public class TestPeerCache {
@@ -113,6 +114,11 @@ public class TestPeerCache {
     @Override
     public String toString() {
       return "FakePeer(dnId=" + dnId + ")";
+    }
+
+    @Override
+    public DomainSocket getDomainSocket() {
+      return null;
     }
   }
 

@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.net.unix.DomainSocket;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -132,5 +133,10 @@ public class EncryptedPeer implements Peer {
   @Override
   public String toString() {
     return "EncryptedPeer(" + enclosedPeer + ")";
+  }
+
+  @Override
+  public DomainSocket getDomainSocket() {
+    return enclosedPeer.getDomainSocket();
   }
 }

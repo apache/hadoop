@@ -23,6 +23,8 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.channels.ReadableByteChannel;
 
+import org.apache.hadoop.net.unix.DomainSocket;
+
 /**
  * Represents a peer that we communicate with by using a basic Socket
  * that has no associated Channel.
@@ -117,5 +119,10 @@ class BasicInetPeer implements Peer {
   @Override
   public String toString() {
     return "BasicInetPeer(" + socket.toString() + ")";
+  }
+
+  @Override
+  public DomainSocket getDomainSocket() {
+    return null;
   }
 }
