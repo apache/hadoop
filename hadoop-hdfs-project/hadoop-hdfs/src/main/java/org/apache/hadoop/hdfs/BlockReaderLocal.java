@@ -649,7 +649,7 @@ class BlockReaderLocal implements BlockReader {
   }
 
   @Override
-  public synchronized void close() throws IOException {
+  public synchronized void close(PeerCache peerCache) throws IOException {
     dataIn.close();
     if (checksumIn != null) {
       checksumIn.close();
@@ -674,20 +674,5 @@ class BlockReaderLocal implements BlockReader {
   @Override
   public void readFully(byte[] buf, int off, int len) throws IOException {
     BlockReaderUtil.readFully(this, buf, off, len);
-  }
-
-  @Override
-  public Socket takeSocket() {
-    return null;
-  }
-
-  @Override
-  public boolean hasSentStatusCode() {
-    return false;
-  }
-
-  @Override
-  public IOStreamPair getStreams() {
-    return null;
   }
 }

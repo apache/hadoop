@@ -24,6 +24,8 @@ import java.net.Socket;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
@@ -40,71 +42,50 @@ import org.apache.hadoop.security.token.Token;
 @InterfaceAudience.Private
 public class BlockReaderFactory {
   /**
-   * @see #newBlockReader(Conf, Socket, String, ExtendedBlock, Token, long, long, int, boolean, String)
-   */
-  public static BlockReader newBlockReader(
-      Configuration conf,
-      Socket sock, String file,
-      ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
-      long startOffset, long len, DataEncryptionKey encryptionKey)
-          throws IOException {
-    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
-        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
-    return newBlockReader(new Conf(conf),
-        sock, file, block, blockToken, startOffset,
-        len, bufferSize, true, "", encryptionKey, null);
-  }
-
-  /**
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
    * 
    * @param conf the DFSClient configuration
-   * @param sock  An established Socket to the DN. The BlockReader will not close it normally
    * @param file  File location
    * @param block  The block object
    * @param blockToken  The block token for security
    * @param startOffset  The read offset, relative to block head
-   * @param len  The number of bytes to read
+   * @param len  The number of bytes to read, or -1 to read as many as
+   *             possible.
    * @param bufferSize  The IO buffer size (not the client buffer size)
+   *                    Ignored except on the legacy BlockReader.
    * @param verifyChecksum  Whether to verify checksum
-   * @param clientName  Client name
+   * @param clientName  Client name.  Used for log messages.
+   * @param peer  The peer
+   * @param datanodeID  The datanode that the Peer is connected to
    * @return New BlockReader instance, or null on error.
    */
   @SuppressWarnings("deprecation")
   public static BlockReader newBlockReader(
-                                     Conf conf,
-                                     Socket sock, String file,
+                                     Configuration conf,
+                                     String file,
                                      ExtendedBlock block, 
                                      Token<BlockTokenIdentifier> blockToken,
                                      long startOffset, long len,
-                                     int bufferSize, boolean verifyChecksum,
+                                     boolean verifyChecksum,
                                      String clientName,
-                                     DataEncryptionKey encryptionKey,
-                                     IOStreamPair ioStreams)
+                                     Peer peer,
+                                     DatanodeID datanodeID)
                                      throws IOException {
-    
-    if (conf.useLegacyBlockReader) {
-      if (encryptionKey != null) {
-        throw new RuntimeException("Encryption is not supported with the legacy block reader.");
-      }
-      return RemoteBlockReader.newBlockReader(
-          sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);
+    peer.setReadTimeout(conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
+        HdfsServerConstants.READ_TIMEOUT));
+    peer.setWriteTimeout(HdfsServerConstants.WRITE_TIMEOUT);
+    if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER,
+        DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT)) {
+      return RemoteBlockReader.newBlockReader(file,
+          block, blockToken, startOffset, len,
+          conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
+              DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT),
+          verifyChecksum, clientName, peer, datanodeID);
     } else {
-      if (ioStreams == null) {
-        ioStreams = new IOStreamPair(NetUtils.getInputStream(sock),
-            NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT));
-        if (encryptionKey != null) {
-          IOStreamPair encryptedStreams =
-              DataTransferEncryptor.getEncryptedStreams(
-                  ioStreams.out, ioStreams.in, encryptionKey);
-          ioStreams = encryptedStreams;
-        }
-      }
-      
       return RemoteBlockReader2.newBlockReader(
-          sock, file, block, blockToken, startOffset, len, bufferSize,
-          verifyChecksum, clientName, encryptionKey, ioStreams);
+          file, block, blockToken, startOffset, len,
+          verifyChecksum, clientName, peer, datanodeID);
     }
   }
   

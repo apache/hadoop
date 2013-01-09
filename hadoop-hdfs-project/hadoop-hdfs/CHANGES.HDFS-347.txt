@@ -1,0 +1,6 @@
+CHANGES for HDFS-347 branch.
+These will be integrated to trunk CHANGES.txt after merge
+
+
+HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
+(Colin Patrick McCabe via todd)
