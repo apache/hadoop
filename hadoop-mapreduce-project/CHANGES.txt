@@ -12,6 +12,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4520. Added support for MapReduce applications to request for
     CPU cores along-with memory post YARN-2. (acmurthy)
 
+    MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
+    vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input
