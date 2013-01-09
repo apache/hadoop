@@ -604,7 +604,20 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
           reservedApplication.getApplicationId() + " on node: " + nm);
       
       LeafQueue queue = ((LeafQueue)reservedApplication.getQueue());
-      queue.assignContainers(clusterResource, node);
+      CSAssignment assignment = queue.assignContainers(clusterResource, node);
+      
+      RMContainer excessReservation = assignment.getExcessReservation();
+      if (excessReservation != null) {
+      Container container = excessReservation.getContainer();
+      queue.completedContainer(
+          clusterResource, assignment.getApplication(), node, 
+          excessReservation, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              container.getId(), 
+              SchedulerUtils.UNRESERVED_CONTAINER), 
+          RMContainerEventType.RELEASED);
+      }
+
     }
 
     // Try to schedule more if there are no reservations to fulfill

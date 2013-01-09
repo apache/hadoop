@@ -1181,12 +1181,14 @@ public class TestLeafQueue {
     // Now finish another container from app_0 and see the reservation cancelled
     a.completedContainer(clusterResource, app_0, node_0, 
         app_0.getLiveContainers().iterator().next(), null, RMContainerEventType.KILL);
-    a.assignContainers(clusterResource, node_0);
-    assertEquals(4*GB, a.getUsedResources().getMemory());
+    CSAssignment assignment = a.assignContainers(clusterResource, node_0);
+    assertEquals(8*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
-    assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
+    assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
     assertEquals(0*GB, node_0.getUsedResource().getMemory());
+    assertEquals(4*GB, 
+        assignment.getExcessReservation().getContainer().getResource().getMemory());
   }
   
   
