@@ -189,6 +189,7 @@ public class Balancer {
    * balancing purpose at a datanode
    */
   public static final int MAX_NUM_CONCURRENT_MOVES = 5;
+  public static final int MAX_NO_PENDING_BLOCK_INTERATIONS = 5;
   
   private static final String USAGE = "Usage: java "
       + Balancer.class.getSimpleName()
@@ -224,7 +225,6 @@ public class Balancer {
                  = new HashMap<String, BalancerDatanode>();
   
   private NetworkTopology cluster;
-  
   final static private int MOVER_THREAD_POOL_SIZE = 1000;
   final private ExecutorService moverExecutor = 
     Executors.newFixedThreadPool(MOVER_THREAD_POOL_SIZE);
@@ -752,6 +752,7 @@ public class Balancer {
       long startTime = Time.now();
       this.blocksToReceive = 2*scheduledSize;
       boolean isTimeUp = false;
+      int noPendingBlockIteration = 0;
       while(!isTimeUp && scheduledSize>0 &&
           (!srcBlockList.isEmpty() || blocksToReceive>0)) {
         PendingBlockMove pendingBlock = chooseNextBlockToMove();
@@ -775,7 +776,15 @@ public class Balancer {
             LOG.warn("Exception while getting block list", e);
             return;
           }
-        } 
+        } else {
+          // source node cannot find a pendingBlockToMove, iteration +1
+          noPendingBlockIteration++;
+          // in case no blocks can be moved for source node's task,
+          // jump out of while-loop after 5 iterations.
+          if (noPendingBlockIteration >= MAX_NO_PENDING_BLOCK_INTERATIONS) {
+            scheduledSize = 0;
+          }
+        }
         
         // check if time is up or not
         if (Time.now()-startTime > MAX_ITERATION_TIME) {
@@ -801,8 +810,8 @@ public class Balancer {
    */
   private static void checkReplicationPolicyCompatibility(Configuration conf
       ) throws UnsupportedActionException {
-    if (BlockPlacementPolicy.getInstance(conf, null, null) instanceof 
-        BlockPlacementPolicyDefault) {
+    if (!(BlockPlacementPolicy.getInstance(conf, null, null) instanceof 
+        BlockPlacementPolicyDefault)) {
       throw new UnsupportedActionException(
           "Balancer without BlockPlacementPolicyDefault");
     }
@@ -1085,7 +1094,6 @@ public class Balancer {
     }
   };
   private BytesMoved bytesMoved = new BytesMoved();
-  private int notChangedIterations = 0;
   
   /* Start a thread to dispatch block moves for each source. 
    * The thread selects blocks to move & sends request to proxy source to
@@ -1384,19 +1392,10 @@ public class Balancer {
        * available to move.
        * Exit no byte has been moved for 5 consecutive iterations.
        */
-      if (dispatchBlockMoves() > 0) {
-        notChangedIterations = 0;
-      } else {
-        notChangedIterations++;
-        if (notChangedIterations >= 5) {
-          System.out.println(
-              "No block has been moved for 5 iterations. Exiting...");
-          return ReturnStatus.NO_MOVE_PROGRESS;
-        }
+      if (!this.nnc.shouldContinue(dispatchBlockMoves())) {
+        return ReturnStatus.NO_MOVE_PROGRESS;
       }
 
-      // clean all lists
-      resetData(conf);
       return ReturnStatus.IN_PROGRESS;
     } catch (IllegalArgumentException e) {
       System.out.println(e + ".  Exiting ...");
@@ -1445,6 +1444,8 @@ public class Balancer {
         for(NameNodeConnector nnc : connectors) {
           final Balancer b = new Balancer(nnc, p, conf);
           final ReturnStatus r = b.run(iteration, formatter, conf);
+          // clean all lists
+          b.resetData(conf);
           if (r == ReturnStatus.IN_PROGRESS) {
             done = false;
           } else if (r != ReturnStatus.SUCCESS) {

@@ -294,6 +294,9 @@ Trunk (Unreleased)
     HDFS-4338. TestNameNodeMetrics#testCorruptBlock is flaky. (Andrew Wang via
     atm)
 
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
