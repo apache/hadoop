@@ -127,6 +127,10 @@ public interface MRJobConfig {
 
   public static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
 
+  public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
+
+  public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final String IO_SORT_MB = "mapreduce.task.io.sort.mb";

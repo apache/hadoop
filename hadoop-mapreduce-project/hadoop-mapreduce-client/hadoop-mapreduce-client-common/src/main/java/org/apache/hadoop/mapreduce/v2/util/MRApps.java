@@ -19,12 +19,18 @@
 package org.apache.hadoop.mapreduce.v2.util;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -62,6 +69,8 @@ import com.google.common.base.Charsets;
 @Private
 @Unstable
 public class MRApps extends Apps {
+  public static final Log LOG = LogFactory.getLog(MRApps.class);
+
   public static String toString(JobId jid) {
     return jid.toString();
   }
@@ -157,38 +166,42 @@ public class MRApps extends Apps {
     boolean userClassesTakesPrecedence = 
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
 
+    String classpathEnvVar = 
+      conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)
+        ? Environment.APP_CLASSPATH.name() : Environment.CLASSPATH.name();
+
     Apps.addToEnvironment(environment,
-      Environment.CLASSPATH.name(),
+      classpathEnvVar,
       Environment.PWD.$());
     if (!userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR);
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         MRJobConfig.JOB_JAR + Path.SEPARATOR + "classes" + Path.SEPARATOR);
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         MRJobConfig.JOB_JAR + Path.SEPARATOR + "lib" + Path.SEPARATOR + "*");
     Apps.addToEnvironment(
         environment,
-        Environment.CLASSPATH.name(),
+        classpathEnvVar,
         Environment.PWD.$() + Path.SEPARATOR + "*");
     // a * in the classpath will only find a .jar, so we need to filter out
     // all .jars and add everything else
     addToClasspathIfNotJar(DistributedCache.getFileClassPaths(conf),
         DistributedCache.getCacheFiles(conf),
         conf,
-        environment);
+        environment, classpathEnvVar);
     addToClasspathIfNotJar(DistributedCache.getArchiveClassPaths(conf),
         DistributedCache.getCacheArchives(conf),
         conf,
-        environment);
+        environment, classpathEnvVar);
     if (userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
@@ -204,7 +217,8 @@ public class MRApps extends Apps {
    */
   private static void addToClasspathIfNotJar(Path[] paths,
       URI[] withLinks, Configuration conf,
-      Map<String, String> environment) throws IOException {
+      Map<String, String> environment,
+      String classpathEnvVar) throws IOException {
     if (paths != null) {
       HashMap<Path, String> linkLookup = new HashMap<Path, String>();
       if (withLinks != null) {
@@ -232,10 +246,61 @@ public class MRApps extends Apps {
         if(!name.toLowerCase().endsWith(".jar")) {
           Apps.addToEnvironment(
               environment,
-              Environment.CLASSPATH.name(),
+              classpathEnvVar,
               Environment.PWD.$() + Path.SEPARATOR + name);
         }
       }
+    }
+  }
+
+  /**
+   * Sets a {@link ApplicationClassLoader} on the given configuration and as
+   * the context classloader, if
+   * {@link MRJobConfig#MAPREDUCE_JOB_CLASSLOADER} is set to true, and
+   * the APP_CLASSPATH environment variable is set.
+   * @param conf
+   * @throws IOException
+   */
+  public static void setJobClassLoader(Configuration conf)
+      throws IOException {
+    if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)) {
+      String appClasspath = System.getenv(Environment.APP_CLASSPATH.key());
+      if (appClasspath == null) {
+        LOG.warn("Not using job classloader since APP_CLASSPATH is not set.");
+      } else {
+        LOG.info("Using job classloader");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("APP_CLASSPATH=" + appClasspath);
+        }
+        String[] systemClasses = conf.getStrings(
+            MRJobConfig.MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES);
+        ClassLoader jobClassLoader = createJobClassLoader(appClasspath,
+            systemClasses);
+        if (jobClassLoader != null) {
+          conf.setClassLoader(jobClassLoader);
+          Thread.currentThread().setContextClassLoader(jobClassLoader);
+        }
+      }
+    }
+  }
+
+  private static ClassLoader createJobClassLoader(final String appClasspath,
+      final String[] systemClasses) throws IOException {
+    try {
+      return AccessController.doPrivileged(
+        new PrivilegedExceptionAction<ClassLoader>() {
+          @Override
+          public ClassLoader run() throws MalformedURLException {
+            return new ApplicationClassLoader(appClasspath,
+                MRApps.class.getClassLoader(), Arrays.asList(systemClasses));
+          }
+      });
+    } catch (PrivilegedActionException e) {
+      Throwable t = e.getCause();
+      if (t instanceof MalformedURLException) {
+        throw (MalformedURLException) t;
+      }
+      throw new IOException(e);
     }
   }
 
