@@ -884,25 +884,14 @@ public class PBHelper {
   // Located Block Arrays and Lists
   public static LocatedBlockProto[] convertLocatedBlock(LocatedBlock[] lb) {
     if (lb == null) return null;
-    final int len = lb.length;
-    LocatedBlockProto[] result = new LocatedBlockProto[len];
-    for (int i = 0; i < len; ++i) {
-      result[i] = PBHelper.convert(lb[i]);
-    }
-    return result;
+    return convertLocatedBlock2(Arrays.asList(lb)).toArray(
+        new LocatedBlockProto[lb.length]);
   }
   
   public static LocatedBlock[] convertLocatedBlock(LocatedBlockProto[] lb) {
     if (lb == null) return null;
-    final int len = lb.length;
-    LocatedBlock[] result = new LocatedBlock[len];
-    for (int i = 0; i < len; ++i) {
-      result[i] = new LocatedBlock(
-          PBHelper.convert(lb[i].getB()),
-          PBHelper.convert(lb[i].getLocsList()), 
-          lb[i].getOffset(), lb[i].getCorrupt());
-    }
-    return result;
+    return convertLocatedBlock(Arrays.asList(lb)).toArray(
+        new LocatedBlock[lb.length]);
   }
   
   public static List<LocatedBlock> convertLocatedBlock(

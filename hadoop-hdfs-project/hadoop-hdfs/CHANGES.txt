@@ -679,6 +679,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3970. Fix bug causing rollback of HDFS upgrade to result in bad
     VERSION file. (Vinay and Andrew Wang via atm)
 
+    HDFS-4306. PBHelper.convertLocatedBlock miss convert BlockToken. (Binglin
+    Chang via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
