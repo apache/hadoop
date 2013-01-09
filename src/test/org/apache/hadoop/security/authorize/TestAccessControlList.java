@@ -32,10 +32,9 @@ import junit.framework.TestCase;
 
 public class TestAccessControlList extends TestCase {
 
-  /**
-   * test the netgroups (groups in ACL rules that start with @),
-   */
-  public void testNetgroups() throws Exception {
+  private static Groups testGroups = null;
+
+  public void setUp() {
     // set the config for Groups (test mapping class)
     // we rely on hardcoded groups and netgroups in
     // ShellBasedUnixGroupsMappingTestWrapper
@@ -43,8 +42,18 @@ public class TestAccessControlList extends TestCase {
     conf.set("hadoop.security.group.mapping",
       "org.apache.hadoop.security.ShellBasedUnixGroupsNetgroupMappingTestWrapper");
 
-    Groups groups = Groups.getUserToGroupsMappingService(conf);
+    // Ensure that Groups.GROUPS is initialized first.
+    testGroups = Groups.getUserToGroupsMappingService(conf);
+  }
 
+  public void tearDown() {
+    testGroups = null;
+  }
+
+  /**
+   * test the netgroups (groups in ACL rules that start with @),
+   */
+  public void testNetgroups() throws Exception {
     AccessControlList acl;
 
     // create these ACLs to populate groups cache
@@ -53,12 +62,12 @@ public class TestAccessControlList extends TestCase {
     acl = new AccessControlList(" somegroups,@somenetgroup"); // no user
 
     // check that the netgroups are working
-    List<String> elvisGroups = groups.getGroups("elvis");
+    List<String> elvisGroups = testGroups.getGroups("elvis");
     assertTrue(elvisGroups.contains("@lasVegas"));
 
     // refresh cache - not testing this directly but if the results are ok
     // after the refresh that means it worked fine (very likely)
-    groups.refresh();
+    testGroups.refresh();
 
     // create an ACL with netgroups (@xxx)
     acl = new AccessControlList("ja ratpack,@lasVegas");

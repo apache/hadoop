@@ -76,6 +76,7 @@ public class TestJobHistoryConfig extends TestCase {
       if (mdfs != null) {
         try {
           mdfs.shutdown();
+          mdfs = null;
         } catch (Exception e) {
         }
       }
@@ -95,36 +96,43 @@ public class TestJobHistoryConfig extends TestCase {
   }
 
   public void testJobHistoryLogging() throws Exception {
-    JobConf conf = new JobConf();
-    setUpCluster(conf);
-    conf.setMapperClass(MapperClass.class);
-    conf.setReducerClass(IdentityReducer.class);
-    conf.setNumReduceTasks(0);
-    JobClient jc = new JobClient(conf);
-    conf.set("hadoop.job.history.location", "/hadoop/history");
-    conf = MiniMRCluster.configureJobConf(conf, namenode, 0, 0, null);
-    FileSystem inFs = inDir.getFileSystem(conf);
-    if (!inFs.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir.toString());
+    try {
+      JobConf conf = new JobConf();
+      setUpCluster(conf);
+      conf.setMapperClass(MapperClass.class);
+      conf.setReducerClass(IdentityReducer.class);
+      conf.setNumReduceTasks(0);
+      JobClient jc = new JobClient(conf);
+      conf.set("hadoop.job.history.location", "/hadoop/history");
+      conf = MiniMRCluster.configureJobConf(conf, namenode, 0, 0, null);
+      FileSystem inFs = inDir.getFileSystem(conf);
+      if (!inFs.mkdirs(inDir)) {
+        throw new IOException("Mkdirs failed to create " + inDir.toString());
+      }
+      FileInputFormat.setInputPaths(conf, inDir);
+      FileOutputFormat.setOutputPath(conf, outDir);
+      conf.setSpeculativeExecution(false);
+      conf.setJobName("test");
+      conf.setUser("testuser");
+      conf.setQueueName("default");
+      String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
+          "/tmp")).toString().replace(' ', '+');
+      String uniqid = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+      JobTracker jt = JobTracker.startTracker(conf, uniqid, true);
+      assertTrue(jt != null);
+      JobInProgress jip = new JobInProgress(new JobID("jt", 1),
+          new JobConf(conf), jt);
+      assertTrue(jip != null);
+      jip.jobFile = "testfile";
+      String historyFile = JobHistory.getHistoryFilePath(jip.getJobID());
+      JobHistory.JobInfo.logSubmitted(jip.getJobID(), jip.getJobConf(),
+          jip.jobFile, jip.startTime);
+    } finally {
+      if (mdfs != null) {
+        mdfs.shutdown();
+        mdfs = null;
+      }
     }
-    FileInputFormat.setInputPaths(conf, inDir);
-    FileOutputFormat.setOutputPath(conf, outDir);
-    conf.setSpeculativeExecution(false);
-    conf.setJobName("test");
-    conf.setUser("testuser");
-    conf.setQueueName("default");
-    String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
-        "/tmp")).toString().replace(' ', '+');
-    String uniqid = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
-    JobTracker jt = JobTracker.startTracker(conf, uniqid, true);
-    assertTrue(jt != null);
-    JobInProgress jip = new JobInProgress(new JobID("jt", 1),
-        new JobConf(conf), jt);
-    assertTrue(jip != null);
-    jip.jobFile = "testfile";
-    String historyFile = JobHistory.getHistoryFilePath(jip.getJobID());
-    JobHistory.JobInfo.logSubmitted(jip.getJobID(), jip.getJobConf(),
-        jip.jobFile, jip.startTime);
   }
 
   /**

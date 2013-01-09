@@ -410,6 +410,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4278. Cannot run two local jobs in parallel from the same
     gateway. (Sandy Ryza via tomwhite)
 
+    HADOOP-9191. TestAccessControlList and TestJobHistoryConfig fail with
+    JDK7. (Arpit Agarwal via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
