@@ -9,6 +9,9 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    MAPREDUCE-4520. Added support for MapReduce applications to request for
+    CPU cores along-with memory post YARN-2. (acmurthy)
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input

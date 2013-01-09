@@ -475,6 +475,22 @@
 </property>
 
 <property>
+  <name>mapreduce.map.cpu.vcores</name>
+  <value>1</value>
+  <description>
+      The number of virtual cores required for each map task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.cpu.vcores</name>
+  <value>1</value>
+  <description>
+      The number of virtual cores required for each reduce task.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.merge.inmem.threshold</name>
   <value>1000</value>
   <description>The threshold, in terms of the number of files 
@@ -1338,6 +1354,14 @@
   <name>yarn.app.mapreduce.am.resource.mb</name>
   <value>1536</value>
   <description>The amount of memory the MR AppMaster needs.</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.resource.cpu-vcores</name>
+  <value>1</value>
+  <description>
+      The number of virtual CPU cores the MR AppMaster needs.
+  </description>
 </property>
 
 <property>
