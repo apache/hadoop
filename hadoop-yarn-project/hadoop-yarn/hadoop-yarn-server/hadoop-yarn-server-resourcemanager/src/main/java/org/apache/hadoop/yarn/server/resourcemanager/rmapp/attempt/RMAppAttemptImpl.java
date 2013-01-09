@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -591,8 +592,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     try {
       int numUsedContainers = 0;
       int numReservedContainers = 0;
-      int reservedResources = 0;
-      int currentConsumption = 0;
+      Resource currentConsumption = Resources.createResource(0, 0);
+      Resource reservedResources = Resources.createResource(0, 0);
+      
       SchedulerAppReport schedApp = 
           scheduler.getSchedulerAppInfo(this.getAppAttemptId());
       Collection<RMContainer> liveContainers;
@@ -603,22 +605,21 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         if (liveContainers != null) {
           numUsedContainers = liveContainers.size();
           for (RMContainer lc : liveContainers) {
-            currentConsumption += lc.getContainer().getResource().getMemory();
+            Resources.addTo(currentConsumption, lc.getContainer().getResource());
           }
         }
         if (reservedContainers != null) {
           numReservedContainers = reservedContainers.size();
           for (RMContainer rc : reservedContainers) {
-            reservedResources += rc.getContainer().getResource().getMemory();
+            Resources.addTo(reservedResources, rc.getContainer().getResource());
           }
         }
       }
 
       return BuilderUtils.newApplicationResourceUsageReport(
           numUsedContainers, numReservedContainers,
-          Resources.createResource(currentConsumption),
-          Resources.createResource(reservedResources),
-          Resources.createResource(currentConsumption + reservedResources));
+          currentConsumption, reservedResources,
+          Resources.add(currentConsumption, reservedResources));
     } finally {
       this.readLock.unlock();
     }

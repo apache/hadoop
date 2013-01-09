@@ -29,10 +29,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 
 public class YarnConfiguration extends Configuration {
-  private static final Splitter ADDR_SPLITTER = Splitter.on(':').trimResults();
+
   private static final Joiner JOINER = Joiner.on("");
 
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
@@ -111,15 +110,21 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_SCHEDULER_ADDRESS = "0.0.0.0:" +
     DEFAULT_RM_SCHEDULER_PORT;
 
-  /** Miniumum memory request grant-able by the RM scheduler. */
+  /** Miniumum request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_MB =
     YARN_PREFIX + "scheduler.minimum-allocation-mb";
   public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB = 1024;
+  public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES =
+      YARN_PREFIX + "scheduler.minimum-allocation-vcores";
+    public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES = 1;
 
-  /** Maximum memory request grant-able by the RM scheduler. */
+  /** Maximum request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
     YARN_PREFIX + "scheduler.maximum-allocation-mb";
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB = 8192;
+  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_CORES =
+      YARN_PREFIX + "scheduler.maximum-allocation-vcores";
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_CORES = 32;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
@@ -408,9 +413,19 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
   public static final int DEFAULT_NM_PMEM_MB = 8 * 1024;
 
+  /** Conversion ratio for physical memory to virtual memory. */
   public static final String NM_VMEM_PMEM_RATIO =
     NM_PREFIX + "vmem-pmem-ratio";
   public static final float DEFAULT_NM_VMEM_PMEM_RATIO = 2.1f;
+  
+  /** Number of Physical CPU Cores which can be allocated for containers.*/
+  public static final String NM_VCORES = NM_PREFIX + "resource.cpu-cores";
+  public static final int DEFAULT_NM_VCORES = 8;
+
+  /** Conversion ratio for physical cores to virtual cores. */
+  public static final String NM_VCORES_PCORES_RATIO =
+      NM_PREFIX + "vcores-pcores-ratio";
+  public static final float DEFAULT_NM_VCORES_PCORES_RATIO = 2.0f;
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
@@ -675,4 +690,5 @@ public class YarnConfiguration extends Configuration {
   public static String getRMWebAppURL(Configuration conf) {
     return JOINER.join("http://", getRMWebAppHostAndPort(conf));
   }
+  
 }

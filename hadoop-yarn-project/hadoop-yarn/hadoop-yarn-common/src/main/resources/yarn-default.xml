@@ -189,7 +189,7 @@
   </property>
 
   <property>
-    <description>The minimum allocation size for every container request at the RM,
+    <description>The minimum allocation for every container request at the RM,
     in MBs. Memory requests lower than this won't take effect,
     and the specified value will get allocated at minimum.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
@@ -197,11 +197,27 @@
   </property>
 
   <property>
-    <description>The maximum allocation size for every container request at the RM,
+    <description>The maximum allocation for every container request at the RM,
     in MBs. Memory requests higher than this won't take effect,
     and will get capped to this value.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
     <value>8192</value>
+  </property>
+
+  <property>
+    <description>The minimum allocation for every container request at the RM,
+    in terms of virtual CPU cores. Requests lower than this won't take effect,
+    and the specified value will get allocated the minimum.</description>
+    <name>yarn.scheduler.minimum-allocation-vcores</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>The maximum allocation for every container request at the RM,
+    in terms of virtual CPU cores. Requests higher than this won't take effect,
+    and will get capped to this value.</description>
+    <name>yarn.scheduler.maximum-allocation-vcores</name>
+    <value>32</value>
   </property>
 
   <property>
@@ -404,7 +420,6 @@
     <value>logs</value>
   </property>
 
-
   <property>
     <description>Amount of physical memory, in MB, that can be allocated 
     for containers.</description>
@@ -420,6 +435,21 @@
     </description>
     <name>yarn.nodemanager.vmem-pmem-ratio</name>
     <value>2.1</value>
+  </property>
+
+  <property>
+    <description>Number of CPU cores that can be allocated 
+    for containers.</description>
+    <name>yarn.nodemanager.resource.cpu-cores</name>
+    <value>8</value>
+  </property>
+
+  <property>
+    <description>Ratio between virtual cores to physical cores when
+    allocating CPU resources to containers. 
+    </description>
+    <name>yarn.nodemanager.vcores-pcores-ratio</name>
+    <value>2</value>
   </property>
 
   <property>

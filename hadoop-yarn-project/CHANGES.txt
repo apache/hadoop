@@ -32,6 +32,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-286. Add a YARN ApplicationClassLoader. (tomwhite)
 
+    YARN-2. Enhanced CapacityScheduler to account for CPU alongwith memory for
+    multi-dimensional resource scheduling. (acmurthy)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.

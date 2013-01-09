@@ -24,10 +24,13 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 /**
  * Utilities shared by schedulers. 
@@ -81,32 +84,31 @@ public class SchedulerUtils {
   /**
    * Utility method to normalize a list of resource requests, by insuring that
    * the memory for each request is a multiple of minMemory and is not zero.
-   *
-   * @param asks
-   *          a list of resource requests.
-   * @param minMemory
-   *          the configured minimum memory allocation.
    */
-  public static void normalizeRequests(List<ResourceRequest> asks,
-      int minMemory) {
+  public static void normalizeRequests(
+      List<ResourceRequest> asks,
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource minimumResource) {
     for (ResourceRequest ask : asks) {
-      normalizeRequest(ask, minMemory);
+      normalizeRequest(
+          ask, resourceCalculator, clusterResource, minimumResource);
     }
   }
 
   /**
    * Utility method to normalize a resource request, by insuring that the
    * requested memory is a multiple of minMemory and is not zero.
-   *
-   * @param ask
-   *          the resource request.
-   * @param minMemory
-   *          the configured minimum memory allocation.
    */
-  public static void normalizeRequest(ResourceRequest ask, int minMemory) {
-    int memory = Math.max(ask.getCapability().getMemory(), minMemory);
-    ask.getCapability().setMemory(
-        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0)));
+  public static void normalizeRequest(
+      ResourceRequest ask, 
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource minimumResource) {
+    Resource normalized = 
+        Resources.normalize(
+            resourceCalculator, ask.getCapability(), minimumResource);
+    ask.setCapability(normalized);
   }
 
 }

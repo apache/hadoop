@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -637,6 +636,33 @@ public class FairScheduler implements ResourceScheduler {
         " cluster capacity: " + clusterCapacity);
   }
 
+  /**
+   * Utility method to normalize a list of resource requests, by ensuring that
+   * the memory for each request is a multiple of minMemory and is not zero.
+   *
+   * @param asks a list of resource requests
+   * @param minMemory the configured minimum memory allocation
+   */
+  static void normalizeRequests(List<ResourceRequest> asks,
+      int minMemory) {
+    for (ResourceRequest ask : asks) {
+      normalizeRequest(ask, minMemory);
+    }
+  }
+
+  /**
+   * Utility method to normalize a resource request, by ensuring that the
+   * requested memory is a multiple of minMemory and is not zero.
+   *
+   * @param ask the resource request
+   * @param minMemory the configured minimum memory allocation
+   */
+  static void normalizeRequest(ResourceRequest ask, int minMemory) {
+    int memory = Math.max(ask.getCapability().getMemory(), minMemory);
+    ask.getCapability().setMemory(
+        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0)));
+  }
+
   @Override
   public Allocation allocate(ApplicationAttemptId appAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release) {
@@ -650,7 +676,7 @@ public class FairScheduler implements ResourceScheduler {
     }
 
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, minimumAllocation.getMemory());
+    normalizeRequests(ask, minimumAllocation.getMemory());
 
     // Release containers
     for (ContainerId releasedContainerId : release) {

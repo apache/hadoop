@@ -574,7 +574,7 @@ public class TestContainer {
       when(ctxt.getUser()).thenReturn(this.user);
       when(ctxt.getContainerId()).thenReturn(cId);
 
-      Resource resource = BuilderUtils.newResource(1024);
+      Resource resource = BuilderUtils.newResource(1024, 1);
       when(ctxt.getResource()).thenReturn(resource);
 
       if (withLocalRes) {
