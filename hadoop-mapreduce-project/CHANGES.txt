@@ -85,6 +85,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4278. Cannot run two local jobs in parallel from the same
     gateway. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-1700. User supplied dependencies may conflict with MapReduce
+    system JARs. (tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
