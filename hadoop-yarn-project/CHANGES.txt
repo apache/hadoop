@@ -287,6 +287,9 @@ Release 0.23.6 - UNRELEASED
     YARN-50. Implement renewal / cancellation of Delegation Tokens
     (Siddharth Seth via tgraves)
 
+    YARN-320. RM should always be able to renew its own tokens. 
+    (Daryn Sharp via sseth)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
