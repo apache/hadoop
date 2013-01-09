@@ -334,3 +334,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     MAPREDUCE-4915. TestShuffleExceptionCount fails with open JDK7.
     (Brandon Li via suresh)
+
+    HADOOP-9191. TestAccessControlList and TestJobHistoryConfig fail with
+    JDK7. (Arpit Agarwal via suresh)
