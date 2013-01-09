@@ -1071,14 +1071,6 @@ abstract public class Task implements Writable, Configurable {
                             + JobStatus.State.FAILED + " or "
                             + JobStatus.State.KILLED);
     }
-    // delete the staging area for the job
-    JobConf conf = new JobConf(jobContext.getConfiguration());
-    if (!supportIsolationRunner(conf)) {
-      String jobTempDir = conf.get("mapreduce.job.dir");
-      Path jobTempDirPath = new Path(jobTempDir);
-      FileSystem fs = jobTempDirPath.getFileSystem(conf);
-      fs.delete(jobTempDirPath, true);
-    }
     done(umbilical, reporter);
   }
 

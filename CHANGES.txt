@@ -413,6 +413,9 @@ Release 1.2.0 - unreleased
     HADOOP-9191. TestAccessControlList and TestJobHistoryConfig fail with
     JDK7. (Arpit Agarwal via suresh)
 
+    MAPREDUCE-4850. Job recovery may fail if staging directory has been
+    deleted. (tomwhite)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

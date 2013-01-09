@@ -3250,7 +3250,17 @@ public class JobInProgress {
 
         Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
         CleanupQueue.getInstance().addToQueue(
-            new PathDeletionContext(tempDir, conf)); 
+            new PathDeletionContext(tempDir, conf));
+
+        // delete the staging area for the job
+        String jobTempDir = conf.get("mapreduce.job.dir");
+        if (jobTempDir != null && conf.getKeepTaskFilesPattern() == null &&
+            !conf.getKeepFailedTaskFiles()) {
+          Path jobTempDirPath = new Path(jobTempDir);
+          CleanupQueue.getInstance().addToQueue(
+              new PathDeletionContext(jobTempDirPath, conf, userUGI));
+        }
+
       } catch (IOException e) {
         LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
       }

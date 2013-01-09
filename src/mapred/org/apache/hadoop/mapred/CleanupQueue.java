@@ -56,10 +56,17 @@ public class CleanupQueue {
   static class PathDeletionContext {
     final Path fullPath;// full path of file or dir
     final Configuration conf;
+    final UserGroupInformation ugi;
 
     public PathDeletionContext(Path fullPath, Configuration conf) {
+      this(fullPath, conf, null);
+    }
+
+    public PathDeletionContext(Path fullPath, Configuration conf,
+        UserGroupInformation ugi) {
       this.fullPath = fullPath;
       this.conf = conf;
+      this.ugi = ugi;
     }
     
     protected Path getPathForCleanup() {
@@ -72,7 +79,7 @@ public class CleanupQueue {
      */
     protected void deletePath() throws IOException, InterruptedException {
       final Path p = getPathForCleanup();
-      UserGroupInformation.getLoginUser().doAs(
+      (ugi == null ? UserGroupInformation.getLoginUser() : ugi).doAs(
           new PrivilegedExceptionAction<Object>() {
             public Object run() throws IOException {
              p.getFileSystem(conf).delete(p, true);
