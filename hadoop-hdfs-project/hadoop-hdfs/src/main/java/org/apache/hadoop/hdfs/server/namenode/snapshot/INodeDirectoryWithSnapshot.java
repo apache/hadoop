@@ -40,7 +40,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   /**
    * The difference between the current state and a previous snapshot
    * of an INodeDirectory.
-   *
+   * 
+   * <pre>
    * Two lists are maintained in the algorithm:
    * - c-list for newly created inodes
    * - d-list for the deleted inodes
@@ -75,6 +76,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    *   2.3.1. modify i in current and then create: impossible
    *   2.3.2. modify i in current and then delete: remove it from c-list (0, d)
    *   2.3.3. modify i in current and then modify: replace it in c-list  (c, d)
+   * </pre>
    */
   static class Diff {
     /**
@@ -289,6 +291,85 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     List<INode> apply2Current(final List<INode> current) {
       return apply2Previous(current, deleted, created);
     }
+    
+    /**
+     * Combine the posterior diff with this diff. This function needs to called
+     * before the posterior diff is to be deleted. In general we have:
+     * 
+     * <pre>
+     * 1. For (c, 0) in the posterior diff, check the inode in this diff:
+     * 1.1 (c', 0) in this diff: impossible
+     * 1.2 (0, d') in this diff: put in created --> (c, d')
+     * 1.3 (c', d') in this diff: impossible
+     * 1.4 (0, 0) in this diff: put in created --> (c, 0)
+     * This is the same logic with {@link #create(INode)}.
+     * 
+     * 2. For (0, d) in the posterior diff,
+     * 2.1 (c', 0) in this diff: remove from old created --> (0, 0)
+     * 2.2 (0, d') in this diff: impossible
+     * 2.3 (c', d') in this diff: remove from old created --> (0, d')
+     * 2.4 (0, 0) in this diff: put in deleted --> (0, d)
+     * This is the same logic with {@link #delete(INode)}.
+     * 
+     * 3. For (c, d) in the posterior diff,
+     * 3.1 (c', 0) in this diff: replace old created --> (c, 0)
+     * 3.2 (0, d') in this diff: impossible
+     * 3.3 (c', d') in this diff: replace old created --> (c, d')
+     * 3.4 (0, 0) in this diff: put in created and deleted --> (c, d)
+     * This is the same logic with {@link #modify(INode, INode)}.
+     * </pre>
+     * 
+     * Note that after this function the postDiff will be deleted.
+     * 
+     * @param the posterior diff to combine
+     * @param collectedBlocks Used in case 2.3, 3.1, and 3.3 to collect 
+     *                        information for blocksMap update
+     */
+    void combinePostDiff(Diff postDiff, BlocksMapUpdateInfo collectedBlocks) {
+      while (postDiff.created != null && !postDiff.created.isEmpty()) {
+        INode node = postDiff.created.remove(postDiff.created.size() - 1);
+        int deletedIndex = search(postDiff.deleted, node);
+        if (deletedIndex < 0) {
+          // for case 1
+          create(node);
+        } else {
+          // case 3
+          int createdIndex = search(created, node);
+          if (createdIndex < 0) {
+            // 3.4
+            create(node);
+            insertDeleted(node, search(deleted, node));
+          } else {
+            // 3.1 and 3.3
+            created.set(createdIndex, node);
+            // for 3.1 and 3.3, if the node is an INodeFileWithLink, need to
+            // remove d in the posterior diff from the circular list, also do
+            // possible block deletion and blocksMap updating
+            INode dInPost = postDiff.deleted.get(deletedIndex);
+            if (dInPost instanceof INodeFileWithLink) {
+              // dInPost must be an INodeFileWithLink
+              ((INodeFileWithLink) dInPost)
+                  .collectSubtreeBlocksAndClear(collectedBlocks);
+            }
+          }
+          // also remove the inode from the deleted list
+          postDiff.deleted.remove(deletedIndex);
+        }
+      }
+      
+      while (postDiff.deleted != null && !postDiff.deleted.isEmpty()) {
+        // case 2
+        INode node = postDiff.deleted.remove(postDiff.deleted.size() - 1);
+        Triple<Integer, INode, Integer> triple = delete(node);
+        // for 2.3, if the node is an INodeFileWithLink, need to remove c' from
+        // the circular list
+        INode cInCurrent = triple.middle;
+        if (cInCurrent instanceof INodeFileWithLink) {
+          ((INodeFileWithLink) cInCurrent)
+              .collectSubtreeBlocksAndClear(collectedBlocks);
+        }
+      }
+    }
 
     /** Convert the inode list to a compact string. */
     static String toString(List<INode> inodes) {
@@ -480,6 +561,37 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       List<SnapshotDiff> diffs) {
     super(that, adopt, that.getNsQuota(), that.getDsQuota());
     this.diffs = diffs != null? diffs: new ArrayList<SnapshotDiff>();
+  }
+  
+  /**
+   * Delete the snapshot with the given name. The synchronization of the diff
+   * list will be done outside.
+   * 
+   * If the diff to remove is not the first one in the diff list, we need to 
+   * combine the diff with its previous one:
+   * 
+   * @param snapshot The snapshot to be deleted
+   * @param collectedBlocks Used to collect information for blocksMap update
+   * @return The SnapshotDiff containing the deleted snapshot. 
+   *         Null if the snapshot with the given name does not exist. 
+   */
+  SnapshotDiff deleteSnapshotDiff(Snapshot snapshot,
+      BlocksMapUpdateInfo collectedBlocks) {
+    int snapshotIndex = Collections.binarySearch(diffs, snapshot);
+    if (snapshotIndex == -1) {
+      return null;
+    } else {
+      SnapshotDiff diffToRemove = null;
+      diffToRemove = diffs.remove(snapshotIndex);
+      if (snapshotIndex > 0) {
+        // combine the to-be-removed diff with its previous diff
+        SnapshotDiff previousDiff = diffs.get(snapshotIndex - 1);
+        previousDiff.diff.combinePostDiff(diffToRemove.diff, collectedBlocks);
+        previousDiff.posteriorDiff = diffToRemove.posteriorDiff;
+        diffToRemove.posteriorDiff = null;
+      }
+      return diffToRemove;
+    }
   }
 
   /** Add a {@link SnapshotDiff} for the given snapshot and directory. */

@@ -105,14 +105,14 @@ public class TestNestedSnapshots {
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, s1name); 
     hdfs.allowSnapshot(foo.toString());
     print("allow snapshot " + foo);
-    hdfs.createSnapshot(s1name, foo.toString());
+    hdfs.createSnapshot(foo, s1name);
     print("create snapshot " + s1name);
 
     final String s2name = "bar-s2";
     final Path s2path = SnapshotTestHelper.getSnapshotRoot(bar, s2name); 
     hdfs.allowSnapshot(bar.toString());
     print("allow snapshot " + bar);
-    hdfs.createSnapshot(s2name, bar.toString());
+    hdfs.createSnapshot(bar, s2name);
     print("create snapshot " + s2name);
 
     final Path file2 = new Path(bar, "file2");
@@ -153,7 +153,7 @@ public class TestNestedSnapshots {
     int s = 0;
     for(; s < SNAPSHOT_LIMIT; s++) {
       final String snapshotName = "s" + s;
-      hdfs.createSnapshot(snapshotName, dirStr);
+      hdfs.createSnapshot(dir, snapshotName);
 
       //create a file occasionally 
       if (s % step == 0) {
@@ -163,7 +163,7 @@ public class TestNestedSnapshots {
     }
 
     try {
-      hdfs.createSnapshot("s" + s, dirStr);
+      hdfs.createSnapshot(dir, "s" + s);
       Assert.fail("Expected to fail to create snapshot, but didn't.");
     } catch(IOException ioe) {
       SnapshotTestHelper.LOG.info("The exception is expected.", ioe);

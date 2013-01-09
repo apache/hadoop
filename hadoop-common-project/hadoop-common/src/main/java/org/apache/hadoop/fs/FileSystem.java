@@ -2221,13 +2221,24 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Create a snapshot
-   * @param snapshotName The name of the snapshot
    * @param path The directory where snapshots will be taken.
+   * @param snapshotName The name of the snapshot
    */
-  public void createSnapshot(String snapshotName, String path)
+  public void createSnapshot(Path path, String snapshotName)
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support createSnapshot");
+  }
+  
+  /**
+   * Delete a snapshot of a directory
+   * @param path  The directory that the to-be-deleted snapshot belongs to
+   * @param snapshotName The name of the snapshot
+   */
+  public void deleteSnapshot(Path path, String snapshotName)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support deleteSnapshot");
   }
   
   // making it volatile to be able to do a double checked locking

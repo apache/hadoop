@@ -1908,13 +1908,28 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Create one snapshot.
    * 
-   * @see ClientProtocol#createSnapshot(String snapshotName, String
-   *      snapshotRoot)
+   * @param snapshotRoot The directory where the snapshot is to be taken
+   * @param snapshotName Name of the snapshot
+   * @see ClientProtocol#createSnapshot(String, String)
    */
-  public void createSnapshot(String snapshotName, String snapshotRoot)
+  public void createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkOpen();
-    namenode.createSnapshot(snapshotName, snapshotRoot);
+    namenode.createSnapshot(snapshotRoot, snapshotName);
+  }
+  
+  /**
+   * Delete a snapshot of a snapshottable directory.
+   * 
+   * @param snapshotRoot The snapshottable directory that the 
+   *                    to-be-deleted snapshot belongs to
+   * @param snapshotName The name of the to-be-deleted snapshot
+   * @throws IOException
+   * @see ClientProtocol#deleteSnapshot(String, String)
+   */
+  public void deleteSnapshot(String snapshotRoot, String snapshotName)
+      throws IOException {
+    namenode.deleteSnapshot(snapshotRoot, snapshotName);
   }
   
   /**

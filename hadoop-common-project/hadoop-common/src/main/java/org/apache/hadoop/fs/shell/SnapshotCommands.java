@@ -33,9 +33,11 @@ import org.apache.hadoop.fs.PathIsNotDirectoryException;
 
 class SnapshotCommands extends FsCommand {
   private final static String CREATE_SNAPSHOT = "createSnapshot";
+  private final static String DELETE_SNAPSHOT = "deleteSnapshot";
   
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(CreateSnapshot.class, "-" + CREATE_SNAPSHOT);
+    factory.addClass(DeleteSnapshot.class, "-" + DELETE_SNAPSHOT);
   }
   
   /**
@@ -74,9 +76,49 @@ class SnapshotCommands extends FsCommand {
       }
       assert(items.size() == 1);
       PathData sroot = items.getFirst();
-      String snapshotRoot = sroot.path.toString();
-      sroot.fs.createSnapshot(snapshotName, snapshotRoot);
+      sroot.fs.createSnapshot(sroot.path, snapshotName);
     }    
+  }
+
+  /**
+   * Delete a snapshot
+   */
+  public static class DeleteSnapshot extends FsCommand {
+    public static final String NAME = DELETE_SNAPSHOT;
+    public static final String USAGE = "<snapshotName> <snapshotDir>";
+    public static final String DESCRIPTION = 
+        "Delete a snapshot from a directory";
+
+    private static String snapshotName;
+
+    @Override
+    protected void processPath(PathData item) throws IOException {
+      if (!item.stat.isDirectory()) {
+        throw new PathIsNotDirectoryException(item.toString());
+      }
+    }
+
+    @Override
+    protected void processOptions(LinkedList<String> args) throws IOException {
+      if (args.size() != 2) {
+        throw new IOException("args number not 2: " + args.size());
+      }
+      snapshotName = args.removeFirst();
+      // TODO: name length check
+
+    }
+
+    @Override
+    protected void processArguments(LinkedList<PathData> items)
+        throws IOException {
+      super.processArguments(items);
+      if (exitCode != 0) { // check for error collecting paths
+        return;
+      }
+      assert (items.size() == 1);
+      PathData sroot = items.getFirst();
+      sroot.fs.deleteSnapshot(sroot.path, snapshotName);
+    }
   }
 }
 

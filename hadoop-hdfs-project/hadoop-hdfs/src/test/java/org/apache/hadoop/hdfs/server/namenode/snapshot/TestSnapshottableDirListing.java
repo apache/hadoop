@@ -107,8 +107,8 @@ public class TestSnapshottableDirListing {
     // Make dir2 snapshottable again
     hdfs.allowSnapshot(dir2.toString());
     // Create a snapshot for dir2
-    hdfs.createSnapshot("s1", dir2.toString());
-    hdfs.createSnapshot("s2", dir2.toString());
+    hdfs.createSnapshot(dir2, "s1");
+    hdfs.createSnapshot(dir2, "s2");
     dirs = hdfs.getSnapshottableDirListing();
     // There are now 2 snapshots for dir2
     assertEquals(dir2, dirs[1].getFullPath());

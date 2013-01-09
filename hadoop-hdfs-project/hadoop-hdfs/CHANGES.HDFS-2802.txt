@@ -95,3 +95,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4230. Support listing of all the snapshottable directories.  (Jing Zhao
   via szetszwo)
+
+  HDFS-4244. Support snapshot deletion.  (Jing Zhao via szetszwo)

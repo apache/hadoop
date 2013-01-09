@@ -452,8 +452,8 @@ message GetDataEncryptionKeyResponseProto {
 }
 
 message CreateSnapshotRequestProto {
-  required string snapshotName = 1;
-  required string snapshotRoot = 2;
+  required string snapshotRoot = 1;
+  required string snapshotName = 2;
 }
 
 message CreateSnapshotResponseProto { // void response
@@ -480,6 +480,14 @@ message DisallowSnapshotRequestProto {
 }
 
 message DisallowSnapshotResponseProto {
+}
+
+message DeleteSnapshotRequestProto {
+  required string snapshotRoot = 1;
+  required string snapshotName = 2;
+}
+
+message DeleteSnapshotResponseProto { // void response
 }
 
 service ClientNamenodeProtocol {
@@ -565,4 +573,6 @@ service ClientNamenodeProtocol {
       returns(DisallowSnapshotResponseProto);   
   rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
       returns(GetSnapshottableDirListingResponseProto);
+  rpc deleteSnapshot(DeleteSnapshotRequestProto)
+      returns(DeleteSnapshotResponseProto);     
 }

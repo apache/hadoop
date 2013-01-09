@@ -62,16 +62,16 @@ public class SnapshotTestHelper {
    * Create snapshot for a dir using a given snapshot name
    * 
    * @param hdfs DistributedFileSystem instance
-   * @param snapshottedDir The dir to be snapshotted
+   * @param snapshotRoot The dir to be snapshotted
    * @param snapshotName The name of the snapshot
    * @return The path of the snapshot root
    */
   public static Path createSnapshot(DistributedFileSystem hdfs,
-      Path snapshottedDir, String snapshotName) throws Exception {
-    assertTrue(hdfs.exists(snapshottedDir));
-    hdfs.allowSnapshot(snapshottedDir.toString());
-    hdfs.createSnapshot(snapshotName, snapshottedDir.toString());
-    return SnapshotTestHelper.getSnapshotRoot(snapshottedDir, snapshotName);
+      Path snapshotRoot, String snapshotName) throws Exception {
+    assertTrue(hdfs.exists(snapshotRoot));
+    hdfs.allowSnapshot(snapshotRoot.toString());
+    hdfs.createSnapshot(snapshotRoot, snapshotName);
+    return SnapshotTestHelper.getSnapshotRoot(snapshotRoot, snapshotName);
   }
 
   /**

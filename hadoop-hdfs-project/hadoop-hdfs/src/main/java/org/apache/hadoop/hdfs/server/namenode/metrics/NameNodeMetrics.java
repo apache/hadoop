@@ -63,6 +63,8 @@ public class NameNodeMetrics {
   MutableCounterLong disallowSnapshotOps;
   @Metric("Number of createSnapshot operations")
   MutableCounterLong createSnapshotOps;
+  @Metric("Number of deleteSnapshot operations")
+  MutableCounterLong deleteSnapshotOps;
   @Metric("Number of renameSnapshot operations")
   MutableCounterLong renameSnapshotOps;
   @Metric("Number of listSnapshottableDirectory operations")
@@ -179,6 +181,10 @@ public class NameNodeMetrics {
   
   public void incrCreateSnapshotOps() {
     createSnapshotOps.incr();
+  }
+  
+  public void incrDeleteSnapshotOps() {
+    deleteSnapshotOps.incr();
   }
   
   public void incrRenameSnapshotOps() {

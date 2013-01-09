@@ -5680,37 +5680,37 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /**
    * Create a snapshot
+   * @param snapshotRoot The directory path where the snapshot is taken
    * @param snapshotName The name of the snapshot
-   * @param path The directory path where the snapshot is taken
    */
-  public void createSnapshot(String snapshotName, String path)
+  public void createSnapshot(String snapshotRoot, String snapshotName)
       throws SafeModeException, IOException {
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
-        throw new SafeModeException("Cannot create snapshot for " + path,
-            safeMode);
+        throw new SafeModeException("Cannot create snapshot for "
+            + snapshotRoot, safeMode);
       }
-      checkOwner(path);
+      checkOwner(snapshotRoot);
 
       dir.writeLock();
       try {
-        snapshotManager.createSnapshot(snapshotName, path);
+        snapshotManager.createSnapshot(snapshotRoot, snapshotName);
       } finally {
         dir.writeUnlock();
       }
-      getEditLog().logCreateSnapshot(snapshotName, path);
+      getEditLog().logCreateSnapshot(snapshotRoot, snapshotName);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      Path snapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR + "/"
-          + snapshotName);
+      Path rootPath = new Path(snapshotRoot, HdfsConstants.DOT_SNAPSHOT_DIR
+          + Path.SEPARATOR + snapshotName);
       logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "createSnapshot", path, snapshotRoot.toString(), null);
+          "createSnapshot", snapshotRoot, rootPath.toString(), null);
     }
   }
   
@@ -5773,6 +5773,48 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return status;
     } finally {
       readUnlock();
+    }
+  }
+  
+  /**
+   * Delete a snapshot of a snapshottable directory
+   * @param snapshotRoot The snapshottable directory
+   * @param snapshotName The name of the to-be-deleted snapshot
+   * @throws SafeModeException
+   * @throws IOException
+   */
+  public void deleteSnapshot(String snapshotRoot, String snapshotName)
+      throws SafeModeException, IOException {
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      if (isInSafeMode()) {
+        throw new SafeModeException(
+            "Cannot delete snapshot for " + snapshotRoot, safeMode);
+      }
+      checkOwner(snapshotRoot);
+
+      BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+      dir.writeLock();
+      try {
+        snapshotManager.deleteSnapshot(snapshotRoot, snapshotName,
+            collectedBlocks);
+      } finally {
+        dir.writeUnlock();
+      }
+      this.removeBlocks(collectedBlocks);
+      collectedBlocks.clear();
+      getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName);
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+    
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      Path rootPath = new Path(snapshotRoot, HdfsConstants.DOT_SNAPSHOT_DIR
+          + Path.SEPARATOR + snapshotName);
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
+          "deleteSnapshot", rootPath.toString(), null, null);
     }
   }
 

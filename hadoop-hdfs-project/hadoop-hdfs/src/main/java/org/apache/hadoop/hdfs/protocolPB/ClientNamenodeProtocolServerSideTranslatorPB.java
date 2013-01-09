@@ -55,6 +55,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisallowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisallowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeRequestProto;
@@ -161,6 +163,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   final private ClientProtocol server;
   static final CreateSnapshotResponseProto VOID_CREATE_SNAPSHOT_RESPONSE =
       CreateSnapshotResponseProto.newBuilder().build();
+  static final DeleteSnapshotResponseProto VOID_DELETE_SNAPSHOT_RESPONSE =
+      DeleteSnapshotResponseProto.newBuilder().build();
   static final RenameSnapshotResponseProto VOID_RENAME_SNAPSHOT_RESPONSE =
       RenameSnapshotResponseProto.newBuilder().build();
   static final AllowSnapshotResponseProto VOID_ALLOW_SNAPSHOT_RESPONSE = 
@@ -868,14 +872,26 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public CreateSnapshotResponseProto createSnapshot(RpcController controller,
       CreateSnapshotRequestProto request) throws ServiceException {
     try {
-      server.createSnapshot(request.getSnapshotName(),
-          request.getSnapshotRoot());
+      server.createSnapshot(request.getSnapshotRoot(),
+          request.getSnapshotName());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
     return VOID_CREATE_SNAPSHOT_RESPONSE;
   }
 
+  @Override
+  public DeleteSnapshotResponseProto deleteSnapshot(RpcController controller,
+      DeleteSnapshotRequestProto request) throws ServiceException {
+    try {
+      server
+          .deleteSnapshot(request.getSnapshotRoot(), request.getSnapshotName());
+      return VOID_DELETE_SNAPSHOT_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
   @Override
   public AllowSnapshotResponseProto allowSnapshot(RpcController controller,
       AllowSnapshotRequestProto req) throws ServiceException {

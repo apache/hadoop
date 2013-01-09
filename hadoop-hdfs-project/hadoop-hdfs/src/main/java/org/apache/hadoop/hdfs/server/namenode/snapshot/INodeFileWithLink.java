@@ -82,7 +82,7 @@ public class INodeFileWithLink extends INodeFile {
    * any other inode, collect them and update the block list.
    */
   @Override
-  protected int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
+  public int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     if (next == this) {
       // this is the only remaining inode.
       super.collectSubtreeBlocksAndClear(info);

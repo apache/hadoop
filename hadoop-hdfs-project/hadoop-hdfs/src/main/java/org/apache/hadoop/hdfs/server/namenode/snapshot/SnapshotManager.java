@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 
@@ -100,17 +101,17 @@ public class SnapshotManager implements SnapshotStats {
 
   /**
    * Create a snapshot of the given path.
-   * @param snapshotName
-   *          The name of the snapshot.
    * @param path
    *          The directory path where the snapshot will be taken.
+   * @param snapshotName
+   *          The name of the snapshot.
    * @throws IOException
    *           Throw IOException when 1) the given path does not lead to an
    *           existing snapshottable directory, and/or 2) there exists a
    *           snapshot with the given name for the directory, and/or 3)
    *           snapshot number exceeds quota
    */
-  public void createSnapshot(final String snapshotName, final String path
+  public void createSnapshot(final String path, final String snapshotName
       ) throws IOException {
     // Find the source root directory path where the snapshot is taken.
     final INodesInPath i = fsdir.getMutableINodesInPath(path);
@@ -121,6 +122,27 @@ public class SnapshotManager implements SnapshotStats {
     //create success, update id
     snapshotID++;
     numSnapshots.getAndIncrement();
+  }
+  
+  /**
+   * Delete a snapshot for a snapshottable directory
+   * @param path Path to the directory where the snapshot was taken
+   * @param snapshotName Name of the snapshot to be deleted
+   * @param collectedBlocks Used to collect information to update blocksMap 
+   * @throws IOException
+   */
+  public void deleteSnapshot(final String path, final String snapshotName,
+      BlocksMapUpdateInfo collectedBlocks) throws IOException {
+    // parse the path, and check if the path is a snapshot path
+    INodesInPath inodesInPath = fsdir.getMutableINodesInPath(path.toString());
+    // transfer the inode for path to an INodeDirectorySnapshottable.
+    // the INodeDirectorySnapshottable#valueOf method will throw Exception 
+    // if the path is not for a snapshottable directory
+    INodeDirectorySnapshottable dir = INodeDirectorySnapshottable.valueOf(
+        inodesInPath.getLastINode(), path.toString());
+    
+    dir.removeSnapshot(snapshotName, collectedBlocks);
+    numSnapshots.getAndDecrement();
   }
 
   /**

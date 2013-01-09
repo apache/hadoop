@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -177,6 +178,48 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     s.getRoot().updateModificationTime(timestamp, null);
     updateModificationTime(timestamp, null);
     return s;
+  }
+  
+  /**
+   * Remove the snapshot with the given name from {@link #snapshotsByNames},
+   * and delete all the corresponding SnapshotDiff.
+   * 
+   * @param snapshotName The name of the snapshot to be removed
+   * @param collectedBlocks Used to collect information to update blocksMap
+   * @return The removed snapshot. Null if no snapshot with the given name 
+   *         exists.
+   */
+  Snapshot removeSnapshot(String snapshotName,
+      BlocksMapUpdateInfo collectedBlocks) throws SnapshotException {
+    final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
+    if (indexOfOld < 0) {
+      throw new SnapshotException("Cannot delete snapshot " + snapshotName
+          + " from path " + this.getFullPathName()
+          + ": the snapshot does not exist.");
+    } else {
+      Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
+      deleteDiffsForSnapshot(snapshot, this, collectedBlocks);
+      return snapshot;
+    }
+  }
+  
+  /**
+   * Recursively delete SnapshotDiff associated with the given snapshot under a
+   * directory
+   */
+  private void deleteDiffsForSnapshot(Snapshot snapshot, INodeDirectory dir,
+      BlocksMapUpdateInfo collectedBlocks) {
+    if (dir instanceof INodeDirectoryWithSnapshot) {
+      INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
+      sdir.deleteSnapshotDiff(snapshot, collectedBlocks);
+    }
+    ReadOnlyList<INode> children = dir.getChildrenList(null);
+    for (INode child : children) {
+      if (child instanceof INodeDirectory) {
+        deleteDiffsForSnapshot(snapshot, (INodeDirectory) child,
+            collectedBlocks);
+      }
+    }
   }
 
   /**

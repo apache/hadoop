@@ -17,13 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -55,7 +62,7 @@ public class TestSnapshotDeletion {
   public void setUp() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
-        .build();
+        .format(true).build();
     cluster.waitActive();
 
     fsn = cluster.getNamesystem();
@@ -81,7 +88,7 @@ public class TestSnapshotDeletion {
 
     // Allow snapshot for sub1, and create snapshot for it
     hdfs.allowSnapshot(sub1.toString());
-    hdfs.createSnapshot("s1", sub1.toString());
+    hdfs.createSnapshot(sub1, "s1");
 
     // Deleting a snapshottable dir with snapshots should fail
     exception.expect(RemoteException.class);
@@ -109,7 +116,7 @@ public class TestSnapshotDeletion {
 
     // Allow snapshot for subsub1, and create snapshot for it
     hdfs.allowSnapshot(subsub1.toString());
-    hdfs.createSnapshot("s1", subsub1.toString());
+    hdfs.createSnapshot(subsub1, "s1");
 
     // Deleting dir while its descedant subsub1 having snapshots should fail
     exception.expect(RemoteException.class);
@@ -119,4 +126,190 @@ public class TestSnapshotDeletion {
     exception.expectMessage(error);
     hdfs.delete(dir, true);
   }
+  
+  /**
+   * Test deleting the oldest (first) snapshot. We do not need to combine
+   * snapshot diffs in this simplest scenario.
+   */
+  @Test
+  public void testDeleteOldestSnapshot() throws Exception {
+    // create files under sub1
+    Path file0 = new Path(sub1, "file0");
+    Path file1 = new Path(sub1, "file1");
+    DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
+    
+    String snapshotName = "s1";
+    try {
+      hdfs.deleteSnapshot(sub1, snapshotName);
+      fail("SnapshotException expected: " + sub1.toString()
+          + " is not snapshottable yet");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          "Directory is not a snapshottable directory: " + sub1, e);
+    }
+    
+    // make sub1 snapshottable
+    hdfs.allowSnapshot(sub1.toString());
+    try {
+      hdfs.deleteSnapshot(sub1, snapshotName);
+      fail("SnapshotException expected: snapshot " + snapshotName
+          + " does not exist for " + sub1.toString());
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains("Cannot delete snapshot "
+          + snapshotName + " from path " + sub1.toString()
+          + ": the snapshot does not exist.", e);
+    }
+    
+    // create snapshot s1 for sub1
+    hdfs.createSnapshot(sub1, snapshotName);
+    // delete s1
+    hdfs.deleteSnapshot(sub1, snapshotName);
+    // now we can create a snapshot with the same name
+    hdfs.createSnapshot(sub1, snapshotName);
+    
+    // create a new file under sub1
+    Path newFile = new Path(sub1, "newFile");
+    DFSTestUtil.createFile(hdfs, newFile, BLOCKSIZE, REPLICATION, seed);
+    // create another snapshot s2
+    String snapshotName2 = "s2";
+    hdfs.createSnapshot(sub1, snapshotName2);
+    // Get the filestatus of sub1 under snapshot s2
+    Path ss = SnapshotTestHelper
+        .getSnapshotPath(sub1, snapshotName2, "newFile");
+    FileStatus statusBeforeDeletion = hdfs.getFileStatus(ss);
+    // delete s1
+    hdfs.deleteSnapshot(sub1, snapshotName);
+    FileStatus statusAfterDeletion = hdfs.getFileStatus(ss);
+    assertEquals(statusBeforeDeletion.toString(),
+        statusAfterDeletion.toString());
+  }
+  
+  /**
+   * Test deleting snapshots in a more complicated scenario: need to combine
+   * snapshot diffs, but no need to handle diffs distributed in a dir tree
+   */
+  @Test
+  public void testDeleteSnapshot1() throws Exception {
+    testDeleteSnapshot(sub1, "");
+  }
+  
+  /**
+   * Test deleting snapshots in more complicated scenarios (snapshot diffs are
+   * distributed in the directory sub-tree)
+   */
+  @Test
+  public void testDeleteSnapshot2() throws Exception {
+    testDeleteSnapshot(sub1, "subsub1/subsubsub1/");
+  }
+  
+  /**
+   * Test snapshot deletion
+   * @param snapshotRoot The dir where the snapshots are created
+   * @param modDirStr The snapshotRoot itself or one of its sub-directory, 
+   *        where the modifications happen. It is represented as a relative 
+   *        path to the snapshotRoot.
+   */
+  private void testDeleteSnapshot(Path snapshotRoot, String modDirStr)
+      throws Exception {
+    Path modDir = modDirStr.isEmpty() ? snapshotRoot : new Path(snapshotRoot,
+        modDirStr);
+    Path file10 = new Path(modDir, "file10");
+    Path file11 = new Path(modDir, "file11");
+    Path file12 = new Path(modDir, "file12");
+    Path file13 = new Path(modDir, "file13");
+    Path file14 = new Path(modDir, "file14");
+    Path file15 = new Path(modDir, "file15");
+    DFSTestUtil.createFile(hdfs, file10, BLOCKSIZE, (short) (REPLICATION - 1),
+        seed);
+    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, (short) (REPLICATION - 1),
+        seed);
+    DFSTestUtil.createFile(hdfs, file12, BLOCKSIZE, (short) (REPLICATION - 1),
+        seed);
+    DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, (short) (REPLICATION - 1),
+        seed);
+    // create snapshot s1 for snapshotRoot
+    hdfs.allowSnapshot(snapshotRoot.toString());
+    hdfs.createSnapshot(snapshotRoot, "s1");
+    
+    // delete file11
+    hdfs.delete(file11, true);
+    // modify file12
+    hdfs.setReplication(file12, REPLICATION);
+    // modify file13
+    hdfs.setReplication(file13, REPLICATION);
+    // create file14
+    DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, seed);
+    // create file15
+    DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, seed);
+    
+    // create snapshot s2 for snapshotRoot
+    hdfs.createSnapshot(snapshotRoot, "s2");
+    
+    // create file11 again: (0, d) + (c, 0)
+    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, seed);
+    // delete file12: (c, d) + (0, d)
+    hdfs.delete(file12, true);
+    // modify file13: (c, d) + (c, d)
+    hdfs.setReplication(file13, (short) (REPLICATION - 2));
+    // delete file14: (c, 0) + (0, d)
+    hdfs.delete(file14, true);
+    // modify file15: (c, 0) + (c, d)
+    hdfs.setReplication(file15, (short) (REPLICATION - 1));
+    
+    // create snapshot s3 for snapshotRoot
+    hdfs.createSnapshot(snapshotRoot, "s3");
+    // modify file10, to check if the posterior diff was set correctly
+    hdfs.setReplication(file10, (short) (REPLICATION - 1));
+    
+    Path file10_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
+        modDirStr + "file10");
+    Path file11_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
+        modDirStr + "file11");
+    Path file12_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
+        modDirStr + "file12");
+    Path file13_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
+        modDirStr + "file13");
+    FileStatus statusBeforeDeletion10 = hdfs.getFileStatus(file10_s1);
+    FileStatus statusBeforeDeletion11 = hdfs.getFileStatus(file11_s1);
+    FileStatus statusBeforeDeletion12 = hdfs.getFileStatus(file12_s1);
+    FileStatus statusBeforeDeletion13 = hdfs.getFileStatus(file13_s1);
+    
+    // delete s2, in which process we need to combine the diff in s2 to s1
+    hdfs.deleteSnapshot(snapshotRoot, "s2");
+    // check the correctness of s1
+    FileStatus statusAfterDeletion10 = hdfs.getFileStatus(file10_s1);
+    FileStatus statusAfterDeletion11 = hdfs.getFileStatus(file11_s1);
+    FileStatus statusAfterDeletion12 = hdfs.getFileStatus(file12_s1);
+    FileStatus statusAfterDeletion13 = hdfs.getFileStatus(file13_s1);
+    assertEquals(statusBeforeDeletion10.toString(),
+        statusAfterDeletion10.toString());
+    assertEquals(statusBeforeDeletion11.toString(),
+        statusAfterDeletion11.toString());
+    assertEquals(statusBeforeDeletion12.toString(),
+        statusAfterDeletion12.toString());
+    assertEquals(statusBeforeDeletion13.toString(),
+        statusAfterDeletion13.toString());
+    
+    // make sure file14 and file15 are not included in s1
+    Path file14_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
+        modDirStr + "file14");
+    assertFalse(hdfs.exists(file14_s1));
+    Path file15_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
+        modDirStr + "file15");
+    assertFalse(hdfs.exists(file15_s1));
+    
+    // call INodeFileWithLink#getBlockReplication, check the correctness of the
+    // circular list after snapshot deletion
+    INodeFile nodeFile13 = INodeFile.valueOf(
+        fsn.getFSDirectory().getINode(file13.toString()), file13.toString());
+    short blockReplicationFile13 = nodeFile13.getBlockReplication();
+    assertEquals(REPLICATION - 1, blockReplicationFile13);
+    INodeFile nodeFile12 = INodeFile.valueOf(
+        fsn.getFSDirectory().getINode(file12_s1.toString()),
+        file12_s1.toString());
+    short blockReplicationFile12 = nodeFile12.getBlockReplication();
+    assertEquals(REPLICATION - 1, blockReplicationFile12);
+  }
+  
 }
