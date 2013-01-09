@@ -275,9 +275,32 @@ public class FsPermission implements Writable {
     conf.setInt(DEPRECATED_UMASK_LABEL, umask.toShort());
   }
 
-  /** Get the default permission. */
+  /**
+   * Get the default permission for directory and symlink.
+   * In previous versions, this default permission was also used to
+   * create files, so files created end up with ugo+x permission.
+   * See HADOOP-9155 for detail. 
+   * Two new methods are added to solve this, please use 
+   * {@link FsPermission#getDirDefault()} for directory, and use
+   * {@link FsPermission#getFileDefault()} for file.
+   * This method is kept for compatibility.
+   */
   public static FsPermission getDefault() {
     return new FsPermission((short)00777);
+  }
+
+  /**
+   * Get the default permission for directory.
+   */
+  public static FsPermission getDirDefault() {
+    return new FsPermission((short)00777);
+  }
+
+  /**
+   * Get the default permission for file.
+   */
+  public static FsPermission getFileDefault() {
+    return new FsPermission((short)00666);
   }
 
   /**

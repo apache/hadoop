@@ -121,7 +121,7 @@ public class TestFileStatus {
     FileStatus fileStatus = new FileStatus(LENGTH, isdir,
         REPLICATION, BLKSIZE, MTIME, PATH);   
     validateAccessors(fileStatus, LENGTH, isdir, REPLICATION, BLKSIZE, MTIME,
-        0, FsPermission.getDefault(), "", "", null, PATH);
+        0, FsPermission.getDirDefault(), "", "", null, PATH);
   }
 
   /**
@@ -131,7 +131,7 @@ public class TestFileStatus {
   public void constructorBlank() throws IOException {
     FileStatus fileStatus = new FileStatus();  
     validateAccessors(fileStatus, 0, false, 0, 0, 0,
-        0, FsPermission.getDefault(), "", "", null, null);
+        0, FsPermission.getFileDefault(), "", "", null, null);
   }
 
   /**

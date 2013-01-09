@@ -172,7 +172,25 @@ import org.apache.hadoop.util.ShutdownHookManager;
 public final class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
+  /**
+   * Default permission for directory and symlink
+   * In previous versions, this default permission was also used to
+   * create files, so files created end up with ugo+x permission.
+   * See HADOOP-9155 for detail. 
+   * Two new constants are added to solve this, please use 
+   * {@link FileContext#DIR_DEFAULT_PERM} for directory, and use
+   * {@link FileContext#FILE_DEFAULT_PERM} for file.
+   * This constant is kept for compatibility.
+   */
   public static final FsPermission DEFAULT_PERM = FsPermission.getDefault();
+  /**
+   * Default permission for directory
+   */
+  public static final FsPermission DIR_DEFAULT_PERM = FsPermission.getDirDefault();
+  /**
+   * Default permission for file
+   */
+  public static final FsPermission FILE_DEFAULT_PERM = FsPermission.getFileDefault();
 
   /**
    * Priority of the FileContext shutdown hook.
@@ -656,7 +674,7 @@ public final class FileContext {
     CreateOpts.Perms permOpt = 
       (CreateOpts.Perms) CreateOpts.getOpt(CreateOpts.Perms.class, opts);
     FsPermission permission = (permOpt != null) ? permOpt.getValue() :
-                                      FsPermission.getDefault();
+                                      FILE_DEFAULT_PERM;
     permission = permission.applyUMask(umask);
 
     final CreateOpts[] updatedOpts = 
@@ -704,7 +722,7 @@ public final class FileContext {
       IOException {
     final Path absDir = fixRelativePart(dir);
     final FsPermission absFerms = (permission == null ? 
-          FsPermission.getDefault() : permission).applyUMask(umask);
+          FsPermission.getDirDefault() : permission).applyUMask(umask);
     new FSLinkResolver<Void>() {
       @Override
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -2157,7 +2175,7 @@ public final class FileContext {
       FileStatus fs = FileContext.this.getFileStatus(qSrc);
       if (fs.isDirectory()) {
         checkDependencies(qSrc, qDst);
-        mkdir(qDst, FsPermission.getDefault(), true);
+        mkdir(qDst, FsPermission.getDirDefault(), true);
         FileStatus[] contents = listStatus(qSrc);
         for (FileStatus content : contents) {
           copy(makeQualified(content.getPath()), makeQualified(new Path(qDst,
