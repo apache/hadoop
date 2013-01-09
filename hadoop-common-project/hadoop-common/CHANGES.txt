@@ -525,6 +525,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
     (Liang Xie via suresh)
 
+    HADOOP-9155. FsPermission should have different default value, 777 for
+    directory and 666 for file. (Binglin Chang via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

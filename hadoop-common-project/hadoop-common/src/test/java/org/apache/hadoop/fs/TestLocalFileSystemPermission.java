@@ -73,7 +73,7 @@ public class TestLocalFileSystemPermission extends TestCase {
     try {
       FsPermission initialPermission = getPermission(localfs, f);
       System.out.println(filename + ": " + initialPermission);
-      assertEquals(FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf)), initialPermission);
+      assertEquals(FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), initialPermission);
     }
     catch(Exception e) {
       System.out.println(StringUtils.stringifyException(e));
