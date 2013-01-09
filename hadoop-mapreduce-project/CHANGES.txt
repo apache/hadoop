@@ -685,6 +685,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4913. TestMRAppMaster#testMRAppMasterMissingStaging occasionally 
     exits (Jason Lowe via tgraves)
 
+    MAPREDUCE-4848. TaskAttemptContext cast error during AM recovery (Jerry
+    Chen via jlowe)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES

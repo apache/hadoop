@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -100,6 +101,7 @@ public class RecoveryService extends CompositeService implements Recovery {
 
   private final ApplicationAttemptId applicationAttemptId;
   private final OutputCommitter committer;
+  private final boolean newApiCommitter;
   private final Dispatcher dispatcher;
   private final ControlledClock clock;
 
@@ -113,10 +115,11 @@ public class RecoveryService extends CompositeService implements Recovery {
   private volatile boolean recoveryMode = false;
 
   public RecoveryService(ApplicationAttemptId applicationAttemptId, 
-      Clock clock, OutputCommitter committer) {
+      Clock clock, OutputCommitter committer, boolean newApiCommitter) {
     super("RecoveringDispatcher");
     this.applicationAttemptId = applicationAttemptId;
     this.committer = committer;
+    this.newApiCommitter = newApiCommitter;
     this.dispatcher = createRecoveryDispatcher();
     this.clock = new ControlledClock(clock);
       addService((Service) dispatcher);
@@ -360,8 +363,17 @@ public class RecoveryService extends CompositeService implements Recovery {
         switch (state) {
         case SUCCEEDED:
           //recover the task output
-          TaskAttemptContext taskContext = new TaskAttemptContextImpl(getConfig(),
-              attInfo.getAttemptId());
+          
+          // check the committer type and construct corresponding context
+          TaskAttemptContext taskContext = null;
+          if(newApiCommitter) {
+            taskContext = new TaskAttemptContextImpl(getConfig(),
+                attInfo.getAttemptId());
+          } else {
+            taskContext = new org.apache.hadoop.mapred.TaskAttemptContextImpl(new JobConf(getConfig()),
+                TypeConverter.fromYarn(aId));
+          }
+          
           try { 
             TaskType type = taskContext.getTaskAttemptID().getTaskID().getTaskType();
             int numReducers = taskContext.getConfiguration().getInt(MRJobConfig.NUM_REDUCES, 1); 
