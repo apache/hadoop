@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
@@ -39,150 +40,71 @@ import org.apache.hadoop.security.token.Token;
 @InterfaceAudience.Private
 public class BlockReaderFactory {
   /**
-   * Parameters for creating a BlockReader.
-   *
-   * Before you add something to here: think about whether it's already included
-   * in Conf (or should be).
+   * @see #newBlockReader(Conf, Socket, String, ExtendedBlock, Token, long, long, int, boolean, String)
    */
-  @InterfaceAudience.Private
-  public static class Params {
-    private final Conf conf;
-    private Socket socket = null;
-    private String file = null;
-    private ExtendedBlock block = null;
-    private Token<BlockTokenIdentifier> blockToken = null;
-    private long startOffset = 0;
-    private long len = -1;
-    private int bufferSize;
-    private boolean verifyChecksum = true;
-    private boolean shortCircuitLocalReads = false;
-    private String clientName = "";
-    private DataEncryptionKey encryptionKey = null;
-    private IOStreamPair ioStreamPair = null;
-
-    public Params(Conf conf) {
-      this.conf = conf;
-      this.bufferSize = conf.ioBufferSize;
-    }
-    public Conf getConf() {
-      return conf;
-    }
-    public Socket getSocket() {
-      return socket;
-    }
-    public Params setSocket(Socket socket) {
-      this.socket = socket;
-      return this;
-    }
-    public String getFile() {
-      return file;
-    }
-    public Params setFile(String file) {
-      this.file = file;
-      return this;
-    }
-    public ExtendedBlock getBlock() {
-      return block;
-    }
-    public Params setBlock(ExtendedBlock block) {
-      this.block = block;
-      return this;
-    }
-    public Token<BlockTokenIdentifier> getBlockToken() {
-      return blockToken;
-    }
-    public Params setBlockToken(Token<BlockTokenIdentifier> blockToken) {
-      this.blockToken = blockToken;
-      return this;
-    }
-    public long getStartOffset() {
-      return startOffset;
-    }
-    public Params setStartOffset(long startOffset) {
-      this.startOffset = startOffset;
-      return this;
-    }
-    public long getLen() {
-      return len;
-    }
-    public Params setLen(long len) {
-      this.len = len;
-      return this;
-    }
-    public int getBufferSize() {
-      return bufferSize;
-    }
-    public Params setBufferSize(int bufferSize) {
-      this.bufferSize = bufferSize;
-      return this;
-    }
-    public boolean getVerifyChecksum() {
-      return verifyChecksum;
-    }
-    public Params setVerifyChecksum(boolean verifyChecksum) {
-      this.verifyChecksum = verifyChecksum;
-      return this;
-    }
-    public boolean getShortCircuitLocalReads() {
-      return shortCircuitLocalReads;
-    }
-    public Params setShortCircuitLocalReads(boolean on) {
-      this.shortCircuitLocalReads = on;
-      return this;
-    }
-    public String getClientName() {
-      return clientName;
-    }
-    public Params setClientName(String clientName) {
-      this.clientName = clientName;
-      return this;
-    }
-    public Params setEncryptionKey(DataEncryptionKey encryptionKey) {
-      this.encryptionKey = encryptionKey;
-      return this;
-    }
-    public DataEncryptionKey getEncryptionKey() {
-      return encryptionKey;
-    }
-    public IOStreamPair getIoStreamPair() {
-      return ioStreamPair;
-    }
-    public Params setIoStreamPair(IOStreamPair ioStreamPair) {
-      this.ioStreamPair = ioStreamPair;
-      return this;
-    }
+  public static BlockReader newBlockReader(
+      Configuration conf,
+      Socket sock, String file,
+      ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
+      long startOffset, long len, DataEncryptionKey encryptionKey)
+          throws IOException {
+    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
+        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    return newBlockReader(new Conf(conf),
+        sock, file, block, blockToken, startOffset,
+        len, bufferSize, true, "", encryptionKey, null);
   }
 
   /**
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
    * 
-   * @param params            The parameters
-   *
-   * @return                  New BlockReader instance
-   * @throws IOException      If there was an error creating the BlockReader
+   * @param conf the DFSClient configuration
+   * @param sock  An established Socket to the DN. The BlockReader will not close it normally
+   * @param file  File location
+   * @param block  The block object
+   * @param blockToken  The block token for security
+   * @param startOffset  The read offset, relative to block head
+   * @param len  The number of bytes to read
+   * @param bufferSize  The IO buffer size (not the client buffer size)
+   * @param verifyChecksum  Whether to verify checksum
+   * @param clientName  Client name
+   * @return New BlockReader instance, or null on error.
    */
   @SuppressWarnings("deprecation")
-  public static BlockReader newBlockReader(Params params) throws IOException {
-    if (params.getConf().useLegacyBlockReader) {
-      if (params.getEncryptionKey() != null) {
+  public static BlockReader newBlockReader(
+                                     Conf conf,
+                                     Socket sock, String file,
+                                     ExtendedBlock block, 
+                                     Token<BlockTokenIdentifier> blockToken,
+                                     long startOffset, long len,
+                                     int bufferSize, boolean verifyChecksum,
+                                     String clientName,
+                                     DataEncryptionKey encryptionKey,
+                                     IOStreamPair ioStreams)
+                                     throws IOException {
+    
+    if (conf.useLegacyBlockReader) {
+      if (encryptionKey != null) {
         throw new RuntimeException("Encryption is not supported with the legacy block reader.");
       }
-      return RemoteBlockReader.newBlockReader(params);
+      return RemoteBlockReader.newBlockReader(
+          sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);
     } else {
-      Socket sock = params.getSocket();
-      if (params.getIoStreamPair() == null) {
-        params.setIoStreamPair(new IOStreamPair(NetUtils.getInputStream(sock),
-            NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT)));
-        if (params.getEncryptionKey() != null) {
+      if (ioStreams == null) {
+        ioStreams = new IOStreamPair(NetUtils.getInputStream(sock),
+            NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT));
+        if (encryptionKey != null) {
           IOStreamPair encryptedStreams =
               DataTransferEncryptor.getEncryptedStreams(
-                  params.getIoStreamPair().out, params.getIoStreamPair().in, 
-                  params.getEncryptionKey());
-          params.setIoStreamPair(encryptedStreams);
+                  ioStreams.out, ioStreams.in, encryptionKey);
+          ioStreams = encryptedStreams;
         }
       }
-      return RemoteBlockReader2.newBlockReader(params);
+      
+      return RemoteBlockReader2.newBlockReader(
+          sock, file, block, blockToken, startOffset, len, bufferSize,
+          verifyChecksum, clientName, encryptionKey, ioStreams);
     }
   }
   

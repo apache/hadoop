@@ -349,6 +349,13 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     checksumSize = this.checksum.getChecksumSize();
   }
 
+  public static RemoteBlockReader newBlockReader(Socket sock, String file,
+      ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
+      long startOffset, long len, int bufferSize) throws IOException {
+    return newBlockReader(sock, file, block, blockToken, startOffset,
+        len, bufferSize, true, "");
+  }
+
   /**
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
@@ -364,26 +371,29 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * @param clientName  Client name
    * @return New BlockReader instance, or null on error.
    */
-  public static RemoteBlockReader newBlockReader(BlockReaderFactory.Params params)
-        throws IOException {
+  public static RemoteBlockReader newBlockReader( Socket sock, String file,
+                                     ExtendedBlock block, 
+                                     Token<BlockTokenIdentifier> blockToken,
+                                     long startOffset, long len,
+                                     int bufferSize, boolean verifyChecksum,
+                                     String clientName)
+                                     throws IOException {
     // in and out will be closed when sock is closed (by the caller)
-    Socket sock = params.getSocket();
     final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
           NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT)));
-    new Sender(out).readBlock(params.getBlock(), params.getBlockToken(), 
-        params.getClientName(), params.getStartOffset(), params.getLen());
-
+    new Sender(out).readBlock(block, blockToken, clientName, startOffset, len);
+    
     //
     // Get bytes in block, set streams
     //
+
     DataInputStream in = new DataInputStream(
         new BufferedInputStream(NetUtils.getInputStream(sock), 
-            params.getBufferSize()));
-
+                                bufferSize));
+    
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         vintPrefixed(in));
-    RemoteBlockReader2.checkSuccess(status, sock, params.getBlock(),
-        params.getFile());
+    RemoteBlockReader2.checkSuccess(status, sock, block, file);
     ReadOpChecksumInfoProto checksumInfo =
       status.getReadOpChecksumInfo();
     DataChecksum checksum = DataTransferProtoUtil.fromProto(
@@ -393,16 +403,15 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     // Read the first chunk offset.
     long firstChunkOffset = checksumInfo.getChunkOffset();
     
-    if ( firstChunkOffset < 0 || firstChunkOffset > params.getStartOffset() ||
-        firstChunkOffset <= (params.getStartOffset() - checksum.getBytesPerChecksum())) {
+    if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
+        firstChunkOffset <= (startOffset - checksum.getBytesPerChecksum())) {
       throw new IOException("BlockReader: error in first chunk offset (" +
                             firstChunkOffset + ") startOffset is " + 
-                            params.getStartOffset() + " for file " + params.getFile());
+                            startOffset + " for file " + file);
     }
 
-    return new RemoteBlockReader(params.getFile(), params.getBlock().getBlockPoolId(), 
-        params.getBlock().getBlockId(), in, checksum, params.getVerifyChecksum(),
-        params.getStartOffset(), firstChunkOffset, params.getLen(), sock);
+    return new RemoteBlockReader(file, block.getBlockPoolId(), block.getBlockId(),
+        in, checksum, verifyChecksum, startOffset, firstChunkOffset, len, sock);
   }
 
   @Override
