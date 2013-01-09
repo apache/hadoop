@@ -760,11 +760,9 @@ public class LeafQueue implements CSQueue {
     if (reservedContainer != null) {
       SchedulerApp application = 
           getApplication(reservedContainer.getApplicationAttemptId());
-      return new CSAssignment(
+      return 
           assignReservedContainer(application, node, reservedContainer, 
-              clusterResource),
-          NodeType.NODE_LOCAL); // Don't care about locality constraints 
-                                // for reserved containers
+              clusterResource); 
     }
     
     // Try to assign containers to applications in order
@@ -850,20 +848,14 @@ public class LeafQueue implements CSQueue {
 
   }
 
-  private synchronized Resource assignReservedContainer(SchedulerApp application, 
-      SchedulerNode node, RMContainer rmContainer, Resource clusterResource) {
+  private synchronized CSAssignment assignReservedContainer(
+      SchedulerApp application, SchedulerNode node, RMContainer rmContainer, 
+      Resource clusterResource) {
     // Do we still need this reservation?
     Priority priority = rmContainer.getReservedPriority();
     if (application.getTotalRequiredResources(priority) == 0) {
       // Release
-      Container container = rmContainer.getContainer();
-      completedContainer(clusterResource, application, node, 
-          rmContainer, 
-          SchedulerUtils.createAbnormalContainerStatus(
-              container.getId(), 
-              SchedulerUtils.UNRESERVED_CONTAINER), 
-          RMContainerEventType.RELEASED);
-      return container.getResource(); // Ugh, return resource to force re-sort
+      return new CSAssignment(application, rmContainer);
     }
 
     // Try to assign if we have sufficient resources
@@ -872,7 +864,7 @@ public class LeafQueue implements CSQueue {
     
     // Doesn't matter... since it's already charged for at time of reservation
     // "re-reservation" is *free*
-    return org.apache.hadoop.yarn.server.resourcemanager.resource.Resource.NONE;
+    return new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
   }
 
   private synchronized boolean assignToQueue(Resource clusterResource, 
