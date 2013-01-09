@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -153,13 +152,13 @@ public class BlockReaderTestUtil {
 
     return BlockReaderFactory.newBlockReader(
         new BlockReaderFactory.Params(new Conf(conf)).
-          setPeer(TcpPeerServer.peerFromSocket(sock)).
+          setSocket(sock).
           setFile(targetAddr.toString() + ":" + block.getBlockId()).
           setBlock(block).setBlockToken(testBlock.getBlockToken()).
           setStartOffset(offset).setLen(lenToRead).
           setBufferSize(conf.getInt(
               CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096)).
-          setVerifyChecksum(true).setDatanodeID(nodes[0]));
+          setVerifyChecksum(true));
   }
 
   /**

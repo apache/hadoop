@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
-import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -93,13 +92,13 @@ public class TestDataTransferKeepalive {
     DFSTestUtil.createFile(fs, TEST_FILE, 1L, (short)1, 0L);
 
     // Clients that write aren't currently re-used.
-    assertEquals(0, dfsClient.peerCache.size());
+    assertEquals(0, dfsClient.socketCache.size());
     assertXceiverCount(0);
 
     // Reads the file, so we should get a
     // cached socket, and should have an xceiver on the other side.
     DFSTestUtil.readFile(fs, TEST_FILE);
-    assertEquals(1, dfsClient.peerCache.size());
+    assertEquals(1, dfsClient.socketCache.size());
     assertXceiverCount(1);
 
     // Sleep for a bit longer than the keepalive timeout
@@ -110,13 +109,13 @@ public class TestDataTransferKeepalive {
     // The socket is still in the cache, because we don't
     // notice that it's closed until we try to read
     // from it again.
-    assertEquals(1, dfsClient.peerCache.size());
+    assertEquals(1, dfsClient.socketCache.size());
     
     // Take it out of the cache - reading should
     // give an EOF.
-    Peer peer = dfsClient.peerCache.get(dn.getDatanodeId());
-    assertNotNull(peer);
-    assertEquals(-1, peer.getInputStream().read());
+    Socket s = dfsClient.socketCache.get(dnAddr).sock;
+    assertNotNull(s);
+    assertEquals(-1, NetUtils.getInputStream(s).read());
   }
 
   /**
@@ -175,14 +174,14 @@ public class TestDataTransferKeepalive {
     }
     
     DFSClient client = ((DistributedFileSystem)fs).dfs;
-    assertEquals(5, client.peerCache.size());
+    assertEquals(5, client.socketCache.size());
     
     // Let all the xceivers timeout
     Thread.sleep(1500);
     assertXceiverCount(0);
 
     // Client side still has the sockets cached
-    assertEquals(5, client.peerCache.size());
+    assertEquals(5, client.socketCache.size());
 
     // Reading should not throw an exception.
     DFSTestUtil.readFile(fs, TEST_FILE);

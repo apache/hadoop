@@ -61,7 +61,7 @@ public class TestClientBlockVerification {
         util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024));
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024, true);
     verify(reader).sendReadResult(Status.CHECKSUM_OK);
-    reader.close(null);
+    reader.close();
   }
 
   /**
@@ -76,7 +76,7 @@ public class TestClientBlockVerification {
     // We asked the blockreader for the whole file, and only read
     // half of it, so no CHECKSUM_OK
     verify(reader, never()).sendReadResult(Status.CHECKSUM_OK);
-    reader.close(null);
+    reader.close();
   }
 
   /**
@@ -92,7 +92,7 @@ public class TestClientBlockVerification {
     // And read half the file
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024 / 2, true);
     verify(reader).sendReadResult(Status.CHECKSUM_OK);
-    reader.close(null);
+    reader.close();
   }
 
   /**
@@ -111,7 +111,7 @@ public class TestClientBlockVerification {
             util.getBlockReader(testBlock, startOffset, length));
         util.readAndCheckEOS(reader, length, true);
         verify(reader).sendReadResult(Status.CHECKSUM_OK);
-        reader.close(null);
+        reader.close();
       }
     }
   }

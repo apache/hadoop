@@ -18,55 +18,69 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.Closeable;
+import java.net.Socket;
+import java.net.SocketAddress;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 /**
  * A cache of input stream sockets to Data Node.
  */
-class PeerCache {
-  private static final Log LOG = LogFactory.getLog(PeerCache.class);
-  
-  private static class Value {
-    private final Peer peer;
-    private final long time;
+class SocketCache {
+  private static final Log LOG = LogFactory.getLog(SocketCache.class);
 
-    Value(Peer peer, long time) {
-      this.peer = peer;
-      this.time = time;
+  @InterfaceAudience.Private
+  static class SocketAndStreams implements Closeable {
+    public final Socket sock;
+    public final IOStreamPair ioStreams;
+    long createTime;
+    
+    public SocketAndStreams(Socket s, IOStreamPair ioStreams) {
+      this.sock = s;
+      this.ioStreams = ioStreams;
+      this.createTime = Time.monotonicNow();
+    }
+    
+    @Override
+    public void close() {
+      if (ioStreams != null) { 
+        IOUtils.closeStream(ioStreams.in);
+        IOUtils.closeStream(ioStreams.out);
+      }
+      IOUtils.closeSocket(sock);
     }
 
-    Peer getPeer() {
-      return peer;
-    }
-
-    long getTime() {
-      return time;
+    public long getCreateTime() {
+      return this.createTime;
     }
   }
 
   private Daemon daemon;
   /** A map for per user per datanode. */
-  private static LinkedListMultimap<DatanodeID, Value> multimap =
+  private static LinkedListMultimap<SocketAddress, SocketAndStreams> multimap =
     LinkedListMultimap.create();
   private static int capacity;
   private static long expiryPeriod;
-  private static PeerCache instance = new PeerCache();
+  private static SocketCache scInstance = new SocketCache();
   private static boolean isInitedOnce = false;
  
-  public static synchronized PeerCache getInstance(int c, long e) {
+  public static synchronized SocketCache getInstance(int c, long e) {
     // capacity is only initialized once
     if (isInitedOnce == false) {
       capacity = c;
@@ -88,7 +102,7 @@ class PeerCache {
       }
     }
 
-    return instance;
+    return scInstance;
   }
 
   private boolean isDaemonStarted() {
@@ -105,45 +119,44 @@ class PeerCache {
       @Override
       public void run() {
         try {
-          PeerCache.this.run();
+          SocketCache.this.run();
         } catch(InterruptedException e) {
           //noop
         } finally {
-          PeerCache.this.clear();
+          SocketCache.this.clear();
         }
       }
 
       @Override
       public String toString() {
-        return String.valueOf(PeerCache.this);
+        return String.valueOf(SocketCache.this);
       }
     });
     daemon.start();
   }
 
   /**
-   * Get a cached peer connected to the given DataNode.
-   * @param dnId         The DataNode to get a Peer for.
-   * @return             An open Peer connected to the DN, or null if none
-   *                     was found. 
+   * Get a cached socket to the given address.
+   * @param remote  Remote address the socket is connected to.
+   * @return  A socket with unknown state, possibly closed underneath. Or null.
    */
-  public synchronized Peer get(DatanodeID dnId) {
+  public synchronized SocketAndStreams get(SocketAddress remote) {
 
     if (capacity <= 0) { // disabled
       return null;
     }
 
-    List<Value> sockStreamList = multimap.get(dnId);
+    List<SocketAndStreams> sockStreamList = multimap.get(remote);
     if (sockStreamList == null) {
       return null;
     }
 
-    Iterator<Value> iter = sockStreamList.iterator();
+    Iterator<SocketAndStreams> iter = sockStreamList.iterator();
     while (iter.hasNext()) {
-      Value candidate = iter.next();
+      SocketAndStreams candidate = iter.next();
       iter.remove();
-      if (!candidate.getPeer().isClosed()) {
-        return candidate.getPeer();
+      if (!candidate.sock.isClosed()) {
+        return candidate;
       }
     }
     return null;
@@ -153,22 +166,30 @@ class PeerCache {
    * Give an unused socket to the cache.
    * @param sock socket not used by anyone.
    */
-  public synchronized void put(DatanodeID dnId, Peer peer) {
-    Preconditions.checkNotNull(dnId);
-    Preconditions.checkNotNull(peer);
-    if (peer.isClosed()) return;
+  public synchronized void put(Socket sock, IOStreamPair ioStreams) {
+
+    Preconditions.checkNotNull(sock);
+    SocketAndStreams s = new SocketAndStreams(sock, ioStreams);
     if (capacity <= 0) {
       // Cache disabled.
-      IOUtils.cleanup(LOG, peer);
+      s.close();
       return;
     }
  
     startExpiryDaemon();
 
+    SocketAddress remoteAddr = sock.getRemoteSocketAddress();
+    if (remoteAddr == null) {
+      LOG.warn("Cannot cache (unconnected) socket with no remote address: " +
+               sock);
+      IOUtils.closeSocket(sock);
+      return;
+    }
+
     if (capacity == multimap.size()) {
       evictOldest();
     }
-    multimap.put(dnId, new Value(peer, Time.monotonicNow()));
+    multimap.put(remoteAddr, s);
   }
 
   public synchronized int size() {
@@ -180,17 +201,18 @@ class PeerCache {
    */
   private synchronized void evictExpired(long expiryPeriod) {
     while (multimap.size() != 0) {
-      Iterator<Entry<DatanodeID, Value>> iter =
+      Iterator<Entry<SocketAddress, SocketAndStreams>> iter =
         multimap.entries().iterator();
-      Entry<DatanodeID, Value> entry = iter.next();
+      Entry<SocketAddress, SocketAndStreams> entry = iter.next();
       // if oldest socket expired, remove it
       if (entry == null || 
-        Time.monotonicNow() - entry.getValue().getTime() <
+        Time.monotonicNow() - entry.getValue().getCreateTime() < 
         expiryPeriod) {
         break;
       }
-      IOUtils.cleanup(LOG, entry.getValue().getPeer());
       iter.remove();
+      SocketAndStreams s = entry.getValue();
+      s.close();
     }
   }
 
@@ -198,18 +220,16 @@ class PeerCache {
    * Evict the oldest entry in the cache.
    */
   private synchronized void evictOldest() {
-    // We can get the oldest element immediately, because of an interesting
-    // property of LinkedListMultimap: its iterator traverses entries in the
-    // order that they were added.
-    Iterator<Entry<DatanodeID, Value>> iter =
+    Iterator<Entry<SocketAddress, SocketAndStreams>> iter =
       multimap.entries().iterator();
     if (!iter.hasNext()) {
       throw new IllegalStateException("Cannot evict from empty cache! " +
         "capacity: " + capacity);
     }
-    Entry<DatanodeID, Value> entry = iter.next();
-    IOUtils.cleanup(LOG, entry.getValue().getPeer());
+    Entry<SocketAddress, SocketAndStreams> entry = iter.next();
     iter.remove();
+    SocketAndStreams s = entry.getValue();
+    s.close();
   }
 
   /**
@@ -233,10 +253,9 @@ class PeerCache {
   /**
    * Empty the cache, and close all sockets.
    */
-  @VisibleForTesting
-  synchronized void clear() {
-    for (Value value : multimap.values()) {
-      IOUtils.cleanup(LOG, value.getPeer());
+  private synchronized void clear() {
+    for (SocketAndStreams sockAndStream : multimap.values()) {
+      sockAndStream.close();
     }
     multimap.clear();
   }

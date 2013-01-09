@@ -18,20 +18,28 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
-import junit.framework.Assert;
+import java.net.Socket;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.token.Token;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
@@ -47,30 +55,58 @@ public class TestConnCache {
 
   static final int BLOCK_SIZE = 4096;
   static final int FILE_SIZE = 3 * BLOCK_SIZE;
+  final static int CACHE_SIZE = 4;
+  final static long CACHE_EXPIRY_MS = 200;
+  static Configuration conf = null;
+  static MiniDFSCluster cluster = null;
+  static FileSystem fs = null;
+  static SocketCache cache;
+
+  static final Path testFile = new Path("/testConnCache.dat");
+  static byte authenticData[] = null;
+
+  static BlockReaderTestUtil util = null;
+
 
   /**
    * A mock Answer to remember the BlockReader used.
    *
    * It verifies that all invocation to DFSInputStream.getBlockReader()
-   * use the same peer.
+   * use the same socket.
    */
   private class MockGetBlockReader implements Answer<RemoteBlockReader2> {
     public RemoteBlockReader2 reader = null;
-    private Peer peer = null;
+    private Socket sock = null;
 
     @Override
     public RemoteBlockReader2 answer(InvocationOnMock invocation) throws Throwable {
       RemoteBlockReader2 prevReader = reader;
       reader = (RemoteBlockReader2) invocation.callRealMethod();
-      if (peer == null) {
-        peer = reader.getPeer();
+      if (sock == null) {
+        sock = reader.dnSock;
       } else if (prevReader != null) {
-        Assert.assertSame("DFSInputStream should use the same peer",
-                   peer, reader.getPeer());
+        assertSame("DFSInputStream should use the same socket",
+                   sock, reader.dnSock);
       }
       return reader;
     }
   }
+
+  @BeforeClass
+  public static void setupCluster() throws Exception {
+    final int REPLICATION_FACTOR = 1;
+
+    /* create a socket cache. There is only one socket cache per jvm */
+    cache = SocketCache.getInstance(CACHE_SIZE, CACHE_EXPIRY_MS);
+
+    util = new BlockReaderTestUtil(REPLICATION_FACTOR);
+    cluster = util.getCluster();
+    conf = util.getConf();
+    fs = cluster.getFileSystem();
+
+    authenticData = util.writeFile(testFile, FILE_SIZE / 1024);
+  }
+
 
   /**
    * (Optionally) seek to position, read and verify data.
@@ -81,10 +117,9 @@ public class TestConnCache {
                      long pos,
                      byte[] buffer,
                      int offset,
-                     int length,
-                     byte[] authenticData)
+                     int length)
       throws IOException {
-    Assert.assertTrue("Test buffer too small", buffer.length >= offset + length);
+    assertTrue("Test buffer too small", buffer.length >= offset + length);
 
     if (pos >= 0)
       in.seek(pos);
@@ -94,7 +129,7 @@ public class TestConnCache {
 
     while (length > 0) {
       int cnt = in.read(buffer, offset, length);
-      Assert.assertTrue("Error in read", cnt > 0);
+      assertTrue("Error in read", cnt > 0);
       offset += cnt;
       length -= cnt;
     }
@@ -110,22 +145,115 @@ public class TestConnCache {
   }
 
   /**
+   * Test the SocketCache itself.
+   */
+  @Test
+  public void testSocketCache() throws Exception {
+    // Make a client
+    InetSocketAddress nnAddr =
+        new InetSocketAddress("localhost", cluster.getNameNodePort());
+    DFSClient client = new DFSClient(nnAddr, conf);
+
+    // Find out the DN addr
+    LocatedBlock block =
+        client.getNamenode().getBlockLocations(
+            testFile.toString(), 0, FILE_SIZE)
+        .getLocatedBlocks().get(0);
+    DataNode dn = util.getDataNode(block);
+    InetSocketAddress dnAddr = dn.getXferAddress();
+
+
+    // Make some sockets to the DN
+    Socket[] dnSockets = new Socket[CACHE_SIZE];
+    for (int i = 0; i < dnSockets.length; ++i) {
+      dnSockets[i] = client.socketFactory.createSocket(
+          dnAddr.getAddress(), dnAddr.getPort());
+    }
+
+
+    // Insert a socket to the NN
+    Socket nnSock = new Socket(nnAddr.getAddress(), nnAddr.getPort());
+    cache.put(nnSock, null);
+    assertSame("Read the write", nnSock, cache.get(nnAddr).sock);
+    cache.put(nnSock, null);
+
+    // Insert DN socks
+    for (Socket dnSock : dnSockets) {
+      cache.put(dnSock, null);
+    }
+
+    assertEquals("NN socket evicted", null, cache.get(nnAddr));
+    assertTrue("Evicted socket closed", nnSock.isClosed());
+ 
+    // Lookup the DN socks
+    for (Socket dnSock : dnSockets) {
+      assertEquals("Retrieve cached sockets", dnSock, cache.get(dnAddr).sock);
+      dnSock.close();
+    }
+
+    assertEquals("Cache is empty", 0, cache.size());
+  }
+
+
+  /**
+   * Test the SocketCache expiry.
+   * Verify that socket cache entries expire after the set
+   * expiry time.
+   */
+  @Test
+  public void testSocketCacheExpiry() throws Exception {
+    // Make a client
+    InetSocketAddress nnAddr =
+        new InetSocketAddress("localhost", cluster.getNameNodePort());
+    DFSClient client = new DFSClient(nnAddr, conf);
+
+    // Find out the DN addr
+    LocatedBlock block =
+        client.getNamenode().getBlockLocations(
+            testFile.toString(), 0, FILE_SIZE)
+        .getLocatedBlocks().get(0);
+    DataNode dn = util.getDataNode(block);
+    InetSocketAddress dnAddr = dn.getXferAddress();
+
+
+    // Make some sockets to the DN and put in cache
+    Socket[] dnSockets = new Socket[CACHE_SIZE];
+    for (int i = 0; i < dnSockets.length; ++i) {
+      dnSockets[i] = client.socketFactory.createSocket(
+          dnAddr.getAddress(), dnAddr.getPort());
+      cache.put(dnSockets[i], null);
+    }
+
+    // Client side still has the sockets cached
+    assertEquals(CACHE_SIZE, client.socketCache.size());
+
+    //sleep for a second and see if it expired
+    Thread.sleep(CACHE_EXPIRY_MS + 1000);
+    
+    // Client side has no sockets cached
+    assertEquals(0, client.socketCache.size());
+
+    //sleep for another second and see if 
+    //the daemon thread runs fine on empty cache
+    Thread.sleep(CACHE_EXPIRY_MS + 1000);
+  }
+
+
+  /**
    * Read a file served entirely from one DN. Seek around and read from
    * different offsets. And verify that they all use the same socket.
-   * @throws Exception 
+   *
+   * @throws java.io.IOException
    */
   @Test
   @SuppressWarnings("unchecked")
-  public void testReadFromOneDN() throws Exception {
-    BlockReaderTestUtil util = new BlockReaderTestUtil(1,
-        new HdfsConfiguration());
-    final Path testFile = new Path("/testConnCache.dat");
-    byte authenticData[] = util.writeFile(testFile, FILE_SIZE / 1024);
+  public void testReadFromOneDN() throws IOException {
+    LOG.info("Starting testReadFromOneDN()");
     DFSClient client = new DFSClient(
-        new InetSocketAddress("localhost",
-            util.getCluster().getNameNodePort()), util.getConf());
-    DFSInputStream in = Mockito.spy(client.open(testFile.toString()));
+        new InetSocketAddress("localhost", cluster.getNameNodePort()), conf);
+    DFSInputStream in = spy(client.open(testFile.toString()));
     LOG.info("opened " + testFile.toString());
+
     byte[] dataBuf = new byte[BLOCK_SIZE];
 
     MockGetBlockReader answer = new MockGetBlockReader();
@@ -142,15 +270,18 @@ public class TestConnCache {
                            Matchers.anyString());
 
     // Initial read
-    pread(in, 0, dataBuf, 0, dataBuf.length, authenticData);
+    pread(in, 0, dataBuf, 0, dataBuf.length);
     // Read again and verify that the socket is the same
-    pread(in, FILE_SIZE - dataBuf.length, dataBuf, 0, dataBuf.length,
-        authenticData);
-    pread(in, 1024, dataBuf, 0, dataBuf.length, authenticData);
-    // No seek; just read
-    pread(in, -1, dataBuf, 0, dataBuf.length, authenticData);
-    pread(in, 64, dataBuf, 0, dataBuf.length / 2, authenticData);
+    pread(in, FILE_SIZE - dataBuf.length, dataBuf, 0, dataBuf.length);
+    pread(in, 1024, dataBuf, 0, dataBuf.length);
+    pread(in, -1, dataBuf, 0, dataBuf.length);            // No seek; just read
+    pread(in, 64, dataBuf, 0, dataBuf.length / 2);
 
     in.close();
+  }
+
+  @AfterClass
+  public static void teardownCluster() throws Exception {
+    util.shutdown();
   }
 }

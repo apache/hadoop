@@ -191,7 +191,7 @@ public class DFSClient implements java.io.Closeable {
   final FileSystem.Statistics stats;
   final int hdfsTimeout;    // timeout value for a DFS operation.
   private final String authority;
-  final PeerCache peerCache;
+  final SocketCache socketCache;
   final Conf dfsClientConf;
   private Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
@@ -433,7 +433,7 @@ public class DFSClient implements java.io.Closeable {
       Joiner.on(',').join(localInterfaceAddrs) + "]");
     }
     
-    this.peerCache = PeerCache.getInstance(dfsClientConf.socketCacheCapacity, dfsClientConf.socketCacheExpiry);
+    this.socketCache = SocketCache.getInstance(dfsClientConf.socketCacheCapacity, dfsClientConf.socketCacheExpiry);
   }
 
   /**

@@ -46,8 +46,6 @@ import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -209,14 +207,12 @@ public class JspHelper {
     // Use the block name for file name. 
     BlockReader blockReader = BlockReaderFactory.newBlockReader(
         new BlockReaderFactory.Params(new Conf(conf)).
-          setPeer(TcpPeerServer.peerFromSocketAndKey(s, encryptionKey)).
+          setSocket(s).
           setBlockToken(blockToken).setStartOffset(offsetIntoBlock).
           setLen(amtToRead).
+          setEncryptionKey(encryptionKey).
           setFile(BlockReaderFactory.getFileName(addr, poolId, blockId)).
-          setBlock(new ExtendedBlock(poolId, blockId, 0, genStamp)).
-          setDatanodeID(new DatanodeID(addr.getAddress().toString(), 
-              addr.getHostName(), poolId, addr.getPort(), 0, 0)));
-    
+          setBlock(new ExtendedBlock(poolId, blockId, 0, genStamp)));
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
     int retries = 2;
@@ -234,7 +230,8 @@ public class JspHelper {
       amtToRead -= numRead;
       readOffset += numRead;
     }
-    blockReader.close(null);
+    blockReader = null;
+    s.close();
     out.print(HtmlQuoting.quoteHtmlChars(new String(buf)));
   }
 

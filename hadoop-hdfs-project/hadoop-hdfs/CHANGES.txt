@@ -180,9 +180,6 @@ Trunk (Unreleased)
     HDFS-4352. Encapsulate arguments to BlockReaderFactory in a class
     (Colin Patrick McCabe via todd)
 
-    HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes
-    (Colin Patrick McCabe via todd)
-
   OPTIMIZATIONS
 
   BUG FIXES

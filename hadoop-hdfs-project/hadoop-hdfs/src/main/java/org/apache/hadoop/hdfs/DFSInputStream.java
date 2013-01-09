@@ -32,15 +32,12 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.net.EncryptedPeer;
-import org.apache.hadoop.hdfs.net.Peer;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
+import org.apache.hadoop.hdfs.SocketCache.SocketAndStreams;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -49,7 +46,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.ipc.RPC;
@@ -64,7 +60,7 @@ import org.apache.hadoop.security.token.Token;
  ****************************************************************/
 @InterfaceAudience.Private
 public class DFSInputStream extends FSInputStream implements ByteBufferReadable {
-  private final PeerCache peerCache;
+  private final SocketCache socketCache;
 
   private final DFSClient dfsClient;
   private boolean closed = false;
@@ -114,7 +110,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     this.verifyChecksum = verifyChecksum;
     this.buffersize = buffersize;
     this.src = src;
-    this.peerCache = dfsClient.peerCache;
+    this.socketCache = dfsClient.socketCache;
     prefetchSize = dfsClient.getConf().prefetchSize;
     timeWindow = dfsClient.getConf().timeWindow;
     nCachedConnRetry = dfsClient.getConf().nCachedConnRetry;
@@ -428,7 +424,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
 
     // Will be getting a new BlockReader.
     if (blockReader != null) {
-      blockReader.close(peerCache);
+      closeBlockReader(blockReader);
       blockReader = null;
     }
 
@@ -510,7 +506,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     dfsClient.checkOpen();
 
     if (blockReader != null) {
-      blockReader.close(peerCache);
+      closeBlockReader(blockReader);
       blockReader = null;
     }
     super.close();
@@ -837,7 +833,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         }
       } finally {
         if (reader != null) {
-          reader.close(peerCache);
+          closeBlockReader(reader);
         }
       }
       // Put chosen node into dead list, continue
@@ -845,30 +841,16 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     }
   }
 
-  private Peer newPeer(InetSocketAddress addr) throws IOException {
-    Peer peer = null;
-    boolean success = false;
-    Socket sock = null;
-    try {
-      sock = dfsClient.socketFactory.createSocket();
-      NetUtils.connect(sock, addr,
-        dfsClient.getRandomLocalInterfaceAddr(),
-        dfsClient.getConf().socketTimeout);
-      peer = TcpPeerServer.peerFromSocket(sock);
-      
-      // Add encryption if configured.
-      DataEncryptionKey key = dfsClient.getDataEncryptionKey();
-      if (key != null) {
-        peer = new EncryptedPeer(peer, key);
-      }
-      success = true;
-      return peer;
-    } finally {
-      if (!success) {
-        IOUtils.closeQuietly(peer);
-        IOUtils.closeQuietly(sock);
-      }
+  /**
+   * Close the given BlockReader and cache its socket.
+   */
+  private void closeBlockReader(BlockReader reader) throws IOException {
+    if (reader.hasSentStatusCode()) {
+      IOStreamPair ioStreams = reader.getStreams();
+      Socket oldSock = reader.takeSocket();
+      socketCache.put(oldSock, ioStreams);
     }
+    reader.close();
   }
 
   /**
@@ -914,16 +896,40 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     // Allow retry since there is no way of knowing whether the cached socket
     // is good until we actually use it.
     for (int retries = 0; retries <= nCachedConnRetry && fromCache; ++retries) {
-      Peer peer = null;
+      SocketAndStreams sockAndStreams = null;
       // Don't use the cache on the last attempt - it's possible that there
       // are arbitrarily many unusable sockets in the cache, but we don't
       // want to fail the read.
       if (retries < nCachedConnRetry) {
-        peer = peerCache.get(chosenNode);
+        sockAndStreams = socketCache.get(dnAddr);
       }
-      if (peer == null) {
-        peer = newPeer(dnAddr);
+      Socket sock;
+      if (sockAndStreams == null) {
         fromCache = false;
+
+        sock = dfsClient.socketFactory.createSocket();
+        
+        // TCP_NODELAY is crucial here because of bad interactions between
+        // Nagle's Algorithm and Delayed ACKs. With connection keepalive
+        // between the client and DN, the conversation looks like:
+        //   1. Client -> DN: Read block X
+        //   2. DN -> Client: data for block X
+        //   3. Client -> DN: Status OK (successful read)
+        //   4. Client -> DN: Read block Y
+        // The fact that step #3 and #4 are both in the client->DN direction
+        // triggers Nagling. If the DN is using delayed ACKs, this results
+        // in a delay of 40ms or more.
+        //
+        // TCP_NODELAY disables nagling and thus avoids this performance
+        // disaster.
+        sock.setTcpNoDelay(true);
+
+        NetUtils.connect(sock, dnAddr,
+            dfsClient.getRandomLocalInterfaceAddr(),
+            dfsClient.getConf().socketTimeout);
+        sock.setSoTimeout(dfsClient.getConf().socketTimeout);
+      } else {
+        sock = sockAndStreams.sock;
       }
 
       try {
@@ -933,13 +939,19 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                 setFile(file).setBlock(block).setBlockToken(blockToken).
                 setStartOffset(startOffset).setLen(len).
                 setBufferSize(bufferSize).setVerifyChecksum(verifyChecksum).
-                setClientName(clientName).setDatanodeID(chosenNode).
-                setPeer(peer));
+                setClientName(clientName).
+                setEncryptionKey(dfsClient.getDataEncryptionKey()).
+                setIoStreamPair(sockAndStreams == null ? null : sockAndStreams.ioStreams).
+                setSocket(sock));
         return reader;
       } catch (IOException ex) {
         // Our socket is no good.
-        DFSClient.LOG.debug("Error making BlockReader. Closing stale " + peer, ex);
-        IOUtils.closeQuietly(peer);
+        DFSClient.LOG.debug("Error making BlockReader. Closing stale " + sock, ex);
+        if (sockAndStreams != null) {
+          sockAndStreams.close();
+        } else {
+          sock.close();
+        }
         err = ex;
       }
     }

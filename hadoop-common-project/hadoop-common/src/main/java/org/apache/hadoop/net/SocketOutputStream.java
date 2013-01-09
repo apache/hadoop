@@ -260,8 +260,4 @@ public class SocketOutputStream extends OutputStream
       throws IOException {
     transferToFully(fileCh, position, count, null, null);
   }
-
-  public void setTimeout(int timeoutMs) {
-    writer.setTimeout(timeoutMs);
-  }
 }

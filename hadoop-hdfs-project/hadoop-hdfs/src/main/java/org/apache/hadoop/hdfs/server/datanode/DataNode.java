@@ -90,7 +90,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -523,19 +522,24 @@ public class DataNode extends Configured
   
   private void initDataXceiver(Configuration conf) throws IOException {
     // find free port or use privileged port provided
-    TcpPeerServer tcpPeerServer;
-    if (secureResources != null) {
-      tcpPeerServer = new TcpPeerServer(secureResources);
+    ServerSocket ss;
+    if (secureResources == null) {
+      InetSocketAddress addr = DataNode.getStreamingAddr(conf);
+      ss = (dnConf.socketWriteTimeout > 0) ? 
+          ServerSocketChannel.open().socket() : new ServerSocket();
+          Server.bind(ss, addr, 0);
     } else {
-      tcpPeerServer = new TcpPeerServer(dnConf.socketWriteTimeout,
-          DataNode.getStreamingAddr(conf));
+      ss = secureResources.getStreamingSocket();
     }
-    tcpPeerServer.setReceiveBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
-    streamingAddr = tcpPeerServer.getStreamingAddr();
+    ss.setReceiveBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE); 
+
+    streamingAddr = new InetSocketAddress(ss.getInetAddress().getHostAddress(),
+                                     ss.getLocalPort());
+
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
     this.dataXceiverServer = new Daemon(threadGroup, 
-        new DataXceiverServer(tcpPeerServer, conf, this));
+        new DataXceiverServer(ss, conf, this));
     this.threadGroup.setDaemon(true); // auto destroy when empty
   }
   
