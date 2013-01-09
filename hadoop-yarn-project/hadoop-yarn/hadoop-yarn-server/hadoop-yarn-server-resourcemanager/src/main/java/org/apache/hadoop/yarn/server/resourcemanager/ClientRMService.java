@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.AccessControlException;
@@ -505,7 +507,7 @@ public class ClientRMService extends AbstractService implements
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
 
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      String user = getRenewerForToken(token);
       long nextExpTime = rmDTSecretManager.renewToken(token, user);
       RenewDelegationTokenResponse renewResponse = Records
           .newRecord(RenewDelegationTokenResponse.class);
@@ -529,7 +531,7 @@ public class ClientRMService extends AbstractService implements
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
 
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      String user = getRenewerForToken(token);
       rmDTSecretManager.cancelToken(token, user);
       return Records.newRecord(CancelDelegationTokenResponse.class);
     } catch (IOException e) {
@@ -537,6 +539,26 @@ public class ClientRMService extends AbstractService implements
     }
   }
 
+  private String getRenewerForToken(Token<?> token)
+      throws YarnRemoteException {
+    try {
+      UserGroupInformation user = UserGroupInformation.getCurrentUser();
+      UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+      String renewer = user.getShortUserName();
+      // we can always renew our own tokens
+      if (loginUser.getUserName().equals(user.getUserName())) {
+        DataInputStream in = new DataInputStream(
+            new ByteArrayInputStream(token.getIdentifier()));
+        RMDelegationTokenIdentifier id = rmDTSecretManager.createIdentifier();
+        id.readFields(in);
+        renewer = id.getRenewer().toString();
+      }
+      return renewer;
+    } catch (IOException e) {
+      throw RPCUtil.getRemoteException(e);
+    }
+  }
+  
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
     this.server.refreshServiceAcl(configuration, policyProvider);
