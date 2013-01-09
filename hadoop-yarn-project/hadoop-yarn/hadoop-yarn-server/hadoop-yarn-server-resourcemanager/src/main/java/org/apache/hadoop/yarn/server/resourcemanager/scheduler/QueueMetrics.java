@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
-import static org.apache.hadoop.yarn.server.resourcemanager.resource.Resources.multiply;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,6 +41,7 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -325,7 +325,7 @@ public class QueueMetrics implements MetricsSource {
     allocatedContainers.incr(containers);
     aggregateContainersAllocated.incr(containers);
     allocatedMB.incr(res.getMemory() * containers);
-    _decrPendingResources(containers, multiply(res, containers));
+    _decrPendingResources(containers, Resources.multiply(res, containers));
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.allocateResources(user, containers, res);

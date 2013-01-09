@@ -265,13 +265,13 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0), "*",
-        BuilderUtils.newResource(GB), 1));
+        BuilderUtils.newResource(GB, 1), 1));
     fs.allocate(appAttemptId1, ask1, emptyId);
 
     // Ask for a 2 GB container for app 2
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ask2.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0), "*",
-        BuilderUtils.newResource(2 * GB), 1));
+        BuilderUtils.newResource(2 * GB, 1), 1));
     fs.allocate(appAttemptId2, ask2, emptyId);
     
     // Trigger container assignment

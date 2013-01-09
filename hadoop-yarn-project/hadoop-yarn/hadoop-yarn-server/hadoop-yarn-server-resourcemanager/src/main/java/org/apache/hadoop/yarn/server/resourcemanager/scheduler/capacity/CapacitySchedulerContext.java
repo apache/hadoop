@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.util.Comparator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 
 /**
  * Read-only interface to {@link CapacityScheduler} context.
@@ -45,4 +49,10 @@ public interface CapacitySchedulerContext {
    * Get the yarn configuration.
    */
   Configuration getConf();
+
+  Comparator<FiCaSchedulerApp> getApplicationComparator();
+
+  ResourceCalculator getResourceCalculator();
+
+  Comparator<CSQueue> getQueueComparator();
 }

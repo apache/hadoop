@@ -71,9 +71,9 @@ public class TestFifoScheduler {
   
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int nmHttpPort,
-          String rackName, int memory) throws IOException {
+          String rackName, Resource capability) throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
-        hostName, containerManagerPort, nmHttpPort, rackName, memory,
+        hostName, containerManagerPort, nmHttpPort, rackName, capability,
         resourceManager.getResourceTrackerService(), resourceManager
             .getRMContext());
   }
@@ -121,13 +121,15 @@ public class TestFifoScheduler {
     // Register node1
     String host_0 = "host_0";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
-      registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 4 * GB);
+      registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(4 * GB, 1));
     nm_0.heartbeat();
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
-      registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 2 * GB);
+      registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(2 * GB, 1));
     nm_1.heartbeat();
 
     // ResourceRequest priorities

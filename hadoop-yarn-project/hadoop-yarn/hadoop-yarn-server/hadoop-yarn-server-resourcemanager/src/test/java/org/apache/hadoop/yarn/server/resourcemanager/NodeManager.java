@@ -77,14 +77,14 @@ public class NodeManager implements ContainerManager {
     new HashMap<ApplicationId, List<Container>>();
   
   public NodeManager(String hostName, int containerManagerPort, int httpPort,
-      String rackName, int memory,
+      String rackName, Resource capability,
       ResourceTrackerService resourceTrackerService, RMContext rmContext)
       throws IOException {
     this.containerManagerAddress = hostName + ":" + containerManagerPort;
     this.nodeHttpAddress = hostName + ":" + httpPort;
     this.rackName = rackName;
     this.resourceTrackerService = resourceTrackerService;
-    this.capability = Resources.createResource(memory);
+    this.capability = capability;
     Resources.addTo(available, capability);
 
     this.nodeId = recordFactory.newRecordInstance(NodeId.class);
@@ -102,8 +102,10 @@ public class NodeManager implements ContainerManager {
         this.nodeId));
    
     // Sanity check
-    Assert.assertEquals(memory, 
+    Assert.assertEquals(capability.getMemory(), 
        schedulerNode.getAvailableResource().getMemory());
+    Assert.assertEquals(capability.getVirtualCores(), 
+        schedulerNode.getAvailableResource().getVirtualCores());
   }
   
   public String getHostName() {

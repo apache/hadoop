@@ -26,11 +26,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class CapacitySchedulerConfiguration extends Configuration {
@@ -112,6 +115,13 @@ public class CapacitySchedulerConfiguration extends Configuration {
       PREFIX +"user-metrics.enable";
   @Private public static final boolean DEFAULT_ENABLE_USER_METRICS = false;
 
+  /** ResourceComparator for scheduling. */
+  @Private public static final String RESOURCE_CALCULATOR_CLASS =
+      PREFIX + "resource-calculator";
+
+  @Private public static final Class<? extends ResourceCalculator> 
+  DEFAULT_RESOURCE_CALCULATOR_CLASS = DefaultResourceCalculator.class;
+  
   @Private
   public static final String ROOT = "root";
 
@@ -289,14 +299,20 @@ public class CapacitySchedulerConfiguration extends Configuration {
     int minimumMemory = getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    return Resources.createResource(minimumMemory);
+    int minimumCores = getInt(
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+    return Resources.createResource(minimumMemory, minimumCores);
   }
 
   public Resource getMaximumAllocation() {
     int maximumMemory = getInt(
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-    return Resources.createResource(maximumMemory);
+    int maximumCores = getInt(
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_CORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_CORES);
+    return Resources.createResource(maximumMemory, maximumCores);
   }
 
   public boolean getEnableUserMetrics() {
@@ -306,5 +322,22 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public int getNodeLocalityDelay() {
     int delay = getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
     return (delay == DEFAULT_NODE_LOCALITY_DELAY) ? 0 : delay;
+  }
+  
+  public ResourceCalculator getResourceCalculator() {
+    return ReflectionUtils.newInstance(
+        getClass(
+            RESOURCE_CALCULATOR_CLASS, 
+            DEFAULT_RESOURCE_CALCULATOR_CLASS, 
+            ResourceCalculator.class), 
+        this);
+  }
+
+  public void setResourceComparator(
+      Class<? extends ResourceCalculator> resourceCalculatorClass) {
+    setClass(
+        RESOURCE_CALCULATOR_CLASS, 
+        resourceCalculatorClass, 
+        ResourceCalculator.class);
   }
 }

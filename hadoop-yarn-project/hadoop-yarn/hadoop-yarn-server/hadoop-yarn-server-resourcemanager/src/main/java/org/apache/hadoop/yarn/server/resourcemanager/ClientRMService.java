@@ -441,7 +441,7 @@ public class ClientRMService extends AbstractService implements
   private NodeReport createNodeReports(RMNode rmNode) {    
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
-    Resource used = BuilderUtils.newResource(0);
+    Resource used = BuilderUtils.newResource(0, 0);
     int numContainers = 0;
     if (schedulerNodeReport != null) {
       used = schedulerNodeReport.getUsedResource();

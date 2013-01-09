@@ -106,14 +106,37 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.heartBeatInterval =
         conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
             YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);
-    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
+    int memoryMb = 
+        conf.getInt(
+            YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
+    float vMemToPMem =             
+        conf.getFloat(
+            YarnConfiguration.NM_VMEM_PMEM_RATIO, 
+            YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO); 
+    int virtualMemoryMb = (int)Math.ceil(memoryMb * vMemToPMem);
+    
+    int cpuCores =
+        conf.getInt(
+            YarnConfiguration.NM_VCORES, YarnConfiguration.DEFAULT_NM_VCORES);
+    float vCoresToPCores =             
+        conf.getFloat(
+            YarnConfiguration.NM_VCORES_PCORES_RATIO, 
+            YarnConfiguration.DEFAULT_NM_VCORES_PCORES_RATIO); 
+    int virtualCores = (int)Math.ceil(cpuCores * vCoresToPCores); 
+
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
     this.totalResource.setMemory(memoryMb);
+    this.totalResource.setVirtualCores(virtualCores);
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
+    
+    LOG.info("Initialized nodemanager for " + nodeId + ":" +
+    		" physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
+    		" physical-cores=" + cpuCores + " virtual-cores=" + virtualCores);
+    
     super.init(conf);
   }
 

@@ -17,8 +17,17 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +47,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -53,6 +64,8 @@ public class TestApplicationLimits {
 
   LeafQueue queue;
   
+  private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
+  
   @Before
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
@@ -64,23 +77,27 @@ public class TestApplicationLimits {
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
-    when(csContext.getMinimumResourceCapability()).thenReturn(Resources.createResource(GB));
-    when(csContext.getMaximumResourceCapability()).thenReturn(Resources.createResource(16*GB));
-    when(csContext.getClusterResources()).thenReturn(Resources.createResource(10 * 16 * GB));
-    
+    when(csContext.getMinimumResourceCapability()).
+        thenReturn(Resources.createResource(GB, 1));
+    when(csContext.getMaximumResourceCapability()).
+        thenReturn(Resources.createResource(16*GB, 32));
+    when(csContext.getClusterResources()).
+        thenReturn(Resources.createResource(10 * 16 * GB, 10 * 32));
+    when(csContext.getApplicationComparator()).
+        thenReturn(CapacityScheduler.applicationComparator);
+    when(csContext.getQueueComparator()).
+        thenReturn(CapacityScheduler.queueComparator);
+    when(csContext.getResourceCalculator()).
+        thenReturn(resourceCalculator);
+
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
             queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator, 
             TestUtils.spyHook);
 
     
-    queue = spy(
-        new LeafQueue(csContext, A, root, 
-                      CapacityScheduler.applicationComparator, null)
-        );
+    queue = spy(new LeafQueue(csContext, A, root, null));
 
     // Stub out ACL checks
     doReturn(true).
@@ -132,21 +149,23 @@ public class TestApplicationLimits {
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
-        thenReturn(Resources.createResource(GB));
+        thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
-        thenReturn(Resources.createResource(16*GB));
+        thenReturn(Resources.createResource(16*GB, 16));
+    when(csContext.getApplicationComparator()).
+        thenReturn(CapacityScheduler.applicationComparator);
+    when(csContext.getQueueComparator()).
+        thenReturn(CapacityScheduler.queueComparator);
+    when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     
     // Say cluster has 100 nodes of 16G each
-    Resource clusterResource = Resources.createResource(100 * 16 * GB);
+    Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 16);
     when(csContext.getClusterResources()).thenReturn(clusterResource);
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
-            TestUtils.spyHook);
+            queues, queues, TestUtils.spyHook);
 
     LeafQueue queue = (LeafQueue)queues.get(A);
     
@@ -205,8 +224,12 @@ public class TestApplicationLimits {
         );
 
     // should return -1 if per queue setting not set
-    assertEquals((int)csConf.UNDEFINED, csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
-    int expectedMaxApps =  (int)(csConf.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * 
+    assertEquals(
+        (int)CapacitySchedulerConfiguration.UNDEFINED, 
+        csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+    int expectedMaxApps =  
+        (int)
+        (CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * 
         queue.getAbsoluteCapacity());
     assertEquals(expectedMaxApps, queue.getMaxApplications());
 
@@ -215,8 +238,11 @@ public class TestApplicationLimits {
     assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
 
     // should default to global setting if per queue setting not set
-    assertEquals((long) csConf.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT, 
-        (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(queue.getQueuePath()));
+    assertEquals(
+        (long)CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT, 
+        (long)csConf.getMaximumApplicationMasterResourcePerQueuePercent(
+            queue.getQueuePath())
+            );
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(
@@ -228,10 +254,7 @@ public class TestApplicationLimits {
     queues = new HashMap<String, CSQueue>();
     root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
-            TestUtils.spyHook);
+            queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
 
     queue = (LeafQueue)queues.get(A);
@@ -257,10 +280,7 @@ public class TestApplicationLimits {
     queues = new HashMap<String, CSQueue>();
     root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-            queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
-            TestUtils.spyHook);
+            queues, queues, TestUtils.spyHook);
 
     queue = (LeafQueue)queues.get(A);
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
@@ -445,6 +465,11 @@ public class TestApplicationLimits {
         thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB));
+    when(csContext.getApplicationComparator()).
+        thenReturn(CapacityScheduler.applicationComparator);
+    when(csContext.getQueueComparator()).
+        thenReturn(CapacityScheduler.queueComparator);
+    when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
@@ -452,10 +477,7 @@ public class TestApplicationLimits {
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
-        queues, queues, 
-        CapacityScheduler.queueComparator, 
-        CapacityScheduler.applicationComparator, 
-        TestUtils.spyHook);
+        queues, queues, TestUtils.spyHook);
 
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue)queues.get(A));
@@ -490,7 +512,7 @@ public class TestApplicationLimits {
 
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0);
-    Resource expectedHeadroom = Resources.createResource(10*16*GB);
+    Resource expectedHeadroom = Resources.createResource(10*16*GB, 1);
     verify(app_0_0).setHeadroom(eq(expectedHeadroom));
 
     // Submit second application from user_0, check headroom
@@ -528,7 +550,7 @@ public class TestApplicationLimits {
     
     // Schedule to compute 
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
-    expectedHeadroom = Resources.createResource(10*16*GB / 2); // changes
+    expectedHeadroom = Resources.createResource(10*16*GB / 2, 1); // changes
     verify(app_0_0).setHeadroom(eq(expectedHeadroom));
     verify(app_0_1).setHeadroom(eq(expectedHeadroom));
     verify(app_1_0).setHeadroom(eq(expectedHeadroom));
@@ -536,7 +558,7 @@ public class TestApplicationLimits {
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
-    expectedHeadroom = Resources.createResource(9*16*GB / 2); // changes
+    expectedHeadroom = Resources.createResource(9*16*GB / 2, 1); // changes
     verify(app_0_0).setHeadroom(eq(expectedHeadroom));
     verify(app_0_1).setHeadroom(eq(expectedHeadroom));
     verify(app_1_0).setHeadroom(eq(expectedHeadroom));

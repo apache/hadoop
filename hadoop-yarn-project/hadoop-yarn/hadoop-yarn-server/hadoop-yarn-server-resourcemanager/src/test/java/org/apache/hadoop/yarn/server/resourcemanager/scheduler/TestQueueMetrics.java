@@ -34,7 +34,6 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -67,7 +66,7 @@ public class TestQueueMetrics {
     MetricsSource userSource = userSource(ms, queueName, user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0);
 
-    metrics.setAvailableResourcesToQueue(Resource.createResource(100*GB));
+    metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB));
     metrics.incrPendingResources(user, 5, Resources.createResource(15*GB));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources

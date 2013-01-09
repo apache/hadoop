@@ -424,8 +424,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     assertEquals("absoluteUsedCapacity doesn't match",
         0, info.absoluteUsedCapacity, 1e-3f);
     assertEquals("numApplications doesn't match", 0, info.numApplications);
-    assertTrue("usedResources doesn't match",
-        info.usedResources.matches("memory: 0"));
+    assertTrue("usedResources doesn't match ",
+        info.usedResources.matches("<memory:0, vCores:0>"));
     assertTrue("queueName doesn't match, got: " + info.queueName
         + " expected: " + q, qshortName.matches(info.queueName));
     assertTrue("state doesn't match",

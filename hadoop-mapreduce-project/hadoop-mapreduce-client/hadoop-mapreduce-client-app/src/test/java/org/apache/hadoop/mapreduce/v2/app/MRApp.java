@@ -227,9 +227,9 @@ public class MRApp extends MRAppMaster {
           this.clusterInfo.getMaxContainerCapability());
     } else {
       getContext().getClusterInfo().setMinContainerCapability(
-          BuilderUtils.newResource(1024));
+          BuilderUtils.newResource(1024, 1));
       getContext().getClusterInfo().setMaxContainerCapability(
-          BuilderUtils.newResource(10240));
+          BuilderUtils.newResource(10240, 1));
     }
   }
 

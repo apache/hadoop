@@ -48,6 +48,7 @@ message ContainerIdProto {
 
 message ResourceProto {
   optional int32 memory = 1;
+  optional int32 virtual_cores = 2;
 }
 
 message PriorityProto {
