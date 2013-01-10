@@ -148,6 +148,8 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
+
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
     FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
