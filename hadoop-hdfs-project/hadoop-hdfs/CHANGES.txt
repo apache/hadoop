@@ -467,6 +467,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4035. LightWeightGSet and LightWeightHashSet increment a
     volatile without synchronization. (eli)
     
+    HDFS-4032. Specify the charset explicitly rather than rely on the
+    default. (eli)
+
     HDFS-4363. Combine PBHelper and HdfsProtoUtil and remove redundant
     methods. (suresh)
 

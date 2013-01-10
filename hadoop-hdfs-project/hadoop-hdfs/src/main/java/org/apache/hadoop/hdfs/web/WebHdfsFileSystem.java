@@ -105,6 +105,8 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelect
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.base.Charsets;
+
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable {
@@ -281,7 +283,7 @@ public class WebHdfsFileSystem extends FileSystem
             + "\" (parsed=\"" + parsed + "\")");
       }
     }
-    return (Map<?, ?>)JSON.parse(new InputStreamReader(in));
+    return (Map<?, ?>)JSON.parse(new InputStreamReader(in, Charsets.UTF_8));
   }
 
   private static Map<?, ?> validateResponse(final HttpOpParam.Op op,

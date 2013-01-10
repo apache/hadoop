@@ -70,6 +70,8 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
+import com.google.common.base.Charsets;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
 
@@ -229,7 +231,7 @@ public class JspHelper {
     }
     blockReader = null;
     s.close();
-    out.print(HtmlQuoting.quoteHtmlChars(new String(buf)));
+    out.print(HtmlQuoting.quoteHtmlChars(new String(buf, Charsets.UTF_8)));
   }
 
   public static void addTableHeader(JspWriter out) throws IOException {

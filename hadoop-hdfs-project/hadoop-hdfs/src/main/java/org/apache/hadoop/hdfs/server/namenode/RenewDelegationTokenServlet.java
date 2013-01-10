@@ -17,7 +17,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
@@ -31,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+
+import com.google.common.base.Charsets;
 
 /**
  * Renew delegation tokens over http for use in hftp.
@@ -73,7 +76,8 @@ public class RenewDelegationTokenServlet extends DfsServlet {
           return nn.getRpcServer().renewDelegationToken(token);
         }
       });
-      PrintStream os = new PrintStream(resp.getOutputStream());
+      final PrintWriter os = new PrintWriter(new OutputStreamWriter(
+          resp.getOutputStream(), Charsets.UTF_8));
       os.println(result);
       os.close();
     } catch(Exception e) {
