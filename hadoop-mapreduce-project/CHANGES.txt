@@ -39,6 +39,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4920. Use security token protobuf definition from hadoop common.
     (Suresh Srinivas via vinodkv)
 
+    MAPREDUCE-4907. TrackerDistributedCacheManager issues too many getFileStatus
+    calls. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
