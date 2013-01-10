@@ -839,10 +839,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDataEncryptionKeyRequestProto request)
       throws ServiceException {
     try {
+      GetDataEncryptionKeyResponseProto.Builder builder = 
+          GetDataEncryptionKeyResponseProto.newBuilder();
       DataEncryptionKey encryptionKey = server.getDataEncryptionKey();
-      return GetDataEncryptionKeyResponseProto.newBuilder()
-          .setDataEncryptionKey(PBHelper.convert(encryptionKey))
-          .build();
+      if (encryptionKey != null) {
+        builder.setDataEncryptionKey(PBHelper.convert(encryptionKey));
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
