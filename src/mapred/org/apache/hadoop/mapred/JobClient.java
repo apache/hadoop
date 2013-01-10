@@ -827,10 +827,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
     // First we check whether the cached archives and files are legal.
     TrackerDistributedCacheManager.validate(job);
-    //  set the timestamps of the archives and files
-    TrackerDistributedCacheManager.determineTimestamps(job);
-    //  set the public/private visibility of the archives and files
-    TrackerDistributedCacheManager.determineCacheVisibilities(job);
+    //  set the timestamps of the archives and files and set the
+    //  public/private visibility of the archives and files
+    TrackerDistributedCacheManager.determineTimestampsAndCacheVisibilities(job);
     // get DelegationTokens for cache files
     TrackerDistributedCacheManager.getDelegationTokens(job, 
                                                        job.getCredentials());

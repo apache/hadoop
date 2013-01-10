@@ -154,6 +154,9 @@ Release 1.2.0 - unreleased
     HDFS-4320. Add a separate configuration for namenode rpc address instead
     of using fs.default.name. (Mostafa Elhemali via suresh)
 
+    MAPREDUCE-4907. TrackerDistributedCacheManager issues too many 
+    getFileStatus calls. (sandyr via tucu)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

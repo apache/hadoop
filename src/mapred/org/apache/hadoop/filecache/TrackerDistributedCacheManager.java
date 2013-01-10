@@ -320,14 +320,15 @@ public class TrackerDistributedCacheManager {
    * @return true if the path in the uri is visible to all, false otherwise
    * @throws IOException
    */
-  static boolean isPublic(Configuration conf, URI uri) throws IOException {
+  static boolean isPublic(Configuration conf, URI uri,
+      Map<URI, FileStatus> statCache) throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
     Path current = new Path(uri.getPath());
     //the leaf level file should be readable by others
-    if (!checkPermissionOfOther(fs, current, FsAction.READ)) {
+    if (!checkPermissionOfOther(fs, current, FsAction.READ, statCache)) {
       return false;
     }
-    return ancestorsHaveExecutePermissions(fs, current.getParent());
+    return ancestorsHaveExecutePermissions(fs, current.getParent(), statCache);
   }
 
   /**
@@ -335,12 +336,12 @@ public class TrackerDistributedCacheManager {
    * permission set for all users (i.e. that other users can traverse
    * the directory heirarchy to the given path)
    */
-  static boolean ancestorsHaveExecutePermissions(FileSystem fs, Path path)
-    throws IOException {
+  static boolean ancestorsHaveExecutePermissions(FileSystem fs, Path path,
+      Map<URI, FileStatus> statCache) throws IOException {
     Path current = path;
     while (current != null) {
       //the subdirs in the path should have execute permissions for others
-      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE)) {
+      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE, statCache)) {
         return false;
       }
       current = current.getParent();
@@ -358,8 +359,8 @@ public class TrackerDistributedCacheManager {
    * @throws IOException
    */
   private static boolean checkPermissionOfOther(FileSystem fs, Path path,
-      FsAction action) throws IOException {
-    FileStatus status = fs.getFileStatus(path);
+      FsAction action, Map<URI, FileStatus> statCache) throws IOException {
+    FileStatus status = getFileStatus(fs, path, statCache);
     FsPermission perms = status.getPermission();
     FsAction otherAction = perms.getOtherAction();
     if (otherAction.implies(action)) {
@@ -712,25 +713,69 @@ public class TrackerDistributedCacheManager {
   }
 
   /**
+   * Gets the file status for the given URI.  If the URI is in the cache,
+   * returns it.  Otherwise, fetches it and adds it to the cache.
+   */
+  private static FileStatus getFileStatus(Configuration job, URI uri,
+      Map<URI, FileStatus> statCache) throws IOException {
+    FileStatus stat = statCache.get(uri);
+    if (stat == null) {
+      stat = DistributedCache.getFileStatus(job, uri);
+      statCache.put(uri, stat);
+    }
+    return stat;
+  }
+  
+  private static FileStatus getFileStatus(FileSystem fs, Path path,
+      Map<URI, FileStatus> statCache) throws IOException {
+    URI uri = path.toUri();
+    FileStatus stat = statCache.get(uri);
+    if (stat == null) {
+      stat = fs.getFileStatus(path);
+      statCache.put(uri, stat);
+    }
+    return stat;
+  }
+  
+  /**
    * Determines timestamps of files to be cached, and stores those
-   * in the configuration.  This is intended to be used internally by JobClient
-   * after all cache files have been added.
+   * in the configuration. Determines the visibilities of the distributed cache
+   * files and archives. The visibility of a cache path is "public" if the leaf
+   * component has READ permissions for others, and the parent subdirs have 
+   * EXECUTE permissions for others.
    * 
    * This is an internal method!
    * 
-   * @param job Configuration of a job.
+   * @param job
    * @throws IOException
    */
-  public static void determineTimestamps(Configuration job) throws IOException {
+  public static void determineTimestampsAndCacheVisibilities(Configuration job)
+  throws IOException {
+    Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
+    determineTimestamps(job, statCache);
+    determineCacheVisibilities(job, statCache);
+  }
+  
+  /**
+   * Determines timestamps of files to be cached, and stores those
+   * in the configuration.
+   * 
+   * @param job Configuration of a job.
+   * @param statCache a cache of FileStatuses so that redundant remote
+   *    calls can be avoided
+   * @throws IOException
+   */
+  static void determineTimestamps(Configuration job,
+      Map<URI, FileStatus> statCache) throws IOException {
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
-      FileStatus status = DistributedCache.getFileStatus(job, tarchives[0]);
+      FileStatus status = getFileStatus(job, tarchives[0], statCache);
       StringBuffer archiveFileSizes = 
         new StringBuffer(String.valueOf(status.getLen()));      
       StringBuffer archiveTimestamps = 
         new StringBuffer(String.valueOf(status.getModificationTime()));
       for (int i = 1; i < tarchives.length; i++) {
-        status = DistributedCache.getFileStatus(job, tarchives[i]);
+        status = getFileStatus(job, tarchives[i], statCache);
         archiveFileSizes.append(",");
         archiveFileSizes.append(String.valueOf(status.getLen()));
         archiveTimestamps.append(",");
@@ -744,7 +789,7 @@ public class TrackerDistributedCacheManager {
   
     URI[] tfiles = DistributedCache.getCacheFiles(job);
     if (tfiles != null) {
-      FileStatus status = DistributedCache.getFileStatus(job, tfiles[0]);
+      FileStatus status = getFileStatus(job, tfiles[0], statCache);
       StringBuffer fileSizes = 
         new StringBuffer(String.valueOf(status.getLen()));      
       StringBuffer fileTimestamps = new StringBuffer(String.valueOf(
@@ -766,27 +811,29 @@ public class TrackerDistributedCacheManager {
    * has READ permissions for others, and the parent subdirs have 
    * EXECUTE permissions for others
    * @param job
+   * @param statCache a cache of FileStatuses so that redundant remote
+   *    calls can be avoided
    * @throws IOException
    */
-  public static void determineCacheVisibilities(Configuration job) 
-  throws IOException {
+  static void determineCacheVisibilities(Configuration job,
+      Map<URI, FileStatus> statCache) throws IOException {
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
       StringBuffer archiveVisibilities = 
-        new StringBuffer(String.valueOf(isPublic(job, tarchives[0])));
+        new StringBuffer(String.valueOf(isPublic(job, tarchives[0], statCache)));
       for (int i = 1; i < tarchives.length; i++) {
         archiveVisibilities.append(",");
-        archiveVisibilities.append(String.valueOf(isPublic(job, tarchives[i])));
+        archiveVisibilities.append(String.valueOf(isPublic(job, tarchives[i], statCache)));
       }
       setArchiveVisibilities(job, archiveVisibilities.toString());
     }
     URI[] tfiles = DistributedCache.getCacheFiles(job);
     if (tfiles != null) {
       StringBuffer fileVisibilities = 
-        new StringBuffer(String.valueOf(isPublic(job, tfiles[0])));
+        new StringBuffer(String.valueOf(isPublic(job, tfiles[0], statCache)));
       for (int i = 1; i < tfiles.length; i++) {
         fileVisibilities.append(",");
-        fileVisibilities.append(String.valueOf(isPublic(job, tfiles[i])));
+        fileVisibilities.append(String.valueOf(isPublic(job, tfiles[i], statCache)));
       }
       setFileVisibilities(job, fileVisibilities.toString());
     }
