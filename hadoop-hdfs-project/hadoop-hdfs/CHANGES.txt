@@ -10,6 +10,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4362. GetDelegationTokenResponseProto does not handle null token.
     (suresh)
 
+    HDFS-4367. GetDataEncryptionKeyResponseProto does not handle null
+    response. (suresh)
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
