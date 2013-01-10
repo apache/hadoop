@@ -86,6 +86,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -228,12 +229,7 @@ public class DFSUtil {
    * Converts a string to a byte array using UTF8 encoding.
    */
   public static byte[] string2Bytes(String str) {
-    try {
-      return str.getBytes("UTF8");
-    } catch(UnsupportedEncodingException e) {
-      assert false : "UTF8 encoding is not supported ";
-    }
-    return null;
+    return str.getBytes(Charsets.UTF_8);
   }
 
   /**
@@ -245,19 +241,14 @@ public class DFSUtil {
     if (pathComponents.length == 1 && pathComponents[0].length == 0) {
       return Path.SEPARATOR;
     }
-    try {
-      StringBuilder result = new StringBuilder();
-      for (int i = 0; i < pathComponents.length; i++) {
-        result.append(new String(pathComponents[i], "UTF-8"));
-        if (i < pathComponents.length - 1) {
-          result.append(Path.SEPARATOR_CHAR);
-        }
+    StringBuilder result = new StringBuilder();
+    for (int i = 0; i < pathComponents.length; i++) {
+      result.append(new String(pathComponents[i], Charsets.UTF_8));
+      if (i < pathComponents.length - 1) {
+        result.append(Path.SEPARATOR_CHAR);
       }
-      return result.toString();
-    } catch (UnsupportedEncodingException ex) {
-      assert false : "UTF8 encoding is not supported ";
     }
-    return null;
+    return result.toString();
   }
 
   /**

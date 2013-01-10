@@ -19,7 +19,8 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -29,6 +30,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 
+import com.google.common.base.Charsets;
+
 /**
  * StatisticsEditsVisitor implements text version of EditsVisitor
  * that aggregates counts of op codes processed
@@ -37,7 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class StatisticsEditsVisitor implements OfflineEditsVisitor {
-  final private PrintStream out;
+  final private PrintWriter out;
 
   private int version = -1;
   private final Map<FSEditLogOpCodes, Long> opCodeCount =
@@ -52,7 +55,7 @@ public class StatisticsEditsVisitor implements OfflineEditsVisitor {
    * @param printToScreen Mirror output to screen?
    */
   public StatisticsEditsVisitor(OutputStream out) throws IOException {
-    this.out = new PrintStream(out);
+    this.out = new PrintWriter(new OutputStreamWriter(out, Charsets.UTF_8));
   }
 
   /** Start the visitor */
