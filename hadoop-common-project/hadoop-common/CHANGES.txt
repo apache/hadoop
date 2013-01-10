@@ -528,6 +528,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9155. FsPermission should have different default value, 777 for
     directory and 666 for file. (Binglin Chang via atm)
 
+    HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
