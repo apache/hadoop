@@ -186,6 +186,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4363. Combine PBHelper and HdfsProtoUtil and remove redundant
     methods. (suresh)
 
+    HDFS-4377. Some trivial DN comment cleanup. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
