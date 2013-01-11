@@ -353,6 +353,11 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"command-opts";
   public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1024m";
 
+  /** Admin command opts passed to the MR app master.*/
+  public static final String MR_AM_ADMIN_COMMAND_OPTS =
+      MR_AM_PREFIX+"admin-command-opts";
+  public static final String DEFAULT_MR_AM_ADMIN_COMMAND_OPTS = "";
+  
   /** Root Logging level passed to the MR app master.*/
   public static final String MR_AM_LOG_LEVEL = 
     MR_AM_PREFIX+"log.level";

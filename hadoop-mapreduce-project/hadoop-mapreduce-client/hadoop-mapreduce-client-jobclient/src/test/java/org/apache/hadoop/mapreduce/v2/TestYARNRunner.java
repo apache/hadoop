@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 
 import junit.framework.TestCase;
 
@@ -39,11 +40,13 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClientCache;
 import org.apache.hadoop.mapred.ClientServiceDelegate;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.ResourceMgrDelegate;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
@@ -65,6 +68,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -234,5 +238,69 @@ public class TestYARNRunner extends TestCase {
     .thenReturn(aclResponse);
     delegate.getQueueAclsForCurrentUser();
     verify(clientRMProtocol).getQueueUserAcls(any(GetQueueUserAclsInfoRequest.class));
+  }
+  
+  @Test
+  public void testAMAdminCommandOpts() throws Exception {
+    JobConf jobConf = new JobConf();
+    
+    jobConf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS, "-Djava.net.preferIPv4Stack=true");
+    jobConf.set(MRJobConfig.MR_AM_COMMAND_OPTS, "-Xmx1024m");
+    
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    
+    File jobxml = new File(testWorkDir, MRJobConfig.JOB_CONF_FILE);
+    OutputStream out = new FileOutputStream(jobxml);
+    conf.writeXml(out);
+    out.close();
+    
+    File jobsplit = new File(testWorkDir, MRJobConfig.JOB_SPLIT);
+    out = new FileOutputStream(jobsplit);
+    out.close();
+    
+    File jobsplitmetainfo = new File(testWorkDir, MRJobConfig.JOB_SPLIT_METAINFO);
+    out = new FileOutputStream(jobsplitmetainfo);
+    out.close();
+    
+    File appTokens = new File(testWorkDir, MRJobConfig.APPLICATION_TOKENS_FILE);
+    out = new FileOutputStream(appTokens);
+    out.close();
+    
+    ApplicationSubmissionContext submissionContext = 
+        yarnRunner.createApplicationSubmissionContext(jobConf, testWorkDir.toString(), new Credentials());
+    
+    ContainerLaunchContext containerSpec = submissionContext.getAMContainerSpec();
+    List<String> commands = containerSpec.getCommands();
+    
+    int index = 0;
+    int adminIndex = 0;
+    int adminPos = -1;
+    int userIndex = 0;
+    int userPos = -1;
+    
+    for(String command : commands) {
+      if(command != null) {
+        adminPos = command.indexOf("-Djava.net.preferIPv4Stack=true");
+        if(adminPos >= 0)
+          adminIndex = index;
+        
+        userPos = command.indexOf("-Xmx1024m");
+        if(userPos >= 0)
+          userIndex = index;
+      }
+      
+      index++;
+    }
+    
+    // Check both admin java opts and user java opts are in the commands
+    assertTrue("AM admin command opts not in the commands.", adminPos > 0);
+    assertTrue("AM user command opts not in the commands.", userPos > 0);
+    
+    // Check the admin java opts is before user java opts in the commands
+    if(adminIndex == userIndex) {
+      assertTrue("AM admin command opts is after user command opts.", adminPos < userPos);
+    } else {
+      assertTrue("AM admin command opts is after user command opts.", adminIndex < userIndex);
+    }
   }
 }

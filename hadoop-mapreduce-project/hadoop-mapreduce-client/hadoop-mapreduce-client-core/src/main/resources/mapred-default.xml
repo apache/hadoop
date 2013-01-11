@@ -1243,6 +1243,20 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.admin-command-opts</name>
+  <value></value>
+  <description>Java opts for the MR App Master processes for admin purposes.
+  It will appears before the opts set by yarn.app.mapreduce.am.command-opts and
+  thus its options can be overridden user. 
+  
+  Usage of -Djava.library.path can cause programs to no longer function if
+  hadoop native libraries are used. These values should instead be set as part 
+  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and 
+  mapreduce.reduce.env config settings. 
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.job.task.listener.thread-count</name>
   <value>30</value>
   <description>The number of threads used to handle RPC calls in the 

@@ -21,6 +21,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4894. Renewal / cancellation of JobHistory tokens (Siddharth
     Seth via tgraves)
 
+    MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
+    tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
