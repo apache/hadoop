@@ -393,7 +393,11 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4306. PBHelper.convertLocatedBlock miss convert BlockToken. (Binglin
     Chang via atm)
 
-    HDFS-4387. test_libhdfs_threaded SEGV on OpenJDK 7. (Colin McCabe via eli)
+    HDFS-4384. test_libhdfs_threaded gets SEGV if JNIEnv cannot be
+    initialized. (Colin McCabe via eli)
+
+    HDFS-4328. TestLargeBlock#testLargeBlockSize is timing out. (Chris Nauroth
+    via atm)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 

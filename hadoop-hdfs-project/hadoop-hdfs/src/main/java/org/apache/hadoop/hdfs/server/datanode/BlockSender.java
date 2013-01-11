@@ -648,7 +648,7 @@ class BlockSender implements java.io.Closeable {
 
       ByteBuffer pktBuf = ByteBuffer.allocate(pktBufSize);
 
-      while (endOffset > offset) {
+      while (endOffset > offset && !Thread.currentThread().isInterrupted()) {
         manageOsCache();
         long len = sendPacket(pktBuf, maxChunksPerPacket, streamForSendChunks,
             transferTo, throttler);
@@ -656,16 +656,19 @@ class BlockSender implements java.io.Closeable {
         totalRead += len + (numberOfChunks(len) * checksumSize);
         seqno++;
       }
-      try {
-        // send an empty packet to mark the end of the block
-        sendPacket(pktBuf, maxChunksPerPacket, streamForSendChunks, transferTo,
-            throttler);
-        out.flush();
-      } catch (IOException e) { //socket error
-        throw ioeToSocketException(e);
-      }
+      // If this thread was interrupted, then it did not send the full block.
+      if (!Thread.currentThread().isInterrupted()) {
+        try {
+          // send an empty packet to mark the end of the block
+          sendPacket(pktBuf, maxChunksPerPacket, streamForSendChunks, transferTo,
+              throttler);
+          out.flush();
+        } catch (IOException e) { //socket error
+          throw ioeToSocketException(e);
+        }
 
-      sentEntireByteRange = true;
+        sentEntireByteRange = true;
+      }
     } finally {
       if (clientTraceFmt != null) {
         final long endTime = System.nanoTime();
