@@ -425,6 +425,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4850. Job recovery may fail if staging directory has been
     deleted. (tomwhite)
 
+    MAPREDUCE-4933. MR1 final merge asks for length of file it just wrote
+    before flushing it. (Sandy Ryza via bobby)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

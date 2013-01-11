@@ -2465,10 +2465,12 @@ class ReduceTask extends Task {
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
               tmpDir, comparator, reporter, spilledRecordsCounter, null);
-          final Writer writer = new Writer(job, fs, outputPath,
+          Writer writer = new Writer(job, fs, outputPath,
               keyClass, valueClass, codec, null);
           try {
             Merger.writeFile(rIter, writer, reporter, job);
+            writer.close();
+            writer = null;
             addToMapOutputFilesOnDisk(fs.getFileStatus(outputPath));
           } catch (Exception e) {
             if (null != outputPath) {
