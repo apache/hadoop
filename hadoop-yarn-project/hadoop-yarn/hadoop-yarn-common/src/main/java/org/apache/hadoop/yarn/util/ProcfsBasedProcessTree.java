@@ -140,13 +140,12 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   /**
-   * Get the process-tree with latest state. If the root-process is not alive,
-   * an empty tree will be returned.
+   * Update process-tree with latest state. If the root-process is not alive,
+   * tree will be empty.
    *
-   * @return the process-tree with latest state.
    */
   @Override
-  public ResourceCalculatorProcessTree getProcessTree() {
+  public void updateProcessTree() {
     if (!pid.equals(deadPid)) {
       // Get the list of processes
       List<String> processList = getProcessList();
@@ -172,7 +171,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       }
 
       if (me == null) {
-        return this;
+        return;
       }
 
       // Add each process to its parent.
@@ -214,7 +213,6 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         LOG.debug(this.toString());
       }
     }
-    return this;
   }
 
   /** Verify that the given process id is same as its process group id.

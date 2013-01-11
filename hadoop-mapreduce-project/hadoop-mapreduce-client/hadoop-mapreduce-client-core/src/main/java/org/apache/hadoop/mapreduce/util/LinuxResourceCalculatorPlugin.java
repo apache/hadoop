@@ -409,7 +409,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
   @Override
   public ProcResourceValues getProcResourceValues() {
-    pTree = pTree.getProcessTree();
+    pTree.updateProcessTree();
     long cpuTime = pTree.getCumulativeCpuTime();
     long pMem = pTree.getCumulativeRssmem();
     long vMem = pTree.getCumulativeVmem();

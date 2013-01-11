@@ -6,12 +6,12 @@ Trunk - Unreleased
 
   NEW FEATURES
 
+    YARN-3. Add support for CPU isolation/monitoring of containers. 
+    (adferguson via tucu)
+
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
-
-    YARN-57. Allow process-tree based resource calculation et al. to be
-    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
 
   OPTIMAZATIONS
 
@@ -25,7 +25,16 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-145. Add a Web UI to the fair share scheduler. (Sandy Ryza via tomwhite)
 
+    YARN-230. RM Restart phase 1 - includes support for saving/restarting all
+    applications on an RM bounce. (Bikas Saha via acmurthy)
+
   IMPROVEMENTS
+
+    YARN-223. Update process tree instead of getting new process trees.
+    (Radim Kolar via llu)
+
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
 
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
     vinodkv)
@@ -72,6 +81,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-183. Clean up fair scheduler code. (Sandy Ryza via tomwhite)
 
     YARN-129. Simplify classpath construction for mini YARN tests. (tomwhite)
+
+    YARN-254. Update fair scheduler web UI for hierarchical queues. 
+    (sandyr via tucu)
 
   OPTIMIZATIONS
 
@@ -122,6 +134,26 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-72. NM should handle cleaning up containers when it shuts down.
     (Sandy Ryza via tomwhite)
+
+    YARN-267. Fix fair scheduler web UI. (Sandy Ryza via tomwhite)
+
+    YARN-264. y.s.rm.DelegationTokenRenewer attempts to renew token even 
+    after removing an app. (kkambatl via tucu)
+
+    YARN-271. Fair scheduler hits IllegalStateException trying to reserve
+    different apps on same node. (Sandy Ryza via tomwhite)
+
+    YARN-272. Fair scheduler log messages try to print objects without 
+    overridden toString methods. (sandyr via tucu)
+
+    YARN-278. Fair scheduler maxRunningApps config causes no apps to make
+    progress. (sandyr via tucu)
+
+    YARN-282. Fair scheduler web UI double counts Apps Submitted. 
+    (sandyr via tucu)
+
+    YARN-283. Fair scheduler fails to get queue info without root prefix. 
+    (sandyr via tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -184,6 +216,10 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-285. Added a temporary plugin interface for RM to be able to redirect
+    to JobHistory server for apps that it no longer tracks. (Derek Dagit via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -205,6 +241,12 @@ Release 0.23.6 - UNRELEASED
 
     YARN-258. RM web page UI shows Invalid Date for start and finish times
     (Ravi Prakash via jlowe)
+
+    YARN-266. RM and JHS Web UIs are blank because AppsBlock is not escaping
+    string properly (Ravi Prakash via jlowe)
+
+    YARN-280. RM does not reject app submission with invalid tokens 
+    (Daryn Sharp via tgraves)
 
 Release 0.23.5 - UNRELEASED
 

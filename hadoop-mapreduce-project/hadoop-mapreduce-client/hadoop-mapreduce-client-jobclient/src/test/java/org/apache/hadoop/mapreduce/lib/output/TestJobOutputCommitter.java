@@ -45,7 +45,7 @@ public class TestJobOutputCommitter extends HadoopTestCase {
 
   private static String TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp")
-      + "/" + "test-job-cleanup").toString();
+      + "/" + "test-job-output-committer").toString();
   private static final String CUSTOM_CLEANUP_FILE_NAME = "_custom_cleanup";
   private static final String ABORT_KILLED_FILE_NAME = "_custom_abort_killed";
   private static final String ABORT_FAILED_FILE_NAME = "_custom_abort_failed";

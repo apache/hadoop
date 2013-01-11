@@ -34,7 +34,7 @@ public class TestYarnClient {
   @Test
   public void testClientStop() {
     Configuration conf = new Configuration();
-    ResourceManager rm = new ResourceManager(null);
+    ResourceManager rm = new ResourceManager();
     rm.init(conf);
     rm.start();
 

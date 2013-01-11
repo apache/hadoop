@@ -357,6 +357,27 @@ public class TestDelegationTokenRenewer {
     }
   }
   
+  @Test
+  public void testInvalidDTWithAddApplication() throws Exception {
+    MyFS dfs = (MyFS)FileSystem.get(conf);
+    LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+conf.hashCode());
+
+    MyToken token = dfs.getDelegationToken(new Text("user1"));
+    token.cancelToken();
+
+    Credentials ts = new Credentials();
+    ts.addToken(token.getKind(), token);
+    
+    // register the tokens for renewal
+    ApplicationId appId =  BuilderUtils.newApplicationId(0, 0);
+    try {
+      delegationTokenRenewer.addApplication(appId, ts, true);
+      fail("App submission with a cancelled token should have failed");
+    } catch (InvalidToken e) {
+      // expected
+    }
+  }
+  
   /**
    * Basic idea of the test:
    * 1. register a token for 2 seconds with no cancel at the end

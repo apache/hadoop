@@ -14,6 +14,11 @@ Trunk (Unreleased)
     MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
     (Avner BenHanoch via acmurthy) 
 
+    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
+
+    MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
+    with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
+
   IMPROVEMENTS
 
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
@@ -71,7 +76,13 @@ Trunk (Unreleased)
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
 
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
+
   BUG FIXES
+
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
 
     MAPREDUCE-4356. [Rumen] Provide access to the method
                     ParsedTask.obtainTaskAttempts(). (ravigummadi)
@@ -171,6 +182,16 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4723. Fix warnings found by findbugs 2. (Sandy Ryza via eli)
 
+    MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using 
+    the configurations used before it is being stopped. (ahmed.radwan via tucu)
+
+    MAPREDUCE-4845. ClusterStatus.getMaxMemory() and getUsedMemory() exist in
+    MR1 but not MR2. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4899. Implemented a MR specific plugin for tracking finished
+    applications that YARN's ResourceManager doesn't keep track off anymore
+    (Derek Dagit via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -204,6 +225,12 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4800. Cleanup o.a.h.mapred.MapTaskStatus - remove unused 
     code. (kkambatl via tucu)
+
+    MAPREDUCE-4861. Cleanup: Remove unused mapreduce.security.token.DelegationTokenRenewal. 
+    (kkambatl via tucu)
+
+    MAPREDUCE-4856. TestJobOutputCommitter uses same directory as
+    TestJobCleanup. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -609,6 +636,20 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4836. Elapsed time for running tasks on AM web UI tasks page is 0
     (Ravi Prakash via jeagles)
+
+    MAPREDUCE-4842. Shuffle race can hang reducer (Mariappan Asokan via jlowe)
+
+    MAPREDUCE-4833. Task can get stuck in FAIL_CONTAINER_CLEANUP (Robert
+    Parker via jlowe)
+
+    MAPREDUCE-4793. Problem with adding resources when using both -files and
+    -file to hadoop streaming (jlowe)
+
+    MAPREDUCE-4890. Invalid TaskImpl state transitions when task fails while
+    speculating (jlowe)
+
+    MAPREDUCE-4902. Fix typo "receievd" should be "received" in log output
+    (Albert Chu via jlowe)
 
 Release 0.23.5 - UNRELEASED
 

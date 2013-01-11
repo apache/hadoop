@@ -46,7 +46,7 @@ public class MockNM {
   private int responseId;
   private NodeId nodeId;
   private final int memory;
-  private final ResourceTrackerService resourceTracker;
+  private ResourceTrackerService resourceTracker;
   private final int httpPort = 2;
   private MasterKey currentMasterKey;
 
@@ -65,6 +65,10 @@ public class MockNM {
 
   public int getHttpPort() {
     return httpPort;
+  }
+  
+  void setResourceTrackerService(ResourceTrackerService resourceTracker) {
+    this.resourceTracker = resourceTracker;
   }
 
   public void containerStatus(Container container) throws Exception {

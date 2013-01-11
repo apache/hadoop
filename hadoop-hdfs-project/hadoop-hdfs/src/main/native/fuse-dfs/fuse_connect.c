@@ -131,7 +131,6 @@ static enum authConf discoverAuthConf(void)
 
 int fuseConnectInit(const char *nnUri, int port)
 {
-  const char *timerPeriod;
   int ret;
 
   gTimerPeriod = FUSE_CONN_DEFAULT_TIMER_PERIOD;

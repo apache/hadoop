@@ -413,7 +413,7 @@ public class RemoteBlockReader2  implements BlockReader {
     long firstChunkOffset = checksumInfo.getChunkOffset();
 
     if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
-        firstChunkOffset >= (startOffset + checksum.getBytesPerChecksum())) {
+        firstChunkOffset <= (startOffset - checksum.getBytesPerChecksum())) {
       throw new IOException("BlockReader: error in first chunk offset (" +
                             firstChunkOffset + ") startOffset is " +
                             startOffset + " for file " + file);

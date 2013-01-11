@@ -225,10 +225,12 @@ public class YarnConfiguration extends Configuration {
   public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
     7*24*60*60*1000; // 7 days
   
+  public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
+  public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
   
   /** The class to use as the persistent store.*/
   public static final String RM_STORE = RM_PREFIX + "store.class";
-   
+  
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
     RM_PREFIX + "max-completed-applications";
@@ -398,6 +400,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";
+  
+  public static final String YARN_TRACKING_URL_GENERATOR = 
+      YARN_PREFIX + "tracking.url.generator";
 
   /** Amount of memory in GB that can be allocated for containers.*/
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
@@ -480,6 +485,24 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_LINUX_CONTAINER_GROUP =
     NM_PREFIX + "linux-container-executor.group";
+  
+  /** The type of resource enforcement to use with the
+   *  linux container executor.
+   */
+  public static final String NM_LINUX_CONTAINER_RESOURCES_HANDLER = 
+  NM_PREFIX + "linux-container-executor.resources-handler.class";
+  
+  /** The path the linux container executor should use for cgroups */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_HIERARCHY =
+    NM_PREFIX + "linux-container-executor.cgroups.hierarchy";
+  
+  /** Whether the linux container executor should mount cgroups if not found */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT =
+    NM_PREFIX + "linux-container-executor.cgroups.mount";
+  
+  /** Where the linux container executor should mount cgroups if not found */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
+    NM_PREFIX + "linux-container-executor.cgroups.mount-path";
   
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 

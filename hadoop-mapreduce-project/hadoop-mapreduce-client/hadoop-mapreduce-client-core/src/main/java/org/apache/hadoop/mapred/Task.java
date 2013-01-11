@@ -61,8 +61,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mapreduce.task.ReduceContextImpl;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin.*;
+import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
@@ -169,7 +168,7 @@ abstract public class Task implements Writable, Configurable {
   private Iterator<Long> currentRecIndexIterator = 
     skipRanges.skipRangeIterator();
 
-  private ResourceCalculatorPlugin resourceCalculator = null;
+  private ResourceCalculatorProcessTree pTree;
   private long initCpuCumulativeTime = 0;
 
   protected JobConf conf;
@@ -372,7 +371,7 @@ abstract public class Task implements Writable, Configurable {
    * Return current state of the task. 
    * needs to be synchronized as communication thread 
    * sends the state every second
-   * @return
+   * @return task state
    */
   synchronized TaskStatus.State getState(){
     return this.taskStatus.getRunState(); 
@@ -558,15 +557,15 @@ abstract public class Task implements Writable, Configurable {
       }
     }
     committer.setupTask(taskContext);
-    Class<? extends ResourceCalculatorPlugin> clazz =
-        conf.getClass(MRConfig.RESOURCE_CALCULATOR_PLUGIN,
-            null, ResourceCalculatorPlugin.class);
-    resourceCalculator = ResourceCalculatorPlugin
-            .getResourceCalculatorPlugin(clazz, conf);
-    LOG.info(" Using ResourceCalculatorPlugin : " + resourceCalculator);
-    if (resourceCalculator != null) {
-      initCpuCumulativeTime =
-        resourceCalculator.getProcResourceValues().getCumulativeCpuTime();
+    Class<? extends ResourceCalculatorProcessTree> clazz =
+        conf.getClass(MRConfig.RESOURCE_CALCULATOR_PROCESS_TREE,
+            null, ResourceCalculatorProcessTree.class);
+    pTree = ResourceCalculatorProcessTree
+            .getResourceCalculatorProcessTree(System.getenv().get("JVM_PID"), clazz, conf);
+    LOG.info(" Using ResourceCalculatorProcessTree : " + pTree);
+    if (pTree != null) {
+      pTree.updateProcessTree();
+      initCpuCumulativeTime = pTree.getCumulativeCpuTime();
     }
   }
 
@@ -584,9 +583,9 @@ abstract public class Task implements Writable, Configurable {
     return status;
   }
 
-  @InterfaceAudience.Private
+  @InterfaceAudience.LimitedPrivate({"MapReduce"})
   @InterfaceStability.Unstable
-  protected class TaskReporter 
+  public class TaskReporter 
       extends org.apache.hadoop.mapreduce.StatusReporter
       implements Runnable, Reporter {
     private TaskUmbilicalProtocol umbilical;
@@ -817,14 +816,14 @@ abstract public class Task implements Writable, Configurable {
     // Update generic resource counters
     updateHeapUsageCounter();
 
-    // Updating resources specified in ResourceCalculatorPlugin
-    if (resourceCalculator == null) {
+    // Updating resources specified in ResourceCalculatorProcessTree
+    if (pTree == null) {
       return;
     }
-    ProcResourceValues res = resourceCalculator.getProcResourceValues();
-    long cpuTime = res.getCumulativeCpuTime();
-    long pMem = res.getPhysicalMemorySize();
-    long vMem = res.getVirtualMemorySize();
+    pTree.updateProcessTree();
+    long cpuTime = pTree.getCumulativeCpuTime();
+    long pMem = pTree.getCumulativeRssmem();
+    long vMem = pTree.getCumulativeVmem();
     // Remove the CPU time consumed previously by JVM reuse
     cpuTime -= initCpuCumulativeTime;
     counters.findCounter(TaskCounter.CPU_MILLISECONDS).setValue(cpuTime);
@@ -1466,9 +1465,9 @@ abstract public class Task implements Writable, Configurable {
     return reducerContext;
   }
 
-  @InterfaceAudience.Private
+  @InterfaceAudience.LimitedPrivate({"MapReduce"})
   @InterfaceStability.Unstable
-  protected static abstract class CombinerRunner<K,V> {
+  public static abstract class CombinerRunner<K,V> {
     protected final Counters.Counter inputCounter;
     protected final JobConf job;
     protected final TaskReporter reporter;
@@ -1486,13 +1485,13 @@ abstract public class Task implements Writable, Configurable {
      * @param iterator the key/value pairs to use as input
      * @param collector the output collector
      */
-    abstract void combine(RawKeyValueIterator iterator, 
+    public abstract void combine(RawKeyValueIterator iterator, 
                           OutputCollector<K,V> collector
                          ) throws IOException, InterruptedException, 
                                   ClassNotFoundException;
 
     @SuppressWarnings("unchecked")
-    static <K,V> 
+    public static <K,V> 
     CombinerRunner<K,V> create(JobConf job,
                                TaskAttemptID taskId,
                                Counters.Counter inputCounter,
@@ -1542,7 +1541,7 @@ abstract public class Task implements Writable, Configurable {
     }
 
     @SuppressWarnings("unchecked")
-    protected void combine(RawKeyValueIterator kvIter,
+    public void combine(RawKeyValueIterator kvIter,
                            OutputCollector<K,V> combineCollector
                            ) throws IOException {
       Reducer<K,V,K,V> combiner = 
@@ -1611,7 +1610,7 @@ abstract public class Task implements Writable, Configurable {
 
     @SuppressWarnings("unchecked")
     @Override
-    void combine(RawKeyValueIterator iterator, 
+    public void combine(RawKeyValueIterator iterator, 
                  OutputCollector<K,V> collector
                  ) throws IOException, InterruptedException,
                           ClassNotFoundException {

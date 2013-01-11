@@ -47,7 +47,7 @@ public class TestRMNMSecretKeys {
     // intervene
 
     final DrainDispatcher dispatcher = new DrainDispatcher();
-    ResourceManager rm = new ResourceManager(null) {
+    ResourceManager rm = new ResourceManager() {
       @Override
       protected void doSecureLogin() throws IOException {
         // Do nothing.

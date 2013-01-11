@@ -140,7 +140,7 @@ public class SecureDataNodeStarter implements Daemon {
     System.err.println("Successfully obtained privileged resources (streaming port = "
         + ss + " ) (http listener port = " + listener.getConnection() +")");
     
-    if ((ss.getLocalPort() >= 1023 || listener.getPort() >= 1023) &&
+    if ((ss.getLocalPort() > 1023 || listener.getPort() > 1023) &&
         UserGroupInformation.isSecurityEnabled()) {
       throw new RuntimeException("Cannot start secure datanode with unprivileged ports");
     }

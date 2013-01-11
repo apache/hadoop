@@ -51,7 +51,7 @@ public class TestVolumeId {
   }
   
   @SuppressWarnings("unchecked")
-  private <T> void testEq(final boolean eq, Comparable<? super T> id1, Comparable<? super T> id2) {
+  private <T> void testEq(final boolean eq, Comparable<T> id1, Comparable<T> id2) {
     final int h1 = id1.hashCode();
     final int h2 = id2.hashCode();
     
@@ -99,8 +99,8 @@ public class TestVolumeId {
   }
   
   @SuppressWarnings("unchecked")
-  private <T> void testEqMany(final boolean eq, Comparable<? super T>... volumeIds) {
-    Comparable<? super T> vidNext;
+  private <T> void testEqMany(final boolean eq, Comparable<T>... volumeIds) {
+    Comparable<T> vidNext;
     int sum = 0;
     for (int i=0; i<volumeIds.length; i++) {
       if (i == volumeIds.length - 1) {

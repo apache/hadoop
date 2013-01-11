@@ -180,7 +180,15 @@ public abstract class ZKFailoverController {
 
   private int doRun(String[] args)
       throws HadoopIllegalArgumentException, IOException, InterruptedException {
-    initZK();
+    try {
+      initZK();
+    } catch (KeeperException ke) {
+      LOG.fatal("Unable to start failover controller. Unable to connect "
+          + "to ZooKeeper quorum at " + zkQuorum + ". Please check the "
+          + "configured value for " + ZK_QUORUM_KEY + " and ensure that "
+          + "ZooKeeper is running.");
+      return ERR_CODE_NO_ZK;
+    }
     if (args.length > 0) {
       if ("-formatZK".equals(args[0])) {
         boolean force = false;
@@ -199,24 +207,12 @@ public abstract class ZKFailoverController {
         badArg(args[0]);
       }
     }
-    
-    try {
-      if (!elector.parentZNodeExists()) {
-        LOG.fatal("Unable to start failover controller. " +
-            "Parent znode does not exist.\n" +
-            "Run with -formatZK flag to initialize ZooKeeper.");
-        return ERR_CODE_NO_PARENT_ZNODE;
-      }
-    } catch (IOException ioe) {
-      if (ioe.getCause() instanceof KeeperException.ConnectionLossException) {
-        LOG.fatal("Unable to start failover controller. Unable to connect " +
-            "to ZooKeeper quorum at " + zkQuorum + ". Please check the " +
-            "configured value for " + ZK_QUORUM_KEY + " and ensure that " +
-            "ZooKeeper is running.");
-        return ERR_CODE_NO_ZK;
-      } else {
-        throw ioe;
-      }
+
+    if (!elector.parentZNodeExists()) {
+      LOG.fatal("Unable to start failover controller. "
+          + "Parent znode does not exist.\n"
+          + "Run with -formatZK flag to initialize ZooKeeper.");
+      return ERR_CODE_NO_PARENT_ZNODE;
     }
 
     try {
@@ -310,7 +306,8 @@ public abstract class ZKFailoverController {
   }
 
 
-  private void initZK() throws HadoopIllegalArgumentException, IOException {
+  private void initZK() throws HadoopIllegalArgumentException, IOException,
+      KeeperException {
     zkQuorum = conf.get(ZK_QUORUM_KEY);
     int zkTimeout = conf.getInt(ZK_SESSION_TIMEOUT_KEY,
         ZK_SESSION_TIMEOUT_DEFAULT);

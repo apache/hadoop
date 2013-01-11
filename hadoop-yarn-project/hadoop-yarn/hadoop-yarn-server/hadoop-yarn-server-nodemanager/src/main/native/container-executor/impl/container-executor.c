@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/mount.h>
 
 static const int DEFAULT_MIN_USERID = 1000;
 
@@ -147,6 +148,44 @@ static int change_effective_user(uid_t user, gid_t group) {
             strerror(errno));
     return -1;
   }
+  return 0;
+}
+
+/**
+ * Write the pid of the current process to the cgroup file.
+ * cgroup_file: Path to cgroup file where pid needs to be written to.
+ */
+static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
+  uid_t user = geteuid();
+  gid_t group = getegid();
+  if (change_effective_user(0, 0) != 0) {
+    return -1;
+  }
+
+  // open
+  int cgroup_fd = open(cgroup_file, O_WRONLY | O_APPEND, 0);
+  if (cgroup_fd == -1) {
+    fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", cgroup_file,
+           strerror(errno));
+    return -1;
+  }
+
+  // write pid
+  char pid_buf[21];
+  snprintf(pid_buf, sizeof(pid_buf), "%d", pid);
+  ssize_t written = write(cgroup_fd, pid_buf, strlen(pid_buf));
+  close(cgroup_fd);
+  if (written == -1) {
+    fprintf(LOGFILE, "Failed to write pid to file %s - %s\n",
+       cgroup_file, strerror(errno));
+    return -1;
+  }
+
+  // Revert back to the calling user.
+  if (change_effective_user(user, group)) {
+    return -1;
+  }
+
   return 0;
 }
 
@@ -810,7 +849,8 @@ int launch_container_as_user(const char *user, const char *app_id,
                    const char *container_id, const char *work_dir,
                    const char *script_name, const char *cred_file,
                    const char* pid_file, char* const* local_dirs,
-                   char* const* log_dirs) {
+                   char* const* log_dirs, const char *resources_key,
+                   char* const* resources_values) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -849,7 +889,22 @@ int launch_container_as_user(const char *user, const char *app_id,
       || write_pid_to_file_as_nm(pid_file, pid) != 0) {
     exit_code = WRITE_PIDFILE_FAILED;
     goto cleanup;
-  }  
+  }
+
+  // cgroups-based resource enforcement
+  if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
+
+    // write pid to cgroups
+    char* const* cgroup_ptr;
+    for (cgroup_ptr = resources_values; cgroup_ptr != NULL && 
+         *cgroup_ptr != NULL; ++cgroup_ptr) {
+      if (strcmp(*cgroup_ptr, "none") != 0 &&
+            write_pid_to_cgroup_as_root(*cgroup_ptr, pid) != 0) {
+        exit_code = WRITE_CGROUP_FAILED;
+        goto cleanup;
+      }
+    }
+  }
 
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
@@ -1108,4 +1163,73 @@ int delete_as_user(const char *user,
   return ret;
 }
 
+void chown_dir_contents(const char *dir_path, uid_t uid, gid_t gid) {
+  DIR *dp;
+  struct dirent *ep;
+
+  char *path_tmp = malloc(strlen(dir_path) + NAME_MAX + 2);
+  if (path_tmp == NULL) {
+    return;
+  }
+
+  char *buf = stpncpy(path_tmp, dir_path, strlen(dir_path));
+  *buf++ = '/';
+     
+  dp = opendir(dir_path);
+  if (dp != NULL) {
+    while (ep = readdir(dp)) {
+      stpncpy(buf, ep->d_name, strlen(ep->d_name));
+      buf[strlen(ep->d_name)] = '\0';
+      change_owner(path_tmp, uid, gid);
+    }
+    closedir(dp);
+  }
+
+  free(path_tmp);
+}
+
+/**
+ * Mount a cgroup controller at the requested mount point and create
+ * a hierarchy for the Hadoop NodeManager to manage.
+ * pair: a key-value pair of the form "controller=mount-path"
+ * hierarchy: the top directory of the hierarchy for the NM
+ */
+int mount_cgroup(const char *pair, const char *hierarchy) {
+  char *controller = malloc(strlen(pair));
+  char *mount_path = malloc(strlen(pair));
+  char hier_path[PATH_MAX];
+  int result = 0;
+
+  if (get_kv_key(pair, controller, strlen(pair)) < 0 ||
+      get_kv_value(pair, mount_path, strlen(pair)) < 0) {
+    fprintf(LOGFILE, "Failed to mount cgroup controller; invalid option: %s\n",
+              pair);
+    result = -1; 
+  } else {
+    if (mount("none", mount_path, "cgroup", 0, controller) == 0) {
+      char *buf = stpncpy(hier_path, mount_path, strlen(mount_path));
+      *buf++ = '/';
+      snprintf(buf, PATH_MAX - (buf - hier_path), "%s", hierarchy);
+
+      // create hierarchy as 0750 and chown to Hadoop NM user
+      const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
+      if (mkdirs(hier_path, perms) == 0) {
+        change_owner(hier_path, nm_uid, nm_gid);
+        chown_dir_contents(hier_path, nm_uid, nm_gid);
+      }
+    } else {
+      fprintf(LOGFILE, "Failed to mount cgroup controller %s at %s - %s\n",
+                controller, mount_path, strerror(errno));
+      // if controller is already mounted, don't stop trying to mount others
+      if (errno != EBUSY) {
+        result = -1;
+      }
+    }
+  }
+
+  free(controller);
+  free(mount_path);
+
+  return result;
+}
 

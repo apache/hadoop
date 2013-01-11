@@ -24,11 +24,13 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 
 public class ProxyUriUtils {
   @SuppressWarnings("unused")
@@ -142,5 +144,29 @@ public class ProxyUriUtils {
   public static URI getUriFromAMUrl(String noSchemeUrl)
     throws URISyntaxException {
       return new URI(HttpConfig.getSchemePrefix() + noSchemeUrl);
+  }
+
+  /**
+   * Returns the first valid tracking link, if any, from the given id from the
+   * given list of plug-ins, if any.
+   * 
+   * @param id the id of the application for which the tracking link is desired
+   * @param trackingUriPlugins list of plugins from which to get the tracking link
+   * @return the desired link if possible, otherwise null
+   * @throws URISyntaxException
+   */
+  public static URI getUriFromTrackingPlugins(ApplicationId id,
+      List<TrackingUriPlugin> trackingUriPlugins)
+      throws URISyntaxException {
+    URI toRet = null;
+    for(TrackingUriPlugin plugin : trackingUriPlugins)
+    {
+      toRet = plugin.getTrackingUri(id);
+      if (toRet != null)
+      {
+        return toRet;
+      }
+    }
+    return null;
   }
 }

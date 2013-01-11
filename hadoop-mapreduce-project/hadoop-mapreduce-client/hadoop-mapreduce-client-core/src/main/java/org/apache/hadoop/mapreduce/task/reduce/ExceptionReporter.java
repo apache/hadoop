@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * An interface for reporting exceptions to other threads
  */
-interface ExceptionReporter {
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Unstable
+public interface ExceptionReporter {
   void reportException(Throwable t);
 }

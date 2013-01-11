@@ -378,9 +378,9 @@
                 <argument>src/main/proto/HAServiceProtocol.proto</argument>
                 <argument>src/main/proto/IpcConnectionContext.proto</argument>
                 <argument>src/main/proto/ProtocolInfo.proto</argument>
-                <argument>src/main/proto/RpcPayloadHeader.proto</argument>
+                <argument>src/main/proto/RpcHeader.proto</argument>
                 <argument>src/main/proto/ZKFCProtocol.proto</argument>
-                <argument>src/main/proto/hadoop_rpc.proto</argument>
+                <argument>src/main/proto/ProtobufRpcEngine.proto</argument>
               </arguments>
             </configuration>
           </execution>

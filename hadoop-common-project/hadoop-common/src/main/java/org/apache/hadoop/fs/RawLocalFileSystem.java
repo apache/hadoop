@@ -30,6 +30,7 @@ import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -277,6 +278,18 @@ public class RawLocalFileSystem extends FileSystem {
     Path parent = f.getParent();
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent.toString());
+    }
+    return new FSDataOutputStream(new BufferedOutputStream(
+        new LocalFSFileOutputStream(f, false), bufferSize), statistics);
+  }
+  
+  @Override
+  @Deprecated
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    if (exists(f) && !flags.contains(CreateFlag.OVERWRITE)) {
+      throw new IOException("File already exists: "+f);
     }
     return new FSDataOutputStream(new BufferedOutputStream(
         new LocalFSFileOutputStream(f, false), bufferSize), statistics);

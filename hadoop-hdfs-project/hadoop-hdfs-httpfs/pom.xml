@@ -34,7 +34,7 @@
   <description>Apache Hadoop HttpFS</description>
 
   <properties>
-    <tomcat.version>6.0.32</tomcat.version>
+    <tomcat.version>6.0.36</tomcat.version>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.revision>REVISION NOT AVAIL</httpfs.source.revision>
@@ -531,7 +531,7 @@
                     <mkdir dir="downloads"/>
                     <get
                         src="${tomcat.download.url}"
-                        dest="downloads/tomcat.tar.gz" verbose="true" skipexisting="true"/>
+                        dest="downloads/apache-tomcat-${tomcat.version}.tar.gz" verbose="true" skipexisting="true"/>
                     <delete dir="${project.build.directory}/tomcat.exp"/>
                     <mkdir dir="${project.build.directory}/tomcat.exp"/>
 
@@ -545,7 +545,7 @@
                       BUILD_DIR=`cygpath --unix '${project.build.directory}'`
                       fi
                       cd $BUILD_DIR/tomcat.exp
-                      tar xzf ${basedir}/downloads/tomcat.tar.gz
+                      tar xzf ${basedir}/downloads/apache-tomcat-${tomcat.version}.tar.gz
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
                       <arg line="./tomcat-untar.sh"/>

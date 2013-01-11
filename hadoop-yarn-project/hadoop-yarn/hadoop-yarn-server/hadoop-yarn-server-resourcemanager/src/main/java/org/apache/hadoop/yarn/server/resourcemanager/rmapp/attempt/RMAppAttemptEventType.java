@@ -39,9 +39,15 @@ public enum RMAppAttemptEventType {
   CONTAINER_ACQUIRED,
   CONTAINER_ALLOCATED,
   CONTAINER_FINISHED,
+  
+  // Source: RMStateStore
+  ATTEMPT_SAVED,
 
   // Source: Scheduler
   APP_REJECTED,
   APP_ACCEPTED,
+  
+  // Source: RMAttemptImpl.recover
+  RECOVER
 
 }

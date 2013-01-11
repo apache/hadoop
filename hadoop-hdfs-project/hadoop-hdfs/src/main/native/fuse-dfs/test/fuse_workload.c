@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#define FUSE_USE_VERSION 26
+
 #include "fuse-dfs/test/fuse_workload.h"
 #include "libhdfs/expect.h"
 #include "util/posix_util.h"
@@ -23,6 +25,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuse.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -138,13 +141,89 @@ static int safeRead(int fd, void *buf, int c)
   return amt;
 }
 
+/* Bug: HDFS-2551.
+ * When a program writes a file, closes it, and immediately re-opens it,
+ * it might not appear to have the correct length.  This is because FUSE
+ * invokes the release() callback asynchronously.
+ *
+ * To work around this, we keep retrying until the file length is what we
+ * expect.
+ */
+static int closeWorkaroundHdfs2551(int fd, const char *path, off_t expectedSize)
+{
+  int ret, try;
+  struct stat stBuf;
+
+  RETRY_ON_EINTR_GET_ERRNO(ret, close(fd));
+  EXPECT_ZERO(ret);
+  for (try = 0; try < MAX_TRIES; try++) {
+    EXPECT_ZERO(stat(path, &stBuf));
+    EXPECT_NONZERO(S_ISREG(stBuf.st_mode));
+    if (stBuf.st_size == expectedSize) {
+      return 0;
+    }
+    sleepNoSig(1);
+  }
+  fprintf(stderr, "FUSE_WORKLOAD: error: expected file %s to have length "
+          "%lld; instead, it had length %lld\n",
+          path, (long long)expectedSize, (long long)stBuf.st_size);
+  return -EIO;
+}
+
+#ifdef FUSE_CAP_ATOMIC_O_TRUNC
+
+/**
+ * Test that we can create a file, write some contents to it, close that file,
+ * and then successfully re-open with O_TRUNC.
+ */
+static int testOpenTrunc(const char *base)
+{
+  int fd, err;
+  char path[PATH_MAX];
+  const char * const SAMPLE1 = "this is the first file that we wrote.";
+  const char * const SAMPLE2 = "this is the second file that we wrote.  "
+    "It's #2!";
+
+  snprintf(path, sizeof(path), "%s/trunc.txt", base);
+  fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+  if (fd < 0) {
+    err = errno;
+    fprintf(stderr, "TEST_ERROR: testOpenTrunc(%s): first open "
+            "failed with error %d\n", path, err);
+    return -err;
+  }
+  EXPECT_ZERO(safeWrite(fd, SAMPLE1, strlen(SAMPLE1)));
+  EXPECT_ZERO(closeWorkaroundHdfs2551(fd, path, strlen(SAMPLE1)));
+  fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+  if (fd < 0) {
+    err = errno;
+    fprintf(stderr, "TEST_ERROR: testOpenTrunc(%s): second open "
+            "failed with error %d\n", path, err);
+    return -err;
+  }
+  EXPECT_ZERO(safeWrite(fd, SAMPLE2, strlen(SAMPLE2)));
+  EXPECT_ZERO(closeWorkaroundHdfs2551(fd, path, strlen(SAMPLE2)));
+  return 0;
+}
+
+#else
+
+static int testOpenTrunc(const char *base)
+{
+  fprintf(stderr, "FUSE_WORKLOAD: We lack FUSE_CAP_ATOMIC_O_TRUNC support.  "
+          "Not testing open(O_TRUNC).\n");
+  return 0;
+}
+
+#endif
+
 int runFuseWorkloadImpl(const char *root, const char *pcomp,
     struct fileCtx *ctx)
 {
   char base[PATH_MAX], tmp[PATH_MAX], *tmpBuf;
   char src[PATH_MAX], dst[PATH_MAX];
   struct stat stBuf;
-  int ret, i, try;
+  int ret, i;
   struct utimbuf tbuf;
   struct statvfs stvBuf;
 
@@ -241,33 +320,8 @@ int runFuseWorkloadImpl(const char *root, const char *pcomp,
     EXPECT_ZERO(safeWrite(ctx[i].fd, ctx[i].str, ctx[i].strLen));
   }
   for (i = 0; i < NUM_FILE_CTX; i++) {
-    RETRY_ON_EINTR_GET_ERRNO(ret, close(ctx[i].fd));
-    EXPECT_ZERO(ret);
+    EXPECT_ZERO(closeWorkaroundHdfs2551(ctx[i].fd, ctx[i].path, ctx[i].strLen));
     ctx[i].fd = -1;
-  }
-  for (i = 0; i < NUM_FILE_CTX; i++) {
-    /* Bug: HDFS-2551.
-     * When a program writes a file, closes it, and immediately re-opens it,
-     * it might not appear to have the correct length.  This is because FUSE
-     * invokes the release() callback asynchronously.
-     *
-     * To work around this, we keep retrying until the file length is what we
-     * expect.
-     */
-    for (try = 0; try < MAX_TRIES; try++) {
-      EXPECT_ZERO(stat(ctx[i].path, &stBuf));
-      EXPECT_NONZERO(S_ISREG(stBuf.st_mode));
-      if (ctx[i].strLen == stBuf.st_size) {
-        break;
-      }
-      sleepNoSig(1);
-    }
-    if (try == MAX_TRIES) {
-      fprintf(stderr, "FUSE_WORKLOAD: error: expected file %s to have length "
-              "%d; instead, it had length %lld\n",
-              ctx[i].path, ctx[i].strLen, (long long)stBuf.st_size);
-      return -EIO;
-    }
   }
   for (i = 0; i < NUM_FILE_CTX; i++) {
     ctx[i].fd = open(ctx[i].path, O_RDONLY);
@@ -308,6 +362,7 @@ int runFuseWorkloadImpl(const char *root, const char *pcomp,
   for (i = 0; i < NUM_FILE_CTX; i++) {
     free(ctx[i].path);
   }
+  EXPECT_ZERO(testOpenTrunc(base));
   EXPECT_ZERO(recursiveDelete(base));
   return 0;
 }

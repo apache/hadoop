@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -62,6 +64,9 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
 public class ViewFileSystem extends FileSystem {
+
+  private static final Path ROOT_PATH = new Path(Path.SEPARATOR);
+
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
     return new AccessControlException( 
@@ -97,23 +102,6 @@ public class ViewFileSystem extends FileSystem {
   Path homeDir = null;
   
   /**
-   * Prohibits names which contain a ".", "..", ":" or "/" 
-   */
-  private static boolean isValidName(final String src) {
-    // Check for ".." "." ":" "/"
-    final StringTokenizer tokens = new StringTokenizer(src, Path.SEPARATOR);
-    while(tokens.hasMoreTokens()) {
-      String element = tokens.nextToken();
-      if (element.equals("..") ||
-          element.equals(".")  ||
-          (element.indexOf(":") >= 0)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  /**
    * Make the path Absolute and get the path-part of a pathname.
    * Checks that URI matches this file system 
    * and that the path-part is a valid name.
@@ -124,10 +112,6 @@ public class ViewFileSystem extends FileSystem {
   private String getUriPath(final Path p) {
     checkPath(p);
     String s = makeAbsolute(p).toUri().getPath();
-    if (!isValidName(s)) {
-      throw new InvalidPathException("Path part " + s + " from URI" + p
-          + " is not a valid filename.");
-    }
     return s;
   }
   
@@ -280,6 +264,21 @@ public class ViewFileSystem extends FileSystem {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.append(res.remainingPath, bufferSize, progress);
+  }
+  
+  @Override
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(f), false);
+    } catch (FileNotFoundException e) {
+        throw readOnlyMountTable("create", f);
+    }
+    assert(res.remainingPath != null);
+    return res.targetFileSystem.createNonRecursive(res.remainingPath, permission,
+         flags, bufferSize, replication, blockSize, progress);
   }
   
   @Override
@@ -672,7 +671,7 @@ public class ViewFileSystem extends FileSystem {
           PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
 
           new Path(theInternalDir.fullPath).makeQualified(
-              myUri, null));
+              myUri, ROOT_PATH));
     }
     
 
