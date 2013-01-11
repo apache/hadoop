@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -1290,19 +1291,29 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
             priority, recordFactory));
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 1, // one extra 
+        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, // one extra 
             priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
-    assertEquals(1, app_0.getTotalRequiredResources(priority));
+    assertEquals(2, app_0.getTotalRequiredResources(priority));
     
     String host_3 = "host_3"; // on rack_1
     SchedulerNode node_3 = TestUtils.getMockNode(host_3, rack_1, 0, 8*GB);
     
+    // Rack-delay
+    doReturn(1).when(a).getNodeLocalityDelay();
+    
+    // Shouldn't assign RACK_LOCAL yet
+    assignment = a.assignContainers(clusterResource, node_3);
+    assertEquals(1, app_0.getSchedulingOpportunities(priority));
+    assertEquals(2, app_0.getTotalRequiredResources(priority));
+    assertEquals(NodeType.NODE_LOCAL, assignment.getType()); // None->NODE_LOCAL
+
+    // Should assign RACK_LOCAL now
     assignment = a.assignContainers(clusterResource, node_3);
     verify(app_0).allocate(eq(NodeType.RACK_LOCAL), eq(node_3), 
         any(Priority.class), any(ResourceRequest.class), any(Container.class));
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
-    assertEquals(0, app_0.getTotalRequiredResources(priority));
+    assertEquals(1, app_0.getTotalRequiredResources(priority));
     assertEquals(NodeType.RACK_LOCAL, assignment.getType());
   }
   

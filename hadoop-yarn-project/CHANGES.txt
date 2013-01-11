@@ -86,6 +86,9 @@ Release 0.23.5 - UNRELEASED
 
     YARN-216. Remove jquery theming support. (Robert Joseph Evans via jlowe)
 
+    YARN-80. Add support for delaying rack-local containers in
+    CapacityScheduler. (acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES

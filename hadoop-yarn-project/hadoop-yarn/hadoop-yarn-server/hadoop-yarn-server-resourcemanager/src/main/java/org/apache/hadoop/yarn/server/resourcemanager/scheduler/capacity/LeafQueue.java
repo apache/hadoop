@@ -124,6 +124,8 @@ public class LeafQueue implements CSQueue {
   
   private final ActiveUsersManager activeUsersManager;
   
+  private final int nodeLocalityDelay;
+  
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, 
       Comparator<SchedulerApp> applicationComparator, CSQueue old) {
@@ -188,6 +190,9 @@ public class LeafQueue implements CSQueue {
     Map<QueueACL, AccessControlList> acls = 
       cs.getConfiguration().getAcls(getQueuePath());
 
+    this.nodeLocalityDelay = 
+        cs.getConfiguration().getNodeLocalityDelay();
+    
     setupQueueConfigs(
         cs.getClusterResources(),
         capacity, absoluteCapacity, 
@@ -531,6 +536,11 @@ public class LeafQueue implements CSQueue {
     return Collections.singletonList(userAclInfo);
   }
 
+  @Private
+  public int getNodeLocalityDelay() {
+    return nodeLocalityDelay;
+  }
+  
   public String toString() {
     return queueName + ": " + 
         "capacity=" + capacity + ", " + 
@@ -1096,7 +1106,7 @@ public class LeafQueue implements CSQueue {
           reservedContainer)) {
         return assignContainer(clusterResource, node, application, priority, request, 
             NodeType.RACK_LOCAL, reservedContainer);
-      }
+      } 
     }
     return Resources.none();
   }
@@ -1113,7 +1123,6 @@ public class LeafQueue implements CSQueue {
             NodeType.OFF_SWITCH, reservedContainer);
       }
     }
-    
     return Resources.none();
   }
 
@@ -1148,7 +1157,12 @@ public class LeafQueue implements CSQueue {
       
     // If we are here, we do need containers on this rack for RACK_LOCAL req
     if (type == NodeType.RACK_LOCAL) {
-      return true;
+      // 'Delay' rack-local just a little bit...
+      long missedOpportunities = application.getSchedulingOpportunities(priority);
+      return (
+          Math.min(scheduler.getNumClusterNodes(), getNodeLocalityDelay()) < 
+          missedOpportunities
+          );
     }
 
     // Check if we need containers on this host
