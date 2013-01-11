@@ -483,6 +483,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4377. Some trivial DN comment cleanup. (eli)
 
+    HDFS-4381. Document fsimage format details in FSImageFormat class javadoc.
+    (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
