@@ -602,6 +602,15 @@ class BlockPoolSliceScanner {
       lastScanTime.set(Time.now());
     }
   }
+
+  /**
+   * Shuts down this BlockPoolSliceScanner and releases any internal resources.
+   */
+  void shutdown() {
+    if (verificationLog != null) {
+      verificationLog.close();
+    }
+  }
   
   private void scan() {
     if (LOG.isDebugEnabled()) {
@@ -610,7 +619,8 @@ class BlockPoolSliceScanner {
     try {
       adjustThrottler();
         
-      while (datanode.shouldRun && !Thread.interrupted()
+      while (datanode.shouldRun
+          && !datanode.blockScanner.blockScannerThread.isInterrupted()
           && datanode.isBPServiceAlive(blockPoolId)) {
         long now = Time.now();
         synchronized (this) {

@@ -399,6 +399,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4328. TestLargeBlock#testLargeBlockSize is timing out. (Chris Nauroth
     via atm)
 
+    HDFS-4274. BlockPoolSliceScanner does not close verification log during
+    shutdown. (Chris Nauroth via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
