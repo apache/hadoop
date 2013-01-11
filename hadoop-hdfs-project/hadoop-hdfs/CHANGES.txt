@@ -432,6 +432,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4326. bump up Tomcat version for HttpFS to 6.0.36. (tucu via acmurthy)
 
+    HDFS-4381. Document fsimage format details in FSImageFormat class javadoc.
+    (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
