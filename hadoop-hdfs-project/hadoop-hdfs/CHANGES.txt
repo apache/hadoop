@@ -393,6 +393,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4306. PBHelper.convertLocatedBlock miss convert BlockToken. (Binglin
     Chang via atm)
 
+    HDFS-4387. test_libhdfs_threaded SEGV on OpenJDK 7. (Colin McCabe via eli)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
