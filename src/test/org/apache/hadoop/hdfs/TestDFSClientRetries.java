@@ -270,6 +270,8 @@ public class TestDFSClientRetries extends TestCase {
     public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
 
     public boolean rename(String src, String dst) throws IOException { return false; }
+    
+    public void concat(String trg, String[] srcs)  throws IOException {}
 
     public boolean delete(String src) throws IOException { return false; }
 

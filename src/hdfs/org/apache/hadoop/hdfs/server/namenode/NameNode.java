@@ -830,6 +830,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public long getPreferredBlockSize(String filename) throws IOException {
     return namesystem.getPreferredBlockSize(filename);
   }
+  
+  /** 
+   * {@inheritDoc}
+   */
+  public void concat(String trg, String[] src) throws IOException {
+    namesystem.concat(trg, src);
+  }
     
   /**
    */

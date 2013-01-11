@@ -61,6 +61,10 @@ Release 1.2.0 - unreleased
     NetworkTopology with NodeGroup and use generic code for choosing datanode
     in Balancer.  (Junping Du via szetszwo)
 
+
+    HDFS-4256 Backport concatenation of files into a single file to branch-1
+    (sanjay Radia)
+
   IMPROVEMENTS
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)

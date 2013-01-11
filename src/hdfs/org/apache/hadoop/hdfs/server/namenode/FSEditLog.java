@@ -85,6 +85,7 @@ public class FSEditLog {
   private static final byte OP_CLEAR_NS_QUOTA = 12; // clear namespace quota
   private static final byte OP_TIMES = 13; // sets mod & access time on a file
   private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
+  private static final byte OP_CONCAT_DELETE = 16; // concat files.
   private static final byte OP_GET_DELEGATION_TOKEN = 18; //new delegation token
   private static final byte OP_RENEW_DELEGATION_TOKEN = 19; //renew delegation token
   private static final byte OP_CANCEL_DELEGATION_TOKEN = 20; //cancel delegation token
@@ -631,7 +632,8 @@ public class FSEditLog {
         numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
         numOpTimes = 0, numOpGetDelegationToken = 0,
         numOpRenewDelegationToken = 0, numOpCancelDelegationToken = 0,
-        numOpUpdateMasterKey = 0, numOpOther = 0;
+        numOpUpdateMasterKey = 0, numOpOther = 0,
+        numOpConcatDelete = 0;
     long highestGenStamp = -1;
     long startTime = FSNamesystem.now();
 
@@ -807,13 +809,34 @@ public class FSEditLog {
           short replication = adjustReplication(readShort(in));
           fsDir.unprotectedSetReplication(path, replication, null);
           break;
-        } 
+        }
+        case OP_CONCAT_DELETE: {
+          if (logVersion > -22) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpConcatDelete++;
+          int length = in.readInt();
+          if (length < 3) { // trg, srcs.., timestam
+            throw new IOException("Incorrect data format. " 
+                                  + "ConcatDelete operation.");
+          }
+          String trg = FSImage.readString(in);
+          int srcSize = length - 1 - 1; //trg and timestamp
+          String [] srcs = new String [srcSize];
+          for(int i=0; i<srcSize;i++) {
+            srcs[i]= FSImage.readString(in);
+          }
+          timestamp = readLong(in);
+          fsDir.unprotectedConcat(trg, srcs, timestamp);
+          break;
+        }
         case OP_RENAME: {
           numOpRename++;
           int length = in.readInt();
           if (length != 3) {
             throw new IOException("Incorrect data format. " 
-                                  + "Mkdir operation.");
+                                  + "Rename operation.");
           }
           String s = FSImage.readString(in);
           String d = FSImage.readString(in);
@@ -1065,6 +1088,7 @@ public class FSEditLog {
           + " numOpRenewDelegationToken = " + numOpRenewDelegationToken
           + " numOpCancelDelegationToken = " + numOpCancelDelegationToken
           + " numOpUpdateMasterKey = " + numOpUpdateMasterKey
+          + " numOpConcatDelete  = " + numOpConcatDelete
           + " numOpOther = " + numOpOther);
     }
 
@@ -1350,6 +1374,21 @@ public class FSEditLog {
     logEdit(OP_SET_OWNER, new UTF8(src), u, g);
   }
 
+  /**
+   * concat(trg,src..) log
+   */
+  void logConcat(String trg, String [] srcs, long timestamp) {
+    int size = 1 + srcs.length + 1; // trg, srcs, timestamp
+    UTF8 info[] = new UTF8[size];
+    int idx = 0;
+    info[idx++] = new UTF8(trg);
+    for(int i=0; i<srcs.length; i++) {
+      info[idx++] = new UTF8(srcs[i]);
+    }
+    info[idx] = FSEditLog.toLogLong(timestamp);
+    logEdit(OP_CONCAT_DELETE, new ArrayWritable(UTF8.class, info));
+  }
+  
   /** 
    * Add delete file record to edit log
    */

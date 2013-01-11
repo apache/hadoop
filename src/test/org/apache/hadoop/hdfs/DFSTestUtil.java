@@ -34,6 +34,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -136,27 +137,39 @@ public class DFSTestUtil {
   
   public static void createFile(FileSystem fs, Path fileName, long fileLen, 
       short replFactor, long seed) throws IOException {
+    createFile(fs, fileName, 1024, fileLen, fs.getDefaultBlockSize(fileName),
+        replFactor, seed);
+  }
+  
+  public static void createFile(FileSystem fs, Path fileName, int bufferLen,
+      long fileLen, long blockSize, short replFactor, long seed)
+      throws IOException {
+    assert bufferLen > 0;
     if (!fs.mkdirs(fileName.getParent())) {
       throw new IOException("Mkdirs failed to create " + 
                             fileName.getParent().toString());
     }
     FSDataOutputStream out = null;
     try {
-      out = fs.create(fileName, replFactor);
-      byte[] toWrite = new byte[1024];
-      Random rb = new Random(seed);
-      long bytesToWrite = fileLen;
-      while (bytesToWrite>0) {
-        rb.nextBytes(toWrite);
-        int bytesToWriteNext = (1024<bytesToWrite)?1024:(int)bytesToWrite;
-
-        out.write(toWrite, 0, bytesToWriteNext);
-        bytesToWrite -= bytesToWriteNext;
+      out = fs.create(fileName, true,
+        fs.getConf().getInt("io.file.buffer.size", 4096),replFactor, blockSize);
+      if (fileLen > 0) {
+        byte[] toWrite = new byte[bufferLen];
+        Random rb = new Random(seed);
+        long bytesToWrite = fileLen;
+        while (bytesToWrite>0) {
+          rb.nextBytes(toWrite);
+          int bytesToWriteNext = (bufferLen < bytesToWrite) ? bufferLen
+              : (int) bytesToWrite;
+  
+          out.write(toWrite, 0, bytesToWriteNext);
+          bytesToWrite -= bytesToWriteNext;
+        }
       }
-      out.close();
-      out = null;
     } finally {
-      IOUtils.closeStream(out);
+      if (out != null) {
+        out.close();
+      }
     }
   }
   

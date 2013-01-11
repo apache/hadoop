@@ -944,6 +944,19 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      DSQuotaExceededException.class);
     }
   }
+  
+  /**
+   * Move blocks from src to trg and delete src
+   * See {@link ClientProtocol#concat(String, String [])}. 
+   */
+  public void concat(String trg, String [] srcs) throws IOException {
+    checkOpen();
+    try {
+      namenode.concat(trg, srcs);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
+  }
 
   /**
    * Rename file or directory.
