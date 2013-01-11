@@ -311,6 +311,8 @@ Trunk (Unreleased)
     HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
 
+    HADOOP-9139 improve killKdc.sh (Ivan A. Veselovsky via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
