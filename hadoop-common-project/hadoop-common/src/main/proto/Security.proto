@@ -32,3 +32,26 @@ message TokenProto {
   required string service = 4;
 }
 
+message GetDelegationTokenRequestProto {
+  required string renewer = 1;
+}
+
+message GetDelegationTokenResponseProto {
+  optional hadoop.common.TokenProto token = 1;
+}
+
+message RenewDelegationTokenRequestProto {
+  required hadoop.common.TokenProto token = 1;
+}
+
+message RenewDelegationTokenResponseProto {
+  required uint64 newExpiryTime = 1;
+}
+
+message CancelDelegationTokenRequestProto {
+  required hadoop.common.TokenProto token = 1;
+}
+
+message CancelDelegationTokenResponseProto { // void response
+}
+

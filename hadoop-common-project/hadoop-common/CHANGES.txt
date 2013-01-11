@@ -115,6 +115,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9119. Add test to FileSystemContractBaseTest to verify integrity
     of overwritten files. (Steve Loughran via suresh)
 
+    HADOOP-9192. Move token related request/response messages to common.
+    (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
