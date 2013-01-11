@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -38,7 +39,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.net.EncryptedPeer;
+import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -46,17 +47,16 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.hdfs.FileInputStreamCache;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
@@ -79,6 +79,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
   private LocatedBlock currentLocatedBlock = null;
   private long pos = 0;
   private long blockEnd = -1;
+
+  private final FileInputStreamCache fileInputStreamCache;
 
   /**
    * This variable tracks the number of failures since the start of the
@@ -115,6 +117,13 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     this.buffersize = buffersize;
     this.src = src;
     this.peerCache = dfsClient.peerCache;
+    this.fileInputStreamCache = new FileInputStreamCache(
+      dfsClient.conf.getInt(DFSConfigKeys.
+        DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_KEY,
+        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_DEFAULT),
+      dfsClient.conf.getLong(DFSConfigKeys.
+        DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY,
+        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_DEFAULT));
     prefetchSize = dfsClient.getConf().prefetchSize;
     timeWindow = dfsClient.getConf().timeWindow;
     nCachedConnRetry = dfsClient.getConf().nCachedConnRetry;
@@ -247,7 +256,9 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         locatedBlocks.getFileLength() + lastBlockBeingWrittenLength;
   }
 
-  private synchronized boolean blockUnderConstruction() {
+  // Short circuit local reads are forbidden for files that are
+  // under construction.  See HDFS-2757.
+  synchronized boolean shortCircuitForbidden() {
     return locatedBlocks.isUnderConstruction();
   }
 
@@ -428,7 +439,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
 
     // Will be getting a new BlockReader.
     if (blockReader != null) {
-      blockReader.close(peerCache);
+      blockReader.close(peerCache, fileInputStreamCache);
       blockReader = null;
     }
 
@@ -510,10 +521,11 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     dfsClient.checkOpen();
 
     if (blockReader != null) {
-      blockReader.close(peerCache);
+      blockReader.close(peerCache, fileInputStreamCache);
       blockReader = null;
     }
     super.close();
+    fileInputStreamCache.close();
     closed = true;
   }
 
@@ -809,10 +821,6 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                  e.getPos() + " from " + chosenNode);
         // we want to remember what we have tried
         addIntoCorruptedBlockMap(block.getBlock(), chosenNode, corruptedBlockMap);
-      } catch (AccessControlException ex) {
-        DFSClient.LOG.warn("Short circuit access failed ", ex);
-        dfsClient.disableShortCircuit();
-        continue;
       } catch (IOException e) {
         if (e instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
           DFSClient.LOG.info("Will fetch a new encryption key and retry, " 
@@ -837,7 +845,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         }
       } finally {
         if (reader != null) {
-          reader.close(peerCache);
+          reader.close(peerCache, fileInputStreamCache);
         }
       }
       // Put chosen node into dead list, continue
@@ -849,19 +857,29 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     Peer peer = null;
     boolean success = false;
     Socket sock = null;
+    DomainSocket domSock = null;
+
     try {
-      sock = dfsClient.socketFactory.createSocket();
-      NetUtils.connect(sock, addr,
-        dfsClient.getRandomLocalInterfaceAddr(),
-        dfsClient.getConf().socketTimeout);
-      peer = TcpPeerServer.peerFromSocketAndKey(sock, 
-          dfsClient.getDataEncryptionKey());
+      domSock = dfsClient.getDomainSocketFactory().create(addr, this);
+      if (domSock != null) {
+        // Create a UNIX Domain peer.
+        peer = new DomainPeer(domSock);
+      } else {
+        // Create a conventional TCP-based Peer.
+        sock = dfsClient.socketFactory.createSocket();
+        NetUtils.connect(sock, addr,
+          dfsClient.getRandomLocalInterfaceAddr(),
+          dfsClient.getConf().socketTimeout);
+        peer = TcpPeerServer.peerFromSocketAndKey(sock, 
+            dfsClient.getDataEncryptionKey());
+      }
       success = true;
       return peer;
     } finally {
       if (!success) {
         IOUtils.closeQuietly(peer);
         IOUtils.closeQuietly(sock);
+        IOUtils.closeQuietly(domSock);
       }
     }
   }
@@ -895,49 +913,77 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                                        String clientName)
       throws IOException {
     
-    // Can't local read a block under construction, see HDFS-2757
-    if (dfsClient.shouldTryShortCircuitRead(dnAddr) &&
-        !blockUnderConstruction()) {
-      return DFSClient.getLocalBlockReader(dfsClient.conf, src, block,
-          blockToken, chosenNode, dfsClient.hdfsTimeout, startOffset,
-          dfsClient.connectToDnViaHostname());
-    }
-    
     IOException err = null;
-    boolean fromCache = true;
 
-    // Allow retry since there is no way of knowing whether the cached socket
-    // is good until we actually use it.
-    for (int retries = 0; retries <= nCachedConnRetry && fromCache; ++retries) {
+    // Firstly, we check to see if we have cached any file descriptors for
+    // local blocks.  If so, we can just re-use those file descriptors.
+    FileInputStream fis[] = fileInputStreamCache.get(chosenNode, block);
+    if (fis != null) {
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("got FileInputStreams for " + block + " from " +
+            "the FileInputStreamCache.");
+      }
+      return new BlockReaderLocal(dfsClient.conf, file,
+        block, startOffset, len, fis[0], fis[1], chosenNode, verifyChecksum);
+    }
+
+    // We retry several times here.
+    // On the first nCachedConnRetry times, we try to fetch a socket from
+    // the socketCache and use it.  This may fail, since the old socket may
+    // have been closed by the peer.
+    // After that, we try to create a new socket using newPeer().
+    // This may create either a TCP socket or a UNIX domain socket, depending
+    // on the configuration and whether the peer is remote.
+    // If we try to create a UNIX domain socket and fail, we will not try that 
+    // again.  Instead, we'll try to create a TCP socket.  Only after we've 
+    // failed to create a TCP-based BlockReader will we throw an IOException
+    // from this function.  Throwing an IOException from here is basically
+    // equivalent to declaring the DataNode bad.
+    boolean triedNonDomainSocketReader = false;
+    for (int retries = 0;
+          retries < nCachedConnRetry && (!triedNonDomainSocketReader);
+          ++retries) {
       Peer peer = null;
-      // Don't use the cache on the last attempt - it's possible that there
-      // are arbitrarily many unusable sockets in the cache, but we don't
-      // want to fail the read.
       if (retries < nCachedConnRetry) {
         peer = peerCache.get(chosenNode);
       }
       if (peer == null) {
         peer = newPeer(dnAddr);
-        fromCache = false;
+        if (peer.getDomainSocket() == null) {
+          triedNonDomainSocketReader = true;
+        }
       }
-
+      boolean success = false;
       try {
-        // The OP_READ_BLOCK request is sent as we make the BlockReader
-        BlockReader reader =
-            BlockReaderFactory.newBlockReader(dfsClient.conf,
-                                       file, block,
-                                       blockToken,
-                                       startOffset, len,
-                                       verifyChecksum,
-                                       clientName,
-                                       peer,
-                                       chosenNode);
-        return reader;
-      } catch (IOException ex) {
-        // Our socket is no good.
-        DFSClient.LOG.debug("Error making BlockReader. Closing stale " + peer, ex);
-        IOUtils.closeQuietly(peer);
+        boolean allowShortCircuitLocalReads =
+          (peer.getDomainSocket() != null) &&
+          dfsClient.getConf().shortCircuitLocalReads && 
+          (!shortCircuitForbidden());
+        // Here we will try to send either an OP_READ_BLOCK request or an 
+        // OP_REQUEST_SHORT_CIRCUIT_FDS, depending on what kind of block reader 
+        // we're trying to create.
+        BlockReader blockReader = BlockReaderFactory.newBlockReader(
+            dfsClient.conf, file, block, blockToken, startOffset,
+            len, verifyChecksum, clientName, peer, chosenNode, 
+            dfsClient.getDomainSocketFactory(), allowShortCircuitLocalReads);
+        success = true;
+        return blockReader;
+       } catch (IOException ex) {
+         // Our socket is no good.
+        DFSClient.LOG.debug("Error making BlockReader. " +
+            "Closing stale " + peer, ex);
+        if (peer.getDomainSocket() != null) {
+          // If the Peer that we got the error from was a DomainPeer,
+          // mark the socket path as bad, so that newDataSocket will not try 
+          // to re-open this socket for a while.
+          dfsClient.getDomainSocketFactory().
+              disableDomainSocketPath(peer.getDomainSocket().getPath());
+        }
         err = ex;
+      } finally {
+        if (!success) {
+          IOUtils.closeQuietly(peer);
+        }
       }
     }
 
@@ -1075,7 +1121,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
       // the TCP buffer, then just eat up the intervening data.
       //
       int diff = (int)(targetPos - pos);
-      if (diff <= DFSClient.TCP_WINDOW_SIZE) {
+      if (diff <= blockReader.available()) {
         try {
           pos += blockReader.skip(diff);
           if (pos == targetPos) {

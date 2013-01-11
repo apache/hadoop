@@ -17,52 +17,32 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
+import java.io.File;
 
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
 
-public class TestParallelLocalRead extends TestParallelReadUtil {
+public class TestParallelShortCircuitReadNoChecksum extends TestParallelReadUtil {
+  private static TemporarySocketDirectory sockDir;
 
   @BeforeClass
   static public void setupCluster() throws Exception {
+    sockDir = new TemporarySocketDirectory();
     HdfsConfiguration conf = new HdfsConfiguration();
-
+    conf.set(DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY,
+      new File(sockDir.getDir(), "TestParallelLocalRead.%d.sock").getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
-        false);
-    conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
-        UserGroupInformation.getCurrentUser().getShortUserName());
-
+    conf.setBoolean(DFSConfigKeys.
+        DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, true);
+    DomainSocket.disableBindPathValidation();
     setupCluster(1, conf);
   }
 
   @AfterClass
   static public void teardownCluster() throws Exception {
+    sockDir.close();
     TestParallelReadUtil.teardownCluster();
-  }
-
-  /**
-   * Do parallel read several times with different number of files and threads.
-   *
-   * Note that while this is the only "test" in a junit sense, we're actually
-   * dispatching a lot more. Failures in the other methods (and other threads)
-   * need to be manually collected, which is inconvenient.
-   */
-  @Test
-  public void testParallelReadCopying() throws IOException {
-    runTestWorkload(new CopyingReadWorkerHelper());
-  }
-
-  @Test
-  public void testParallelReadByteBuffer() throws IOException {
-    runTestWorkload(new DirectReadWorkerHelper());
-  }
-
-  @Test
-  public void testParallelReadMixed() throws IOException {
-    runTestWorkload(new MixedWorkloadHelper());
   }
 }

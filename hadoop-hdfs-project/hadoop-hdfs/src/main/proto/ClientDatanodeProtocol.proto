@@ -74,6 +74,8 @@ message DeleteBlockPoolResponseProto {
  * Gets the file information where block and its metadata is stored
  * block - block for which path information is being requested
  * token - block token
+ *
+ * This message is deprecated in favor of file descriptor passing.
  */
 message GetBlockLocalPathInfoRequestProto {
   required ExtendedBlockProto block = 1;
@@ -84,6 +86,8 @@ message GetBlockLocalPathInfoRequestProto {
  * block - block for which file path information is being returned
  * localPath - file path where the block data is stored
  * localMetaPath - file path where the block meta data is stored
+ *
+ * This message is deprecated in favor of file descriptor passing.
  */
 message GetBlockLocalPathInfoResponseProto {
   required ExtendedBlockProto block = 1;

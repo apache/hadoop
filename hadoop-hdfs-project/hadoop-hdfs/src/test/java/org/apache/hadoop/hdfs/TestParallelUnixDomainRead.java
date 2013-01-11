@@ -17,17 +17,30 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.File;
+
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-public class TestParallelRead extends TestParallelReadUtil {
+public class TestParallelUnixDomainRead extends TestParallelReadUtil {
+  private static TemporarySocketDirectory sockDir;
+
   @BeforeClass
   static public void setupCluster() throws Exception {
-    setupCluster(DEFAULT_REPLICATION_FACTOR, new HdfsConfiguration());
+    sockDir = new TemporarySocketDirectory();
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY,
+      new File(sockDir.getDir(), "TestParallelLocalRead.%d.sock").getAbsolutePath());
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    DomainSocket.disableBindPathValidation();
+    setupCluster(1, conf);
   }
 
   @AfterClass
   static public void teardownCluster() throws Exception {
+    sockDir.close();
     TestParallelReadUtil.teardownCluster();
   }
 }

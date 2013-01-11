@@ -413,7 +413,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   }
 
   @Override
-  public synchronized void close(PeerCache peerCache) throws IOException {
+  public synchronized void close(PeerCache peerCache,
+      FileInputStreamCache fisCache) throws IOException {
     startOffset = -1;
     checksum = null;
     if (peerCache != null & sentStatusCode) {
@@ -469,5 +470,12 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   @Override
   public int read(ByteBuffer buf) throws IOException {
     throw new UnsupportedOperationException("readDirect unsupported in RemoteBlockReader");
+  }
+  
+  @Override
+  public int available() throws IOException {
+    // An optimistic estimate of how much data is available
+    // to us without doing network I/O.
+    return DFSClient.TCP_WINDOW_SIZE;
   }
 }

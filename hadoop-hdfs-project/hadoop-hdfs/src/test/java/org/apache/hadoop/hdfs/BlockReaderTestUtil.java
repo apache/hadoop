@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.unix.DomainSocket;
 
 /**
  * A helper class to setup the cluster, and get to BlockReader and DataNode for a block.
@@ -156,7 +157,7 @@ public class BlockReaderTestUtil {
       testBlock.getBlockToken(), 
       offset, lenToRead,
       true, "BlockReaderTestUtil", TcpPeerServer.peerFromSocket(sock),
-      nodes[0]);
+      nodes[0], null, false);
   }
 
   /**
@@ -168,4 +169,12 @@ public class BlockReaderTestUtil {
     return cluster.getDataNode(ipcport);
   }
 
+  public boolean haveRequiredResources() {
+    if (conf.get(DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY) != null) {
+      // To use UNIX Domain sockets, we must have the native code loaded.
+      return DomainSocket.getLoadingFailureReason() == null;
+    } else {
+      return true;
+    }
+  }
 }

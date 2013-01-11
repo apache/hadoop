@@ -275,7 +275,8 @@ public class RemoteBlockReader2  implements BlockReader {
 
 
   @Override
-  public synchronized void close(PeerCache peerCache) throws IOException {
+  public synchronized void close(PeerCache peerCache,
+      FileInputStreamCache fisCache) throws IOException {
     packetReceiver.close();
     startOffset = -1;
     checksum = null;
@@ -421,5 +422,12 @@ public class RemoteBlockReader2  implements BlockReader {
             + block.getBlockId() + "_" + block.getGenerationStamp());
       }
     }
+  }
+  
+  @Override
+  public int available() throws IOException {
+    // An optimistic estimate of how much data is available
+    // to us without doing network I/O.
+    return DFSClient.TCP_WINDOW_SIZE;
   }
 }

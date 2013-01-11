@@ -111,7 +111,7 @@ public class DomainSocket implements Closeable {
    * Disable validation of the server bind paths.
    */
   @VisibleForTesting
-  static void disableBindPathValidation() {
+  public static void disableBindPathValidation() {
     validateBindPaths = false;
   }
 

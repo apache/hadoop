@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpTransferBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpRequestShortCircuitAccessProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
 
 /** Receiver */
@@ -77,6 +78,9 @@ public abstract class Receiver implements DataTransferProtocol {
     case TRANSFER_BLOCK:
       opTransferBlock(in);
       break;
+    case REQUEST_SHORT_CIRCUIT_FDS:
+      opRequestShortCircuitFds(in);
+      break;
     default:
       throw new IOException("Unknown op " + op + " in data stream");
     }
@@ -115,6 +119,15 @@ public abstract class Receiver implements DataTransferProtocol {
         fromProto(proto.getHeader().getBaseHeader().getToken()),
         proto.getHeader().getClientName(),
         fromProtos(proto.getTargetsList()));
+  }
+
+  /** Receive {@link Op#REQUEST_SHORT_CIRCUIT_FDS} */
+  private void opRequestShortCircuitFds(DataInputStream in) throws IOException {
+    final OpRequestShortCircuitAccessProto proto =
+      OpRequestShortCircuitAccessProto.parseFrom(vintPrefixed(in));
+    requestShortCircuitFds(fromProto(proto.getHeader().getBlock()),
+        fromProto(proto.getHeader().getToken()),
+        proto.getMaxVersion());
   }
 
   /** Receive OP_REPLACE_BLOCK */
