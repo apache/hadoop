@@ -497,6 +497,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4100. Fix all findbug security warings. (Liang Xie via eli)
 
+    HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
+    via tgraves)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
