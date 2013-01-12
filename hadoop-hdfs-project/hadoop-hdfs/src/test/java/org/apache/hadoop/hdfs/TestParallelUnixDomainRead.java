@@ -22,13 +22,17 @@ import java.io.File;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.AfterClass;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import static org.hamcrest.CoreMatchers.*;
 
 public class TestParallelUnixDomainRead extends TestParallelReadUtil {
   private static TemporarySocketDirectory sockDir;
 
   @BeforeClass
   static public void setupCluster() throws Exception {
+    if (DomainSocket.getLoadingFailureReason() != null) return;
     sockDir = new TemporarySocketDirectory();
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY,
@@ -38,8 +42,14 @@ public class TestParallelUnixDomainRead extends TestParallelReadUtil {
     setupCluster(1, conf);
   }
 
+  @Before
+  public void before() {
+    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+  }
+
   @AfterClass
   static public void teardownCluster() throws Exception {
+    if (DomainSocket.getLoadingFailureReason() != null) return;
     sockDir.close();
     TestParallelReadUtil.teardownCluster();
   }

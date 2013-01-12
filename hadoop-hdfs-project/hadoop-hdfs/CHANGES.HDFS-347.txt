@@ -13,3 +13,7 @@ HDFS-4356. BlockReaderLocal should use passed file descriptors rather than paths
 
 HDFS-4388. DomainSocket should throw AsynchronousCloseException when appropriate.
 (Colin Patrick McCabe via todd)
+
+HDFS-4390. Bypass UNIX domain socket unit tests when they cannot be run.
+(Colin Patrick McCabe via todd)
+

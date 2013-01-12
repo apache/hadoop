@@ -401,19 +401,16 @@ public class TestParallelReadUtil {
    */
   @Test
   public void testParallelReadCopying() throws IOException {
-    Assume.assumeTrue(util.haveRequiredResources());
     runTestWorkload(new CopyingReadWorkerHelper());
   }
 
   @Test
   public void testParallelReadByteBuffer() throws IOException {
-    Assume.assumeTrue(util.haveRequiredResources());
     runTestWorkload(new DirectReadWorkerHelper());
   }
 
   @Test
   public void testParallelReadMixed() throws IOException {
-    Assume.assumeTrue(util.haveRequiredResources());
     runTestWorkload(new MixedWorkloadHelper());
   }
 }
