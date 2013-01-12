@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -207,10 +209,13 @@ public class DomainSocket implements Closeable {
    */
   public DomainSocket accept() throws IOException {
     fdRef();
+    boolean exc = true;
     try {
-      return new DomainSocket(path, accept0(fd));
+      DomainSocket ret = new DomainSocket(path, accept0(fd));
+      exc = false;
+      return ret;
     } finally {
-      fdUnref();
+      fdUnref(exc);
     }
   }
 
@@ -235,20 +240,23 @@ public class DomainSocket implements Closeable {
    *
    * @throws SocketException  If the file descriptor is closed.
    */
-  private void fdRef() throws SocketException {
+  private void fdRef() throws ClosedChannelException {
     int bits = status.incrementAndGet();
     if ((bits & STATUS_CLOSED_MASK) != 0) {
       status.decrementAndGet();
-      throw new SocketException("Socket is closed.");
+      throw new ClosedChannelException();
     }
   }
 
   /**
    * Decrement the reference count of the underlying file descriptor.
    */
-  private void fdUnref() {
+  private void fdUnref(boolean checkClosed) throws AsynchronousCloseException {
     int newCount = status.decrementAndGet();
-    assert newCount >= 0;
+    assert (newCount & ~STATUS_CLOSED_MASK) >= 0;
+    if (checkClosed & ((newCount & STATUS_CLOSED_MASK) != 0)) {
+      throw new AsynchronousCloseException();
+    }
   }
 
   /**
@@ -298,10 +306,12 @@ public class DomainSocket implements Closeable {
 
   public void setAttribute(int type, int size) throws IOException {
     fdRef();
+    boolean exc = true;
     try {
       setAttribute0(fd, type, size);
+      exc = false;
     } finally {
-      fdUnref();
+      fdUnref(exc);
     }
   }
 
@@ -309,10 +319,14 @@ public class DomainSocket implements Closeable {
 
   public int getAttribute(int type) throws IOException {
     fdRef();
+    int attribute;
+    boolean exc = true;
     try {
-      return getAttribute0(fd, type);
+      attribute = getAttribute0(fd, type);
+      exc = false;
+      return attribute;
     } finally {
-      fdUnref();
+      fdUnref(exc);
     }
   }
 
@@ -396,10 +410,12 @@ public class DomainSocket implements Closeable {
   public void sendFileDescriptors(FileDescriptor jfds[],
       byte jbuf[], int offset, int length) throws IOException {
     fdRef();
+    boolean exc = true;
     try {
       sendFileDescriptors0(fd, jfds, jbuf, offset, length);
+      exc = false;
     } finally {
-      fdUnref();
+      fdUnref(exc);
     }
   }
 
@@ -430,10 +446,13 @@ public class DomainSocket implements Closeable {
   public int receiveFileDescriptors(FileDescriptor[] jfds,
       byte jbuf[], int offset, int length) throws IOException {
     fdRef();
+    boolean exc = true;
     try {
-      return receiveFileDescriptors0(fd, jfds, jbuf, offset, length);
+      int nBytes = receiveFileDescriptors0(fd, jfds, jbuf, offset, length);
+      exc = false;
+      return nBytes;
     } finally {
-      fdUnref();
+      fdUnref(exc);
     }
   }
 
@@ -462,7 +481,6 @@ public class DomainSocket implements Closeable {
       success = true;
       return ret;
     } finally {
-      fdUnref();
       if (!success) {
         for (int i = 0; i < fds.length; i++) {
           if (fds[i] != null) {
@@ -481,6 +499,7 @@ public class DomainSocket implements Closeable {
           }
         }
       }
+      fdUnref(!success);
     }
   }
 
@@ -505,32 +524,40 @@ public class DomainSocket implements Closeable {
     @Override
     public int read() throws IOException {
       fdRef();
+      boolean exc = true;
       try {
         byte b[] = new byte[1];
         int ret = DomainSocket.readArray0(DomainSocket.this.fd, b, 0, 1);
+        exc = false;
         return (ret >= 0) ? b[0] : -1;
       } finally {
-        fdUnref();
+        fdUnref(exc);
       }
     }
     
     @Override
     public int read(byte b[], int off, int len) throws IOException {
       fdRef();
+      boolean exc = true;
       try {
-        return DomainSocket.readArray0(DomainSocket.this.fd, b, off, len);
+        int nRead = DomainSocket.readArray0(DomainSocket.this.fd, b, off, len);
+        exc = false;
+        return nRead;
       } finally {
-        fdUnref();
+        fdUnref(exc);
       }
     }
 
     @Override
     public int available() throws IOException {
       fdRef();
+      boolean exc = true;
       try {
-        return DomainSocket.available0(DomainSocket.this.fd);
+        int nAvailable = DomainSocket.available0(DomainSocket.this.fd);
+        exc = false;
+        return nAvailable;
       } finally {
-        fdUnref();
+        fdUnref(exc);
       }
     }
 
@@ -553,22 +580,26 @@ public class DomainSocket implements Closeable {
     @Override
     public void write(int val) throws IOException {
       fdRef();
+      boolean exc = true;
       try {
         byte b[] = new byte[1];
         b[0] = (byte)val;
         DomainSocket.writeArray0(DomainSocket.this.fd, b, 0, 1);
+        exc = false;
       } finally {
-        fdUnref();
+        fdUnref(exc);
       }
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
       fdRef();
+        boolean exc = true;
       try {
         DomainSocket.writeArray0(DomainSocket.this.fd, b, off, len);
+        exc = false;
       } finally {
-        fdUnref();
+        fdUnref(exc);
       }
     }
   }
@@ -588,6 +619,7 @@ public class DomainSocket implements Closeable {
     @Override
     public int read(ByteBuffer dst) throws IOException {
       fdRef();
+      boolean exc = true;
       try {
         int nread = 0;
         if (dst.isDirect()) {
@@ -605,9 +637,10 @@ public class DomainSocket implements Closeable {
         if (nread > 0) {
           dst.position(dst.position() + nread);
         }
+        exc = false;
         return nread;
       } finally {
-        fdUnref();
+        fdUnref(exc);
       }
     }
   }

@@ -25,6 +25,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -96,8 +98,47 @@ public class TestDomainSocket {
   }
 
   /**
-   * Test that if one thread is blocking in accept(), another thread
-   * can close the socket and stop the accept.
+   * Test that we get a read result of -1 on EOF.
+   *
+   * @throws IOException
+   */
+  @Test(timeout=180000)
+  public void testSocketReadEof() throws Exception {
+    final String TEST_PATH = new File(sockDir.getDir(),
+        "testSocketReadEof").getAbsolutePath();
+    final DomainSocket serv = DomainSocket.bindAndListen(TEST_PATH);
+    ExecutorService exeServ = Executors.newSingleThreadExecutor();
+    Callable<Void> callable = new Callable<Void>() {
+      public Void call(){
+        DomainSocket conn;
+        try {
+          conn = serv.accept();
+        } catch (IOException e) {
+          throw new RuntimeException("unexpected IOException", e);
+        }
+        byte buf[] = new byte[100];
+        for (int i = 0; i < buf.length; i++) {
+          buf[i] = 0;
+        }
+        try {
+          Assert.assertEquals(-1, conn.getInputStream().read());
+        } catch (IOException e) {
+          throw new RuntimeException("unexpected IOException", e);
+        }
+        return null;
+      }
+    };
+    Future<Void> future = exeServ.submit(callable);
+    DomainSocket conn = DomainSocket.connect(serv.getPath());
+    Thread.sleep(50);
+    conn.close();
+    serv.close();
+    future.get(2, TimeUnit.MINUTES);
+  }
+
+  /**
+   * Test that if one thread is blocking in a read or write operation, another
+   * thread can close the socket and stop the accept.
    *
    * @throws IOException
    */
@@ -113,8 +154,10 @@ public class TestDomainSocket {
           serv.accept();
           throw new RuntimeException("expected the accept() to be " +
               "interrupted and fail");
-        } catch (IOException e) {
+        } catch (AsynchronousCloseException e) {
           return null;
+        } catch (IOException e) {
+          throw new RuntimeException("unexpected IOException", e);
         }
       }
     };
@@ -124,6 +167,96 @@ public class TestDomainSocket {
     future.get(2, TimeUnit.MINUTES);
   }
 
+  /**
+   * Test that we get an AsynchronousCloseException when the DomainSocket
+   * we're using is closed during a read or write operation.
+   *
+   * @throws IOException
+   */
+  private void testAsyncCloseDuringIO(final boolean closeDuringWrite)
+      throws Exception {
+    final String TEST_PATH = new File(sockDir.getDir(),
+        "testAsyncCloseDuringIO(" + closeDuringWrite + ")").getAbsolutePath();
+    final DomainSocket serv = DomainSocket.bindAndListen(TEST_PATH);
+    ExecutorService exeServ = Executors.newFixedThreadPool(2);
+    Callable<Void> serverCallable = new Callable<Void>() {
+      public Void call() {
+        DomainSocket serverConn = null;
+        try {
+          serverConn = serv.accept();
+          byte buf[] = new byte[100];
+          for (int i = 0; i < buf.length; i++) {
+            buf[i] = 0;
+          }
+          // The server just continues either writing or reading until someone
+          // asynchronously closes the client's socket.  At that point, all our
+          // reads return EOF, and writes get a socket error.
+          if (closeDuringWrite) {
+            try {
+              while (true) {
+                serverConn.getOutputStream().write(buf);
+              }
+            } catch (IOException e) {
+            }
+          } else {
+            do { ; } while 
+              (serverConn.getInputStream().read(buf, 0, buf.length) != -1);
+          }
+        } catch (IOException e) {
+          throw new RuntimeException("unexpected IOException", e);
+        } finally {
+          IOUtils.cleanup(DomainSocket.LOG, serverConn);
+        }
+        return null;
+      }
+    };
+    Future<Void> serverFuture = exeServ.submit(serverCallable);
+    final DomainSocket clientConn = DomainSocket.connect(serv.getPath());
+    Callable<Void> clientCallable = new Callable<Void>() {
+      public Void call(){
+        // The client writes or reads until another thread
+        // asynchronously closes the socket.  At that point, we should
+        // get ClosedChannelException, or possibly its subclass
+        // AsynchronousCloseException.
+        byte buf[] = new byte[100];
+        for (int i = 0; i < buf.length; i++) {
+          buf[i] = 0;
+        }
+        try {
+          if (closeDuringWrite) {
+            while (true) {
+              clientConn.getOutputStream().write(buf);
+            }
+          } else {
+            while (true) {
+              clientConn.getInputStream().read(buf, 0, buf.length);
+            }
+          }
+        } catch (ClosedChannelException e) {
+          return null;
+        } catch (IOException e) {
+          throw new RuntimeException("unexpected IOException", e);
+        }
+      }
+    };
+    Future<Void> clientFuture = exeServ.submit(clientCallable);
+    Thread.sleep(500);
+    clientConn.close();
+    serv.close();
+    clientFuture.get(2, TimeUnit.MINUTES);
+    serverFuture.get(2, TimeUnit.MINUTES);
+  }
+  
+  @Test(timeout=180000)
+  public void testAsyncCloseDuringWrite() throws Exception {
+    testAsyncCloseDuringIO(true);
+  }
+  
+  @Test(timeout=180000)
+  public void testAsyncCloseDuringRead() throws Exception {
+    testAsyncCloseDuringIO(false);
+  }
+  
   /**
    * Test that attempting to connect to an invalid path doesn't work.
    *

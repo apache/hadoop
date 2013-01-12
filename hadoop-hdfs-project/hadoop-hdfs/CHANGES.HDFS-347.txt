@@ -10,3 +10,6 @@ HDFS-4354. Create DomainSocket and DomainPeer and associated unit tests.
 
 HDFS-4356. BlockReaderLocal should use passed file descriptors rather than paths.
 (Colin Patrick McCabe via todd)
+
+HDFS-4388. DomainSocket should throw AsynchronousCloseException when appropriate.
+(Colin Patrick McCabe via todd)
