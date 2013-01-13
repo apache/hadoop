@@ -97,3 +97,6 @@ Branch-2802 Snapshot (Unreleased)
   via szetszwo)
 
   HDFS-4244. Support snapshot deletion.  (Jing Zhao via szetszwo)
+
+  HDFS-4245. Include snapshot related operations in TestOfflineEditsViewer.
+  (Jing Zhao via szetszwo)
