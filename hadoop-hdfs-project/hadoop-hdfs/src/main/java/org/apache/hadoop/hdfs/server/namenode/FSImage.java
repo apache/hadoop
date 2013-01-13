@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.util.IdGenerator;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -91,6 +92,7 @@ public class FSImage implements Closeable {
   final private Configuration conf;
 
   protected NNStorageRetentionManager archivalManager;
+  protected IdGenerator blockIdGenerator;
 
   /**
    * Construct an FSImage
@@ -136,6 +138,9 @@ public class FSImage implements Closeable {
     Preconditions.checkState(fileCount == 1,
         "FSImage.format should be called with an uninitialized namesystem, has " +
         fileCount + " files");
+    // BlockIdGenerator is defined during formatting
+    // currently there is only one BlockIdGenerator
+    blockIdGenerator = createBlockIdGenerator(fsn);
     NamespaceInfo ns = NNStorage.newNamespaceInfo();
     ns.clusterID = clusterId;
     
@@ -252,6 +257,7 @@ public class FSImage implements Closeable {
       doRollback();
       break;
     case REGULAR:
+    default:
       // just load the image
     }
     
@@ -736,6 +742,9 @@ public class FSImage implements Closeable {
     FSImageFormat.Loader loader = new FSImageFormat.Loader(
         conf, target);
     loader.load(curFile);
+    // BlockIdGenerator is determined after loading image
+    // currently there is only one BlockIdGenerator
+    blockIdGenerator = createBlockIdGenerator(target);
     target.setBlockPoolId(this.getBlockPoolID());
 
     // Check that the image digest we loaded matches up with what
@@ -1163,5 +1172,13 @@ public class FSImage implements Closeable {
 
   public synchronized long getMostRecentCheckpointTxId() {
     return storage.getMostRecentCheckpointTxId();
+  }
+
+  public long getUniqueBlockId() {
+    return blockIdGenerator.nextValue();
+  }
+
+  public IdGenerator createBlockIdGenerator(FSNamesystem fsn) {
+    return new RandomBlockIdGenerator(fsn);
   }
 }
