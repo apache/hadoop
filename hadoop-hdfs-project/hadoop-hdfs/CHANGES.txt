@@ -701,7 +701,7 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4274. BlockPoolSliceScanner does not close verification log during
     shutdown. (Chris Nauroth via suresh)
 
-    HDFS-1245. Plugable block id generation. (shv)
+    HDFS-1245. Pluggable block id generation. (shv)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
