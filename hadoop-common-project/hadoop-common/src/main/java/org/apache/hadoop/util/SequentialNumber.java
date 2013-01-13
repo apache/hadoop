@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * This class is thread safe.
  */
 @InterfaceAudience.Private
-public abstract class SequentialNumber {
+public abstract class SequentialNumber implements IdGenerator {
   private final AtomicLong currentValue;
 
   /** Create a new instance with the given initial value. */
