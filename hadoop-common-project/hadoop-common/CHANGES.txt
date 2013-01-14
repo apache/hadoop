@@ -148,6 +148,8 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
+
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
     FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
@@ -306,8 +308,13 @@ Trunk (Unreleased)
     HADOOP-9131. Turn off TestLocalFileSystem#testListStatusWithColons on
     Windows. (Chris Nauroth via suresh)
 
-    HADOOP-8957 AbstractFileSystem#IsValidName should be overridden for
+    HADOOP-8957. AbstractFileSystem#IsValidName should be overridden for
     embedded file systems like ViewFs (Chris Nauroth via Sanjay Radia)
+
+    HADOOP-9139. improve killKdc.sh (Ivan A. Veselovsky via bobby)
+
+    HADOOP-9202. test-patch.sh fails during mvn eclipse:eclipse if patch adds
+    a new module to the build (Chris Nauroth via bobby)
 
   OPTIMIZATIONS
 
@@ -426,6 +433,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9119. Add test to FileSystemContractBaseTest to verify integrity
     of overwritten files. (Steve Loughran via suresh)
 
+    HADOOP-9192. Move token related request/response messages to common.
+    (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -524,6 +534,11 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool.
     (Liang Xie via suresh)
+
+    HADOOP-9155. FsPermission should have different default value, 777 for
+    directory and 666 for file. (Binglin Chang via atm)
+
+    HADOOP-9183. Potential deadlock in ActiveStandbyElector. (tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1237,6 +1252,8 @@ Release 0.23.6 - UNRELEASED
     Veselovsky via bobby)
 
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
+
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
 
 Release 0.23.5 - UNRELEASED
 

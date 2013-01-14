@@ -25,6 +25,7 @@ import static org.mockito.Matchers.anyString;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,14 +34,19 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -49,11 +55,16 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 
 public class TestClientRMService {
@@ -63,6 +74,21 @@ public class TestClientRMService {
   private RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
+  private static RMDelegationTokenSecretManager dtsm;
+  
+  @BeforeClass
+  public static void setupSecretManager() throws IOException {
+    dtsm = new RMDelegationTokenSecretManager(60000, 60000, 60000, 60000);
+    dtsm.startThreads();  
+  }
+
+  @AfterClass
+  public static void teardownSecretManager() {
+    if (dtsm != null) {
+      dtsm.stopThreads();
+    }
+  }
+  
   @Test
   public void testGetClusterNodes() throws Exception {
     MockRM rm = new MockRM() {
@@ -141,6 +167,74 @@ public class TestClientRMService {
     Assert.assertEquals(2, applications.size());
   }
 
+  private static final UserGroupInformation owner =
+      UserGroupInformation.createRemoteUser("owner");
+  private static final UserGroupInformation other =
+      UserGroupInformation.createRemoteUser("other");
+  
+  @Test
+  public void testTokenRenewalByOwner() throws Exception {
+    owner.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTokenRenewal(owner, owner);
+        return null;
+      }
+    });
+  }
+  
+  @Test
+  public void testTokenRenewalWrongUser() throws Exception {
+    try {
+      owner.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          checkTokenRenewal(owner, other);
+          return null;
+        }
+      });
+    } catch (YarnRemoteException e) {
+      Assert.assertEquals(e.getMessage(),
+          "Client " + owner.getUserName() +
+          " tries to renew a token with renewer specified as " +
+          other.getUserName());
+      return;
+    }
+    Assert.fail("renew should have failed");
+  }
+
+  @Test
+  public void testTokenRenewalByLoginUser() throws Exception {
+    UserGroupInformation.getLoginUser().doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        checkTokenRenewal(owner, owner);
+        checkTokenRenewal(owner, other);
+        return null;
+      }
+    });
+  }
+
+  private void checkTokenRenewal(UserGroupInformation owner,
+      UserGroupInformation renewer) throws IOException {
+    RMDelegationTokenIdentifier tokenIdentifier =
+        new RMDelegationTokenIdentifier(
+            new Text(owner.getUserName()), new Text(renewer.getUserName()), null);
+    Token<?> token =
+        new Token<RMDelegationTokenIdentifier>(tokenIdentifier, dtsm);
+    DelegationToken dToken = BuilderUtils.newDelegationToken(
+        token.getIdentifier(), token.getKind().toString(),
+        token.getPassword(), token.getService().toString());
+    RenewDelegationTokenRequest request =
+        Records.newRecord(RenewDelegationTokenRequest.class);
+    request.setDelegationToken(dToken);
+
+    RMContext rmContext = mock(RMContext.class);
+    ClientRMService rmService = new ClientRMService(
+        rmContext, null, null, null, dtsm);
+    rmService.renewDelegationToken(request);
+  }
+  
   private void mockRMContext(YarnScheduler yarnScheduler, RMContext rmContext)
       throws IOException {
     Dispatcher dispatcher = mock(Dispatcher.class);

@@ -579,7 +579,7 @@ public class MRAppMaster extends CompositeService {
    */
   protected Recovery createRecoveryService(AppContext appContext) {
     return new RecoveryService(appContext.getApplicationAttemptId(),
-        appContext.getClock(), getCommitter());
+        appContext.getClock(), getCommitter(), isNewApiCommitter());
   }
 
   /** Create and initialize (but don't start) a single job. 

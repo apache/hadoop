@@ -15,22 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.util;
 
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
-import org.apache.log4j.Level;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-public class TestParallelRead extends TestParallelReadUtil {
-  @BeforeClass
-  static public void setupCluster() throws Exception {
-    setupCluster(DEFAULT_REPLICATION_FACTOR, new HdfsConfiguration());
-  }
+/**
+ * Generic ID generator
+ * used for generating various types of number sequences.
+ */
+@InterfaceAudience.Private
+public interface IdGenerator {
 
-  @AfterClass
-  static public void teardownCluster() throws Exception {
-    TestParallelReadUtil.teardownCluster();
-  }
+  /** Increment and then return the next value. */
+  public long nextValue();
 }

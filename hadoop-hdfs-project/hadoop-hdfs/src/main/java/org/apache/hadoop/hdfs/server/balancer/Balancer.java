@@ -18,7 +18,8 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.hdfs.protocol.HdfsProtoUtil.vintPrefixed;
+
+import static org.apache.hadoop.hdfs.protocolPB.PBHelper.vintPrefixed;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -189,7 +190,7 @@ public class Balancer {
    * balancing purpose at a datanode
    */
   public static final int MAX_NUM_CONCURRENT_MOVES = 5;
-  public static final int MAX_NO_PENDING_BLOCK_INTERATIONS = 5;
+  private static final int MAX_NO_PENDING_BLOCK_ITERATIONS = 5;
   
   private static final String USAGE = "Usage: java "
       + Balancer.class.getSimpleName()
@@ -781,7 +782,7 @@ public class Balancer {
           noPendingBlockIteration++;
           // in case no blocks can be moved for source node's task,
           // jump out of while-loop after 5 iterations.
-          if (noPendingBlockIteration >= MAX_NO_PENDING_BLOCK_INTERATIONS) {
+          if (noPendingBlockIteration >= MAX_NO_PENDING_BLOCK_ITERATIONS) {
             scheduledSize = 0;
           }
         }

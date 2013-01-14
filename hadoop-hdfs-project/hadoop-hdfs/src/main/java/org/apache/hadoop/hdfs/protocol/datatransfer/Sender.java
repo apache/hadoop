@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsProtoUtil.toProto;
-import static org.apache.hadoop.hdfs.protocol.HdfsProtoUtil.toProtos;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil.toProto;
 
 import java.io.DataOutput;
@@ -38,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockPr
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpTransferBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpRequestShortCircuitAccessProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -64,6 +63,10 @@ public class Sender implements DataTransferProtocol {
 
   private static void send(final DataOutputStream out, final Op opcode,
       final Message proto) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Sending DataTransferOp " + proto.getClass().getSimpleName()
+          + ": " + proto);
+    }
     op(out, opcode);
     proto.writeDelimitedTo(out);
     out.flush();
@@ -74,12 +77,14 @@ public class Sender implements DataTransferProtocol {
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final long blockOffset,
-      final long length) throws IOException {
+      final long length,
+      final boolean sendChecksum) throws IOException {
 
     OpReadBlockProto proto = OpReadBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildClientHeader(blk, clientName, blockToken))
       .setOffset(blockOffset)
       .setLen(length)
+      .setSendChecksums(sendChecksum)
       .build();
 
     send(out, Op.READ_BLOCK, proto);
@@ -106,7 +111,7 @@ public class Sender implements DataTransferProtocol {
 
     OpWriteBlockProto.Builder proto = OpWriteBlockProto.newBuilder()
       .setHeader(header)
-      .addAllTargets(toProtos(targets, 1))
+      .addAllTargets(PBHelper.convert(targets, 1))
       .setStage(toProto(stage))
       .setPipelineSize(pipelineSize)
       .setMinBytesRcvd(minBytesRcvd)
@@ -115,7 +120,7 @@ public class Sender implements DataTransferProtocol {
       .setRequestedChecksum(checksumProto);
     
     if (source != null) {
-      proto.setSource(toProto(source));
+      proto.setSource(PBHelper.convertDatanodeInfo(source));
     }
 
     send(out, Op.WRITE_BLOCK, proto.build());
@@ -130,7 +135,7 @@ public class Sender implements DataTransferProtocol {
     OpTransferBlockProto proto = OpTransferBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildClientHeader(
           blk, clientName, blockToken))
-      .addAllTargets(toProtos(targets, 0))
+      .addAllTargets(PBHelper.convert(targets))
       .build();
 
     send(out, Op.TRANSFER_BLOCK, proto);
@@ -155,7 +160,7 @@ public class Sender implements DataTransferProtocol {
     OpReplaceBlockProto proto = OpReplaceBlockProto.newBuilder()
       .setHeader(DataTransferProtoUtil.buildBaseHeader(blk, blockToken))
       .setDelHint(delHint)
-      .setSource(toProto(source))
+      .setSource(PBHelper.convertDatanodeInfo(source))
       .build();
     
     send(out, Op.REPLACE_BLOCK, proto);

@@ -52,7 +52,7 @@ import org.apache.hadoop.util.Daemon;
 class NameNodeConnector {
   private static final Log LOG = Balancer.LOG;
   private static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
-  private static final int MAX_NOT_CHANGED_INTERATIONS = 5;
+  private static final int MAX_NOT_CHANGED_ITERATIONS = 5;
 
   final URI nameNodeUri;
   final String blockpoolID;
@@ -127,7 +127,7 @@ class NameNodeConnector {
       notChangedIterations = 0;
     } else {
       notChangedIterations++;
-      if (notChangedIterations >= MAX_NOT_CHANGED_INTERATIONS) {
+      if (notChangedIterations >= MAX_NOT_CHANGED_ITERATIONS) {
         System.out.println("No block has been moved for "
             + notChangedIterations + " iterations. Exiting...");
         return false;

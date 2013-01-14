@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.regex.Matcher;
@@ -33,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.base.Charsets;
 
 /**
  * Static functions for dealing with files of the same format
@@ -78,7 +80,8 @@ public abstract class MD5FileUtils {
     }
     
     BufferedReader reader =
-      new BufferedReader(new FileReader(md5File));
+        new BufferedReader(new InputStreamReader(new FileInputStream(
+            md5File), Charsets.UTF_8));
     try {
       md5Line = reader.readLine();
       if (md5Line == null) { md5Line = ""; }
@@ -138,7 +141,7 @@ public abstract class MD5FileUtils {
     String md5Line = digestString + " *" + dataFile.getName() + "\n";
     
     AtomicFileOutputStream afos = new AtomicFileOutputStream(md5File);
-    afos.write(md5Line.getBytes());
+    afos.write(md5Line.getBytes(Charsets.UTF_8));
     afos.close();
     LOG.debug("Saved MD5 " + digest + " to " + md5File);
   }

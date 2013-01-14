@@ -55,6 +55,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.GenericOptionsParser;
 
+import com.google.common.base.Charsets;
+
 /**
  * Fetch a DelegationToken from the current Namenode and store it in the
  * specified file.
@@ -269,8 +271,8 @@ public class DelegationTokenFetcher {
         throw new IOException("Error renewing token: " + 
             connection.getResponseMessage());
       }
-      in = new BufferedReader(new InputStreamReader
-          (connection.getInputStream()));
+      in = new BufferedReader(
+          new InputStreamReader(connection.getInputStream(), Charsets.UTF_8));
       long result = Long.parseLong(in.readLine());
       in.close();
       return result;

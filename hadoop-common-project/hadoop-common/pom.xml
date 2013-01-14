@@ -445,10 +445,11 @@
             <exclude>dev-support/jdiff/**</exclude>
             <exclude>src/main/native/*</exclude>
             <exclude>src/main/native/config/*</exclude>
-            <exclude>src/main/resources/META-INF/services/org.apache.hadoop.security.SecurityInfo</exclude>
             <exclude>src/main/native/m4/*</exclude>
             <exclude>src/test/empty-file</exclude>
             <exclude>src/test/all-tests</exclude>
+            <exclude>src/test/resources/kdc/ldif/users.ldif</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
           </excludes>
         </configuration>
       </plugin>

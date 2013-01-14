@@ -443,7 +443,7 @@ message GetDataEncryptionKeyRequestProto { // no parameters
 }
 
 message GetDataEncryptionKeyResponseProto {
-  required DataEncryptionKeyProto dataEncryptionKey = 1;
+  optional DataEncryptionKeyProto dataEncryptionKey = 1;
 }
 
 service ClientNamenodeProtocol {

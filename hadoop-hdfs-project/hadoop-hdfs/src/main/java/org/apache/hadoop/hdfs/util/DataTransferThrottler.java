@@ -96,7 +96,12 @@ public class DataTransferThrottler {
         // Wait for next period so that curReserve can be increased.
         try {
           wait( curPeriodEnd - now );
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException e) {
+          // Abort throttle and reset interrupted status to make sure other
+          // interrupt handling higher in the call stack executes.
+          Thread.currentThread().interrupt();
+          break;
+        }
       } else if ( now <  (curPeriodStart + periodExtension)) {
         curPeriodStart = curPeriodEnd;
         curReserve += bytesPerPeriod;

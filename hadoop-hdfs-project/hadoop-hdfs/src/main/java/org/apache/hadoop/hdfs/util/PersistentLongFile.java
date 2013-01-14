@@ -19,13 +19,17 @@ package org.apache.hadoop.hdfs.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
+
+import com.google.common.base.Charsets;
 
 /**
  * Class that represents a file on disk which persistently stores
@@ -74,7 +78,7 @@ public class PersistentLongFile {
   public static void writeFile(File file, long val) throws IOException {
     AtomicFileOutputStream fos = new AtomicFileOutputStream(file);
     try {
-      fos.write(String.valueOf(val).getBytes());
+      fos.write(String.valueOf(val).getBytes(Charsets.UTF_8));
       fos.write('\n');
       fos.close();
       fos = null;
@@ -88,7 +92,9 @@ public class PersistentLongFile {
   public static long readFile(File file, long defaultVal) throws IOException {
     long val = defaultVal;
     if (file.exists()) {
-      BufferedReader br = new BufferedReader(new FileReader(file));
+      BufferedReader br = 
+          new BufferedReader(new InputStreamReader(new FileInputStream(
+              file), Charsets.UTF_8));
       try {
         val = Long.valueOf(br.readLine());
         br.close();

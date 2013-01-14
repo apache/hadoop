@@ -52,7 +52,7 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
 
     if (!env) {
         fprintf(stderr, "nmdCreate: unable to construct JNIEnv.\n");
-        goto error;
+        return NULL;
     }
     cl = calloc(1, sizeof(struct NativeMiniDfsCluster));
     if (!cl) {

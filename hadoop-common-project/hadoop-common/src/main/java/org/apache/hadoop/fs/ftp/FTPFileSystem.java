@@ -224,7 +224,7 @@ public class FTPFileSystem extends FileSystem {
     }
     
     Path parent = absolute.getParent();
-    if (parent == null || !mkdirs(client, parent, FsPermission.getDefault())) {
+    if (parent == null || !mkdirs(client, parent, FsPermission.getDirDefault())) {
       parent = (parent == null) ? new Path("/") : parent;
       disconnect(client);
       throw new IOException("create(): Mkdirs failed to create: " + parent);
@@ -484,7 +484,7 @@ public class FTPFileSystem extends FileSystem {
     if (!exists(client, absolute)) {
       Path parent = absolute.getParent();
       created = (parent == null || mkdirs(client, parent, FsPermission
-          .getDefault()));
+          .getDirDefault()));
       if (created) {
         String parentDir = parent.toUri().getPath();
         client.changeWorkingDirectory(parentDir);

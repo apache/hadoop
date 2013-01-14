@@ -20,7 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.web.resources;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -102,6 +103,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
+import com.google.common.base.Charsets;
 import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
@@ -713,7 +715,8 @@ public class NamenodeWebHdfsMethods {
     return new StreamingOutput() {
       @Override
       public void write(final OutputStream outstream) throws IOException {
-        final PrintStream out = new PrintStream(outstream);
+        final PrintWriter out = new PrintWriter(new OutputStreamWriter(
+            outstream, Charsets.UTF_8));
         out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
             + FileStatus.class.getSimpleName() + "\":[");
 
@@ -736,6 +739,7 @@ public class NamenodeWebHdfsMethods {
         
         out.println();
         out.println("]}}");
+        out.flush();
       }
     };
   }

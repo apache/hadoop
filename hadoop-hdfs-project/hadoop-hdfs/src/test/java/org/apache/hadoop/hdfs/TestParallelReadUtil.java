@@ -52,6 +52,7 @@ public class TestParallelReadUtil {
   static final int FILE_SIZE_K = 256;
   static Random rand = null;
   static final int DEFAULT_REPLICATION_FACTOR = 2;
+  protected boolean verifyChecksums = true;
 
   static {
     // The client-trace log ends up causing a lot of blocking threads
@@ -323,7 +324,8 @@ public class TestParallelReadUtil {
 
       testInfo.filepath = new Path("/TestParallelRead.dat." + i);
       testInfo.authenticData = util.writeFile(testInfo.filepath, FILE_SIZE_K);
-      testInfo.dis = dfsClient.open(testInfo.filepath.toString());
+      testInfo.dis = dfsClient.open(testInfo.filepath.toString(),
+          dfsClient.dfsClientConf.ioBufferSize, verifyChecksums);
 
       for (int j = 0; j < nWorkerEach; ++j) {
         workers[nWorkers++] = new ReadWorker(testInfo, nWorkers, helper);
@@ -411,6 +413,12 @@ public class TestParallelReadUtil {
 
   @Test
   public void testParallelReadMixed() throws IOException {
+    runTestWorkload(new MixedWorkloadHelper());
+  }
+  
+  @Test
+  public void testParallelNoChecksums() throws IOException {
+    verifyChecksums = false;
     runTestWorkload(new MixedWorkloadHelper());
   }
 }
