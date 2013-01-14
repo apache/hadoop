@@ -943,6 +943,8 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
+    HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
