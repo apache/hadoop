@@ -78,6 +78,8 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4848. TaskAttemptContext cast error during AM recovery (Jerry
     Chen via jlowe)
 
+    MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
