@@ -195,9 +195,10 @@
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
+          <excludes>
+            <exclude>conf/slaves</exclude>
+            <exclude>conf/container-executor.cfg</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>

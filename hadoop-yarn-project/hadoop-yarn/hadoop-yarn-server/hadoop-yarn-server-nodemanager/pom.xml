@@ -226,6 +226,18 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+       <configuration>
+          <excludes>
+            <exclude>src/main/avro/LocalizationProtocol.genavro</exclude>
+            <exclude>src/main/native/container-executor/.deps/container-executor.Po</exclude>
+         </excludes>
+       </configuration>
+      </plugin>
+
     </plugins>
   </build>
 </project>
