@@ -88,8 +88,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
-  private boolean hasToRebootNode;
-  
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
@@ -149,18 +147,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     super.stop();
   }
   
-  private synchronized void reboot() {
-    this.hasToRebootNode = true;
-    // Stop the status-updater. This will trigger a sub-service state change in
-    // the NodeManager which will then decide to reboot or not based on
-    // isRebooted.
-    this.stop();
-  }
-
-  synchronized boolean hasToRebootNode() {
-    return this.hasToRebootNode;
-  }
-
   private boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
   }
@@ -348,13 +334,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               LOG
                   .info("Recieved SHUTDOWN signal from Resourcemanager as part of heartbeat," +
                   		" hence shutting down.");
-              NodeStatusUpdaterImpl.this.stop();
+              dispatcher.getEventHandler().handle(
+                  new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
               break;
             }
             if (response.getNodeAction() == NodeAction.REBOOT) {
               LOG.info("Node is out of sync with ResourceManager,"
                   + " hence rebooting.");
-              NodeStatusUpdaterImpl.this.reboot();
+              dispatcher.getEventHandler().handle(
+                  new NodeManagerEvent(NodeManagerEventType.REBOOT));
               break;
             }
 

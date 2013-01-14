@@ -54,6 +54,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-334. Maven RAT plugin is not checking all source files (tgraves)
 
+    YARN-170. NodeManager stop() gets called twice on shutdown (Sandy Ryza
+    via tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
