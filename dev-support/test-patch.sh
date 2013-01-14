@@ -980,12 +980,12 @@ fi
 (( RESULT = RESULT + $JAVAC_RET ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
-checkEclipseGeneration
-(( RESULT = RESULT + $? ))
 ### Checkstyle not implemented yet
 #checkStyle
 #(( RESULT = RESULT + $? ))
 buildAndInstall
+checkEclipseGeneration
+(( RESULT = RESULT + $? ))
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
