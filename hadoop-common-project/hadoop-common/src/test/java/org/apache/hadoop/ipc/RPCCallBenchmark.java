@@ -67,7 +67,7 @@ public class RPCCallBenchmark implements Tool, Configurable {
     private int serverReaderThreads = 1;
     private int clientThreads = 0;
     private String host = "0.0.0.0";
-    private int port = 0;
+    private int port = 12345;
     public int secondsToRun = 15;
     private int msgSize = 1024;
     public Class<? extends RpcEngine> rpcEngine =
@@ -201,21 +201,11 @@ public class RPCCallBenchmark implements Tool, Configurable {
       }
     }
     
-    public int getPort() {
-      if (port == 0) {
-        port = NetUtils.getFreeSocketPort();
-        if (port == 0) {
-          throw new RuntimeException("Could not find a free port");
-        }
-      }
-      return port;
-    }
-
     @Override
     public String toString() {
       return "rpcEngine=" + rpcEngine + "\nserverThreads=" + serverThreads
           + "\nserverReaderThreads=" + serverReaderThreads + "\nclientThreads="
-          + clientThreads + "\nhost=" + host + "\nport=" + getPort()
+          + clientThreads + "\nhost=" + host + "\nport=" + port
           + "\nsecondsToRun=" + secondsToRun + "\nmsgSize=" + msgSize;
     }
   }
@@ -238,12 +228,12 @@ public class RPCCallBenchmark implements Tool, Configurable {
           .newReflectiveBlockingService(serverImpl);
 
       server = new RPC.Builder(conf).setProtocol(TestRpcService.class)
-          .setInstance(service).setBindAddress(opts.host).setPort(opts.getPort())
+          .setInstance(service).setBindAddress(opts.host).setPort(opts.port)
           .setNumHandlers(opts.serverThreads).setVerbose(false).build();
     } else if (opts.rpcEngine == WritableRpcEngine.class) {
       server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
           .setInstance(new TestRPC.TestImpl()).setBindAddress(opts.host)
-          .setPort(opts.getPort()).setNumHandlers(opts.serverThreads)
+          .setPort(opts.port).setNumHandlers(opts.serverThreads)
           .setVerbose(false).build();
     } else {
       throw new RuntimeException("Bad engine: " + opts.rpcEngine);
@@ -388,7 +378,7 @@ public class RPCCallBenchmark implements Tool, Configurable {
    * Create a client proxy for the specified engine.
    */
   private RpcServiceWrapper createRpcClient(MyOptions opts) throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(opts.host, opts.getPort());
+    InetSocketAddress addr = NetUtils.createSocketAddr(opts.host, opts.port);
     
     if (opts.rpcEngine == ProtobufRpcEngine.class) {
       final TestRpcService proxy = RPC.getProxy(TestRpcService.class, 0, addr, conf);
