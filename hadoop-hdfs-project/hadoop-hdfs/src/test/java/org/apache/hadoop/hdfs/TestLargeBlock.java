@@ -158,7 +158,7 @@ public class TestLargeBlock {
    * Test for block size of 2GB + 512B
    * @throws IOException in case of errors
    */
-  @Test
+  @Test(timeout = 120000)
   public void testLargeBlockSize() throws IOException {
     final long blockSize = 2L * 1024L * 1024L * 1024L + 512L; // 2GB + 512B
     runTest(blockSize);

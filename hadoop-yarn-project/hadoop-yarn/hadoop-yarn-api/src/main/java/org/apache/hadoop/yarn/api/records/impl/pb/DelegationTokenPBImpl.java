@@ -20,15 +20,15 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnProtos.DelegationTokenProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.DelegationTokenProtoOrBuilder;
 
-public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto> 
+public class DelegationTokenPBImpl extends ProtoBase<TokenProto> 
   implements DelegationToken {
-  private DelegationTokenProto proto = DelegationTokenProto.getDefaultInstance();
-  private DelegationTokenProto.Builder builder = null;
+  private TokenProto proto = TokenProto.getDefaultInstance();
+  private TokenProto.Builder builder = null;
   private boolean viaProto = false;
   
   private ByteBuffer identifier;
@@ -36,15 +36,15 @@ public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto>
   
   
   public DelegationTokenPBImpl() {
-    builder = DelegationTokenProto.newBuilder();
+    builder = TokenProto.newBuilder();
   }
 
-  public DelegationTokenPBImpl(DelegationTokenProto proto) {
+  public DelegationTokenPBImpl(TokenProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public synchronized DelegationTokenProto getProto() {
+  public synchronized TokenProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -70,7 +70,7 @@ public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto>
 
   private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = DelegationTokenProto.newBuilder(proto);
+      builder = TokenProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -78,7 +78,7 @@ public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto>
   
   @Override
   public synchronized ByteBuffer getIdentifier() {
-    DelegationTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (this.identifier != null) {
       return this.identifier;
     }
@@ -98,7 +98,7 @@ public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto>
   }
   @Override
   public synchronized ByteBuffer getPassword() {
-    DelegationTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (this.password != null) {
       return this.password;
     }
@@ -118,7 +118,7 @@ public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto>
   }
   @Override
   public synchronized String getKind() {
-    DelegationTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasKind()) {
       return null;
     }
@@ -136,7 +136,7 @@ public class DelegationTokenPBImpl extends ProtoBase<DelegationTokenProto>
   }
   @Override
   public synchronized String getService() {
-    DelegationTokenProtoOrBuilder p = viaProto ? proto : builder;
+    TokenProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasService()) {
       return null;
     }

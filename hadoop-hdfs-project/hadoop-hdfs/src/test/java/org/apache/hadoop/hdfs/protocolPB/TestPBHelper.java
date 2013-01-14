@@ -31,12 +31,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto;
@@ -69,7 +69,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
@@ -374,7 +376,7 @@ public class TestPBHelper {
     Token<BlockTokenIdentifier> token = new Token<BlockTokenIdentifier>(
         "identifier".getBytes(), "password".getBytes(), new Text("kind"),
         new Text("service"));
-    BlockTokenIdentifierProto tokenProto = PBHelper.convert(token);
+    TokenProto tokenProto = PBHelper.convert(token);
     Token<BlockTokenIdentifier> token2 = PBHelper.convert(tokenProto);
     compare(token, token2);
   }
@@ -403,29 +405,73 @@ public class TestPBHelper {
     assertEquals(expected.getKind(), actual.getKind());
     assertEquals(expected.getService(), actual.getService());
   }
-  
-  @Test
-  public void testConvertLocatedBlock() {
-    DatanodeInfo [] dnInfos = {
-        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h1", AdminStates.DECOMMISSION_INPROGRESS),
-        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h2", AdminStates.DECOMMISSIONED),
-        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h3", AdminStates.NORMAL)
+
+  private void compare(LocatedBlock expected, LocatedBlock actual) {
+    assertEquals(expected.getBlock(), actual.getBlock());
+    compare(expected.getBlockToken(), actual.getBlockToken());
+    assertEquals(expected.getStartOffset(), actual.getStartOffset());
+    assertEquals(expected.isCorrupt(), actual.isCorrupt());
+    DatanodeInfo [] ei = expected.getLocations();
+    DatanodeInfo [] ai = actual.getLocations();
+    assertEquals(ei.length, ai.length);
+    for (int i = 0; i < ei.length ; i++) {
+      compare(ei[i], ai[i]);
+    }
+  }
+
+  private LocatedBlock createLocatedBlock() {
+    DatanodeInfo[] dnInfos = {
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h1",
+            AdminStates.DECOMMISSION_INPROGRESS),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h2",
+            AdminStates.DECOMMISSIONED),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h3", 
+            AdminStates.NORMAL)
     };
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
+    lb.setBlockToken(new Token<BlockTokenIdentifier>(
+        "identifier".getBytes(), "password".getBytes(), new Text("kind"),
+        new Text("service")));
+    return lb;
+  }
+
+  @Test
+  public void testConvertLocatedBlock() {
+    LocatedBlock lb = createLocatedBlock();
     LocatedBlockProto lbProto = PBHelper.convert(lb);
     LocatedBlock lb2 = PBHelper.convert(lbProto);
-    assertEquals(lb.getBlock(), lb2.getBlock());
-    compare(lb.getBlockToken(), lb2.getBlockToken());
-    assertEquals(lb.getStartOffset(), lb2.getStartOffset());
-    assertEquals(lb.isCorrupt(), lb2.isCorrupt());
-    DatanodeInfo [] dnInfos2 = lb2.getLocations();
-    assertEquals(dnInfos.length, dnInfos2.length);
-    for (int i = 0; i < dnInfos.length ; i++) {
-      compare(dnInfos[i], dnInfos2[i]);
+    compare(lb,lb2);
+  }
+
+  @Test
+  public void testConvertLocatedBlockList() {
+    ArrayList<LocatedBlock> lbl = new ArrayList<LocatedBlock>();
+    for (int i=0;i<3;i++) {
+      lbl.add(createLocatedBlock());
+    }
+    List<LocatedBlockProto> lbpl = PBHelper.convertLocatedBlock2(lbl);
+    List<LocatedBlock> lbl2 = PBHelper.convertLocatedBlock(lbpl);
+    assertEquals(lbl.size(), lbl2.size());
+    for (int i=0;i<lbl.size();i++) {
+      compare(lbl.get(i), lbl2.get(2));
     }
   }
   
+  @Test
+  public void testConvertLocatedBlockArray() {
+    LocatedBlock [] lbl = new LocatedBlock[3];
+    for (int i=0;i<3;i++) {
+      lbl[i] = createLocatedBlock();
+    }
+    LocatedBlockProto [] lbpl = PBHelper.convertLocatedBlock(lbl);
+    LocatedBlock [] lbl2 = PBHelper.convertLocatedBlock(lbpl);
+    assertEquals(lbl.length, lbl2.length);
+    for (int i=0;i<lbl.length;i++) {
+      compare(lbl[i], lbl2[i]);
+    }
+  }
+
   @Test
   public void testConvertDatanodeRegistration() {
     DatanodeID dnId = DFSTestUtil.getLocalDatanodeID();
@@ -470,5 +516,21 @@ public class TestPBHelper {
         compare(d1[j], d2[j]);
       }
     }
+  }
+  
+  @Test
+  public void testChecksumTypeProto() {
+    assertEquals(DataChecksum.Type.NULL,
+        PBHelper.convert(HdfsProtos.ChecksumTypeProto.CHECKSUM_NULL));
+    assertEquals(DataChecksum.Type.CRC32,
+        PBHelper.convert(HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32));
+    assertEquals(DataChecksum.Type.CRC32C,
+        PBHelper.convert(HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32C));
+    assertEquals(PBHelper.convert(DataChecksum.Type.NULL),
+        HdfsProtos.ChecksumTypeProto.CHECKSUM_NULL);
+    assertEquals(PBHelper.convert(DataChecksum.Type.CRC32),
+        HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32);
+    assertEquals(PBHelper.convert(DataChecksum.Type.CRC32C),
+        HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32C);
   }
 }

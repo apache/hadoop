@@ -208,7 +208,7 @@ public class TestINodeDirectoryWithSnapshot {
   }
 
   static INode newINode(int n, int width) {
-    return new INodeDirectory(String.format("n%0" + width + "d", n), PERM);
+    return new INodeDirectory(n, String.format("n%0" + width + "d", n), PERM);
   }
 
   static void create(INode inode, final List<INode> current, Diff diff) {
@@ -303,7 +303,7 @@ public class TestINodeDirectoryWithSnapshot {
    */
   @Test
   public void testIdCmp() {
-    final INodeDirectory dir = new INodeDirectory("foo", PERM);
+    final INodeDirectory dir = new INodeDirectory(0, "foo", PERM);
     final INodeDirectorySnapshottable snapshottable
         = new INodeDirectorySnapshottable(dir);
     final Snapshot[] snapshots = {

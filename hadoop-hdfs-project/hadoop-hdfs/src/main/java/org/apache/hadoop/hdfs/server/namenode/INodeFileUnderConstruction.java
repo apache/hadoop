@@ -58,6 +58,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     Preconditions.checkArgument(!(file instanceof INodeFileUnderConstruction),
         "file is already an INodeFileUnderConstruction");
     final INodeFileUnderConstruction uc = new INodeFileUnderConstruction(
+        file.getId(),
         file.getLocalNameBytes(),
         file.getFileReplication(),
         file.getModificationTime(),
@@ -75,18 +76,20 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
   
-  INodeFileUnderConstruction(PermissionStatus permissions,
+  INodeFileUnderConstruction(long id,
+                             PermissionStatus permissions,
                              short replication,
                              long preferredBlockSize,
                              long modTime,
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    this(null, replication, modTime, preferredBlockSize, BlockInfo.EMPTY_ARRAY,
+    this(id, null, replication, modTime, preferredBlockSize, BlockInfo.EMPTY_ARRAY,
         permissions.applyUMask(UMASK), clientName, clientMachine, clientNode);
   }
 
-  INodeFileUnderConstruction(byte[] name,
+  INodeFileUnderConstruction(long id,
+                             byte[] name,
                              short blockReplication,
                              long modificationTime,
                              long preferredBlockSize,
@@ -95,7 +98,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(name, perm, modificationTime, modificationTime,
+    super(id, name, perm, modificationTime, modificationTime,
         blocks, blockReplication, preferredBlockSize);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
@@ -140,7 +143,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
    */
   protected INodeFile toINodeFile(long mtime) {
     assertAllBlocksComplete();
-    return new INodeFile(getLocalNameBytes(), getPermissionStatus(),
+    return new INodeFile(getId(), getLocalNameBytes(), getPermissionStatus(),
         mtime, getModificationTime(),
         getBlocks(), getFileReplication(), getPreferredBlockSize());
   }

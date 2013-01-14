@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -138,13 +137,13 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Update
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineResponseProto;
-
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -516,10 +515,10 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDatanodeReportRequestProto req)
       throws ServiceException {
     try {
-      DatanodeInfoProto[] result = PBHelper.convert(server
+      List<? extends DatanodeInfoProto> result = PBHelper.convert(server
           .getDatanodeReport(PBHelper.convert(req.getType())));
       return GetDatanodeReportResponseProto.newBuilder()
-          .addAllDi(Arrays.asList(result)).build();
+          .addAllDi(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -798,10 +797,14 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDelegationTokenRequestProto req)
       throws ServiceException {
     try {
-      BlockTokenIdentifierProto result = PBHelper.convert(server
-          .getDelegationToken(new Text(req.getRenewer())));
-      return GetDelegationTokenResponseProto.newBuilder().setToken(result)
-          .build();
+      Token<DelegationTokenIdentifier> token = server
+          .getDelegationToken(new Text(req.getRenewer()));
+      GetDelegationTokenResponseProto.Builder rspBuilder = 
+          GetDelegationTokenResponseProto.newBuilder();
+      if (token != null) {
+        rspBuilder.setToken(PBHelper.convert(token));
+      }
+      return rspBuilder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -859,10 +862,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetDataEncryptionKeyRequestProto request)
       throws ServiceException {
     try {
+      GetDataEncryptionKeyResponseProto.Builder builder = 
+          GetDataEncryptionKeyResponseProto.newBuilder();
       DataEncryptionKey encryptionKey = server.getDataEncryptionKey();
-      return GetDataEncryptionKeyResponseProto.newBuilder()
-          .setDataEncryptionKey(PBHelper.convert(encryptionKey))
-          .build();
+      if (encryptionKey != null) {
+        builder.setDataEncryptionKey(PBHelper.convert(encryptionKey));
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

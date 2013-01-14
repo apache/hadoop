@@ -58,6 +58,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.SecurityUtil;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -934,7 +935,7 @@ class Journal implements Closeable {
       fos.write('\n');
       // Write human-readable data after the protobuf. This is only
       // to assist in debugging -- it's not parsed at all.
-      OutputStreamWriter writer = new OutputStreamWriter(fos);
+      OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8);
       
       writer.write(String.valueOf(newData));
       writer.write('\n');

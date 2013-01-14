@@ -20,11 +20,15 @@ package org.apache.hadoop.mapreduce.v2.app.job;
 
 public enum JobStateInternal {
   NEW,
+  SETUP,
   INITED,
   RUNNING,
+  COMMITTING,
   SUCCEEDED,
+  FAIL_ABORT,
   FAILED,
   KILL_WAIT,
+  KILL_ABORT,
   KILLED,
   ERROR
 }

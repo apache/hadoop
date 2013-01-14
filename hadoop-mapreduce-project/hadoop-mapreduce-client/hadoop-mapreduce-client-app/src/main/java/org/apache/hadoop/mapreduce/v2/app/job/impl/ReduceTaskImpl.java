@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.ReduceTaskAttemptImpl;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -46,12 +45,12 @@ public class ReduceTaskImpl extends TaskImpl {
   public ReduceTaskImpl(JobId jobId, int partition,
       EventHandler eventHandler, Path jobFile, JobConf conf,
       int numMapTasks, TaskAttemptListener taskAttemptListener,
-      OutputCommitter committer, Token<JobTokenIdentifier> jobToken,
+      Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
       MRAppMetrics metrics, AppContext appContext) {
     super(jobId, TaskType.REDUCE, partition, eventHandler, jobFile, conf,
-        taskAttemptListener, committer, jobToken, credentials, clock,
+        taskAttemptListener, jobToken, credentials, clock,
         completedTasksFromPreviousRun, startCount, metrics, appContext);
     this.numMapTasks = numMapTasks;
   }
@@ -66,7 +65,7 @@ public class ReduceTaskImpl extends TaskImpl {
     return new ReduceTaskAttemptImpl(getID(), nextAttemptNumber,
         eventHandler, jobFile,
         partition, numMapTasks, conf, taskAttemptListener,
-        committer, jobToken, credentials, clock, appContext);
+        jobToken, credentials, clock, appContext);
   }
 
   @Override

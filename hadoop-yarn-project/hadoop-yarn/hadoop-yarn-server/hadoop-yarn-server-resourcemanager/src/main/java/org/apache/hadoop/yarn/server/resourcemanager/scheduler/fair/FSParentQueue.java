@@ -28,7 +28,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class FSParentQueue extends FSQueue {
   private static final Log LOG = LogFactory.getLog(
@@ -97,20 +96,6 @@ public class FSParentQueue extends FSQueue {
       LOG.debug("The updated demand for " + getName() + " is " + demand +
           "; the max is " + maxRes);
     }    
-  }
-  
-  public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
-    synchronized (this) {
-      if (getQueueAcls().get(acl).isUserAllowed(user)) {
-        return true;
-      }
-    }
-    
-    if (parent != null) {
-      return parent.hasAccess(acl, user);
-    }
-    
-    return false;
   }
   
   private synchronized QueueUserACLInfo getUserAclInfo(

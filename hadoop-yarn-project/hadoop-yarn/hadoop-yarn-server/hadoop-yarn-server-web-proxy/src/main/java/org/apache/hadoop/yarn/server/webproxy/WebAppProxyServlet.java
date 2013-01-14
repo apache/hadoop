@@ -254,11 +254,14 @@ public class WebAppProxyServlet extends HttpServlet {
       
       if(securityEnabled) {
         String cookieName = getCheckCookieName(id); 
-        for(Cookie c: req.getCookies()) {
-          if(cookieName.equals(c.getName())) {
-            userWasWarned = true;
-            userApproved = userApproved || Boolean.valueOf(c.getValue());
-            break;
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+          for (Cookie c : cookies) {
+            if (cookieName.equals(c.getName())) {
+              userWasWarned = true;
+              userApproved = userApproved || Boolean.valueOf(c.getValue());
+              break;
+            }
           }
         }
       }
@@ -283,9 +286,12 @@ public class WebAppProxyServlet extends HttpServlet {
         		"please try the history server");
         return;
       }
-      URI trackingUri = ProxyUriUtils.getUriFromAMUrl(
-          applicationReport.getOriginalTrackingUrl());
-      if(applicationReport.getOriginalTrackingUrl().equals("N/A")) {
+      String original = applicationReport.getOriginalTrackingUrl();
+      URI trackingUri = null;
+      if (original != null) {
+        trackingUri = ProxyUriUtils.getUriFromAMUrl(original);
+      }
+      if(original == null || original.equals("N/A")) {
         String message;
         switch(applicationReport.getFinalApplicationStatus()) {
           case FAILED:

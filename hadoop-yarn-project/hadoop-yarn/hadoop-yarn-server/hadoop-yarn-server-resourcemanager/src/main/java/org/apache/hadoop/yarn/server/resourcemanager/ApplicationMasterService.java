@@ -297,7 +297,7 @@ public class ApplicationMasterService extends AbstractService implements
         for(RMNode rmNode: updatedNodes) {
           SchedulerNodeReport schedulerNodeReport =  
               rScheduler.getNodeReport(rmNode.getNodeID());
-          Resource used = BuilderUtils.newResource(0);
+          Resource used = BuilderUtils.newResource(0, 0);
           int numContainers = 0;
           if (schedulerNodeReport != null) {
             used = schedulerNodeReport.getUsedResource();

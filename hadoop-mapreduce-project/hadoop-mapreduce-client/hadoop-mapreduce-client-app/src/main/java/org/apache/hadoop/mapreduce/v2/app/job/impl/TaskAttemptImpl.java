@@ -39,7 +39,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +56,6 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -76,6 +74,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.commit.CommitterTaskAbortEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttemptStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
@@ -99,7 +98,6 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
-import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -157,7 +155,6 @@ public abstract class TaskAttemptImpl implements
   private final Clock clock;
   private final org.apache.hadoop.mapred.JobID oldJobId;
   private final TaskAttemptListener taskAttemptListener;
-  private final OutputCommitter committer;
   private final Resource resourceCapability;
   private final String[] dataLocalHosts;
   private final List<String> diagnostics = new ArrayList<String>();
@@ -168,6 +165,7 @@ public abstract class TaskAttemptImpl implements
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
   private static String initialClasspath = null;
+  private static String initialAppClasspath = null;
   private static Object commonContainerSpecLock = new Object();
   private static ContainerLaunchContext commonContainerSpec = null;
   private static final Object classpathLock = new Object();
@@ -501,7 +499,7 @@ public abstract class TaskAttemptImpl implements
   public TaskAttemptImpl(TaskId taskId, int i, 
       EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
-      JobConf conf, String[] dataLocalHosts, OutputCommitter committer,
+      JobConf conf, String[] dataLocalHosts,
       Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock,
       AppContext appContext) {
@@ -525,13 +523,15 @@ public abstract class TaskAttemptImpl implements
     this.credentials = credentials;
     this.jobToken = jobToken;
     this.eventHandler = eventHandler;
-    this.committer = committer;
     this.jobFile = jobFile;
     this.partition = partition;
 
     //TODO:create the resource reqt for this Task attempt
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
-    this.resourceCapability.setMemory(getMemoryRequired(conf, taskId.getTaskType()));
+    this.resourceCapability.setMemory(
+        getMemoryRequired(conf, taskId.getTaskType()));
+    this.resourceCapability.setVirtualCores(
+        getCpuRequired(conf, taskId.getTaskType()));
     this.dataLocalHosts = dataLocalHosts;
     RackResolver.init(conf);
 
@@ -553,6 +553,21 @@ public abstract class TaskAttemptImpl implements
     }
     
     return memory;
+  }
+
+  private int getCpuRequired(Configuration conf, TaskType taskType) {
+    int vcores = 1;
+    if (taskType == TaskType.MAP)  {
+      vcores =
+          conf.getInt(MRJobConfig.MAP_CPU_VCORES,
+              MRJobConfig.DEFAULT_MAP_CPU_VCORES);
+    } else if (taskType == TaskType.REDUCE) {
+      vcores =
+          conf.getInt(MRJobConfig.REDUCE_CPU_VCORES,
+              MRJobConfig.DEFAULT_REDUCE_CPU_VCORES);
+    }
+    
+    return vcores;
   }
 
   /**
@@ -585,6 +600,7 @@ public abstract class TaskAttemptImpl implements
       Map<String, String> env = new HashMap<String, String>();
       MRApps.setClasspath(env, conf);
       initialClasspath = env.get(Environment.CLASSPATH.name());
+      initialAppClasspath = env.get(Environment.APP_CLASSPATH.name());
       initialClasspathFlag.set(true);
       return initialClasspath;
     }
@@ -683,6 +699,13 @@ public abstract class TaskAttemptImpl implements
           environment,  
           Environment.CLASSPATH.name(), 
           getInitialClasspath(conf));
+
+      if (initialAppClasspath != null) {
+        Apps.addToEnvironment(
+            environment,  
+            Environment.APP_CLASSPATH.name(), 
+            initialAppClasspath);
+      }
     } catch (IOException e) {
       throw new YarnException(e);
     }
@@ -1436,10 +1459,8 @@ public abstract class TaskAttemptImpl implements
       TaskAttemptContext taskContext =
         new TaskAttemptContextImpl(taskAttempt.conf,
             TypeConverter.fromYarn(taskAttempt.attemptId));
-      taskAttempt.eventHandler.handle(new TaskCleanupEvent(
-          taskAttempt.attemptId,
-          taskAttempt.committer,
-          taskContext));
+      taskAttempt.eventHandler.handle(new CommitterTaskAbortEvent(
+          taskAttempt.attemptId, taskContext));
     }
   }
 

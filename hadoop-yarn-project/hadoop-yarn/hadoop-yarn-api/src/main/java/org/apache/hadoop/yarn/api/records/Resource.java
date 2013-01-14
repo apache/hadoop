@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 
@@ -54,11 +55,43 @@ public abstract class Resource implements Comparable<Resource> {
   @Stable
   public abstract void setMemory(int memory);
 
+
+  /**
+   * Get <em>number of virtual cpu cores</em> of the resource.
+   * 
+   * We refer to <em>virtual cores</em> to clarify that these represent
+   * <em>normalized</em> cores which may have a m:n relationship w.r.t
+   * physical cores available on the compute nodes. Furthermore, they also 
+   * represent <em>idealized</em> cores since the cluster might be composed
+   * of <em>heterogenous</em> nodes.
+   *   
+   * @return <em>num of virtual cpu cores</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract int getVirtualCores();
+  
+  /**
+   * Set <em>number of virtual cpu cores</em> of the resource.
+   * 
+   * We refer to <em>virtual cores</em> to clarify that these represent
+   * <em>normalized</em> cores which may have a m:n relationship w.r.t
+   * physical cores available on the compute nodes. Furthermore, they also 
+   * represent <em>idealized</em> cores since the cluster might be composed
+   * of <em>heterogenous</em> nodes.
+   *   
+   * @param vCores <em>number of virtual cpu cores</em> of the resource
+   */
+  @Public
+  @Evolving
+  public abstract void setVirtualCores(int vCores);
+
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + getMemory();
+    final int prime = 263167;
+    int result = 3571;
+    result = 939769357 + getMemory(); // prime * result = 939769357 initially
+    result = prime * result + getVirtualCores();
     return result;
   }
 
@@ -68,16 +101,18 @@ public abstract class Resource implements Comparable<Resource> {
       return true;
     if (obj == null)
       return false;
-    if (getClass() != obj.getClass())
+    if (!(obj instanceof Resource))
       return false;
     Resource other = (Resource) obj;
-    if (getMemory() != other.getMemory())
+    if (getMemory() != other.getMemory() || 
+        getVirtualCores() != other.getVirtualCores()) {
       return false;
+    }
     return true;
   }
 
   @Override
   public String toString() {
-    return "memory: " + getMemory();
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ">";
   }
 }

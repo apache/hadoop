@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.apache.hadoop.fs.FileContextTestHelper;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 public class TestLocalFSFileContextMainOperations extends FileContextMainOperationsBaseTest {
 
@@ -46,5 +48,15 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
   public void testFileContextNoCache() throws UnsupportedFileSystemException {
     FileContext fc1 = FileContext.getLocalFSFileContext();
     Assert.assertTrue(fc1 != fc);
+  }
+
+  @Test
+  public void testDefaultFilePermission() throws IOException {
+    Path file = FileContextTestHelper.getTestRootPath(fc,
+        "testDefaultFilePermission");
+    FileContextTestHelper.createFile(fc, file);
+    FsPermission expect = FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask());
+    Assert.assertEquals(expect, fc.getFileStatus(file)
+        .getPermission());
   }
 }

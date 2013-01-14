@@ -19,10 +19,13 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -428,5 +431,58 @@ public class TestBlockManager {
       }
     }
     return repls;
+  }
+
+  /**
+   * Test that a source node for a highest-priority replication is chosen even if all available
+   * source nodes have reached their replication limits.
+   */
+  @Test
+  public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {
+    bm.maxReplicationStreams = 0;
+    bm.replicationStreamsHardLimit = 1;
+
+    long blockId = 42;         // arbitrary
+    Block aBlock = new Block(blockId, 0, 0);
+
+    List<DatanodeDescriptor> origNodes = getNodes(0, 1);
+    // Add the block to the first node.
+    addBlockOnNodes(blockId,origNodes.subList(0,1));
+
+    List<DatanodeDescriptor> cntNodes = new LinkedList<DatanodeDescriptor>();
+    List<DatanodeDescriptor> liveNodes = new LinkedList<DatanodeDescriptor>();
+
+    assertNotNull("Chooses source node for a highest-priority replication"
+        + " even if all available source nodes have reached their replication"
+        + " limits below the hard limit.",
+        bm.chooseSourceDatanode(
+            aBlock,
+            cntNodes,
+            liveNodes,
+            new NumberReplicas(),
+            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY));
+
+    assertNull("Does not choose a source node for a less-than-highest-priority"
+        + " replication since all available source nodes have reached"
+        + " their replication limits.",
+        bm.chooseSourceDatanode(
+            aBlock,
+            cntNodes,
+            liveNodes,
+            new NumberReplicas(),
+            UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED));
+
+    // Increase the replication count to test replication count > hard limit
+    DatanodeDescriptor targets[] = { origNodes.get(1) };
+    origNodes.get(0).addBlockToBeReplicated(aBlock, targets);
+
+    assertNull("Does not choose a source node for a highest-priority"
+        + " replication when all available nodes exceed the hard limit.",
+        bm.chooseSourceDatanode(
+            aBlock,
+            cntNodes,
+            liveNodes,
+            new NumberReplicas(),
+            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY));
   }
 }

@@ -30,11 +30,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.WrappedJvmID;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
@@ -49,6 +53,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEvent;
+import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEventHandler;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -69,8 +75,7 @@ import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
-import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
-import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
@@ -204,6 +209,16 @@ public class MRApp extends MRAppMaster {
 
   @Override
   public void init(Configuration conf) {
+    try {
+      //Create the staging directory if it does not exist
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      Path stagingDir = MRApps.getStagingAreaDir(conf, user);
+      FileSystem fs = getFileSystem(conf);
+      fs.mkdirs(stagingDir);
+    } catch (Exception e) {
+      throw new YarnException("Error creating staging dir", e);
+    }
+    
     super.init(conf);
     if (this.clusterInfo != null) {
       getContext().getClusterInfo().setMinContainerCapability(
@@ -212,9 +227,9 @@ public class MRApp extends MRAppMaster {
           this.clusterInfo.getMaxContainerCapability());
     } else {
       getContext().getClusterInfo().setMinContainerCapability(
-          BuilderUtils.newResource(1024));
+          BuilderUtils.newResource(1024, 1));
       getContext().getClusterInfo().setMaxContainerCapability(
-          BuilderUtils.newResource(10240));
+          BuilderUtils.newResource(10240, 1));
     }
   }
 
@@ -384,7 +399,8 @@ public class MRApp extends MRAppMaster {
   }
 
   @Override
-  protected Job createJob(Configuration conf) {
+  protected Job createJob(Configuration conf, JobStateInternal forcedState, 
+      String diagnostic) {
     UserGroupInformation currentUser = null;
     try {
       currentUser = UserGroupInformation.getCurrentUser();
@@ -394,8 +410,8 @@ public class MRApp extends MRAppMaster {
     Job newJob = new TestJob(getJobId(), getAttemptID(), conf, 
     		getDispatcher().getEventHandler(),
             getTaskAttemptListener(), getContext().getClock(),
-            getCommitter(), isNewApiCommitter(),
-            currentUser.getUserName(), getContext());
+            isNewApiCommitter(), currentUser.getUserName(), getContext(),
+            forcedState, diagnostic);
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
@@ -487,7 +503,8 @@ public class MRApp extends MRAppMaster {
     return new MRAppContainerAllocator();
   }
 
-  protected class MRAppContainerAllocator implements ContainerAllocator {
+  protected class MRAppContainerAllocator
+      implements ContainerAllocator, RMHeartbeatHandler {
     private int containerCount;
 
      @Override
@@ -512,19 +529,70 @@ public class MRApp extends MRAppMaster {
             new TaskAttemptContainerAssignedEvent(event.getAttemptID(),
                 container, null));
       }
+
+    @Override
+    public long getLastHeartbeatTime() {
+      return getContext().getClock().getTime();
+    }
+
+    @Override
+    public void runOnNextHeartbeat(Runnable callback) {
+      callback.run();
+    }
   }
 
   @Override
-  protected TaskCleaner createTaskCleaner(AppContext context) {
-    return new TaskCleaner() {
+  protected EventHandler<CommitterEvent> createCommitterEventHandler(
+      AppContext context, final OutputCommitter committer) {
+    // create an output committer with the task methods stubbed out
+    OutputCommitter stubbedCommitter = new OutputCommitter() {
       @Override
-      public void handle(TaskCleanupEvent event) {
-        //send the cleanup done event
-        getContext().getEventHandler().handle(
-            new TaskAttemptEvent(event.getAttemptID(),
-                TaskAttemptEventType.TA_CLEANUP_DONE));
+      public void setupJob(JobContext jobContext) throws IOException {
+        committer.setupJob(jobContext);
+      }
+      @SuppressWarnings("deprecation")
+      @Override
+      public void cleanupJob(JobContext jobContext) throws IOException {
+        committer.cleanupJob(jobContext);
+      }
+      @Override
+      public void commitJob(JobContext jobContext) throws IOException {
+        committer.commitJob(jobContext);
+      }
+      @Override
+      public void abortJob(JobContext jobContext, State state)
+          throws IOException {
+        committer.abortJob(jobContext, state);
+      }
+      @Override
+      public boolean isRecoverySupported() {
+        return committer.isRecoverySupported();
+      }
+      @Override
+      public void setupTask(TaskAttemptContext taskContext)
+          throws IOException {
+      }
+      @Override
+      public boolean needsTaskCommit(TaskAttemptContext taskContext)
+          throws IOException {
+        return false;
+      }
+      @Override
+      public void commitTask(TaskAttemptContext taskContext)
+          throws IOException {
+      }
+      @Override
+      public void abortTask(TaskAttemptContext taskContext)
+          throws IOException {
+      }
+      @Override
+      public void recoverTask(TaskAttemptContext taskContext)
+          throws IOException {
       }
     };
+
+    return new CommitterEventHandler(context, stubbedCommitter,
+        getRMHeartbeatHandler());
   }
 
   @Override
@@ -576,14 +644,14 @@ public class MRApp extends MRAppMaster {
     public TestJob(JobId jobId, ApplicationAttemptId applicationAttemptId,
         Configuration conf, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Clock clock,
-        OutputCommitter committer, boolean newApiCommitter, String user, 
-        AppContext appContext) {
+        boolean newApiCommitter, String user, AppContext appContext, 
+        JobStateInternal forcedState, String diagnostic) {
       super(jobId, getApplicationAttemptId(applicationId, getStartCount()),
           conf, eventHandler, taskAttemptListener,
           new JobTokenSecretManager(), new Credentials(), clock,
-          getCompletedTaskFromPreviousRun(), metrics, committer,
+          getCompletedTaskFromPreviousRun(), metrics,
           newApiCommitter, user, System.currentTimeMillis(), getAllAMInfos(),
-          appContext);
+          appContext, forcedState, diagnostic);
 
       // This "this leak" is okay because the retained pointer is in an
       //  instance variable.

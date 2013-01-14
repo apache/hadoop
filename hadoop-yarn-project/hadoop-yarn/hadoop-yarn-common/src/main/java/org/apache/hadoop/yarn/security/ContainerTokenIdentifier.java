@@ -106,6 +106,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeUTF(this.nmHostAddr);
     out.writeUTF(this.appSubmitter);
     out.writeInt(this.resource.getMemory());
+    out.writeInt(this.resource.getVirtualCores());
     out.writeLong(this.expiryTimeStamp);
     out.writeInt(this.masterKeyId);
   }
@@ -120,7 +121,9 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
         .readInt());
     this.nmHostAddr = in.readUTF();
     this.appSubmitter = in.readUTF();
-    this.resource = BuilderUtils.newResource(in.readInt());
+    int memory = in.readInt();
+    int vCores = in.readInt();
+    this.resource = BuilderUtils.newResource(memory, vCores);
     this.expiryTimeStamp = in.readLong();
     this.masterKeyId = in.readInt();
   }

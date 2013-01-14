@@ -290,4 +290,38 @@
        <Method name="persistPaxosData" />
        <Bug pattern="OS_OPEN_STREAM" />
      </Match>
+     <!-- Don't complain about LocalDatanodeInfo's anonymous class -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.BlockReaderLocal$LocalDatanodeInfo$1" />
+       <Bug pattern="SE_BAD_FIELD_INNER_CLASS" />
+     </Match>
+     <!-- Only one method increments numFailedVolumes and it is synchronized -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeList" />
+       <Field name="numFailedVolumes" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
+     <!-- Access to pendingReceivedRequests is synchronized -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.BPServiceActor" />
+       <Method name="notifyNamenodeBlockImmediately" />
+       <Field name="pendingReceivedRequests" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
+     <!-- The "LightWeight" classes are explicitly not thread safe -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.util.LightWeightGSet" />
+       <Field name="modification" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.util.LightWeightHashSet" />
+       <Field name="modification" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.util.LightWeightLinkedSet" />
+       <Field name="modification" />
+       <Bug pattern="VO_VOLATILE_INCREMENT" />
+     </Match>
  </FindBugsFilter>

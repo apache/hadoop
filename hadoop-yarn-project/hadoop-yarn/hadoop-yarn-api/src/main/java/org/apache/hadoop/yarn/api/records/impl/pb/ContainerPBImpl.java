@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTokenProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
@@ -324,11 +324,11 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
     return ((PriorityPBImpl)p).getProto();
   }
   
-  private ContainerTokenPBImpl convertFromProtoFormat(ContainerTokenProto p) {
+  private ContainerTokenPBImpl convertFromProtoFormat(TokenProto p) {
     return new ContainerTokenPBImpl(p);
   }
 
-  private ContainerTokenProto convertToProtoFormat(ContainerToken t) {
+  private TokenProto convertToProtoFormat(ContainerToken t) {
     return ((ContainerTokenPBImpl)t).getProto();
   }
 

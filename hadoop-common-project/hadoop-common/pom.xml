@@ -381,6 +381,7 @@
                 <argument>src/main/proto/RpcHeader.proto</argument>
                 <argument>src/main/proto/ZKFCProtocol.proto</argument>
                 <argument>src/main/proto/ProtobufRpcEngine.proto</argument>
+                <argument>src/main/proto/Security.proto</argument>
               </arguments>
             </configuration>
           </execution>

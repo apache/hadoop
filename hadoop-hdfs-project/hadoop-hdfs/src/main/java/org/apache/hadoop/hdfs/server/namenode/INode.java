@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
@@ -143,6 +144,11 @@ public abstract class INode implements Comparable<byte[]> {
   }
 
   /**
+   * The inode id
+   */
+  final private long id;
+
+  /**
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.
    *  if this encoding is changed, implicitly getFileInfo and listStatus in
@@ -161,8 +167,9 @@ public abstract class INode implements Comparable<byte[]> {
   private long modificationTime = 0L;
   private long accessTime = 0L;
 
-  private INode(byte[] name, long permission, INodeDirectory parent,
+  private INode(long id, byte[] name, long permission, INodeDirectory parent,
       long modificationTime, long accessTime) {
+    this.id = id;
     this.name = name;
     this.permission = permission;
     this.parent = parent;
@@ -170,26 +177,31 @@ public abstract class INode implements Comparable<byte[]> {
     this.accessTime = accessTime;
   }
 
-  INode(byte[] name, PermissionStatus permissions, INodeDirectory parent,
-      long modificationTime, long accessTime) {
-    this(name, PermissionStatusFormat.toLong(permissions), parent,
+  INode(long id, byte[] name, PermissionStatus permissions,
+      INodeDirectory parent, long modificationTime, long accessTime) {
+    this(id, name, PermissionStatusFormat.toLong(permissions), parent,
         modificationTime, accessTime);
   }
-
-  INode(PermissionStatus permissions, long mtime, long atime) {
-    this(null, permissions, null, mtime, atime);
+  
+  INode(long id, PermissionStatus permissions, long mtime, long atime) {
+    this(id, null, PermissionStatusFormat.toLong(permissions), null, mtime, atime);
   }
-
-  protected INode(String name, PermissionStatus permissions) {
-    this(DFSUtil.string2Bytes(name), permissions, null, 0L, 0L);
+  
+  protected INode(long id, String name, PermissionStatus permissions) {
+    this(id, DFSUtil.string2Bytes(name), permissions, null, 0L, 0L);
   }
   
   /** @param other Other node to be copied */
   INode(INode other) {
-    this(other.name, other.permission, other.parent, 
+    this(other.id, other.name, other.permission, other.parent, 
         other.modificationTime, other.accessTime);
   }
 
+  /** Get inode id */
+  public long getId() {
+    return this.id;
+  }
+  
   /**
    * Create a copy of this inode for snapshot.
    * 
@@ -598,6 +610,7 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Create an INode; the inode's name is not set yet
    * 
+   * @param id preassigned inode id
    * @param permissions permissions
    * @param blocks blocks if a file
    * @param symlink symblic link if a symbolic link
@@ -609,7 +622,8 @@ public abstract class INode implements Comparable<byte[]> {
    * @param preferredBlockSize block size
    * @return an inode
    */
-  static INode newINode(PermissionStatus permissions,
+  static INode newINode(long id,
+                        PermissionStatus permissions,
                         BlockInfo[] blocks,
                         String symlink,
                         short replication,
@@ -619,17 +633,17 @@ public abstract class INode implements Comparable<byte[]> {
                         long dsQuota,
                         long preferredBlockSize) {
     if (symlink.length() != 0) { // check if symbolic link
-      return new INodeSymlink(symlink, modificationTime, atime, permissions);
+      return new INodeSymlink(id, symlink, modificationTime, atime, permissions);
     }  else if (blocks == null) { //not sym link and blocks null? directory!
       if (nsQuota >= 0 || dsQuota >= 0) {
         return new INodeDirectoryWithQuota(
-            permissions, modificationTime, nsQuota, dsQuota);
+             id, permissions, modificationTime, nsQuota, dsQuota);
       } 
       // regular directory
-      return new INodeDirectory(permissions, modificationTime);
+      return new INodeDirectory(id, permissions, modificationTime);
     }
     // file
-    return new INodeFile(permissions, blocks, replication,
+    return new INodeFile(id, permissions, blocks, replication,
         modificationTime, atime, preferredBlockSize);
   }
 

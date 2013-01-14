@@ -20,18 +20,32 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 
 @Private
 @Unstable
 public class CSAssignment {
   final private Resource resource;
   private NodeType type;
+  private final RMContainer excessReservation;
+  private final FiCaSchedulerApp application;
   
   public CSAssignment(Resource resource, NodeType type) {
     this.resource = resource;
     this.type = type;
+    this.application = null;
+    this.excessReservation = null;
   }
+  
+  public CSAssignment(FiCaSchedulerApp application, RMContainer excessReservation) {
+    this.resource = excessReservation.getContainer().getResource();
+    this.type = NodeType.NODE_LOCAL;
+    this.application = application;
+    this.excessReservation = excessReservation;
+  }
+
 
   public Resource getResource() {
     return resource;
@@ -45,6 +59,14 @@ public class CSAssignment {
     this.type = type;
   }
   
+  public FiCaSchedulerApp getApplication() {
+    return application;
+  }
+
+  public RMContainer getExcessReservation() {
+    return excessReservation;
+  }
+
   @Override
   public String toString() {
     return resource.getMemory() + ":" + type;

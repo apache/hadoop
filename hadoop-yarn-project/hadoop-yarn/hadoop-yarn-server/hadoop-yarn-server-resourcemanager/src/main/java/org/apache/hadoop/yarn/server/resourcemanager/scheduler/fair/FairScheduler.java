@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
@@ -52,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -494,24 +494,15 @@ public class FairScheduler implements ResourceScheduler {
         new FSSchedulerApp(applicationAttemptId, user,
             queue, new ActiveUsersManager(getRootQueueMetrics()),
             rmContext);
-    
+
     // Enforce ACLs
-    UserGroupInformation userUgi;
-    try {
-      userUgi = UserGroupInformation.getCurrentUser();
-    } catch (IOException ioe) {
-      LOG.info("Failed to get current user information");
-      return;
-    }
-
-    // Always a singleton list
-    List<QueueUserACLInfo> info = queue.getQueueUserAclInfo(userUgi);
-    if (!info.get(0).getUserAcls().contains(QueueACL.SUBMIT_APPLICATIONS)) {
+    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
+    if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)) {
       LOG.info("User " + userUgi.getUserName() +
-          " cannot submit" + " applications to queue " + queue.getName());
+          " cannot submit applications to queue " + queue.getName());
       return;
     }
-
+    
     queue.addApp(schedulerApp);
     queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
 
@@ -645,6 +636,33 @@ public class FairScheduler implements ResourceScheduler {
         " cluster capacity: " + clusterCapacity);
   }
 
+  /**
+   * Utility method to normalize a list of resource requests, by ensuring that
+   * the memory for each request is a multiple of minMemory and is not zero.
+   *
+   * @param asks a list of resource requests
+   * @param minMemory the configured minimum memory allocation
+   */
+  static void normalizeRequests(List<ResourceRequest> asks,
+      int minMemory) {
+    for (ResourceRequest ask : asks) {
+      normalizeRequest(ask, minMemory);
+    }
+  }
+
+  /**
+   * Utility method to normalize a resource request, by ensuring that the
+   * requested memory is a multiple of minMemory and is not zero.
+   *
+   * @param ask the resource request
+   * @param minMemory the configured minimum memory allocation
+   */
+  static void normalizeRequest(ResourceRequest ask, int minMemory) {
+    int memory = Math.max(ask.getCapability().getMemory(), minMemory);
+    ask.getCapability().setMemory(
+        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0)));
+  }
+
   @Override
   public Allocation allocate(ApplicationAttemptId appAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release) {
@@ -658,7 +676,7 @@ public class FairScheduler implements ResourceScheduler {
     }
 
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, minimumAllocation.getMemory());
+    normalizeRequests(ask, minimumAllocation.getMemory());
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -768,7 +786,7 @@ public class FairScheduler implements ResourceScheduler {
     // Otherwise, schedule at queue which is furthest below fair share
     else {
       int assignedContainers = 0;
-      while (true) {
+      while (node.getReservedContainer() == null) {
         // At most one task is scheduled each iteration of this loop
         List<FSLeafQueue> scheds = new ArrayList<FSLeafQueue>(
             queueMgr.getLeafQueues());

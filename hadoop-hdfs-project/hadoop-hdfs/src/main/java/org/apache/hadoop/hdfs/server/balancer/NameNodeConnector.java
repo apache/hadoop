@@ -52,6 +52,7 @@ import org.apache.hadoop.util.Daemon;
 class NameNodeConnector {
   private static final Log LOG = Balancer.LOG;
   private static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
+  private static final int MAX_NOT_CHANGED_ITERATIONS = 5;
 
   final URI nameNodeUri;
   final String blockpoolID;
@@ -65,6 +66,8 @@ class NameNodeConnector {
   private final boolean encryptDataTransfer;
   private boolean shouldRun;
   private long keyUpdaterInterval;
+  // used for balancer
+  private int notChangedIterations = 0;
   private BlockTokenSecretManager blockTokenSecretManager;
   private Daemon keyupdaterthread; // AccessKeyUpdater thread
   private DataEncryptionKey encryptionKey;
@@ -119,6 +122,20 @@ class NameNodeConnector {
     }
   }
 
+  boolean shouldContinue(long dispatchBlockMoveBytes) {
+    if (dispatchBlockMoveBytes > 0) {
+      notChangedIterations = 0;
+    } else {
+      notChangedIterations++;
+      if (notChangedIterations >= MAX_NOT_CHANGED_ITERATIONS) {
+        System.out.println("No block has been moved for "
+            + notChangedIterations + " iterations. Exiting...");
+        return false;
+      }
+    }
+    return true;
+  }
+  
   /** Get an access token for a block. */
   Token<BlockTokenIdentifier> getAccessToken(ExtendedBlock eb
       ) throws IOException {

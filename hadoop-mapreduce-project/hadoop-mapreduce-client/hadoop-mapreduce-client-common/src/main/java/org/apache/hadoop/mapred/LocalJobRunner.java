@@ -67,7 +67,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /** Implements MapReduce locally, in-process, for debugging. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-@SuppressWarnings("deprecation")
 public class LocalJobRunner implements ClientProtocol {
   public static final Log LOG =
     LogFactory.getLog(LocalJobRunner.class);
@@ -610,8 +609,12 @@ public class LocalJobRunner implements ClientProtocol {
   // JobSubmissionProtocol methods
 
   private static int jobid = 0;
+  // used for making sure that local jobs run in different jvms don't
+  // collide on staging or job directories
+  private int randid;
+  
   public synchronized org.apache.hadoop.mapreduce.JobID getNewJobID() {
-    return new org.apache.hadoop.mapreduce.JobID("local", ++jobid);
+    return new org.apache.hadoop.mapreduce.JobID("local" + randid, ++jobid);
   }
 
   public org.apache.hadoop.mapreduce.JobStatus submitJob(
@@ -686,7 +689,7 @@ public class LocalJobRunner implements ClientProtocol {
    */
   public TaskTrackerInfo[] getActiveTrackers() 
       throws IOException, InterruptedException {
-    return null;
+    return new TaskTrackerInfo[0];
   }
 
   /** 
@@ -695,7 +698,7 @@ public class LocalJobRunner implements ClientProtocol {
    */
   public TaskTrackerInfo[] getBlacklistedTrackers() 
       throws IOException, InterruptedException {
-    return null;
+    return new TaskTrackerInfo[0];
   }
 
   public TaskCompletionEvent[] getTaskCompletionEvents(
@@ -740,10 +743,11 @@ public class LocalJobRunner implements ClientProtocol {
         "/tmp/hadoop/mapred/staging"));
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user;
+    randid = rand.nextInt(Integer.MAX_VALUE);
     if (ugi != null) {
-      user = ugi.getShortUserName() + rand.nextInt();
+      user = ugi.getShortUserName() + randid;
     } else {
-      user = "dummy" + rand.nextInt();
+      user = "dummy" + randid;
     }
     return fs.makeQualified(new Path(stagingRootDir, user+"/.staging")).toString();
   }

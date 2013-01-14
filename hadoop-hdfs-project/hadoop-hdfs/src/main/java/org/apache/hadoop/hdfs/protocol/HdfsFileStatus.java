@@ -67,7 +67,10 @@ public class HdfsFileStatus {
     this.modification_time = modification_time;
     this.access_time = access_time;
     this.permission = (permission == null) ? 
-                      FsPermission.getDefault() : permission;
+        ((isdir || symlink!=null) ? 
+            FsPermission.getDefault() : 
+            FsPermission.getFileDefault()) :
+        permission;
     this.owner = (owner == null) ? "" : owner;
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;

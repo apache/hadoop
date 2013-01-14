@@ -219,6 +219,22 @@
 </property>
 
 <property>
+  <name>mapreduce.map.cpu.vcores</name>
+  <value>1</value>
+  <description>
+      The number of virtual cores required for each map task.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.cpu.vcores</name>
+  <value>1</value>
+  <description>
+      The number of virtual cores required for each reduce task.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.merge.inmem.threshold</name>
   <value>1000</value>
   <description>The threshold, in terms of the number of files 
@@ -859,6 +875,20 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.admin-command-opts</name>
+  <value></value>
+  <description>Java opts for the MR App Master processes for admin purposes.
+  It will appears before the opts set by yarn.app.mapreduce.am.command-opts and
+  thus its options can be overridden user. 
+  
+  Usage of -Djava.library.path can cause programs to no longer function if
+  hadoop native libraries are used. These values should instead be set as part 
+  of LD_LIBRARY_PATH in the map / reduce JVM env using the mapreduce.map.env and 
+  mapreduce.reduce.env config settings. 
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.job.task.listener.thread-count</name>
   <value>30</value>
   <description>The number of threads used to handle RPC calls in the 
@@ -871,6 +901,22 @@
   <description>Range of ports that the MapReduce AM can use when binding.
     Leave blank if you want all possible ports.  
     For example 50000-50050,50100-50200</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.job.committer.cancel-timeout</name>
+  <value>60000</value>
+  <description>The amount of time in milliseconds to wait for the output
+    committer to cancel an operation if the job is killed</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.job.committer.commit-window</name>
+  <value>10000</value>
+  <description>Defines a time window in milliseconds for output commit
+  operations.  If contact with the RM has occurred within this window then
+  commits are allowed, otherwise the AM will not allow output commits until
+  contact with the RM has been re-established.</description>
 </property>
 
 <property>
@@ -901,10 +947,35 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.resource.cpu-vcores</name>
+  <value>1</value>
+  <description>
+      The number of virtual CPU cores the MR AppMaster needs.
+  </description>
+</property>
+
+<property>
   <description>CLASSPATH for MR applications. A comma-separated list
   of CLASSPATH entries</description>
    <name>mapreduce.application.classpath</name>
    <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
+</property>
+
+<property>
+   <name>mapreduce.job.classloader</name>
+   <value>false</value>
+  <description>Whether to use a separate (isolated) classloader for
+    user classes in the task JVM.</description>
+</property>
+
+<property>
+   <name>mapreduce.job.classloader.system.classes</name>
+   <value>java.,javax.,org.apache.commons.logging.,org.apache.log4j.,org.apache.hadoop.</value>
+  <description>A comma-separated list of classes that should be loaded from the
+    system classpath, not the user-supplied JARs, when mapreduce.job.classloader
+    is enabled. Names ending in '.' (period) are treated as package names,
+    and names starting with a '-' are treated as negative matches.
+  </description>
 </property>
 
 <!-- jobhistory properties -->

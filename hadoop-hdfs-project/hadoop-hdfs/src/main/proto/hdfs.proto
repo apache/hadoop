@@ -19,10 +19,13 @@
 // This file contains protocol buffers that are used throughout HDFS -- i.e.
 // by the client, server, and data transfer protocols.
 
+
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "HdfsProtos";
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
+
+import "Security.proto";
 
 /**
  * Extended block idenfies a block
@@ -33,16 +36,6 @@ message ExtendedBlockProto {
   required uint64 generationStamp = 3;
   optional uint64 numBytes = 4 [default = 0];  // len does not belong in ebid 
                                                // here for historical reasons
-}
-
-/**
- * Block Token
- */
-message BlockTokenIdentifierProto {
-  required bytes identifier = 1;
-  required bytes password = 2;
-  required string kind = 3;
-  required string service = 4;
 }
 
 /**
@@ -126,7 +119,7 @@ message LocatedBlockProto {
                                         // If block has few corrupt replicas, they are filtered and 
                                         // their locations are not part of this object
 
-  required BlockTokenIdentifierProto blockToken = 5;
+  required hadoop.common.TokenProto blockToken = 5;
 }
 
 message DataEncryptionKeyProto {

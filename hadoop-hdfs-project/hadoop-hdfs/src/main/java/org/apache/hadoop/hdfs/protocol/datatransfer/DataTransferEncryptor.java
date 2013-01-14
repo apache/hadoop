@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsProtoUtil.vintPrefixed;
+import static org.apache.hadoop.hdfs.protocolPB.PBHelper.vintPrefixed;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslOutputStream;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 
@@ -399,7 +400,7 @@ public class DataTransferEncryptor {
       DataEncryptionKey encryptionKey) {
     return encryptionKey.keyId + NAME_DELIMITER +
         encryptionKey.blockPoolId + NAME_DELIMITER +
-        new String(Base64.encodeBase64(encryptionKey.nonce, false));
+        new String(Base64.encodeBase64(encryptionKey.nonce, false), Charsets.UTF_8);
   }
   
   /**
@@ -427,7 +428,7 @@ public class DataTransferEncryptor {
   }
   
   private static char[] encryptionKeyToPassword(byte[] encryptionKey) {
-    return new String(Base64.encodeBase64(encryptionKey, false)).toCharArray();
+    return new String(Base64.encodeBase64(encryptionKey, false), Charsets.UTF_8).toCharArray();
   }
   
   /**

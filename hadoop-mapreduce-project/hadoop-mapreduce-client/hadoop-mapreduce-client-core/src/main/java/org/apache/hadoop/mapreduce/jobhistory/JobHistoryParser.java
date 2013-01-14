@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class JobHistoryParser {
+public class JobHistoryParser implements HistoryEventHandler {
 
   private static final Log LOG = LogFactory.getLog(JobHistoryParser.class);
   
@@ -94,6 +94,34 @@ public class JobHistoryParser {
     this.in = in;
   }
   
+  public synchronized void parse(HistoryEventHandler handler) 
+    throws IOException {
+    parse(new EventReader(in), handler);
+  }
+  
+  /**
+   * Only used for unit tests.
+   */
+  @Private
+  public synchronized void parse(EventReader reader, HistoryEventHandler handler)
+    throws IOException {
+    int eventCtr = 0;
+    HistoryEvent event;
+    try {
+      while ((event = reader.getNextEvent()) != null) {
+        handler.handleEvent(event);
+        ++eventCtr;
+      } 
+    } catch (IOException ioe) {
+      LOG.info("Caught exception parsing history file after " + eventCtr + 
+          " events", ioe);
+      parseException = ioe;
+    } finally {
+      in.close();
+    }
+  }
+  
+  
   /**
    * Parse the entire history file and populate the JobInfo object
    * The first invocation will populate the object, subsequent calls
@@ -122,21 +150,7 @@ public class JobHistoryParser {
     }
 
     info = new JobInfo();
-
-    int eventCtr = 0;
-    HistoryEvent event;
-    try {
-      while ((event = reader.getNextEvent()) != null) {
-        handleEvent(event);
-        ++eventCtr;
-      } 
-    } catch (IOException ioe) {
-      LOG.info("Caught exception parsing history file after " + eventCtr + 
-          " events", ioe);
-      parseException = ioe;
-    } finally {
-      in.close();
-    }
+    parse(reader, this);
     return info;
   }
   
@@ -150,7 +164,8 @@ public class JobHistoryParser {
     return parseException;
   }
   
-  private void handleEvent(HistoryEvent event)  { 
+  @Override
+  public void handleEvent(HistoryEvent event)  { 
     EventType type = event.getEventType();
 
     switch (type) {

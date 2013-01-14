@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -48,6 +49,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.ControlledClock;
+import org.apache.hadoop.mapreduce.v2.app.commit.CommitterTaskAbortEvent;
+import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
@@ -65,8 +68,6 @@ import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
-import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
-import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.Clock;
@@ -100,6 +101,7 @@ public class RecoveryService extends CompositeService implements Recovery {
 
   private final ApplicationAttemptId applicationAttemptId;
   private final OutputCommitter committer;
+  private final boolean newApiCommitter;
   private final Dispatcher dispatcher;
   private final ControlledClock clock;
 
@@ -113,10 +115,11 @@ public class RecoveryService extends CompositeService implements Recovery {
   private volatile boolean recoveryMode = false;
 
   public RecoveryService(ApplicationAttemptId applicationAttemptId, 
-      Clock clock, OutputCommitter committer) {
+      Clock clock, OutputCommitter committer, boolean newApiCommitter) {
     super("RecoveringDispatcher");
     this.applicationAttemptId = applicationAttemptId;
     this.committer = committer;
+    this.newApiCommitter = newApiCommitter;
     this.dispatcher = createRecoveryDispatcher();
     this.clock = new ControlledClock(clock);
       addService((Service) dispatcher);
@@ -205,18 +208,18 @@ public class RecoveryService extends CompositeService implements Recovery {
       throws IOException {
     FSDataInputStream in = null;
     Path historyFile = null;
-    String jobName =
+    String jobId =
         TypeConverter.fromYarn(applicationAttemptId.getApplicationId())
           .toString();
     String jobhistoryDir =
-        JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+        JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf, jobId);
     Path histDirPath =
         FileContext.getFileContext(conf).makeQualified(new Path(jobhistoryDir));
     FileContext fc = FileContext.getFileContext(histDirPath.toUri(), conf);
     // read the previous history file
     historyFile =
         fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(histDirPath,
-          jobName, (applicationAttemptId.getAttemptId() - 1)));
+          jobId, (applicationAttemptId.getAttemptId() - 1)));
     LOG.info("History file is at " + historyFile);
     in = fc.open(historyFile);
     return in;
@@ -339,8 +342,8 @@ public class RecoveryService extends CompositeService implements Recovery {
         return;
       }
 
-      else if (event.getType() == TaskCleaner.EventType.TASK_CLEAN) {
-        TaskAttemptId aId = ((TaskCleanupEvent) event).getAttemptID();
+      else if (event.getType() == CommitterEventType.TASK_ABORT) {
+        TaskAttemptId aId = ((CommitterTaskAbortEvent) event).getAttemptID();
         LOG.debug("TASK_CLEAN");
         actualHandler.handle(new TaskAttemptEvent(aId,
             TaskAttemptEventType.TA_CLEANUP_DONE));
@@ -360,8 +363,17 @@ public class RecoveryService extends CompositeService implements Recovery {
         switch (state) {
         case SUCCEEDED:
           //recover the task output
-          TaskAttemptContext taskContext = new TaskAttemptContextImpl(getConfig(),
-              attInfo.getAttemptId());
+          
+          // check the committer type and construct corresponding context
+          TaskAttemptContext taskContext = null;
+          if(newApiCommitter) {
+            taskContext = new TaskAttemptContextImpl(getConfig(),
+                attInfo.getAttemptId());
+          } else {
+            taskContext = new org.apache.hadoop.mapred.TaskAttemptContextImpl(new JobConf(getConfig()),
+                TypeConverter.fromYarn(aId));
+          }
+          
           try { 
             TaskType type = taskContext.getTaskAttemptID().getTaskID().getTaskType();
             int numReducers = taskContext.getConfiguration().getInt(MRJobConfig.NUM_REDUCES, 1); 

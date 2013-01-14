@@ -21,6 +21,7 @@ option java_outer_classname = "YarnServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
 import "yarn_protos.proto";
 
 //////////////////////////////////////////////////////
@@ -144,8 +145,24 @@ message GetDelegationTokenRequestProto {
 }
 
 message GetDelegationTokenResponseProto {
-  optional DelegationTokenProto application_token = 1;
+  optional hadoop.common.TokenProto application_token = 1;
 }
+
+message RenewDelegationTokenRequestProto {
+  required hadoop.common.TokenProto delegation_token = 1;
+}
+
+message RenewDelegationTokenResponseProto {
+  required int64 next_expiry_ts = 1;
+}
+
+message CancelDelegationTokenRequestProto {
+  required hadoop.common.TokenProto delegation_token = 1;
+}
+
+message CancelDelegationTokenResponseProto {
+}
+  
 
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////

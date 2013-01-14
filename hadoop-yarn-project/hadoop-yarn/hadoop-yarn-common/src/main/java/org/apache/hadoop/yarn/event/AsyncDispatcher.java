@@ -125,7 +125,12 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     Class<? extends Enum> type = event.getType().getDeclaringClass();
 
     try{
-      eventDispatchers.get(type).handle(event);
+      EventHandler handler = eventDispatchers.get(type);
+      if(handler != null) {
+        handler.handle(event);
+      } else {
+        throw new Exception("No handler for registered for " + type);
+      }
     }
     catch (Throwable t) {
       //TODO Maybe log the state of the queue

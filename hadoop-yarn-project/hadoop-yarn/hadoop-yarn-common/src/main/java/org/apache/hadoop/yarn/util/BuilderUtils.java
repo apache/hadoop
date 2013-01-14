@@ -371,9 +371,10 @@ public class BuilderUtils {
     return report;
   }
 
-  public static Resource newResource(int memory) {
+  public static Resource newResource(int memory, int vCores) {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);
+    resource.setVirtualCores(vCores);
     return resource;
   }
 

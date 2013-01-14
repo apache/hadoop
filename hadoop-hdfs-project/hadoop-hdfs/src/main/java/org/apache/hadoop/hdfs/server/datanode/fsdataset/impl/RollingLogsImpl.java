@@ -19,15 +19,19 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
+
+import com.google.common.base.Charsets;
 
 class RollingLogsImpl implements RollingLogs {
   private static final String CURR_SUFFIX = ".curr";
@@ -40,7 +44,7 @@ class RollingLogsImpl implements RollingLogs {
 
   private final File curr;
   private final File prev;
-  private PrintStream out; //require synchronized access
+  private PrintWriter out; //require synchronized access
 
   private Appender appender = new Appender() {
     @Override
@@ -82,7 +86,8 @@ class RollingLogsImpl implements RollingLogs {
   RollingLogsImpl(String dir, String filePrefix) throws FileNotFoundException{
     curr = new File(dir, filePrefix + CURR_SUFFIX);
     prev = new File(dir, filePrefix + PREV_SUFFIX);
-    out = new PrintStream(new FileOutputStream(curr, true));
+    out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(
+        curr, true), Charsets.UTF_8));
   }
 
   @Override
@@ -108,7 +113,8 @@ class RollingLogsImpl implements RollingLogs {
     synchronized(this) {
       appender.close();
       final boolean renamed = curr.renameTo(prev);
-      out = new PrintStream(new FileOutputStream(curr, true));
+      out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(
+          curr, true), Charsets.UTF_8));
       if (!renamed) {
         throw new IOException("Failed to rename " + curr + " to " + prev);
       }
@@ -163,7 +169,8 @@ class RollingLogsImpl implements RollingLogs {
         reader = null;
       }
       
-      reader = new BufferedReader(new FileReader(file));
+      reader = new BufferedReader(new InputStreamReader(new FileInputStream(
+          file), Charsets.UTF_8));
       return true;
     }
     

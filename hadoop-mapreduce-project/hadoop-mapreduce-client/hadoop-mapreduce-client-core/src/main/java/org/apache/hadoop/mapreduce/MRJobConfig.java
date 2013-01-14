@@ -127,6 +127,10 @@ public interface MRJobConfig {
 
   public static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
 
+  public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
+
+  public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final String IO_SORT_MB = "mapreduce.task.io.sort.mb";
@@ -184,7 +188,8 @@ public interface MRJobConfig {
   public static final String MAP_MEMORY_MB = "mapreduce.map.memory.mb";
   public static final int DEFAULT_MAP_MEMORY_MB = 1024;
 
-  public static final String MAP_MEMORY_PHYSICAL_MB = "mapreduce.map.memory.physical.mb";
+  public static final String MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
+  public static final int DEFAULT_MAP_CPU_VCORES = 1;
 
   public static final String MAP_ENV = "mapreduce.map.env";
 
@@ -228,10 +233,11 @@ public interface MRJobConfig {
 
   public static final String REDUCE_MARKRESET_BUFFER_SIZE = "mapreduce.reduce.markreset.buffer.size";
 
-  public static final String REDUCE_MEMORY_PHYSICAL_MB = "mapreduce.reduce.memory.physical.mb";
-
   public static final String REDUCE_MEMORY_MB = "mapreduce.reduce.memory.mb";
   public static final int DEFAULT_REDUCE_MEMORY_MB = 1024;
+
+  public static final String REDUCE_CPU_VCORES = "mapreduce.reduce.cpu.vcores";
+  public static final int DEFAULT_REDUCE_CPU_VCORES = 1;
 
   public static final String REDUCE_MEMORY_TOTAL_BYTES = "mapreduce.reduce.memory.totalbytes";
 
@@ -353,11 +359,21 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"resource.mb";
   public static final int DEFAULT_MR_AM_VMEM_MB = 1536;
 
+  /** The number of virtual cores the MR app master needs.*/
+  public static final String MR_AM_CPU_VCORES =
+    MR_AM_PREFIX+"resource.cpu-vcores";
+  public static final int DEFAULT_MR_AM_CPU_VCORES = 1;
+
   /** Command line arguments passed to the MR app master.*/
   public static final String MR_AM_COMMAND_OPTS =
     MR_AM_PREFIX+"command-opts";
   public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1024m";
 
+  /** Admin command opts passed to the MR app master.*/
+  public static final String MR_AM_ADMIN_COMMAND_OPTS =
+      MR_AM_PREFIX+"admin-command-opts";
+  public static final String DEFAULT_MR_AM_ADMIN_COMMAND_OPTS = "";
+  
   /** Root Logging level passed to the MR app master.*/
   public static final String MR_AM_LOG_LEVEL = 
     MR_AM_PREFIX+"log.level";
@@ -463,6 +479,25 @@ public interface MRJobConfig {
   public static final String MR_AM_TO_RM_WAIT_INTERVAL_MS =
     MR_AM_PREFIX + "scheduler.connection.wait.interval-ms";
   public static final int DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
+
+  /**
+   * How long to wait in milliseconds for the output committer to cancel
+   * an operation when the job is being killed
+   */
+  public static final String MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      MR_AM_PREFIX + "job.committer.cancel-timeout";
+  public static final int DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS =
+      60 * 1000;
+
+  /**
+   * Defines a time window in milliseconds for output committer operations.
+   * If contact with the RM has occurred within this window then commit
+   * operations are allowed, otherwise the AM will not allow output committer
+   * operations until contact with the RM has been re-established.
+   */
+  public static final String MR_AM_COMMIT_WINDOW_MS =
+      MR_AM_PREFIX + "job.committer.commit-window";
+  public static final int DEFAULT_MR_AM_COMMIT_WINDOW_MS = 10 * 1000;
 
   /**
    * Boolean. Create the base dirs in the JobHistoryEventHandler

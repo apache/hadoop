@@ -182,14 +182,16 @@ public class JobHistoryUtils {
 
   /**
    * Gets the configured directory prefix for In Progress history files.
-   * @param conf
+   * @param conf the configuration for hte job
+   * @param jobId the id of the job the history file is for.
    * @return A string representation of the prefix.
    */
   public static String
-      getConfiguredHistoryStagingDirPrefix(Configuration conf)
+      getConfiguredHistoryStagingDirPrefix(Configuration conf, String jobId)
           throws IOException {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
-    Path path = MRApps.getStagingAreaDir(conf, user);
+    Path stagingPath = MRApps.getStagingAreaDir(conf, user);
+    Path path = new Path(stagingPath, jobId);
     String logDir = path.toString();
     return logDir;
   }

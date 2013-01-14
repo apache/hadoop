@@ -164,7 +164,7 @@ public class NameNodeResourceChecker {
     
     CheckedVolume newVolume = new CheckedVolume(dir, required);
     CheckedVolume volume = volumes.get(newVolume.getVolume());
-    if (volume == null || (volume != null && !volume.isRequired())) {
+    if (volume == null || !volume.isRequired()) {
       volumes.put(newVolume.getVolume(), newVolume);
     }
   }

@@ -23,12 +23,9 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
@@ -45,15 +42,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
  * </p>
  */
 public abstract class FileSystemContractBaseTest extends TestCase {
+  private static final Log LOG =
+    LogFactory.getLog(FileSystemContractBaseTest.class);
+
   protected final static String TEST_UMASK = "062";
   protected FileSystem fs;
-  protected byte[] data = new byte[getBlockSize() * 2]; // two blocks of data
-  {
-    for (int i = 0; i < data.length; i++) {
-      data[i] = (byte) (i % 10);
-    }
-  }
-  
+  protected byte[] data = dataset(getBlockSize() * 2, 0, 255);
+
   @Override
   protected void tearDown() throws Exception {
     fs.delete(path("/test"), true);
@@ -235,35 +230,16 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testWriteReadAndDeleteTwoBlocks() throws Exception {
     writeReadAndDelete(getBlockSize() * 2);
   }
-  
+
+  /**
+   * Write a dataset, read it back in and verify that they match.
+   * Afterwards, the file is deleted.
+   * @param len length of data
+   * @throws IOException on IO failures
+   */
   protected void writeReadAndDelete(int len) throws IOException {
     Path path = path("/test/hadoop/file");
-    
-    fs.mkdirs(path.getParent());
-
-    FSDataOutputStream out = fs.create(path, false,
-        fs.getConf().getInt("io.file.buffer.size", 4096), 
-        (short) 1, getBlockSize());
-    out.write(data, 0, len);
-    out.close();
-
-    assertTrue("Exists", fs.exists(path));
-    assertEquals("Length", len, fs.getFileStatus(path).getLen());
-
-    FSDataInputStream in = fs.open(path);
-    byte[] buf = new byte[len];
-    in.readFully(0, buf);
-    in.close();
-
-    assertEquals(len, buf.length);
-    for (int i = 0; i < buf.length; i++) {
-      assertEquals("Position " + i, data[i], buf[i]);
-    }
-    
-    assertTrue("Deleted", fs.delete(path, false));
-    
-    assertFalse("No longer exists", fs.exists(path));
-
+    writeAndRead(path, data, len, false, true);
   }
   
   public void testOverwrite() throws IOException {
@@ -493,5 +469,148 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     assertEquals("Rename result", renameSucceeded, fs.rename(src, dst));
     assertEquals("Source exists", srcExists, fs.exists(src));
     assertEquals("Destination exists", dstExists, fs.exists(dst));
+  }
+
+  /**
+   * Verify that if you take an existing file and overwrite it, the new values
+   * get picked up.
+   * This is a test for the behavior of eventually consistent
+   * filesystems.
+   *
+   * @throws Exception on any failure
+   */
+
+  public void testOverWriteAndRead() throws Exception {
+    int blockSize = getBlockSize();
+
+    byte[] filedata1 = dataset(blockSize * 2, 'A', 26);
+    byte[] filedata2 = dataset(blockSize * 2, 'a', 26);
+    Path path = path("/test/hadoop/file-overwrite");
+    writeAndRead(path, filedata1, blockSize, true, false);
+    writeAndRead(path, filedata2, blockSize, true, false);
+    writeAndRead(path, filedata1, blockSize * 2, true, false);
+    writeAndRead(path, filedata2, blockSize * 2, true, false);
+    writeAndRead(path, filedata1, blockSize, true, false);
+    writeAndRead(path, filedata2, blockSize * 2, true, false);
+  }
+
+  /**
+   *
+   * Write a file and read it in, validating the result. Optional flags control
+   * whether file overwrite operations should be enabled, and whether the
+   * file should be deleted afterwards.
+   *
+   * If there is a mismatch between what was written and what was expected,
+   * a small range of bytes either side of the first error are logged to aid
+   * diagnosing what problem occurred -whether it was a previous file
+   * or a corrupting of the current file. This assumes that two
+   * sequential runs to the same path use datasets with different character
+   * moduli.
+   *
+   * @param path path to write to
+   * @param len length of data
+   * @param overwrite should the create option allow overwrites?
+   * @param delete should the file be deleted afterwards? -with a verification
+   * that it worked. Deletion is not attempted if an assertion has failed
+   * earlier -it is not in a <code>finally{}</code> block.
+   * @throws IOException IO problems
+   */
+  protected void writeAndRead(Path path, byte[] src, int len,
+                              boolean overwrite,
+                              boolean delete) throws IOException {
+    assertTrue("Not enough data in source array to write " + len + " bytes",
+               src.length >= len);
+    fs.mkdirs(path.getParent());
+
+    FSDataOutputStream out = fs.create(path, overwrite,
+                                       fs.getConf().getInt("io.file.buffer.size",
+                                                           4096),
+                                       (short) 1, getBlockSize());
+    out.write(src, 0, len);
+    out.close();
+
+    assertTrue("Exists", fs.exists(path));
+    assertEquals("Length", len, fs.getFileStatus(path).getLen());
+
+    FSDataInputStream in = fs.open(path);
+    byte[] buf = new byte[len];
+    in.readFully(0, buf);
+    in.close();
+
+    assertEquals(len, buf.length);
+    int errors = 0;
+    int first_error_byte = -1;
+    for (int i = 0; i < len; i++) {
+      if (src[i] != buf[i]) {
+        if (errors == 0) {
+          first_error_byte = i;
+        }
+        errors++;
+      }
+    }
+
+    if (errors > 0) {
+      String message = String.format(" %d errors in file of length %d",
+                                     errors, len);
+      LOG.warn(message);
+      // the range either side of the first error to print
+      // this is a purely arbitrary number, to aid user debugging
+      final int overlap = 10;
+      for (int i = Math.max(0, first_error_byte - overlap);
+           i < Math.min(first_error_byte + overlap, len);
+           i++) {
+        byte actual = buf[i];
+        byte expected = src[i];
+        String letter = toChar(actual);
+        String line = String.format("[%04d] %2x %s\n", i, actual, letter);
+        if (expected != actual) {
+          line = String.format("[%04d] %2x %s -expected %2x %s\n",
+                               i,
+                               actual,
+                               letter,
+                               expected,
+                               toChar(expected));
+        }
+        LOG.warn(line);
+      }
+      fail(message);
+    }
+
+    if (delete) {
+      boolean deleted = fs.delete(path, false);
+      assertTrue("Deleted", deleted);
+      assertFalse("No longer exists", fs.exists(path));
+    }
+  }
+
+  /**
+   * Convert a byte to a character for printing. If the
+   * byte value is < 32 -and hence unprintable- the byte is
+   * returned as a two digit hex value
+   * @param b byte
+   * @return the printable character string
+   */
+  protected String toChar(byte b) {
+    if (b >= 0x20) {
+      return Character.toString((char) b);
+    } else {
+      return String.format("%02x", b);
+    }
+  }
+
+  /**
+   * Create a dataset for use in the tests; all data is in the range
+   * base to (base+modulo-1) inclusive
+   * @param len length of data
+   * @param base base of the data
+   * @param modulo the modulo
+   * @return the newly generated dataset
+   */
+  protected byte[] dataset(int len, int base, int modulo) {
+    byte[] dataset = new byte[len];
+    for (int i = 0; i < len; i++) {
+      dataset[i] = (byte) (base + (i % modulo));
+    }
+    return dataset;
   }
 }

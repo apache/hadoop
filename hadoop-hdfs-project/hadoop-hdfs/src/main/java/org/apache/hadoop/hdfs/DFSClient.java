@@ -114,7 +114,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -128,6 +127,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -364,7 +364,7 @@ public class DFSClient implements java.io.Closeable {
 
   /**
    * Same as this(nameNodeUri, conf, null);
-   * @see #DFSClient(InetSocketAddress, Configuration, org.apache.hadoop.fs.FileSystem.Statistics)
+   * @see #DFSClient(URI, Configuration, FileSystem.Statistics)
    */
   public DFSClient(URI nameNodeUri, Configuration conf
       ) throws IOException {
@@ -373,7 +373,7 @@ public class DFSClient implements java.io.Closeable {
 
   /**
    * Same as this(nameNodeUri, null, conf, stats);
-   * @see #DFSClient(InetSocketAddress, ClientProtocol, Configuration, org.apache.hadoop.fs.FileSystem.Statistics) 
+   * @see #DFSClient(URI, ClientProtocol, Configuration, FileSystem.Statistics) 
    */
   public DFSClient(URI nameNodeUri, Configuration conf,
                    FileSystem.Statistics stats)
@@ -1158,8 +1158,8 @@ public class DFSClient implements java.io.Closeable {
 
   /**
    * Call {@link #create(String, FsPermission, EnumSet, short, long, 
-   * Progressable, int)} with default <code>permission</code>
-   * {@link FsPermission#getDefault()}.
+   * Progressable, int, ChecksumOpt)} with default <code>permission</code>
+   * {@link FsPermission#getFileDefault()}.
    * 
    * @param src File name
    * @param overwrite overwrite an existing file if true
@@ -1177,7 +1177,7 @@ public class DFSClient implements java.io.Closeable {
                              Progressable progress,
                              int buffersize)
       throws IOException {
-    return create(src, FsPermission.getDefault(),
+    return create(src, FsPermission.getFileDefault(),
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
         buffersize, null);
@@ -1208,7 +1208,7 @@ public class DFSClient implements java.io.Closeable {
    * 
    * @param src File name
    * @param permission The permission of the directory being created.
-   *          If null, use default permission {@link FsPermission#getDefault()}
+   *          If null, use default permission {@link FsPermission#getFileDefault()}
    * @param flag indicates create a new file or create/overwrite an
    *          existing file or append to an existing file
    * @param createParent create missing parent directory if true
@@ -1234,7 +1234,7 @@ public class DFSClient implements java.io.Closeable {
                              ChecksumOpt checksumOpt) throws IOException {
     checkOpen();
     if (permission == null) {
-      permission = FsPermission.getDefault();
+      permission = FsPermission.getFileDefault();
     }
     FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
     if(LOG.isDebugEnabled()) {
@@ -1269,7 +1269,7 @@ public class DFSClient implements java.io.Closeable {
   
   /**
    * Same as {{@link #create(String, FsPermission, EnumSet, short, long,
-   *  Progressable, int)} except that the permission
+   *  Progressable, int, ChecksumOpt)} except that the permission
    *  is absolute (ie has already been masked with umask.
    */
   public DFSOutputStream primitiveCreate(String src, 
@@ -1460,7 +1460,7 @@ public class DFSClient implements java.io.Closeable {
   }
   /**
    * Delete file or directory.
-   * See {@link ClientProtocol#delete(String)}. 
+   * See {@link ClientProtocol#delete(String, boolean)}. 
    */
   @Deprecated
   public boolean delete(String src) throws IOException {
@@ -1600,8 +1600,7 @@ public class DFSClient implements java.io.Closeable {
     if (shouldEncryptData()) {
       synchronized (this) {
         if (encryptionKey == null ||
-            (encryptionKey != null &&
-             encryptionKey.expiryDate < Time.now())) {
+            encryptionKey.expiryDate < Time.now()) {
           LOG.debug("Getting new encryption token from NN");
           encryptionKey = namenode.getDataEncryptionKey();
         }
@@ -1687,7 +1686,7 @@ public class DFSClient implements java.io.Closeable {
           new Sender(out).blockChecksum(block, lb.getBlockToken());
 
           final BlockOpResponseProto reply =
-            BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));
+            BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
 
           if (reply.getStatus() != Status.SUCCESS) {
             if (reply.getStatus() == Status.ERROR_ACCESS_TOKEN
@@ -1734,8 +1733,8 @@ public class DFSClient implements java.io.Closeable {
           md5.write(md5out);
           
           // read crc-type
-          final DataChecksum.Type ct = HdfsProtoUtil.
-              fromProto(checksumData.getCrcType());
+          final DataChecksum.Type ct = PBHelper.convert(checksumData
+              .getCrcType());
           if (i == 0) { // first block
             crcType = ct;
           } else if (crcType != DataChecksum.Type.MIXED
@@ -1899,7 +1898,7 @@ public class DFSClient implements java.io.Closeable {
    * @param isChecked
    *          If true, then check only active namenode's safemode status, else
    *          check first namenode's status.
-   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeActio,boolean)
+   * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction, boolean)
    */
   public boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException{
     return namenode.setSafeMode(action, isChecked);    

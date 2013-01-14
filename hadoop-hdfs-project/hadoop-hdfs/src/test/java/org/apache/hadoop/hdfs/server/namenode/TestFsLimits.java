@@ -73,7 +73,8 @@ public class TestFsLimits {
              fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
                                 "namenode")).toString());
 
-    rootInode = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME, perms);
+    rootInode = new INodeDirectoryWithQuota(getMockNamesystem()
+        .allocateNewInodeId(), INodeDirectory.ROOT_NAME, perms);
     inodes = new INode[]{ rootInode, null };
     fs = null;
     fsIsReady = true;
@@ -152,7 +153,8 @@ public class TestFsLimits {
     // have to create after the caller has had a chance to set conf values
     if (fs == null) fs = new MockFSDirectory();
 
-    INode child = new INodeDirectory(name, perms);
+    INode child = new INodeDirectory(getMockNamesystem().allocateNewInodeId(),
+        name, perms);
     child.setLocalName(name);
     
     Class<?> generated = null;

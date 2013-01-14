@@ -382,6 +382,24 @@ public class TestReplicationPolicy {
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
   }
+
+  /**
+   * In this testcase, it tries to choose more targets than available nodes and
+   * check the result, with stale node avoidance on the write path enabled.
+   * @throws Exception
+   */
+  @Test
+  public void testChooseTargetWithMoreThanAvailableNodesWithStaleness()
+      throws Exception {
+    try {
+      namenode.getNamesystem().getBlockManager().getDatanodeManager()
+        .setAvoidStaleDataNodesForWrite(true);
+      testChooseTargetWithMoreThanAvailableNodes();
+    } finally {
+      namenode.getNamesystem().getBlockManager().getDatanodeManager()
+      .setAvoidStaleDataNodesForWrite(false);
+    }
+  }
   
   /**
    * In this testcase, it tries to choose more targets than available nodes and
@@ -389,7 +407,7 @@ public class TestReplicationPolicy {
    * @throws Exception
    */
   @Test
-  public void testChooseTargetWithMoreThanAvaiableNodes() throws Exception {
+  public void testChooseTargetWithMoreThanAvailableNodes() throws Exception {
     // make data node 0 & 1 to be not qualified to choose: not enough disk space
     for(int i=0; i<2; i++) {
       dataNodes[i].updateHeartbeat(
