@@ -387,7 +387,7 @@ message GetLinkTargetRequestProto {
   required string path = 1;
 }
 message GetLinkTargetResponseProto {
-  required string targetPath = 1;
+  optional string targetPath = 1;
 }
 
 message UpdateBlockForPipelineRequestProto {
