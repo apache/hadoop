@@ -48,9 +48,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
         </configuration>
       </plugin>
     </plugins>
