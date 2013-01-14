@@ -17,3 +17,5 @@ HDFS-4388. DomainSocket should throw AsynchronousCloseException when appropriate
 HDFS-4390. Bypass UNIX domain socket unit tests when they cannot be run.
 (Colin Patrick McCabe via todd)
 
+HDFS-4400. DFSInputStream#getBlockReader: last retries should ignore the cache
+(Colin Patrick McCabe via todd)

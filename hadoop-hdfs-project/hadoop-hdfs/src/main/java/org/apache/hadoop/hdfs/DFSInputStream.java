@@ -941,7 +941,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     // equivalent to declaring the DataNode bad.
     boolean triedNonDomainSocketReader = false;
     for (int retries = 0;
-          retries < nCachedConnRetry && (!triedNonDomainSocketReader);
+          retries < nCachedConnRetry || (!triedNonDomainSocketReader);
           ++retries) {
       Peer peer = null;
       if (retries < nCachedConnRetry) {
