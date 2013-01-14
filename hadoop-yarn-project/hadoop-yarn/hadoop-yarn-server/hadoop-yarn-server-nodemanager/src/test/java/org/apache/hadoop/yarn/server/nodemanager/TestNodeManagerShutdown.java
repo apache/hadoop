@@ -138,7 +138,14 @@ public class TestNodeManagerShutdown {
         containerManager.getContainerStatus(request).getStatus();
     Assert.assertEquals(ContainerState.RUNNING, containerStatus.getState());
     
-    try {Thread.sleep(5000);} catch (InterruptedException ex) {ex.printStackTrace();} 
+    final int MAX_TRIES=20;
+    int numTries = 0;
+    while (!processStartFile.exists() && numTries < MAX_TRIES) {
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException ex) {ex.printStackTrace();}
+      numTries++;
+    }
     
     nm.stop();
     
@@ -202,7 +209,7 @@ public class TestNodeManagerShutdown {
     fileWriter.write("trap \"echo $hello >> " + processStartFile + "\" SIGTERM\n");
     fileWriter.write("echo \"Writing pid to start file\"\n");
     fileWriter.write("echo $$ >> " + processStartFile + "\n");
-    fileWriter.write("while true; do\nsleep 1s;\ndone\n");
+    fileWriter.write("while true; do\ndate >> /dev/null;\n done\n");
 
     fileWriter.close();
     return scriptFile;
