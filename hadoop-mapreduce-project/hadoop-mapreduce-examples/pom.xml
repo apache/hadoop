@@ -134,7 +134,15 @@
           <effort>Max</effort>
         </configuration>
       </plugin>
-
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/java/org/apache/hadoop/examples/dancing/puzzle1.dta</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
    </plugins>
    </build>
 </project>
