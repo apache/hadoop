@@ -534,6 +534,8 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4921. JobClient should acquire HS token with RM principal 
     (daryn via bobby)
 
+    MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
