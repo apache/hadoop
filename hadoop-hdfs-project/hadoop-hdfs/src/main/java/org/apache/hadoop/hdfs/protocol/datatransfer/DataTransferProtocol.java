@@ -55,12 +55,15 @@ public interface DataTransferProtocol {
    * @param clientName client's name.
    * @param blockOffset offset of the block.
    * @param length maximum number of bytes for this read.
+   * @param sendChecksum if false, the DN should skip reading and sending
+   *        checksums
    */
   public void readBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final long blockOffset,
-      final long length) throws IOException;
+      final long length,
+      final boolean sendChecksum) throws IOException;
 
   /**
    * Write a block to a datanode pipeline.
