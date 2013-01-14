@@ -91,8 +91,12 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return GetBlockKeysResponseProto.newBuilder()
-        .setKeys(PBHelper.convert(keys)).build();
+    GetBlockKeysResponseProto.Builder builder = 
+        GetBlockKeysResponseProto.newBuilder();
+    if (keys != null) {
+      builder.setKeys(PBHelper.convert(keys));
+    }
+    return builder.build();
   }
 
   @Override

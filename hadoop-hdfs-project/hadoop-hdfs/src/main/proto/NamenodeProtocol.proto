@@ -56,7 +56,7 @@ message GetBlockKeysRequestProto {
  * keys - Information about block keys at the active namenode
  */
 message GetBlockKeysResponseProto {
-  required ExportedBlockKeysProto keys = 1;
+  optional ExportedBlockKeysProto keys = 1;
 }
 
 /**
