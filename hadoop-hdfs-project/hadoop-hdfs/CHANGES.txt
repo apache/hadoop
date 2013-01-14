@@ -36,6 +36,8 @@ Release 0.23.6 - UNRELEASED
     HDFS-2757. Cannot read a local block that's being written to when
     using the local read short circuit. (Jean-Daniel Cryans via eli)
 
+    HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
