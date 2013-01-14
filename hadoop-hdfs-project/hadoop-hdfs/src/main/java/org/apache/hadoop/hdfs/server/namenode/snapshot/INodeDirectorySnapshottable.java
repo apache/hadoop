@@ -76,7 +76,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   private int snapshotQuota = SNAPSHOT_LIMIT;
 
   public INodeDirectorySnapshottable(INodeDirectory dir) {
-    super(dir, true, null);
+    super(dir, true, dir instanceof INodeDirectoryWithSnapshot ? 
+        ((INodeDirectoryWithSnapshot) dir).getSnapshotDiffs() : null);
   }
   
   /** @return the number of existing snapshots. */

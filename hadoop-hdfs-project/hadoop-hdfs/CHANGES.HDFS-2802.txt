@@ -104,3 +104,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4098. Add FileWithLink, INodeFileUnderConstructionWithLink and
   INodeFileUnderConstructionSnapshot in order to support append to snapshotted
   files.  (szetszwo)
+
+  HDFS-4395. In INodeDirectorySnapshottable's constructor, the passed-in dir
+  could be an INodeDirectoryWithSnapshot.  (Jing Zhao via szetszwo)
