@@ -24,11 +24,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -199,11 +202,19 @@ public class TestPread {
    */
   @Test
   public void testPreadDFS() throws IOException {
-    dfsPreadTest(false); //normal pread
-    dfsPreadTest(true); //trigger read code path without transferTo.
+    dfsPreadTest(false, true); //normal pread
+    dfsPreadTest(true, true); //trigger read code path without transferTo.
   }
   
-  private void dfsPreadTest(boolean disableTransferTo) throws IOException {
+  @Test
+  public void testPreadDFSNoChecksum() throws IOException {
+    ((Log4JLogger)DataTransferProtocol.LOG).getLogger().setLevel(Level.ALL);
+    dfsPreadTest(false, false);
+    dfsPreadTest(true, false);
+  }
+  
+  private void dfsPreadTest(boolean disableTransferTo, boolean verifyChecksum)
+      throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
     conf.setLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 4096);
@@ -215,6 +226,7 @@ public class TestPread {
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     FileSystem fileSys = cluster.getFileSystem();
+    fileSys.setVerifyChecksum(verifyChecksum);
     try {
       Path file1 = new Path("preadtest.dat");
       writeFile(fileSys, file1);

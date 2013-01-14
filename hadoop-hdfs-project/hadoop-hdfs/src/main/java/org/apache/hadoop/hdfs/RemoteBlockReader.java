@@ -380,7 +380,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
           NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT)));
-    new Sender(out).readBlock(block, blockToken, clientName, startOffset, len);
+    new Sender(out).readBlock(block, blockToken, clientName, startOffset, len,
+        verifyChecksum);
     
     //
     // Get bytes in block, set streams

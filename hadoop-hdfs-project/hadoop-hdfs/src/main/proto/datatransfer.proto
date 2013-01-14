@@ -52,6 +52,7 @@ message OpReadBlockProto {
   required ClientOperationHeaderProto header = 1;
   required uint64 offset = 2;
   required uint64 len = 3;
+  optional bool sendChecksums = 4 [default = true];
 }
 
 

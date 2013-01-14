@@ -193,6 +193,8 @@ Release 2.0.3-alpha - Unreleased
 
   OPTIMIZATIONS
 
+    HDFS-3429. DataNode reads checksums even if client does not need them (todd)
+
   BUG FIXES 
 
     HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.

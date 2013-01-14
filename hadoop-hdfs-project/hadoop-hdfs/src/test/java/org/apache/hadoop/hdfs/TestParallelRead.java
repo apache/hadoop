@@ -19,6 +19,9 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -56,4 +59,11 @@ public class TestParallelRead extends TestParallelReadUtil {
   public void testParallelReadMixed() throws IOException {
     runTestWorkload(new MixedWorkloadHelper());
   }
+  
+  @Test
+  public void testParallelNoChecksums() throws IOException {
+    verifyChecksums = false;
+    runTestWorkload(new MixedWorkloadHelper());
+  }
+
 }

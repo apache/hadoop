@@ -388,8 +388,8 @@ class BlockPoolSliceScanner {
       try {
         adjustThrottler();
         
-        blockSender = new BlockSender(block, 0, -1, false, true, datanode,
-            null);
+        blockSender = new BlockSender(block, 0, -1, false, true, true, 
+            datanode, null);
 
         DataOutputStream out = 
                 new DataOutputStream(new IOUtils.NullOutputStream());
