@@ -729,8 +729,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetLinkTargetRequestProto req) throws ServiceException {
     try {
       String result = server.getLinkTarget(req.getPath());
-      return GetLinkTargetResponseProto.newBuilder().setTargetPath(result)
-          .build();
+      GetLinkTargetResponseProto.Builder builder = GetLinkTargetResponseProto
+          .newBuilder();
+      if (result != null) {
+        builder.setTargetPath(result);
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

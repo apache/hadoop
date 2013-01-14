@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFil
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
@@ -714,7 +715,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
     GetLinkTargetRequestProto req = GetLinkTargetRequestProto.newBuilder()
         .setPath(path).build();
     try {
-      return rpcProxy.getLinkTarget(null, req).getTargetPath();
+      GetLinkTargetResponseProto rsp = rpcProxy.getLinkTarget(null, req);
+      return rsp.hasTargetPath() ? rsp.getTargetPath() : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
