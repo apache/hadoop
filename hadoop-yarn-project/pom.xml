@@ -213,9 +213,9 @@
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
+          <excludes>
+            <exclude>CHANGES.txt</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>

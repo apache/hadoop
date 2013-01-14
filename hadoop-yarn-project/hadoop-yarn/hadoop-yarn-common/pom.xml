@@ -46,6 +46,24 @@
 
   <build>
     <plugins>
+     <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/resources/webapps/mapreduce/.keep</exclude>
+            <exclude>src/main/resources/webapps/jobhistory/.keep</exclude>
+            <exclude>src/main/resources/webapps/yarn/.keep</exclude>
+            <exclude>src/main/resources/webapps/cluster/.keep</exclude>
+            <exclude>src/main/resources/webapps/test/.keep</exclude>
+            <exclude>src/main/resources/webapps/proxy/.keep</exclude>
+            <exclude>src/main/resources/webapps/node/.keep</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
