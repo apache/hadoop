@@ -28,8 +28,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /** I-node for closed file. */
@@ -96,7 +94,7 @@ public class INodeFile extends INode implements BlockCollection {
         preferredBlockSize);
   }
 
-  INodeFile(byte[] name, PermissionStatus permissions, long mtime, long atime,
+  protected INodeFile(byte[] name, PermissionStatus permissions, long mtime, long atime,
       BlockInfo[] blklist, short replication, long preferredBlockSize) {
     super(name, permissions, null, mtime, atime);
     header = HeaderFormat.combineReplication(header, replication);
@@ -111,7 +109,7 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  public Pair<INodeFileWithLink, INodeFileSnapshot> createSnapshotCopy() {
+  public Pair<? extends INodeFile, ? extends INodeFile> createSnapshotCopy() {
     return parent.replaceINodeFile(this).createSnapshotCopy();
   }
 
@@ -141,7 +139,7 @@ public class INodeFile extends INode implements BlockCollection {
     return getFileReplication();
   }
 
-  protected void setFileReplication(short replication, Snapshot latest) {
+  public void setFileReplication(short replication, Snapshot latest) {
     if (latest != null) {
       final Pair<? extends INode, ? extends INode> p = recordModification(latest);
       if (p != null) {

@@ -100,3 +100,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4245. Include snapshot related operations in TestOfflineEditsViewer.
   (Jing Zhao via szetszwo)
+
+  HDFS-4098. Add FileWithLink, INodeFileUnderConstructionWithLink and
+  INodeFileUnderConstructionSnapshot in order to support append to snapshotted
+  files.  (szetszwo)

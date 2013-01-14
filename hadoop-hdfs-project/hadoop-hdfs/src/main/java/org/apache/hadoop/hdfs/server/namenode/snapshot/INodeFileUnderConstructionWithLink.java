@@ -19,24 +19,39 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 
 /**
- * Represent an {@link INodeFile} that is snapshotted.
- * Note that snapshot files are represented by {@link INodeFileSnapshot}.
+ * Represent an {@link INodeFileUnderConstruction} that is snapshotted.
+ * Note that snapshot files are represented by
+ * {@link INodeFileUnderConstructionSnapshot}.
  */
 @InterfaceAudience.Private
-public class INodeFileWithLink extends INodeFile implements FileWithLink {
+public class INodeFileUnderConstructionWithLink
+    extends INodeFileUnderConstruction implements FileWithLink {
   private FileWithLink next;
 
-  public INodeFileWithLink(INodeFile f) {
+  public INodeFileUnderConstructionWithLink(INodeFileUnderConstruction f) {
     super(f);
     setNext(this);
   }
 
   @Override
-  public Pair<INodeFileWithLink, INodeFileSnapshot> createSnapshotCopy() {
-    return new Pair<INodeFileWithLink, INodeFileSnapshot>(this,
-        new INodeFileSnapshot(this));
+  protected INodeFileWithLink toINodeFile(final long mtime) {
+    assertAllBlocksComplete();
+    final long atime = getModificationTime();
+    final INodeFileWithLink f = new INodeFileWithLink(this);
+    f.setModificationTime(mtime, null);
+    f.setAccessTime(atime, null);
+    return f;
+  }
+
+  @Override
+  public Pair<? extends INodeFileUnderConstruction,
+      INodeFileUnderConstructionSnapshot> createSnapshotCopy() {
+    return new Pair<INodeFileUnderConstructionWithLink,
+        INodeFileUnderConstructionSnapshot>(
+            this, new INodeFileUnderConstructionSnapshot(this));
   }
 
   @SuppressWarnings("unchecked")
@@ -49,7 +64,7 @@ public class INodeFileWithLink extends INodeFile implements FileWithLink {
   public <N extends INodeFile & FileWithLink> void setNext(N next) {
     this.next = next;
   }
-
+  
   @Override
   public <N extends INodeFile & FileWithLink> void insert(N inode) {
     inode.setNext(this.getNext());
@@ -62,7 +77,7 @@ public class INodeFileWithLink extends INodeFile implements FileWithLink {
   }
 
   @Override
-  public int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
+  protected int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     if (next == null || next == this) {
       // this is the only remaining inode.
       return super.collectSubtreeBlocksAndClear(info);

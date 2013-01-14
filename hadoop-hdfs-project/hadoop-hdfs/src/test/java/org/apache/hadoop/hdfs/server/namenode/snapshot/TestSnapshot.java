@@ -270,10 +270,9 @@ public class TestSnapshot {
       Modification delete = new FileDeletion(
           node.fileList.get((node.nullFileIndex + 1) % node.fileList.size()),
           hdfs);
-//      TODO: fix append for snapshots
-//      Modification append = new FileAppend(
-//          node.fileList.get((node.nullFileIndex + 2) % node.fileList.size()),
-//          hdfs, (int) BLOCKSIZE);
+      Modification append = new FileAppend(
+          node.fileList.get((node.nullFileIndex + 2) % node.fileList.size()),
+          hdfs, (int) BLOCKSIZE);
       Modification chmod = new FileChangePermission(
           node.fileList.get((node.nullFileIndex + 3) % node.fileList.size()),
           hdfs, genRandomPermission());
@@ -290,8 +289,7 @@ public class TestSnapshot {
       
       mList.add(create);
       mList.add(delete);
-      // TODO: fix append for snapshots
-//      mList.add(append);
+      mList.add(append);
       mList.add(chmod);
       mList.add(chown);
       mList.add(replication);
