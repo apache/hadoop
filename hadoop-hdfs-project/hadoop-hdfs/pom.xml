@@ -516,6 +516,8 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/test/resources/data*</exclude>
             <exclude>src/test/resources/editsStored*</exclude>
             <exclude>src/test/resources/empty-file</exclude>
+            <exclude>src/main/native/util/tree.h</exclude>
+            <exclude>src/test/aop/org/apache/hadoop/hdfs/server/datanode/DataXceiverAspects.aj</exclude>
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
             <exclude>src/main/docs/releasenotes.html</exclude>
             <exclude>src/contrib/**</exclude>
