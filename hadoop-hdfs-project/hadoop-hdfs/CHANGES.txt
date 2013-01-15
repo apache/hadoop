@@ -485,6 +485,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4381. Document fsimage format details in FSImageFormat class javadoc.
     (Jing Zhao via suresh)
 
+    HDFS-4375. Use token request messages defined in hadoop common.
+    (suresh)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
