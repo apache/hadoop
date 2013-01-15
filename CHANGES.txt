@@ -428,6 +428,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4933. MR1 final merge asks for length of file it just wrote
     before flushing it. (Sandy Ryza via bobby)
 
+    MAPREDUCE-4930. Backport MAPREDUCE-4678 and MAPREDUCE-4925 to branch-1.
+    (Karthik Kambatla and Chris McConnell via harsh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

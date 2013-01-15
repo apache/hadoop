@@ -162,17 +162,36 @@ public class DistributedPentomino extends Configured implements Tool {
     int height = 10;
     Class<? extends Pentomino> pentClass;
     if (args.length == 0) {
-      System.out.println("pentomino <output>");
+      System.out
+          .println("Usage: pentomino <output> [-depth #] [-height #] [-width #]");
       ToolRunner.printGenericCommandUsage(System.out);
       return -1;
     }
     
     conf = new JobConf(getConf());
+
+    // Pick up the parameters, should the user set these
     width = conf.getInt("pent.width", width);
     height = conf.getInt("pent.height", height);
     depth = conf.getInt("pent.depth", depth);
     pentClass = conf.getClass("pent.class", OneSidedPentomino.class, Pentomino.class);
     
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equalsIgnoreCase("-depth")) {
+        depth = Integer.parseInt(args[++i].trim());
+      } else if (args[i].equalsIgnoreCase("-height")) {
+        height = Integer.parseInt(args[++i].trim());
+      } else if (args[i].equalsIgnoreCase("-width")) {
+        width = Integer.parseInt(args[++i].trim());
+      }
+    }
+
+    // Set parameters for MR tasks to pick up either which way the user sets
+    // them or not
+    conf.setInt("pent.width", width);
+    conf.setInt("pent.height", height);
+    conf.setInt("pent.depth", depth);
+
     Path output = new Path(args[0]);
     Path input = new Path(output + "_input");
     FileSystem fileSys = FileSystem.get(conf);
