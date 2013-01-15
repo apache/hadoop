@@ -62,7 +62,7 @@ class DomainSocketFactory {
         LOG.warn(feature + " is disabled because you have not set " +
             DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY);
       } else if (DomainSocket.getLoadingFailureReason() != null) {
-        LOG.error(feature + " is disabled because " +
+        LOG.warn(feature + " is disabled because " +
               DomainSocket.getLoadingFailureReason());
       } else {
         LOG.debug(feature + "is enabled.");
@@ -113,7 +113,7 @@ class DomainSocketFactory {
       sock.setAttribute(DomainSocket.RCV_TIMEO, conf.socketTimeout);
       success = true;
     } catch (IOException e) {
-      LOG.error("error creating DomainSocket", e);
+      LOG.warn("error creating DomainSocket", e);
       // fall through
     } finally {
       if (!success) {

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import java.io.DataInputStream;
 import org.apache.hadoop.conf.Configuration;
+
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -118,7 +120,9 @@ class BlockReaderLocal implements BlockReader {
     // read and handle the common header here. For now just a version
     checksumIn.getChannel().position(0);
     BlockMetadataHeader header = BlockMetadataHeader
-        .readHeader(new DataInputStream(checksumIn));
+        .readHeader(new DataInputStream(
+            new BufferedInputStream(checksumIn,
+                BlockMetadataHeader.getHeaderSize())));
     short version = header.getVersion();
     if (version != BlockMetadataHeader.VERSION) {
       throw new IOException("Wrong version (" + version + ") of the " +

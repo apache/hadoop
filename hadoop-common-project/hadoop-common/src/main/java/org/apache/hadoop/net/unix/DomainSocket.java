@@ -254,7 +254,7 @@ public class DomainSocket implements Closeable {
   private void fdUnref(boolean checkClosed) throws AsynchronousCloseException {
     int newCount = status.decrementAndGet();
     assert (newCount & ~STATUS_CLOSED_MASK) >= 0;
-    if (checkClosed & ((newCount & STATUS_CLOSED_MASK) != 0)) {
+    if (checkClosed && ((newCount & STATUS_CLOSED_MASK) != 0)) {
       throw new AsynchronousCloseException();
     }
   }
