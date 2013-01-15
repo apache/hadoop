@@ -199,6 +199,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4375. Use token request messages defined in hadoop common.
     (suresh)
 
+    HDFS-4392. Use NetUtils#getFreeSocketPort in MiniDFSCluster.
+    (Andrew Purtell via suresh)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
