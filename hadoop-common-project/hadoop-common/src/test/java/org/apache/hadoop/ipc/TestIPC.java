@@ -62,7 +62,6 @@ public class TestIPC {
   final private static Configuration conf = new Configuration();
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
-
   /**
    * Flag used to turn off the fault injection behavior
    * of the various writables.
@@ -498,6 +497,26 @@ public class TestIPC {
     // set timeout to be bigger than 3*ping interval
     client.call(new LongWritable(RANDOM.nextLong()),
         addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME, conf);
+  }
+
+  @Test
+  public void testIpcConnectTimeout() throws Exception {
+    // start server
+    Server server = new TestServer(1, true);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    //Intentionally do not start server to get a connection timeout
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    Client client = new Client(LongWritable.class, conf);
+    // set the rpc timeout to twice the MIN_SLEEP_TIME
+    try {
+      client.call(new LongWritable(RANDOM.nextLong()),
+              addr, null, null, MIN_SLEEP_TIME*2, conf);
+      fail("Expected an exception to have been thrown");
+    } catch (SocketTimeoutException e) {
+      LOG.info("Get a SocketTimeoutException ", e);
+    }
   }
   
   /**
