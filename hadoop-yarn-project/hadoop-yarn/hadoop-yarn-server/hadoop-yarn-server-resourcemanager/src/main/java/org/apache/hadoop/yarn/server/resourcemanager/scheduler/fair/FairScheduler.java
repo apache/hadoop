@@ -109,6 +109,10 @@ public class FairScheduler implements ResourceScheduler {
   private Clock clock;
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
+  
+  // Value that container assignment methods return when a container is
+  // reserved
+  public static final Resource CONTAINER_RESERVED = Resources.createResource(-1);
 
   // How often fair shares are re-calculated (ms)
   protected long UPDATE_INTERVAL = 500;

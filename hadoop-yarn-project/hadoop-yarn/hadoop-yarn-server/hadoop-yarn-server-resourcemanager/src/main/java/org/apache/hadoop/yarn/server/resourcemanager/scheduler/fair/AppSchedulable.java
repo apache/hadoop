@@ -275,7 +275,7 @@ public class AppSchedulable extends Schedulable {
       // The desired container won't fit here, so reserve
       reserve(application, priority, node, container, reserved);
 
-      return Resources.none();
+      return FairScheduler.CONTAINER_RESERVED;
     }
   }
 
