@@ -29,10 +29,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithLink;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
-
-import com.google.common.base.Preconditions;
 
 /**
  * I-node for file being written.
@@ -47,29 +43,6 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
       throw new FileNotFoundException("File is not under construction: " + path);
     }
     return (INodeFileUnderConstruction)file;
-  }
-
-  /** Convert the given file to an {@link INodeFileUnderConstruction}. */
-  public static INodeFileUnderConstruction toINodeFileUnderConstruction(
-      INodeFile file,
-      String clientName,
-      String clientMachine,
-      DatanodeDescriptor clientNode) {
-    Preconditions.checkArgument(!(file instanceof INodeFileUnderConstruction),
-        "file is already an INodeFileUnderConstruction");
-    final INodeFileUnderConstruction uc = new INodeFileUnderConstruction(
-        file.getId(),
-        file.getLocalNameBytes(),
-        file.getFileReplication(),
-        file.getModificationTime(),
-        file.getPreferredBlockSize(),
-        file.getBlocks(),
-        file.getPermissionStatus(),
-        clientName,
-        clientMachine,
-        clientNode);
-    return file instanceof INodeFileWithLink?
-        new INodeFileUnderConstructionWithLink(uc): uc;
   }
 
   private  String clientName;         // lease holder
@@ -104,13 +77,6 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
- 
-  protected INodeFileUnderConstruction(INodeFileUnderConstruction that) {
-    super(that);
-    this.clientName = that.clientName;
-    this.clientMachine = that.clientMachine;
-    this.clientNode = that.clientNode;
-  }
 
   String getClientName() {
     return clientName;
@@ -136,26 +102,30 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     return true;
   }
 
-  /**
-   * Converts an INodeFileUnderConstruction to an INodeFile.
-   * The original modification time is used as the access time.
-   * The new modification is the specified mtime.
-   */
-  protected INodeFile toINodeFile(long mtime) {
-    assertAllBlocksComplete();
+  //
+  // converts a INodeFileUnderConstruction into a INodeFile
+  // use the modification time as the access time
+  //
+  INodeFile convertToInodeFile(long mtime) {
+    assert allBlocksComplete() : "Can't finalize inode " + this
+      + " since it contains non-complete blocks! Blocks are "
+      + Arrays.asList(getBlocks());
+    //TODO SNAPSHOT: may convert to INodeFileWithLink
     return new INodeFile(getId(), getLocalNameBytes(), getPermissionStatus(),
         mtime, getModificationTime(),
         getBlocks(), getFileReplication(), getPreferredBlockSize());
   }
   
-  /** Assert all blocks are complete. */
-  protected void assertAllBlocksComplete() {
-    final BlockInfo[] blocks = getBlocks();
-    for (int i = 0; i < blocks.length; i++) {
-      Preconditions.checkState(blocks[i].isComplete(), "Failed to finalize"
-          + " %s %s since blocks[%s] is non-complete, where blocks=%s.",
-          getClass().getSimpleName(), this, i, Arrays.asList(getBlocks()));
+  /**
+   * @return true if all of the blocks in this file are marked as completed.
+   */
+  private boolean allBlocksComplete() {
+    for (BlockInfo b : getBlocks()) {
+      if (!b.isComplete()) {
+        return false;
+      }
     }
+    return true;
   }
 
   /**

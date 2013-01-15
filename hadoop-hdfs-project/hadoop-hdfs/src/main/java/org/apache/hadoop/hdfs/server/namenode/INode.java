@@ -509,7 +509,7 @@ public abstract class INode implements Comparable<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public INode setAccessTime(long atime, Snapshot latest) {
+  INode setAccessTime(long atime, Snapshot latest) {
     Pair<? extends INode, ? extends INode> pair = recordModification(latest);
     INode nodeToUpdate = pair != null ? pair.left : this;    
     nodeToUpdate.accessTime = atime;

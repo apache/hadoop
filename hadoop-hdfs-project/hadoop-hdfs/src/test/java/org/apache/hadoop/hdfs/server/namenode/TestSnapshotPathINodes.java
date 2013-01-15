@@ -364,7 +364,8 @@ public class TestSnapshotPathINodes {
    * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file while modifying file after snapshot.
    */
-  @Test
+//  TODO: disable it temporarily since it uses append.
+//  @Test
   public void testSnapshotPathINodesAfterModification() throws Exception {
     //file1 was deleted, create it again.
     DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);
