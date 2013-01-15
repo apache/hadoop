@@ -86,6 +86,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4925. The pentomino option parser may be buggy.
     (Karthik Kambatla via harsh)
 
+    MAPREDUCE-4921. JobClient should acquire HS token with RM principal 
+    (Daryn Sharp via bobby)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
