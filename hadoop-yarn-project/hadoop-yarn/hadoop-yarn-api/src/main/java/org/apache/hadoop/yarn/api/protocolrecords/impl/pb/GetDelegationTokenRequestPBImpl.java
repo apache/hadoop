@@ -17,10 +17,10 @@
    */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetDelegationTokenRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetDelegationTokenRequestProtoOrBuilder;
 
 public class GetDelegationTokenRequestPBImpl extends
       ProtoBase<GetDelegationTokenRequestProto> implements GetDelegationTokenRequest {
@@ -47,9 +47,6 @@ public class GetDelegationTokenRequestPBImpl extends
     GetDelegationTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.renewer != null) {
       return this.renewer;
-    }
-    if (!p.hasRenewer()) {
-      return null;
     }
     this.renewer = p.getRenewer();
     return this.renewer;  

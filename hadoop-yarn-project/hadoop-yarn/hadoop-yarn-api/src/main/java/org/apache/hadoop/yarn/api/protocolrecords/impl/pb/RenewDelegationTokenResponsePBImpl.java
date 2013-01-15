@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.RenewDelegationTokenResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.RenewDelegationTokenResponseProtoOrBuilder;
 
 public class RenewDelegationTokenResponsePBImpl extends
     ProtoBase<RenewDelegationTokenResponseProto> implements
@@ -58,12 +58,12 @@ public class RenewDelegationTokenResponsePBImpl extends
   @Override
   public long getNextExpirationTime() {
     RenewDelegationTokenResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getNextExpiryTs();
+    return p.getNewExpiryTime();
   }
 
   @Override
   public void setNextExpirationTime(long expTime) {
     maybeInitBuilder();
-    builder.setNextExpiryTs(expTime);
+    builder.setNewExpiryTime(expTime);
   }
 }
