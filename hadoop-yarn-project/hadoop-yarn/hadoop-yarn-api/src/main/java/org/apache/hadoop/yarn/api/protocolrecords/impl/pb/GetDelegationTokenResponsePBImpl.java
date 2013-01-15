@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetDelegationTokenResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetDelegationTokenResponseProtoOrBuilder;
 
 public class GetDelegationTokenResponsePBImpl extends
 ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse {
@@ -53,10 +53,10 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
     if (this.appToken != null) {
       return this.appToken;
     }
-    if (!p.hasApplicationToken()) {
+    if (!p.hasToken()) {
       return null;
     }
-    this.appToken = convertFromProtoFormat(p.getApplicationToken());
+    this.appToken = convertFromProtoFormat(p.getToken());
     return this.appToken;  
   }
 
@@ -64,7 +64,7 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
   public void setRMDelegationToken(DelegationToken appToken) {
     maybeInitBuilder();
     if (appToken == null) 
-      builder.clearApplicationToken();
+      builder.clearToken();
     this.appToken = appToken;
   }
 
@@ -79,7 +79,7 @@ ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse
 
   private void mergeLocalToBuilder() {
     if (appToken != null) {
-      builder.setApplicationToken(convertToProtoFormat(this.appToken));
+      builder.setToken(convertToProtoFormat(this.appToken));
     }
   }
 
