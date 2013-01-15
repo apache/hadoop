@@ -338,7 +338,7 @@ public class TestApplicationACLs {
     Assert.assertEquals("Enemy should not see app rpc port!",
         -1, appReport.getRpcPort());
     Assert.assertEquals("Enemy should not see app client token!",
-        UNAVAILABLE, appReport.getClientToken());
+        null, appReport.getClientToken());
     Assert.assertEquals("Enemy should not see app diagnostics!",
         UNAVAILABLE, appReport.getDiagnostics());
     Assert.assertEquals("Enemy should not see app tracking url!",

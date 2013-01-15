@@ -168,7 +168,6 @@ public class TestRMAppTransitions {
     Configuration conf = new YarnConfiguration();
     // ensure max retries set to known value
     conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, maxRetries);
-    String clientTokenStr = "bogusstring";
     YarnScheduler scheduler = mock(YarnScheduler.class);
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
@@ -177,11 +176,10 @@ public class TestRMAppTransitions {
       submissionContext = new ApplicationSubmissionContextPBImpl();
     }
 
-    RMApp application = new RMAppImpl(applicationId, rmContext,
-        conf, name, user,
-        queue, submissionContext, clientTokenStr,
-        scheduler,
-        masterService, System.currentTimeMillis());
+    RMApp application =
+        new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
+          submissionContext, scheduler, masterService,
+          System.currentTimeMillis());
 
     testAppStartState(applicationId, user, name, queue, application);
     return application;

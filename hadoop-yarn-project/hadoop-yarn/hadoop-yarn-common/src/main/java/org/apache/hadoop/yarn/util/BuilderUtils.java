@@ -25,10 +25,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -37,12 +33,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -52,9 +50,9 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -256,30 +254,36 @@ public class BuilderUtils {
     return container;
   }
 
-  public static DelegationToken newDelegationToken(
-      byte[] identifier, String kind, byte[] password,
-      String service) {
-      DelegationToken delegationToken = recordFactory.newRecordInstance(
-          DelegationToken.class);
-      delegationToken.setIdentifier(ByteBuffer.wrap(identifier));
-      delegationToken.setKind(kind);
-      delegationToken.setPassword(ByteBuffer.wrap(password));
-      delegationToken.setService(service);
-      return delegationToken;
+  public static <T extends Token> T newToken(Class<T> tokenClass,
+      byte[] identifier, String kind, byte[] password, String service) {
+    T token = recordFactory.newRecordInstance(tokenClass);
+    token.setIdentifier(ByteBuffer.wrap(identifier));
+    token.setKind(kind);
+    token.setPassword(ByteBuffer.wrap(password));
+    token.setService(service);
+    return token;
   }
-  
+
+  public static DelegationToken newDelegationToken(byte[] identifier,
+      String kind, byte[] password, String service) {
+    return newToken(DelegationToken.class, identifier, kind, password, service);
+  }
+
+  public static ClientToken newClientToken(byte[] identifier, String kind,
+      byte[] password, String service) {
+    return newToken(ClientToken.class, identifier, kind, password, service);
+  }
+
   public static ContainerToken newContainerToken(NodeId nodeId,
-      ByteBuffer password, ContainerTokenIdentifier tokenIdentifier) {
-    ContainerToken containerToken = recordFactory
-        .newRecordInstance(ContainerToken.class);
-    containerToken.setIdentifier(ByteBuffer.wrap(tokenIdentifier.getBytes()));
-    containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
-    containerToken.setPassword(password);
+      byte[] password, ContainerTokenIdentifier tokenIdentifier) {
     // RPC layer client expects ip:port as service for tokens
-    InetSocketAddress addr = NetUtils.createSocketAddrForHost(nodeId.getHost(),
-        nodeId.getPort());
-    // NOTE: use SecurityUtil.setTokenService if this becomes a "real" token 
-    containerToken.setService(SecurityUtil.buildTokenService(addr).toString());
+    InetSocketAddress addr =
+        NetUtils.createSocketAddrForHost(nodeId.getHost(), nodeId.getPort());
+    // NOTE: use SecurityUtil.setTokenService if this becomes a "real" token
+    ContainerToken containerToken =
+        newToken(ContainerToken.class, tokenIdentifier.getBytes(),
+          ContainerTokenIdentifier.KIND.toString(), password, SecurityUtil
+            .buildTokenService(addr).toString());
     return containerToken;
   }
 
@@ -333,7 +337,7 @@ public class BuilderUtils {
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, ApplicationAttemptId applicationAttemptId,
       String user, String queue, String name, String host, int rpcPort,
-      String clientToken, YarnApplicationState state, String diagnostics,
+      ClientToken clientToken, YarnApplicationState state, String diagnostics,
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl) {

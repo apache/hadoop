@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
 
-
 public class GetDelegationTokenResponsePBImpl extends
       ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse {
   
@@ -97,7 +96,6 @@ public class GetDelegationTokenResponsePBImpl extends
     }
     viaProto = false;
   }
-   
 
   private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
     return new DelegationTokenPBImpl(p);
