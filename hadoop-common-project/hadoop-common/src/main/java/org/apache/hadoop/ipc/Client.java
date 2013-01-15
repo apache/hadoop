@@ -106,6 +106,8 @@ public class Client {
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
+
+  private final int connectionTimeout;
   
   final static int PING_CALL_ID = -1;
   
@@ -159,7 +161,16 @@ public class Client {
     }
     return -1;
   }
-  
+  /**
+   * set the connection timeout value in configuration
+   * 
+   * @param conf Configuration
+   * @param timeout the socket connect timeout value
+   */
+  public static final void setConnectTimeout(Configuration conf, int timeout) {
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY, timeout);
+  }
+
   /**
    * Increment this client's reference count
    *
@@ -494,8 +505,7 @@ public class Client {
             }
           }
           
-          // connection time out is 20s
-          NetUtils.connect(this.socket, server, 20000);
+          NetUtils.connect(this.socket, server, connectionTimeout);
           if (rpcTimeout > 0) {
             pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
           }
@@ -1034,6 +1044,8 @@ public class Client {
     this.valueClass = valueClass;
     this.conf = conf;
     this.socketFactory = factory;
+    this.connectionTimeout = conf.getInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_CONNECT_TIMEOUT_DEFAULT);
   }
 
   /**
