@@ -120,6 +120,18 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @SuppressWarnings("serial")
+  public static class LongHeaderServlet extends HttpServlet {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+    ) throws ServletException, IOException {
+      Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
+      response.setStatus(HttpServletResponse.SC_OK);
+    }
+  }
+
+  @SuppressWarnings("serial")
   public static class HtmlContentServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest request, 
@@ -139,6 +151,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
+    server.addServlet("longheader", "/longheader", LongHeaderServlet.class);
     server.addJerseyResourcePackage(
         JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
@@ -195,6 +208,22 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                  readOutput(new URL(baseUrl, "/echomap?a=b&c=d")));
     assertEquals("a:b,&gt;\nc&lt;:d\n", 
                  readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
+  }
+
+  /** 
+   *  Test that verifies headers can be up to 64K long. 
+   *  The test adds a 63K header leaving 1K for other headers.
+   *  This is because the header buffer setting is for ALL headers,
+   *  names and values included. */
+  @Test public void testLongHeader() throws Exception {
+    URL url = new URL(baseUrl, "/longheader");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0 ; i < 63 * 1024; i++) {
+      sb.append("a");
+    }
+    conn.setRequestProperty("longheader", sb.toString());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
   }
 
   @Test public void testContentTypes() throws Exception {
