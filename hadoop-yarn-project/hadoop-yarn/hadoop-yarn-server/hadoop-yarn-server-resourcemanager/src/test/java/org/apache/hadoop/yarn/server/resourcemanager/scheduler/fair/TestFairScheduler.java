@@ -1275,4 +1275,46 @@ public class TestFairScheduler {
     FSSchedulerApp app2 = scheduler.applications.get(attId2);
     assertNull("The application was allowed", app2);
   }
+  
+  @Test
+  public void testMultipleNodesSingleRackRequest() throws Exception {
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    RMNode node3 = MockNodes.newNodeInfo(2, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+    
+    ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    scheduler.addApplication(appId, "queue1", "user1");
+    
+    // 1 request with 2 nodes on the same rack. another request with 1 node on
+    // a different rack
+    List<ResourceRequest> asks = new ArrayList<ResourceRequest>();
+    asks.add(createResourceRequest(1024, node1.getHostName(), 1, 1));
+    asks.add(createResourceRequest(1024, node2.getHostName(), 1, 1));
+    asks.add(createResourceRequest(1024, node3.getHostName(), 1, 1));
+    asks.add(createResourceRequest(1024, node1.getRackName(), 1, 1));
+    asks.add(createResourceRequest(1024, node3.getRackName(), 1, 1));
+    asks.add(createResourceRequest(1024, RMNode.ANY, 1, 2));
+
+    scheduler.allocate(appId, asks, new ArrayList<ContainerId>());
+    
+    // node 1 checks in
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+    scheduler.handle(updateEvent1);
+    // should assign node local
+    assertEquals(1, scheduler.applications.get(appId).getLiveContainers().size());
+
+    // node 2 checks in
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+    scheduler.handle(updateEvent2);
+    // should assign rack local
+    assertEquals(2, scheduler.applications.get(appId).getLiveContainers().size());
+  }
 }

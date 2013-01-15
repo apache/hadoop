@@ -189,6 +189,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-330. Fix flakey test: TestNodeManagerShutdown#testKillContainersOnShutdown.
     (Sandy Ryza via hitesh)
+    
+    YARN-335. Fair scheduler doesn't check whether rack needs containers
+    before assigning to node. (Sandy Ryza via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
