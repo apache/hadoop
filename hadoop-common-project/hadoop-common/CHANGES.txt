@@ -118,6 +118,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9192. Move token related request/response messages to common.
     (suresh)
 
+    HADOOP-8712. Change default hadoop.security.group.mapping to
+    JniBasedUnixGroupsNetgroupMappingWithFallback (Robert Parker via todd)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
