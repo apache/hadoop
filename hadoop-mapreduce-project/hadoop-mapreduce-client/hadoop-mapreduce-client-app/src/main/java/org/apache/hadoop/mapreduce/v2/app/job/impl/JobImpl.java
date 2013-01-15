@@ -1068,9 +1068,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     boolean smallCpu =
         (
             Math.max(
-                conf.getInt(MRJobConfig.MAP_CPU_VCORES, 1), 
-                conf.getInt(MRJobConfig.REDUCE_CPU_VCORES, 1)) < 
-             sysCPUSizeForUberSlot
+                conf.getInt(
+                    MRJobConfig.MAP_CPU_VCORES, 
+                    MRJobConfig.DEFAULT_MAP_CPU_VCORES), 
+                conf.getInt(
+                    MRJobConfig.REDUCE_CPU_VCORES, 
+                    MRJobConfig.DEFAULT_REDUCE_CPU_VCORES)) 
+             <= sysCPUSizeForUberSlot
         );
     boolean notChainJob = !isChainJob(conf);
 
