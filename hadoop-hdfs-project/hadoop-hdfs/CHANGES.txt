@@ -38,6 +38,8 @@ Release 0.23.6 - UNRELEASED
 
     HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
 
+    HDFS-4399. precommit release audit warnings (tgraves)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
