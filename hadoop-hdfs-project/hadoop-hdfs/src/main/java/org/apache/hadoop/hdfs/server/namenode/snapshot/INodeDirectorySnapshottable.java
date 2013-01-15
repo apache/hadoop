@@ -242,7 +242,6 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       Snapshot snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
 
-    try {
     if (snapshot == null) {
       out.println();
       out.print(prefix);
@@ -295,9 +294,6 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           };
         }
       });
-    }
-    } catch(Exception e) {
-      throw new RuntimeException("this=" + this, e);
     }
   }
 }

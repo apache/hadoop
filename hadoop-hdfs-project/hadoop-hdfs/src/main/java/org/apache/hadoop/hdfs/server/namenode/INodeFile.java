@@ -211,7 +211,7 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  protected int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
+  public int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
     parent = null;
     if(blocks != null && info != null) {
       for (BlockInfo blk : blocks) {

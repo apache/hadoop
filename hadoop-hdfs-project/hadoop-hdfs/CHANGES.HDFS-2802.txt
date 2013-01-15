@@ -103,3 +103,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4395. In INodeDirectorySnapshottable's constructor, the passed-in dir
   could be an INodeDirectoryWithSnapshot.  (Jing Zhao via szetszwo)
+
+  HDFS-4397. Fix a bug in INodeDirectoryWithSnapshot.Diff.combinePostDiff(..)
+  that it may put the wrong node into the deleted list.  (szetszwo)

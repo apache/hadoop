@@ -48,7 +48,7 @@ public class TestINodeDirectoryWithSnapshot {
   public void testDiff() throws Exception {
     for(int startSize = 0; startSize <= 1000; startSize = nextStep(startSize)) {
       for(int m = 0; m <= 10000; m = nextStep(m)) {
-        runDiffTest(startSize, m, true);
+        runDiffTest(startSize, m);
       }
     }
   }
@@ -68,7 +68,7 @@ public class TestINodeDirectoryWithSnapshot {
    * @param numModifications
    * @param computeDiff
    */
-  void runDiffTest(int startSize, int numModifications, boolean computeDiff) {
+  void runDiffTest(int startSize, int numModifications) {
     final int width = findWidth(startSize + numModifications);
     System.out.println("\nstartSize=" + startSize
         + ", numModifications=" + numModifications
@@ -83,9 +83,15 @@ public class TestINodeDirectoryWithSnapshot {
 
     // make modifications to current and record the diff
     final List<INode> current = new ArrayList<INode>(previous);
-    final Diff diff = computeDiff? new Diff(): null;
+    
+    final Diff[] diffs = new Diff[5];
+    for(int j = 0; j < diffs.length; j++) {
+      diffs[j] = new Diff();
+    }
 
     for(int m = 0; m < numModifications; m++) {
+      final int j = m * diffs.length / numModifications;
+
       // if current is empty, the next operation must be create;
       // otherwise, randomly pick an operation.
       final int nextOperation = current.isEmpty()? 1: RANDOM.nextInt(3) + 1;
@@ -93,55 +99,85 @@ public class TestINodeDirectoryWithSnapshot {
       case 1: // create
       {
         final INode i = newINode(n++, width);
-        create(i, current, diff);
+        create(i, current, diffs[j]);
         break;
       }
       case 2: // delete
       {
         final INode i = current.get(RANDOM.nextInt(current.size()));
-        delete(i, current, diff);
+        delete(i, current, diffs[j]);
         break;
       }
       case 3: // modify
       {
         final INode i = current.get(RANDOM.nextInt(current.size()));
-        modify(i, current, diff);
+        modify(i, current, diffs[j]);
         break;
       }
       }
     }
 
-    if (computeDiff) {
-      // check if current == previous + diff
-      final List<INode> c = diff.apply2Previous(previous);
+    {
+      // check if current == previous + diffs
+      List<INode> c = previous;
+      for(int i = 0; i < diffs.length; i++) {
+        c = diffs[i].apply2Previous(c);
+      }
       if (!hasIdenticalElements(current, c)) {
         System.out.println("previous = " + Diff.toString(previous));
         System.out.println();
         System.out.println("current  = " + Diff.toString(current));
         System.out.println("c        = " + Diff.toString(c));
-        System.out.println();
-        System.out.println("diff     = " + diff);
         throw new AssertionError("current and c are not identical.");
       }
 
-      // check if previous == current - diff
-      final List<INode> p = diff.apply2Current(current);
+      // check if previous == current - diffs
+      List<INode> p = current;
+      for(int i = diffs.length - 1; i >= 0; i--) {
+        p = diffs[i].apply2Current(p);
+      }
       if (!hasIdenticalElements(previous, p)) {
         System.out.println("previous = " + Diff.toString(previous));
         System.out.println("p        = " + Diff.toString(p));
         System.out.println();
         System.out.println("current  = " + Diff.toString(current));
-        System.out.println();
-        System.out.println("diff     = " + diff);
         throw new AssertionError("previous and p are not identical.");
       }
     }
 
-    if (computeDiff) {
+    // combine all diffs
+    final Diff combined = diffs[0];
+    for(int i = 1; i < diffs.length; i++) {
+      combined.combinePostDiff(diffs[i], null);
+    }
+
+    {
+      // check if current == previous + combined
+      final List<INode> c = combined.apply2Previous(previous);
+      if (!hasIdenticalElements(current, c)) {
+        System.out.println("previous = " + Diff.toString(previous));
+        System.out.println();
+        System.out.println("current  = " + Diff.toString(current));
+        System.out.println("c        = " + Diff.toString(c));
+        throw new AssertionError("current and c are not identical.");
+      }
+
+      // check if previous == current - combined
+      final List<INode> p = combined.apply2Current(current);
+      if (!hasIdenticalElements(previous, p)) {
+        System.out.println("previous = " + Diff.toString(previous));
+        System.out.println("p        = " + Diff.toString(p));
+        System.out.println();
+        System.out.println("current  = " + Diff.toString(current));
+        throw new AssertionError("previous and p are not identical.");
+      }
+    }
+
+    {
       for(int m = 0; m < n; m++) {
         final INode inode = newINode(m, width);
         {// test accessPrevious
-          final INode[] array = diff.accessPrevious(inode.getLocalNameBytes());
+          final INode[] array = combined.accessPrevious(inode.getLocalNameBytes());
           final INode computed;
           if (array != null) {
             computed = array[0];
@@ -157,7 +193,7 @@ public class TestINodeDirectoryWithSnapshot {
         }
 
         {// test accessCurrent
-          final INode[] array = diff.accessCurrent(inode.getLocalNameBytes());
+          final INode[] array = combined.accessCurrent(inode.getLocalNameBytes());
           final INode computed;
           if (array != null) {
             computed = array[0]; 
@@ -239,8 +275,6 @@ public class TestINodeDirectoryWithSnapshot {
 
   static void delete(INode inode, final List<INode> current, Diff diff) {
     final int i = Diff.search(current, inode);
-    Assert.assertTrue("i=" + i + ", inode=" + inode + "\ncurrent=" + current,
-        i >= 0);
     current.remove(i);
     if (diff != null) {
       //test undo with 1/UNDO_TEST_P probability

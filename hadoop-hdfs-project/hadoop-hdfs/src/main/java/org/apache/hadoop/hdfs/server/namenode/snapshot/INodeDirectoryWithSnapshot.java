@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -58,7 +59,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    *   1.1. create i in current: add it to c-list                        (c, 0)
    *   1.1.1. create i in current and then create: impossible
    *   1.1.2. create i in current and then delete: remove it from c-list (0, 0)
-   *   1.1.3. create i in current and then modify: replace it in c-list  (c, 0)
+   *   1.1.3. create i in current and then modify: replace it in c-list (c', 0)
    *
    *   1.2. delete i from current: impossible
    *
@@ -75,7 +76,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    *   2.3. modify i in current: put it in both c-list and d-list        (c, d)
    *   2.3.1. modify i in current and then create: impossible
    *   2.3.2. modify i in current and then delete: remove it from c-list (0, d)
-   *   2.3.3. modify i in current and then modify: replace it in c-list  (c, d)
+   *   2.3.3. modify i in current and then modify: replace it in c-list (c', d)
    * </pre>
    */
   static class Diff {
@@ -192,8 +193,11 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       INode previous = null;
       Integer d = null;
       if (c >= 0) {
-        // Case 1.1.3: inode is already in c-list,
+        // Case 1.1.3 and 2.3.3: inode is already in c-list,
         previous = created.set(c, newinode);
+        
+        //TODO: fix a bug that previous != oldinode.  Set it to oldinode for now
+        previous = oldinode;
       } else {
         d = search(deleted, oldinode);
         if (d < 0) {
@@ -322,38 +326,23 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * Note that after this function the postDiff will be deleted.
      * 
      * @param the posterior diff to combine
-     * @param collectedBlocks Used in case 2.3, 3.1, and 3.3 to collect 
-     *                        information for blocksMap update
+     * @param deletedINodeProcesser Used in case 2.1, 2.3, 3.1, and 3.3
+     *                              to process the deleted inodes.
      */
-    void combinePostDiff(Diff postDiff, BlocksMapUpdateInfo collectedBlocks) {
+    void combinePostDiff(Diff postDiff, Processor deletedINodeProcesser) {
       while (postDiff.created != null && !postDiff.created.isEmpty()) {
-        INode node = postDiff.created.remove(postDiff.created.size() - 1);
-        int deletedIndex = search(postDiff.deleted, node);
+        final INode c = postDiff.created.remove(postDiff.created.size() - 1);
+        final int deletedIndex = search(postDiff.deleted, c);
         if (deletedIndex < 0) {
-          // for case 1
-          create(node);
+          // case 1
+          create(c);
         } else {
+          final INode d = postDiff.deleted.remove(deletedIndex);
           // case 3
-          int createdIndex = search(created, node);
-          if (createdIndex < 0) {
-            // 3.4
-            create(node);
-            insertDeleted(node, search(deleted, node));
-          } else {
-            // 3.1 and 3.3
-            created.set(createdIndex, node);
-            // for 3.1 and 3.3, if the node is an INodeFileWithLink, need to
-            // remove d in the posterior diff from the circular list, also do
-            // possible block deletion and blocksMap updating
-            INode dInPost = postDiff.deleted.get(deletedIndex);
-            if (dInPost instanceof INodeFileWithLink) {
-              // dInPost must be an INodeFileWithLink
-              ((INodeFileWithLink) dInPost)
-                  .collectSubtreeBlocksAndClear(collectedBlocks);
-            }
+          final Triple<Integer, INode, Integer> triple = modify(d, c);
+          if (deletedINodeProcesser != null) {
+            deletedINodeProcesser.process(triple.middle);
           }
-          // also remove the inode from the deleted list
-          postDiff.deleted.remove(deletedIndex);
         }
       }
       
@@ -361,12 +350,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         // case 2
         INode node = postDiff.deleted.remove(postDiff.deleted.size() - 1);
         Triple<Integer, INode, Integer> triple = delete(node);
-        // for 2.3, if the node is an INodeFileWithLink, need to remove c' from
-        // the circular list
-        INode cInCurrent = triple.middle;
-        if (cInCurrent instanceof INodeFileWithLink) {
-          ((INodeFileWithLink) cInCurrent)
-              .collectSubtreeBlocksAndClear(collectedBlocks);
+        if (deletedINodeProcesser != null) {
+          deletedINodeProcesser.process(triple.middle);
         }
       }
     }
@@ -487,10 +472,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
         private List<INode> initChildren() {
           if (children == null) {
-            final ReadOnlyList<INode> posterior = posteriorDiff != null?
-                posteriorDiff.getChildrenList()
-                : INodeDirectoryWithSnapshot.this.getChildrenList(null);
-            children = diff.apply2Current(ReadOnlyList.Util.asList(posterior));
+            final Diff combined = new Diff();
+            for(SnapshotDiff d = SnapshotDiff.this; d != null; d = d.posteriorDiff) {
+              combined.combinePostDiff(d.diff, null);
+            }
+            children = combined.apply2Current(ReadOnlyList.Util.asList(
+                INodeDirectoryWithSnapshot.this.getChildrenList(null)));
           }
           return children;
         }
@@ -542,6 +529,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
   }
   
+  /** An interface for passing a method to process inodes. */
+  static interface Processor {
+    /** Process the given inode. */
+    void process(INode inode);
+  }
+
   /** Create an {@link INodeDirectoryWithSnapshot} with the given snapshot.*/
   public static INodeDirectoryWithSnapshot newInstance(INodeDirectory dir,
       Snapshot latest) {
@@ -576,7 +569,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    *         Null if the snapshot with the given name does not exist. 
    */
   SnapshotDiff deleteSnapshotDiff(Snapshot snapshot,
-      BlocksMapUpdateInfo collectedBlocks) {
+      final BlocksMapUpdateInfo collectedBlocks) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     if (snapshotIndex == -1) {
       return null;
@@ -586,7 +579,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (snapshotIndex > 0) {
         // combine the to-be-removed diff with its previous diff
         SnapshotDiff previousDiff = diffs.get(snapshotIndex - 1);
-        previousDiff.diff.combinePostDiff(diffToRemove.diff, collectedBlocks);
+        previousDiff.diff.combinePostDiff(diffToRemove.diff, new Processor() {
+          /** Collect blocks for deleted files. */
+          @Override
+          public void process(INode inode) {
+            if (inode != null && inode instanceof INodeFile) {
+              ((INodeFile)inode).collectSubtreeBlocksAndClear(collectedBlocks);
+            }
+          }
+        });
+
         previousDiff.posteriorDiff = diffToRemove.posteriorDiff;
         diffToRemove.posteriorDiff = null;
       }
