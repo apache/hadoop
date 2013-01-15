@@ -543,6 +543,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9203. RPCCallBenchmark should find a random available port.
     (Andrew Purtell via suresh)
 
+    HADOOP-9178. src/main/conf is missing hadoop-policy.xml.
+    (Sandy Ryza via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
