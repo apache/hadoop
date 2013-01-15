@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
+import org.mortbay.log.Log;
 
 
 /**
@@ -31,13 +34,20 @@ import org.apache.hadoop.fs.viewfs.ConfigUtil;
  * 
  * If tests launched via ant (build.xml) the test root is absolute path
  * If tests launched via eclipse, the test root is 
- * is a test dir below the working directory. (see FileContextTestHelper).
- * Since viewFs has no built-in wd, its wd is /user/<username>.
+ * is a test dir below the working directory. (see FileContextTestHelper)
  * 
- * We set up fc to be the viewFs with mount point for 
- * /<firstComponent>" pointing to the local file system's testdir 
+ * We set a viewfs with 3 mount points: 
+ * 1) /<firstComponent>" of testdir  pointing to same in  target fs
+ * 2)   /<firstComponent>" of home  pointing to same in  target fs 
+ * 3)  /<firstComponent>" of wd  pointing to same in  target fs
+ * (note in many cases the link may be the same - viewfs handles this)
+ * 
+ * We also set the view file system's wd to point to the wd.  
  */
+
 public class ViewFsTestSetup {
+  
+  static public String ViewFSTestDir = "/testDir";
 
 
    /* 
@@ -47,30 +57,31 @@ public class ViewFsTestSetup {
     /**
      * create the test root on local_fs - the  mount table will point here
      */
-    FileContext fclocal = FileContext.getLocalFSFileContext();
-    Path targetOfTests = FileContextTestHelper.getTestRootPath(fclocal);
+    FileContext fsTarget = FileContext.getLocalFSFileContext();
+    Path targetOfTests = FileContextTestHelper.getTestRootPath(fsTarget);
     // In case previous test was killed before cleanup
-    fclocal.delete(targetOfTests, true);
+    fsTarget.delete(targetOfTests, true);
     
-    fclocal.mkdir(targetOfTests, FileContext.DEFAULT_PERM, true);
-  
-    String srcTestFirstDir;
-    if (FileContextTestHelper.TEST_ROOT_DIR.startsWith("/")) {
-      int indexOf2ndSlash = FileContextTestHelper.TEST_ROOT_DIR.indexOf('/', 1);
-      srcTestFirstDir = FileContextTestHelper.TEST_ROOT_DIR.substring(0, indexOf2ndSlash);
-    } else {
-      srcTestFirstDir = "/user"; 
-  
-    }
-    //System.out.println("srcTestFirstDir=" + srcTestFirstDir);
-  
-    // Set up the defaultMT in the config with mount point links
-    // The test dir is root is below  /user/<userid>
+    fsTarget.mkdir(targetOfTests, FileContext.DEFAULT_PERM, true);
     Configuration conf = new Configuration();
-    ConfigUtil.addLink(conf, srcTestFirstDir,
-        targetOfTests.toUri());
+    
+    // Set up viewfs link for test dir as described above
+    String testDir = FileContextTestHelper.getTestRootPath(fsTarget).toUri()
+        .getPath();
+    linkUpFirstComponents(conf, testDir, fsTarget, "test dir");
+    
+    
+    // Set up viewfs link for home dir as described above
+    setUpHomeDir(conf, fsTarget);
+      
+    // the test path may be relative to working dir - we need to make that work:
+    // Set up viewfs link for wd as described above
+    String wdDir = fsTarget.getWorkingDirectory().toUri().getPath();
+    linkUpFirstComponents(conf, wdDir, fsTarget, "working dir");
     
     FileContext fc = FileContext.getFileContext(FsConstants.VIEWFS_URI, conf);
+    fc.setWorkingDirectory(new Path(wdDir)); // in case testdir relative to wd.
+    Log.info("Working dir is: " + fc.getWorkingDirectory());
     //System.out.println("SRCOfTests = "+ getTestRootPath(fc, "test"));
     //System.out.println("TargetOfTests = "+ targetOfTests.toUri());
     return fc;
@@ -84,6 +95,37 @@ public class ViewFsTestSetup {
     FileContext fclocal = FileContext.getLocalFSFileContext();
     Path targetOfTests = FileContextTestHelper.getTestRootPath(fclocal);
     fclocal.delete(targetOfTests, true);
+  }
+  
+  
+  static void setUpHomeDir(Configuration conf, FileContext fsTarget) {
+    String homeDir = fsTarget.getHomeDirectory().toUri().getPath();
+    int indexOf2ndSlash = homeDir.indexOf('/', 1);
+    if (indexOf2ndSlash >0) {
+      linkUpFirstComponents(conf, homeDir, fsTarget, "home dir");
+    } else { // home dir is at root. Just link the home dir itse
+      URI linkTarget = fsTarget.makeQualified(new Path(homeDir)).toUri();
+      ConfigUtil.addLink(conf, homeDir, linkTarget);
+      Log.info("Added link for home dir " + homeDir + "->" + linkTarget);
+    }
+    // Now set the root of the home dir for viewfs
+    String homeDirRoot = fsTarget.getHomeDirectory().getParent().toUri().getPath();
+    ConfigUtil.setHomeDirConf(conf, homeDirRoot);
+    Log.info("Home dir base for viewfs" + homeDirRoot);  
+  }
+  
+  /*
+   * Set up link in config for first component of path to the same
+   * in the target file system.
+   */
+  static void linkUpFirstComponents(Configuration conf, String path,
+      FileContext fsTarget, String info) {
+    int indexOf2ndSlash = path.indexOf('/', 1);
+    String firstComponent = path.substring(0, indexOf2ndSlash);
+    URI linkTarget = fsTarget.makeQualified(new Path(firstComponent)).toUri();
+    ConfigUtil.addLink(conf, firstComponent, linkTarget);
+    Log.info("Added link for " + info + " " 
+        + firstComponent + "->" + linkTarget);    
   }
 
 }

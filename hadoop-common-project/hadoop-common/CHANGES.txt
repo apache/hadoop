@@ -239,6 +239,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
     (moritzmoeller via tucu)
 
+    HADOOP-8589 ViewFs tests fail when tests and home dirs are nested.
+    (sanjay Radia)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

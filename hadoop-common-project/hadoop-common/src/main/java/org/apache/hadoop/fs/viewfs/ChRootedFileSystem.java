@@ -156,12 +156,6 @@ class ChRootedFileSystem extends FilterFileSystem {
     return makeQualified(
         new Path(chRootPathPartString + f.toUri().toString()));
   }
-  
-  @Override
-  public Path getHomeDirectory() {
-    return  new Path("/user/"+System.getProperty("user.name")).makeQualified(
-          getUri(), null);
-  }
 
   @Override
   public Path getWorkingDirectory() {

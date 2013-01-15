@@ -258,8 +258,9 @@ public class ViewFileSystem extends FileSystem {
       if (base == null) {
         base = "/user";
       }
-      homeDir = 
-        this.makeQualified(new Path(base + "/" + ugi.getShortUserName()));
+      homeDir = (base.equals("/") ? 
+          this.makeQualified(new Path(base + ugi.getShortUserName())):
+          this.makeQualified(new Path(base + "/" + ugi.getShortUserName())));
     }
     return homeDir;
   }
