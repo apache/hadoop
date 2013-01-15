@@ -20,6 +20,7 @@ option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "MRClientProtocol";
 option java_generic_services = true;
 
+import "Security.proto";
 import "mr_service_protos.proto";
 
 /* If making changes to this, please edit HSClientProtocolService */
@@ -31,11 +32,11 @@ service MRClientProtocolService {
   rpc getTaskAttemptCompletionEvents (GetTaskAttemptCompletionEventsRequestProto) returns (GetTaskAttemptCompletionEventsResponseProto);
   rpc getTaskReports (GetTaskReportsRequestProto) returns (GetTaskReportsResponseProto);
   rpc getDiagnostics (GetDiagnosticsRequestProto) returns (GetDiagnosticsResponseProto);
-  rpc getDelegationToken (GetDelegationTokenRequestProto) returns (GetDelegationTokenResponseProto);
+  rpc getDelegationToken (hadoop.common.GetDelegationTokenRequestProto) returns (hadoop.common.GetDelegationTokenResponseProto);
   rpc killJob (KillJobRequestProto) returns (KillJobResponseProto);
   rpc killTask (KillTaskRequestProto) returns (KillTaskResponseProto);
   rpc killTaskAttempt (KillTaskAttemptRequestProto) returns (KillTaskAttemptResponseProto);
   rpc failTaskAttempt (FailTaskAttemptRequestProto) returns (FailTaskAttemptResponseProto);
-  rpc renewDelegationToken(RenewDelegationTokenRequestProto) returns (RenewDelegationTokenResponseProto);
-  rpc cancelDelegationToken(CancelDelegationTokenRequestProto) returns (CancelDelegationTokenResponseProto);
+  rpc renewDelegationToken(hadoop.common.RenewDelegationTokenRequestProto) returns (hadoop.common.RenewDelegationTokenResponseProto);
+  rpc cancelDelegationToken(hadoop.common.CancelDelegationTokenRequestProto) returns (hadoop.common.CancelDelegationTokenResponseProto);
 }

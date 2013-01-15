@@ -73,14 +73,10 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskReques
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskResponsePBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.RenewDelegationTokenResponsePBImpl;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.CancelDelegationTokenRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.FailTaskAttemptRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.FailTaskAttemptResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetCountersRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetCountersResponseProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDiagnosticsRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDiagnosticsResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetJobReportRequestProto;
@@ -99,8 +95,12 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskAttemptReque
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskAttemptResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskResponseProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.RenewDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 import com.google.protobuf.RpcController;
