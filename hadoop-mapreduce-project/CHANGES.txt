@@ -83,6 +83,9 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4678. Running the Pentomino example with defaults throws
     java.lang.NegativeArraySizeException (Chris McConnell via harsh)
 
+    MAPREDUCE-4925. The pentomino option parser may be buggy.
+    (Karthik Kambatla via harsh)
+
 Release 0.23.5 - UNRELEASED
 
   INCOMPATIBLE CHANGES
