@@ -516,6 +516,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/datanode/robots.txt</exclude>
             <exclude>src/main/docs/releasenotes.html</exclude>
             <exclude>src/contrib/**</exclude>
+            <exclude>src/site/resources/images/*</exclude>
           </excludes>
         </configuration>
       </plugin>
