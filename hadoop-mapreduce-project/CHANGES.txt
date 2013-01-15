@@ -151,9 +151,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
 
-    MAPREDUCE-4678. Running the Pentomino example with defaults throws
-    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
-
     MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
     (harsh)
 
@@ -698,6 +695,9 @@ Release 0.23.6 - UNRELEASED
     (daryn via bobby)
 
     MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
+
+    MAPREDUCE-4678. Running the Pentomino example with defaults throws
+    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
 
 Release 0.23.5 - UNRELEASED
 
