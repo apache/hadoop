@@ -18,6 +18,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in 
     child hadoop client processes (Yu Gao via tgraves)
 
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
