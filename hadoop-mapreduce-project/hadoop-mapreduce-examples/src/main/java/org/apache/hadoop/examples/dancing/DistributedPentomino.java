@@ -167,16 +167,30 @@ public class DistributedPentomino extends Configured implements Tool {
   }
 
   public int run(String[] args) throws Exception {
+    Configuration conf = getConf();
     if (args.length == 0) {
-      System.out.println("pentomino <output>");
+      System.out.println("Usage: pentomino <output> [-depth #] [-height #] [-width #]");
       ToolRunner.printGenericCommandUsage(System.out);
       return 2;
     }
-
-    Configuration conf = getConf();
-    int width = conf.getInt(Pentomino.WIDTH, PENT_WIDTH);
-    int height = conf.getInt(Pentomino.HEIGHT, PENT_HEIGHT);
-    int depth = conf.getInt(Pentomino.DEPTH, PENT_DEPTH);
+    // check for passed parameters, otherwise use defaults
+    int width = PENT_WIDTH;
+    int height = PENT_HEIGHT;
+    int depth = PENT_DEPTH;
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equalsIgnoreCase("-depth")) {
+          depth = Integer.parseInt(args[i++].trim());
+      } else if (args[i].equalsIgnoreCase("-height")) {
+	  height = Integer.parseInt(args[i++].trim());
+      } else if (args[i].equalsIgnoreCase("-width") ) {
+	  width = Integer.parseInt(args[i++].trim()); 
+      }
+    }
+    // now set the values within conf for M/R tasks to read, this
+    // will ensure values are set preventing MAPREDUCE-4678
+    conf.setInt(Pentomino.WIDTH, width);
+    conf.setInt(Pentomino.HEIGHT, height);
+    conf.setInt(Pentomino.DEPTH, depth);
     Class<? extends Pentomino> pentClass = conf.getClass(Pentomino.CLASS, 
       OneSidedPentomino.class, Pentomino.class);
     int numMaps = conf.getInt(MRJobConfig.NUM_MAPS, DEFAULT_MAPS);
