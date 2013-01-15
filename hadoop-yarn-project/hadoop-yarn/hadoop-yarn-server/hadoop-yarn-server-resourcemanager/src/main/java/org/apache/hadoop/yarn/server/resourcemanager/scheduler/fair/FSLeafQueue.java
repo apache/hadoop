@@ -177,7 +177,10 @@ public class FSLeafQueue extends FSQueue {
       Collections.sort(appScheds, comparator);
       for (AppSchedulable sched: appScheds) {
         if (sched.getRunnable()) {
-          return sched.assignContainer(node, reserved);
+          Resource assignedResource = sched.assignContainer(node, reserved);
+          if (!assignedResource.equals(Resources.none())) {
+            return assignedResource;
+          }
         }
       }
 

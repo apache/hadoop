@@ -1317,4 +1317,44 @@ public class TestFairScheduler {
     // should assign rack local
     assertEquals(2, scheduler.applications.get(appId).getLiveContainers().size());
   }
+  
+  @Test
+  public void testFifoWithinQueue() throws Exception {
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(3072));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    
+    // Even if submitted at exact same time, apps will be deterministically
+    // ordered by name.
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
+        "user1", 2);
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
+        "user1", 2);
+    FSSchedulerApp app1 = scheduler.applications.get(attId1);
+    FSSchedulerApp app2 = scheduler.applications.get(attId2);
+    
+    FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1");
+    queue1.setSchedulingMode(SchedulingMode.FIFO);
+    
+    scheduler.update();
+
+    // First two containers should go to app 1, third should go to app 2.
+    // Because tests set assignmultiple to false, each heartbeat assigns a single
+    // container.
+    
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1,
+      new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+
+    scheduler.handle(updateEvent);
+    assertEquals(1, app1.getLiveContainers().size());
+    assertEquals(0, app2.getLiveContainers().size());
+    
+    scheduler.handle(updateEvent);
+    assertEquals(2, app1.getLiveContainers().size());
+    assertEquals(0, app2.getLiveContainers().size());
+    
+    scheduler.handle(updateEvent);
+    assertEquals(2, app1.getLiveContainers().size());
+    assertEquals(1, app2.getLiveContainers().size());
+  }
 }
