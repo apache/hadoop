@@ -1249,6 +1249,8 @@ Release 0.23.6 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
 
   OPTIMIZATIONS
 
