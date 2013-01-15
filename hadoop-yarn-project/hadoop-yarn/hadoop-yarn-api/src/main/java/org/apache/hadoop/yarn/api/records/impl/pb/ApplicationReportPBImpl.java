@@ -18,19 +18,21 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ClientToken;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -40,8 +42,9 @@ implements ApplicationReport {
   ApplicationReportProto.Builder builder = null;
   boolean viaProto = false;
 
-  ApplicationId applicationId;
-  ApplicationAttemptId currentApplicationAttemptId;
+  private ApplicationId applicationId;
+  private ApplicationAttemptId currentApplicationAttemptId;
+  private ClientToken clientToken = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -159,12 +162,16 @@ implements ApplicationReport {
   }
 
   @Override
-  public String getClientToken() {
+  public ClientToken getClientToken() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.clientToken != null) {
+      return this.clientToken;
+    }
     if (!p.hasClientToken()) {
       return null;
     }
-    return (p.getClientToken());
+    this.clientToken = convertFromProtoFormat(p.getClientToken());
+    return this.clientToken;
   }
 
   @Override
@@ -175,7 +182,6 @@ implements ApplicationReport {
     }
     return p.getUser();
   }
-
 
   @Override
   public String getDiagnostics() {
@@ -290,13 +296,11 @@ implements ApplicationReport {
   }
 
   @Override
-  public void setClientToken(String clientToken) {
+  public void setClientToken(ClientToken clientToken) {
     maybeInitBuilder();
-    if (clientToken == null) {
+    if (clientToken == null) 
       builder.clearClientToken();
-      return;
-    }
-    builder.setClientToken((clientToken));
+    this.clientToken = clientToken;
   }
 
   @Override
@@ -360,6 +364,11 @@ implements ApplicationReport {
             builder.getCurrentApplicationAttemptId())) {
       builder.setCurrentApplicationAttemptId(convertToProtoFormat(this.currentApplicationAttemptId));
     }
+    if (this.clientToken != null
+        && !((ClientTokenPBImpl) this.clientToken).getProto().equals(
+            builder.getClientToken())) {
+      builder.setClientToken(convertToProtoFormat(this.clientToken));
+    }
   }
 
   private void mergeLocalToProto() {
@@ -419,4 +428,11 @@ implements ApplicationReport {
     return ProtoUtils.convertToProtoFormat(s);
   }
 
+  private ClientTokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new ClientTokenPBImpl(p);
+  }
+
+  private TokenProto convertToProtoFormat(ClientToken t) {
+    return ((ClientTokenPBImpl)t).getProto();
+  }
 }

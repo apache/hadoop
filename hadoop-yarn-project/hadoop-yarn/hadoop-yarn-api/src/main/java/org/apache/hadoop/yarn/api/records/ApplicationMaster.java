@@ -45,8 +45,8 @@ public interface ApplicationMaster {
   YarnApplicationState getState();
   void setState(YarnApplicationState state);
 
-  String getClientToken();
-  void setClientToken(String clientToken);
+  ClientToken getClientToken();
+  void setClientToken(ClientToken clientToken);
 
   int getAMFailCount();
   void setAMFailCount(int amFailCount);

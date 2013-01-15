@@ -28,19 +28,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -236,21 +234,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMApp application = null;
     try {
 
-      String clientTokenStr = null;
-      if (UserGroupInformation.isSecurityEnabled()) {
-
-        // TODO: This needs to move to per-AppAttempt
-        this.rmContext.getClientToAMTokenSecretManager().registerApplication(
-          applicationId);
-
-        Token<ClientTokenIdentifier> clientToken = new 
-            Token<ClientTokenIdentifier>(
-            new ClientTokenIdentifier(applicationId),
-            this.rmContext.getClientToAMTokenSecretManager());
-        clientTokenStr = clientToken.encodeToUrlString();
-        LOG.debug("Sending client token as " + clientTokenStr);
-      }
-      
       // Sanity checks
       if (submissionContext.getQueue() == null) {
         submissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
@@ -265,8 +248,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           new RMAppImpl(applicationId, rmContext, this.conf,
             submissionContext.getApplicationName(),
             submissionContext.getUser(), submissionContext.getQueue(),
-            submissionContext, clientTokenStr, this.scheduler,
-            this.masterService, submitTime);
+            submissionContext, this.scheduler, this.masterService,
+            submitTime);
 
       // Sanity check - duplicate?
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 

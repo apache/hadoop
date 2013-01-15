@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -276,7 +276,7 @@ public class TestClientRMService {
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName) {
     return new RMAppImpl(applicationId3, rmContext, config, null, null,
-        queueName, null, null, yarnScheduler, null, System
+        queueName, null, yarnScheduler, null , System
             .currentTimeMillis());
   }
 }
