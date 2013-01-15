@@ -17,13 +17,13 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.CancelDelegationTokenRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.CancelDelegationTokenRequestProtoOrBuilder;
 
 public class CancelDelegationTokenRequestPBImpl extends
     ProtoBase<CancelDelegationTokenRequestProto> implements
@@ -52,10 +52,7 @@ public class CancelDelegationTokenRequestPBImpl extends
     if (this.token != null) {
       return this.token;
     }
-    if (!p.hasDelegationToken()) {
-      return null;
-    }
-    this.token = convertFromProtoFormat(p.getDelegationToken());
+    this.token = convertFromProtoFormat(p.getToken());
     return this.token;
   }
 
@@ -63,7 +60,7 @@ public class CancelDelegationTokenRequestPBImpl extends
   public void setDelegationToken(DelegationToken token) {
     maybeInitBuilder();
     if (token == null)
-      builder.clearDelegationToken();
+      builder.clearToken();
     this.token = token;
   }
 
@@ -77,7 +74,7 @@ public class CancelDelegationTokenRequestPBImpl extends
 
   private void mergeLocalToBuilder() {
     if (token != null) {
-      builder.setDelegationToken(convertToProtoFormat(this.token));
+      builder.setToken(convertToProtoFormat(this.token));
     }
   }
 
