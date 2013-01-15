@@ -18,8 +18,8 @@
 package org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenRequestProtoOrBuilder;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 
 
@@ -49,9 +49,6 @@ public class GetDelegationTokenRequestPBImpl extends
     GetDelegationTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.renewer != null) {
       return this.renewer;
-    }
-    if (!p.hasRenewer()) {
-      return null;
     }
     this.renewer = p.getRenewer();
     return this.renewer;

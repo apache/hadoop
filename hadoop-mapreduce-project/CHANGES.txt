@@ -7,6 +7,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4123. Remove the 'mapred groups' command, which is no longer 
     supported. (Devaraj K via sseth)
 
+    MAPREDUCE-4938. Use token request messages defined in hadoop common.
+    (suresh)
+
   NEW FEATURES
 
     MAPREDUCE-4520. Added support for MapReduce applications to request for

@@ -77,14 +77,6 @@ message GetDiagnosticsResponseProto {
   repeated string diagnostics = 1;
 }
 
-message GetDelegationTokenRequestProto {
-  optional string renewer = 1;
-}
-
-message GetDelegationTokenResponseProto {
-  optional hadoop.common.TokenProto m_r_delegation_token = 1;
-}
-
 message KillJobRequestProto {
   optional JobIdProto job_id = 1;
 }
@@ -109,17 +101,3 @@ message FailTaskAttemptRequestProto {
 message FailTaskAttemptResponseProto {
 }
 
-message RenewDelegationTokenRequestProto {
-  required hadoop.common.TokenProto delegation_token = 1;
-}
-
-message RenewDelegationTokenResponseProto {
-  required int64 next_expiry_ts = 1;
-}
-
-message CancelDelegationTokenRequestProto {
-  required hadoop.common.TokenProto delegation_token = 1;
-}
-
-message CancelDelegationTokenResponseProto {
-}
