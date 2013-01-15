@@ -232,7 +232,7 @@ Java_org_apache_hadoop_net_unix_DomainSocket_validateSocketPathSecurity0(
 JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
 {
   jint utfLength;
-  char path[PATH_MAX], check[PATH_MAX] = { 0 }, *token, *rest;
+  char path[PATH_MAX], check[PATH_MAX], *token, *rest;
   struct stat st;
   int ret, mode, strlenPath;
   uid_t uid;
@@ -263,20 +263,25 @@ JNIEnv *env, jclass clazz, jobject jstr, jint skipComponents)
           "must not end in a slash.", path);
     goto done;
   }
-  rest = path;
-  while ((token = strtok_r(rest, "/", &rest))) {
-    strcat(check, "/");
+  // This loop iterates through all of the path components except for the very
+  // last one.  We don't validate the last component, since it's not supposed to
+  // be a directory.  (If it is a directory, we will fail to create the socket
+  // later with EISDIR or similar.)
+  for (check[0] = '/', check[1] = '\0', rest = path, token = "";
+       token && rest[0];
+       token = strtok_r(rest, "/", &rest)) {
+    if (strcmp(check, "/") != 0) {
+      // If the previous directory we checked was '/', we skip appending another
+      // slash to the end because it would be unncessary.  Otherwise we do it.
+      strcat(check, "/");
+    }
+    // These strcats are safe because the length of 'check' is the same as the
+    // length of 'path' and we never add more slashes than were in the original
+    // path.
     strcat(check, token);
     if (skipComponents > 0) {
       skipComponents--;
       continue;
-    }
-    if (!index(rest, '/')) {
-      /* Don't validate the last component, since it's not supposed to be a
-       * directory.  (If it is a directory, we will fail to create the socket
-       * later with EISDIR or similar.)
-       */
-      break;
     }
     if (stat(check, &st) < 0) {
       ret = errno;

@@ -19,3 +19,6 @@ HDFS-4390. Bypass UNIX domain socket unit tests when they cannot be run.
 
 HDFS-4400. DFSInputStream#getBlockReader: last retries should ignore the cache
 (Colin Patrick McCabe via todd)
+
+HDFS-4401. Fix bug in DomainSocket path validation
+(Colin Patrick McCabe via todd)

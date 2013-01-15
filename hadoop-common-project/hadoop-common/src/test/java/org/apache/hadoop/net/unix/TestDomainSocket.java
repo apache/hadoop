@@ -698,7 +698,7 @@ public class TestDomainSocket {
             "component: ", e);
       }
       // Root should be secure
-      DomainSocket.validateSocketPathSecurity0("/foo", 0);
+      DomainSocket.validateSocketPathSecurity0("/foo", 1);
     } finally {
       tmp.close();
     }
