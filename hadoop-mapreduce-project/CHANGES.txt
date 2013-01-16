@@ -635,6 +635,18 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -708,7 +720,7 @@ Release 0.23.6 - UNRELEASED
     MAPREDUCE-4925. The pentomino option parser may be buggy.
     (Karthik Kambatla via harsh)
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 
