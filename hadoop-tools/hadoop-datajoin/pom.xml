@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>0.23.6-SNAPSHOT</version>
+    <version>0.23.7-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-datajoin</artifactId>
-  <version>0.23.6-SNAPSHOT</version>
+  <version>0.23.7-SNAPSHOT</version>
   <description>Apache Hadoop Data Join</description>
   <name>Apache Hadoop Data Join</name>
   <packaging>jar</packaging>

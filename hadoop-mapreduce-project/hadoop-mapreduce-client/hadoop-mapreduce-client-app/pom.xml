@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>0.23.6-SNAPSHOT</version>
+    <version>0.23.7-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-app</artifactId>
-  <version>0.23.6-SNAPSHOT</version>
+  <version>0.23.7-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-app</name>
 
   <properties>
@@ -105,7 +105,7 @@
               <target>
                 <symlink link="${applink.base}.jar"
                     resource="mr-app.jar" failonerror="false"/>
-                <symlink link="${applink.base}-0.23.6-SNAPSHOT.jar"
+                <symlink link="${applink.base}-0.23.7-SNAPSHOT.jar"
                     resource="mr-app.jar" failonerror="false"/>
               </target>
             </configuration>

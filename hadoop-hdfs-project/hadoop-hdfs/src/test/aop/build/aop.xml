@@ -21,7 +21,7 @@
   <property name="aspectversion" value="1.6.5"/>
   <!-- TODO this has to be changed synchronously with build.xml version prop.-->
   <!-- this workarounds of test-patch setting its own 'version' -->
-  <property name="project.version" value="0.23.6-SNAPSHOT"/>
+  <property name="project.version" value="0.23.7-SNAPSHOT"/>
 
   <!-- Properties common for all fault injections -->
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
