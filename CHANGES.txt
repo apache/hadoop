@@ -431,6 +431,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4930. Backport MAPREDUCE-4678 and MAPREDUCE-4925 to branch-1.
     (Karthik Kambatla and Chris McConnell via harsh)
 
+    MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
+    (rkanter via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
