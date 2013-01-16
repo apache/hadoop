@@ -244,6 +244,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
     (moritzmoeller via tucu)
+    
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
 
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested.
     (sanjay Radia)
