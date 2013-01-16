@@ -40,7 +40,7 @@ Release 0.23.6 - UNRELEASED
 
     HDFS-4399. precommit release audit warnings (tgraves)
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 
