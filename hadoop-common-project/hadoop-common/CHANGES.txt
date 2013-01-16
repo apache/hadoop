@@ -4,6 +4,8 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8999. SASL negotiation is flawed (daryn)
+
   NEW FEATURES
 
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
@@ -194,8 +196,6 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9012. IPC Client sends wrong connection context (daryn via bobby)
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
-
-    HADOOP-8999. SASL negotiation is flawed (daryn)
 
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
