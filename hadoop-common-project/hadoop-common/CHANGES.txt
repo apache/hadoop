@@ -250,6 +250,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested.
     (sanjay Radia)
 
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
