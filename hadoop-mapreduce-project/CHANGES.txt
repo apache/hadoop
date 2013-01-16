@@ -97,6 +97,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4936. JobImpl uber checks for cpu are wrong (Arun C Murthy via
     jlowe)
 
+    MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
+    (rkanter via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
