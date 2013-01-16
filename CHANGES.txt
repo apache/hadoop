@@ -434,6 +434,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
     (rkanter via tucu)
 
+    MAPREDUCE-4315. jobhistory.jsp throws 500 when a .txt file is found in /done. 
+    (sandyr via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

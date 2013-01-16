@@ -152,11 +152,24 @@ window.location.href = url;
                  || fileName.split("_")[FILENAME_JOBNAME_PART].toLowerCase()
                        .contains(jobnameKeywordInFname);
       }
+      
+      private boolean isHistoryFile(String fileName) {      	
+        String[] tokens = null;
+        try {
+          String dp = JobHistory.JobInfo.decodeJobHistoryFileName(fileName);
+          tokens = dp.split("_");
+        } catch (IOException ioe) {
+        }
+	    
+        return tokens != null && !fileName.endsWith(".xml") && tokens.length > 3
+            && tokens[1].matches("\\d+")  && tokens[2].matches("\\d+")
+            && tokens[3].matches("\\d+");
+      }
 
       public boolean accept(Path path) {
         String name = path.getName();
 
-        return !(name.endsWith(".xml")) && matchUser(name) && matchJobName(name);
+        return isHistoryFile(name) && matchUser(name) && matchJobName(name);
       }
     };
     
