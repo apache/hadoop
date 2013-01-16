@@ -223,6 +223,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
 
   /**
+   * Sentinel value to store negative cache results in {@link #CACHE_CLASSES}.
+   */
+  private static final Class<?> NEGATIVE_CACHE_SENTINEL =
+    NegativeCacheSentinel.class;
+
+  /**
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
    */
@@ -1474,24 +1480,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
 
-    Class<?> clazz = null;
-    if (!map.containsKey(name)) {
+    Class<?> clazz = map.get(name);
+    if (clazz == null) {
       try {
         clazz = Class.forName(name, true, classLoader);
       } catch (ClassNotFoundException e) {
-        map.put(name, null); //cache negative that class is not found
+        // Leave a marker that the class isn't found
+        map.put(name, NEGATIVE_CACHE_SENTINEL);
         return null;
       }
       // two putters can race here, but they'll put the same class
       map.put(name, clazz);
-    } else { // check already performed on this class name
-      clazz = map.get(name);
-      if (clazz == null) { // found the negative
-        return null;
-      }
+      return clazz;
+    } else if (clazz == NEGATIVE_CACHE_SENTINEL) {
+      return null; // not found
+    } else {
+      // cache hit
+      return clazz;
     }
-
-    return clazz;
   }
 
   /** 
@@ -2248,4 +2254,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Configuration.addDeprecation("dfs.umaskmode",
         new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY});
   }
+  
+  /**
+   * A unique class which is used as a sentinel value in the caching
+   * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
+   */
+  private static abstract class NegativeCacheSentinel {}
 }

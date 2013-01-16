@@ -12,6 +12,9 @@ Release 0.23.7 - UNRELEASED
 
   BUG FIXES
 
+  HADOOP-8157. Fix race condition in Configuration that could cause spurious
+  ClassNotFoundExceptions after a GC. (todd)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
