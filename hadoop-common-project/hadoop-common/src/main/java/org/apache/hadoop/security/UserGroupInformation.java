@@ -20,6 +20,7 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -656,10 +657,11 @@ public class UserGroupInformation {
 
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {
-          // load the token storage file and put all of the tokens into the
-          // user.
+          // Load the token storage file and put all of the tokens into the
+          // user. Don't use the FileSystem API for reading since it has a lock
+          // cycle (HADOOP-9212).
           Credentials cred = Credentials.readTokenStorageFile(
-              new Path("file:///" + fileLocation), conf);
+              new File(fileLocation), conf);
           loginUser.addCredentials(cred);
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();

@@ -554,6 +554,8 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
     (moritzmoeller via tucu)
+    
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
