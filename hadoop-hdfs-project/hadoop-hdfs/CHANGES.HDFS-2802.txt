@@ -106,3 +106,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4397. Fix a bug in INodeDirectoryWithSnapshot.Diff.combinePostDiff(..)
   that it may put the wrong node into the deleted list.  (szetszwo)
+
+  HDFS-4407. Change INodeDirectoryWithSnapshot.Diff.combinePostDiff(..) to
+  merge-sort like and keep the postDiff parameter unmodified.  (szetszwo)
