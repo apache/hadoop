@@ -557,6 +557,9 @@ Release 2.0.3-alpha - Unreleased
     
     HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
 
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
