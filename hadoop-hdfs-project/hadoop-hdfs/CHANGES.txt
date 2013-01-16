@@ -417,9 +417,6 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-1245. Pluggable block id generation. (shv)
 
-    HDFS-4288. NN accepts incremental BR as IBR in safemode
-    (Daryn Sharp via todd)
-
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
