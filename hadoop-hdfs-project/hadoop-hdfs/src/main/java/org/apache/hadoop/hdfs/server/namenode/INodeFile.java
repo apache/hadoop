@@ -28,9 +28,10 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+
+import com.google.common.base.Preconditions;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -111,7 +112,7 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  public Pair<INodeFileWithLink, INodeFileSnapshot> createSnapshotCopy() {
+  public Pair<? extends INodeFile, ? extends INodeFile> createSnapshotCopy() {
     return parent.replaceINodeFile(this).createSnapshotCopy();
   }
 
@@ -119,6 +120,17 @@ public class INodeFile extends INode implements BlockCollection {
   @Override
   public final boolean isFile() {
     return true;
+  }
+
+  /** Convert this file to an {@link INodeFileUnderConstruction}. */
+  public INodeFileUnderConstruction toUnderConstruction(
+      String clientName,
+      String clientMachine,
+      DatanodeDescriptor clientNode) {
+    Preconditions.checkArgument(!(this instanceof INodeFileUnderConstruction),
+        "file is already an INodeFileUnderConstruction");
+    return new INodeFileUnderConstruction(this,
+        clientName, clientMachine, clientNode); 
   }
 
   /**
@@ -141,7 +153,7 @@ public class INodeFile extends INode implements BlockCollection {
     return getFileReplication();
   }
 
-  protected void setFileReplication(short replication, Snapshot latest) {
+  public void setFileReplication(short replication, Snapshot latest) {
     if (latest != null) {
       final Pair<? extends INode, ? extends INode> p = recordModification(latest);
       if (p != null) {

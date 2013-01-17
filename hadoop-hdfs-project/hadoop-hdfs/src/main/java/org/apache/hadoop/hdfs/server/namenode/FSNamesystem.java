@@ -178,7 +178,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -1357,10 +1357,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           doAccessTime = false;
         }
 
-        long now = now();
-        final INodesInPath iip = dir.getMutableINodesInPath(src);
+        final INodesInPath iip = dir.getINodesInPath(src);
         final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
-        if (doAccessTime && isAccessTimeSupported()) {
+        if (!iip.isSnapshot() //snapshots are readonly, so don't update atime.
+            && doAccessTime && isAccessTimeSupported()) {
+          final long now = now();
           if (now <= inode.getAccessTime() + getAccessTimePrecision()) {
             // if we have to set access time but we only have the readlock, then
             // restart this entire operation with the writeLock.
@@ -1488,7 +1489,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is empty");
     }
-    if (trgInode instanceof INodeFileWithLink) {
+    if (trgInode instanceof INodeFileWithSnapshot) {
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is in a snapshot");
     }
@@ -1981,18 +1982,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog, Snapshot latestSnapshot) throws IOException {
-    //TODO SNAPSHOT: INodeFileUnderConstruction with link
-    INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                    file.getId(),
-                                    file.getLocalNameBytes(),
-                                    file.getFileReplication(),
-                                    file.getModificationTime(),
-                                    file.getPreferredBlockSize(),
-                                    file.getBlocks(),
-                                    file.getPermissionStatus(),
-                                    leaseHolder,
-                                    clientMachine,
-                                    clientNode);
+    if (latestSnapshot != null) {
+      file = (INodeFile)file.recordModification(latestSnapshot).left;
+    }
+    final INodeFileUnderConstruction cons = file.toUnderConstruction(
+        leaseHolder, clientMachine, clientNode);
+
     dir.replaceINodeFile(src, file, cons, latestSnapshot);
     leaseManager.addLease(cons.getClientName(), src);
     
@@ -3301,7 +3296,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
-    INodeFile newFile = pendingFile.convertToInodeFile(now());
+    final INodeFile newFile = pendingFile.toINodeFile(now());
     dir.replaceINodeFile(src, pendingFile, newFile, latestSnapshot);
 
     // close file and persist block allocations for this file

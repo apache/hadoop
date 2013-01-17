@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
+import com.google.common.base.Preconditions;
+
 /**
  * I-node for file being written.
  */
@@ -77,8 +79,18 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;
   }
+  
+  protected INodeFileUnderConstruction(final INodeFile that,
+      final String clientName,
+      final String clientMachine,
+      final DatanodeDescriptor clientNode) {
+    super(that);
+    this.clientName = clientName;
+    this.clientMachine = clientMachine;
+    this.clientNode = clientNode;
+  }
 
-  String getClientName() {
+  public String getClientName() {
     return clientName;
   }
 
@@ -86,11 +98,11 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     this.clientName = clientName;
   }
 
-  String getClientMachine() {
+  public String getClientMachine() {
     return clientMachine;
   }
 
-  DatanodeDescriptor getClientNode() {
+  public DatanodeDescriptor getClientNode() {
     return clientNode;
   }
 
@@ -102,30 +114,27 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     return true;
   }
 
-  //
-  // converts a INodeFileUnderConstruction into a INodeFile
-  // use the modification time as the access time
-  //
-  INodeFile convertToInodeFile(long mtime) {
-    assert allBlocksComplete() : "Can't finalize inode " + this
-      + " since it contains non-complete blocks! Blocks are "
-      + Arrays.asList(getBlocks());
-    //TODO SNAPSHOT: may convert to INodeFileWithLink
+  /**
+   * Converts an INodeFileUnderConstruction to an INodeFile.
+   * The original modification time is used as the access time.
+   * The new modification is the specified mtime.
+   */
+  protected INodeFile toINodeFile(long mtime) {
+    assertAllBlocksComplete();
+
     return new INodeFile(getId(), getLocalNameBytes(), getPermissionStatus(),
         mtime, getModificationTime(),
         getBlocks(), getFileReplication(), getPreferredBlockSize());
   }
   
-  /**
-   * @return true if all of the blocks in this file are marked as completed.
-   */
-  private boolean allBlocksComplete() {
-    for (BlockInfo b : getBlocks()) {
-      if (!b.isComplete()) {
-        return false;
-      }
+  /** Assert all blocks are complete. */
+  protected void assertAllBlocksComplete() {
+    final BlockInfo[] blocks = getBlocks();
+    for (int i = 0; i < blocks.length; i++) {
+      Preconditions.checkState(blocks[i].isComplete(), "Failed to finalize"
+          + " %s %s since blocks[%s] is non-complete, where blocks=%s.",
+          getClass().getSimpleName(), this, i, Arrays.asList(getBlocks()));
     }
-    return true;
   }
 
   /**

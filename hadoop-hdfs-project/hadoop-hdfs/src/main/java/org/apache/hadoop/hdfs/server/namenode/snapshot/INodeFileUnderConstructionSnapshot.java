@@ -18,17 +18,19 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 
 /**
- *  INode representing a snapshot of a file.
+ *  INode representing a snapshot of an {@link INodeFileUnderConstruction}.
  */
 @InterfaceAudience.Private
-public class INodeFileSnapshot extends INodeFileWithSnapshot {
+public class INodeFileUnderConstructionSnapshot
+    extends INodeFileUnderConstructionWithSnapshot {
   /** The file size at snapshot creation time. */
   final long size;
 
-  INodeFileSnapshot(INodeFileWithSnapshot f) {
-    super(f);
+  INodeFileUnderConstructionSnapshot(INodeFileUnderConstructionWithSnapshot f) {
+    super(f, f.getClientName(), f.getClientMachine(), f.getClientNode());
     this.size = f.computeFileSize(true);
     f.insert(this);
   }

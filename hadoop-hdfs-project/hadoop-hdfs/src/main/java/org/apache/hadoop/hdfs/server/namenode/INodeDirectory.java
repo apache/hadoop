@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithLink;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -216,13 +216,13 @@ public class INodeDirectory extends INode {
     oldDir.setParent(null);
   }
 
-  /** Replace a child {@link INodeFile} with an {@link INodeFileWithLink}. */
-  INodeFileWithLink replaceINodeFile(final INodeFile child) {
+  /** Replace a child {@link INodeFile} with an {@link INodeFileWithSnapshot}. */
+  INodeFileWithSnapshot replaceINodeFile(final INodeFile child) {
     assertChildrenNonNull();
-    Preconditions.checkArgument(!(child instanceof INodeFileWithLink),
+    Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
         "Child file is already an INodeFileWithLink, child=" + child);
 
-    final INodeFileWithLink newChild = new INodeFileWithLink(child);
+    final INodeFileWithSnapshot newChild = new INodeFileWithSnapshot(child);
     final int i = searchChildrenForExistingINode(newChild);
     children.set(i, newChild);
     return newChild;

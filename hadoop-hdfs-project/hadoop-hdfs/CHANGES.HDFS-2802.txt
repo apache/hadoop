@@ -109,3 +109,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4407. Change INodeDirectoryWithSnapshot.Diff.combinePostDiff(..) to
   merge-sort like and keep the postDiff parameter unmodified.  (szetszwo)
+
+  HDFS-4098. Add FileWithSnapshot, INodeFileUnderConstructionWithSnapshot and
+  INodeFileUnderConstructionSnapshot for supporting append to snapshotted files.
+  (szetszwo)

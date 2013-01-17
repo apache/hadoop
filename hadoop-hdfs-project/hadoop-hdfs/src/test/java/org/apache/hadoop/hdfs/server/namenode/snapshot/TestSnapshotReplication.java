@@ -39,7 +39,7 @@ import org.junit.Test;
 /**
  * This class tests the replication handling/calculation of snapshots. In
  * particular, {@link INodeFile#getFileReplication()} and
- * {@link INodeFileWithLink#getBlockReplication()} are tested to make sure
+ * {@link INodeFileWithSnapshot#getBlockReplication()} are tested to make sure
  * the number of replication is calculated correctly with/without snapshots.
  */
 public class TestSnapshotReplication {
@@ -132,7 +132,7 @@ public class TestSnapshotReplication {
    *          INodes
    * @param expectedBlockRep
    *          The expected replication number that should be returned by
-   *          {@link INodeFileWithLink#getBlockReplication()} of all the INodes
+   *          {@link INodeFileWithSnapshot#getBlockReplication()} of all the INodes
    * @throws Exception
    */
   private void checkSnapshotFileReplication(Path currentFile,
