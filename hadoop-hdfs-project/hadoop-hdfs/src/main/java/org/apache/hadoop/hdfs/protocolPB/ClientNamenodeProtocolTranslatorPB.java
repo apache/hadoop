@@ -129,6 +129,29 @@ public class ClientNamenodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
   final private ClientNamenodeProtocolPB rpcProxy;
 
+  static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST = 
+  GetServerDefaultsRequestProto.newBuilder().build();
+
+  private final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
+  GetFsStatusRequestProto.newBuilder().build();
+
+  private final static SaveNamespaceRequestProto VOID_SAVE_NAMESPACE_REQUEST =
+  SaveNamespaceRequestProto.newBuilder().build();
+
+  private final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST = 
+  RollEditsRequestProto.getDefaultInstance();
+
+  private final static RefreshNodesRequestProto VOID_REFRESH_NODES_REQUEST =
+  RefreshNodesRequestProto.newBuilder().build();
+
+  private final static FinalizeUpgradeRequestProto
+  VOID_FINALIZE_UPGRADE_REQUEST =
+      FinalizeUpgradeRequestProto.newBuilder().build();
+
+  private final static GetDataEncryptionKeyRequestProto
+  VOID_GET_DATA_ENCRYPTIONKEY_REQUEST =
+      GetDataEncryptionKeyRequestProto.newBuilder().build();
+
   public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
     rpcProxy = proxy;
   }
@@ -160,7 +183,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
-    GetServerDefaultsRequestProto req = GetServerDefaultsRequestProto.newBuilder().build();
+    GetServerDefaultsRequestProto req = VOID_GET_SERVER_DEFAULT_REQUEST;
     try {
       return PBHelper
           .convert(rpcProxy.getServerDefaults(null, req).getServerDefaults());
@@ -473,9 +496,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public long[] getStats() throws IOException {
-    GetFsStatusRequestProto req = GetFsStatusRequestProto.newBuilder().build();
     try {
-      return PBHelper.convert(rpcProxy.getFsStats(null, req));
+      return PBHelper.convert(rpcProxy.getFsStats(null,
+          VOID_GET_FSSTATUS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -522,10 +545,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void saveNamespace() throws AccessControlException, IOException {
-    SaveNamespaceRequestProto req = SaveNamespaceRequestProto.newBuilder()
-        .build();
     try {
-      rpcProxy.saveNamespace(null, req);
+      rpcProxy.saveNamespace(null, VOID_SAVE_NAMESPACE_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -533,9 +554,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
   
   @Override
   public long rollEdits() throws AccessControlException, IOException {
-    RollEditsRequestProto req = RollEditsRequestProto.getDefaultInstance();
     try {
-      RollEditsResponseProto resp = rpcProxy.rollEdits(null, req);
+      RollEditsResponseProto resp = rpcProxy.rollEdits(null,
+          VOID_ROLLEDITS_REQUEST);
       return resp.getNewSegmentTxId();
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
@@ -557,9 +578,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void refreshNodes() throws IOException {
-    RefreshNodesRequestProto req = RefreshNodesRequestProto.newBuilder().build();
     try {
-      rpcProxy.refreshNodes(null, req);
+      rpcProxy.refreshNodes(null, VOID_REFRESH_NODES_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -567,9 +587,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void finalizeUpgrade() throws IOException {
-    FinalizeUpgradeRequestProto req = FinalizeUpgradeRequestProto.newBuilder().build();
     try {
-      rpcProxy.finalizeUpgrade(null, req);
+      rpcProxy.finalizeUpgrade(null, VOID_FINALIZE_UPGRADE_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -818,12 +837,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
   
   @Override
   public DataEncryptionKey getDataEncryptionKey() throws IOException {
-    GetDataEncryptionKeyRequestProto req = GetDataEncryptionKeyRequestProto
-        .newBuilder().build();
     try {
-      GetDataEncryptionKeyResponseProto rsp = 
-          rpcProxy.getDataEncryptionKey(null, req);
-      return rsp.hasDataEncryptionKey() ? 
+      GetDataEncryptionKeyResponseProto rsp = rpcProxy.getDataEncryptionKey(
+          null, VOID_GET_DATA_ENCRYPTIONKEY_REQUEST);
+     return rsp.hasDataEncryptionKey() ? 
           PBHelper.convert(rsp.getDataEncryptionKey()) : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

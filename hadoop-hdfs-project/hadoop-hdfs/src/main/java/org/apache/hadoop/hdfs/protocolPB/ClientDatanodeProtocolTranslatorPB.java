@@ -77,7 +77,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final ClientDatanodeProtocolPB rpcProxy;
-  private final static RefreshNamenodesRequestProto REFRESH_NAMENODES = 
+  private final static RefreshNamenodesRequestProto VOID_REFRESH_NAMENODES = 
       RefreshNamenodesRequestProto.newBuilder().build();
 
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
@@ -170,7 +170,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   @Override
   public void refreshNamenodes() throws IOException {
     try {
-      rpcProxy.refreshNamenodes(NULL_CONTROLLER, REFRESH_NAMENODES);
+      rpcProxy.refreshNamenodes(NULL_CONTROLLER, VOID_REFRESH_NAMENODES);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
