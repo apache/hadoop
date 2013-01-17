@@ -253,6 +253,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
     when delegating to hdfs script. (Andy Isaacson via todd)
 
+    HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
+    (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
