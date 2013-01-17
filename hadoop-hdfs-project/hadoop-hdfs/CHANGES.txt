@@ -420,6 +420,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-1245. Pluggable block id generation. (shv)
 
+    HDFS-4415. HostnameFilter should handle hostname resolution failures and
+    continue processing. (Robert Kanter via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
