@@ -95,7 +95,7 @@ public abstract class FileContextPermissionBase {
     String filename = "foo";
     Path f = getTestRootPath(fc, filename);
     createFile(fc, filename);
-    doFilePermissionCheck(FileContext.DEFAULT_PERM.applyUMask(fc.getUMask()),
+    doFilePermissionCheck(FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask()),
                         fc.getFileStatus(f).getPermission());
   }
   

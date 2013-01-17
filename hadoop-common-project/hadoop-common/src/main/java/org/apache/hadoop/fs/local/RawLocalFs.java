@@ -85,7 +85,7 @@ public class RawLocalFs extends DelegateToFileSystem {
                             "system: "+target.toString());
     }
     if (createParent) {
-      mkdir(link.getParent(), FsPermission.getDefault(), true);
+      mkdir(link.getParent(), FsPermission.getDirDefault(), true);
     }
     // NB: Use createSymbolicLink in java.nio.file.Path once available
     try {

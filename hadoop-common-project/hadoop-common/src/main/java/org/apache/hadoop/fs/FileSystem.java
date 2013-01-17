@@ -835,7 +835,7 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault().applyUMask(
+    return this.create(f, FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(getConf())), overwrite, bufferSize,
         replication, blockSize, progress);
   }
@@ -993,7 +993,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       boolean overwrite,
       int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
-    return this.createNonRecursive(f, FsPermission.getDefault(),
+    return this.createNonRecursive(f, FsPermission.getFileDefault(),
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
@@ -1804,7 +1804,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Call {@link #mkdirs(Path, FsPermission)} with default permission.
    */
   public boolean mkdirs(Path f) throws IOException {
-    return mkdirs(f, FsPermission.getDefault());
+    return mkdirs(f, FsPermission.getDirDefault());
   }
 
   /**
