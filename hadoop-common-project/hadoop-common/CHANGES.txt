@@ -10,6 +10,9 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-9147. Add missing fields to FIleStatus.toString.
+    (Jonathan Allen via suresh)
+
   BUG FIXES
 
     HADOOP-8157. Fix race condition in Configuration that could cause spurious
