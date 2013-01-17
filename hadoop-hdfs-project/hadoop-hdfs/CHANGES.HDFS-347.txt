@@ -25,3 +25,5 @@ HDFS-4401. Fix bug in DomainSocket path validation
 
 HDFS-4402. Some small DomainSocket fixes: avoid findbugs warning, change log level, etc.
 (Colin Patrick McCabe via todd)
+
+HDFS-4418. increase default FileInputStreamCache size (todd)
