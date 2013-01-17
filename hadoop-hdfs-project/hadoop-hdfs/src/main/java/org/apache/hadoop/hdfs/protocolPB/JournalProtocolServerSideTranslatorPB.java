@@ -42,6 +42,13 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
   /** Server side implementation to delegate the requests to */
   private final JournalProtocol impl;
 
+  private final static JournalResponseProto VOID_JOURNAL_RESPONSE = 
+  JournalResponseProto.newBuilder().build();
+
+  private final static StartLogSegmentResponseProto
+  VOID_START_LOG_SEGMENT_RESPONSE =
+      StartLogSegmentResponseProto.newBuilder().build();
+
   public JournalProtocolServerSideTranslatorPB(JournalProtocol impl) {
     this.impl = impl;
   }
@@ -56,7 +63,7 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return JournalResponseProto.newBuilder().build();
+    return VOID_JOURNAL_RESPONSE;
   }
 
   /** @see JournalProtocol#startLogSegment */
@@ -69,7 +76,7 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return StartLogSegmentResponseProto.newBuilder().build();
+    return VOID_START_LOG_SEGMENT_RESPONSE;
   }
 
   @Override
