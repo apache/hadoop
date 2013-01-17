@@ -8,6 +8,9 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4907. TrackerDistributedCacheManager issues too many 
+    getFileStatus calls  (Sandy Ryza via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
