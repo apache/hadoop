@@ -1264,6 +1264,9 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
+    permissions (Ivan A. Veselovsky via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

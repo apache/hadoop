@@ -87,33 +87,98 @@ public class FileUtil {
    * (4) If dir is a normal directory, then dir and all its contents recursively
    *     are deleted.
    */
-  public static boolean fullyDelete(File dir) {
-    if (dir.delete()) {
+  public static boolean fullyDelete(final File dir) {
+    return fullyDelete(dir, false);
+  }
+  
+  /**
+   * Delete a directory and all its contents.  If
+   * we return false, the directory may be partially-deleted.
+   * (1) If dir is symlink to a file, the symlink is deleted. The file pointed
+   *     to by the symlink is not deleted.
+   * (2) If dir is symlink to a directory, symlink is deleted. The directory
+   *     pointed to by symlink is not deleted.
+   * (3) If dir is a normal file, it is deleted.
+   * (4) If dir is a normal directory, then dir and all its contents recursively
+   *     are deleted.
+   * @param dir the file or directory to be deleted
+   * @param tryGrantPermissions true if permissions should be modified to delete a file.
+   * @return true on success false on failure.
+   */
+  public static boolean fullyDelete(final File dir, boolean tryGrantPermissions) {
+    if (tryGrantPermissions) {
+      // try to chmod +rwx the parent folder of the 'dir': 
+      File parent = dir.getParentFile();
+      grantPermissions(parent);
+    }
+    if (deleteImpl(dir, false)) {
       // dir is (a) normal file, (b) symlink to a file, (c) empty directory or
       // (d) symlink to a directory
       return true;
     }
-
     // handle nonempty directory deletion
-    if (!fullyDeleteContents(dir)) {
+    if (!fullyDeleteContents(dir, tryGrantPermissions)) {
       return false;
     }
-    return dir.delete();
+    return deleteImpl(dir, true);
+  }
+  
+  /*
+   * Pure-Java implementation of "chmod +rwx f".
+   */
+  private static void grantPermissions(final File f) {
+      f.setExecutable(true);
+      f.setReadable(true);
+      f.setWritable(true);
   }
 
+  private static boolean deleteImpl(final File f, final boolean doLog) {
+    if (f == null) {
+      LOG.warn("null file argument.");
+      return false;
+    }
+    final boolean wasDeleted = f.delete();
+    if (wasDeleted) {
+      return true;
+    }
+    final boolean ex = f.exists();
+    if (doLog && ex) {
+      LOG.warn("Failed to delete file or dir ["
+          + f.getAbsolutePath() + "]: it still exists.");
+    }
+    return !ex;
+  }
+  
   /**
    * Delete the contents of a directory, not the directory itself.  If
    * we return false, the directory may be partially-deleted.
    * If dir is a symlink to a directory, all the contents of the actual
    * directory pointed to by dir will be deleted.
    */
-  public static boolean fullyDeleteContents(File dir) {
+  public static boolean fullyDeleteContents(final File dir) {
+    return fullyDeleteContents(dir, false);
+  }
+  
+  /**
+   * Delete the contents of a directory, not the directory itself.  If
+   * we return false, the directory may be partially-deleted.
+   * If dir is a symlink to a directory, all the contents of the actual
+   * directory pointed to by dir will be deleted.
+   * @param tryGrantPermissions if 'true', try grant +rwx permissions to this 
+   * and all the underlying directories before trying to delete their contents.
+   */
+  public static boolean fullyDeleteContents(final File dir, final boolean tryGrantPermissions) {
+    if (tryGrantPermissions) {
+      // to be able to list the dir and delete files from it
+      // we must grant the dir rwx permissions: 
+      grantPermissions(dir);
+    }
     boolean deletionSucceeded = true;
-    File contents[] = dir.listFiles();
+    final File[] contents = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
-          if (!contents[i].delete()) {// normal file or symlink to another file
+          if (!deleteImpl(contents[i], true)) {// normal file or symlink to another file
             deletionSucceeded = false;
             continue; // continue deletion of other files/dirs under dir
           }
@@ -121,16 +186,16 @@ public class FileUtil {
           // Either directory or symlink to another directory.
           // Try deleting the directory as this might be a symlink
           boolean b = false;
-          b = contents[i].delete();
+          b = deleteImpl(contents[i], false);
           if (b){
             //this was indeed a symlink or an empty directory
             continue;
           }
           // if not an empty directory or symlink let
           // fullydelete handle it.
-          if (!fullyDelete(contents[i])) {
+          if (!fullyDelete(contents[i], tryGrantPermissions)) {
             deletionSucceeded = false;
-            continue; // continue deletion of other files/dirs under dir
+            // continue deletion of other files/dirs under dir
           }
         }
       }
