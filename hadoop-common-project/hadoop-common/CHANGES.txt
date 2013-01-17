@@ -26,6 +26,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9155. FsPermission should have different default value, 777 for 
     directory and 666 for file (Binglin Chang via tgraves)
 
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI (Tom White
+    via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
