@@ -256,5 +256,17 @@ public class TestCodecFactory extends TestCase {
     checkCodec("overridden factory for .gz", NewGzipCodec.class, codec);
     codec = factory.getCodecByClassName(NewGzipCodec.class.getCanonicalName());
     checkCodec("overridden factory for gzip codec", NewGzipCodec.class, codec);
+    
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codecs", 
+        "   org.apache.hadoop.io.compress.GzipCodec   , " +
+        "    org.apache.hadoop.io.compress.DefaultCodec  , " +
+        " org.apache.hadoop.io.compress.BZip2Codec   ");
+    try {
+      CompressionCodecFactory.getCodecClasses(conf);
+    } catch (IllegalArgumentException e) {
+      fail("IllegalArgumentException is unexpected");
+    }
+
   }
 }
