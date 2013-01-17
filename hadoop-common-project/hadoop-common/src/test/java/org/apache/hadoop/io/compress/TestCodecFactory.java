@@ -220,5 +220,17 @@ public class TestCodecFactory extends TestCase {
     checkCodec("full factory foo codec", FooCodec.class, codec);
     codec = factory.getCodecByName("FOO");
     checkCodec("full factory foo codec", FooCodec.class, codec);
+    
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codecs", 
+        "   org.apache.hadoop.io.compress.GzipCodec   , " +
+        "    org.apache.hadoop.io.compress.DefaultCodec  , " +
+        " org.apache.hadoop.io.compress.BZip2Codec   ");
+    try {
+      CompressionCodecFactory.getCodecClasses(conf);
+    } catch (IllegalArgumentException e) {
+      fail("IllegalArgumentException is unexpected");
+    }
+
   }
 }

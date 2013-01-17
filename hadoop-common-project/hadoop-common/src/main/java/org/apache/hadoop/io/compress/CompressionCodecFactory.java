@@ -107,7 +107,7 @@ public class CompressionCodecFactory {
         = new ArrayList<Class<? extends CompressionCodec>>();
       StringTokenizer codecSplit = new StringTokenizer(codecsString, ",");
       while (codecSplit.hasMoreElements()) {
-        String codecSubstring = codecSplit.nextToken();
+        String codecSubstring = codecSplit.nextToken().trim();
         if (codecSubstring.length() != 0) {
           try {
             Class<?> cls = conf.getClassByName(codecSubstring);
