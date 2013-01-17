@@ -12,8 +12,10 @@ Release 0.23.7 - UNRELEASED
 
   BUG FIXES
 
-  HADOOP-8157. Fix race condition in Configuration that could cause spurious
-  ClassNotFoundExceptions after a GC. (todd)
+    HADOOP-8157. Fix race condition in Configuration that could cause spurious
+    ClassNotFoundExceptions after a GC. (todd)
+
+    HADOOP-7886 Add toString to FileStatus (SreeHari via tgraves)
 
 Release 0.23.6 - UNRELEASED
 
