@@ -858,6 +858,17 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.admin.user.env</name>
+  <value></value>
+  <description> Environment variables for the MR App Master 
+  processes for admin purposes. These values are set first and can be 
+  overridden by the user env (yarn.app.mapreduce.am.env) Example :
+  1) A=foo  This will set the env variable A to foo
+  2) B=$B:c This is inherit app master's B env variable.  
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.command-opts</name>
   <value>-Xmx1024m</value>
   <description>Java opts for the MR App Master processes.  
