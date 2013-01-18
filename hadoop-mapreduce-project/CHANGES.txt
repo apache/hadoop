@@ -18,6 +18,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4278. cannot run two local jobs in parallel from the same 
     gateway. (Sandy Ryza via tgraves)
 
+    MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
+    (Robert Parker via jeagles)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
