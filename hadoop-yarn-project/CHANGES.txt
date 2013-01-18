@@ -82,6 +82,8 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-170. Change NodeManager stop to be reentrant. (Sandy Ryza via vinodkv)
 
+    YARN-331. Fill in missing fair scheduler documentation. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES 
