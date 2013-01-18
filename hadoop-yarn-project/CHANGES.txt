@@ -184,6 +184,8 @@ Release 2.0.3-alpha - Unreleased
     YARN-135. Client tokens should be per app-attempt, and should be
     unregistered on App-finish. (vinodkv via sseth)
 
+    YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
