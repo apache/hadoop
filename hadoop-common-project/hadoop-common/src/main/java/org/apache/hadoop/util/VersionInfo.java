@@ -20,78 +20,41 @@ package org.apache.hadoop.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopVersionAnnotation;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-
 /**
- * This class returns build information about Hadoop components.
+ * This class finds the package info for Hadoop and the HadoopVersionAnnotation
+ * information.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class VersionInfo {
   private static final Log LOG = LogFactory.getLog(VersionInfo.class);
 
-  private Properties info;
-
-  protected VersionInfo(String component) {
-    info = new Properties();
-    String versionInfoFile = component + "-version-info.properties";
-    try {
-      InputStream is = Thread.currentThread().getContextClassLoader()
-        .getResourceAsStream(versionInfoFile);
-      info.load(is);
-    } catch (IOException ex) {
-      LogFactory.getLog(getClass()).warn("Could not read '" + 
-        versionInfoFile + "', " + ex.toString(), ex);
-    }
+  private static Package myPackage;
+  private static HadoopVersionAnnotation version;
+  
+  static {
+    myPackage = HadoopVersionAnnotation.class.getPackage();
+    version = myPackage.getAnnotation(HadoopVersionAnnotation.class);
   }
 
-  protected String _getVersion() {
-    return info.getProperty("version", "Unknown");
+  /**
+   * Get the meta-data for the Hadoop package.
+   * @return
+   */
+  static Package getPackage() {
+    return myPackage;
   }
-
-  protected String _getRevision() {
-    return info.getProperty("revision", "Unknown");
-  }
-
-  protected String _getBranch() {
-    return info.getProperty("branch", "Unknown");
-  }
-
-  protected String _getDate() {
-    return info.getProperty("date", "Unknown");
-  }
-
-  protected String _getUser() {
-    return info.getProperty("user", "Unknown");
-  }
-
-  protected String _getUrl() {
-    return info.getProperty("url", "Unknown");
-  }
-
-  protected String _getSrcChecksum() {
-    return info.getProperty("srcChecksum", "Unknown");
-  }
-
-  protected String _getBuildVersion(){
-    return getVersion() +
-      " from " + _getRevision() +
-      " by " + _getUser() +
-      " source checksum " + _getSrcChecksum();
-  }
-
-  private static VersionInfo COMMON_VERSION_INFO = new VersionInfo("common");
+  
   /**
    * Get the Hadoop version.
    * @return the Hadoop version string, eg. "0.6.3-dev"
    */
   public static String getVersion() {
-    return COMMON_VERSION_INFO._getVersion();
+    return version != null ? version.version() : "Unknown";
   }
   
   /**
@@ -99,7 +62,7 @@ public class VersionInfo {
    * @return the revision number, eg. "451451"
    */
   public static String getRevision() {
-    return COMMON_VERSION_INFO._getRevision();
+    return version != null ? version.revision() : "Unknown";
   }
 
   /**
@@ -107,7 +70,7 @@ public class VersionInfo {
    * @return The branch name, e.g. "trunk" or "branches/branch-0.20"
    */
   public static String getBranch() {
-    return COMMON_VERSION_INFO._getBranch();
+    return version != null ? version.branch() : "Unknown";
   }
 
   /**
@@ -115,7 +78,7 @@ public class VersionInfo {
    * @return the compilation date in unix date format
    */
   public static String getDate() {
-    return COMMON_VERSION_INFO._getDate();
+    return version != null ? version.date() : "Unknown";
   }
   
   /**
@@ -123,14 +86,14 @@ public class VersionInfo {
    * @return the username of the user
    */
   public static String getUser() {
-    return COMMON_VERSION_INFO._getUser();
+    return version != null ? version.user() : "Unknown";
   }
   
   /**
    * Get the subversion URL for the root Hadoop directory.
    */
   public static String getUrl() {
-    return COMMON_VERSION_INFO._getUrl();
+    return version != null ? version.url() : "Unknown";
   }
 
   /**
@@ -138,7 +101,7 @@ public class VersionInfo {
    * built.
    **/
   public static String getSrcChecksum() {
-    return COMMON_VERSION_INFO._getSrcChecksum();
+    return version != null ? version.srcChecksum() : "Unknown";
   }
 
   /**
@@ -146,11 +109,14 @@ public class VersionInfo {
    * revision, user and date. 
    */
   public static String getBuildVersion(){
-    return COMMON_VERSION_INFO._getBuildVersion();
+    return VersionInfo.getVersion() + 
+    " from " + VersionInfo.getRevision() +
+    " by " + VersionInfo.getUser() + 
+    " source checksum " + VersionInfo.getSrcChecksum();
   }
   
   public static void main(String[] args) {
-    LOG.debug("version: "+ getVersion());
+    LOG.debug("version: "+ version);
     System.out.println("Hadoop " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
