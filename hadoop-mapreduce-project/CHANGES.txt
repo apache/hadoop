@@ -102,6 +102,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
 
+    MAPREDUCE-4948. Fix a failing unit test TestYARNRunner.testHistoryServerToken.
+    (Junping Du via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

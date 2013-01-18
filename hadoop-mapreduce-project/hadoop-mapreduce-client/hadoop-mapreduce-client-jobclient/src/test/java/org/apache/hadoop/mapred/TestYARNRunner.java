@@ -112,6 +112,7 @@ public class TestYARNRunner extends TestCase {
   public void setUp() throws Exception {
     resourceMgrDelegate = mock(ResourceMgrDelegate.class);
     conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_PRINCIPAL, "mapred/host@REALM");
     clientCache = new ClientCache(conf, resourceMgrDelegate);
     clientCache = spy(clientCache);
     yarnRunner = new YARNRunner(conf, resourceMgrDelegate, clientCache);
