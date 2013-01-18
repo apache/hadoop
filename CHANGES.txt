@@ -437,6 +437,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4315. jobhistory.jsp throws 500 when a .txt file is found in /done. 
     (sandyr via tucu)
 
+    MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
