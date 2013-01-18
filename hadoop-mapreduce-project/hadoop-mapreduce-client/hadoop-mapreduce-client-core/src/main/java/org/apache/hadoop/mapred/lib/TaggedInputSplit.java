@@ -138,4 +138,9 @@ class TaggedInputSplit implements Configurable, InputSplit {
     this.conf = conf;
   }
 
+  @Override
+  public String toString() {
+    return inputSplit.toString();
+  }
+
 }
