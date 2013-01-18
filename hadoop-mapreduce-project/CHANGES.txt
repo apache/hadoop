@@ -495,6 +495,9 @@ Release 0.23.7 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
+    (Robert Parker via jeagles)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

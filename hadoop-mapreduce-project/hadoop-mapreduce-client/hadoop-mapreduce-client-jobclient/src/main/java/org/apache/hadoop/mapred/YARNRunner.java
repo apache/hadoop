@@ -101,7 +101,7 @@ public class YARNRunner implements ClientProtocol {
   private Configuration conf;
   private final FileContext defaultFileContext;
   
-  /* usually is false unless the jobclient getdelegation token is 
+  /* usually is false unless the jobclient get delegation token is 
    *  called. This is a hack wherein we do return a token from RM 
    *  on getDelegationtoken but due to the restricted api on jobclient
    *  we just add a job history DT token when submitting a job.
@@ -165,12 +165,12 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public TaskTrackerInfo[] getActiveTrackers() throws IOException,
       InterruptedException {
-	  return resMgrDelegate.getActiveTrackers();
+    return resMgrDelegate.getActiveTrackers();
   }
 
   @Override
   public JobStatus[] getAllJobs() throws IOException, InterruptedException {
-   return resMgrDelegate.getAllJobs();
+    return resMgrDelegate.getAllJobs();
   }
 
   @Override
@@ -394,14 +394,31 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.MR_AM_LOG_LEVEL, MRJobConfig.DEFAULT_MR_AM_LOG_LEVEL);
     MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
 
+    // Check for Java Lib Path usage in MAP and REDUCE configs
+    warnForJavaLibPath(conf.get(MRJobConfig.MAP_JAVA_OPTS,""), "map", 
+        MRJobConfig.MAP_JAVA_OPTS, MRJobConfig.MAP_ENV);
+    warnForJavaLibPath(conf.get(MRJobConfig.MAPRED_MAP_ADMIN_JAVA_OPTS,""), "map", 
+        MRJobConfig.MAPRED_MAP_ADMIN_JAVA_OPTS, MRJobConfig.MAPRED_ADMIN_USER_ENV);
+    warnForJavaLibPath(conf.get(MRJobConfig.REDUCE_JAVA_OPTS,""), "reduce", 
+        MRJobConfig.REDUCE_JAVA_OPTS, MRJobConfig.REDUCE_ENV);
+    warnForJavaLibPath(conf.get(MRJobConfig.MAPRED_REDUCE_ADMIN_JAVA_OPTS,""), "reduce", 
+        MRJobConfig.MAPRED_REDUCE_ADMIN_JAVA_OPTS, MRJobConfig.MAPRED_ADMIN_USER_ENV);   
+
     // Add AM admin command opts before user command opts
     // so that it can be overridden by user
-    vargs.add(conf.get(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
-        MRJobConfig.DEFAULT_MR_AM_ADMIN_COMMAND_OPTS));
+    String mrAppMasterAdminOptions = conf.get(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_ADMIN_COMMAND_OPTS);
+    warnForJavaLibPath(mrAppMasterAdminOptions, "app master", 
+        MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS, MRJobConfig.MR_AM_ADMIN_USER_ENV);
+    vargs.add(mrAppMasterAdminOptions);
     
-    vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
-        MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
-
+    // Add AM user command opts
+    String mrAppMasterUserOptions = conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS);
+    warnForJavaLibPath(mrAppMasterUserOptions, "app master", 
+        MRJobConfig.MR_AM_COMMAND_OPTS, MRJobConfig.MR_AM_ENV);
+    vargs.add(mrAppMasterUserOptions);
+    
     vargs.add(MRJobConfig.APPLICATION_MASTER_CLASS);
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR +
         Path.SEPARATOR + ApplicationConstants.STDOUT);
@@ -425,6 +442,9 @@ public class YARNRunner implements ClientProtocol {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
     
+    // Setup the environment variables for Admin first
+    MRApps.setEnvFromInputString(environment, 
+        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV));
     // Setup the environment variables (LD_LIBRARY_PATH, etc)
     MRApps.setEnvFromInputString(environment, 
         conf.get(MRJobConfig.MR_AM_ENV));
@@ -581,5 +601,16 @@ public class YARNRunner implements ClientProtocol {
   public LogParams getLogFileParams(JobID jobID, TaskAttemptID taskAttemptID)
       throws IOException {
     return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
+  }
+
+  private static void warnForJavaLibPath(String opts, String component, 
+      String javaConf, String envConf) {
+    if (opts != null && opts.contains("-Djava.library.path")) {
+      LOG.warn("Usage of -Djava.library.path in " + javaConf + " can cause " +
+               "programs to no longer function if hadoop native libraries " +
+               "are used. These values should be set as part of the " +
+               "LD_LIBRARY_PATH in the " + component + " JVM env using " +
+               envConf + " config settings.");
+    }
   }
 }
