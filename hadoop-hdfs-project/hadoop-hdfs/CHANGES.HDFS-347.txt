@@ -27,3 +27,6 @@ HDFS-4402. Some small DomainSocket fixes: avoid findbugs warning, change log lev
 (Colin Patrick McCabe via todd)
 
 HDFS-4418. increase default FileInputStreamCache size (todd)
+
+HDFS-4416. Rename dfs.datanode.domain.socket.path to dfs.domain.socket.path
+(Colin Patrick McCabe via todd)

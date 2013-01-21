@@ -572,13 +572,14 @@ public class DataNode extends Configured
   static DomainPeerServer getDomainPeerServer(Configuration conf,
       int port) throws IOException {
     String domainSocketPath =
-        conf.get(DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY);
-    if (domainSocketPath == null) {
+        conf.getTrimmed(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
+            DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT);
+    if (domainSocketPath.isEmpty()) {
       if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
           DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT)) {
         LOG.warn("Although short-circuit local reads are configured, " +
             "they are disabled because you didn't configure " +
-            DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY);
+            DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY);
       }
       return null;
     }

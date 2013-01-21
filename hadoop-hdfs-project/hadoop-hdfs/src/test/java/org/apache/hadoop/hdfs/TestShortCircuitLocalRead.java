@@ -193,9 +193,9 @@ public class TestShortCircuitLocalRead {
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
         ignoreChecksum);
-    conf.set(DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY,
+    conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         new File(sockDir.getDir(),
-          "TestShortCircuitLocalRead.__PORT__.sock").getAbsolutePath());
+          "TestShortCircuitLocalRead._PORT.sock").getAbsolutePath());
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }

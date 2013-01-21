@@ -58,9 +58,9 @@ class DomainSocketFactory {
       feature = "UNIX domain socket data traffic";
     }
     if (feature != null) {
-      if (conf.domainSocketPath == null) {
+      if (conf.domainSocketPath.isEmpty()) {
         LOG.warn(feature + " is disabled because you have not set " +
-            DFSConfigKeys.DFS_DATANODE_DOMAIN_SOCKET_PATH_KEY);
+            DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY);
       } else if (DomainSocket.getLoadingFailureReason() != null) {
         LOG.warn(feature + " is disabled because " +
               DomainSocket.getLoadingFailureReason());

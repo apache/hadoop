@@ -119,7 +119,7 @@ public class DomainSocket implements Closeable {
 
   /**
    * Given a path and a port, compute the effective path by replacing
-   * occurrences of __PORT__ with the port.  This is mainly to make it 
+   * occurrences of _PORT with the port.  This is mainly to make it 
    * possible to run multiple DataNodes locally for testing purposes.
    *
    * @param path            The source path
@@ -128,7 +128,7 @@ public class DomainSocket implements Closeable {
    * @return                The effective path
    */
   public static String getEffectivePath(String path, int port) {
-    return path.replace("__PORT__", String.valueOf(port));
+    return path.replace("_PORT", String.valueOf(port));
   }
 
   /**

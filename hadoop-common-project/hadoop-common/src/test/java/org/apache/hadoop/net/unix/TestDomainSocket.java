@@ -91,7 +91,7 @@ public class TestDomainSocket {
   @Test(timeout=180000)
   public void testSocketPathSetGet() throws IOException {
     Assert.assertEquals("/var/run/hdfs/sock.100",
-        DomainSocket.getEffectivePath("/var/run/hdfs/sock.__PORT__", 100));
+        DomainSocket.getEffectivePath("/var/run/hdfs/sock._PORT", 100));
   }
 
   /**
