@@ -146,6 +146,9 @@ Trunk (Unreleased)
     HADOOP-9162. Add utility to check native library availability.
     (Binglin Chang via suresh)
 
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
