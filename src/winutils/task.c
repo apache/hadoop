@@ -46,7 +46,7 @@ typedef enum TaskCommandOptionType
 // TRUE: If the command line is valid
 // FALSE: otherwise
 static BOOL ParseCommandLine(__in int argc,
-                             __in wchar_t *argv[],
+                             __in_ecount(argc) wchar_t *argv[],
                              __out TaskCommandOption *command)
 {
   *command = TaskInvalid;
@@ -95,7 +95,7 @@ static BOOL ParseCommandLine(__in int argc,
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine) 
+DWORD createTask(__in PCWSTR jobObjName,__in PWSTR cmdLine) 
 {
   DWORD err = ERROR_SUCCESS;
   DWORD exitCode = EXIT_FAILURE;
@@ -134,7 +134,7 @@ DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine)
 
   // the child JVM uses this env var to send the task OS process identifier 
   // to the TaskTracker. We pass the job object name.
-  if(SetEnvironmentVariable(_T("JVM_PID"), jobObjName) == 0)
+  if(SetEnvironmentVariable(L"JVM_PID", jobObjName) == 0)
   {
     err = GetLastError();
     CloseHandle(jobObject);
@@ -144,12 +144,14 @@ DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine)
   ZeroMemory( &si, sizeof(si) );
   si.cb = sizeof(si);
   ZeroMemory( &pi, sizeof(pi) );
-  if(CreateProcess(NULL, cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) == 0)
+
+  if (CreateProcess(NULL, cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) == 0)
   {
     err = GetLastError();
     CloseHandle(jobObject);
     return err;
   }
+
   CloseHandle(pi.hThread);
 
   // Wait until child process exits.
@@ -190,7 +192,7 @@ DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine)
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD isTaskAlive(const _TCHAR* jobObjName, int* isAlive, int* procsInJob)
+DWORD isTaskAlive(const WCHAR* jobObjName, int* isAlive, int* procsInJob)
 {
   PJOBOBJECT_BASIC_PROCESS_ID_LIST procList;
   HANDLE jobObject = NULL;
@@ -250,7 +252,7 @@ DWORD isTaskAlive(const _TCHAR* jobObjName, int* isAlive, int* procsInJob)
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD killTask(_TCHAR* jobObjName)
+DWORD killTask(PCWSTR jobObjName)
 {
   HANDLE jobObject = OpenJobObject(JOB_OBJECT_TERMINATE, FALSE, jobObjName);
   if(jobObject == NULL)
@@ -282,7 +284,7 @@ DWORD killTask(_TCHAR* jobObjName)
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD printTaskProcessList(const _TCHAR* jobObjName)
+DWORD printTaskProcessList(const WCHAR* jobObjName)
 {
   DWORD i;
   PJOBOBJECT_BASIC_PROCESS_ID_LIST procList;
@@ -313,9 +315,9 @@ DWORD printTaskProcessList(const _TCHAR* jobObjName)
     numProcs = procList->NumberOfAssignedProcesses;
     LocalFree(procList);
     procList = (PJOBOBJECT_BASIC_PROCESS_ID_LIST) LocalAlloc(LPTR, sizeof (JOBOBJECT_BASIC_PROCESS_ID_LIST) + numProcs*32);
-    if (!procList)
+    if (procList == NULL)
     {
-      DWORD err = GetLastError();
+      err = GetLastError();
       CloseHandle(jobObject);
       return err;
     }
@@ -339,7 +341,7 @@ DWORD printTaskProcessList(const _TCHAR* jobObjName)
           userTime.HighPart = user.dwHighDateTime;
           userTime.LowPart = user.dwLowDateTime;
           cpuTimeMs = (kernelTime.QuadPart+userTime.QuadPart)/10000;
-          _ftprintf_s(stdout, TEXT("%u,%Iu,%Iu,%Iu\n"), procList->ProcessIdList[i], pmc.PrivateUsage, pmc.WorkingSetSize, cpuTimeMs);
+          fwprintf_s(stdout, L"%Iu,%Iu,%Iu,%I64u\n", procList->ProcessIdList[i], pmc.PrivateUsage, pmc.WorkingSetSize, cpuTimeMs);
         }
       }
       CloseHandle( hProcess );
@@ -362,7 +364,7 @@ DWORD printTaskProcessList(const _TCHAR* jobObjName)
 // Returns:
 // ERROR_SUCCESS: On success
 // Error code otherwise: otherwise
-int Task(int argc, wchar_t *argv[])
+int Task(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   DWORD dwErrorCode = ERROR_SUCCESS;
   TaskCommandOption command = TaskInvalid;

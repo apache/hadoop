@@ -51,8 +51,8 @@ int SystemInfo()
   ULONGLONG cpuTimeMs;
   size_t size;
   LPBYTE pBuffer;
-  PPROCESSOR_POWER_INFORMATION ppi;
-  long cpuFrequencyKhz;
+  PROCESSOR_POWER_INFORMATION const *ppi;
+  ULONGLONG cpuFrequencyKhz;
   NTSTATUS status;
 
   ZeroMemory(&memInfo, sizeof(PERFORMANCE_INFORMATION));
@@ -98,11 +98,12 @@ int SystemInfo()
     LocalFree(pBuffer);
     return EXIT_FAILURE;
   }
-  ppi = (PPROCESSOR_POWER_INFORMATION)pBuffer;
+  ppi = (PROCESSOR_POWER_INFORMATION const *)pBuffer;
   cpuFrequencyKhz = ppi->MaxMhz*1000;
   LocalFree(pBuffer);
 
-  fwprintf_s(stdout, L"%Iu,%Iu,%Iu,%Iu,%Iu,%Iu,%Iu\n", vmemSize, memSize, vmemFree, memFree, sysInfo.dwNumberOfProcessors, cpuFrequencyKhz, cpuTimeMs);
+  fwprintf_s(stdout, L"%Iu,%Iu,%Iu,%Iu,%u,%I64u,%I64u\n", vmemSize, memSize,
+    vmemFree, memFree, sysInfo.dwNumberOfProcessors, cpuFrequencyKhz, cpuTimeMs);
 
   return EXIT_SUCCESS;
 }

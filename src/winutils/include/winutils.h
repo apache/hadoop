@@ -20,13 +20,11 @@
 #endif
 
 #pragma once
-
 #include <stdio.h>
 #include <assert.h>
 #include <windows.h>
 #include <aclapi.h>
 #include <accctrl.h>
-#include <tchar.h>
 #include <strsafe.h>
 #include <lm.h>
 
@@ -85,25 +83,25 @@ enum WindowsAclMask
 extern const ACCESS_MASK WinMasks[];
 
 
-int Ls(int argc, wchar_t *argv[]);
+int Ls(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void LsUsage(LPCWSTR program);
 
-int Chmod(int argc, wchar_t *argv[]);
+int Chmod(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void ChmodUsage(LPCWSTR program);
 
-int Chown(int argc, wchar_t *argv[]);
+int Chown(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void ChownUsage(LPCWSTR program);
 
-int Groups(int argc, wchar_t *argv[]);
+int Groups(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void GroupsUsage(LPCWSTR program);
 
-int Hardlink(int argc, wchar_t *argv[]);
+int Hardlink(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void HardlinkUsage();
 
-int Task(int argc, wchar_t *argv[]);
+int Task(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void TaskUsage();
 
-int Symlink(int argc, wchar_t *argv[]);
+int Symlink(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void SymlinkUsage();
 
 int SystemInfo();
@@ -114,9 +112,9 @@ DWORD GetFileInformationByName(__in LPCWSTR pathName,  __in BOOL followLink,
 
 DWORD ConvertToLongPath(__in PCWSTR path, __deref_out PWSTR *newPath);
 
-DWORD GetSidFromAcctNameW(LPCWSTR acctName, PSID* ppSid);
+DWORD GetSidFromAcctNameW(__in PCWSTR acctName, __out PSID* ppSid);
 
-DWORD GetAccntNameFromSid(PSID pSid, LPWSTR *ppAcctName);
+DWORD GetAccntNameFromSid(__in PSID pSid, __out LPWSTR *ppAcctName);
 
 void ReportErrorCode(LPCWSTR func, DWORD err);
 
