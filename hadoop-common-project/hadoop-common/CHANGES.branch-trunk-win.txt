@@ -72,3 +72,9 @@ branch-trunk-win changes - unreleased
 
   HADOOP-9146. Fix sticky bit regression on branch-trunk-win.
   (Chris Nauroth via suresh)
+
+Patch equivalent to trunk committed to branch-trunk-win
+
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
