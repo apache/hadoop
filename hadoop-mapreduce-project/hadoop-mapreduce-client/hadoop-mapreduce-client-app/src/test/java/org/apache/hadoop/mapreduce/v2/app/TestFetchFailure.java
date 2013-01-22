@@ -25,8 +25,10 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -150,14 +152,16 @@ public class TestFetchFailure {
     Assert.assertEquals("Event status not correct for reduce attempt1",
         TaskAttemptCompletionEventStatus.SUCCEEDED, events[3].getStatus());
 
-    TaskAttemptCompletionEvent mapEvents[] =
+    TaskCompletionEvent mapEvents[] =
         job.getMapAttemptCompletionEvents(0, 2);
+    TaskCompletionEvent convertedEvents[] = TypeConverter.fromYarn(events);
     Assert.assertEquals("Incorrect number of map events", 2, mapEvents.length);
     Assert.assertArrayEquals("Unexpected map events",
-        Arrays.copyOfRange(events, 0, 2), mapEvents);
+        Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents);
     mapEvents = job.getMapAttemptCompletionEvents(2, 200);
     Assert.assertEquals("Incorrect number of map events", 1, mapEvents.length);
-    Assert.assertEquals("Unexpected map event", events[2], mapEvents[0]);
+    Assert.assertEquals("Unexpected map event", convertedEvents[2],
+        mapEvents[0]);
   }
   
   /**
@@ -395,14 +399,16 @@ public class TestFetchFailure {
     Assert.assertEquals("Event status not correct for reduce attempt1",
         TaskAttemptCompletionEventStatus.SUCCEEDED, events[3].getStatus());
 
-    TaskAttemptCompletionEvent mapEvents[] =
+    TaskCompletionEvent mapEvents[] =
         job.getMapAttemptCompletionEvents(0, 2);
+    TaskCompletionEvent convertedEvents[] = TypeConverter.fromYarn(events);
     Assert.assertEquals("Incorrect number of map events", 2, mapEvents.length);
     Assert.assertArrayEquals("Unexpected map events",
-        Arrays.copyOfRange(events, 0, 2), mapEvents);
+        Arrays.copyOfRange(convertedEvents, 0, 2), mapEvents);
     mapEvents = job.getMapAttemptCompletionEvents(2, 200);
     Assert.assertEquals("Incorrect number of map events", 1, mapEvents.length);
-    Assert.assertEquals("Unexpected map event", events[2], mapEvents[0]);
+    Assert.assertEquals("Unexpected map event", convertedEvents[2],
+        mapEvents[0]);
   }
   
 
