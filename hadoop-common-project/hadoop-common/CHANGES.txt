@@ -450,6 +450,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
     result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
 
+    HADOOP-9231. Parametrize staging URL for the uniformity of
+    distributionManagement. (Konstantin Boudnik via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
