@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 class CSQueueUtils {
@@ -51,15 +52,19 @@ class CSQueueUtils {
     return (parentAbsMaxCapacity * maximumCapacity);
   }
 
-  public static int computeMaxActiveApplications(Resource clusterResource,
-      Resource minimumAllocation, float maxAMResourcePercent, 
-      float absoluteMaxCapacity) {
-    return 
+  public static int computeMaxActiveApplications(
+      ResourceCalculator calculator,
+      Resource clusterResource, Resource minimumAllocation, 
+      float maxAMResourcePercent, float absoluteMaxCapacity) {
+    return
         Math.max(
             (int)Math.ceil(
-                     ((float)clusterResource.getMemory() / 
-                         minimumAllocation.getMemory()) * 
-                     maxAMResourcePercent * absoluteMaxCapacity), 
+                Resources.ratio(
+                    calculator, 
+                    clusterResource, 
+                    minimumAllocation) * 
+                    maxAMResourcePercent * absoluteMaxCapacity
+                ), 
             1);
   }
 
@@ -73,36 +78,43 @@ class CSQueueUtils {
   
   @Lock(CSQueue.class)
   public static void updateQueueStatistics(
+      final ResourceCalculator calculator,
       final CSQueue childQueue, final CSQueue parentQueue, 
       final Resource clusterResource, final Resource minimumAllocation) {
-    final int clusterMemory = clusterResource.getMemory();
-    final int usedMemory = childQueue.getUsedResources().getMemory();
+    Resource queueLimit = Resources.none();
+    Resource usedResources = childQueue.getUsedResources();
     
-    float queueLimit = 0.0f;
     float absoluteUsedCapacity = 0.0f;
     float usedCapacity = 0.0f;
-    if (clusterMemory > 0) {
-      queueLimit = clusterMemory * childQueue.getAbsoluteCapacity();
-      absoluteUsedCapacity = ((float)usedMemory / (float)clusterMemory);
-      usedCapacity = (queueLimit == 0) ? 0 : (usedMemory / queueLimit);
+
+    if (Resources.greaterThan(
+        calculator, clusterResource, clusterResource, Resources.none())) {
+      queueLimit = 
+          Resources.multiply(clusterResource, childQueue.getAbsoluteCapacity());
+      absoluteUsedCapacity = 
+          Resources.divide(calculator, clusterResource, 
+              usedResources, clusterResource);
+      usedCapacity = 
+          Resources.equals(queueLimit, Resources.none()) ? 0 :
+          Resources.divide(calculator, clusterResource, 
+              usedResources, queueLimit);
     }
     
     childQueue.setUsedCapacity(usedCapacity);
     childQueue.setAbsoluteUsedCapacity(absoluteUsedCapacity);
     
-    int available = 
-        Math.max((roundUp(minimumAllocation, (int)queueLimit) - usedMemory), 0); 
+    Resource available = 
+        Resources.roundUp(
+            calculator, 
+            Resources.subtract(queueLimit, usedResources), 
+            minimumAllocation);
     childQueue.getMetrics().setAvailableResourcesToQueue(
-        Resources.createResource(available));
-  }
-
-  public static int roundUp(Resource minimumAllocation, int memory) {
-    int minMemory = minimumAllocation.getMemory();
-    return LeafQueue.divideAndCeil(memory, minMemory) * minMemory; 
-  }
-
-  public static int roundDown(Resource minimumAllocation, int memory) {
-    int minMemory = minimumAllocation.getMemory();
-    return (memory / minMemory) * minMemory;
-  }
+        Resources.max(
+            calculator, 
+            clusterResource, 
+            available, 
+            Resources.none()
+            )
+        );
+   }
 }

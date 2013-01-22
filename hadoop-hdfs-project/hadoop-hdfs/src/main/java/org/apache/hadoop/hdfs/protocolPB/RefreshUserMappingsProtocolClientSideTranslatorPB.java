@@ -39,6 +39,14 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
   private final static RpcController NULL_CONTROLLER = null;
   private final RefreshUserMappingsProtocolPB rpcProxy;
   
+  private final static RefreshUserToGroupsMappingsRequestProto 
+  VOID_REFRESH_USER_TO_GROUPS_MAPPING_REQUEST = 
+      RefreshUserToGroupsMappingsRequestProto.newBuilder().build();
+
+  private final static RefreshSuperUserGroupsConfigurationRequestProto
+  VOID_REFRESH_SUPERUSER_GROUPS_CONFIGURATION_REQUEST = 
+      RefreshSuperUserGroupsConfigurationRequestProto.newBuilder().build();
+
   public RefreshUserMappingsProtocolClientSideTranslatorPB(
       RefreshUserMappingsProtocolPB rpcProxy) {
     this.rpcProxy = rpcProxy;
@@ -51,10 +59,9 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshUserToGroupsMappings() throws IOException {
-    RefreshUserToGroupsMappingsRequestProto request = 
-        RefreshUserToGroupsMappingsRequestProto.newBuilder().build();
     try {
-      rpcProxy.refreshUserToGroupsMappings(NULL_CONTROLLER, request);
+      rpcProxy.refreshUserToGroupsMappings(NULL_CONTROLLER,
+          VOID_REFRESH_USER_TO_GROUPS_MAPPING_REQUEST);
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
@@ -62,10 +69,9 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshSuperUserGroupsConfiguration() throws IOException {
-    RefreshSuperUserGroupsConfigurationRequestProto request = 
-        RefreshSuperUserGroupsConfigurationRequestProto.newBuilder().build();
     try {
-      rpcProxy.refreshSuperUserGroupsConfiguration(NULL_CONTROLLER, request);
+      rpcProxy.refreshSuperUserGroupsConfiguration(NULL_CONTROLLER,
+          VOID_REFRESH_SUPERUSER_GROUPS_CONFIGURATION_REQUEST);
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }

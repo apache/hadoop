@@ -252,7 +252,7 @@ public class TestFail {
       //task time out is reduced
       //when attempt times out, heartbeat handler will send the lost event
       //leading to Attempt failure
-      return new TaskAttemptListenerImpl(getContext(), null) {
+      return new TaskAttemptListenerImpl(getContext(), null, null) {
         @Override
         public void startRpcServer(){};
         @Override

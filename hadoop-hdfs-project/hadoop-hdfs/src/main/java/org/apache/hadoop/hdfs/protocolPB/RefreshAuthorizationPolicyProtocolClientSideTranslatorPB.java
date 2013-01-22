@@ -38,6 +38,10 @@ public class RefreshAuthorizationPolicyProtocolClientSideTranslatorPB implements
   private final static RpcController NULL_CONTROLLER = null;
   private final RefreshAuthorizationPolicyProtocolPB rpcProxy;
   
+  private final static RefreshServiceAclRequestProto
+  VOID_REFRESH_SERVICE_ACL_REQUEST =
+      RefreshServiceAclRequestProto.newBuilder().build();
+
   public RefreshAuthorizationPolicyProtocolClientSideTranslatorPB(
       RefreshAuthorizationPolicyProtocolPB rpcProxy) {
     this.rpcProxy = rpcProxy;
@@ -50,10 +54,9 @@ public class RefreshAuthorizationPolicyProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshServiceAcl() throws IOException {
-    RefreshServiceAclRequestProto request = RefreshServiceAclRequestProto
-        .newBuilder().build();
     try {
-      rpcProxy.refreshServiceAcl(NULL_CONTROLLER, request);
+      rpcProxy.refreshServiceAcl(NULL_CONTROLLER,
+          VOID_REFRESH_SERVICE_ACL_REQUEST);
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }

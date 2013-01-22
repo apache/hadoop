@@ -89,6 +89,9 @@ public class RemoteEditLog implements Comparable<RemoteEditLog> {
     new Function<RemoteEditLog, Long>() {
       @Override
       public Long apply(RemoteEditLog log) {
+        if (null == log) {
+          return HdfsConstants.INVALID_TXID;
+        }
         return log.getStartTxId();
       }
     };

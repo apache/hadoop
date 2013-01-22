@@ -21,6 +21,7 @@ option java_outer_classname = "MRServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
 import "mr_protos.proto";
 import "yarn_protos.proto";
 
@@ -76,14 +77,6 @@ message GetDiagnosticsResponseProto {
   repeated string diagnostics = 1;
 }
 
-message GetDelegationTokenRequestProto {
-  optional string renewer = 1;
-}
-
-message GetDelegationTokenResponseProto {
-  optional DelegationTokenProto m_r_delegation_token = 1;
-}
-
 message KillJobRequestProto {
   optional JobIdProto job_id = 1;
 }
@@ -107,3 +100,4 @@ message FailTaskAttemptRequestProto {
 }
 message FailTaskAttemptResponseProto {
 }
+

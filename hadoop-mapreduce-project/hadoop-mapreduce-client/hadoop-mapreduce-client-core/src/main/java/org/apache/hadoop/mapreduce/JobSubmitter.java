@@ -251,9 +251,8 @@ class JobSubmitter {
     }
 
     //  set the timestamps of the archives and files
-    ClientDistributedCacheManager.determineTimestamps(conf);
     //  set the public/private visibility of the archives and files
-    ClientDistributedCacheManager.determineCacheVisibilities(conf);
+    ClientDistributedCacheManager.determineTimestampsAndCacheVisibilities(conf);
     // get DelegationToken for each cached file
     ClientDistributedCacheManager.getDelegationTokens(conf, job
         .getCredentials());

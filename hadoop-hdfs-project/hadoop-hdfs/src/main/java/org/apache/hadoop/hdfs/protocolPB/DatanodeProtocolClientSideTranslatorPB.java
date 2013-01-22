@@ -84,7 +84,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   
   /** RpcController is not used and hence is set to null */
   private final DatanodeProtocolPB rpcProxy;
-  private static final VersionRequestProto VERSION_REQUEST = 
+  private static final VersionRequestProto VOID_VERSION_REQUEST = 
       VersionRequestProto.newBuilder().build();
   private final static RpcController NULL_CONTROLLER = null;
   
@@ -243,7 +243,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   public NamespaceInfo versionRequest() throws IOException {
     try {
       return PBHelper.convert(rpcProxy.versionRequest(NULL_CONTROLLER,
-          VERSION_REQUEST).getInfo());
+          VOID_VERSION_REQUEST).getInfo());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

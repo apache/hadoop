@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -62,7 +63,8 @@ import org.apache.hadoop.yarn.service.AbstractService;
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
  */
-public abstract class RMCommunicator extends AbstractService  {
+public abstract class RMCommunicator extends AbstractService
+    implements RMHeartbeatHandler {
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
@@ -77,6 +79,8 @@ public abstract class RMCommunicator extends AbstractService  {
   private Resource minContainerCapability;
   private Resource maxContainerCapability;
   protected Map<ApplicationAccessType, String> applicationACLs;
+  private volatile long lastHeartbeatTime;
+  private ConcurrentLinkedQueue<Runnable> heartbeatCallbacks;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -95,6 +99,7 @@ public abstract class RMCommunicator extends AbstractService  {
     this.applicationId = context.getApplicationID();
     this.applicationAttemptId = context.getApplicationAttemptId();
     this.stopped = new AtomicBoolean(false);
+    this.heartbeatCallbacks = new ConcurrentLinkedQueue<Runnable>();
   }
 
   @Override
@@ -136,14 +141,19 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected void register() {
     //Register
-    InetSocketAddress serviceAddr = clientService.getBindAddress();
+    InetSocketAddress serviceAddr = null;
+    if (clientService != null ) {
+      serviceAddr = clientService.getBindAddress();
+    }
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
       request.setApplicationAttemptId(applicationAttemptId);
-      request.setHost(serviceAddr.getHostName());
-      request.setRpcPort(serviceAddr.getPort());
-      request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+      if (serviceAddr != null) {
+        request.setHost(serviceAddr.getHostName());
+        request.setRpcPort(serviceAddr.getPort());
+        request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+      }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();
@@ -236,8 +246,12 @@ public abstract class RMCommunicator extends AbstractService  {
               return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
+              continue;
               // TODO: for other exceptions
             }
+
+            lastHeartbeatTime = context.getClock().getTime();
+            executeHeartbeatCallbacks();
           } catch (InterruptedException e) {
             if (!stopped.get()) {
               LOG.warn("Allocated thread interrupted. Returning.");
@@ -294,6 +308,23 @@ public abstract class RMCommunicator extends AbstractService  {
   }
 
   protected abstract void heartbeat() throws Exception;
+
+  private void executeHeartbeatCallbacks() {
+    Runnable callback = null;
+    while ((callback = heartbeatCallbacks.poll()) != null) {
+      callback.run();
+    }
+  }
+
+  @Override
+  public long getLastHeartbeatTime() {
+    return lastHeartbeatTime;
+  }
+
+  @Override
+  public void runOnNextHeartbeat(Runnable callback) {
+    heartbeatCallbacks.add(callback);
+  }
 
   public void setShouldUnregister(boolean shouldUnregister) {
     this.shouldUnregister = shouldUnregister;

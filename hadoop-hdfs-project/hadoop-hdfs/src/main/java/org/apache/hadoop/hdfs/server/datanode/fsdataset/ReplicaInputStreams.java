@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.Closeable;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.InputStream;
 
 import org.apache.hadoop.io.IOUtils;
@@ -30,9 +32,9 @@ public class ReplicaInputStreams implements Closeable {
   private final InputStream checksumIn;
 
   /** Create an object with a data input stream and a checksum input stream. */
-  public ReplicaInputStreams(InputStream dataIn, InputStream checksumIn) {
-    this.dataIn = dataIn;
-    this.checksumIn = checksumIn;
+  public ReplicaInputStreams(FileDescriptor dataFd, FileDescriptor checksumFd) {
+    this.dataIn = new FileInputStream(dataFd);
+    this.checksumIn = new FileInputStream(checksumFd);
   }
 
   /** @return the data input stream. */

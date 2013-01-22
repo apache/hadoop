@@ -144,11 +144,11 @@ public interface ApplicationReport {
    */
   @Public
   @Stable
-  String getClientToken();
+  ClientToken getClientToken();
 
   @Private
   @Unstable
-  void setClientToken(String clientToken);
+  void setClientToken(ClientToken clientToken);
 
   /**
    * Get the <code>YarnApplicationState</code> of the application.

@@ -199,7 +199,6 @@ public class BaseContainerTokenSecretManager extends
       this.readLock.unlock();
     }
 
-    return BuilderUtils.newContainerToken(nodeId, ByteBuffer.wrap(password),
-      tokenIdentifier);
+    return BuilderUtils.newContainerToken(nodeId, password, tokenIdentifier);
   }
 }

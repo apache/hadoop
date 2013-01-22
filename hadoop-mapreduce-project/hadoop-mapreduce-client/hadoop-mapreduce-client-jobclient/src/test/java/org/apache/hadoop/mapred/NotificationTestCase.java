@@ -90,8 +90,8 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   }
 
   public static class NotificationServlet extends HttpServlet {
-    public static int counter = 0;
-    public static int failureCounter = 0;
+    public static volatile int counter = 0;
+    public static volatile int failureCounter = 0;
     private static final long serialVersionUID = 1L;
     
     protected void doGet(HttpServletRequest req, HttpServletResponse res)
@@ -155,7 +155,11 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
     System.out.println(launchWordCount(this.createJobConf(),
                                        "a b c d e f g h", 1, 1));
-    Thread.sleep(2000);
+    boolean keepTrying = true;
+    for (int tries = 0; tries < 30 && keepTrying; tries++) {
+      Thread.sleep(50);
+      keepTrying = !(NotificationServlet.counter == 2);
+    }
     assertEquals(2, NotificationServlet.counter);
     assertEquals(0, NotificationServlet.failureCounter);
     
@@ -173,14 +177,22 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     // run a job with KILLED status
     System.out.println(UtilsForTests.runJobKill(this.createJobConf(), inDir,
                                                 outDir).getID());
-    Thread.sleep(2000);
+    keepTrying = true;
+    for (int tries = 0; tries < 30 && keepTrying; tries++) {
+      Thread.sleep(50);
+      keepTrying = !(NotificationServlet.counter == 4);
+    }
     assertEquals(4, NotificationServlet.counter);
     assertEquals(0, NotificationServlet.failureCounter);
     
     // run a job with FAILED status
     System.out.println(UtilsForTests.runJobFail(this.createJobConf(), inDir,
                                                 outDir).getID());
-    Thread.sleep(2000);
+    keepTrying = true;
+    for (int tries = 0; tries < 30 && keepTrying; tries++) {
+      Thread.sleep(50);
+      keepTrying = !(NotificationServlet.counter == 6);
+    }
     assertEquals(6, NotificationServlet.counter);
     assertEquals(0, NotificationServlet.failureCounter);
   }

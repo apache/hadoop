@@ -209,9 +209,9 @@ public class TestRMAppAttemptTransitions {
     unmanagedAM = false;
     
     application = mock(RMApp.class);
-    applicationAttempt = 
-        new RMAppAttemptImpl(applicationAttemptId, null, rmContext, scheduler, 
-            masterService, submissionContext, new Configuration());
+    applicationAttempt =
+        new RMAppAttemptImpl(applicationAttemptId, rmContext, scheduler,
+          masterService, submissionContext, new Configuration());
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
     

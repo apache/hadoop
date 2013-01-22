@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdf
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.ipc.ProtobufHelper;
@@ -55,6 +54,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
@@ -77,7 +77,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final ClientDatanodeProtocolPB rpcProxy;
-  private final static RefreshNamenodesRequestProto REFRESH_NAMENODES = 
+  private final static RefreshNamenodesRequestProto VOID_REFRESH_NAMENODES = 
       RefreshNamenodesRequestProto.newBuilder().build();
 
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
@@ -170,7 +170,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   @Override
   public void refreshNamenodes() throws IOException {
     try {
-      rpcProxy.refreshNamenodes(NULL_CONTROLLER, REFRESH_NAMENODES);
+      rpcProxy.refreshNamenodes(NULL_CONTROLLER, VOID_REFRESH_NAMENODES);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -222,8 +222,8 @@ public class ClientDatanodeProtocolTranslatorPB implements
     // Convert to proto objects
     List<ExtendedBlockProto> blocksProtos = 
         new ArrayList<ExtendedBlockProto>(blocks.size());
-    List<BlockTokenIdentifierProto> tokensProtos = 
-        new ArrayList<BlockTokenIdentifierProto>(tokens.size());
+    List<TokenProto> tokensProtos = 
+        new ArrayList<TokenProto>(tokens.size());
     for (ExtendedBlock b : blocks) {
       blocksProtos.add(PBHelper.convert(b));
     }

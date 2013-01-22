@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
@@ -70,7 +71,9 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
+import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -1139,7 +1142,7 @@ public class TestRMContainerAllocator {
     }
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId,
         taskAttemptId);
-    Resource containerNeed = BuilderUtils.newResource(memory);
+    Resource containerNeed = BuilderUtils.newResource(memory, 1);
     if (earlierFailedAttempt) {
       return ContainerRequestEvent
           .createContainerRequestEventForFailedContainer(attemptId,
@@ -1222,8 +1225,8 @@ public class TestRMContainerAllocator {
       when(context.getApplicationAttemptId()).thenReturn(appAttemptId);
       when(context.getJob(isA(JobId.class))).thenReturn(job);
       when(context.getClusterInfo()).thenReturn(
-          new ClusterInfo(BuilderUtils.newResource(1024), BuilderUtils
-              .newResource(10240)));
+          new ClusterInfo(BuilderUtils.newResource(1024, 1), BuilderUtils
+              .newResource(10240, 1)));
       when(context.getEventHandler()).thenReturn(new EventHandler() {
         @Override
         public void handle(Event event) {
@@ -1237,6 +1240,13 @@ public class TestRMContainerAllocator {
           }
         }
       });
+      return context;
+    }
+
+    private static AppContext createAppContext(
+        ApplicationAttemptId appAttemptId, Job job, Clock clock) {
+      AppContext context = createAppContext(appAttemptId, job);
+      when(context.getClock()).thenReturn(clock);
       return context;
     }
 
@@ -1264,6 +1274,15 @@ public class TestRMContainerAllocator {
       super.start();
     }
 
+    public MyContainerAllocator(MyResourceManager rm, Configuration conf,
+        ApplicationAttemptId appAttemptId, Job job, Clock clock) {
+      super(createMockClientService(),
+          createAppContext(appAttemptId, job, clock));
+      this.rm = rm;
+      super.init(conf);
+      super.start();
+    }
+
     @Override
     protected AMRMProtocol createSchedulerProxy() {
       return this.rm.getApplicationMasterService();
@@ -1280,12 +1299,12 @@ public class TestRMContainerAllocator {
 
     @Override
     protected Resource getMinContainerCapability() {
-      return BuilderUtils.newResource(1024);
+      return BuilderUtils.newResource(1024, 1);
     }
 
     @Override
     protected Resource getMaxContainerCapability() {
-      return BuilderUtils.newResource(10240);
+      return BuilderUtils.newResource(10240, 1);
     }
 
     public void sendRequest(ContainerRequestEvent req) {
@@ -1463,6 +1482,66 @@ public class TestRMContainerAllocator {
     allocator.schedule();
     Assert.assertTrue("Expected recalculate of reduce schedule",
         allocator.recalculatedReduceSchedule);
+  }
+
+  @Test
+  public void testHeartbeatHandler() throws Exception {
+    LOG.info("Running testHeartbeatHandler");
+
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS, 1);
+    ControlledClock clock = new ControlledClock(new SystemClock());
+    AppContext appContext = mock(AppContext.class);
+    when(appContext.getClock()).thenReturn(clock);
+    when(appContext.getApplicationID()).thenReturn(
+        BuilderUtils.newApplicationId(1, 1));
+
+    RMContainerAllocator allocator = new RMContainerAllocator(
+        mock(ClientService.class), appContext) {
+          @Override
+          protected void register() {
+          }
+          @Override
+          protected AMRMProtocol createSchedulerProxy() {
+            return mock(AMRMProtocol.class);
+          }
+          @Override
+          protected synchronized void heartbeat() throws Exception {
+          }
+    };
+    allocator.init(conf);
+    allocator.start();
+
+    clock.setTime(5);
+    int timeToWaitMs = 5000;
+    while (allocator.getLastHeartbeatTime() != 5 && timeToWaitMs > 0) {
+      Thread.sleep(10);
+      timeToWaitMs -= 10;
+    }
+    Assert.assertEquals(5, allocator.getLastHeartbeatTime());
+    clock.setTime(7);
+    timeToWaitMs = 5000;
+    while (allocator.getLastHeartbeatTime() != 7 && timeToWaitMs > 0) {
+      Thread.sleep(10);
+      timeToWaitMs -= 10;
+    }
+    Assert.assertEquals(7, allocator.getLastHeartbeatTime());
+
+    final AtomicBoolean callbackCalled = new AtomicBoolean(false);
+    allocator.runOnNextHeartbeat(new Runnable() {
+      @Override
+      public void run() {
+        callbackCalled.set(true);
+      }
+    });
+    clock.setTime(8);
+    timeToWaitMs = 5000;
+    while (allocator.getLastHeartbeatTime() != 8 && timeToWaitMs > 0) {
+      Thread.sleep(10);
+      timeToWaitMs -= 10;
+    }
+    Assert.assertEquals(8, allocator.getLastHeartbeatTime());
+    Assert.assertTrue(callbackCalled.get());
   }
 
   public static void main(String[] args) throws Exception {

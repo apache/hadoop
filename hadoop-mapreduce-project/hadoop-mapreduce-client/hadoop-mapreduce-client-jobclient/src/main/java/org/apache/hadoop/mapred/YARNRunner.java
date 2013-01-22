@@ -85,6 +85,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class enables the current JobClient (0.22 hadoop) to run on YARN.
@@ -100,7 +101,7 @@ public class YARNRunner implements ClientProtocol {
   private Configuration conf;
   private final FileContext defaultFileContext;
   
-  /* usually is false unless the jobclient getdelegation token is 
+  /* usually is false unless the jobclient get delegation token is 
    *  called. This is a hack wherein we do return a token from RM 
    *  on getDelegationtoken but due to the restricted api on jobclient
    *  we just add a job history DT token when submitting a job.
@@ -158,18 +159,18 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
-    resMgrDelegate.cancelDelegationToken(arg0);
+    throw new UnsupportedOperationException("Use Token.renew instead");
   }
 
   @Override
   public TaskTrackerInfo[] getActiveTrackers() throws IOException,
       InterruptedException {
-	  return resMgrDelegate.getActiveTrackers();
+    return resMgrDelegate.getActiveTrackers();
   }
 
   @Override
   public JobStatus[] getAllJobs() throws IOException, InterruptedException {
-   return resMgrDelegate.getAllJobs();
+    return resMgrDelegate.getAllJobs();
   }
 
   @Override
@@ -184,18 +185,18 @@ public class YARNRunner implements ClientProtocol {
     return resMgrDelegate.getClusterMetrics();
   }
 
-  private Token<?> getDelegationTokenFromHS(
-      MRClientProtocol hsProxy, Text renewer) throws IOException,
-      InterruptedException {
+  @VisibleForTesting
+  Token<?> getDelegationTokenFromHS(MRClientProtocol hsProxy)
+      throws IOException, InterruptedException {
     GetDelegationTokenRequest request = recordFactory
       .newRecordInstance(GetDelegationTokenRequest.class);
-    request.setRenewer(renewer.toString());
+    request.setRenewer(Master.getMasterPrincipal(conf));
     DelegationToken mrDelegationToken = hsProxy.getDelegationToken(request)
       .getDelegationToken();
     return ProtoUtils.convertFromProtoFormat(mrDelegationToken,
                                              hsProxy.getConnectAddress());
   }
-  
+
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException, InterruptedException {
@@ -269,8 +270,7 @@ public class YARNRunner implements ClientProtocol {
       // the delegation tokens for the HistoryServer also.
       if (conf.getBoolean(JobClient.HS_DELEGATION_TOKEN_REQUIRED, 
           DEFAULT_HS_DELEGATION_TOKEN_REQUIRED)) {
-        Token hsDT = getDelegationTokenFromHS(hsProxy, new Text( 
-                conf.get(JobClient.HS_DELEGATION_TOKEN_RENEWER)));
+        Token hsDT = getDelegationTokenFromHS(hsProxy);
         ts.addToken(hsDT.getService(), hsDT);
       }
     }
@@ -324,8 +324,16 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup resource requirements
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
-        MRJobConfig.DEFAULT_MR_AM_VMEM_MB));
+    capability.setMemory(
+        conf.getInt(
+            MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
+            )
+        );
+    capability.setVirtualCores(
+        conf.getInt(
+            MRJobConfig.MR_AM_CPU_VCORES, MRJobConfig.DEFAULT_MR_AM_CPU_VCORES
+            )
+        );
     LOG.debug("AppMaster capability = " + capability);
 
     // Setup LocalResources
@@ -386,9 +394,31 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.MR_AM_LOG_LEVEL, MRJobConfig.DEFAULT_MR_AM_LOG_LEVEL);
     MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
 
-    vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
-        MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
+    // Check for Java Lib Path usage in MAP and REDUCE configs
+    warnForJavaLibPath(conf.get(MRJobConfig.MAP_JAVA_OPTS,""), "map", 
+        MRJobConfig.MAP_JAVA_OPTS, MRJobConfig.MAP_ENV);
+    warnForJavaLibPath(conf.get(MRJobConfig.MAPRED_MAP_ADMIN_JAVA_OPTS,""), "map", 
+        MRJobConfig.MAPRED_MAP_ADMIN_JAVA_OPTS, MRJobConfig.MAPRED_ADMIN_USER_ENV);
+    warnForJavaLibPath(conf.get(MRJobConfig.REDUCE_JAVA_OPTS,""), "reduce", 
+        MRJobConfig.REDUCE_JAVA_OPTS, MRJobConfig.REDUCE_ENV);
+    warnForJavaLibPath(conf.get(MRJobConfig.MAPRED_REDUCE_ADMIN_JAVA_OPTS,""), "reduce", 
+        MRJobConfig.MAPRED_REDUCE_ADMIN_JAVA_OPTS, MRJobConfig.MAPRED_ADMIN_USER_ENV);   
 
+    // Add AM admin command opts before user command opts
+    // so that it can be overridden by user
+    String mrAppMasterAdminOptions = conf.get(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_ADMIN_COMMAND_OPTS);
+    warnForJavaLibPath(mrAppMasterAdminOptions, "app master", 
+        MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS, MRJobConfig.MR_AM_ADMIN_USER_ENV);
+    vargs.add(mrAppMasterAdminOptions);
+    
+    // Add AM user command opts
+    String mrAppMasterUserOptions = conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS);
+    warnForJavaLibPath(mrAppMasterUserOptions, "app master", 
+        MRJobConfig.MR_AM_COMMAND_OPTS, MRJobConfig.MR_AM_ENV);
+    vargs.add(mrAppMasterUserOptions);
+    
     vargs.add(MRJobConfig.APPLICATION_MASTER_CLASS);
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR +
         Path.SEPARATOR + ApplicationConstants.STDOUT);
@@ -412,6 +442,9 @@ public class YARNRunner implements ClientProtocol {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
     
+    // Setup the environment variables for Admin first
+    MRApps.setEnvFromInputString(environment, 
+        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV));
     // Setup the environment variables (LD_LIBRARY_PATH, etc)
     MRApps.setEnvFromInputString(environment, 
         conf.get(MRJobConfig.MR_AM_ENV));
@@ -466,7 +499,7 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public long renewDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
-    return resMgrDelegate.renewDelegationToken(arg0);
+    throw new UnsupportedOperationException("Use Token.renew instead");
   }
 
 
@@ -568,5 +601,16 @@ public class YARNRunner implements ClientProtocol {
   public LogParams getLogFileParams(JobID jobID, TaskAttemptID taskAttemptID)
       throws IOException {
     return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
+  }
+
+  private static void warnForJavaLibPath(String opts, String component, 
+      String javaConf, String envConf) {
+    if (opts != null && opts.contains("-Djava.library.path")) {
+      LOG.warn("Usage of -Djava.library.path in " + javaConf + " can cause " +
+               "programs to no longer function if hadoop native libraries " +
+               "are used. These values should be set as part of the " +
+               "LD_LIBRARY_PATH in the " + component + " JVM env using " +
+               envConf + " config settings.");
+    }
   }
 }

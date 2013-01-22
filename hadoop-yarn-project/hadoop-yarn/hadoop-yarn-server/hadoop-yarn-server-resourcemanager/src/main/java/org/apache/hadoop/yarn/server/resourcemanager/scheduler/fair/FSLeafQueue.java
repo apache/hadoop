@@ -33,7 +33,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class FSLeafQueue extends FSQueue {
   private static final Log LOG = LogFactory.getLog(
@@ -178,7 +177,10 @@ public class FSLeafQueue extends FSQueue {
       Collections.sort(appScheds, comparator);
       for (AppSchedulable sched: appScheds) {
         if (sched.getRunnable()) {
-          return sched.assignContainer(node, reserved);
+          Resource assignedResource = sched.assignContainer(node, reserved);
+          if (!assignedResource.equals(Resources.none())) {
+            return assignedResource;
+          }
         }
       }
 

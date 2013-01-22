@@ -235,6 +235,22 @@ public class TestMRApps {
       index, 0);
   }
   
+  @Test public void testSetClasspathWithJobClassloader() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, true);
+    Map<String, String> env = new HashMap<String, String>();
+    MRApps.setClasspath(env, conf);
+    String cp = env.get("CLASSPATH");
+    String appCp = env.get("APP_CLASSPATH");
+    assertSame("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is"
+        + " in the classpath!", cp.indexOf("jar:job"), -1);
+    assertSame("MAPREDUCE_JOB_CLASSLOADER true, but PWD is"
+        + " in the classpath!", cp.indexOf("PWD"), -1);
+    assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not"
+        + " in the app classpath!",
+        "$PWD:job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*", appCp);
+  }
+  
   @Test
   public void testSetupDistributedCacheEmpty() throws IOException {
     Configuration conf = new Configuration();

@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Abando
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateRequestProto;
@@ -64,14 +63,15 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
@@ -83,7 +83,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Recove
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RestoreFailedStorageRequestProto;
@@ -110,6 +109,10 @@ import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
@@ -125,6 +128,29 @@ import com.google.protobuf.ServiceException;
 public class ClientNamenodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
   final private ClientNamenodeProtocolPB rpcProxy;
+
+  static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST = 
+  GetServerDefaultsRequestProto.newBuilder().build();
+
+  private final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
+  GetFsStatusRequestProto.newBuilder().build();
+
+  private final static SaveNamespaceRequestProto VOID_SAVE_NAMESPACE_REQUEST =
+  SaveNamespaceRequestProto.newBuilder().build();
+
+  private final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST = 
+  RollEditsRequestProto.getDefaultInstance();
+
+  private final static RefreshNodesRequestProto VOID_REFRESH_NODES_REQUEST =
+  RefreshNodesRequestProto.newBuilder().build();
+
+  private final static FinalizeUpgradeRequestProto
+  VOID_FINALIZE_UPGRADE_REQUEST =
+      FinalizeUpgradeRequestProto.newBuilder().build();
+
+  private final static GetDataEncryptionKeyRequestProto
+  VOID_GET_DATA_ENCRYPTIONKEY_REQUEST =
+      GetDataEncryptionKeyRequestProto.newBuilder().build();
 
   public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
     rpcProxy = proxy;
@@ -157,7 +183,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
-    GetServerDefaultsRequestProto req = GetServerDefaultsRequestProto.newBuilder().build();
+    GetServerDefaultsRequestProto req = VOID_GET_SERVER_DEFAULT_REQUEST;
     try {
       return PBHelper
           .convert(rpcProxy.getServerDefaults(null, req).getServerDefaults());
@@ -280,7 +306,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     if (previous != null) 
       req.setPrevious(PBHelper.convert(previous)); 
     if (excludeNodes != null) 
-      req.addAllExcludeNodes(Arrays.asList(PBHelper.convert(excludeNodes)));
+      req.addAllExcludeNodes(PBHelper.convert(excludeNodes));
     try {
       return PBHelper.convert(rpcProxy.addBlock(null, req.build()).getBlock());
     } catch (ServiceException e) {
@@ -298,8 +324,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .newBuilder()
         .setSrc(src)
         .setBlk(PBHelper.convert(blk))
-        .addAllExistings(Arrays.asList(PBHelper.convert(existings)))
-        .addAllExcludes(Arrays.asList(PBHelper.convert(excludes)))
+        .addAllExistings(PBHelper.convert(existings))
+        .addAllExcludes(PBHelper.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)
         .build();
@@ -470,9 +496,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public long[] getStats() throws IOException {
-    GetFsStatusRequestProto req = GetFsStatusRequestProto.newBuilder().build();
     try {
-      return PBHelper.convert(rpcProxy.getFsStats(null, req));
+      return PBHelper.convert(rpcProxy.getFsStats(null,
+          VOID_GET_FSSTATUS_REQUEST));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -519,10 +545,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void saveNamespace() throws AccessControlException, IOException {
-    SaveNamespaceRequestProto req = SaveNamespaceRequestProto.newBuilder()
-        .build();
     try {
-      rpcProxy.saveNamespace(null, req);
+      rpcProxy.saveNamespace(null, VOID_SAVE_NAMESPACE_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -530,9 +554,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
   
   @Override
   public long rollEdits() throws AccessControlException, IOException {
-    RollEditsRequestProto req = RollEditsRequestProto.getDefaultInstance();
     try {
-      RollEditsResponseProto resp = rpcProxy.rollEdits(null, req);
+      RollEditsResponseProto resp = rpcProxy.rollEdits(null,
+          VOID_ROLLEDITS_REQUEST);
       return resp.getNewSegmentTxId();
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
@@ -554,9 +578,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void refreshNodes() throws IOException {
-    RefreshNodesRequestProto req = RefreshNodesRequestProto.newBuilder().build();
     try {
-      rpcProxy.refreshNodes(null, req);
+      rpcProxy.refreshNodes(null, VOID_REFRESH_NODES_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -564,9 +587,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void finalizeUpgrade() throws IOException {
-    FinalizeUpgradeRequestProto req = FinalizeUpgradeRequestProto.newBuilder().build();
     try {
-      rpcProxy.finalizeUpgrade(null, req);
+      rpcProxy.finalizeUpgrade(null, VOID_FINALIZE_UPGRADE_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -712,7 +734,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
     GetLinkTargetRequestProto req = GetLinkTargetRequestProto.newBuilder()
         .setPath(path).build();
     try {
-      return rpcProxy.getLinkTarget(null, req).getTargetPath();
+      GetLinkTargetResponseProto rsp = rpcProxy.getLinkTarget(null, req);
+      return rsp.hasTargetPath() ? rsp.getTargetPath() : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -758,7 +781,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setRenewer(renewer.toString())
         .build();
     try {
-      return PBHelper.convertDelegationToken(rpcProxy.getDelegationToken(null, req).getToken());
+      GetDelegationTokenResponseProto resp = rpcProxy.getDelegationToken(null, req);
+      return resp.hasToken() ? PBHelper.convertDelegationToken(resp.getToken())
+          : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -771,7 +796,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         setToken(PBHelper.convert(token)).
         build();
     try {
-      return rpcProxy.renewDelegationToken(null, req).getNewExireTime();
+      return rpcProxy.renewDelegationToken(null, req).getNewExpiryTime();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -812,11 +837,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   
   @Override
   public DataEncryptionKey getDataEncryptionKey() throws IOException {
-    GetDataEncryptionKeyRequestProto req = GetDataEncryptionKeyRequestProto
-        .newBuilder().build();
     try {
-      return PBHelper.convert(rpcProxy.getDataEncryptionKey(null, req)
-          .getDataEncryptionKey());
+      GetDataEncryptionKeyResponseProto rsp = rpcProxy.getDataEncryptionKey(
+          null, VOID_GET_DATA_ENCRYPTIONKEY_REQUEST);
+     return rsp.hasDataEncryptionKey() ? 
+          PBHelper.convert(rsp.getDataEncryptionKey()) : null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

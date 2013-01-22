@@ -23,26 +23,29 @@ import java.util.Map;
 
 import javax.crypto.SecretKey;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.security.client.BaseClientToAMTokenSecretManager;
 
 public class ClientToAMTokenSecretManagerInRM extends
     BaseClientToAMTokenSecretManager {
 
   // Per application master-keys for managing client-tokens
-  private Map<ApplicationId, SecretKey> masterKeys =
-      new HashMap<ApplicationId, SecretKey>();
+  private Map<ApplicationAttemptId, SecretKey> masterKeys =
+      new HashMap<ApplicationAttemptId, SecretKey>();
 
-  public synchronized void registerApplication(ApplicationId applicationID) {
-    this.masterKeys.put(applicationID, generateSecret());
+  public synchronized void registerApplication(
+      ApplicationAttemptId applicationAttemptID) {
+    this.masterKeys.put(applicationAttemptID, generateSecret());
   }
 
-  public synchronized void unRegisterApplication(ApplicationId applicationID) {
-    this.masterKeys.remove(applicationID);
+  public synchronized void unRegisterApplication(
+      ApplicationAttemptId applicationAttemptID) {
+    this.masterKeys.remove(applicationAttemptID);
   }
 
   @Override
-  public synchronized SecretKey getMasterKey(ApplicationId applicationID) {
-    return this.masterKeys.get(applicationID);
+  public synchronized SecretKey getMasterKey(
+      ApplicationAttemptId applicationAttemptID) {
+    return this.masterKeys.get(applicationAttemptID);
   }
 }

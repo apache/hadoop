@@ -21,12 +21,12 @@ package org.apache.hadoop.hdfs.protocol.datatransfer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ChecksumTypeProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -41,23 +41,17 @@ import org.apache.hadoop.util.DataChecksum;
 public abstract class DataTransferProtoUtil {
   static BlockConstructionStage fromProto(
       OpWriteBlockProto.BlockConstructionStage stage) {
-    return BlockConstructionStage.valueOf(BlockConstructionStage.class,
-        stage.name());
+    return BlockConstructionStage.valueOf(stage.name());
   }
 
   static OpWriteBlockProto.BlockConstructionStage toProto(
       BlockConstructionStage stage) {
-    return OpWriteBlockProto.BlockConstructionStage.valueOf(
-        stage.name());
+    return OpWriteBlockProto.BlockConstructionStage.valueOf(stage.name());
   }
 
   public static ChecksumProto toProto(DataChecksum checksum) {
-    ChecksumTypeProto type = HdfsProtoUtil.toProto(checksum.getChecksumType());
-    if (type == null) {
-      throw new IllegalArgumentException(
-          "Can't convert checksum to protobuf: " + checksum);
-    }
-
+    ChecksumTypeProto type = PBHelper.convert(checksum.getChecksumType());
+    // ChecksumType#valueOf never returns null
     return ChecksumProto.newBuilder()
       .setBytesPerChecksum(checksum.getBytesPerChecksum())
       .setType(type)
@@ -68,8 +62,7 @@ public abstract class DataTransferProtoUtil {
     if (proto == null) return null;
 
     int bytesPerChecksum = proto.getBytesPerChecksum();
-    DataChecksum.Type type = HdfsProtoUtil.fromProto(proto.getType());
-    
+    DataChecksum.Type type = PBHelper.convert(proto.getType());
     return DataChecksum.newDataChecksum(type, bytesPerChecksum);
   }
 
@@ -86,8 +79,8 @@ public abstract class DataTransferProtoUtil {
   static BaseHeaderProto buildBaseHeader(ExtendedBlock blk,
       Token<BlockTokenIdentifier> blockToken) {
     return BaseHeaderProto.newBuilder()
-      .setBlock(HdfsProtoUtil.toProto(blk))
-      .setToken(HdfsProtoUtil.toProto(blockToken))
+      .setBlock(PBHelper.convert(blk))
+      .setToken(PBHelper.convert(blockToken))
       .build();
   }
 }

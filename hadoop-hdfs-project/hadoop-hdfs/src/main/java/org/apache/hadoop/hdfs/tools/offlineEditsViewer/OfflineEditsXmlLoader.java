@@ -18,9 +18,10 @@
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Stack;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,6 +40,8 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import com.google.common.base.Charsets;
+
 /**
  * OfflineEditsXmlLoader walks an EditsVisitor over an OEV XML file
  */
@@ -48,7 +51,7 @@ class OfflineEditsXmlLoader
     extends DefaultHandler implements OfflineEditsLoader {
   private final boolean fixTxIds;
   private final OfflineEditsVisitor visitor;
-  private final FileReader fileReader;
+  private final InputStreamReader fileReader;
   private ParseState state;
   private Stanza stanza;
   private Stack<Stanza> stanzaStack;
@@ -70,7 +73,8 @@ class OfflineEditsXmlLoader
   public OfflineEditsXmlLoader(OfflineEditsVisitor visitor,
         File inputFile, OfflineEditsViewer.Flags flags) throws FileNotFoundException {
     this.visitor = visitor;
-    this.fileReader = new FileReader(inputFile);
+    this.fileReader =
+        new InputStreamReader(new FileInputStream(inputFile), Charsets.UTF_8);
     this.fixTxIds = flags.getFixTxIds();
   }
 

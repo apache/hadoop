@@ -24,6 +24,8 @@ import java.util.HashMap;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -48,6 +50,8 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -58,8 +62,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -82,10 +86,9 @@ public class NotRunningJob implements MRClientProtocol {
         .newRecordInstance(ApplicationAttemptId.class);
 
     // Setting AppState to NEW and finalStatus to UNDEFINED as they are never
-    // used
-    // for a non running job
+    // used for a non running job
     return BuilderUtils.newApplicationReport(unknownAppId, unknownAttemptId,
-        "N/A", "N/A", "N/A", "N/A", 0, "", YarnApplicationState.NEW, "N/A",
+        "N/A", "N/A", "N/A", "N/A", 0, null, YarnApplicationState.NEW, "N/A",
         "N/A", 0, 0, FinalApplicationStatus.UNDEFINED, null, "N/A");
   }
 
@@ -215,7 +218,21 @@ public class NotRunningJob implements MRClientProtocol {
     /* Should not be invoked by anyone. */
     throw new NotImplementedException();
   }
-  
+
+  @Override
+  public RenewDelegationTokenResponse renewDelegationToken(
+      RenewDelegationTokenRequest request) throws YarnRemoteException {
+    /* Should not be invoked by anyone. */
+    throw new NotImplementedException();
+  }
+
+  @Override
+  public CancelDelegationTokenResponse cancelDelegationToken(
+      CancelDelegationTokenRequest request) throws YarnRemoteException {
+    /* Should not be invoked by anyone. */
+    throw new NotImplementedException();
+  }
+
   @Override
   public InetSocketAddress getConnectAddress() {
     /* Should not be invoked by anyone.  Normally used to set token service */

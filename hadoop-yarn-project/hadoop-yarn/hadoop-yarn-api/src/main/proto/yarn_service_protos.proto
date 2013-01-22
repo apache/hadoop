@@ -21,6 +21,7 @@ option java_outer_classname = "YarnServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
 import "yarn_protos.proto";
 
 //////////////////////////////////////////////////////
@@ -138,14 +139,6 @@ message GetQueueUserAclsInfoResponseProto {
   repeated QueueUserACLInfoProto queueUserAcls = 1;
 }
 
-
-message GetDelegationTokenRequestProto {
-  optional string renewer = 1; 
-}
-
-message GetDelegationTokenResponseProto {
-  optional DelegationTokenProto application_token = 1;
-}
 
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////

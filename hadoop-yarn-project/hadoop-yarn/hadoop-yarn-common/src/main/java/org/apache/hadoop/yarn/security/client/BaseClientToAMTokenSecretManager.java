@@ -21,24 +21,25 @@ package org.apache.hadoop.yarn.security.client;
 import javax.crypto.SecretKey;
 
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
 public abstract class BaseClientToAMTokenSecretManager extends
     SecretManager<ClientTokenIdentifier> {
 
-  public abstract SecretKey getMasterKey(ApplicationId applicationId);
+  public abstract SecretKey getMasterKey(
+      ApplicationAttemptId applicationAttemptId);
 
   @Override
   public synchronized byte[] createPassword(
       ClientTokenIdentifier identifier) {
     return createPassword(identifier.getBytes(),
-      getMasterKey(identifier.getApplicationID()));
+      getMasterKey(identifier.getApplicationAttemptID()));
   }
 
   @Override
   public byte[] retrievePassword(ClientTokenIdentifier identifier)
       throws SecretManager.InvalidToken {
-    SecretKey masterKey = getMasterKey(identifier.getApplicationID());
+    SecretKey masterKey = getMasterKey(identifier.getApplicationAttemptID());
     if (masterKey == null) {
       throw new SecretManager.InvalidToken("Illegal client-token!");
     }

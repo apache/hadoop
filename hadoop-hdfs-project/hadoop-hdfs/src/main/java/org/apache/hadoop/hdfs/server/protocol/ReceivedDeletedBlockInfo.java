@@ -90,8 +90,8 @@ public class ReceivedDeletedBlockInfo {
     ReceivedDeletedBlockInfo other = (ReceivedDeletedBlockInfo) o;
     return this.block.equals(other.getBlock())
         && this.status == other.status
-        && (this.delHints == other.delHints ||
-            this.delHints != null && this.delHints.equals(other.delHints));
+        && this.delHints != null
+        && this.delHints.equals(other.delHints);
   }
 
   @Override

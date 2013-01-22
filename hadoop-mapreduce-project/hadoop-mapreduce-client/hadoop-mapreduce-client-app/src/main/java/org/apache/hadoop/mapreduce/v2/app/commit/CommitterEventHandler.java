@@ -29,8 +29,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobAbortCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCommitCompletedEvent;
@@ -39,6 +44,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -54,6 +62,7 @@ public class CommitterEventHandler extends AbstractService
 
   private final AppContext context;
   private final OutputCommitter committer;
+  private final RMHeartbeatHandler rmHeartbeatHandler;
   private ThreadPoolExecutor launcherPool;
   private Thread eventHandlingThread;
   private BlockingQueue<CommitterEvent> eventQueue =
@@ -61,11 +70,19 @@ public class CommitterEventHandler extends AbstractService
   private final AtomicBoolean stopped;
   private Thread jobCommitThread = null;
   private int commitThreadCancelTimeoutMs;
+  private long commitWindowMs;
+  private FileSystem fs;
+  private Path startCommitFile;
+  private Path endCommitSuccessFile;
+  private Path endCommitFailureFile;
+  
 
-  public CommitterEventHandler(AppContext context, OutputCommitter committer) {
+  public CommitterEventHandler(AppContext context, OutputCommitter committer,
+      RMHeartbeatHandler rmHeartbeatHandler) {
     super("CommitterEventHandler");
     this.context = context;
     this.committer = committer;
+    this.rmHeartbeatHandler = rmHeartbeatHandler;
     this.stopped = new AtomicBoolean(false);
   }
 
@@ -75,10 +92,23 @@ public class CommitterEventHandler extends AbstractService
     commitThreadCancelTimeoutMs = conf.getInt(
         MRJobConfig.MR_AM_COMMITTER_CANCEL_TIMEOUT_MS,
         MRJobConfig.DEFAULT_MR_AM_COMMITTER_CANCEL_TIMEOUT_MS);
+    commitWindowMs = conf.getLong(MRJobConfig.MR_AM_COMMIT_WINDOW_MS,
+        MRJobConfig.DEFAULT_MR_AM_COMMIT_WINDOW_MS);
+    try {
+      fs = FileSystem.get(conf);
+      JobID id = TypeConverter.fromYarn(context.getApplicationID());
+      JobId jobId = TypeConverter.toYarn(id);
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      startCommitFile = MRApps.getStartJobCommitFile(conf, user, jobId);
+      endCommitSuccessFile = MRApps.getEndJobCommitSuccessFile(conf, user, jobId);
+      endCommitFailureFile = MRApps.getEndJobCommitFailureFile(conf, user, jobId);
+    } catch (IOException e) {
+      throw new YarnException(e);
+    }
   }
 
   @Override
-  public void start() {
+  public void start() {    
     ThreadFactory tf = new ThreadFactoryBuilder()
       .setNameFormat("CommitterEvent Processor #%d")
       .build();
@@ -192,7 +222,7 @@ public class CommitterEventHandler extends AbstractService
             + event.toString());
       }
     }
-
+    
     @SuppressWarnings("unchecked")
     protected void handleJobSetup(CommitterJobSetupEvent event) {
       try {
@@ -206,18 +236,30 @@ public class CommitterEventHandler extends AbstractService
       }
     }
 
+    private void touchz(Path p) throws IOException {
+      fs.create(p, false).close();
+    }
+    
     @SuppressWarnings("unchecked")
     protected void handleJobCommit(CommitterJobCommitEvent event) {
       try {
+        touchz(startCommitFile);
         jobCommitStarted();
+        waitForValidCommitWindow();
         committer.commitJob(event.getJobContext());
+        touchz(endCommitSuccessFile);
         context.getEventHandler().handle(
             new JobCommitCompletedEvent(event.getJobID()));
       } catch (Exception e) {
-          LOG.error("Could not commit job", e);
-          context.getEventHandler().handle(
-              new JobCommitFailedEvent(event.getJobID(),
-                  StringUtils.stringifyException(e)));
+        try {
+          touchz(endCommitFailureFile);
+        } catch (Exception e2) {
+          LOG.error("could not create failure file.", e2);
+        }
+        LOG.error("Could not commit job", e);
+        context.getEventHandler().handle(
+            new JobCommitFailedEvent(event.getJobID(),
+                StringUtils.stringifyException(e)));
       } finally {
         jobCommitEnded();
       }
@@ -247,6 +289,27 @@ public class CommitterEventHandler extends AbstractService
       context.getEventHandler().handle(
           new TaskAttemptEvent(event.getAttemptID(),
               TaskAttemptEventType.TA_CLEANUP_DONE));
+    }
+
+    private synchronized void waitForValidCommitWindow()
+        throws InterruptedException {
+      long lastHeartbeatTime = rmHeartbeatHandler.getLastHeartbeatTime();
+      long now = context.getClock().getTime();
+
+      while (now - lastHeartbeatTime > commitWindowMs) {
+        rmHeartbeatHandler.runOnNextHeartbeat(new Runnable() {
+          @Override
+          public void run() {
+            synchronized (EventProcessor.this) {
+              EventProcessor.this.notify();
+            }
+          }
+        });
+
+        wait();
+        lastHeartbeatTime = rmHeartbeatHandler.getLastHeartbeatTime();
+        now = context.getClock().getTime();
+      }
     }
   }
 }

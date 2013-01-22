@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.NoRouteToHostException;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -864,5 +865,24 @@ public class NetUtils {
       }
     }
     return addrs;
+  }
+
+  /**
+   * Return a free port number. There is no guarantee it will remain free, so
+   * it should be used immediately.
+   *
+   * @returns A free port for binding a local socket
+   */
+  public static int getFreeSocketPort() {
+    int port = 0;
+    try {
+      ServerSocket s = new ServerSocket(0);
+      port = s.getLocalPort();
+      s.close();
+      return port;
+    } catch (IOException e) {
+      // Could not get a free port. Return default port 0.
+    }
+    return port;
   }
 }

@@ -193,7 +193,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     LOG.info("NodeManager from node " + host + "(cmPort: " + cmPort
         + " httpPort: " + httpPort + ") " + "registered with capability: "
-        + capability.getMemory() + ", assigned nodeId " + nodeId);
+        + capability + ", assigned nodeId " + nodeId);
 
     regResponse.setNodeAction(NodeAction.NORMAL);
     response.setRegistrationResponse(regResponse);

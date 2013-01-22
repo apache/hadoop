@@ -25,6 +25,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.hdfs;
 
+import "Security.proto";
 import "hdfs.proto";
 
 /**
@@ -76,7 +77,7 @@ message DeleteBlockPoolResponseProto {
  */
 message GetBlockLocalPathInfoRequestProto {
   required ExtendedBlockProto block = 1;
-  required BlockTokenIdentifierProto token = 2;
+  required hadoop.common.TokenProto token = 2;
 }
 
 /**
@@ -96,7 +97,7 @@ message GetBlockLocalPathInfoResponseProto {
  */
 message GetHdfsBlockLocationsRequestProto {
   repeated ExtendedBlockProto blocks = 1;
-  repeated BlockTokenIdentifierProto tokens = 2;
+  repeated hadoop.common.TokenProto tokens = 2;
 }
 
 /**

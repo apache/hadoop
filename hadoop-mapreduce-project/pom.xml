@@ -214,9 +214,11 @@ with tarfile.open(tar_name, "w:gz") as tar:
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
+          <excludes>
+            <exclude>.eclipse.templates/</exclude>
+            <exclude>CHANGES.txt</exclude>
+            <exclude>lib/jdiff/**</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>

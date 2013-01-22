@@ -431,6 +431,7 @@
                 <argument>src/main/proto/RpcHeader.proto</argument>
                 <argument>src/main/proto/ZKFCProtocol.proto</argument>
                 <argument>src/main/proto/ProtobufRpcEngine.proto</argument>
+                <argument>src/main/proto/Security.proto</argument>
               </arguments>
             </configuration>
           </execution>
@@ -494,11 +495,24 @@
             <exclude>dev-support/jdiff/**</exclude>
             <exclude>src/main/native/*</exclude>
             <exclude>src/main/native/config/*</exclude>
-            <exclude>src/main/resources/META-INF/services/org.apache.hadoop.security.SecurityInfo</exclude>
             <exclude>src/main/native/m4/*</exclude>
             <exclude>src/test/empty-file</exclude>
             <exclude>src/test/all-tests</exclude>
+            <exclude>src/test/resources/kdc/ldif/users.ldif</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
           </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+            </property>
+          </properties>
         </configuration>
       </plugin>
     </plugins>
@@ -584,6 +598,9 @@
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
                       <arg line="VERBOSE=1"/>
                     </exec>
+                    <!-- The second make is a workaround for HADOOP-9215.  It can
+                         be removed when version 2.6 of cmake is no longer supported . -->
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true"></exec>
                   </target>
                 </configuration>
               </execution>

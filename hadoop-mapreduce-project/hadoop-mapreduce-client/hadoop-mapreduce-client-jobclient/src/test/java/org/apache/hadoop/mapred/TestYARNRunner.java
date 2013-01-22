@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2;
+package org.apache.hadoop.mapred;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -25,10 +25,14 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.List;
 
 import junit.framework.TestCase;
 
@@ -39,13 +43,20 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClientCache;
 import org.apache.hadoop.mapred.ClientServiceDelegate;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapred.ResourceMgrDelegate;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -65,12 +76,19 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.log4j.Appender;
+import org.apache.log4j.Layout;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+import org.apache.log4j.WriterAppender;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -100,6 +118,7 @@ public class TestYARNRunner extends TestCase {
   public void setUp() throws Exception {
     resourceMgrDelegate = mock(ResourceMgrDelegate.class);
     conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_PRINCIPAL, "mapred/host@REALM");
     clientCache = new ClientCache(conf, resourceMgrDelegate);
     clientCache = spy(clientCache);
     yarnRunner = new YARNRunner(conf, resourceMgrDelegate, clientCache);
@@ -176,7 +195,7 @@ public class TestYARNRunner extends TestCase {
 
   @Test
   public void testResourceMgrDelegate() throws Exception {
-    /* we not want a mock of resourcemgr deleagte */
+    /* we not want a mock of resource mgr delegate */
     final ClientRMProtocol clientRMProtocol = mock(ClientRMProtocol.class);
     ResourceMgrDelegate delegate = new ResourceMgrDelegate(conf) {
       @Override
@@ -239,5 +258,161 @@ public class TestYARNRunner extends TestCase {
     .thenReturn(aclResponse);
     delegate.getQueueAclsForCurrentUser();
     verify(clientRMProtocol).getQueueUserAcls(any(GetQueueUserAclsInfoRequest.class));
+  }
+  
+  @Test
+  public void testHistoryServerToken() throws Exception {
+    //Set the master principal in the config
+    conf.set(YarnConfiguration.RM_PRINCIPAL,"foo@LOCAL");
+
+    final String masterPrincipal = Master.getMasterPrincipal(conf);
+
+    final MRClientProtocol hsProxy = mock(MRClientProtocol.class);
+    when(hsProxy.getDelegationToken(any(GetDelegationTokenRequest.class))).thenAnswer(
+        new Answer<GetDelegationTokenResponse>() {
+          public GetDelegationTokenResponse answer(InvocationOnMock invocation) {
+            GetDelegationTokenRequest request =
+                (GetDelegationTokenRequest)invocation.getArguments()[0];
+            // check that the renewer matches the cluster's RM principal
+            assertEquals(masterPrincipal, request.getRenewer() );
+
+            DelegationToken token =
+                recordFactory.newRecordInstance(DelegationToken.class);
+            // none of these fields matter for the sake of the test
+            token.setKind("");
+            token.setService("");
+            token.setIdentifier(ByteBuffer.allocate(0));
+            token.setPassword(ByteBuffer.allocate(0));
+            GetDelegationTokenResponse tokenResponse =
+                recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
+            tokenResponse.setDelegationToken(token);
+            return tokenResponse;
+          }
+        });
+    
+    UserGroupInformation.createRemoteUser("someone").doAs(
+        new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            yarnRunner = new YARNRunner(conf, null, null);
+            yarnRunner.getDelegationTokenFromHS(hsProxy);
+            verify(hsProxy).
+              getDelegationToken(any(GetDelegationTokenRequest.class));
+            return null;
+          }
+        });
+  }
+
+  @Test
+  public void testAMAdminCommandOpts() throws Exception {
+    JobConf jobConf = new JobConf();
+    
+    jobConf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS, "-Djava.net.preferIPv4Stack=true");
+    jobConf.set(MRJobConfig.MR_AM_COMMAND_OPTS, "-Xmx1024m");
+    
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    
+    File jobxml = new File(testWorkDir, MRJobConfig.JOB_CONF_FILE);
+    OutputStream out = new FileOutputStream(jobxml);
+    conf.writeXml(out);
+    out.close();
+    
+    File jobsplit = new File(testWorkDir, MRJobConfig.JOB_SPLIT);
+    out = new FileOutputStream(jobsplit);
+    out.close();
+    
+    File jobsplitmetainfo = new File(testWorkDir, MRJobConfig.JOB_SPLIT_METAINFO);
+    out = new FileOutputStream(jobsplitmetainfo);
+    out.close();
+    
+    File appTokens = new File(testWorkDir, MRJobConfig.APPLICATION_TOKENS_FILE);
+    out = new FileOutputStream(appTokens);
+    out.close();
+    
+    ApplicationSubmissionContext submissionContext = 
+        yarnRunner.createApplicationSubmissionContext(jobConf, testWorkDir.toString(), new Credentials());
+    
+    ContainerLaunchContext containerSpec = submissionContext.getAMContainerSpec();
+    List<String> commands = containerSpec.getCommands();
+    
+    int index = 0;
+    int adminIndex = 0;
+    int adminPos = -1;
+    int userIndex = 0;
+    int userPos = -1;
+    
+    for(String command : commands) {
+      if(command != null) {
+        adminPos = command.indexOf("-Djava.net.preferIPv4Stack=true");
+        if(adminPos >= 0)
+          adminIndex = index;
+        
+        userPos = command.indexOf("-Xmx1024m");
+        if(userPos >= 0)
+          userIndex = index;
+      }
+      
+      index++;
+    }
+    
+    // Check both admin java opts and user java opts are in the commands
+    assertTrue("AM admin command opts not in the commands.", adminPos > 0);
+    assertTrue("AM user command opts not in the commands.", userPos > 0);
+    
+    // Check the admin java opts is before user java opts in the commands
+    if(adminIndex == userIndex) {
+      assertTrue("AM admin command opts is after user command opts.", adminPos < userPos);
+    } else {
+      assertTrue("AM admin command opts is after user command opts.", adminIndex < userIndex);
+    }
+  }
+  @Test
+  public void testWarnCommandOpts() throws Exception {
+    Logger logger = Logger.getLogger(YARNRunner.class);
+    
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    Layout layout = new SimpleLayout();
+    Appender appender = new WriterAppender(layout, bout);
+    logger.addAppender(appender);
+    
+    JobConf jobConf = new JobConf();
+    
+    jobConf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS, "-Djava.net.preferIPv4Stack=true -Djava.library.path=foo");
+    jobConf.set(MRJobConfig.MR_AM_COMMAND_OPTS, "-Xmx1024m -Djava.library.path=bar");
+    
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+    
+    File jobxml = new File(testWorkDir, MRJobConfig.JOB_CONF_FILE);
+    OutputStream out = new FileOutputStream(jobxml);
+    conf.writeXml(out);
+    out.close();
+    
+    File jobsplit = new File(testWorkDir, MRJobConfig.JOB_SPLIT);
+    out = new FileOutputStream(jobsplit);
+    out.close();
+    
+    File jobsplitmetainfo = new File(testWorkDir, MRJobConfig.JOB_SPLIT_METAINFO);
+    out = new FileOutputStream(jobsplitmetainfo);
+    out.close();
+    
+    File appTokens = new File(testWorkDir, MRJobConfig.APPLICATION_TOKENS_FILE);
+    out = new FileOutputStream(appTokens);
+    out.close();
+    
+    @SuppressWarnings("unused")
+    ApplicationSubmissionContext submissionContext = 
+        yarnRunner.createApplicationSubmissionContext(jobConf, testWorkDir.toString(), new Credentials());
+   
+    String logMsg = bout.toString();
+    assertTrue(logMsg.contains("WARN - Usage of -Djava.library.path in " + 
+    		"yarn.app.mapreduce.am.admin-command-opts can cause programs to no " +
+        "longer function if hadoop native libraries are used. These values " + 
+    		"should be set as part of the LD_LIBRARY_PATH in the app master JVM " +
+        "env using yarn.app.mapreduce.am.admin.user.env config settings."));
+    assertTrue(logMsg.contains("WARN - Usage of -Djava.library.path in " + 
+        "yarn.app.mapreduce.am.command-opts can cause programs to no longer " +
+        "function if hadoop native libraries are used. These values should " +
+        "be set as part of the LD_LIBRARY_PATH in the app master JVM env " +
+        "using yarn.app.mapreduce.am.env config settings."));
   }
 }

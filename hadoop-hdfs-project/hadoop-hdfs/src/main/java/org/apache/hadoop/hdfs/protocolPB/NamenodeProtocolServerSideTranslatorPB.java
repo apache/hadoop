@@ -63,6 +63,12 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     NamenodeProtocolPB {
   private final NamenodeProtocol impl;
 
+  private final static ErrorReportResponseProto VOID_ERROR_REPORT_RESPONSE = 
+  ErrorReportResponseProto.newBuilder().build();
+
+  private final static EndCheckpointResponseProto VOID_END_CHECKPOINT_RESPONSE =
+  EndCheckpointResponseProto.newBuilder().build();
+
   public NamenodeProtocolServerSideTranslatorPB(NamenodeProtocol impl) {
     this.impl = impl;
   }
@@ -91,8 +97,12 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return GetBlockKeysResponseProto.newBuilder()
-        .setKeys(PBHelper.convert(keys)).build();
+    GetBlockKeysResponseProto.Builder builder = 
+        GetBlockKeysResponseProto.newBuilder();
+    if (keys != null) {
+      builder.setKeys(PBHelper.convert(keys));
+    }
+    return builder.build();
   }
 
   @Override
@@ -143,7 +153,7 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return ErrorReportResponseProto.newBuilder().build();
+    return VOID_ERROR_REPORT_RESPONSE;
   }
 
   @Override
@@ -181,7 +191,7 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return EndCheckpointResponseProto.newBuilder().build();
+    return VOID_END_CHECKPOINT_RESPONSE;
   }
 
   @Override

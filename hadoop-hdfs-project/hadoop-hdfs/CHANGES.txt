@@ -285,20 +285,33 @@ Trunk (Unreleased)
     HDFS-4310. fix test org.apache.hadoop.hdfs.server.datanode.
     TestStartSecureDataNode (Ivan A. Veselovsky via atm)
 
-    HDFS-4274. BlockPoolSliceScanner does not close verification log during
-    shutdown. (Chris Nauroth via suresh)
-
     HDFS-4275. MiniDFSCluster-based tests fail on Windows due to failure
     to delete test namenode directory. (Chris Nauroth via suresh)
 
     HDFS-4338. TestNameNodeMetrics#testCorruptBlock is flaky. (Andrew Wang via
     atm)
 
+    HDFS-4261. Fix bugs in Balaner causing infinite loop and
+    TestBalancerWithNodeGroup timeing out.  (Junping Du via szetszwo)
+
+    HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
     HDFS-4122. Cleanup HDFS logs and reduce the size of logged messages.
+    (suresh)
+
+    HDFS-4362. GetDelegationTokenResponseProto does not handle null token.
+    (suresh)
+
+    HDFS-4367. GetDataEncryptionKeyResponseProto does not handle null
+    response. (suresh)
+
+    HDFS-4364. GetLinkTargetResponseProto does not handle null path. (suresh)
+
+    HDFS-4369. GetBlockKeysResponseProto does not handle null response.
     (suresh)
 
   NEW FEATURES
@@ -440,7 +453,53 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4326. bump up Tomcat version for HttpFS to 6.0.36. (tucu via acmurthy)
 
+    HDFS-4270. Introduce soft and hard limits for max replication so that
+    replications of the highest priority are allowed to choose a source datanode
+    that has reached its soft limit but not the hard limit.  (Derek Dagit via
+    szetszwo)
+
+    HADOOP-9173. Add security token protobuf definition to common and
+    use it in hdfs. (suresh)
+
+    HDFS-4030. BlockManager excessBlocksCount and
+    postponedMisreplicatedBlocksCount should be AtomicLongs. (eli)
+
+    HDFS-4031. Update findbugsExcludeFile.xml to include findbugs 2
+    exclusions. (eli)
+    
+    HDFS-4033. Miscellaneous findbugs 2 fixes. (eli)
+
+    HDFS-4034. Remove redundant null checks. (eli)
+
+    HDFS-4035. LightWeightGSet and LightWeightHashSet increment a
+    volatile without synchronization. (eli)
+    
+    HDFS-4032. Specify the charset explicitly rather than rely on the
+    default. (eli)
+
+    HDFS-4363. Combine PBHelper and HdfsProtoUtil and remove redundant
+    methods. (suresh)
+
+    HDFS-4377. Some trivial DN comment cleanup. (eli)
+
+    HDFS-4381. Document fsimage format details in FSImageFormat class javadoc.
+    (Jing Zhao via suresh)
+
+    HDFS-4375. Use token request messages defined in hadoop common.
+    (suresh)
+
+    HDFS-4392. Use NetUtils#getFreeSocketPort in MiniDFSCluster.
+    (Andrew Purtell via suresh)
+
+    HDFS-4393. Make empty request and responses in protocol translators can be
+    static final members. (Brandon Li via suresh)
+
+    HDFS-4403. DFSClient can infer checksum type when not provided by reading
+    first byte (todd)
+
   OPTIMIZATIONS
+
+    HDFS-3429. DataNode reads checksums even if client does not need them (todd)
 
   BUG FIXES
 
@@ -646,6 +705,29 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4302. Fix fatal exception when starting NameNode with DEBUG logs
     (Eugene Koontz via todd)
 
+    HDFS-3970. Fix bug causing rollback of HDFS upgrade to result in bad
+    VERSION file. (Vinay and Andrew Wang via atm)
+
+    HDFS-4306. PBHelper.convertLocatedBlock miss convert BlockToken. (Binglin
+    Chang via atm)
+
+    HDFS-4384. test_libhdfs_threaded gets SEGV if JNIEnv cannot be
+    initialized. (Colin Patrick McCabe via eli)
+
+    HDFS-4328. TestLargeBlock#testLargeBlockSize is timing out. (Chris Nauroth
+    via atm)
+
+    HDFS-4274. BlockPoolSliceScanner does not close verification log during
+    shutdown. (Chris Nauroth via suresh)
+
+    HDFS-1245. Pluggable block id generation. (shv)
+
+    HDFS-4415. HostnameFilter should handle hostname resolution failures and
+    continue processing. (Robert Kanter via atm)
+
+    HDFS-4359. Slow RPC responses from NN can prevent metrics collection on
+    DNs. (liang xie via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
@@ -748,6 +830,11 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
     (Chao Shi via todd)
 
+    HDFS-4351. In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
+    needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
+
+    HDFS-4399. Fix RAT warnings by excluding images sub-dir in docs. (Thomas
+    Graves via acmurthy) 
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -2126,6 +2213,18 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2143,7 +2242,9 @@ Release 0.23.6 - UNRELEASED
     HDFS-4248. Renaming directories may incorrectly remove the paths in leases
     under the tree.  (daryn via szetszwo)
 
-Release 0.23.5 - UNRELEASED
+    HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

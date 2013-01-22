@@ -92,10 +92,11 @@ There is no provision within HDFS for creating user identities, establishing gro
 
 <section><title>Group Mapping</title>
 <p>
-Once a username has been determined as described above, the list of groups is determined by a <em>group mapping
-service</em>, configured by the <code>hadoop.security.group.mapping</code> property.
-The default implementation, <code>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</code>, will shell out
-to the Unix <code>bash -c groups</code> command to resolve a list of groups for a user.
+Once a username has been determined as described above, the list of groups is 
+determined by a <em>group mapping service</em>, configured by the 
+<code>hadoop.security.group.mapping</code> property. Refer to the 
+core-default.xml for details of the <code>hadoop.security.group.mapping</code>
+implementation.
 </p>
 <p>
 An alternate implementation, which connects directly to an LDAP server to resolve the list of groups, is available

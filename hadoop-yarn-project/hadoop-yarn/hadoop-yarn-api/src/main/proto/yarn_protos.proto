@@ -21,6 +21,8 @@ option java_outer_classname = "YarnProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
+
 message YarnRemoteExceptionProto {
   optional string message = 1;
   optional string trace = 2;
@@ -46,6 +48,7 @@ message ContainerIdProto {
 
 message ResourceProto {
   optional int32 memory = 1;
+  optional int32 virtual_cores = 2;
 }
 
 message PriorityProto {
@@ -58,20 +61,6 @@ enum ContainerStateProto {
   C_COMPLETE = 3;
 }
 
-message ContainerTokenProto {
-  optional bytes identifier = 1;
-  optional bytes password = 2;
-  optional string kind = 3;
-  optional string service = 4;
-}
-
-message DelegationTokenProto {
-  optional bytes identifier = 1;
-  optional bytes password = 2;
-  optional string kind = 3;
-  optional string service = 4;
-}
-
 message ContainerProto {
   optional ContainerIdProto id = 1;
   optional NodeIdProto nodeId = 2;
@@ -79,7 +68,7 @@ message ContainerProto {
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
   optional ContainerStateProto state = 6;
-  optional ContainerTokenProto container_token = 7;
+  optional hadoop.common.TokenProto container_token = 7;
   optional ContainerStatusProto container_status = 8;
 }
 
@@ -113,7 +102,7 @@ message ApplicationMasterProto {
   optional string trackingUrl = 4;
   optional ApplicationStatusProto status = 5;
   optional YarnApplicationStateProto state = 6;
-  optional string client_token = 7;
+  optional hadoop.common.TokenProto client_token = 7;
   optional int32 containerCount = 8;
   optional int32 amFailCount = 9;
   optional string diagnostics = 10 [default = ""];
@@ -162,7 +151,7 @@ message ApplicationReportProto {
   optional string name = 4;
   optional string host = 5;
   optional int32 rpc_port = 6;
-  optional string client_token = 7;
+  optional hadoop.common.TokenProto client_token = 7;
   optional ApplicationStatusProto status = 8;
   optional YarnApplicationStateProto yarn_application_state = 9;
   optional ContainerProto masterContainer = 10;

@@ -165,6 +165,7 @@ public abstract class TaskAttemptImpl implements
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
   private static String initialClasspath = null;
+  private static String initialAppClasspath = null;
   private static Object commonContainerSpecLock = new Object();
   private static ContainerLaunchContext commonContainerSpec = null;
   private static final Object classpathLock = new Object();
@@ -527,7 +528,10 @@ public abstract class TaskAttemptImpl implements
 
     //TODO:create the resource reqt for this Task attempt
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
-    this.resourceCapability.setMemory(getMemoryRequired(conf, taskId.getTaskType()));
+    this.resourceCapability.setMemory(
+        getMemoryRequired(conf, taskId.getTaskType()));
+    this.resourceCapability.setVirtualCores(
+        getCpuRequired(conf, taskId.getTaskType()));
     this.dataLocalHosts = dataLocalHosts;
     RackResolver.init(conf);
 
@@ -549,6 +553,21 @@ public abstract class TaskAttemptImpl implements
     }
     
     return memory;
+  }
+
+  private int getCpuRequired(Configuration conf, TaskType taskType) {
+    int vcores = 1;
+    if (taskType == TaskType.MAP)  {
+      vcores =
+          conf.getInt(MRJobConfig.MAP_CPU_VCORES,
+              MRJobConfig.DEFAULT_MAP_CPU_VCORES);
+    } else if (taskType == TaskType.REDUCE) {
+      vcores =
+          conf.getInt(MRJobConfig.REDUCE_CPU_VCORES,
+              MRJobConfig.DEFAULT_REDUCE_CPU_VCORES);
+    }
+    
+    return vcores;
   }
 
   /**
@@ -581,6 +600,7 @@ public abstract class TaskAttemptImpl implements
       Map<String, String> env = new HashMap<String, String>();
       MRApps.setClasspath(env, conf);
       initialClasspath = env.get(Environment.CLASSPATH.name());
+      initialAppClasspath = env.get(Environment.APP_CLASSPATH.name());
       initialClasspathFlag.set(true);
       return initialClasspath;
     }
@@ -679,6 +699,13 @@ public abstract class TaskAttemptImpl implements
           environment,  
           Environment.CLASSPATH.name(), 
           getInitialClasspath(conf));
+
+      if (initialAppClasspath != null) {
+        Apps.addToEnvironment(
+            environment,  
+            Environment.APP_CLASSPATH.name(), 
+            initialAppClasspath);
+      }
     } catch (IOException e) {
       throw new YarnException(e);
     }

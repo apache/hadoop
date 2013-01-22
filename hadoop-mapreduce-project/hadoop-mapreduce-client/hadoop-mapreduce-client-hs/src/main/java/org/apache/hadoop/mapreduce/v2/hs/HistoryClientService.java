@@ -24,6 +24,7 @@ import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +38,8 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -61,6 +64,8 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -75,7 +80,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -83,6 +87,7 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
@@ -314,13 +319,10 @@ public class HistoryClientService extends AbstractService {
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
       // Verify that the connection is kerberos authenticated
-      AuthenticationMethod authMethod = UserGroupInformation
-        .getRealAuthenticationMethod(ugi);
-      if (UserGroupInformation.isSecurityEnabled()
-          && (authMethod != AuthenticationMethod.KERBEROS)) {
-       throw new IOException(
-          "Delegation Token can be issued only with kerberos authentication");
-      }
+        if (!isAllowedDelegationTokenOp()) {
+          throw new IOException(
+              "Delegation Token can be issued only with kerberos authentication");
+        }
 
       GetDelegationTokenResponse response = recordFactory.newRecordInstance(
           GetDelegationTokenResponse.class);
@@ -347,6 +349,55 @@ public class HistoryClientService extends AbstractService {
       }
     }
 
+    @Override
+    public RenewDelegationTokenResponse renewDelegationToken(
+        RenewDelegationTokenRequest request) throws YarnRemoteException {
+      try {
+        if (!isAllowedDelegationTokenOp()) {
+          throw new IOException(
+              "Delegation Token can be renewed only with kerberos authentication");
+        }
+
+        DelegationToken protoToken = request.getDelegationToken();
+        Token<MRDelegationTokenIdentifier> token = new Token<MRDelegationTokenIdentifier>(
+            protoToken.getIdentifier().array(), protoToken.getPassword()
+                .array(), new Text(protoToken.getKind()), new Text(
+                protoToken.getService()));
+
+        String user = UserGroupInformation.getCurrentUser().getShortUserName();
+        long nextExpTime = jhsDTSecretManager.renewToken(token, user);
+        RenewDelegationTokenResponse renewResponse = Records
+            .newRecord(RenewDelegationTokenResponse.class);
+        renewResponse.setNextExpirationTime(nextExpTime);
+        return renewResponse;
+      } catch (IOException e) {
+        throw RPCUtil.getRemoteException(e);
+      }
+    }
+
+    @Override
+    public CancelDelegationTokenResponse cancelDelegationToken(
+        CancelDelegationTokenRequest request) throws YarnRemoteException {
+      try {
+        if (!isAllowedDelegationTokenOp()) {
+          throw new IOException(
+              "Delegation Token can be cancelled only with kerberos authentication");
+        }
+        
+        DelegationToken protoToken = request.getDelegationToken();
+        Token<MRDelegationTokenIdentifier> token = new Token<MRDelegationTokenIdentifier>(
+            protoToken.getIdentifier().array(), protoToken.getPassword()
+                .array(), new Text(protoToken.getKind()), new Text(
+                protoToken.getService()));
+
+        String user = UserGroupInformation.getCurrentUser().getShortUserName();
+        jhsDTSecretManager.cancelToken(token, user);
+        return Records.newRecord(CancelDelegationTokenResponse.class);
+      } catch (IOException e) {
+        throw RPCUtil.getRemoteException(e);
+      }
+    }
+
     private void checkAccess(Job job, JobACL jobOperation)
         throws YarnRemoteException {
 
@@ -362,5 +413,18 @@ public class HistoryClientService extends AbstractService {
             + jobOperation.name() + " on " + job.getID()));
       }
     }
+
+    private boolean isAllowedDelegationTokenOp() throws IOException {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        return EnumSet.of(AuthenticationMethod.KERBEROS,
+                          AuthenticationMethod.KERBEROS_SSL,
+                          AuthenticationMethod.CERTIFICATE)
+            .contains(UserGroupInformation.getCurrentUser()
+                    .getRealAuthenticationMethod());
+      } else {
+        return true;
+      }
+    }
+
   }
 }

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -77,7 +78,7 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
-    public String getClientToken() {
+    public ClientToken getClientToken() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -127,7 +128,7 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
-    public void setClientToken(String clientToken) {
+    public void setClientToken(ClientToken clientToken) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 

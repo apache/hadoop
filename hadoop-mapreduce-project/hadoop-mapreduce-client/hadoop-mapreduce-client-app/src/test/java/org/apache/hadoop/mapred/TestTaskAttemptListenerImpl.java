@@ -24,6 +24,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +34,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
@@ -41,7 +44,9 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
@@ -51,8 +56,9 @@ public class TestTaskAttemptListenerImpl {
 
     public MockTaskAttemptListenerImpl(AppContext context,
         JobTokenSecretManager jobTokenSecretManager,
+        RMHeartbeatHandler rmHeartbeatHandler,
         TaskHeartbeatHandler hbHandler) {
-      super(context, jobTokenSecretManager);
+      super(context, jobTokenSecretManager, rmHeartbeatHandler);
       this.taskHeartbeatHandler = hbHandler;
     }
     
@@ -76,9 +82,12 @@ public class TestTaskAttemptListenerImpl {
   public void testGetTask() throws IOException {
     AppContext appCtx = mock(AppContext.class);
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class); 
+    RMHeartbeatHandler rmHeartbeatHandler =
+        mock(RMHeartbeatHandler.class);
     TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
     MockTaskAttemptListenerImpl listener = 
-      new MockTaskAttemptListenerImpl(appCtx, secret, hbHandler);
+      new MockTaskAttemptListenerImpl(appCtx, secret,
+          rmHeartbeatHandler, hbHandler);
     Configuration conf = new Configuration();
     listener.init(conf);
     listener.start();
@@ -145,16 +154,21 @@ public class TestTaskAttemptListenerImpl {
       .thenReturn(Arrays.copyOfRange(taskEvents, 0, 2));
     when(mockJob.getTaskAttemptCompletionEvents(2, 100))
       .thenReturn(Arrays.copyOfRange(taskEvents, 2, 4));
-    when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(mapEvents);
-    when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(mapEvents);
-    when(mockJob.getMapAttemptCompletionEvents(2, 100)).thenReturn(empty);
+    when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(
+        TypeConverter.fromYarn(mapEvents));
+    when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(
+        TypeConverter.fromYarn(mapEvents));
+    when(mockJob.getMapAttemptCompletionEvents(2, 100)).thenReturn(
+        TypeConverter.fromYarn(empty));
 
     AppContext appCtx = mock(AppContext.class);
     when(appCtx.getJob(any(JobId.class))).thenReturn(mockJob);
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class);
+    RMHeartbeatHandler rmHeartbeatHandler =
+        mock(RMHeartbeatHandler.class);
     final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
     TaskAttemptListenerImpl listener =
-        new TaskAttemptListenerImpl(appCtx, secret) {
+        new TaskAttemptListenerImpl(appCtx, secret, rmHeartbeatHandler) {
       @Override
       protected void registerHeartbeatHandler(Configuration conf) {
         taskHeartbeatHandler = hbHandler;
@@ -191,4 +205,46 @@ public class TestTaskAttemptListenerImpl {
     return tce;
   }
 
+  @Test
+  public void testCommitWindow() throws IOException {
+    SystemClock clock = new SystemClock();
+
+    org.apache.hadoop.mapreduce.v2.app.job.Task mockTask =
+        mock(org.apache.hadoop.mapreduce.v2.app.job.Task.class);
+    when(mockTask.canCommit(any(TaskAttemptId.class))).thenReturn(true);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getTask(any(TaskId.class))).thenReturn(mockTask);
+    AppContext appCtx = mock(AppContext.class);
+    when(appCtx.getJob(any(JobId.class))).thenReturn(mockJob);
+    when(appCtx.getClock()).thenReturn(clock);
+    JobTokenSecretManager secret = mock(JobTokenSecretManager.class);
+    RMHeartbeatHandler rmHeartbeatHandler =
+        mock(RMHeartbeatHandler.class);
+    final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
+    TaskAttemptListenerImpl listener =
+        new TaskAttemptListenerImpl(appCtx, secret, rmHeartbeatHandler) {
+      @Override
+      protected void registerHeartbeatHandler(Configuration conf) {
+        taskHeartbeatHandler = hbHandler;
+      }
+    };
+
+    Configuration conf = new Configuration();
+    listener.init(conf);
+    listener.start();
+
+    // verify commit not allowed when RM heartbeat has not occurred recently
+    TaskAttemptID tid = new TaskAttemptID("12345", 1, TaskType.REDUCE, 1, 0);
+    boolean canCommit = listener.canCommit(tid);
+    assertFalse(canCommit);
+    verify(mockTask, never()).canCommit(any(TaskAttemptId.class));
+
+    // verify commit allowed when RM heartbeat is recent
+    when(rmHeartbeatHandler.getLastHeartbeatTime()).thenReturn(clock.getTime());
+    canCommit = listener.canCommit(tid);
+    assertTrue(canCommit);
+    verify(mockTask, times(1)).canCommit(any(TaskAttemptId.class));
+
+    listener.stop();
+  }
 }

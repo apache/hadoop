@@ -275,7 +275,7 @@ public class AppSchedulable extends Schedulable {
       // The desired container won't fit here, so reserve
       reserve(application, priority, node, container, reserved);
 
-      return Resources.none();
+      return FairScheduler.CONTAINER_RESERVED;
     }
   }
 
@@ -307,20 +307,27 @@ public class AppSchedulable extends Schedulable {
     // (not scheduled) in order to promote better locality.
     synchronized (app) {
       for (Priority priority : prioritiesToTry) {
+        if (app.getTotalRequiredResources(priority) <= 0) {
+          continue;
+        }
+        
         app.addSchedulingOpportunity(priority);
+
+        ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
+            node.getRackName());
+        ResourceRequest localRequest = app.getResourceRequest(priority,
+            node.getHostName());
+        
         NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
             scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
             scheduler.getRackLocalityThreshold());
-
-        ResourceRequest localRequest = app.getResourceRequest(priority,
-            node.getHostName());
-        if (localRequest != null && localRequest.getNumContainers() != 0) {
+        
+        if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
+            && localRequest != null && localRequest.getNumContainers() != 0) {
           return assignContainer(node, app, priority,
               localRequest, NodeType.NODE_LOCAL, reserved);
         }
 
-        ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
-            node.getRackName());
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && (allowedLocality.equals(NodeType.RACK_LOCAL) ||
                 allowedLocality.equals(NodeType.OFF_SWITCH))) {

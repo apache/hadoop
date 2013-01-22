@@ -118,7 +118,7 @@ public class TestUtils {
       RecordFactory recordFactory) {
     ResourceRequest request = 
         recordFactory.newRecordInstance(ResourceRequest.class);
-    Resource capability = Resources.createResource(memory);
+    Resource capability = Resources.createResource(memory, 1);
     
     request.setNumContainers(numContainers);
     request.setHostName(hostName);
@@ -153,7 +153,7 @@ public class TestUtils {
     RMNode rmNode = mock(RMNode.class);
     when(rmNode.getNodeID()).thenReturn(nodeId);
     when(rmNode.getTotalCapability()).thenReturn(
-        Resources.createResource(capability));
+        Resources.createResource(capability, 1));
     when(rmNode.getNodeAddress()).thenReturn(host+":"+port);
     when(rmNode.getHostName()).thenReturn(host);
     when(rmNode.getRackName()).thenReturn(rack);

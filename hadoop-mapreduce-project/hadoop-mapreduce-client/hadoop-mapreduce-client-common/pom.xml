@@ -81,6 +81,7 @@
             <configuration>
               <executable>protoc</executable>
               <arguments>
+                <argument>-I../../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
                 <argument>-I../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/proto</argument>

@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.security;
 
+import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -148,8 +151,32 @@ public class Credentials implements Writable {
       in.close();
       return credentials;
     } catch(IOException ioe) {
-      IOUtils.cleanup(LOG, in);
       throw new IOException("Exception reading " + filename, ioe);
+    } finally {
+      IOUtils.cleanup(LOG, in);
+    }
+  }
+
+  /**
+   * Convenience method for reading a token storage file, and loading the Tokens
+   * therein in the passed UGI
+   * @param filename
+   * @param conf
+   * @throws IOException
+   */
+  public static Credentials readTokenStorageFile(File filename, Configuration conf)
+      throws IOException {
+    DataInputStream in = null;
+    Credentials credentials = new Credentials();
+    try {
+      in = new DataInputStream(new BufferedInputStream(
+          new FileInputStream(filename)));
+      credentials.readTokenStorageStream(in);
+      return credentials;
+    } catch(IOException ioe) {
+      throw new IOException("Exception reading " + filename, ioe);
+    } finally {
+      IOUtils.cleanup(LOG, in);
     }
   }
   
