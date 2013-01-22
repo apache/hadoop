@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.ShuffleHandler;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -556,7 +557,7 @@ public class MockJobs extends MockApps {
       }
 
       @Override
-      public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+      public TaskCompletionEvent[] getMapAttemptCompletionEvents(
           int startIndex, int maxEvents) {
         return null;
       }
