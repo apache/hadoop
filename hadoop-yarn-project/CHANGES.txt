@@ -84,6 +84,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-331. Fill in missing fair scheduler documentation. (sandyr via tucu)
 
+    YARN-277. Use AMRMClient in DistributedShell to exemplify the approach.
+    (Bikas Saha via hitesh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
