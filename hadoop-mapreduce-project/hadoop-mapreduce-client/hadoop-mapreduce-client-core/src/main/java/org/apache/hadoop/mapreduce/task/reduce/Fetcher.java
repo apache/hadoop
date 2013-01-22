@@ -19,8 +19,6 @@ package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -38,12 +36,7 @@ import javax.net.ssl.HttpsURLConnection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.compress.CodecPool;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.Counters;
-import org.apache.hadoop.mapred.IFileInputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -51,9 +44,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
-import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -70,7 +60,7 @@ class Fetcher<K,V> extends Thread {
   /* Default read timeout (in milliseconds) */
   private final static int DEFAULT_READ_TIMEOUT = 3 * 60 * 1000;
 
-  private final Progressable reporter;
+  private final Reporter reporter;
   private static enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
                                     CONNECTION, WRONG_REDUCE}
   
@@ -92,14 +82,9 @@ class Fetcher<K,V> extends Thread {
   private final int connectionTimeout;
   private final int readTimeout;
   
-  // Decompression of map-outputs
-  private final CompressionCodec codec;
-  private final Decompressor decompressor;
   private final SecretKey jobTokenSecret;
 
   private volatile boolean stopped = false;
-
-  private JobConf job;
 
   private static boolean sslShuffle;
   private static SSLFactory sslFactory;
@@ -108,7 +93,6 @@ class Fetcher<K,V> extends Thread {
                  ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey jobTokenSecret) {
-    this.job = job;
     this.reporter = reporter;
     this.scheduler = scheduler;
     this.merger = merger;
@@ -130,16 +114,6 @@ class Fetcher<K,V> extends Thread {
     wrongReduceErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
         ShuffleErrors.WRONG_REDUCE.toString());
     
-    if (job.getCompressMapOutput()) {
-      Class<? extends CompressionCodec> codecClass =
-        job.getMapOutputCompressorClass(DefaultCodec.class);
-      codec = ReflectionUtils.newInstance(codecClass, job);
-      decompressor = CodecPool.getDecompressor(codec);
-    } else {
-      codec = null;
-      decompressor = null;
-    }
-
     this.connectionTimeout = 
       job.getInt(MRJobConfig.SHUFFLE_CONNECT_TIMEOUT,
                  DEFAULT_STALLED_COPY_TIMEOUT);
@@ -170,7 +144,7 @@ class Fetcher<K,V> extends Thread {
         MapHost host = null;
         try {
           // If merge is on, block
-          merger.waitForInMemoryMerge();
+          merger.waitForResource();
 
           // Get a host to shuffle from
           host = scheduler.getHost();
@@ -386,8 +360,8 @@ class Fetcher<K,V> extends Thread {
       mapOutput = merger.reserve(mapId, decompressedLength, id);
       
       // Check if we can shuffle *now* ...
-      if (mapOutput.getType() == Type.WAIT) {
-        LOG.info("fetcher#" + id + " - MergerManager returned Status.WAIT ...");
+      if (mapOutput == null) {
+        LOG.info("fetcher#" + id + " - MergeManager returned status WAIT ...");
         //Not an error but wait to process data.
         return EMPTY_ATTEMPT_ID_ARRAY;
       } 
@@ -396,13 +370,9 @@ class Fetcher<K,V> extends Thread {
       LOG.info("fetcher#" + id + " about to shuffle output of map " + 
                mapOutput.getMapId() + " decomp: " +
                decompressedLength + " len: " + compressedLength + " to " +
-               mapOutput.getType());
-      if (mapOutput.getType() == Type.MEMORY) {
-        shuffleToMemory(host, mapOutput, input, 
-                        (int) decompressedLength, (int) compressedLength);
-      } else {
-        shuffleToDisk(host, mapOutput, input, compressedLength);
-      }
+               mapOutput.getDescription());
+      mapOutput.shuffle(host, input, compressedLength, decompressedLength,
+                        metrics, reporter);
       
       // Inform the shuffle scheduler
       long endTime = System.currentTimeMillis();
@@ -536,86 +506,6 @@ class Fetcher<K,V> extends Thread {
           connection.setConnectTimeout(unit);
         }
       }
-    }
-  }
-
-  private void shuffleToMemory(MapHost host, MapOutput<K,V> mapOutput, 
-                               InputStream input, 
-                               int decompressedLength, 
-                               int compressedLength) throws IOException {    
-    IFileInputStream checksumIn = 
-      new IFileInputStream(input, compressedLength, job);
-
-    input = checksumIn;       
-  
-    // Are map-outputs compressed?
-    if (codec != null) {
-      decompressor.reset();
-      input = codec.createInputStream(input, decompressor);
-    }
-  
-    // Copy map-output into an in-memory buffer
-    byte[] shuffleData = mapOutput.getMemory();
-    
-    try {
-      IOUtils.readFully(input, shuffleData, 0, shuffleData.length);
-      metrics.inputBytes(shuffleData.length);
-      reporter.progress();
-      LOG.info("Read " + shuffleData.length + " bytes from map-output for " +
-               mapOutput.getMapId());
-    } catch (IOException ioe) {      
-      // Close the streams
-      IOUtils.cleanup(LOG, input);
-
-      // Re-throw
-      throw ioe;
-    }
-
-  }
-  
-  private void shuffleToDisk(MapHost host, MapOutput<K,V> mapOutput, 
-                             InputStream input, 
-                             long compressedLength) 
-  throws IOException {
-    // Copy data to local-disk
-    OutputStream output = mapOutput.getDisk();
-    long bytesLeft = compressedLength;
-    try {
-      final int BYTES_TO_READ = 64 * 1024;
-      byte[] buf = new byte[BYTES_TO_READ];
-      while (bytesLeft > 0) {
-        int n = input.read(buf, 0, (int) Math.min(bytesLeft, BYTES_TO_READ));
-        if (n < 0) {
-          throw new IOException("read past end of stream reading " + 
-                                mapOutput.getMapId());
-        }
-        output.write(buf, 0, n);
-        bytesLeft -= n;
-        metrics.inputBytes(n);
-        reporter.progress();
-      }
-
-      LOG.info("Read " + (compressedLength - bytesLeft) + 
-               " bytes from map-output for " +
-               mapOutput.getMapId());
-
-      output.close();
-    } catch (IOException ioe) {
-      // Close the streams
-      IOUtils.cleanup(LOG, input, output);
-
-      // Re-throw
-      throw ioe;
-    }
-
-    // Sanity check
-    if (bytesLeft != 0) {
-      throw new IOException("Incomplete map output received for " +
-                            mapOutput.getMapId() + " from " +
-                            host.getHostName() + " (" + 
-                            bytesLeft + " bytes missing of " + 
-                            compressedLength + ")"
-      );
     }
   }
 }
