@@ -205,6 +205,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4393. Make empty request and responses in protocol translators can be
     static final members. (Brandon Li via suresh)
 
+    HDFS-4403. DFSClient can infer checksum type when not provided by reading
+    first byte (todd)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)

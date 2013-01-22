@@ -183,5 +183,5 @@ message OpBlockChecksumResponseProto {
   required uint32 bytesPerCrc = 1;
   required uint64 crcPerBlock = 2;
   required bytes md5 = 3;
-  optional ChecksumTypeProto crcType = 4 [default = CHECKSUM_CRC32];
+  optional ChecksumTypeProto crcType = 4;
 }
