@@ -34,6 +34,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
@@ -153,9 +154,12 @@ public class TestTaskAttemptListenerImpl {
       .thenReturn(Arrays.copyOfRange(taskEvents, 0, 2));
     when(mockJob.getTaskAttemptCompletionEvents(2, 100))
       .thenReturn(Arrays.copyOfRange(taskEvents, 2, 4));
-    when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(mapEvents);
-    when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(mapEvents);
-    when(mockJob.getMapAttemptCompletionEvents(2, 100)).thenReturn(empty);
+    when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(
+        TypeConverter.fromYarn(mapEvents));
+    when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(
+        TypeConverter.fromYarn(mapEvents));
+    when(mockJob.getMapAttemptCompletionEvents(2, 100)).thenReturn(
+        TypeConverter.fromYarn(empty));
 
     AppContext appCtx = mock(AppContext.class);
     when(appCtx.getJob(any(JobId.class))).thenReturn(mockJob);
