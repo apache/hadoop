@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -212,7 +209,7 @@ public class Client extends YarnClientImpl {
   /**
    */
   public Client() throws Exception  {
-    this(new Configuration());
+    this(new YarnConfiguration());
   }
 
   /**
