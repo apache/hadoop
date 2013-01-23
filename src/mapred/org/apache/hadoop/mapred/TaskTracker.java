@@ -2805,7 +2805,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       this.localJobConf = lconf;
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
       taskTimeout = localJobConf.getLong("mapred.task.timeout", 
-                                         10 * 60 * 1000);
+                                         Integer.MIN_VALUE);
+      if (taskTimeout == Integer.MIN_VALUE) {
+        taskTimeout = localJobConf.getLong("mapreduce.task.timeout", 
+            10 * 60 * 1000);
+      }
       if (task.isMapTask()) {
         debugCommand = localJobConf.getMapDebugScript();
       } else {
