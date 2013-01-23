@@ -69,6 +69,9 @@ Release 0.23.6 - UNRELEASED
     YARN-170. NodeManager stop() gets called twice on shutdown (Sandy Ryza
     via tgraves)
 
+    YARN-354. WebAppProxyServer exits immediately after startup (Liang Xie via
+    jlowe)
+
 Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
