@@ -208,6 +208,10 @@ Release 2.0.3-alpha - Unreleased
     unregistered on App-finish. (vinodkv via sseth)
 
     YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
+    
+    YARN-319. Submitting a job to a fair scheduler queue for which the user
+    does not have permission causes the client to wait forever.
+    (shenhong via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
