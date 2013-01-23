@@ -282,6 +282,17 @@ public class SecondaryNameNode implements Runnable {
   }
 
   /**
+   * Wait for the service to finish.
+   * (Normally, it runs forever.)
+   */
+  private void join() {
+    try {
+      infoServer.join();
+    } catch (InterruptedException ie) {
+    }
+  }
+
+  /**
    * Shut down this instance of the datanode.
    * Returns only after shutdown is complete.
    */
@@ -607,6 +618,7 @@ public class SecondaryNameNode implements Runnable {
 
     if (secondary != null) {
       secondary.startCheckpointThread();
+      secondary.join();
     }
   }
   
