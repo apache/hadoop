@@ -439,6 +439,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
 
+    HADOOP-8580. ant compile-native fails with automake version 1.11.3.
+    (Gera Shegalov via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

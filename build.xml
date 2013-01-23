@@ -697,8 +697,8 @@
   	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
     </exec>
 
-	<exec dir="${build.native}" executable="sh" failonerror="true">
-	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/libhadoop.la ${build.native}/lib"/>
+	<exec dir="${build.native}" executable="${build.native}/libtool" failonerror="true">
+	  <arg line="--mode=install cp ${build.native}/libhadoop.la ${build.native}/lib"/>
     </exec>
 
   </target>
