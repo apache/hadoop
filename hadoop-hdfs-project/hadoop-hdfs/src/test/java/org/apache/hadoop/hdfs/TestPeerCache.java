@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.ReadableByteChannel;
-import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,11 +36,10 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.google.common.collect.HashMultiset;
+
 public class TestPeerCache {
   static final Log LOG = LogFactory.getLog(TestPeerCache.class);
-
-  private static final int CAPACITY = 3;
-  private static final int EXPIRY_PERIOD = 20;
 
   private static class FakePeer implements Peer {
     private boolean closed = false;
@@ -132,11 +130,24 @@ public class TestPeerCache {
               throw new RuntimeException("injected fault.");
           } });
     }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof FakePeer)) return false;
+      FakePeer other = (FakePeer)o;
+      return hasDomain == other.hasDomain &&
+          dnId.equals(other.dnId);
+    }
+
+    @Override
+    public int hashCode() {
+      return dnId.hashCode() ^ (hasDomain ? 1 : 0);
+    }
   }
 
   @Test
   public void testAddAndRetrieve() throws Exception {
-    PeerCache cache = PeerCache.getInstance(3, 100000);
+    PeerCache cache = new PeerCache(3, 100000);
     DatanodeID dnId = new DatanodeID("192.168.0.1",
           "fakehostname", "fake_storage_id",
           100, 101, 102);
@@ -146,14 +157,14 @@ public class TestPeerCache {
     assertEquals(1, cache.size());
     assertEquals(peer, cache.get(dnId, false));
     assertEquals(0, cache.size());
-    cache.clear();
+    cache.close();
   }
 
   @Test
   public void testExpiry() throws Exception {
     final int CAPACITY = 3;
     final int EXPIRY_PERIOD = 10;
-    PeerCache cache = PeerCache.getInstance(CAPACITY, EXPIRY_PERIOD);
+    PeerCache cache = new PeerCache(CAPACITY, EXPIRY_PERIOD);
     DatanodeID dnIds[] = new DatanodeID[CAPACITY];
     FakePeer peers[] = new FakePeer[CAPACITY];
     for (int i = 0; i < CAPACITY; ++i) {
@@ -178,13 +189,13 @@ public class TestPeerCache {
     // sleep for another second and see if 
     // the daemon thread runs fine on empty cache
     Thread.sleep(EXPIRY_PERIOD * 50);
-    cache.clear();
+    cache.close();
   }
 
   @Test
   public void testEviction() throws Exception {
     final int CAPACITY = 3;
-    PeerCache cache = PeerCache.getInstance(CAPACITY, 100000);
+    PeerCache cache = new PeerCache(CAPACITY, 100000);
     DatanodeID dnIds[] = new DatanodeID[CAPACITY + 1];
     FakePeer peers[] = new FakePeer[CAPACITY + 1];
     for (int i = 0; i < dnIds.length; ++i) {
@@ -212,17 +223,17 @@ public class TestPeerCache {
       peer.close();
     }
     assertEquals(1, cache.size());
-    cache.clear();
+    cache.close();
   }
 
   @Test
-  public void testMultiplePeersWithSameDnId() throws Exception {
+  public void testMultiplePeersWithSameKey() throws Exception {
     final int CAPACITY = 3;
-    PeerCache cache = PeerCache.getInstance(CAPACITY, 100000);
+    PeerCache cache = new PeerCache(CAPACITY, 100000);
     DatanodeID dnId = new DatanodeID("192.168.0.1",
           "fakehostname", "fake_storage_id",
           100, 101, 102);
-    HashSet<FakePeer> peers = new HashSet<FakePeer>(CAPACITY);
+    HashMultiset<FakePeer> peers = HashMultiset.create(CAPACITY);
     for (int i = 0; i < CAPACITY; ++i) {
       FakePeer peer = new FakePeer(dnId, false);
       peers.add(peer);
@@ -237,17 +248,17 @@ public class TestPeerCache {
       peers.remove(peer);
     }
     assertEquals(0, cache.size());
-    cache.clear();
+    cache.close();
   }
 
   @Test
   public void testDomainSocketPeers() throws Exception {
     final int CAPACITY = 3;
-    PeerCache cache = PeerCache.getInstance(CAPACITY, 100000);
+    PeerCache cache = new PeerCache(CAPACITY, 100000);
     DatanodeID dnId = new DatanodeID("192.168.0.1",
           "fakehostname", "fake_storage_id",
           100, 101, 102);
-    HashSet<FakePeer> peers = new HashSet<FakePeer>(CAPACITY);
+    HashMultiset<FakePeer> peers = HashMultiset.create(CAPACITY);
     for (int i = 0; i < CAPACITY; ++i) {
       FakePeer peer = new FakePeer(dnId, i == CAPACITY - 1);
       peers.add(peer);
@@ -272,6 +283,6 @@ public class TestPeerCache {
       peers.remove(peer);
     }
     assertEquals(0, cache.size());
-    cache.clear();
+    cache.close();
   }
 }
