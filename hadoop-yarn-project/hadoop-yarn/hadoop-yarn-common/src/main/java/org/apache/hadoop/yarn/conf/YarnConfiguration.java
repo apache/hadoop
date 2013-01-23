@@ -236,6 +236,10 @@ public class YarnConfiguration extends Configuration {
   /** The class to use as the persistent store.*/
   public static final String RM_STORE = RM_PREFIX + "store.class";
   
+  /** URI for FileSystemRMStateStore */
+  public static final String FS_RM_STATE_STORE_URI =
+                                           RM_PREFIX + "fs.rm-state-store.uri";
+
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
     RM_PREFIX + "max-completed-applications";

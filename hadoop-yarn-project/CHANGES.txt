@@ -37,6 +37,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-328. Use token request messages defined in hadoop common. (suresh)
 
+    YARN-231. RM Restart - Add FS-based persistent store implementation for
+    RMStateStore (Bikas Saha via hitesh)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.
