@@ -335,6 +335,9 @@ Release 0.23.6 - UNRELEASED
 
     YARN-334. Maven RAT plugin is not checking all source files (tgraves)
 
+    YARN-354. WebAppProxyServer exits immediately after startup (Liang Xie via
+    jlowe)
+
 Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
