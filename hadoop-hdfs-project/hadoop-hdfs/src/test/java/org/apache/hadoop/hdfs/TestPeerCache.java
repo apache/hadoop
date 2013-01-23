@@ -33,22 +33,25 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestPeerCache {
   static final Log LOG = LogFactory.getLog(TestPeerCache.class);
 
   private static final int CAPACITY = 3;
   private static final int EXPIRY_PERIOD = 20;
-  private static PeerCache cache =
-      PeerCache.getInstance(CAPACITY, EXPIRY_PERIOD);
 
   private static class FakePeer implements Peer {
     private boolean closed = false;
+    private final boolean hasDomain;
 
     private DatanodeID dnId;
 
-    public FakePeer(DatanodeID dnId) {
+    public FakePeer(DatanodeID dnId, boolean hasDomain) {
       this.dnId = dnId;
+      this.hasDomain = hasDomain;
     }
 
     @Override
@@ -118,39 +121,50 @@ public class TestPeerCache {
 
     @Override
     public DomainSocket getDomainSocket() {
-      return null;
+      if (!hasDomain) return null;
+      // Return a mock which throws an exception whenever any function is
+      // called.
+      return Mockito.mock(DomainSocket.class,
+          new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocation)
+                throws Throwable {
+              throw new RuntimeException("injected fault.");
+          } });
     }
   }
 
   @Test
   public void testAddAndRetrieve() throws Exception {
+    PeerCache cache = PeerCache.getInstance(3, 100000);
     DatanodeID dnId = new DatanodeID("192.168.0.1",
           "fakehostname", "fake_storage_id",
           100, 101, 102);
-    FakePeer peer = new FakePeer(dnId);
+    FakePeer peer = new FakePeer(dnId, false);
     cache.put(dnId, peer);
     assertTrue(!peer.isClosed());
     assertEquals(1, cache.size());
-    assertEquals(peer, cache.get(dnId));
+    assertEquals(peer, cache.get(dnId, false));
     assertEquals(0, cache.size());
     cache.clear();
   }
 
   @Test
   public void testExpiry() throws Exception {
+    final int CAPACITY = 3;
+    final int EXPIRY_PERIOD = 10;
+    PeerCache cache = PeerCache.getInstance(CAPACITY, EXPIRY_PERIOD);
     DatanodeID dnIds[] = new DatanodeID[CAPACITY];
     FakePeer peers[] = new FakePeer[CAPACITY];
     for (int i = 0; i < CAPACITY; ++i) {
       dnIds[i] = new DatanodeID("192.168.0.1",
           "fakehostname_" + i, "fake_storage_id",
           100, 101, 102);
-      peers[i] = new FakePeer(dnIds[i]);
+      peers[i] = new FakePeer(dnIds[i], false);
     }
     for (int i = 0; i < CAPACITY; ++i) {
       cache.put(dnIds[i], peers[i]);
     }
-    // Check that the peers are cached
-    assertEquals(CAPACITY, cache.size());
 
     // Wait for the peers to expire
     Thread.sleep(EXPIRY_PERIOD * 50);
@@ -169,13 +183,15 @@ public class TestPeerCache {
 
   @Test
   public void testEviction() throws Exception {
+    final int CAPACITY = 3;
+    PeerCache cache = PeerCache.getInstance(CAPACITY, 100000);
     DatanodeID dnIds[] = new DatanodeID[CAPACITY + 1];
     FakePeer peers[] = new FakePeer[CAPACITY + 1];
     for (int i = 0; i < dnIds.length; ++i) {
       dnIds[i] = new DatanodeID("192.168.0.1",
           "fakehostname_" + i, "fake_storage_id_" + i,
           100, 101, 102);
-      peers[i] = new FakePeer(dnIds[i]);
+      peers[i] = new FakePeer(dnIds[i], false);
     }
     for (int i = 0; i < CAPACITY; ++i) {
       cache.put(dnIds[i], peers[i]);
@@ -186,11 +202,11 @@ public class TestPeerCache {
     // Add another entry and check that the first entry was evicted
     cache.put(dnIds[CAPACITY], peers[CAPACITY]);
     assertEquals(CAPACITY, cache.size());
-    assertSame(null, cache.get(dnIds[0]));
+    assertSame(null, cache.get(dnIds[0], false));
 
     // Make sure that the other entries are still there
     for (int i = 1; i < CAPACITY; ++i) {
-      Peer peer = cache.get(dnIds[i]);
+      Peer peer = cache.get(dnIds[i], false);
       assertSame(peers[i], peer);
       assertTrue(!peer.isClosed());
       peer.close();
@@ -201,19 +217,56 @@ public class TestPeerCache {
 
   @Test
   public void testMultiplePeersWithSameDnId() throws Exception {
+    final int CAPACITY = 3;
+    PeerCache cache = PeerCache.getInstance(CAPACITY, 100000);
     DatanodeID dnId = new DatanodeID("192.168.0.1",
           "fakehostname", "fake_storage_id",
           100, 101, 102);
     HashSet<FakePeer> peers = new HashSet<FakePeer>(CAPACITY);
     for (int i = 0; i < CAPACITY; ++i) {
-      FakePeer peer = new FakePeer(dnId);
+      FakePeer peer = new FakePeer(dnId, false);
       peers.add(peer);
       cache.put(dnId, peer);
     }
     // Check that all of the peers ended up in the cache
     assertEquals(CAPACITY, cache.size());
     while (!peers.isEmpty()) {
-      Peer peer = cache.get(dnId);
+      Peer peer = cache.get(dnId, false);
+      assertTrue(peer != null);
+      assertTrue(!peer.isClosed());
+      peers.remove(peer);
+    }
+    assertEquals(0, cache.size());
+    cache.clear();
+  }
+
+  @Test
+  public void testDomainSocketPeers() throws Exception {
+    final int CAPACITY = 3;
+    PeerCache cache = PeerCache.getInstance(CAPACITY, 100000);
+    DatanodeID dnId = new DatanodeID("192.168.0.1",
+          "fakehostname", "fake_storage_id",
+          100, 101, 102);
+    HashSet<FakePeer> peers = new HashSet<FakePeer>(CAPACITY);
+    for (int i = 0; i < CAPACITY; ++i) {
+      FakePeer peer = new FakePeer(dnId, i == CAPACITY - 1);
+      peers.add(peer);
+      cache.put(dnId, peer);
+    }
+    // Check that all of the peers ended up in the cache
+    assertEquals(CAPACITY, cache.size());
+    // Test that get(requireDomainPeer=true) finds the peer with the 
+    // domain socket.
+    Peer peer = cache.get(dnId, true);
+    assertTrue(peer.getDomainSocket() != null);
+    peers.remove(peer);
+    // Test that get(requireDomainPeer=true) returns null when there are
+    // no more peers with domain sockets.
+    peer = cache.get(dnId, true);
+    assertTrue(peer == null);
+    // Check that all of the other peers ended up in the cache.
+    while (!peers.isEmpty()) {
+      peer = cache.get(dnId, false);
       assertTrue(peer != null);
       assertTrue(!peer.isClosed());
       peers.remove(peer);

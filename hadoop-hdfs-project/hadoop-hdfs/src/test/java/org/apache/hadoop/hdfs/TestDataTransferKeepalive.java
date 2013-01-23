@@ -114,7 +114,7 @@ public class TestDataTransferKeepalive {
     
     // Take it out of the cache - reading should
     // give an EOF.
-    Peer peer = dfsClient.peerCache.get(dn.getDatanodeId());
+    Peer peer = dfsClient.peerCache.get(dn.getDatanodeId(), false);
     assertNotNull(peer);
     assertEquals(-1, peer.getInputStream().read());
   }

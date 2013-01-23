@@ -39,6 +39,30 @@ import org.apache.hadoop.util.Time;
 class PeerCache {
   private static final Log LOG = LogFactory.getLog(PeerCache.class);
   
+  private static class Key {
+    final DatanodeID dnID;
+    final boolean isDomain;
+    
+    Key(DatanodeID dnID, boolean isDomain) {
+      this.dnID = dnID;
+      this.isDomain = isDomain;
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof Key)) {
+        return false;
+      }
+      Key other = (Key)o;
+      return dnID.equals(other.dnID) && isDomain == other.isDomain;
+    }
+
+    @Override
+    public int hashCode() {
+      return dnID.hashCode() ^ (isDomain ? 1 : 0);
+    }
+  }
+  
   private static class Value {
     private final Peer peer;
     private final long time;
@@ -59,7 +83,7 @@ class PeerCache {
 
   private Daemon daemon;
   /** A map for per user per datanode. */
-  private static LinkedListMultimap<DatanodeID, Value> multimap =
+  private static LinkedListMultimap<Key, Value> multimap =
     LinkedListMultimap.create();
   private static int capacity;
   private static long expiryPeriod;
@@ -124,16 +148,18 @@ class PeerCache {
   /**
    * Get a cached peer connected to the given DataNode.
    * @param dnId         The DataNode to get a Peer for.
+   * @param isDomain     Whether to retrieve a DomainPeer or not.
+   *
    * @return             An open Peer connected to the DN, or null if none
    *                     was found. 
    */
-  public synchronized Peer get(DatanodeID dnId) {
+  public synchronized Peer get(DatanodeID dnId, boolean isDomain) {
 
     if (capacity <= 0) { // disabled
       return null;
     }
 
-    List<Value> sockStreamList = multimap.get(dnId);
+    List<Value> sockStreamList = multimap.get(new Key(dnId, isDomain));
     if (sockStreamList == null) {
       return null;
     }
@@ -168,7 +194,8 @@ class PeerCache {
     if (capacity == multimap.size()) {
       evictOldest();
     }
-    multimap.put(dnId, new Value(peer, Time.monotonicNow()));
+    multimap.put(new Key(dnId, peer.getDomainSocket() != null),
+        new Value(peer, Time.monotonicNow()));
   }
 
   public synchronized int size() {
@@ -180,9 +207,9 @@ class PeerCache {
    */
   private synchronized void evictExpired(long expiryPeriod) {
     while (multimap.size() != 0) {
-      Iterator<Entry<DatanodeID, Value>> iter =
+      Iterator<Entry<Key, Value>> iter =
         multimap.entries().iterator();
-      Entry<DatanodeID, Value> entry = iter.next();
+      Entry<Key, Value> entry = iter.next();
       // if oldest socket expired, remove it
       if (entry == null || 
         Time.monotonicNow() - entry.getValue().getTime() <
@@ -201,13 +228,13 @@ class PeerCache {
     // We can get the oldest element immediately, because of an interesting
     // property of LinkedListMultimap: its iterator traverses entries in the
     // order that they were added.
-    Iterator<Entry<DatanodeID, Value>> iter =
+    Iterator<Entry<Key, Value>> iter =
       multimap.entries().iterator();
     if (!iter.hasNext()) {
       throw new IllegalStateException("Cannot evict from empty cache! " +
         "capacity: " + capacity);
     }
-    Entry<DatanodeID, Value> entry = iter.next();
+    Entry<Key, Value> entry = iter.next();
     IOUtils.cleanup(LOG, entry.getValue().getPeer());
     iter.remove();
   }

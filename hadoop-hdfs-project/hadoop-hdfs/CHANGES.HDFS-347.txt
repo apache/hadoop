@@ -30,3 +30,6 @@ HDFS-4418. increase default FileInputStreamCache size (todd)
 
 HDFS-4416. Rename dfs.datanode.domain.socket.path to dfs.domain.socket.path
 (Colin Patrick McCabe via todd)
+
+HDFS-4417. Fix case where local reads get disabled incorrectly
+(Colin Patrick McCabe and todd via todd)

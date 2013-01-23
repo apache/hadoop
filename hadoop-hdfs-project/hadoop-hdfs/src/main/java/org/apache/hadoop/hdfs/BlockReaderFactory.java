@@ -68,7 +68,7 @@ public class BlockReaderFactory {
    *                             case.
    * @param allowShortCircuitLocalReads  True if short-circuit local reads
    *                                     should be allowed.
-   * @return New BlockReader instance, or null on error.
+   * @return New BlockReader instance
    */
   @SuppressWarnings("deprecation")
   public static BlockReader newBlockReader(
