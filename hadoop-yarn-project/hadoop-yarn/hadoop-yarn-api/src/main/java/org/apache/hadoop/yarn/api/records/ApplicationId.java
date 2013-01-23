@@ -38,6 +38,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Stable
 public abstract class ApplicationId implements Comparable<ApplicationId> {
   
+  public static final String appIdStrPrefix = "application_";
+
   /**
    * Get the short integer identifier of the <code>ApplicationId</code>
    * which is unique for all applications started by a particular instance
@@ -88,7 +90,7 @@ public abstract class ApplicationId implements Comparable<ApplicationId> {
 
   @Override
   public String toString() {
-    return "application_" + this.getClusterTimestamp() + "_"
+    return appIdStrPrefix + this.getClusterTimestamp() + "_"
         + appIdFormat.get().format(getId());
   }
 
