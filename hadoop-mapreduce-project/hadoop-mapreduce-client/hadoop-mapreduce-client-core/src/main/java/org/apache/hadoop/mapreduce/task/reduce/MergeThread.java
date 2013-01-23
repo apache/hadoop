@@ -34,12 +34,12 @@ abstract class MergeThread<T,K,V> extends Thread {
 
   private AtomicInteger numPending = new AtomicInteger(0);
   private LinkedList<List<T>> pendingToBeMerged;
-  protected final MergeManager<K,V> manager;
+  protected final MergeManagerImpl<K,V> manager;
   private final ExceptionReporter reporter;
   private boolean closed = false;
   private final int mergeFactor;
   
-  public MergeThread(MergeManager<K,V> manager, int mergeFactor,
+  public MergeThread(MergeManagerImpl<K,V> manager, int mergeFactor,
                      ExceptionReporter reporter) {
     this.pendingToBeMerged = new LinkedList<List<T>>();
     this.manager = manager;

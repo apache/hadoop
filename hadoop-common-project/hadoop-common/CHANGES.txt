@@ -146,6 +146,9 @@ Trunk (Unreleased)
     HADOOP-9162. Add utility to check native library availability.
     (Binglin Chang via suresh)
 
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
@@ -326,6 +329,8 @@ Release 2.0.3-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8999. SASL negotiation is flawed (daryn)
+
   NEW FEATURES
 
     HADOOP-8597. Permit FsShell's text command to read Avro files.
@@ -436,6 +441,18 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9192. Move token related request/response messages to common.
     (suresh)
 
+    HADOOP-8712. Change default hadoop.security.group.mapping to
+    JniBasedUnixGroupsNetgroupMappingWithFallback (Robert Parker via todd)
+
+    HADOOP-9106. Allow configuration of IPC connect timeout.
+    (Rober Parker via suresh)
+
+    HADOOP-9216. CompressionCodecFactory#getCodecClasses should trim the
+    result of parsing by Configuration. (Tsuyoshi Ozawa via todd)
+
+    HADOOP-9231. Parametrize staging URL for the uniformity of
+    distributionManagement. (Konstantin Boudnik via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
@@ -496,8 +513,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls (tucu)
 
-    HADOOP-8999. SASL negotiation is flawed (daryn)
-
     HADOOP-6607. Add different variants of non caching HTTP headers. (tucu)
 
     HADOOP-9049. DelegationTokenRenewer needs to be Singleton and FileSystems
@@ -542,6 +557,20 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9203. RPCCallBenchmark should find a random available port.
     (Andrew Purtell via suresh)
+
+    HADOOP-9178. src/main/conf is missing hadoop-policy.xml.
+    (Sandy Ryza via eli)
+
+    HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication. 
+    (moritzmoeller via tucu)
+    
+    HADOOP-9212. Potential deadlock in FileSystem.Cache/IPC/UGI. (tomwhite)
+
+    HADOOP-9193. hadoop script can inadvertently expand wildcard arguments
+    when delegating to hdfs script. (Andy Isaacson via todd)
+
+    HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
+    (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1233,6 +1262,21 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
+    permissions (Ivan A. Veselovsky via bobby)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1240,6 +1284,8 @@ Release 0.23.6 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
 
   OPTIMIZATIONS
 
@@ -1258,7 +1304,8 @@ Release 0.23.6 - UNRELEASED
 
     HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.5 - 2012-11-28
+
 
   INCOMPATIBLE CHANGES
 

@@ -395,7 +395,7 @@ class BPOfferService {
   }
 
   @VisibleForTesting
-  synchronized List<BPServiceActor> getBPServiceActors() {
+  List<BPServiceActor> getBPServiceActors() {
     return Lists.newArrayList(bpServices);
   }
   

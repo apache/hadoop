@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
@@ -441,7 +442,7 @@ public class TestRuntimeEstimators {
     }
 
     @Override
-    public TaskAttemptCompletionEvent[]
+    public TaskCompletionEvent[]
             getMapAttemptCompletionEvents(int startIndex, int maxEvents) {
       throw new UnsupportedOperationException("Not supported yet.");
     }

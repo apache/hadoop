@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMSta
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -109,6 +110,10 @@ public class FairScheduler implements ResourceScheduler {
   private Clock clock;
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
+  
+  // Value that container assignment methods return when a container is
+  // reserved
+  public static final Resource CONTAINER_RESERVED = Resources.createResource(-1);
 
   // How often fair shares are re-calculated (ms)
   protected long UPDATE_INTERVAL = 500;
@@ -498,8 +503,11 @@ public class FairScheduler implements ResourceScheduler {
     // Enforce ACLs
     UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
     if (!queue.hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)) {
-      LOG.info("User " + userUgi.getUserName() +
-          " cannot submit applications to queue " + queue.getName());
+      String msg = "User " + userUgi.getUserName() +
+    	        " cannot submit applications to queue " + queue.getName();
+      LOG.info(msg);
+      rmContext.getDispatcher().getEventHandler().handle(
+    	        new RMAppAttemptRejectedEvent(applicationAttemptId, msg));
       return;
     }
     

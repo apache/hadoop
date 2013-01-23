@@ -157,4 +157,9 @@ class TaggedInputSplit extends InputSplit implements Configurable, Writable {
     this.conf = conf;
   }
 
+  @Override
+  public String toString() {
+    return inputSplit.toString();
+  }
+
 }

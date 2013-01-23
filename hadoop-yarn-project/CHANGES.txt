@@ -37,6 +37,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-328. Use token request messages defined in hadoop common. (suresh)
 
+    YARN-231. RM Restart - Add FS-based persistent store implementation for
+    RMStateStore (Bikas Saha via hitesh)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.
@@ -98,6 +101,11 @@ Release 2.0.3-alpha - Unreleased
     common. (Suresh Srinivas via vinodkv) 
 
     YARN-170. Change NodeManager stop to be reentrant. (Sandy Ryza via vinodkv)
+
+    YARN-331. Fill in missing fair scheduler documentation. (sandyr via tucu)
+
+    YARN-277. Use AMRMClient in DistributedShell to exemplify the approach.
+    (Bikas Saha via hitesh)
 
   OPTIMIZATIONS
 
@@ -189,6 +197,21 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-330. Fix flakey test: TestNodeManagerShutdown#testKillContainersOnShutdown.
     (Sandy Ryza via hitesh)
+    
+    YARN-335. Fair scheduler doesn't check whether rack needs containers
+    before assigning to node. (Sandy Ryza via tomwhite)
+    
+    YARN-336. Fair scheduler FIFO scheduling within a queue only allows 1
+    app at a time. (Sandy Ryza via tomwhite)
+
+    YARN-135. Client tokens should be per app-attempt, and should be
+    unregistered on App-finish. (vinodkv via sseth)
+
+    YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
+    
+    YARN-319. Submitting a job to a fair scheduler queue for which the user
+    does not have permission causes the client to wait forever.
+    (shenhong via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -242,6 +265,18 @@ Release 2.0.2-alpha - 2012-09-07
 
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
+
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 0.23.6 - UNRELEASED
 
@@ -300,7 +335,7 @@ Release 0.23.6 - UNRELEASED
 
     YARN-334. Maven RAT plugin is not checking all source files (tgraves)
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

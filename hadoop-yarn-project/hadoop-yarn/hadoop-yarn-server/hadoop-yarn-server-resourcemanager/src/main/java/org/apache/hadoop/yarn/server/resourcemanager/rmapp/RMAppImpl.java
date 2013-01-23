@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -49,11 +50,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -82,7 +83,6 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final String queue;
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
-  private final String clientTokenStr;
   private final Dispatcher dispatcher;
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
@@ -213,9 +213,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
-      ApplicationSubmissionContext submissionContext, String clientTokenStr,
-      YarnScheduler scheduler, ApplicationMasterService masterService, 
-      long submitTime) {
+      ApplicationSubmissionContext submissionContext,
+      YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -226,7 +226,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.user = user;
     this.queue = queue;
     this.submissionContext = submissionContext;
-    this.clientTokenStr = clientTokenStr;
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.submitTime = submitTime;
@@ -402,7 +401,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     try {
       ApplicationAttemptId currentApplicationAttemptId = null;
-      String clientToken = UNAVAILABLE;
+      ClientToken clientToken = null;
       String trackingUrl = UNAVAILABLE;
       String host = UNAVAILABLE;
       String origTrackingUrl = UNAVAILABLE;
@@ -541,9 +540,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     appAttemptId.setApplicationId(applicationId);
     appAttemptId.setAttemptId(attempts.size() + 1);
 
-    RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
-        clientTokenStr, rmContext, scheduler, masterService,
-        submissionContext, conf);
+    RMAppAttempt attempt =
+        new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
+          submissionContext, conf);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     if(startAttempt) {

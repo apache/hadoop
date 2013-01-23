@@ -35,12 +35,12 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 @InterfaceStability.Unstable
 public class InMemoryReader<K, V> extends Reader<K, V> {
   private final TaskAttemptID taskAttemptId;
-  private final MergeManager<K,V> merger;
+  private final MergeManagerImpl<K,V> merger;
   DataInputBuffer memDataIn = new DataInputBuffer();
   private int start;
   private int length;
 
-  public InMemoryReader(MergeManager<K,V> merger, TaskAttemptID taskAttemptId,
+  public InMemoryReader(MergeManagerImpl<K,V> merger, TaskAttemptID taskAttemptId,
                         byte[] data, int start, int length)
   throws IOException {
     super(null, null, length - start, null, null);

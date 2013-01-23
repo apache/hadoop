@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -143,7 +144,7 @@ public class MockHistoryJobs extends MockJobs {
     }
 
     @Override
-    public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+    public TaskCompletionEvent[] getMapAttemptCompletionEvents(
         int startIndex, int maxEvents) {
       return job.getMapAttemptCompletionEvents(startIndex, maxEvents);
     }

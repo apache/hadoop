@@ -168,7 +168,7 @@ message RenameRequestProto {
   required string dst = 2;
 }
 
-message RenameResponseProto { // void response
+message RenameResponseProto {
   required bool result = 1;
 }
 

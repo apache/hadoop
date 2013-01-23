@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -38,8 +37,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
-
-
     
 public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Container {
 

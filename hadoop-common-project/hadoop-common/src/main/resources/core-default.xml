@@ -80,9 +80,17 @@
 
 <property>
   <name>hadoop.security.group.mapping</name>
-  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
+  <value>org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback</value>
   <description>
-    Class for user to group mapping (get groups for a given user) for ACL
+    Class for user to group mapping (get groups for a given user) for ACL. 
+    The default implementation,
+    org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback, 
+    will determine if the Java Native Interface (JNI) is available. If JNI is 
+    available the implementation will use the API within hadoop to resolve a 
+    list of groups for a user. If JNI is not available then the shell 
+    implementation, ShellBasedUnixGroupsMapping, is used.  This implementation 
+    shells out to the Linux/Unix environment with the 
+    <code>bash -c groups</code> command to resolve a list of groups for a user.
   </description>
 </property>
 
@@ -562,6 +570,14 @@
   <value>10</value>
   <description>Indicates the number of retries a client will make to establish
                a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.timeout</name>
+  <value>20000</value>
+  <description>Indicates the number of milliseconds a client will wait for the 
+               socket to establish a server connection.
   </description>
 </property>
 

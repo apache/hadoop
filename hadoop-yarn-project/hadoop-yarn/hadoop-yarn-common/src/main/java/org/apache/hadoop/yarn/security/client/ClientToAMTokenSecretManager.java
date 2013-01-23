@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.security.client;
 import javax.crypto.SecretKey;
 
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
 public class ClientToAMTokenSecretManager extends
     BaseClientToAMTokenSecretManager {
@@ -29,14 +29,14 @@ public class ClientToAMTokenSecretManager extends
   // Only one client-token and one master-key for AM
   private final SecretKey masterKey;
 
-  public ClientToAMTokenSecretManager(ApplicationId applicationID,
-      byte[] secretKeyBytes) {
+  public ClientToAMTokenSecretManager(
+      ApplicationAttemptId applicationAttemptID, byte[] secretKeyBytes) {
     super();
     this.masterKey = SecretManager.createSecretKey(secretKeyBytes);
   }
 
   @Override
-  public SecretKey getMasterKey(ApplicationId applicationID) {
+  public SecretKey getMasterKey(ApplicationAttemptId applicationAttemptID) {
     // Only one client-token and one master-key for AM, just return that.
     return this.masterKey;
   }

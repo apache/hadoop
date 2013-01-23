@@ -29,6 +29,9 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Filter that resolves the requester hostname.
@@ -36,6 +39,7 @@ import java.net.InetAddress;
 @InterfaceAudience.Private
 public class HostnameFilter implements Filter {
   static final ThreadLocal<String> HOSTNAME_TL = new ThreadLocal<String>();
+  private static final Logger log = LoggerFactory.getLogger(HostnameFilter.class);
 
   /**
    * Initializes the filter.
@@ -66,7 +70,19 @@ public class HostnameFilter implements Filter {
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
     throws IOException, ServletException {
     try {
-      String hostname = InetAddress.getByName(request.getRemoteAddr()).getCanonicalHostName();
+      String hostname;
+      try {
+        String address = request.getRemoteAddr();
+        if (address != null) {
+          hostname = InetAddress.getByName(address).getCanonicalHostName();
+        } else {
+          log.warn("Request remote address is NULL");
+          hostname = "???";
+        }
+      } catch (UnknownHostException ex) {
+        log.warn("Request remote address could not be resolved, {0}", ex.toString(), ex);
+        hostname = "???";
+      }
       HOSTNAME_TL.set(hostname);
       chain.doFilter(request, response);
     } finally {

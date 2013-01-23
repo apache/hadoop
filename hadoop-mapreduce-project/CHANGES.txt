@@ -19,6 +19,8 @@ Trunk (Unreleased)
     MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
     with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
 
+    MAPREDUCE-4808. Refactor MapOutput and MergeManager to facilitate reuse by Shuffle implementations. (masokan via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
@@ -151,9 +153,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-3223. Remove MR1 configs from mapred-default.xml (tlipcon via harsh)
 
-    MAPREDUCE-4678. Running the Pentomino example with defaults throws
-    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
-
     MAPREDUCE-4695. Fix LocalRunner on trunk after MAPREDUCE-3223 broke it
     (harsh)
 
@@ -210,6 +209,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4907. TrackerDistributedCacheManager issues too many getFileStatus
     calls. (sandyr via tucu)
 
+    MAPREDUCE-4949. Enable multiple pi jobs to run in parallel. (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -255,6 +256,17 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-1700. User supplied dependencies may conflict with MapReduce
     system JARs. (tomwhite)
+
+    MAPREDUCE-4936. JobImpl uber checks for cpu are wrong (Arun C Murthy via
+    jlowe)
+
+    MAPREDUCE-4924. flakey test: org.apache.hadoop.mapred.TestClusterMRNotification.testMR. 
+    (rkanter via tucu)
+
+    MAPREDUCE-4923. Add toString method to TaggedInputSplit. (sandyr via tucu)
+
+    MAPREDUCE-4948. Fix a failing unit test TestYARNRunner.testHistoryServerToken.
+    (Junping Du via sseth)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -632,6 +644,24 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+    MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
+    number of map completion event type conversions. (Jason Lowe via sseth)
+
+  BUG FIXES
+
+    MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
+    (Robert Parker via jeagles)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -699,7 +729,13 @@ Release 0.23.6 - UNRELEASED
 
     MAPREDUCE-4934. Maven RAT plugin is not checking all source files (tgraves)
 
-Release 0.23.5 - UNRELEASED
+    MAPREDUCE-4678. Running the Pentomino example with defaults throws
+    java.lang.NegativeArraySizeException (Chris McConnell via harsh)
+
+    MAPREDUCE-4925. The pentomino option parser may be buggy.
+    (Karthik Kambatla via harsh)
+
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

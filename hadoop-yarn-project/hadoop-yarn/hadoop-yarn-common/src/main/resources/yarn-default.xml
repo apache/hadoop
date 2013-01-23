@@ -230,6 +230,17 @@
   <property>
     <description>The class to use as the persistent store.</description>
     <name>yarn.resourcemanager.store.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore</value>
+  </property>
+
+  <property>
+    <description>URI pointing to the location of the FileSystem path where
+    RM state will be stored. This must be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.fs.rm-state-store.uri</name>
+    <value>${hadoop.tmp.dir}/yarn/system/rmstore</value>
+    <!--value>hdfs://localhost:9000/rmstore</value-->
   </property>
 
   <property>

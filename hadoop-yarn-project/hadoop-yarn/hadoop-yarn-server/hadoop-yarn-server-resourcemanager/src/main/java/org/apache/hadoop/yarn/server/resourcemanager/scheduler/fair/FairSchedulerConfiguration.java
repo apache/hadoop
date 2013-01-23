@@ -56,7 +56,7 @@ public class FairSchedulerConfiguration extends Configuration {
 
   /** Whether to assign multiple containers in one check-in. */
   protected static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
-  protected static final boolean DEFAULT_ASSIGN_MULTIPLE = true;
+  protected static final boolean DEFAULT_ASSIGN_MULTIPLE = false;
 
   /** Whether to give more weight to apps requiring many resources. */
   protected static final String  SIZE_BASED_WEIGHT = CONF_PREFIX + "sizebasedweight";

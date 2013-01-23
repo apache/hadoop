@@ -39,14 +39,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -55,6 +58,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
@@ -119,7 +123,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final WriteLock writeLock;
 
   private final ApplicationAttemptId applicationAttemptId;
-  private final String clientToken;
+  private ClientToken clientToken;
   private final ApplicationSubmissionContext submissionContext;
 
   //nodes on while this attempt's containers ran
@@ -347,11 +351,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     .installTopology();
 
   public RMAppAttemptImpl(ApplicationAttemptId appAttemptId,
-      String clientToken, RMContext rmContext, YarnScheduler scheduler,
+      RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
       Configuration conf) {
-
     this.conf = conf;
     this.applicationAttemptId = appAttemptId;
     this.rmContext = rmContext;
@@ -359,7 +362,19 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
     this.masterService = masterService;
-    this.clientToken = clientToken;
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+
+      this.rmContext.getClientToAMTokenSecretManager().registerApplication(
+        appAttemptId);
+
+      Token<ClientTokenIdentifier> token =
+          new Token<ClientTokenIdentifier>(new ClientTokenIdentifier(
+            appAttemptId), this.rmContext.getClientToAMTokenSecretManager());
+      this.clientToken =
+          BuilderUtils.newClientToken(token.getIdentifier(), token.getKind()
+            .toString(), token.getPassword(), token.getService().toString());
+    }
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -477,7 +492,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public String getClientToken() {
+  public ClientToken getClientToken() {
     return this.clientToken;
   }
 
@@ -962,6 +977,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           appAttempt.getAppAttemptId());
       appAttempt.rmContext.getAMFinishingMonitor().unregister(
           appAttempt.getAppAttemptId());
+
+      
+      // Unregister from the ClientTokenSecretManager
+      if (UserGroupInformation.isSecurityEnabled()) {
+        appAttempt.rmContext.getClientToAMTokenSecretManager()
+          .unRegisterApplication(appAttempt.getAppAttemptId());
+      }
 
       if(!appAttempt.submissionContext.getUnmanagedAM()) {
         // Tell the launcher to cleanup.

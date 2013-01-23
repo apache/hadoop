@@ -488,6 +488,15 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4375. Use token request messages defined in hadoop common.
     (suresh)
 
+    HDFS-4392. Use NetUtils#getFreeSocketPort in MiniDFSCluster.
+    (Andrew Purtell via suresh)
+
+    HDFS-4393. Make empty request and responses in protocol translators can be
+    static final members. (Brandon Li via suresh)
+
+    HDFS-4403. DFSClient can infer checksum type when not provided by reading
+    first byte (todd)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
@@ -713,6 +722,12 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-1245. Pluggable block id generation. (shv)
 
+    HDFS-4415. HostnameFilter should handle hostname resolution failures and
+    continue processing. (Robert Kanter via atm)
+
+    HDFS-4359. Slow RPC responses from NN can prevent metrics collection on
+    DNs. (liang xie via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
@@ -815,8 +830,11 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4017. Unclosed FileInputStream in GetJournalEditServlet
     (Chao Shi via todd)
 
-    HDFS-4351.  In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
+    HDFS-4351. In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
     needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
+
+    HDFS-4399. Fix RAT warnings by excluding images sub-dir in docs. (Thomas
+    Graves via acmurthy) 
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -2195,6 +2213,18 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2214,7 +2244,7 @@ Release 0.23.6 - UNRELEASED
 
     HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
 
-Release 0.23.5 - UNRELEASED
+Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
 

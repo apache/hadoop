@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.security.authorize.Service;
 
 /** 
  * This class contains constants for configuration keys used
@@ -114,7 +115,18 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   SECURITY_HA_SERVICE_PROTOCOL_ACL = "security.ha.service.protocol.acl";
   public static final String 
   SECURITY_ZKFC_PROTOCOL_ACL = "security.zkfc.protocol.acl";
-  
+  public static final String
+  SECURITY_CLIENT_PROTOCOL_ACL = "security.client.protocol.acl";
+  public static final String SECURITY_CLIENT_DATANODE_PROTOCOL_ACL =
+      "security.client.datanode.protocol.acl";
+  public static final String
+  SECURITY_DATANODE_PROTOCOL_ACL = "security.datanode.protocol.acl";
+  public static final String
+  SECURITY_INTER_DATANODE_PROTOCOL_ACL = "security.inter.datanode.protocol.acl";
+  public static final String
+  SECURITY_NAMENODE_PROTOCOL_ACL = "security.namenode.protocol.acl";
+  public static final String SECURITY_QJOURNAL_SERVICE_PROTOCOL_ACL =
+      "security.qjournal.service.protocol.acl";
   public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
