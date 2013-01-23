@@ -52,6 +52,9 @@ Release 0.23.6 - UNRELEASED
 
     HDFS-4399. precommit release audit warnings (tgraves)
 
+    HDFS-4426. Secondary namenode shuts down immediately after startup.
+    (Arpit Agarwal via suresh)
+
 Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
@@ -140,45 +143,6 @@ Release 0.23.4
 
 Release 0.23.3
 
-<<<<<<< .working
-=======
-    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
-    (Vinay via umamahesh)
-
-    HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
-
-    HDFS-3828. Block Scanner rescans blocks too frequently.
-    (Andy Isaacson via eli)
-
-    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
-
-    HDFS-3895. hadoop-client must include commons-cli (tucu)
-
-    HDFS-2757. Cannot read a local block that's being written to when
-    using the local read short circuit. (Jean-Daniel Cryans via eli)
-    
-  BREAKDOWN OF HDFS-3042 SUBTASKS
-
-    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
-    
-    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
-    
-    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
-    
-    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
-    
-    HDFS-3159. Document NN auto-failover setup and configuration (todd)
-    
-    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
-    
-    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
-
-    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
-    read/write. (Brandon Li via suresh)
-
-Release 2.0.0-alpha - 05-23-2012
-
->>>>>>> .merge-right.r1382409
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
@@ -261,6 +225,451 @@ Release 2.0.0-alpha - 05-23-2012
     HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
     corrupted block. (Henry Robinson via atm)
 
+<<<<<<< .working
+=======
+    HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
+    
+    HDFS-1974. Introduce active and standy states to the namenode. (suresh)
+    
+    HDFS-2407. getServerDefaults and getStats don't check operation category (atm)
+    
+    HDFS-1973. HA: HDFS clients must handle namenode failover and switch over to
+    the new active namenode. (atm)
+    
+    HDFS-2301. Start/stop appropriate namenode services when transition to active
+    and standby states. (suresh)
+    
+    HDFS-2231. Configuration changes for HA namenode. (suresh)
+    
+    HDFS-2418. Change ConfiguredFailoverProxyProvider to take advantage of
+    HDFS-2231. (atm)
+    
+    HDFS-2393. Mark appropriate methods of ClientProtocol with the idempotent
+    annotation. (atm)
+    
+    HDFS-2523. Small NN fixes to include HAServiceProtocol and prevent NPE on
+    shutdown. (todd)
+    
+    HDFS-2577. NN fails to start since it tries to start secret manager in
+    safemode. (todd)
+    
+    HDFS-2582. Scope dfs.ha.namenodes config by nameservice (todd)
+    
+    HDFS-2591. MiniDFSCluster support to mix and match federation with HA (todd)
+    
+    HDFS-1975. Support for sharing the namenode state from active to standby.
+    (jitendra, atm, todd)
+    
+    HDFS-1971. Send block report from datanode to both active and standby
+    namenodes. (sanjay, todd via suresh)
+    
+    HDFS-2616. Change DatanodeProtocol#sendHeartbeat() to return HeartbeatResponse.
+    (suresh)
+    
+    HDFS-2622. Fix TestDFSUpgrade in HA branch. (todd)
+    
+    HDFS-2612. Handle refreshNameNodes in federated HA clusters (todd)
+    
+    HDFS-2623. Add test case for hot standby capability (todd)
+    
+    HDFS-2626. BPOfferService.verifyAndSetNamespaceInfo needs to be synchronized
+    (todd)
+    
+    HDFS-2624. ConfiguredFailoverProxyProvider doesn't correctly stop
+    ProtocolTranslators (todd)
+    
+    HDFS-2625. TestDfsOverAvroRpc failing after introduction of HeartbeatResponse
+    type (todd)
+    
+    HDFS-2627. Determine DN's view of which NN is active based on heartbeat
+    responses (todd)
+    
+    HDFS-2634. Standby needs to ingest latest edit logs before transitioning to
+    active (todd)
+    
+    HDFS-2671. NN should throw StandbyException in response to RPCs in STANDBY
+    state (todd)
+    
+    HDFS-2680. DFSClient should construct failover proxy with exponential backoff
+    (todd)
+    
+    HDFS-2683. Authority-based lookup of proxy provider fails if path becomes
+    canonicalized (todd)
+    
+    HDFS-2689. HA: BookKeeperEditLogInputStream doesn't implement isInProgress()
+    (atm)
+    
+    HDFS-2602. NN should log newly-allocated blocks without losing BlockInfo (atm)
+    
+    HDFS-2667. Fix transition from active to standby (todd)
+    
+    HDFS-2684. Fix up some failing unit tests on HA branch (todd)
+    
+    HDFS-2679. Add interface to query current state to HAServiceProtocol (eli via
+    todd)
+    
+    HDFS-2677. Web UI should indicate the NN state. (eli via todd)
+    
+    HDFS-2678. When a FailoverProxyProvider is used, DFSClient should not retry
+    connection ten times before failing over (atm via todd)
+    
+    HDFS-2682. When a FailoverProxyProvider is used, Client should not retry for 45
+    times if it is timing out to connect to server. (Uma Maheswara Rao G via todd)
+    
+    HDFS-2693. Fix synchronization issues around state transition (todd)
+    
+    HDFS-1972. Fencing mechanism for block invalidations and replications (todd)
+    
+    HDFS-2714. Fix test cases which use standalone FSNamesystems (todd)
+    
+    HDFS-2692. Fix bugs related to failover from/into safe mode. (todd)
+    
+    HDFS-2716. Configuration needs to allow different dfs.http.addresses for each
+    HA NN (todd)
+    
+    HDFS-2720. Fix MiniDFSCluster HA support to work properly on Windows. (Uma
+    Maheswara Rao G via todd)
+    
+    HDFS-2291. Allow the StandbyNode to make checkpoints in an HA setup. (todd)
+    
+    HDFS-2709. Appropriately handle error conditions in EditLogTailer (atm via
+    todd)
+    
+    HDFS-2730. Refactor shared HA-related test code into HATestUtil class (todd)
+    
+    HDFS-2762. Fix TestCheckpoint timing out on HA branch. (Uma Maheswara Rao G via
+    todd)
+    
+    HDFS-2724. NN web UI can throw NPE after startup, before standby state is
+    entered. (todd)
+    
+    HDFS-2753. Fix standby getting stuck in safemode when blocks are written while
+    SBN is down. (Hari Mankude and todd via todd)
+    
+    HDFS-2773. Reading edit logs from an earlier version should not leave blocks in
+    under-construction state. (todd)
+    
+    HDFS-2775. Fix TestStandbyCheckpoints.testBothNodesInStandbyState failing
+    intermittently. (todd)
+    
+    HDFS-2766. Test for case where standby partially reads log and then performs
+    checkpoint. (atm)
+    
+    HDFS-2738. FSEditLog.selectinputStreams is reading through in-progress streams
+    even when non-in-progress are requested. (atm)
+    
+    HDFS-2789. TestHAAdmin.testFailover is failing (eli)
+    
+    HDFS-2747. Entering safe mode after starting SBN can NPE. (Uma Maheswara Rao G
+    via todd)
+    
+    HDFS-2772. On transition to active, standby should not swallow ELIE. (atm)
+    
+    HDFS-2767. ConfiguredFailoverProxyProvider should support NameNodeProtocol.
+    (Uma Maheswara Rao G via todd)
+    
+    HDFS-2795. Standby NN takes a long time to recover from a dead DN starting up.
+    (todd)
+    
+    HDFS-2592. Balancer support for HA namenodes. (Uma Maheswara Rao G via todd)
+    
+    HDFS-2367. Enable the configuration of multiple HA cluster addresses. (atm)
+    
+    HDFS-2812. When becoming active, the NN should treat all leases as freshly
+    renewed. (todd)
+    
+    HDFS-2737. Automatically trigger log rolls periodically on the active NN. (todd
+    and atm)
+    
+    HDFS-2820. Add a simple sanity check for HA config (todd)
+    
+    HDFS-2688. Add tests for quota tracking in an HA cluster. (todd)
+    
+    HDFS-2804. Should not mark blocks under-replicated when exiting safemode (todd)
+    
+    HDFS-2807. Service level authorizartion for HAServiceProtocol. (jitendra)
+    
+    HDFS-2809. Add test to verify that delegation tokens are honored after
+    failover. (jitendra and atm)
+    
+    HDFS-2838. NPE in FSNamesystem when in safe mode. (Gregory Chanan via eli)
+    
+    HDFS-2805. Add a test for a federated cluster with HA NNs. (Brandon Li via
+    jitendra)
+    
+    HDFS-2841. HAAdmin does not work if security is enabled. (atm)
+    
+    HDFS-2691. Fixes for pipeline recovery in an HA cluster: report RBW replicas
+    immediately upon pipeline creation. (todd)
+    
+    HDFS-2824. Fix failover when prior NN died just after creating an edit log
+    segment. (atm via todd)
+    
+    HDFS-2853. HA: NN fails to start if the shared edits dir is marked required
+    (atm via eli)
+    
+    HDFS-2845. SBN should not allow browsing of the file system via web UI. (Bikas
+    Saha via atm)
+    
+    HDFS-2742. HA: observed dataloss in replication stress test. (todd via eli)
+    
+    HDFS-2870. Fix log level for block debug info in processMisReplicatedBlocks
+    (todd)
+    
+    HDFS-2859. LOCAL_ADDRESS_MATCHER.match has NPE when called from
+    DFSUtil.getSuffixIDs when the host is incorrect (Bikas Saha via todd)
+    
+    HDFS-2861. checkpointing should verify that the dfs.http.address has been
+    configured to a non-loopback for peer NN (todd)
+    
+    HDFS-2860. TestDFSRollback#testRollback is failing. (atm)
+    
+    HDFS-2769. HA: When HA is enabled with a shared edits dir, that dir should be
+    marked required. (atm via eli)
+    
+    HDFS-2863. Failures observed if dfs.edits.dir and shared.edits.dir have same
+    directories. (Bikas Saha via atm)
+    
+    HDFS-2874. Edit log should log to shared dirs before local dirs. (todd)
+    
+    HDFS-2890. DFSUtil#getSuffixIDs should skip unset configurations. (atm)
+    
+    HDFS-2792. Make fsck work. (atm)
+    
+    HDFS-2808. HA: haadmin should use namenode ids. (eli)
+    
+    HDFS-2819. Document new HA-related configs in hdfs-default.xml. (eli)
+    
+    HDFS-2752. HA: exit if multiple shared dirs are configured. (eli)
+    
+    HDFS-2894. HA: automatically determine the nameservice Id if only one
+    nameservice is configured. (eli)
+    
+    HDFS-2733. Document HA configuration and CLI. (atm)
+    
+    HDFS-2794. Active NN may purge edit log files before standby NN has a chance to
+    read them (todd)
+    
+    HDFS-2901. Improvements for SBN web UI - not show under-replicated/missing
+    blocks. (Brandon Li via jitendra)
+    
+    HDFS-2905. HA: Standby NN NPE when shared edits dir is deleted. (Bikas Saha via
+    jitendra)
+    
+    HDFS-2579. Starting delegation token manager during safemode fails. (todd)
+    
+    HDFS-2510. Add HA-related metrics. (atm)
+    
+    HDFS-2924. Standby checkpointing fails to authenticate in secure cluster.
+    (todd)
+    
+    HDFS-2915. HA: TestFailureOfSharedDir.testFailureOfSharedDir() has race
+    condition. (Bikas Saha via jitendra)
+    
+    HDFS-2912. Namenode not shutting down when shared edits dir is inaccessible.
+    (Bikas Saha via atm)
+    
+    HDFS-2917. HA: haadmin should not work if run by regular user (eli)
+    
+    HDFS-2939. TestHAStateTransitions fails on Windows. (Uma Maheswara Rao G via
+    atm)
+    
+    HDFS-2947. On startup NN throws an NPE in the metrics system. (atm)
+    
+    HDFS-2942. TestActiveStandbyElectorRealZK fails if build dir does not exist.
+    (atm)
+    
+    HDFS-2948. NN throws NPE during shutdown if it fails to startup (todd)
+    
+    HDFS-2909. HA: Inaccessible shared edits dir not getting removed from FSImage
+    storage dirs upon error. (Bikas Saha via jitendra)
+    
+    HDFS-2934. Allow configs to be scoped to all NNs in the nameservice. (todd)
+    
+    HDFS-2935. Shared edits dir property should be suffixed with nameservice and
+    namenodeID (todd)
+    
+    HDFS-2928. ConfiguredFailoverProxyProvider should not create a NameNode proxy
+    with an underlying retry proxy. (Uma Maheswara Rao G via atm)
+    
+    HDFS-2955. IllegalStateException during standby startup in getCurSegmentTxId.
+    (Hari Mankude via atm)
+    
+    HDFS-2937. TestDFSHAAdmin needs tests with MiniDFSCluster. (Brandon Li via
+    suresh)
+    
+    HDFS-2586. Add protobuf service and implementation for HAServiceProtocol.
+    (suresh via atm)
+    
+    HDFS-2952. NN should not start with upgrade option or with a pending an
+    unfinalized upgrade. (atm)
+    
+    HDFS-2974. MiniDFSCluster does not delete standby NN name dirs during format.
+    (atm)
+    
+    HDFS-2929. Stress test and fixes for block synchronization (todd)
+    
+    HDFS-2972. Small optimization building incremental block report (todd)
+    
+    HDFS-2973. Re-enable NO_ACK optimization for block deletion. (todd)
+    
+    HDFS-2922. HA: close out operation categories (eli)
+    
+    HDFS-2993. HA: BackupNode#checkOperation should permit CHECKPOINT operations
+    (eli)
+    
+    HDFS-2904. Client support for getting delegation tokens. (todd)
+    
+    HDFS-3013. HA: NameNode format doesn't pick up
+    dfs.namenode.name.dir.NameServiceId configuration (Mingjie Lai via todd)
+    
+    HDFS-3019. Fix silent failure of TestEditLogJournalFailures (todd)
+    
+    HDFS-2958. Sweep for remaining proxy construction which doesn't go through
+    failover path. (atm)
+    
+    HDFS-2920. fix remaining TODO items. (atm and todd)
+    
+    HDFS-3027. Implement a simple NN health check. (atm)
+    
+    HDFS-3023. Optimize entries in edits log for persistBlocks call. (todd)
+    
+    HDFS-2979. Balancer should use logical uri for creating failover proxy with HA
+    enabled. (atm)
+    
+    HDFS-3035. Fix failure of TestFileAppendRestart due to OP_UPDATE_BLOCKS (todd)
+    
+    HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
+
+Release 0.23.7 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.6 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-4247. saveNamespace should be tolerant of dangling lease (daryn)
+
+    HDFS-4248. Renaming directories may incorrectly remove the paths in leases
+    under the tree.  (daryn via szetszwo)
+
+    HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
+
+    HDFS-4426. Secondary namenode shuts down immediately after startup.
+    (Arpit Agarwal via suresh)
+
+Release 0.23.5 - 2012-11-28
+
+  INCOMPATIBLE CHANGES
+
+    HDFS-4080. Add a separate logger for block state change logs to enable turning
+    off those logs. (Kihwal Lee via suresh)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+    HDFS-4075. Reduce recommissioning overhead (Kihwal Lee via daryn)
+
+    HDFS-3990.  NN's health report has severe performance problems (daryn)
+
+    HDFS-4181.  LeaseManager tries to double remove and prints extra messages
+    (Kihwal Lee via daryn)
+
+  BUG FIXES
+
+    HDFS-3829. TestHftpURLTimeouts fails intermittently with JDK7  (Trevor
+    Robinson via tgraves)
+
+    HDFS-3824. TestHftpDelegationToken fails intermittently with JDK7 (Trevor
+    Robinson via tgraves)
+
+    HDFS-3224. Bug in check for DN re-registration with different storage ID
+    (jlowe)
+
+    HDFS-4090. getFileChecksum() result incompatible when called against
+    zero-byte files. (Kihwal Lee via daryn)
+
+    HDFS-4172. namenode does not URI-encode parameters when building URI for
+    datanode request (Derek Dagit via bobby)
+
+    HDFS-4182. SecondaryNameNode leaks NameCache entries (bobby)
+
+    HDFS-4186. logSync() is called with the write lock held while releasing
+    lease (Kihwal Lee via daryn)
+
+Release 0.23.4
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3831. Failure to renew tokens due to test-sources left in classpath
+    (jlowe via bobby)
+
+Release 0.23.3
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3166. Add timeout to Hftp connections.  (Daryn Sharp via szetszwo)
+
+    HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
+    Lee via szetszwo)
+
+    HDFS-2652. Add support for host-based delegation tokens.  (Daryn Sharp via
+    szetszwo)
+
+    HDFS-3308. Uses canonical URI to select delegation tokens in HftpFileSystem
+    and WebHdfsFileSystem.  (Daryn Sharp via szetszwo)
+
+    HDFS-3312. In HftpFileSystem, the namenode URI is non-secure but the
+    delegation tokens have to use secure URI.  (Daryn Sharp via szetszwo)
+
+    HDFS-3318. Use BoundedInputStream in ByteRangeInputStream, otherwise, it
+    hangs on transfers >2 GB.  (Daryn Sharp via szetszwo)
+
+    HDFS-3321. Fix safe mode turn off tip message.  (Ravi Prakash via szetszwo)
+
+    HDFS-3334. Fix ByteRangeInputStream stream leakage.  (Daryn Sharp via
+    szetszwo)
+
+    HDFS-3331. In namenode, check superuser privilege for setBalancerBandwidth
+    and acquire the write lock for finalizeUpgrade.  (szetszwo)
+
+>>>>>>> .merge-right.r1437627
     HDFS-3577. In DatanodeWebHdfsMethods, use MessageBodyWriter instead of
     StreamingOutput, otherwise, it will fail to transfer large files.
     (szetszwo)
