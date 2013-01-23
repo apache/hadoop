@@ -2024,6 +2024,9 @@ Release 0.23.6 - UNRELEASED
 
     HDFS-4385. Maven RAT plugin is not checking all source files (tgraves)
 
+    HDFS-4426. Secondary namenode shuts down immediately after startup.
+    (Arpit Agarwal via suresh)
+
 Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
