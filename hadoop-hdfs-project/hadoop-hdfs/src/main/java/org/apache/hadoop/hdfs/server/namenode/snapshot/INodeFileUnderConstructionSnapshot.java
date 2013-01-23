@@ -32,7 +32,7 @@ public class INodeFileUnderConstructionSnapshot
   INodeFileUnderConstructionSnapshot(INodeFileUnderConstructionWithSnapshot f) {
     super(f, f.getClientName(), f.getClientMachine(), f.getClientNode());
     this.size = f.computeFileSize(true);
-    f.insert(this);
+    f.insertAfter(this);
   }
 
   @Override

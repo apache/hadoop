@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -32,6 +33,10 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
@@ -143,52 +148,109 @@ public class FSImageSerialization {
     out.writeInt(0); //  do not store locations of last block
   }
 
-  /*
-   * Save one inode's attributes to the image.
+  /**
+   * Serialize a {@link INodeDirectory}
+   * @param node The node to write
+   * @param out The {@link DataOutput} where the fields are written 
    */
-  static void saveINode2Image(INode node,
-                              DataOutputStream out) throws IOException {
+  public static void writeINodeDirectory(INodeDirectory node, DataOutput out)
+      throws IOException {
     byte[] name = node.getLocalNameBytes();
     out.writeShort(name.length);
     out.write(name);
-    FsPermission filePerm = TL_DATA.get().FILE_PERM;
-    if (node.isDirectory()) {
-      out.writeShort(0);  // replication
-      out.writeLong(node.getModificationTime());
-      out.writeLong(0);   // access time
-      out.writeLong(0);   // preferred block size
-      out.writeInt(-1);   // # of blocks
-      out.writeLong(node.getNsQuota());
-      out.writeLong(node.getDsQuota());
-      filePerm.fromShort(node.getFsPermissionShort());
-      PermissionStatus.write(out, node.getUserName(),
-                             node.getGroupName(),
-                             filePerm);
-    } else if (node.isSymlink()) {
-      out.writeShort(0);  // replication
-      out.writeLong(0);   // modification time
-      out.writeLong(0);   // access time
-      out.writeLong(0);   // preferred block size
-      out.writeInt(-2);   // # of blocks
-      Text.writeString(out, ((INodeSymlink)node).getSymlinkString());
-      filePerm.fromShort(node.getFsPermissionShort());
-      PermissionStatus.write(out, node.getUserName(),
-                             node.getGroupName(),
-                             filePerm);      
+    out.writeShort(0);  // replication
+    out.writeLong(node.getModificationTime());
+    out.writeLong(0);   // access time
+    out.writeLong(0);   // preferred block size
+    out.writeInt(-1);   // # of blocks
+    out.writeLong(node.getNsQuota());
+    out.writeLong(node.getDsQuota());
+    if (node instanceof INodeDirectorySnapshottable) {
+      out.writeBoolean(true);
     } else {
-      INodeFile fileINode = (INodeFile)node;
-      out.writeShort(fileINode.getFileReplication());
-      out.writeLong(fileINode.getModificationTime());
-      out.writeLong(fileINode.getAccessTime());
-      out.writeLong(fileINode.getPreferredBlockSize());
+      out.writeBoolean(false);
+      out.writeBoolean(node instanceof INodeDirectoryWithSnapshot);
+    }
+    FsPermission filePerm = TL_DATA.get().FILE_PERM;
+    filePerm.fromShort(node.getFsPermissionShort());
+    PermissionStatus.write(out, node.getUserName(),
+                           node.getGroupName(),
+                           filePerm);
+  }
+  
+  /**
+   * Serialize a {@link INodeSymlink} node
+   * @param node The node to write
+   * @param out The {@link DataOutput} where the fields are written
+   */
+  private static void writeINodeSymlink(INodeSymlink node, DataOutput out)
+      throws IOException {
+    byte[] name = node.getLocalNameBytes();
+    out.writeShort(name.length);
+    out.write(name);
+    out.writeShort(0);  // replication
+    out.writeLong(0);   // modification time
+    out.writeLong(0);   // access time
+    out.writeLong(0);   // preferred block size
+    out.writeInt(-2);   // # of blocks
+    Text.writeString(out, node.getSymlinkString());
+    FsPermission filePerm = TL_DATA.get().FILE_PERM;
+    filePerm.fromShort(node.getFsPermissionShort());
+    PermissionStatus.write(out, node.getUserName(),
+                           node.getGroupName(),
+                           filePerm);
+  }
+  
+  /**
+   * Serialize a {@link INodeFile} node
+   * @param node The node to write
+   * @param out The {@link DataOutput} where the fields are written
+   * @param writeBlock Whether to write block information
+   */
+  public static void writeINodeFile(INodeFile node, DataOutput out,
+      boolean writeBlock) throws IOException {
+    byte[] name = node.getLocalNameBytes();
+    out.writeShort(name.length);
+    out.write(name);
+    INodeFile fileINode = node;
+    out.writeShort(fileINode.getFileReplication());
+    out.writeLong(fileINode.getModificationTime());
+    out.writeLong(fileINode.getAccessTime());
+    out.writeLong(fileINode.getPreferredBlockSize());
+    if (writeBlock) {
       Block[] blocks = fileINode.getBlocks();
       out.writeInt(blocks.length);
+      out.writeBoolean(true);
       for (Block blk : blocks)
         blk.write(out);
-      filePerm.fromShort(fileINode.getFsPermissionShort());
-      PermissionStatus.write(out, fileINode.getUserName(),
-                             fileINode.getGroupName(),
-                             filePerm);
+    } else {
+      out.writeInt(0); // # of blocks
+      out.writeBoolean(false);
+    }
+    if (node instanceof INodeFileSnapshot) {
+      out.writeLong(((INodeFileSnapshot) node).computeFileSize(true));
+    } else {
+      out.writeLong(-1);
+      out.writeBoolean(node instanceof INodeFileWithSnapshot);
+    }
+    FsPermission filePerm = TL_DATA.get().FILE_PERM;
+    filePerm.fromShort(fileINode.getFsPermissionShort());
+    PermissionStatus.write(out, fileINode.getUserName(),
+                           fileINode.getGroupName(),
+                           filePerm);
+  }
+  
+  /**
+   * Save one inode's attributes to the image.
+   */
+  static void saveINode2Image(INode node, DataOutput out)
+      throws IOException {
+    if (node.isDirectory()) {
+      writeINodeDirectory((INodeDirectory) node, out);
+    } else if (node.isSymlink()) {
+      writeINodeSymlink((INodeSymlink) node, out);      
+    } else {
+      writeINodeFile((INodeFile) node, out, true);
     }
   }
 

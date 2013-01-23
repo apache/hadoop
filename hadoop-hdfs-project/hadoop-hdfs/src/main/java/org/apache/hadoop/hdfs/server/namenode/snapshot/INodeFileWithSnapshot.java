@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.Util;
 
 /**
  * Represent an {@link INodeFile} that is snapshotted.
@@ -70,9 +69,29 @@ public class INodeFileWithSnapshot extends INodeFile
   }
 
   @Override
-  public void insert(FileWithSnapshot inode) {
+  public void insertAfter(FileWithSnapshot inode) {
     inode.setNext(this.getNext());
     this.setNext(inode);
+  }
+  
+  @Override
+  public void insertBefore(FileWithSnapshot inode) {
+    inode.setNext(this);
+    if (this.next == null || this.next == this) {
+      this.next = inode;
+      return;
+    }
+    FileWithSnapshot previous = Util.getPrevious(this);
+    previous.setNext(inode);
+  }
+
+  @Override
+  public void removeSelf() {
+    if (this.next != null && this.next != this) {
+      FileWithSnapshot previous = Util.getPrevious(this);
+      previous.setNext(next);
+    }
+    this.next = null;
   }
 
   @Override

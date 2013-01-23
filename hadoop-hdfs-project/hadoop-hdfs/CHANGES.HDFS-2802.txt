@@ -113,3 +113,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4098. Add FileWithSnapshot, INodeFileUnderConstructionWithSnapshot and
   INodeFileUnderConstructionSnapshot for supporting append to snapshotted files.
   (szetszwo)
+
+  HDFS-4126. Add reading/writing snapshot information to FSImage.
+  (Jing Zhao via suresh)

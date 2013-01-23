@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -69,6 +74,13 @@ public class Snapshot implements Comparable<byte[]> {
     public INode getChild(byte[] name, Snapshot snapshot) {
       return getParent().getChild(name, snapshot);
     }
+    
+    @Override
+    public String getFullPathName() {
+      return getParent().getFullPathName() + Path.SEPARATOR
+          + HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR
+          + this.getLocalName();
+    }
   }
 
   /** Snapshot ID. */
@@ -83,7 +95,13 @@ public class Snapshot implements Comparable<byte[]> {
     this.root.setLocalName(name);
     this.root.setParent(dir);
   }
-
+  
+  /** Constructor used when loading fsimage */
+  Snapshot(int id, INodeDirectory root) {
+    this.id = id;
+    this.root = new Root(root);
+  }
+  
   /** @return the root directory of the snapshot. */
   public Root getRoot() {
     return root;
@@ -112,5 +130,12 @@ public class Snapshot implements Comparable<byte[]> {
   @Override
   public String toString() {
     return getClass().getSimpleName() + "." + root.getLocalName();
+  }
+  
+  /** Serialize the fields to out */
+  void write(DataOutput out) throws IOException {
+    out.writeInt(id);
+    // write root
+    FSImageSerialization.writeINodeDirectory(root, out);
   }
 }

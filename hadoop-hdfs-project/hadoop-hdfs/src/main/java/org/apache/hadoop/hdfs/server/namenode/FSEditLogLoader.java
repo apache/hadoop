@@ -36,16 +36,21 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ClearNSQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ConcatDeleteOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CreateSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteSnapshotOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisallowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.GetDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
@@ -57,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.Holder;
@@ -487,6 +493,41 @@ public class FSEditLogLoader {
     case OP_START_LOG_SEGMENT:
     case OP_END_LOG_SEGMENT: {
       // no data in here currently.
+      break;
+    }
+    case OP_CREATE_SNAPSHOT: {
+      CreateSnapshotOp createSnapshotOp = (CreateSnapshotOp) op;
+      fsNamesys.getSnapshotManager().createSnapshot(
+          createSnapshotOp.snapshotRoot, createSnapshotOp.snapshotName);
+      break;
+    }
+    case OP_DELETE_SNAPSHOT: {
+      DeleteSnapshotOp deleteSnapshotOp = (DeleteSnapshotOp) op;
+      BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+      fsNamesys.getSnapshotManager().deleteSnapshot(
+          deleteSnapshotOp.snapshotRoot, deleteSnapshotOp.snapshotName,
+          collectedBlocks);
+      fsNamesys.removeBlocks(collectedBlocks);
+      collectedBlocks.clear();
+      break;
+    }
+    case OP_RENAME_SNAPSHOT: {
+      RenameSnapshotOp renameSnapshotOp = (RenameSnapshotOp) op;
+      fsNamesys.getSnapshotManager().renameSnapshot(
+          renameSnapshotOp.snapshotRoot, renameSnapshotOp.snapshotOldName,
+          renameSnapshotOp.snapshotNewName);
+      break;
+    }
+    case OP_ALLOW_SNAPSHOT: {
+      AllowSnapshotOp allowSnapshotOp = (AllowSnapshotOp) op;
+      fsNamesys.getSnapshotManager().setSnapshottable(
+          allowSnapshotOp.snapshotRoot);
+      break;
+    }
+    case OP_DISALLOW_SNAPSHOT: {
+      DisallowSnapshotOp disallowSnapshotOp = (DisallowSnapshotOp) op;
+      fsNamesys.getSnapshotManager().resetSnapshottable(
+          disallowSnapshotOp.snapshotRoot);
       break;
     }
     default:

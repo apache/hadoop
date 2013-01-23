@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 
 /**
  *  INode representing a snapshot of a file.
@@ -25,18 +27,27 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class INodeFileSnapshot extends INodeFileWithSnapshot {
   /** The file size at snapshot creation time. */
-  final long size;
+  final long snapshotFileSize;
 
   INodeFileSnapshot(INodeFileWithSnapshot f) {
     super(f);
-    this.size = f.computeFileSize(true);
-    f.insert(this);
+    this.snapshotFileSize = f.computeFileSize(true);
+    f.insertAfter(this);
+  }
+  
+  /**
+   * A constructor that only sets the basic attributes and the size. Used while
+   * loading {@link FSImage}
+   */
+  public INodeFileSnapshot(INodeFile f, long size) {
+    super(f);
+    this.snapshotFileSize = size;
   }
 
   @Override
   public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
     //ignore includesBlockInfoUnderConstruction 
     //since files in a snapshot are considered as closed.
-    return size;
+    return snapshotFileSize;
   }
 }

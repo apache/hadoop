@@ -211,8 +211,21 @@ public class DFSUtil {
    * Converts a byte array to a string using UTF8 encoding.
    */
   public static String bytes2String(byte[] bytes) {
+    return bytes2String(bytes, 0, bytes.length);
+  }
+  
+  /**
+   * Decode a specific range of bytes of the given byte array to a string
+   * using UTF8.
+   * 
+   * @param bytes The bytes to be decoded into characters
+   * @param offset The index of the first byte to decode
+   * @param length The number of bytes to decode
+   * @return The decoded string
+   */
+  public static String bytes2String(byte[] bytes, int offset, int length) {
     try {
-      return new String(bytes, "UTF8");
+      return new String(bytes, offset, length, "UTF8");
     } catch(UnsupportedEncodingException e) {
       assert false : "UTF8 encoding is not supported ";
     }

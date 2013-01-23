@@ -17,19 +17,23 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -79,7 +83,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    *   2.3.3. modify i in current and then modify: replace it in c-list (c', d)
    * </pre>
    */
-  static class Diff {
+  public static class Diff {
     /**
      * Search the inode from the list.
      * @return -1 if the list is null; otherwise, return the insertion point
@@ -105,6 +109,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     /** d-list: inode(s) deleted from current. */
     private List<INode> deleted;
 
+    INode searchCreated(final byte[] name) {
+      int cIndex = search(created, name);
+      return cIndex < 0 ? null : created.get(cIndex);
+    }
+    
+    INode searchDeleted(final byte[] name) {
+      int dIndex = search(deleted, name);
+      return dIndex < 0 ? null : deleted.get(dIndex);
+    }
+    
     /**
      * Insert the inode to created.
      * @param i the insertion point defined
@@ -155,13 +169,18 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * Delete an inode from current state.
      * @return a triple for undo.
      */
-    Triple<Integer, INode, Integer> delete(final INode inode) {
+    Triple<Integer, INode, Integer> delete(final INode inode,
+        boolean updateCircularList) {
       final int c = search(created, inode);
       INode previous = null;
       Integer d = null;
       if (c >= 0) {
         // remove a newly created inode
         previous = created.remove(c);
+        if (updateCircularList && previous instanceof FileWithSnapshot) {
+          // also we should remove previous from the circular list
+          ((FileWithSnapshot) previous).removeSelf();
+        }
       } else {
         // not in c-list, it must be in previous
         d = search(deleted, inode);
@@ -184,7 +203,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * Modify an inode in current state.
      * @return a triple for undo.
      */
-    Triple<Integer, INode, Integer> modify(final INode oldinode, final INode newinode) {
+    Triple<Integer, INode, Integer> modify(final INode oldinode,
+        final INode newinode, boolean updateCircularList) {
       if (!oldinode.equals(newinode)) {
         throw new AssertionError("The names do not match: oldinode="
             + oldinode + ", newinode=" + newinode);
@@ -195,6 +215,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (c >= 0) {
         // Case 1.1.3 and 2.3.3: inode is already in c-list,
         previous = created.set(c, newinode);
+        
+        if (updateCircularList && newinode instanceof FileWithSnapshot) {
+          // also should remove oldinode from the circular list
+          FileWithSnapshot newNodeWithLink = (FileWithSnapshot) newinode;
+          FileWithSnapshot oldNodeWithLink = (FileWithSnapshot) oldinode;
+          newNodeWithLink.setNext(oldNodeWithLink.getNext());
+          oldNodeWithLink.setNext(null);
+        }
         
         //TODO: fix a bug that previous != oldinode.  Set it to oldinode for now
         previous = oldinode;
@@ -328,8 +356,11 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * @param the posterior diff to combine
      * @param deletedINodeProcesser Used in case 2.1, 2.3, 3.1, and 3.3
      *                              to process the deleted inodes.
+     * @param updateCircularList Whether to update the circular linked list 
+     *                           while combining the diffs.                             
      */
-    void combinePostDiff(Diff postDiff, Processor deletedINodeProcesser) {
+    void combinePostDiff(Diff postDiff, Processor deletedINodeProcesser,
+        boolean updateCircularList) {
       final List<INode> postCreated = postDiff.created != null?
           postDiff.created: Collections.<INode>emptyList();
       final List<INode> postDeleted = postDiff.deleted != null?
@@ -350,14 +381,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           c = createdIterator.hasNext()? createdIterator.next(): null;
         } else if (cmp > 0) {
           // case 2: only in d-list
-          Triple<Integer, INode, Integer> triple = delete(d);
+          Triple<Integer, INode, Integer> triple = delete(d, 
+              updateCircularList);
           if (deletedINodeProcesser != null) {
             deletedINodeProcesser.process(triple.middle);
           }
           d = deletedIterator.hasNext()? deletedIterator.next(): null;
         } else {
           // case 3: in both c-list and d-list 
-          final Triple<Integer, INode, Integer> triple = modify(d, c);
+          final Triple<Integer, INode, Integer> triple = modify(d, c,
+              updateCircularList);
           if (deletedINodeProcesser != null) {
             deletedINodeProcesser.process(triple.middle);
           }
@@ -386,6 +419,74 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           + "{created=" + toString(created)
           + ", deleted=" + toString(deleted) + "}";
     }
+    
+    /** Serialize {@link #created} */
+    private void writeCreated(DataOutput out) throws IOException {
+      if (created != null) {
+        out.writeInt(created.size());
+        for (INode node : created) {
+          // For INode in created list, we only need to record its local name 
+          byte[] name = node.getLocalNameBytes();
+          out.writeShort(name.length);
+          out.write(name);
+        }
+      } else {
+        out.writeInt(0);
+      }     
+    }
+    
+    /** Serialize {@link #deleted} */
+    private void writeDeleted(DataOutput out) throws IOException {
+      if (deleted != null) {
+        out.writeInt(deleted.size());
+        for (INode node : deleted) {
+          if (node.isDirectory()) {
+            FSImageSerialization.writeINodeDirectory((INodeDirectory) node, out);
+          } else { // INodeFile
+            // we write the block information only for INodeFile node when the
+            // node is only stored in the deleted list or the node is not a
+            // snapshot copy
+            int createdIndex = search(created, node);
+            if (createdIndex < 0) {
+              FSImageSerialization.writeINodeFile((INodeFile) node, out, true);
+            } else {
+              INodeFile cNode = (INodeFile) created.get(createdIndex);
+              INodeFile dNode = (INodeFile) node;
+              // A corner case here: after deleting a Snapshot, when combining
+              // SnapshotDiff, we may put two inodes sharing the same name but
+              // with totally different blocks in the created and deleted list of
+              // the same SnapshotDiff.
+              if (cNode.getBlocks() == dNode.getBlocks()) {
+                FSImageSerialization.writeINodeFile(dNode, out, false);
+              } else {
+                FSImageSerialization.writeINodeFile(dNode, out, true);
+              }
+            }
+          }
+        }
+      } else {
+        out.writeInt(0);
+      }
+    }
+    
+    /** Serialize to out */
+    private void write(DataOutput out) throws IOException {
+      writeCreated(out);
+      writeDeleted(out);    
+    }
+    
+    /** @return The list of INodeDirectory contained in the deleted list */
+    private List<INodeDirectory> getDirsInDeleted() {
+      List<INodeDirectory> dirList = new ArrayList<INodeDirectory>();
+      if (deleted != null) {
+        for (INode node : deleted) {
+          if (node.isDirectory()) {
+            dirList.add((INodeDirectory) node);
+          }
+        }
+      }
+      return dirList;
+    }
   }
   
   /**
@@ -406,7 +507,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    *   s_k     = s_{k+1} - d_k = (current state) - d_n - d_{n-1} - ... - d_k.
    * </pre>
    */
-  class SnapshotDiff implements Comparable<Snapshot> {
+  public class SnapshotDiff implements Comparable<Snapshot> {
     /** The snapshot will be obtained after this diff is applied. */
     final Snapshot snapshot;
     /** The size of the children list at snapshot creation time. */
@@ -419,7 +520,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      */
     private SnapshotDiff posteriorDiff;
     /** The children list diff. */
-    private final Diff diff = new Diff();
+    private final Diff diff;
     /** The snapshot inode data.  It is null when there is no change. */
     private INodeDirectory snapshotINode = null;
 
@@ -428,6 +529,25 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
       this.snapshot = snapshot;
       this.childrenSize = dir.getChildrenList(null).size();
+      this.diff = new Diff();
+    }
+
+    /** Constructor used by FSImage loading */
+    SnapshotDiff(Snapshot snapshot,
+        int childrenSize, INodeDirectory snapshotINode,
+        SnapshotDiff posteriorDiff, List<INode> createdList,
+        List<INode> deletedList) {
+      this.snapshot = snapshot;
+      this.childrenSize = childrenSize;
+      this.snapshotINode = snapshotINode;
+      this.posteriorDiff = posteriorDiff;
+      this.diff = new Diff();
+      diff.created = createdList;
+      diff.deleted = deletedList;
+    }
+    
+    public Diff getDiff() {
+      return diff;
     }
 
     /** Compare diffs with snapshot ID. */
@@ -485,7 +605,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           if (children == null) {
             final Diff combined = new Diff();
             for(SnapshotDiff d = SnapshotDiff.this; d != null; d = d.posteriorDiff) {
-              combined.combinePostDiff(d.diff, null);
+              combined.combinePostDiff(d.diff, null, false);
             }
             children = combined.apply2Current(ReadOnlyList.Util.asList(
                 INodeDirectoryWithSnapshot.this.getChildrenList(null)));
@@ -537,6 +657,36 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       return "\n  " + snapshot + " (-> "
           + (posteriorDiff == null? null: posteriorDiff.snapshot)
           + ") childrenSize=" + childrenSize + ", " + diff;
+    }
+    
+    /** Serialize fields to out */
+    void write(DataOutput out) throws IOException {
+      out.writeInt(childrenSize);
+      // No need to write all fields of Snapshot here, since the snapshot must
+      // have been recorded before when writing the FSImage. We only need to
+      // record the full path of its root.
+      byte[] fullPath = DFSUtil.string2Bytes(snapshot.getRoot()
+          .getFullPathName());
+      out.writeShort(fullPath.length);
+      out.write(fullPath);
+      // write snapshotINode
+      if (isSnapshotRoot()) {
+        out.writeBoolean(true);
+      } else {
+        out.writeBoolean(false);
+        if (snapshotINode != null) {
+          out.writeBoolean(true);
+          FSImageSerialization.writeINodeDirectory(snapshotINode, out);
+        } else {
+          out.writeBoolean(false);
+        }
+      }
+      // Write diff. Node need to write poseriorDiff, since diffs is a list.
+      diff.write(out);
+    }
+    
+    private List<INodeDirectory> getSnapshotDirectory() {
+      return diff.getDirsInDeleted();
     }
   }
   
@@ -598,7 +748,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
               ((INodeFile)inode).collectSubtreeBlocksAndClear(collectedBlocks);
             }
           }
-        });
+        }, true);
 
         previousDiff.posteriorDiff = diffToRemove.posteriorDiff;
         diffToRemove.posteriorDiff = null;
@@ -606,7 +756,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       return diffToRemove;
     }
   }
-
+  
+  /** Insert a SnapshotDiff to the head of diffs */
+  public void insertDiff(SnapshotDiff diff) {
+    diffs.add(0, diff);
+  }
+  
   /** Add a {@link SnapshotDiff} for the given snapshot and directory. */
   SnapshotDiff addSnapshotDiff(Snapshot snapshot, INodeDirectory dir,
       boolean isSnapshotCreation) {
@@ -623,7 +778,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     return d;
   }
-
+  
   SnapshotDiff getLastSnapshotDiff() {
     final int n = diffs.size();
     return n == 0? null: diffs.get(n - 1);
@@ -656,7 +811,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   /**
    * @return {@link #snapshots}
    */
-  @VisibleForTesting
   List<SnapshotDiff> getSnapshotDiffs() {
     return diffs;
   }
@@ -709,7 +863,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     final Pair<? extends INode, ? extends INode> p = child.createSnapshotCopy();
-    diff.diff.modify(p.right, p.left);
+    diff.diff.modify(p.right, p.left, true);
     return p;
   }
 
@@ -734,7 +888,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     Triple<Integer, INode, Integer> undoInfo = null;
     if (latest != null) {
       diff = checkAndAddLatestDiff(latest);
-      undoInfo = diff.delete(child);
+      undoInfo = diff.delete(child, true);
     }
     final INode removed = super.removeChild(child, null);
     if (removed == null && undoInfo != null) {
@@ -793,5 +947,26 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   @Override
   public String toString() {
     return super.toString() + ", diffs=" + getSnapshotDiffs();
+  }
+  
+  /**
+   * Get all the INodeDirectory stored in the deletes lists.
+   * 
+   * @param snapshotDirMap
+   *          A HashMap storing all the INodeDirectory stored in the deleted
+   *          lists, with their associated full Snapshot.
+   * @return The number of INodeDirectory returned.
+   */
+  public int getSnapshotDirectory(
+      Map<Snapshot, List<INodeDirectory>> snapshotDirMap) {
+    int dirNum = 0;
+    for (SnapshotDiff sdiff : diffs) {
+      List<INodeDirectory> list = sdiff.getSnapshotDirectory();
+      if (list.size() > 0) {
+        snapshotDirMap.put(sdiff.snapshot, list);
+        dirNum += list.size();
+      }
+    }
+    return dirNum;
   }
 }

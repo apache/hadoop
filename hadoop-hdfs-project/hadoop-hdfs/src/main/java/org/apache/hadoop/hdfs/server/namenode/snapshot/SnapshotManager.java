@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +50,7 @@ public class SnapshotManager implements SnapshotStats {
   private final AtomicInteger numSnapshottableDirs = new AtomicInteger();
   private final AtomicInteger numSnapshots = new AtomicInteger();
 
-  private int snapshotID = 0;
+  private int snapshotCounter = 0;
   
   /** All snapshottable directories in the namesystem. */
   private final List<INodeDirectorySnapshottable> snapshottables
@@ -117,10 +119,10 @@ public class SnapshotManager implements SnapshotStats {
     final INodesInPath i = fsdir.getMutableINodesInPath(path);
     final INodeDirectorySnapshottable srcRoot
         = INodeDirectorySnapshottable.valueOf(i.getLastINode(), path);
-    srcRoot.addSnapshot(snapshotID, snapshotName);
+    srcRoot.addSnapshot(snapshotCounter, snapshotName);
       
     //create success, update id
-    snapshotID++;
+    snapshotCounter++;
     numSnapshots.getAndIncrement();
   }
   
@@ -178,6 +180,26 @@ public class SnapshotManager implements SnapshotStats {
   @Override
   public long getNumSnapshots() {
     return numSnapshots.get();
+  }
+  
+  /**
+   * Write {@link #snapshotCounter}, {@link #numSnapshots}, and
+   * {@link #numSnapshottableDirs} to the DataOutput.
+   */
+  public void write(DataOutput out) throws IOException {
+    out.writeInt(snapshotCounter);
+    out.writeInt(numSnapshots.get());
+    out.writeInt(numSnapshottableDirs.get());
+  }
+  
+  /**
+   * Read values of {@link #snapshotCounter}, {@link #numSnapshots}, and
+   * {@link #numSnapshottableDirs} from the DataInput
+   */
+  public void read(DataInput in) throws IOException {
+    snapshotCounter = in.readInt();
+    numSnapshots.set(in.readInt());
+    numSnapshottableDirs.set(in.readInt());
   }
   
   /**

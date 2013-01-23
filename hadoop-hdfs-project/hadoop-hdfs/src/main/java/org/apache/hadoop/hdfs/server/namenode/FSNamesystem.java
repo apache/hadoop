@@ -2824,7 +2824,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *          An instance of {@link BlocksMapUpdateInfo} which contains a list
    *          of blocks that need to be removed from blocksMap
    */
-  private void removeBlocks(BlocksMapUpdateInfo blocks) {
+  void removeBlocks(BlocksMapUpdateInfo blocks) {
     Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> iter = blocks
         .iterator();
     while (iter.hasNext()) {
@@ -5643,6 +5643,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public boolean isAvoidingStaleDataNodesForWrite() {
     return this.blockManager.getDatanodeManager()
         .isAvoidingStaleDataNodesForWrite();
+  }
+  
+  public SnapshotManager getSnapshotManager() {
+    return snapshotManager;
   }
   
   /** Allow snapshot on a directroy. */

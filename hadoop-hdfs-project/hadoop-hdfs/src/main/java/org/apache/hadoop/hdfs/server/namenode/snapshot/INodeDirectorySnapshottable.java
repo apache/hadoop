@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -67,9 +66,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   /**
    * @return {@link #snapshotsByNames}
    */
-  @VisibleForTesting
-  List<Snapshot> getSnapshotsByNames() {
-    return snapshotsByNames;
+  ReadOnlyList<Snapshot> getSnapshotsByNames() {
+    return ReadOnlyList.Util.asReadOnlyList(this.snapshotsByNames);
   }
   
   /** Number of snapshots allowed. */
@@ -82,7 +80,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   
   /** @return the number of existing snapshots. */
   public int getNumSnapshots() {
-    return getSnapshotsByNames().size();
+    return snapshotsByNames.size();
   }
   
   private int searchSnapshot(byte[] snapshotName) {
@@ -152,6 +150,14 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   @Override
   public boolean isSnapshottable() {
     return true;
+  }
+  
+  /**
+   * Simply add a snapshot into the {@link #snapshotsByNames}. Used by FSImage
+   * loading.
+   */
+  void addSnapshot(Snapshot snapshot) {
+    this.snapshotsByNames.add(snapshot);
   }
 
   /** Add a snapshot. */

@@ -127,7 +127,6 @@ public class SnapshotTestHelper {
   static class TestDirectoryTree {
     /** Height of the directory tree */
     final int height;
-    final FileSystem fs;
     /** Top node of the directory tree */
     final Node topNode;
     /** A map recording nodes for each tree level */
@@ -138,12 +137,11 @@ public class SnapshotTestHelper {
      */
     TestDirectoryTree(int height, FileSystem fs) throws Exception {
       this.height = height;
-      this.fs = fs;
       this.topNode = new Node(new Path("/TestSnapshot"), 0,
           null, fs);
       this.levelMap = new HashMap<Integer, ArrayList<Node>>();
       addDirNode(topNode, 0);
-      genChildren(topNode, height - 1);
+      genChildren(topNode, height - 1, fs);
     }
 
     /**
@@ -164,9 +162,11 @@ public class SnapshotTestHelper {
      * 
      * @param parent The parent node
      * @param level The remaining levels to generate
+     * @param fs The FileSystem where to generate the files/dirs
      * @throws Exception
      */
-    void genChildren(Node parent, int level) throws Exception {
+    private void genChildren(Node parent, int level, FileSystem fs)
+        throws Exception {
       if (level == 0) {
         return;
       }
@@ -176,8 +176,8 @@ public class SnapshotTestHelper {
           "right" + ++id), height - level, parent, fs);
       addDirNode(parent.leftChild, parent.leftChild.level);
       addDirNode(parent.rightChild, parent.rightChild.level);
-      genChildren(parent.leftChild, level - 1);
-      genChildren(parent.rightChild, level - 1);
+      genChildren(parent.leftChild, level - 1, fs);
+      genChildren(parent.rightChild, level - 1, fs);
     }
 
     /**
@@ -246,7 +246,6 @@ public class SnapshotTestHelper {
        * directory creation/deletion
        */
       final ArrayList<Node> nonSnapshotChildren;
-      final FileSystem fs;
 
       Node(Path path, int level, Node parent,
           FileSystem fs) throws Exception {
@@ -254,7 +253,6 @@ public class SnapshotTestHelper {
         this.level = level;
         this.parent = parent;
         this.nonSnapshotChildren = new ArrayList<Node>();
-        this.fs = fs;
         fs.mkdirs(nodePath);
       }
 
@@ -262,8 +260,8 @@ public class SnapshotTestHelper {
        * Create files and add them in the fileList. Initially the last element
        * in the fileList is set to null (where we start file creation).
        */
-      void initFileList(String namePrefix, long fileLen, short replication,
-          long seed, int numFiles) throws Exception {
+      void initFileList(FileSystem fs, String namePrefix, long fileLen,
+          short replication, long seed, int numFiles) throws Exception {
         fileList = new ArrayList<Path>(numFiles);
         for (int i = 0; i < numFiles; i++) {
           Path file = new Path(nodePath, namePrefix + "-f" + i);

@@ -35,6 +35,11 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
@@ -619,31 +624,41 @@ public abstract class INode implements Comparable<byte[]> {
    * @param nsQuota namespace quota
    * @param dsQuota disk quota
    * @param preferredBlockSize block size
+   * @param numBlocks number of blocks
+   * @param withLink whether the node is INodeWithLink
+   * @param computeFileSize non-negative computeFileSize means the node is 
+   *                        INodeFileSnapshot
+   * @param snapshottable whether the node is {@link INodeDirectorySnapshottable}
+   * @param withSnapshot whether the node is {@link INodeDirectoryWithSnapshot}                       
    * @return an inode
    */
-  static INode newINode(long id,
-                        PermissionStatus permissions,
-                        BlockInfo[] blocks,
-                        String symlink,
-                        short replication,
-                        long modificationTime,
-                        long atime,
-                        long nsQuota,
-                        long dsQuota,
-                        long preferredBlockSize) {
+  static INode newINode(long id, PermissionStatus permissions,
+      BlockInfo[] blocks, String symlink, short replication,
+      long modificationTime, long atime, long nsQuota, long dsQuota,
+      long preferredBlockSize, int numBlocks, boolean withLink,
+      long computeFileSize, boolean snapshottable, boolean withSnapshot) {
     if (symlink.length() != 0) { // check if symbolic link
       return new INodeSymlink(id, symlink, modificationTime, atime, permissions);
-    }  else if (blocks == null) { //not sym link and blocks null? directory!
+    }  else if (blocks == null && numBlocks < 0) { 
+      //not sym link and numBlocks < 0? directory!
+      INodeDirectory dir = null;
       if (nsQuota >= 0 || dsQuota >= 0) {
-        return new INodeDirectoryWithQuota(
-             id, permissions, modificationTime, nsQuota, dsQuota);
-      } 
-      // regular directory
-      return new INodeDirectory(id, permissions, modificationTime);
+        dir = new INodeDirectoryWithQuota(id, permissions, modificationTime,
+            nsQuota, dsQuota);
+      } else {
+        // regular directory
+        dir = new INodeDirectory(id, permissions, modificationTime);
+      }
+      return snapshottable ? new INodeDirectorySnapshottable(dir)
+          : (withSnapshot ? INodeDirectoryWithSnapshot.newInstance(dir, null)
+              : dir);
     }
     // file
-    return new INodeFile(id, permissions, blocks, replication,
+    INodeFile fileNode = new INodeFile(id, permissions, blocks, replication,
         modificationTime, atime, preferredBlockSize);
+    return computeFileSize >= 0 ? new INodeFileSnapshot(fileNode,
+        computeFileSize) : (withLink ? new INodeFileWithSnapshot(fileNode)
+        : fileNode);
   }
 
   /**
@@ -662,7 +677,8 @@ public abstract class INode implements Comparable<byte[]> {
    * @param prefix The prefix string that each line should print.
    */
   @VisibleForTesting
-  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix, Snapshot snapshot) {
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
+      Snapshot snapshot) {
     out.print(prefix);
     out.print(" ");
     out.print(getLocalName());
@@ -670,10 +686,27 @@ public abstract class INode implements Comparable<byte[]> {
     out.print(getObjectString());
     out.print("), parent=");
     out.print(parent == null? null: parent.getLocalName() + "/");
+    out.print(", permission=" + getFsPermission(snapshot) + ", group="
+        + getGroupName(snapshot) + ", user=" + getUserName(snapshot));
     if (!this.isDirectory()) {
+      if (this.isFile()) {
+        // print block information
+        String blocksInfo = ((INodeFile) this).printBlocksInfo();
+        out.print(", blocks=[" + blocksInfo + "]");
+      }
+      if (this instanceof INodeFileWithSnapshot) {
+        INodeFileWithSnapshot nodeWithLink = (INodeFileWithSnapshot) this;
+        FileWithSnapshot next = nodeWithLink.getNext();
+        out.print(", next="
+            + (next != null ? next.asINodeFile().getObjectString() : "null"));
+        if (this instanceof INodeFileSnapshot) {
+          out.print(", computedSize="
+              + ((INodeFileSnapshot) this).computeFileSize(true));
+        }
+      }
       out.println();
     } else {
-      final INodeDirectory dir = (INodeDirectory)this;
+      final INodeDirectory dir = (INodeDirectory) this;
       out.println(", size=" + dir.getChildrenList(snapshot).size());
     }
   }

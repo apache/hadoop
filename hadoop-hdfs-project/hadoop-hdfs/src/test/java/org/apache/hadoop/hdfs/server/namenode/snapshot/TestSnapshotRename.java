@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.SnapshotDiff;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
@@ -85,7 +86,7 @@ public class TestSnapshotRename {
    */
   private void checkSnapshotList(INodeDirectorySnapshottable srcRoot,
       String[] sortedNames, String[] names) {
-    List<Snapshot> listByName = srcRoot.getSnapshotsByNames();
+    ReadOnlyList<Snapshot> listByName = srcRoot.getSnapshotsByNames();
     assertEquals(sortedNames.length, listByName.size());
     for (int i = 0; i < listByName.size(); i++) {
       assertEquals(sortedNames[i], listByName.get(i).getRoot().getLocalName());

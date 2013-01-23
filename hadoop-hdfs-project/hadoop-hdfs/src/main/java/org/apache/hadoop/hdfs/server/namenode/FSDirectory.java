@@ -1060,13 +1060,13 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
+    fsImage.getEditLog().logDelete(src, now);
     if (filesRemoved <= 0) {
       return false;
     }
     incrDeletedFileCount(filesRemoved);
     // Blocks will be deleted later by the caller of this method
     getFSNamesystem().removePathAndBlocks(src, null);
-    fsImage.getEditLog().logDelete(src, now);
     return true;
   }
   

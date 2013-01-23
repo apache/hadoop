@@ -319,4 +319,18 @@ public class INodeFile extends INode implements BlockCollection {
   public int numBlocks() {
     return blocks == null ? 0 : blocks.length;
   }
+  
+  /**
+   * @return A String containing all the blockInfo
+   */
+  String printBlocksInfo() {
+    if (blocks == null) {
+      return "";
+    }
+    StringBuilder buffer = new StringBuilder();
+    for (BlockInfo blk : blocks) {
+      buffer.append(blk.toString() + " ");
+    }
+    return buffer.toString();
+  }
 }
