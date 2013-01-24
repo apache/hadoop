@@ -696,6 +696,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12519. hadoop-azure tests should avoid creating a metrics
     configuration file in the module root directory. (cnauroth)
 
+    HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
+    (Andrey Klochkov via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
