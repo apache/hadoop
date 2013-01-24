@@ -120,6 +120,7 @@ public class TestDistributedShell {
     boolean exceptionThrown = false;
     try {
       boolean initSuccess = client.init(args);
+      Assert.assertTrue(initSuccess);
     }
     catch (IllegalArgumentException e) {
       exceptionThrown = true;

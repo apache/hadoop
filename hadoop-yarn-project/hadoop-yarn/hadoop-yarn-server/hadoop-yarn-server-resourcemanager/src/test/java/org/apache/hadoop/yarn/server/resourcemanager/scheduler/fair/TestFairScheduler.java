@@ -41,20 +41,29 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -1356,5 +1365,55 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     assertEquals(2, app1.getLiveContainers().size());
     assertEquals(1, app2.getLiveContainers().size());
+  }
+  
+  
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testNotAllowSubmitApplication() throws Exception {
+    // Set acl's
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<aclSubmitApps>userallow</aclSubmitApps>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    int appId = this.APP_ID++;
+    String user = "usernotallow";
+    String queue = "queue1";
+    ApplicationId applicationId = MockApps.newAppID(appId);
+    String name = MockApps.newAppName();
+    ApplicationMasterService masterService =
+        new ApplicationMasterService(resourceManager.getRMContext(), scheduler);
+    ApplicationSubmissionContext submissionContext = new ApplicationSubmissionContextPBImpl();
+    RMApp application =
+        new RMAppImpl(applicationId, resourceManager.getRMContext(), conf, name, user, 
+          queue, submissionContext, scheduler, masterService,
+          System.currentTimeMillis());
+    resourceManager.getRMContext().getRMApps().putIfAbsent(applicationId, application);
+    application.handle(new RMAppEvent(applicationId, RMAppEventType.START));
+
+    ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    attId.setAttemptId(this.ATTEMPT_ID++);
+    attId.setApplicationId(applicationId);
+    scheduler.addApplication(attId, queue, user);
+    
+    final int MAX_TRIES=20;
+    int numTries = 0;
+    while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ex) {ex.printStackTrace();}
+      numTries++;
+    }
+    assertEquals(FinalApplicationStatus.FAILED, application.getFinalApplicationStatus());
   }
 }

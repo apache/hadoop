@@ -37,6 +37,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-328. Use token request messages defined in hadoop common. (suresh)
 
+    YARN-231. RM Restart - Add FS-based persistent store implementation for
+    RMStateStore (Bikas Saha via hitesh)
+
   IMPROVEMENTS
 
     YARN-223. Update process tree instead of getting new process trees.
@@ -100,6 +103,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-170. Change NodeManager stop to be reentrant. (Sandy Ryza via vinodkv)
 
     YARN-331. Fill in missing fair scheduler documentation. (sandyr via tucu)
+
+    YARN-277. Use AMRMClient in DistributedShell to exemplify the approach.
+    (Bikas Saha via hitesh)
 
   OPTIMIZATIONS
 
@@ -202,6 +208,10 @@ Release 2.0.3-alpha - Unreleased
     unregistered on App-finish. (vinodkv via sseth)
 
     YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
+    
+    YARN-319. Submitting a job to a fair scheduler queue for which the user
+    does not have permission causes the client to wait forever.
+    (shenhong via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -324,6 +334,9 @@ Release 0.23.6 - UNRELEASED
     called and a container is completing (Arun C Murthy via tgraves)
 
     YARN-334. Maven RAT plugin is not checking all source files (tgraves)
+
+    YARN-354. WebAppProxyServer exits immediately after startup (Liang Xie via
+    jlowe)
 
 Release 0.23.5 - 2012-11-28
 
