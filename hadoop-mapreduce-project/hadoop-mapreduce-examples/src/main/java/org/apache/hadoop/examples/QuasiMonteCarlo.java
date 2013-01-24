@@ -21,6 +21,7 @@ package org.apache.hadoop.examples;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -77,8 +78,7 @@ public class QuasiMonteCarlo extends Configured implements Tool {
   static final String DESCRIPTION
       = "A map/reduce program that estimates Pi using a quasi-Monte Carlo method.";
   /** tmp directory for input/output */
-  static private final Path TMP_DIR = new Path(
-      QuasiMonteCarlo.class.getSimpleName() + "_TMP_3_141592654");
+  static private final String TMP_DIR_PREFIX = QuasiMonteCarlo.class.getSimpleName();
   
   /** 2-dimensional Halton sequence {H(i)},
    * where H(i) is a 2-dimensional point and i >= 1 is the index.
@@ -228,9 +228,9 @@ public class QuasiMonteCarlo extends Configured implements Tool {
     @Override
     public void cleanup(Context context) throws IOException {
       //write output to a file
-      Path outDir = new Path(TMP_DIR, "out");
-      Path outFile = new Path(outDir, "reduce-out");
       Configuration conf = context.getConfiguration();
+      Path outDir = new Path(conf.get(FileOutputFormat.OUTDIR));
+      Path outFile = new Path(outDir, "reduce-out");
       FileSystem fileSys = FileSystem.get(conf);
       SequenceFile.Writer writer = SequenceFile.createWriter(fileSys, conf,
           outFile, LongWritable.class, LongWritable.class, 
@@ -246,7 +246,7 @@ public class QuasiMonteCarlo extends Configured implements Tool {
    * @return the estimated value of Pi
    */
   public static BigDecimal estimatePi(int numMaps, long numPoints,
-      Configuration conf
+      Path tmpDir, Configuration conf
       ) throws IOException, ClassNotFoundException, InterruptedException {
     Job job = new Job(conf);
     //setup job conf
@@ -269,14 +269,14 @@ public class QuasiMonteCarlo extends Configured implements Tool {
     job.setSpeculativeExecution(false);
 
     //setup input/output directories
-    final Path inDir = new Path(TMP_DIR, "in");
-    final Path outDir = new Path(TMP_DIR, "out");
+    final Path inDir = new Path(tmpDir, "in");
+    final Path outDir = new Path(tmpDir, "out");
     FileInputFormat.setInputPaths(job, inDir);
     FileOutputFormat.setOutputPath(job, outDir);
 
     final FileSystem fs = FileSystem.get(conf);
-    if (fs.exists(TMP_DIR)) {
-      throw new IOException("Tmp directory " + fs.makeQualified(TMP_DIR)
+    if (fs.exists(tmpDir)) {
+      throw new IOException("Tmp directory " + fs.makeQualified(tmpDir)
           + " already exists.  Please remove it first.");
     }
     if (!fs.mkdirs(inDir)) {
@@ -325,7 +325,7 @@ public class QuasiMonteCarlo extends Configured implements Tool {
           .multiply(BigDecimal.valueOf(numInside.get()))
           .divide(numTotal, RoundingMode.HALF_UP);
     } finally {
-      fs.delete(TMP_DIR, true);
+      fs.delete(tmpDir, true);
     }
   }
 
@@ -344,12 +344,15 @@ public class QuasiMonteCarlo extends Configured implements Tool {
     
     final int nMaps = Integer.parseInt(args[0]);
     final long nSamples = Long.parseLong(args[1]);
+    long now = System.currentTimeMillis();
+    int rand = new Random().nextInt(Integer.MAX_VALUE);
+    final Path tmpDir = new Path(TMP_DIR_PREFIX + "_" + now + "_" + rand);
         
     System.out.println("Number of Maps  = " + nMaps);
     System.out.println("Samples per Map = " + nSamples);
         
     System.out.println("Estimated value of Pi is "
-        + estimatePi(nMaps, nSamples, getConf()));
+        + estimatePi(nMaps, nSamples, tmpDir, getConf()));
     return 0;
   }
 

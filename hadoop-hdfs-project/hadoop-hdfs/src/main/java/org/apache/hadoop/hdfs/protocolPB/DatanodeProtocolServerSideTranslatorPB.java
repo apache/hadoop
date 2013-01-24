@@ -62,15 +62,17 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     DatanodeProtocolPB {
 
   private final DatanodeProtocol impl;
-  private static final ErrorReportResponseProto ERROR_REPORT_RESPONSE_PROTO = 
-      ErrorReportResponseProto.newBuilder().build();
+  private static final ErrorReportResponseProto
+      VOID_ERROR_REPORT_RESPONSE_PROTO = 
+          ErrorReportResponseProto.newBuilder().build();
   private static final BlockReceivedAndDeletedResponseProto 
-      BLOCK_RECEIVED_AND_DELETE_RESPONSE = 
+      VOID_BLOCK_RECEIVED_AND_DELETE_RESPONSE = 
           BlockReceivedAndDeletedResponseProto.newBuilder().build();
-  private static final ReportBadBlocksResponseProto REPORT_BAD_BLOCK_RESPONSE = 
-      ReportBadBlocksResponseProto.newBuilder().build();
+  private static final ReportBadBlocksResponseProto
+      VOID_REPORT_BAD_BLOCK_RESPONSE = 
+          ReportBadBlocksResponseProto.newBuilder().build();
   private static final CommitBlockSynchronizationResponseProto 
-      COMMIT_BLOCK_SYNCHRONIZATION_RESPONSE_PROTO =
+      VOID_COMMIT_BLOCK_SYNCHRONIZATION_RESPONSE_PROTO =
           CommitBlockSynchronizationResponseProto.newBuilder().build();
 
   public DatanodeProtocolServerSideTranslatorPB(DatanodeProtocol impl) {
@@ -180,7 +182,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return BLOCK_RECEIVED_AND_DELETE_RESPONSE;
+    return VOID_BLOCK_RECEIVED_AND_DELETE_RESPONSE;
   }
 
   @Override
@@ -192,7 +194,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return ERROR_REPORT_RESPONSE_PROTO;
+    return VOID_ERROR_REPORT_RESPONSE_PROTO;
   }
 
   @Override
@@ -221,7 +223,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return REPORT_BAD_BLOCK_RESPONSE;
+    return VOID_REPORT_BAD_BLOCK_RESPONSE;
   }
 
   @Override
@@ -242,6 +244,6 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return COMMIT_BLOCK_SYNCHRONIZATION_RESPONSE_PROTO;
+    return VOID_COMMIT_BLOCK_SYNCHRONIZATION_RESPONSE_PROTO;
   }
 }

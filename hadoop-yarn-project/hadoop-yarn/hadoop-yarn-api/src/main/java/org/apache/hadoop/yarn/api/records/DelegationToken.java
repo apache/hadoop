@@ -18,12 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import java.nio.ByteBuffer;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
 /**
@@ -33,52 +29,4 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
  */
 @Public
 @Evolving
-public interface DelegationToken {
-  /**
-   * Get the token identifier.
-   * @return token identifier
-   */
-  @Public
-  @Stable
-  ByteBuffer getIdentifier();
-  
-  @Private
-  @Stable
-  void setIdentifier(ByteBuffer identifier);
-
-  /**
-   * Get the token password
-   * @return token password
-   */
-  @Public
-  @Stable
-  ByteBuffer getPassword();
-  
-  @Private
-  @Stable
-  void setPassword(ByteBuffer password);
-
-  /**
-   * Get the token kind.
-   * @return token kind
-   */
-  @Public
-  @Stable
-  String getKind();
-  
-  @Private
-  @Stable
-  void setKind(String kind);
-
-  /**
-   * Get the service to which the token is allocated.
-   * @return service to which the token is allocated
-   */
-  @Public
-  @Stable
-  String getService();
-
-  @Private
-  @Stable
-  void setService(String service);
-}
+public interface DelegationToken extends Token {}

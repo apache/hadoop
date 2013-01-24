@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.YarnVersionAnnotation;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -30,31 +30,20 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class YarnVersionInfo {
+public class YarnVersionInfo extends VersionInfo {
   private static final Log LOG = LogFactory.getLog(YarnVersionInfo.class);
 
-  private static Package myPackage;
-  private static YarnVersionAnnotation version;
-  
-  static {
-    myPackage = YarnVersionAnnotation.class.getPackage();
-    version = myPackage.getAnnotation(YarnVersionAnnotation.class);
-  }
+  private static YarnVersionInfo YARN_VERSION_INFO = new YarnVersionInfo();
 
-  /**
-   * Get the meta-data for the Yarn package.
-   * @return
-   */
-  static Package getPackage() {
-    return myPackage;
+  protected YarnVersionInfo() {
+    super("yarn");
   }
-  
   /**
    * Get the Yarn version.
    * @return the Yarn version string, eg. "0.6.3-dev"
    */
   public static String getVersion() {
-    return version != null ? version.version() : "Unknown";
+    return YARN_VERSION_INFO._getVersion();
   }
   
   /**
@@ -62,7 +51,7 @@ public class YarnVersionInfo {
    * @return the revision number, eg. "451451"
    */
   public static String getRevision() {
-    return version != null ? version.revision() : "Unknown";
+    return YARN_VERSION_INFO._getRevision();
   }
 
   /**
@@ -70,7 +59,7 @@ public class YarnVersionInfo {
    * @return The branch name, e.g. "trunk" or "branches/branch-0.20"
    */
   public static String getBranch() {
-    return version != null ? version.branch() : "Unknown";
+    return YARN_VERSION_INFO._getBranch();
   }
 
   /**
@@ -78,7 +67,7 @@ public class YarnVersionInfo {
    * @return the compilation date in unix date format
    */
   public static String getDate() {
-    return version != null ? version.date() : "Unknown";
+    return YARN_VERSION_INFO._getDate();
   }
   
   /**
@@ -86,14 +75,14 @@ public class YarnVersionInfo {
    * @return the username of the user
    */
   public static String getUser() {
-    return version != null ? version.user() : "Unknown";
+    return YARN_VERSION_INFO._getUser();
   }
   
   /**
    * Get the subversion URL for the root Yarn directory.
    */
   public static String getUrl() {
-    return version != null ? version.url() : "Unknown";
+    return YARN_VERSION_INFO._getUrl();
   }
 
   /**
@@ -101,7 +90,7 @@ public class YarnVersionInfo {
    * built.
    **/
   public static String getSrcChecksum() {
-    return version != null ? version.srcChecksum() : "Unknown";
+    return YARN_VERSION_INFO._getSrcChecksum();
   }
 
   /**
@@ -109,14 +98,11 @@ public class YarnVersionInfo {
    * revision, user and date. 
    */
   public static String getBuildVersion(){
-    return YarnVersionInfo.getVersion() + 
-    " from " + YarnVersionInfo.getRevision() +
-    " by " + YarnVersionInfo.getUser() + 
-    " source checksum " + YarnVersionInfo.getSrcChecksum();
+    return YARN_VERSION_INFO._getBuildVersion();
   }
   
   public static void main(String[] args) {
-    LOG.debug("version: "+ version);
+    LOG.debug("version: "+ getVersion());
     System.out.println("Yarn " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import org.junit.Before;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -173,12 +174,26 @@ public class TestFileUtil {
       //Expected an IOException
     }
   }
+
+  @Before
+  public void before() throws IOException {
+    cleanupImpl();
+  }
   
   @After
   public void tearDown() throws IOException {
-    FileUtil.fullyDelete(del);
-    FileUtil.fullyDelete(tmp);
-    FileUtil.fullyDelete(partitioned);
+    cleanupImpl();
+  }
+  
+  private void cleanupImpl() throws IOException  {
+    FileUtil.fullyDelete(del, true);
+    Assert.assertTrue(!del.exists());
+    
+    FileUtil.fullyDelete(tmp, true);
+    Assert.assertTrue(!tmp.exists());
+    
+    FileUtil.fullyDelete(partitioned, true);
+    Assert.assertTrue(!partitioned.exists());
   }
 
   @Test
@@ -269,12 +284,14 @@ public class TestFileUtil {
     Assert.assertTrue(new File(tmp, FILE).exists());
   }
 
-  private File xSubDir = new File(del, "xsubdir");
-  private File ySubDir = new File(del, "ysubdir");
-  static String file1Name = "file1";
-  private File file2 = new File(xSubDir, "file2");
-  private File file3 = new File(ySubDir, "file3");
-  private File zlink = new File(del, "zlink");
+  private final File xSubDir = new File(del, "xSubDir");
+  private final File xSubSubDir = new File(xSubDir, "xSubSubDir");
+  private final File ySubDir = new File(del, "ySubDir");
+  private static final String file1Name = "file1";
+  private final File file2 = new File(xSubDir, "file2");
+  private final File file22 = new File(xSubSubDir, "file22");
+  private final File file3 = new File(ySubDir, "file3");
+  private final File zlink = new File(del, "zlink");
   
   /**
    * Creates a directory which can not be deleted completely.
@@ -286,10 +303,14 @@ public class TestFileUtil {
    *                       |
    *    .---------------------------------------,
    *    |            |              |           |
-   *  file1(!w)   xsubdir(-w)   ysubdir(+w)   zlink
-   *                 |              |
-   *               file2          file3
-   *
+   *  file1(!w)   xSubDir(-rwx)   ySubDir(+w)   zlink
+   *              |  |              |
+   *              | file2(-rwx)   file3
+   *              |
+   *            xSubSubDir(-rwx) 
+   *              |
+   *             file22(-rwx)
+   *             
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
@@ -302,7 +323,16 @@ public class TestFileUtil {
 
     xSubDir.mkdirs();
     file2.createNewFile();
-    xSubDir.setWritable(false);
+    
+    xSubSubDir.mkdirs();
+    file22.createNewFile();
+    
+    revokePermissions(file22);
+    revokePermissions(xSubSubDir);
+    
+    revokePermissions(file2);
+    revokePermissions(xSubDir);
+    
     ySubDir.mkdirs();
     file3.createNewFile();
 
@@ -314,23 +344,43 @@ public class TestFileUtil {
     FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
   
+  private static void grantPermissions(final File f) {
+    f.setReadable(true);
+    f.setWritable(true);
+    f.setExecutable(true);
+  }
+  
+  private static void revokePermissions(final File f) {
+     f.setWritable(false);
+     f.setExecutable(false);
+     f.setReadable(false);
+  }
+  
   // Validates the return value.
-  // Validates the existence of directory "xsubdir" and the file "file1"
-  // Sets writable permissions for the non-deleted dir "xsubdir" so that it can
-  // be deleted in tearDown().
-  private void validateAndSetWritablePermissions(boolean ret) {
-    xSubDir.setWritable(true);
-    Assert.assertFalse("The return value should have been false!", ret);
-    Assert.assertTrue("The file file1 should not have been deleted!",
+  // Validates the existence of the file "file1"
+  private void validateAndSetWritablePermissions(
+      final boolean expectedRevokedPermissionDirsExist, final boolean ret) {
+    grantPermissions(xSubDir);
+    grantPermissions(xSubSubDir);
+    
+    Assert.assertFalse("The return value should have been false.", ret);
+    Assert.assertTrue("The file file1 should not have been deleted.",
         new File(del, file1Name).exists());
-    Assert.assertTrue(
-        "The directory xsubdir should not have been deleted!",
-        xSubDir.exists());
-    Assert.assertTrue("The file file2 should not have been deleted!",
-        file2.exists());
-    Assert.assertFalse("The directory ysubdir should have been deleted!",
+    
+    Assert.assertEquals(
+        "The directory xSubDir *should* not have been deleted.",
+        expectedRevokedPermissionDirsExist, xSubDir.exists());
+    Assert.assertEquals("The file file2 *should* not have been deleted.",
+        expectedRevokedPermissionDirsExist, file2.exists());
+    Assert.assertEquals(
+        "The directory xSubSubDir *should* not have been deleted.",
+        expectedRevokedPermissionDirsExist, xSubSubDir.exists());
+    Assert.assertEquals("The file file22 *should* not have been deleted.",
+        expectedRevokedPermissionDirsExist, file22.exists());
+    
+    Assert.assertFalse("The directory ySubDir should have been deleted.",
         ySubDir.exists());
-    Assert.assertFalse("The link zlink should have been deleted!",
+    Assert.assertFalse("The link zlink should have been deleted.",
         zlink.exists());
   }
 
@@ -339,7 +389,15 @@ public class TestFileUtil {
     LOG.info("Running test to verify failure of fullyDelete()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDelete(new MyFile(del));
-    validateAndSetWritablePermissions(ret);
+    validateAndSetWritablePermissions(true, ret);
+  }
+  
+  @Test
+  public void testFailFullyDeleteGrantPermissions() throws IOException {
+    setupDirsAndNonWritablePermissions();
+    boolean ret = FileUtil.fullyDelete(new MyFile(del), true);
+    // this time the directories with revoked permissions *should* be deleted:
+    validateAndSetWritablePermissions(false, ret);
   }
 
   /**
@@ -388,7 +446,10 @@ public class TestFileUtil {
      */
     @Override
     public File[] listFiles() {
-      File[] files = super.listFiles();
+      final File[] files = super.listFiles();
+      if (files == null) {
+         return null;
+      }
       List<File> filesList = Arrays.asList(files);
       Collections.sort(filesList);
       File[] myFiles = new MyFile[files.length];
@@ -405,9 +466,17 @@ public class TestFileUtil {
     LOG.info("Running test to verify failure of fullyDeleteContents()");
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
-    validateAndSetWritablePermissions(ret);
+    validateAndSetWritablePermissions(true, ret);
   }
 
+  @Test
+  public void testFailFullyDeleteContentsGrantPermissions() throws IOException {
+    setupDirsAndNonWritablePermissions();
+    boolean ret = FileUtil.fullyDeleteContents(new MyFile(del), true);
+    // this time the directories with revoked permissions *should* be deleted:
+    validateAndSetWritablePermissions(false, ret);
+  }
+  
   @Test
   public void testCopyMergeSingleDirectory() throws IOException {
     setupDirs();

@@ -102,7 +102,7 @@ message ApplicationMasterProto {
   optional string trackingUrl = 4;
   optional ApplicationStatusProto status = 5;
   optional YarnApplicationStateProto state = 6;
-  optional string client_token = 7;
+  optional hadoop.common.TokenProto client_token = 7;
   optional int32 containerCount = 8;
   optional int32 amFailCount = 9;
   optional string diagnostics = 10 [default = ""];
@@ -151,7 +151,7 @@ message ApplicationReportProto {
   optional string name = 4;
   optional string host = 5;
   optional int32 rpc_port = 6;
-  optional string client_token = 7;
+  optional hadoop.common.TokenProto client_token = 7;
   optional ApplicationStatusProto status = 8;
   optional YarnApplicationStateProto yarn_application_state = 9;
   optional ContainerProto masterContainer = 10;

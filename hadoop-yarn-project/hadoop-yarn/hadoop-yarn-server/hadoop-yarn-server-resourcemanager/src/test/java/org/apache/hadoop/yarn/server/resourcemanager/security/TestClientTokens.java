@@ -52,8 +52,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -67,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMWithCustomAMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
@@ -106,14 +109,14 @@ public class TestClientTokens {
   private static class CustomAM extends AbstractService implements
       CustomProtocol {
 
-    private final ApplicationId appId;
+    private final ApplicationAttemptId appAttemptId;
     private final String secretKey;
     private InetSocketAddress address;
     private boolean pinged = false;
 
-    public CustomAM(ApplicationId appId, String secretKeyStr) {
+    public CustomAM(ApplicationAttemptId appId, String secretKeyStr) {
       super("CustomAM");
-      this.appId = appId;
+      this.appAttemptId = appId;
       this.secretKey = secretKeyStr;
     }
 
@@ -128,7 +131,7 @@ public class TestClientTokens {
 
       ClientToAMTokenSecretManager secretManager = null;
       byte[] bytes = Base64.decodeBase64(this.secretKey);
-      secretManager = new ClientToAMTokenSecretManager(this.appId, bytes);
+      secretManager = new ClientToAMTokenSecretManager(this.appAttemptId, bytes);
       Server server;
       try {
         server =
@@ -216,7 +219,7 @@ public class TestClientTokens {
     GetApplicationReportResponse reportResponse =
         rm.getClientRMService().getApplicationReport(request);
     ApplicationReport appReport = reportResponse.getApplicationReport();
-    String clientTokenEncoded = appReport.getClientToken();
+    ClientToken clientToken = appReport.getClientToken();
 
     // Wait till AM is 'launched'
     int waitTime = 0;
@@ -226,9 +229,11 @@ public class TestClientTokens {
     Assert.assertNotNull(containerManager.clientTokensSecret);
 
     // Start the AM with the correct shared-secret.
+    ApplicationAttemptId appAttemptId =
+        app.getAppAttempts().keySet().iterator().next();
+    Assert.assertNotNull(appAttemptId);
     final CustomAM am =
-        new CustomAM(app.getApplicationId(),
-          containerManager.clientTokensSecret);
+        new CustomAM(appAttemptId, containerManager.clientTokensSecret);
     am.init(conf);
     am.start();
 
@@ -249,21 +254,19 @@ public class TestClientTokens {
 
     // Verify denial for a malicious user
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("me");
-    Token<ClientTokenIdentifier> clientToken =
-        new Token<ClientTokenIdentifier>();
-    clientToken.decodeFromUrlString(clientTokenEncoded);
-    // RPC layer client expects ip:port as service for tokens
-    SecurityUtil.setTokenService(clientToken, am.address);
+    Token<ClientTokenIdentifier> token =
+        ProtoUtils.convertFromProtoFormat(clientToken, am.address);
 
     // Malicious user, messes with appId
     ClientTokenIdentifier maliciousID =
-        new ClientTokenIdentifier(BuilderUtils.newApplicationId(app
-          .getApplicationId().getClusterTimestamp(), 42));
+        new ClientTokenIdentifier(BuilderUtils.newApplicationAttemptId(
+          BuilderUtils.newApplicationId(app.getApplicationId()
+            .getClusterTimestamp(), 42), 43));
 
     Token<ClientTokenIdentifier> maliciousToken =
         new Token<ClientTokenIdentifier>(maliciousID.getBytes(),
-          clientToken.getPassword(), clientToken.getKind(),
-          clientToken.getService());
+          token.getPassword(), token.getKind(),
+          token.getService());
     ugi.addToken(maliciousToken);
 
     try {
@@ -297,7 +300,7 @@ public class TestClientTokens {
 
     // Now for an authenticated user
     ugi = UserGroupInformation.createRemoteUser("me");
-    ugi.addToken(clientToken);
+    ugi.addToken(token);
 
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override

@@ -48,7 +48,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
@@ -2290,19 +2289,6 @@ public class MiniDFSCluster {
     return nameNodes[nnIndex].nameNode;
   }
   
-  private int getFreeSocketPort() {
-    int port = 0;
-    try {
-      ServerSocket s = new ServerSocket(0);
-      port = s.getLocalPort();
-      s.close();
-      return port;
-    } catch (IOException e) {
-      // Could not get a free port. Return default port 0.
-    }
-    return port;
-  }
-  
   protected void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
                            boolean checkDataNodeAddrConfig) throws IOException {
     if (setupHostsFile) {
@@ -2311,7 +2297,7 @@ public class MiniDFSCluster {
         throw new IOException("Parameter dfs.hosts is not setup in conf");
       }
       // Setup datanode in the include file, if it is defined in the conf
-      String address = "127.0.0.1:" + getFreeSocketPort();
+      String address = "127.0.0.1:" + NetUtils.getFreeSocketPort();
       if (checkDataNodeAddrConfig) {
         conf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, address);
       } else {

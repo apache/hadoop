@@ -32,13 +32,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestMergeManager {
 
   @Test(timeout=10000)
+  @SuppressWarnings("unchecked")
   public void testMemoryMerge() throws Exception {
     final int TOTAL_MEM_BYTES = 10000;
     final int OUTPUT_SIZE = 7950;
@@ -55,45 +55,47 @@ public class TestMergeManager {
 
     // reserve enough map output to cause a merge when it is committed
     MapOutput<Text, Text> out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out1.getType());
-    fillOutput(out1);
+    Assert.assertTrue("Should be a memory merge",
+                      (out1 instanceof InMemoryMapOutput));
+    InMemoryMapOutput<Text, Text> mout1 = (InMemoryMapOutput<Text, Text>)out1;
+    fillOutput(mout1);
     MapOutput<Text, Text> out2 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out2.getType());
-    fillOutput(out2);
+    Assert.assertTrue("Should be a memory merge",
+                      (out2 instanceof InMemoryMapOutput));
+    InMemoryMapOutput<Text, Text> mout2 = (InMemoryMapOutput<Text, Text>)out2;
+    fillOutput(mout2);
 
     // next reservation should be a WAIT
     MapOutput<Text, Text> out3 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be told to wait",
-        Type.WAIT, out3.getType());
+    Assert.assertEquals("Should be told to wait", null, out3);
 
     // trigger the first merge and wait for merge thread to start merging
     // and free enough output to reserve more
-    out1.commit();
-    out2.commit();
+    mout1.commit();
+    mout2.commit();
     mergeStart.await();
 
     Assert.assertEquals(1, mgr.getNumMerges());
 
     // reserve enough map output to cause another merge when committed
     out1 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out1.getType());
-    fillOutput(out1);
+    Assert.assertTrue("Should be a memory merge",
+                       (out1 instanceof InMemoryMapOutput));
+    mout1 = (InMemoryMapOutput<Text, Text>)out1;
+    fillOutput(mout1);
     out2 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be a memory merge",
-        Type.MEMORY, out2.getType());
-    fillOutput(out2);
+    Assert.assertTrue("Should be a memory merge",
+                       (out2 instanceof InMemoryMapOutput));
+    mout2 = (InMemoryMapOutput<Text, Text>)out2;
+    fillOutput(mout2);
 
-    // next reservation should be a WAIT
+    // next reservation should be null
     out3 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be told to wait",
-        Type.WAIT, out3.getType());
+    Assert.assertEquals("Should be told to wait", null, out3);
 
     // commit output *before* merge thread completes
-    out1.commit();
-    out2.commit();
+    mout1.commit();
+    mout2.commit();
 
     // allow the first merge to complete
     mergeComplete.await();
@@ -110,7 +112,7 @@ public class TestMergeManager {
         0, reporter.getNumExceptions());
   }
 
-  private void fillOutput(MapOutput<Text, Text> output) throws IOException {
+  private void fillOutput(InMemoryMapOutput<Text, Text> output) throws IOException {
     BoundedByteArrayOutputStream stream = output.getArrayStream();
     int count = stream.getLimit();
     for (int i=0; i < count; ++i) {
@@ -118,7 +120,7 @@ public class TestMergeManager {
     }
   }
 
-  private static class StubbedMergeManager extends MergeManager<Text, Text> {
+  private static class StubbedMergeManager extends MergeManagerImpl<Text, Text> {
     private TestMergeThread mergeThread;
 
     public StubbedMergeManager(JobConf conf, ExceptionReporter reporter,
@@ -129,7 +131,7 @@ public class TestMergeManager {
     }
 
     @Override
-    protected MergeThread<MapOutput<Text, Text>, Text, Text> createInMemoryMerger() {
+    protected MergeThread<InMemoryMapOutput<Text, Text>, Text, Text> createInMemoryMerger() {
       mergeThread = new TestMergeThread(this, getExceptionReporter());
       return mergeThread;
     }
@@ -140,12 +142,12 @@ public class TestMergeManager {
   }
 
   private static class TestMergeThread
-  extends MergeThread<MapOutput<Text,Text>, Text, Text> {
+  extends MergeThread<InMemoryMapOutput<Text,Text>, Text, Text> {
     private AtomicInteger numMerges;
     private CyclicBarrier mergeStart;
     private CyclicBarrier mergeComplete;
 
-    public TestMergeThread(MergeManager<Text, Text> mergeManager,
+    public TestMergeThread(MergeManagerImpl<Text, Text> mergeManager,
         ExceptionReporter reporter) {
       super(mergeManager, Integer.MAX_VALUE, reporter);
       numMerges = new AtomicInteger(0);
@@ -162,11 +164,11 @@ public class TestMergeManager {
     }
 
     @Override
-    public void merge(List<MapOutput<Text, Text>> inputs)
+    public void merge(List<InMemoryMapOutput<Text, Text>> inputs)
         throws IOException {
       synchronized (this) {
         numMerges.incrementAndGet();
-        for (MapOutput<Text, Text> input : inputs) {
+        for (InMemoryMapOutput<Text, Text> input : inputs) {
           manager.unreserve(input.getSize());
         }
       }

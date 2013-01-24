@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskID;
@@ -183,13 +184,13 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
-  public synchronized TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+  public synchronized TaskCompletionEvent[] getMapAttemptCompletionEvents(
       int startIndex, int maxEvents) {
     if (mapCompletionEvents == null) {
       constructTaskAttemptCompletionEvents();
     }
-    return getAttemptCompletionEvents(mapCompletionEvents,
-        startIndex, maxEvents);
+    return TypeConverter.fromYarn(getAttemptCompletionEvents(
+        mapCompletionEvents, startIndex, maxEvents));
   }
 
   private static TaskAttemptCompletionEvent[] getAttemptCompletionEvents(

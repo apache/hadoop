@@ -117,22 +117,6 @@
             namenode to communicate with the namenode.</td>
           </tr>
           <tr>
-            <td><code>security.inter.tracker.protocol.acl</code></td>
-            <td>ACL for InterTrackerProtocol, used by the tasktrackers to 
-            communicate with the jobtracker.</td>
-          </tr>
-          <tr>
-            <td><code>security.job.submission.protocol.acl</code></td>
-            <td>ACL for JobSubmissionProtocol, used by job clients to 
-            communciate with the jobtracker for job submission, querying job status 
-            etc.</td>
-          </tr>
-          <tr>
-            <td><code>security.task.umbilical.protocol.acl</code></td>
-            <td>ACL for TaskUmbilicalProtocol, used by the map and reduce 
-            tasks to communicate with the parent tasktracker.</td>
-          </tr>
-          <tr>
             <td><code>security.refresh.policy.protocol.acl</code></td>
             <td>ACL for RefreshAuthorizationPolicyProtocol, used by the 
             dfsadmin and mradmin commands to refresh the security policy in-effect.

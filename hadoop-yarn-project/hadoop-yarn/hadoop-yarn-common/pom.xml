@@ -45,7 +45,69 @@
   </dependencies>
 
   <build>
+    <!--
+    Include all files in src/main/resources.  By default, do not apply property
+    substitution (filtering=false), but do apply property substitution to
+    yarn-version-info.properties (filtering=true).  This will substitute the
+    version information correctly, but prevent Maven from altering other files
+    like yarn-default.xml.
+    -->
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <excludes>
+          <exclude>yarn-version-info.properties</exclude>
+        </excludes>
+        <filtering>false</filtering>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <includes>
+          <include>yarn-version-info.properties</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
+     <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/resources/webapps/mapreduce/.keep</exclude>
+            <exclude>src/main/resources/webapps/jobhistory/.keep</exclude>
+            <exclude>src/main/resources/webapps/yarn/.keep</exclude>
+            <exclude>src/main/resources/webapps/cluster/.keep</exclude>
+            <exclude>src/main/resources/webapps/test/.keep</exclude>
+            <exclude>src/main/resources/webapps/proxy/.keep</exclude>
+            <exclude>src/main/resources/webapps/node/.keep</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
+        <executions>
+          <execution>
+            <id>version-info</id>
+            <goals>
+              <goal>version-info</goal>
+            </goals>
+            <configuration>
+              <source>
+                <directory>${basedir}/src/main</directory>
+                <includes>
+                  <include>java/**/*.java</include>
+                  <include>proto/**/*.proto</include>
+                </includes>
+              </source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
@@ -103,20 +165,6 @@
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/proto</argument>
                 <argument>src/main/proto/yarnprototunnelrpc.proto</argument>
-              </arguments>
-            </configuration>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>generate-version</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <executable>scripts/saveVersion.sh</executable>
-              <arguments>
-                <argument>${project.version}</argument>
-                <argument>${project.build.directory}</argument>
               </arguments>
             </configuration>
             <goals>

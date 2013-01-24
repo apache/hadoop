@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-
+import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ClientToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
@@ -31,15 +32,15 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-
-public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> implements ApplicationMaster {
+public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto>
+    implements ApplicationMaster {
   ApplicationMasterProto proto = ApplicationMasterProto.getDefaultInstance();
   ApplicationMasterProto.Builder builder = null;
   boolean viaProto = false;
 
   private ApplicationId applicationId = null;
   private ApplicationStatus applicationStatus = null;
-
+  private ClientToken clientToken = null;
 
   public ApplicationMasterPBImpl() {
     builder = ApplicationMasterProto.newBuilder();
@@ -59,12 +60,21 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)this.applicationId).getProto().equals(builder.getApplicationId())) {
+    if (this.applicationId != null
+        && !((ApplicationIdPBImpl) this.applicationId).getProto().equals(
+          builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
 
-    if (this.applicationStatus != null && !((ApplicationStatusPBImpl)this.applicationStatus).getProto().equals(builder.getStatus())) {
+    if (this.applicationStatus != null
+        && !((ApplicationStatusPBImpl) this.applicationStatus).getProto()
+          .equals(builder.getStatus())) {
       builder.setStatus(convertToProtoFormat(this.applicationStatus));
+    }
+    if (this.clientToken != null
+        && !((ClientTokenPBImpl) this.clientToken).getProto().equals(
+          builder.getClientToken())) {
+      builder.setClientToken(convertToProtoFormat(this.clientToken));
     }
   }
 
@@ -188,23 +198,26 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     this.applicationStatus = status;
 
   }
+
   @Override
-  public String getClientToken() {
+  public ClientToken getClientToken() {
     ApplicationMasterProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.clientToken != null) {
+      return this.clientToken;
+    }
     if (!p.hasClientToken()) {
       return null;
     }
-    return (p.getClientToken());
+    this.clientToken = convertFromProtoFormat(p.getClientToken());
+    return this.clientToken;
   }
-
+  
   @Override
-  public void setClientToken(String clientToken) {
+  public void setClientToken(ClientToken clientToken) {
     maybeInitBuilder();
-    if (clientToken == null) {
+    if (clientToken == null) 
       builder.clearClientToken();
-      return;
-    }
-    builder.setClientToken((clientToken));
+    this.clientToken = clientToken;
   }
 
   @Override
@@ -271,4 +284,11 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     return ((ApplicationStatusPBImpl)t).getProto();
   }
 
+  private ClientTokenPBImpl convertFromProtoFormat(TokenProto p) {
+    return new ClientTokenPBImpl(p);
+  }
+
+  private TokenProto convertToProtoFormat(ClientToken t) {
+    return ((ClientTokenPBImpl)t).getProto();
+  }
 }

@@ -237,7 +237,7 @@ public class AMLauncher implements Runnable {
 
       SecretKey clientSecretKey =
           this.rmContext.getClientToAMTokenSecretManager().getMasterKey(
-            applicationId);
+            application.getAppAttemptId());
       String encoded =
           Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
       environment.put(

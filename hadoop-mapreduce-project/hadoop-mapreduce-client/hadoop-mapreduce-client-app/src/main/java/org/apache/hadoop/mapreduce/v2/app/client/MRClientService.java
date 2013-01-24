@@ -125,8 +125,8 @@ public class MRClientService extends AbstractService
               .getenv(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME);
       byte[] bytes = Base64.decodeBase64(secretKeyStr);
       secretManager =
-          new ClientToAMTokenSecretManager(this.appContext.getApplicationID(),
-            bytes);
+          new ClientToAMTokenSecretManager(
+            this.appContext.getApplicationAttemptId(), bytes);
     }
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,

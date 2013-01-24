@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationStateDataPBImpl;
 
+@Unstable
 public class NullRMStateStore extends RMStateStore {
 
   @Override
@@ -36,7 +38,7 @@ public class NullRMStateStore extends RMStateStore {
 
   @Override
   public RMState loadState() throws Exception {
-    return null;
+    throw new UnsupportedOperationException("Cannot load state from null store");
   }
 
   @Override

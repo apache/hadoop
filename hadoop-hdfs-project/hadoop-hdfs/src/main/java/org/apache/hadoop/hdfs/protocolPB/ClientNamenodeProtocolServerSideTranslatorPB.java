@@ -40,8 +40,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowS
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CancelDelegationTokenRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatRequestProto;
@@ -73,8 +71,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetCon
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
@@ -107,8 +103,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameSnapshotResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewDelegationTokenRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewLeaseResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ReportBadBlocksRequestProto;
@@ -143,6 +137,12 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.RpcController;
@@ -170,6 +170,78 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       AllowSnapshotResponseProto.newBuilder().build();
   static final DisallowSnapshotResponseProto VOID_DISALLOW_SNAPSHOT_RESPONSE =
       DisallowSnapshotResponseProto.newBuilder().build();
+
+  private static final CreateResponseProto VOID_CREATE_RESPONSE = 
+  CreateResponseProto.newBuilder().build();
+
+  private static final AppendResponseProto VOID_APPEND_RESPONSE = 
+  AppendResponseProto.newBuilder().build();
+
+  private static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE = 
+  SetPermissionResponseProto.newBuilder().build();
+
+  private static final SetOwnerResponseProto VOID_SET_OWNER_RESPONSE = 
+  SetOwnerResponseProto.newBuilder().build();
+
+  private static final AbandonBlockResponseProto VOID_ADD_BLOCK_RESPONSE = 
+  AbandonBlockResponseProto.newBuilder().build();
+
+  private static final ReportBadBlocksResponseProto VOID_REP_BAD_BLOCK_RESPONSE = 
+  ReportBadBlocksResponseProto.newBuilder().build();
+
+  private static final ConcatResponseProto VOID_CONCAT_RESPONSE = 
+  ConcatResponseProto.newBuilder().build();
+
+  private static final Rename2ResponseProto VOID_RENAME2_RESPONSE = 
+  Rename2ResponseProto.newBuilder().build();
+
+  private static final GetListingResponseProto VOID_GETLISTING_RESPONSE = 
+  GetListingResponseProto.newBuilder().build();
+
+  private static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE = 
+  RenewLeaseResponseProto.newBuilder().build();
+
+  private static final SaveNamespaceResponseProto VOID_SAVENAMESPACE_RESPONSE = 
+  SaveNamespaceResponseProto.newBuilder().build();
+
+  private static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE = 
+  RefreshNodesResponseProto.newBuilder().build();
+
+  private static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE = 
+  FinalizeUpgradeResponseProto.newBuilder().build();
+
+  private static final MetaSaveResponseProto VOID_METASAVE_RESPONSE = 
+  MetaSaveResponseProto.newBuilder().build();
+
+  private static final GetFileInfoResponseProto VOID_GETFILEINFO_RESPONSE = 
+  GetFileInfoResponseProto.newBuilder().build();
+
+  private static final GetFileLinkInfoResponseProto VOID_GETFILELINKINFO_RESPONSE = 
+  GetFileLinkInfoResponseProto.newBuilder().build();
+
+  private static final SetQuotaResponseProto VOID_SETQUOTA_RESPONSE = 
+  SetQuotaResponseProto.newBuilder().build();
+
+  private static final FsyncResponseProto VOID_FSYNC_RESPONSE = 
+  FsyncResponseProto.newBuilder().build();
+
+  private static final SetTimesResponseProto VOID_SETTIMES_RESPONSE = 
+  SetTimesResponseProto.newBuilder().build();
+
+  private static final CreateSymlinkResponseProto VOID_CREATESYMLINK_RESPONSE = 
+  CreateSymlinkResponseProto.newBuilder().build();
+
+  private static final UpdatePipelineResponseProto
+    VOID_UPDATEPIPELINE_RESPONSE = 
+  UpdatePipelineResponseProto.newBuilder().build();
+
+  private static final CancelDelegationTokenResponseProto 
+      VOID_CANCELDELEGATIONTOKEN_RESPONSE = 
+          CancelDelegationTokenResponseProto.newBuilder().build();
+
+  private static final SetBalancerBandwidthResponseProto 
+      VOID_SETBALANCERBANDWIDTH_RESPONSE = 
+        SetBalancerBandwidthResponseProto.newBuilder().build();
 
   /**
    * Constructor
@@ -215,9 +287,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   
-  static final CreateResponseProto VOID_CREATE_RESPONSE = 
-      CreateResponseProto.newBuilder().build();
-  
   @Override
   public CreateResponseProto create(RpcController controller,
       CreateRequestProto req) throws ServiceException {
@@ -232,9 +301,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     return VOID_CREATE_RESPONSE;
   }
   
-  static final AppendResponseProto NULL_APPEND_RESPONSE = 
-      AppendResponseProto.newBuilder().build();
-  
   @Override
   public AppendResponseProto append(RpcController controller,
       AppendRequestProto req) throws ServiceException {
@@ -244,7 +310,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         return AppendResponseProto.newBuilder()
             .setBlock(PBHelper.convert(result)).build();
       }
-      return NULL_APPEND_RESPONSE;
+      return VOID_APPEND_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -263,9 +329,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
 
-  static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE = 
-      SetPermissionResponseProto.newBuilder().build();
-
   @Override
   public SetPermissionResponseProto setPermission(RpcController controller,
       SetPermissionRequestProto req) throws ServiceException {
@@ -276,9 +339,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
     return VOID_SET_PERM_RESPONSE;
   }
-
-  static final SetOwnerResponseProto VOID_SET_OWNER_RESPONSE = 
-      SetOwnerResponseProto.newBuilder().build();
 
   @Override
   public SetOwnerResponseProto setOwner(RpcController controller,
@@ -292,9 +352,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
     return VOID_SET_OWNER_RESPONSE;
   }
-
-  static final AbandonBlockResponseProto VOID_ADD_BLOCK_RESPONSE = 
-      AbandonBlockResponseProto.newBuilder().build();
 
   @Override
   public AbandonBlockResponseProto abandonBlock(RpcController controller,
@@ -361,9 +418,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
   
-  static final ReportBadBlocksResponseProto VOID_REP_BAD_BLOCK_RESPONSE = 
-      ReportBadBlocksResponseProto.newBuilder().build();
-  
   @Override
   public ReportBadBlocksResponseProto reportBadBlocks(RpcController controller,
       ReportBadBlocksRequestProto req) throws ServiceException {
@@ -377,9 +431,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     return VOID_REP_BAD_BLOCK_RESPONSE;
   }
 
-  static final ConcatResponseProto VOID_CONCAT_RESPONSE = 
-      ConcatResponseProto.newBuilder().build();
-  
   @Override
   public ConcatResponseProto concat(RpcController controller,
       ConcatRequestProto req) throws ServiceException {
@@ -403,9 +454,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
 
-  static final Rename2ResponseProto VOID_RENAME2_RESPONSE = 
-      Rename2ResponseProto.newBuilder().build();
-  
   @Override
   public Rename2ResponseProto rename2(RpcController controller,
       Rename2RequestProto req) throws ServiceException {
@@ -442,8 +490,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
 
-  static final GetListingResponseProto NULL_GETLISTING_RESPONSE = 
-      GetListingResponseProto.newBuilder().build();
   @Override
   public GetListingResponseProto getListing(RpcController controller,
       GetListingRequestProto req) throws ServiceException {
@@ -455,15 +501,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         return GetListingResponseProto.newBuilder().setDirList(
           PBHelper.convert(result)).build();
       } else {
-        return NULL_GETLISTING_RESPONSE;
+        return VOID_GETLISTING_RESPONSE;
       }
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
-  
-  static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE = 
-      RenewLeaseResponseProto.newBuilder().build();
   
   @Override
   public RenewLeaseResponseProto renewLease(RpcController controller,
@@ -549,9 +592,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
   
-  static final SaveNamespaceResponseProto VOID_SAVENAMESPACE_RESPONSE = 
-      SaveNamespaceResponseProto.newBuilder().build();
-
   @Override
   public SaveNamespaceResponseProto saveNamespace(RpcController controller,
       SaveNamespaceRequestProto req) throws ServiceException {
@@ -578,9 +618,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
 
-  static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE = 
-      RefreshNodesResponseProto.newBuilder().build();
-
   @Override
   public RefreshNodesResponseProto refreshNodes(RpcController controller,
       RefreshNodesRequestProto req) throws ServiceException {
@@ -592,9 +629,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
 
   }
-
-  static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE = 
-      FinalizeUpgradeResponseProto.newBuilder().build();
 
   @Override
   public FinalizeUpgradeResponseProto finalizeUpgrade(RpcController controller,
@@ -622,9 +656,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
 
-  static final MetaSaveResponseProto VOID_METASAVE_RESPONSE = 
-      MetaSaveResponseProto.newBuilder().build();
-  
   @Override
   public MetaSaveResponseProto metaSave(RpcController controller,
       MetaSaveRequestProto req) throws ServiceException {
@@ -637,8 +668,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   }
 
-  static final GetFileInfoResponseProto NULL_GETFILEINFO_RESPONSE = 
-      GetFileInfoResponseProto.newBuilder().build();
   @Override
   public GetFileInfoResponseProto getFileInfo(RpcController controller,
       GetFileInfoRequestProto req) throws ServiceException {
@@ -649,14 +678,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         return GetFileInfoResponseProto.newBuilder().setFs(
             PBHelper.convert(result)).build();
       }
-      return NULL_GETFILEINFO_RESPONSE;      
+      return VOID_GETFILEINFO_RESPONSE;      
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
-  static final GetFileLinkInfoResponseProto NULL_GETFILELINKINFO_RESPONSE = 
-      GetFileLinkInfoResponseProto.newBuilder().build();
   @Override
   public GetFileLinkInfoResponseProto getFileLinkInfo(RpcController controller,
       GetFileLinkInfoRequestProto req) throws ServiceException {
@@ -668,7 +695,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
             PBHelper.convert(result)).build();
       } else {
         System.out.println("got  null result for getFileLinkInfo for " + req.getSrc());
-        return NULL_GETFILELINKINFO_RESPONSE;      
+        return VOID_GETFILELINKINFO_RESPONSE;      
       }
 
     } catch (IOException e) {
@@ -689,9 +716,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
   
-  static final SetQuotaResponseProto VOID_SETQUOTA_RESPONSE = 
-      SetQuotaResponseProto.newBuilder().build();
-  
   @Override
   public SetQuotaResponseProto setQuota(RpcController controller,
       SetQuotaRequestProto req) throws ServiceException {
@@ -704,9 +728,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
   
-  static final FsyncResponseProto VOID_FSYNC_RESPONSE = 
-      FsyncResponseProto.newBuilder().build();
-
   @Override
   public FsyncResponseProto fsync(RpcController controller,
       FsyncRequestProto req) throws ServiceException {
@@ -718,9 +739,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     }
   }
 
-  static final SetTimesResponseProto VOID_SETTIMES_RESPONSE = 
-      SetTimesResponseProto.newBuilder().build();
-
   @Override
   public SetTimesResponseProto setTimes(RpcController controller,
       SetTimesRequestProto req) throws ServiceException {
@@ -731,9 +749,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-
-  static final CreateSymlinkResponseProto VOID_CREATESYMLINK_RESPONSE = 
-      CreateSymlinkResponseProto.newBuilder().build();
 
   @Override
   public CreateSymlinkResponseProto createSymlink(RpcController controller,
@@ -752,8 +767,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetLinkTargetRequestProto req) throws ServiceException {
     try {
       String result = server.getLinkTarget(req.getPath());
-      return GetLinkTargetResponseProto.newBuilder().setTargetPath(result)
-          .build();
+      GetLinkTargetResponseProto.Builder builder = GetLinkTargetResponseProto
+          .newBuilder();
+      if (result != null) {
+        builder.setTargetPath(result);
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -773,9 +792,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-
-  static final UpdatePipelineResponseProto VOID_UPDATEPIPELINE_RESPONSE = 
-      UpdatePipelineResponseProto.newBuilder().build();
 
   @Override
   public UpdatePipelineResponseProto updatePipeline(RpcController controller,
@@ -818,16 +834,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       long result = server.renewDelegationToken(PBHelper
           .convertDelegationToken(req.getToken()));
       return RenewDelegationTokenResponseProto.newBuilder()
-          .setNewExireTime(result).build();
+          .setNewExpiryTime(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
   }
 
-  static final CancelDelegationTokenResponseProto 
-      VOID_CANCELDELEGATIONTOKEN_RESPONSE = 
-      CancelDelegationTokenResponseProto.newBuilder().build();
-  
   @Override
   public CancelDelegationTokenResponseProto cancelDelegationToken(
       RpcController controller, CancelDelegationTokenRequestProto req)
@@ -840,10 +852,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-
-  static final SetBalancerBandwidthResponseProto 
-    VOID_SETBALANCERBANDWIDTH_RESPONSE = 
-      SetBalancerBandwidthResponseProto.newBuilder().build();
 
   @Override
   public SetBalancerBandwidthResponseProto setBalancerBandwidth(

@@ -18,13 +18,12 @@
 package org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenResponseProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenResponseProtoOrBuilder;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
+import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.DelegationTokenPBImpl;
-
 
 public class GetDelegationTokenResponsePBImpl extends
       ProtoBase<GetDelegationTokenResponseProto> implements GetDelegationTokenResponse {
@@ -53,10 +52,10 @@ public class GetDelegationTokenResponsePBImpl extends
     if (this.mrToken != null) {
       return this.mrToken;
     }
-    if (!p.hasMRDelegationToken()) {
+    if (!p.hasToken()) {
       return null;
     }
-    this.mrToken = convertFromProtoFormat(p.getMRDelegationToken());
+    this.mrToken = convertFromProtoFormat(p.getToken());
     return this.mrToken;  
   }
   
@@ -64,7 +63,7 @@ public class GetDelegationTokenResponsePBImpl extends
   public void setDelegationToken(DelegationToken mrToken) {
     maybeInitBuilder();
     if (mrToken == null) 
-      builder.clearMRDelegationToken();
+      builder.getToken();
     this.mrToken = mrToken;
   }
 
@@ -79,7 +78,7 @@ public class GetDelegationTokenResponsePBImpl extends
 
   private void mergeLocalToBuilder() {
     if (mrToken != null) {
-      builder.setMRDelegationToken(convertToProtoFormat(this.mrToken));
+      builder.setToken(convertToProtoFormat(this.mrToken));
     }
   }
 
@@ -97,7 +96,6 @@ public class GetDelegationTokenResponsePBImpl extends
     }
     viaProto = false;
   }
-   
 
   private DelegationTokenPBImpl convertFromProtoFormat(TokenProto p) {
     return new DelegationTokenPBImpl(p);

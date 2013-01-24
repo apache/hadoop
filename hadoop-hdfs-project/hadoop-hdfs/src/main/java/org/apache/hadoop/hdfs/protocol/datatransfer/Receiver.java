@@ -88,7 +88,8 @@ public abstract class Receiver implements DataTransferProtocol {
         PBHelper.convert(proto.getHeader().getBaseHeader().getToken()),
         proto.getHeader().getClientName(),
         proto.getOffset(),
-        proto.getLen());
+        proto.getLen(),
+        proto.getSendChecksums());
   }
   
   /** Receive OP_WRITE_BLOCK */

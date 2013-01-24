@@ -21,6 +21,7 @@ option java_outer_classname = "ClientRMProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "Security.proto";
 import "yarn_service_protos.proto";
 
 service ClientRMProtocolService {
@@ -33,8 +34,8 @@ service ClientRMProtocolService {
   rpc getClusterNodes (GetClusterNodesRequestProto) returns (GetClusterNodesResponseProto);
   rpc getQueueInfo (GetQueueInfoRequestProto) returns (GetQueueInfoResponseProto);
   rpc getQueueUserAcls (GetQueueUserAclsInfoRequestProto) returns (GetQueueUserAclsInfoResponseProto);
-  rpc getDelegationToken(GetDelegationTokenRequestProto) returns (GetDelegationTokenResponseProto);
-  rpc renewDelegationToken(RenewDelegationTokenRequestProto) returns (RenewDelegationTokenResponseProto);
-  rpc cancelDelegationToken(CancelDelegationTokenRequestProto) returns (CancelDelegationTokenResponseProto);
+  rpc getDelegationToken(hadoop.common.GetDelegationTokenRequestProto) returns (hadoop.common.GetDelegationTokenResponseProto);
+  rpc renewDelegationToken(hadoop.common.RenewDelegationTokenRequestProto) returns (hadoop.common.RenewDelegationTokenResponseProto);
+  rpc cancelDelegationToken(hadoop.common.CancelDelegationTokenRequestProto) returns (hadoop.common.CancelDelegationTokenResponseProto);
 }
 

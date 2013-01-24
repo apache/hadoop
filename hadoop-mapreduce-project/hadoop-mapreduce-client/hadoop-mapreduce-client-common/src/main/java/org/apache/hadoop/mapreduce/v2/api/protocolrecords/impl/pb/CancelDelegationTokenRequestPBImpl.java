@@ -18,8 +18,8 @@
 package org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenRequest;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.CancelDelegationTokenRequestProto;
-import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.CancelDelegationTokenRequestProtoOrBuilder;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
+import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProtoOrBuilder;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
@@ -52,10 +52,7 @@ public class CancelDelegationTokenRequestPBImpl extends
     if (this.token != null) {
       return this.token;
     }
-    if (!p.hasDelegationToken()) {
-      return null;
-    }
-    this.token = convertFromProtoFormat(p.getDelegationToken());
+    this.token = convertFromProtoFormat(p.getToken());
     return this.token;
   }
 
@@ -63,7 +60,7 @@ public class CancelDelegationTokenRequestPBImpl extends
   public void setDelegationToken(DelegationToken token) {
     maybeInitBuilder();
     if (token == null) 
-      builder.clearDelegationToken();
+      builder.clearToken();
     this.token = token;
   }
 
@@ -78,7 +75,7 @@ public class CancelDelegationTokenRequestPBImpl extends
 
   private void mergeLocalToBuilder() {
     if (token != null) {
-      builder.setDelegationToken(convertToProtoFormat(this.token));
+      builder.setToken(convertToProtoFormat(this.token));
     }
   }
 

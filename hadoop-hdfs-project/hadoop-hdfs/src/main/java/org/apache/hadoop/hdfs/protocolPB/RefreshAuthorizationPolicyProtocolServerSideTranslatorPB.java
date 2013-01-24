@@ -32,6 +32,10 @@ public class RefreshAuthorizationPolicyProtocolServerSideTranslatorPB implements
 
   private final RefreshAuthorizationPolicyProtocol impl;
 
+  private final static RefreshServiceAclResponseProto
+  VOID_REFRESH_SERVICE_ACL_RESPONSE = RefreshServiceAclResponseProto
+      .newBuilder().build();
+
   public RefreshAuthorizationPolicyProtocolServerSideTranslatorPB(
       RefreshAuthorizationPolicyProtocol impl) {
     this.impl = impl;
@@ -46,6 +50,6 @@ public class RefreshAuthorizationPolicyProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return RefreshServiceAclResponseProto.newBuilder().build();
+    return VOID_REFRESH_SERVICE_ACL_RESPONSE;
   }
 }

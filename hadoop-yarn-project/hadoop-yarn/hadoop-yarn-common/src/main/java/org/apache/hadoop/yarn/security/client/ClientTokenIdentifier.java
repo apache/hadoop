@@ -27,14 +27,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class ClientTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
-  private ApplicationId applicationId;
+  private ApplicationAttemptId applicationAttemptId;
 
   // TODO: Add more information in the tokenID such that it is not
   // transferrable, more secure etc.
@@ -42,25 +42,29 @@ public class ClientTokenIdentifier extends TokenIdentifier {
   public ClientTokenIdentifier() {
   }
 
-  public ClientTokenIdentifier(ApplicationId id) {
+  public ClientTokenIdentifier(ApplicationAttemptId id) {
     this();
-    this.applicationId = id;
+    this.applicationAttemptId = id;
   }
 
-  public ApplicationId getApplicationID() {
-    return this.applicationId;
+  public ApplicationAttemptId getApplicationAttemptID() {
+    return this.applicationAttemptId;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    out.writeLong(this.applicationId.getClusterTimestamp());
-    out.writeInt(this.applicationId.getId());
+    out.writeLong(this.applicationAttemptId.getApplicationId()
+      .getClusterTimestamp());
+    out.writeInt(this.applicationAttemptId.getApplicationId().getId());
+    out.writeInt(this.applicationAttemptId.getAttemptId());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    this.applicationId =
-        BuilderUtils.newApplicationId(in.readLong(), in.readInt());
+    this.applicationAttemptId =
+        BuilderUtils.newApplicationAttemptId(
+          BuilderUtils.newApplicationId(in.readLong(), in.readInt()),
+          in.readInt());
   }
 
   @Override
@@ -70,10 +74,10 @@ public class ClientTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    if (this.applicationId == null) {
+    if (this.applicationAttemptId == null) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(this.applicationId.toString());
+    return UserGroupInformation.createRemoteUser(this.applicationAttemptId.toString());
   }
 
   @InterfaceAudience.Private

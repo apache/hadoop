@@ -38,6 +38,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 public abstract class ApplicationAttemptId implements
     Comparable<ApplicationAttemptId> {
   
+  public static final String appAttemptIdStrPrefix = "appattempt_";
+
   /**
    * Get the <code>ApplicationId</code> of the <code>ApplicationAttempId</code>. 
    * @return <code>ApplicationId</code> of the <code>ApplicationAttempId</code>
@@ -111,7 +113,7 @@ public abstract class ApplicationAttemptId implements
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("appattempt_");
+    StringBuilder sb = new StringBuilder(appAttemptIdStrPrefix);
     sb.append(this.getApplicationId().getClusterTimestamp()).append("_");
     sb.append(ApplicationId.appIdFormat.get().format(
         this.getApplicationId().getId()));

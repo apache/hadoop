@@ -530,6 +530,9 @@ public interface MRJobConfig {
   public static final String MR_AM_ENV =
       MR_AM_PREFIX + "env";
   
+  public static final String MR_AM_ADMIN_USER_ENV =
+      MR_AM_PREFIX + "admin.user.env";
+  
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";
 

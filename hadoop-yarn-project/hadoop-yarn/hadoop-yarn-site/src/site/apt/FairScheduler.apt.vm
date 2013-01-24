@@ -132,20 +132,45 @@ Hadoop MapReduce Next Generation - Fair Scheduler
     * Whether to use the username associated with the allocation as the default 
       queue name, in the event that a queue name is not specified. If this is set 
       to "false" or unset, all jobs have a shared default queue, called "default".
+      Defaults to true.
 
  * <<<yarn.scheduler.fair.preemption>>>
 
     * Whether to use preemption. Note that preemption is experimental in the current
-      version.
+      version. Defaults to false.
 
  * <<<yarn.scheduler.fair.sizebasedweight>>>
   
     * Whether to assign shares to individual apps based on their size, rather than
-      providing an equal share to all apps regardless of size.
+      providing an equal share to all apps regardless of size. Defaults to false.
 
  * <<<yarn.scheduler.fair.assignmultiple>>>
 
-    * Whether to allow multiple container assignments in one heartbeat.
+    * Whether to allow multiple container assignments in one heartbeat. Defaults
+      to false.
+
+ * <<<yarn.scheduler.fair.max.assign>>>
+
+    * If assignmultiple is true, the maximum amount of containers that can be
+      assigned in one heartbeat. Defaults to -1, which sets no limit.
+
+ * <<<locality.threshold.node>>>
+
+    * For applications that request containers on particular nodes, the number of
+      scheduling opportunities since the last container assignment to wait before
+      accepting a placement on another node. Expressed as a float between 0 and 1,
+      which, as a fraction of the cluster size, is the number of scheduling
+      opportunities to pass up. The default value of -1.0 means don't pass up any
+      scheduling opportunities.
+
+ * <<<locality.threshold.rack>>>
+
+    * For applications that request containers on particular racks, the number of
+      scheduling opportunities since the last container assignment to wait before
+      accepting a placement on another rack. Expressed as a float between 0 and 1,
+      which, as a fraction of the cluster size, is the number of scheduling
+      opportunities to pass up. The default value of -1.0 means don't pass up any
+      scheduling opportunities.
 
 Allocation file format
 
@@ -166,12 +191,24 @@ Allocation file format
    * schedulingMode: either "fifo" or "fair" depending on the in-queue scheduling
      policy desired
 
+   * aclSubmitApps: a list of users that can submit apps to the queue. A (default)
+     value of "*" means that any users can submit apps. A queue inherits the ACL of
+     its parent, so if a queue2 descends from queue1, and user1 is in queue1's ACL,
+     and user2 is in queue2's ACL, then both users may submit to queue2.
+
+   * minSharePreemptionTimeout: number of seconds the queue is under its minimum share
+     before it will try to preempt containers to take resources from other queues.
+
  * <<User elements>>, which represent settings governing the behavior of individual 
      users. They can contain a single property: maxRunningApps, a limit on the 
      number of running apps for a particular user.
 
  * <<A userMaxAppsDefault element>>, which sets the default running app limit 
    for any users whose limit is not otherwise specified.
+
+ * <<A fairSharePreemptionTimeout element>>, number of seconds a queue is under
+   its fair share before it will try to preempt containers to take resources from
+   other queues.
 
   An example allocation file is given here:
 
