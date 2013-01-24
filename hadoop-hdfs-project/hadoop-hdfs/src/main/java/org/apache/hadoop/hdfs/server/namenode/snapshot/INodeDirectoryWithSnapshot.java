@@ -169,18 +169,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * Delete an inode from current state.
      * @return a triple for undo.
      */
-    Triple<Integer, INode, Integer> delete(final INode inode,
-        boolean updateCircularList) {
+    Triple<Integer, INode, Integer> delete(final INode inode) {
       final int c = search(created, inode);
       INode previous = null;
       Integer d = null;
       if (c >= 0) {
         // remove a newly created inode
         previous = created.remove(c);
-        if (updateCircularList && previous instanceof FileWithSnapshot) {
-          // also we should remove previous from the circular list
-          ((FileWithSnapshot) previous).removeSelf();
-        }
       } else {
         // not in c-list, it must be in previous
         d = search(deleted, inode);
@@ -204,7 +199,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * @return a triple for undo.
      */
     Triple<Integer, INode, Integer> modify(final INode oldinode,
-        final INode newinode, boolean updateCircularList) {
+        final INode newinode) {
       if (!oldinode.equals(newinode)) {
         throw new AssertionError("The names do not match: oldinode="
             + oldinode + ", newinode=" + newinode);
@@ -215,14 +210,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (c >= 0) {
         // Case 1.1.3 and 2.3.3: inode is already in c-list,
         previous = created.set(c, newinode);
-        
-        if (updateCircularList && newinode instanceof FileWithSnapshot) {
-          // also should remove oldinode from the circular list
-          FileWithSnapshot newNodeWithLink = (FileWithSnapshot) newinode;
-          FileWithSnapshot oldNodeWithLink = (FileWithSnapshot) oldinode;
-          newNodeWithLink.setNext(oldNodeWithLink.getNext());
-          oldNodeWithLink.setNext(null);
-        }
         
         //TODO: fix a bug that previous != oldinode.  Set it to oldinode for now
         previous = oldinode;
@@ -356,11 +343,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
      * @param the posterior diff to combine
      * @param deletedINodeProcesser Used in case 2.1, 2.3, 3.1, and 3.3
      *                              to process the deleted inodes.
-     * @param updateCircularList Whether to update the circular linked list 
-     *                           while combining the diffs.                             
      */
-    void combinePostDiff(Diff postDiff, Processor deletedINodeProcesser,
-        boolean updateCircularList) {
+    void combinePostDiff(Diff postDiff, Processor deletedINodeProcesser) {
       final List<INode> postCreated = postDiff.created != null?
           postDiff.created: Collections.<INode>emptyList();
       final List<INode> postDeleted = postDiff.deleted != null?
@@ -381,16 +365,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           c = createdIterator.hasNext()? createdIterator.next(): null;
         } else if (cmp > 0) {
           // case 2: only in d-list
-          Triple<Integer, INode, Integer> triple = delete(d, 
-              updateCircularList);
+          Triple<Integer, INode, Integer> triple = delete(d);
           if (deletedINodeProcesser != null) {
             deletedINodeProcesser.process(triple.middle);
           }
           d = deletedIterator.hasNext()? deletedIterator.next(): null;
         } else {
           // case 3: in both c-list and d-list 
-          final Triple<Integer, INode, Integer> triple = modify(d, c,
-              updateCircularList);
+          final Triple<Integer, INode, Integer> triple = modify(d, c);
           if (deletedINodeProcesser != null) {
             deletedINodeProcesser.process(triple.middle);
           }
@@ -562,18 +544,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     /** Copy the INode state to the snapshot if it is not done already. */
-    private Pair<INodeDirectory, INodeDirectory> checkAndInitINode(
-        INodeDirectory snapshotCopy) {
-      if (snapshotINode != null) {
-        // already initialized.
-        return null;
+    private void checkAndInitINode(INodeDirectory snapshotCopy) {
+      if (snapshotINode == null) {
+        if (snapshotCopy == null) {
+          snapshotCopy = new INodeDirectory(INodeDirectoryWithSnapshot.this,
+              false);
+        }
+        snapshotINode = snapshotCopy;
       }
-      final INodeDirectoryWithSnapshot dir = INodeDirectoryWithSnapshot.this;
-      if (snapshotCopy == null) {
-        snapshotCopy = new INodeDirectory(dir, false);
-      }
-      snapshotINode = snapshotCopy;
-      return new Pair<INodeDirectory, INodeDirectory>(dir, snapshotCopy);
     }
 
     /** @return the snapshot object of this diff. */
@@ -605,7 +583,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           if (children == null) {
             final Diff combined = new Diff();
             for(SnapshotDiff d = SnapshotDiff.this; d != null; d = d.posteriorDiff) {
-              combined.combinePostDiff(d.diff, null, false);
+              combined.combinePostDiff(d.diff, null);
             }
             children = combined.apply2Current(ReadOnlyList.Util.asList(
                 INodeDirectoryWithSnapshot.this.getChildrenList(null)));
@@ -748,7 +726,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
               ((INodeFile)inode).collectSubtreeBlocksAndClear(collectedBlocks);
             }
           }
-        }, true);
+        });
 
         previousDiff.posteriorDiff = diffToRemove.posteriorDiff;
         diffToRemove.posteriorDiff = null;
@@ -839,32 +817,44 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public Pair<INodeDirectory, INodeDirectory> recordModification(Snapshot latest) {
-    return save2Snapshot(latest, null);
+  public INodeDirectoryWithSnapshot recordModification(Snapshot latest) {
+    saveSelf2Snapshot(latest, null);
+    return this;
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  public Pair<INodeDirectory, INodeDirectory> save2Snapshot(Snapshot latest,
-      INodeDirectory snapshotCopy) {
-    return latest == null? null
-        : checkAndAddLatestSnapshotDiff(latest).checkAndInitINode(snapshotCopy);
+  public void saveSelf2Snapshot(Snapshot latest, INodeDirectory snapshotCopy) {
+    if (latest != null) {
+      checkAndAddLatestSnapshotDiff(latest).checkAndInitINode(snapshotCopy);
+    }
   }
 
   @Override
-  public Pair<? extends INode, ? extends INode> saveChild2Snapshot(
-      INode child, Snapshot latest) {
+  public INode saveChild2Snapshot(INode child, Snapshot latest) {
     Preconditions.checkArgument(!child.isDirectory(),
         "child is a directory, child=%s", child);
+    if (latest == null) {
+      return child;
+    }
 
     final SnapshotDiff diff = checkAndAddLatestSnapshotDiff(latest);
     if (diff.getChild(child.getLocalNameBytes(), false) != null) {
       // it was already saved in the latest snapshot earlier.  
-      return null;
+      return child;
     }
 
     final Pair<? extends INode, ? extends INode> p = child.createSnapshotCopy();
-    diff.diff.modify(p.right, p.left, true);
-    return p;
+    if (p.left != p.right) {
+      final Triple<Integer, INode, Integer> triple = diff.diff.modify(p.right, p.left);
+      if (triple.middle != null && p.left instanceof FileWithSnapshot) {
+        // also should remove oldinode from the circular list
+        FileWithSnapshot newNodeWithLink = (FileWithSnapshot) p.left;
+        FileWithSnapshot oldNodeWithLink = (FileWithSnapshot) p.right;
+        newNodeWithLink.setNext(oldNodeWithLink.getNext());
+        oldNodeWithLink.setNext(null);
+      }
+    }
+    return p.left;
   }
 
   @Override
@@ -888,11 +878,20 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     Triple<Integer, INode, Integer> undoInfo = null;
     if (latest != null) {
       diff = checkAndAddLatestDiff(latest);
-      undoInfo = diff.delete(child, true);
+      undoInfo = diff.delete(child);
     }
     final INode removed = super.removeChild(child, null);
-    if (removed == null && undoInfo != null) {
-      diff.undoDelete(child, undoInfo);
+    if (undoInfo != null) {
+      if (removed == null) {
+        //remove failed, undo
+        diff.undoDelete(child, undoInfo);
+      } else {
+        //clean up the previously created file, if there is any.
+        final INode previous = undoInfo.middle;
+        if (previous != null && previous instanceof FileWithSnapshot) {
+          ((FileWithSnapshot)previous).removeSelf();
+        }
+      }
     }
     return removed;
   }

@@ -116,3 +116,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4126. Add reading/writing snapshot information to FSImage.
   (Jing Zhao via suresh)
+
+  HDFS-4436. Change INode.recordModification(..) to return only the current
+  inode and remove the updateCircularList parameter from some methods in
+  INodeDirectoryWithSnapshot.Diff.  (szetszwo)

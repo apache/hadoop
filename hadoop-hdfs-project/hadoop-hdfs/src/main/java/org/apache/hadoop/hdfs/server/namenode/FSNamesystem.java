@@ -1983,7 +1983,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog, Snapshot latestSnapshot) throws IOException {
     if (latestSnapshot != null) {
-      file = (INodeFile)file.recordModification(latestSnapshot).left;
+      file = file.recordModification(latestSnapshot);
     }
     final INodeFileUnderConstruction cons = file.toUnderConstruction(
         leaseHolder, clientMachine, clientNode);

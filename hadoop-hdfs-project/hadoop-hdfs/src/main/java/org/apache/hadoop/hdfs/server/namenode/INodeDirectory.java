@@ -171,7 +171,7 @@ public class INodeDirectory extends INode {
           = INodeDirectoryWithSnapshot.newInstance(this, null);
       s.setQuota(nsQuota, dsQuota, null);
       replaceSelf(s);
-      s.save2Snapshot(latest, this);
+      s.saveSelf2Snapshot(latest, this);
       return s;
     }
   }
@@ -180,7 +180,7 @@ public class INodeDirectory extends INode {
       Snapshot latest) {
     final INodeDirectorySnapshottable s = new INodeDirectorySnapshottable(this);
     replaceSelf(s);
-    s.save2Snapshot(latest, this);
+    s.saveSelf2Snapshot(latest, this);
     return s;
   }
 
@@ -229,25 +229,24 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  public Pair<? extends INode, ? extends INode> recordModification(Snapshot latest) {
+  public INodeDirectory recordModification(Snapshot latest) {
     if (latest == null) {
-      return null;
+      return this;
     }
-    return replaceSelf4INodeDirectoryWithSnapshot(latest)
-        .save2Snapshot(latest, this);
+    final INodeDirectoryWithSnapshot withSnapshot
+        = replaceSelf4INodeDirectoryWithSnapshot(latest);
+    withSnapshot.saveSelf2Snapshot(latest, this);
+    return withSnapshot;
   }
 
   /**
    * Save the child to the latest snapshot.
    * 
-   * @return a pair of inodes, where the left inode is the original child and
-   *         the right inode is the snapshot copy of the child; see also
-   *         {@link INode#createSnapshotCopy()}.
+   * @return the child inode, which may be replaced.
    */
-  public Pair<? extends INode, ? extends INode> saveChild2Snapshot(
-      INode child, Snapshot latest) {
+  public INode saveChild2Snapshot(INode child, Snapshot latest) {
     if (latest == null) {
-      return null;
+      return child;
     }
     return replaceSelf4INodeDirectoryWithSnapshot(latest)
         .saveChild2Snapshot(child, latest);

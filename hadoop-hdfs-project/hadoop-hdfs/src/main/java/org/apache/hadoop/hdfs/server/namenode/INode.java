@@ -242,8 +242,7 @@ public abstract class INode implements Comparable<byte[]> {
   }
   private INode updatePermissionStatus(PermissionStatusFormat f, long n,
       Snapshot latest) {
-    Pair<? extends INode, ? extends INode> pair = recordModification(latest);
-    INode nodeToUpdate = pair != null ? pair.left : this;
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.permission = f.combine(n, permission);
     return nodeToUpdate;
   }
@@ -314,12 +313,14 @@ public abstract class INode implements Comparable<byte[]> {
    *
    * @param latest the latest snapshot that has been taken.
    *        Note that it is null if no snapshots have been taken.
-   * @return see {@link #createSnapshotCopy()}. 
+   * @return The current inode, which usually is the same object of this inode.
+   *         However, in some cases, this inode may be replaced with a new inode
+   *         for maintaining snapshots. The current inode is then the new inode.
    */
-  Pair<? extends INode, ? extends INode> recordModification(Snapshot latest) {
+  INode recordModification(final Snapshot latest) {
     Preconditions.checkState(!isDirectory(),
         "this is an INodeDirectory, this=%s", this);
-    return latest == null? null: parent.saveChild2Snapshot(this, latest);
+    return parent.saveChild2Snapshot(this, latest);
   }
 
   /**
@@ -489,8 +490,7 @@ public abstract class INode implements Comparable<byte[]> {
    * Always set the last modification time of inode.
    */
   public INode setModificationTime(long modtime, Snapshot latest) {
-    Pair<? extends INode, ? extends INode> pair = recordModification(latest);
-    INode nodeToUpdate = pair != null ? pair.left : this;
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.modificationTime = modtime;
     return nodeToUpdate;
   }
@@ -514,8 +514,7 @@ public abstract class INode implements Comparable<byte[]> {
    * Set last access time of inode.
    */
   public INode setAccessTime(long atime, Snapshot latest) {
-    Pair<? extends INode, ? extends INode> pair = recordModification(latest);
-    INode nodeToUpdate = pair != null ? pair.left : this;    
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.accessTime = atime;
     return nodeToUpdate;
   }

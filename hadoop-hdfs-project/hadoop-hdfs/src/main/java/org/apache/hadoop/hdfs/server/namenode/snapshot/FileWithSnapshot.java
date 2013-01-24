@@ -64,13 +64,16 @@ public interface FileWithSnapshot {
     
     /** Replace the old file with the new file in the circular linked list. */
     static void replace(FileWithSnapshot oldFile, FileWithSnapshot newFile) {
-      //set next element
-      FileWithSnapshot i = oldFile.getNext();
-      newFile.setNext(i);
-      oldFile.setNext(null);
-      //find previous element and update it
-      for(; i.getNext() != oldFile; i = i.getNext());
-      i.setNext(newFile);
+      final FileWithSnapshot oldNext = oldFile.getNext();
+      if (oldNext == null) {
+        newFile.setNext(null);
+      } else {
+        if (oldNext != oldFile) {
+          newFile.setNext(oldNext);
+          getPrevious(oldFile).setNext(newFile);
+        }
+        oldFile.setNext(null);
+      }
     }
 
     /**

@@ -148,7 +148,7 @@ public class TestINodeDirectoryWithSnapshot {
     // combine all diffs
     final Diff combined = diffs[0];
     for(int i = 1; i < diffs.length; i++) {
-      combined.combinePostDiff(diffs[i], null, false);
+      combined.combinePostDiff(diffs[i], null);
     }
 
     {
@@ -284,7 +284,7 @@ public class TestINodeDirectoryWithSnapshot {
         before = toString(diff);
       }
 
-      final Triple<Integer, INode, Integer> undoInfo = diff.delete(inode, true);
+      final Triple<Integer, INode, Integer> undoInfo = diff.delete(inode);
 
       if (testUndo) {
         final String after = toString(diff);
@@ -292,7 +292,7 @@ public class TestINodeDirectoryWithSnapshot {
         diff.undoDelete(inode, undoInfo);
         assertDiff(before, diff);
         //re-do
-        diff.delete(inode, true);
+        diff.delete(inode);
         assertDiff(after, diff);
       }
     }
@@ -314,7 +314,7 @@ public class TestINodeDirectoryWithSnapshot {
         before = toString(diff);
       }
 
-      final Triple<Integer, INode, Integer> undoInfo = diff.modify(oldinode, newinode, true);
+      final Triple<Integer, INode, Integer> undoInfo = diff.modify(oldinode, newinode);
 
       if (testUndo) {
         final String after = toString(diff);
@@ -322,7 +322,7 @@ public class TestINodeDirectoryWithSnapshot {
         diff.undoModify(oldinode, newinode, undoInfo);
         assertDiff(before, diff);
         //re-do
-        diff.modify(oldinode, newinode, true);
+        diff.modify(oldinode, newinode);
         assertDiff(after, diff);
       }
     }
