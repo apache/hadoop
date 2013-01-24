@@ -15,6 +15,9 @@ Release 2.6.3 - UNRELEASED
     HADOOP-12230. hadoop-project declares duplicate, conflicting curator
     dependencies. (Rakesh R via aajisaka)
 
+    HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
+    (Andrey Klochkov via suresh)
+
 Release 2.6.2 - 2015-10-21
 
   INCOMPATIBLE CHANGES

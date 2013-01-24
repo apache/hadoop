@@ -408,6 +408,12 @@
             <kdc.resource.dir>${kdc.resource.dir}</kdc.resource.dir>
             <runningWithNative>${runningWithNative}</runningWithNative>
           </systemPropertyVariables>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+            </property>
+          </properties>
         </configuration>
       </plugin>
       <plugin>
@@ -511,18 +517,6 @@
             <exclude>src/test/resources/test.har/part-0</exclude>
             <exclude>src/test/resources/javakeystoreprovider.password</exclude>
           </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
-            </property>
-          </properties>
         </configuration>
       </plugin>
     </plugins>
