@@ -51,6 +51,9 @@ Release 2.7.2 - UNRELEASED
 
     HADOOP-12464. Interrupted client may try to fail-over and retry (kihwal)
 
+    HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
+    (Andrey Klochkov via suresh)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
