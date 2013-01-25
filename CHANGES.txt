@@ -445,6 +445,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4929. mapreduce.task.timeout is ignored.
     (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-2264. Job status exceeds 100% in some cases. 
+    (devaraj.k & sandyr via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
