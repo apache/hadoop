@@ -93,6 +93,7 @@
         <executions>
           <execution>
             <id>version-info</id>
+            <phase>compile</phase>
             <goals>
               <goal>version-info</goal>
             </goals>

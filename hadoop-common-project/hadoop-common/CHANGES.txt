@@ -149,6 +149,9 @@ Trunk (Unreleased)
     HADOOP-8924. Add maven plugin alternative to shell script to save
     package-info.java. (Chris Nauroth via suresh)
 
+    HADOOP-9245. mvn clean without running mvn install before fails.
+    (Karthik Kambatla via suresh)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
@@ -1285,6 +1288,9 @@ Release 0.23.6 - UNRELEASED
 
   IMPROVEMENTS
     HADOOP-9217. Print thread dumps when hadoop-common tests fail.
+    (Andrey Klochkov via suresh)
+
+    HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
     (Andrey Klochkov via suresh)
 
   OPTIMIZATIONS
