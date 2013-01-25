@@ -646,7 +646,7 @@ public class TestDomainSocket {
    */
   private static void testValidateSocketPath(String str, String prefix)
       throws IOException {
-    int skipComponents = 0;
+    int skipComponents = 1;
     File prefixFile = new File(prefix);
     while (true) {
       prefixFile = prefixFile.getParentFile();

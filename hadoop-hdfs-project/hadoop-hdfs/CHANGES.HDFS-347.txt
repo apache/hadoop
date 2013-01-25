@@ -35,3 +35,5 @@ HDFS-4417. Fix case where local reads get disabled incorrectly
 (Colin Patrick McCabe and todd via todd)
 
 HDFS-4433. Make TestPeerCache not flaky (Colin Patrick McCabe via todd)
+
+HDFS-4438. TestDomainSocket fails when system umask is set to 0002. (Colin Patrick McCabe via atm)
