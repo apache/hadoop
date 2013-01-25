@@ -178,6 +178,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
@@ -3293,6 +3294,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
+    
+    if (latestSnapshot != null) {
+      if (!(pendingFile instanceof INodeFileUnderConstructionWithSnapshot)) {
+        // replace INodeFileUnderConstruction with
+        // INodeFileUnderConstructionWithSnapshot. This replacement does not
+        // need to be recorded in snapshot.
+        INodeFileUnderConstructionWithSnapshot pendingFileWithSnaphsot = 
+            new INodeFileUnderConstructionWithSnapshot(pendingFile);
+        dir.replaceINodeFile(src, pendingFile,
+            pendingFileWithSnaphsot, null);
+        pendingFile = pendingFileWithSnaphsot;
+      }
+      pendingFile = (INodeFileUnderConstruction) pendingFile
+          .recordModification(latestSnapshot);
+    }
 
     // The file is no longer pending.
     // Create permanent INode, update blocks

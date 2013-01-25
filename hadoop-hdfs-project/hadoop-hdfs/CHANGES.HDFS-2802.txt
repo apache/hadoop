@@ -120,3 +120,7 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4436. Change INode.recordModification(..) to return only the current
   inode and remove the updateCircularList parameter from some methods in
   INodeDirectoryWithSnapshot.Diff.  (szetszwo)
+
+  HDFS-4429. When the latest snapshot exists, INodeFileUnderConstruction should
+  be replaced with INodeFileWithSnapshot but not INodeFile.  (Jing Zhao
+  via szetszwo)

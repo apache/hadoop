@@ -20,6 +20,12 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -42,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDi
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -67,6 +74,9 @@ public class TestSnapshot {
   protected DistributedFileSystem hdfs;
 
   private static Random random = new Random(seed);
+  
+  private static String testDir =
+      System.getProperty("test.build.data", "build/test/data");
   
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -144,13 +154,23 @@ public class TestSnapshot {
     return nodes;
   }
 
+  private File getDumpTreeFile(String dir, String suffix) {
+    return new File(dir, String.format("dumptree_%s", suffix));
+  }
+  
   /**
    * Restart the cluster to check edit log applying and fsimage saving/loading
    */
   private void checkFSImage() throws Exception {
+    File fsnBefore = getDumpTreeFile(testDir, "before");
+    File fsnMiddle = getDumpTreeFile(testDir, "middle");
+    File fsnAfter = getDumpTreeFile(testDir, "after");
+    
     String rootDir = "/";
-    StringBuffer fsnStrBefore = fsn.getFSDirectory().getINode(rootDir)
-        .dumpTreeRecursively();
+    PrintWriter out = new PrintWriter(new FileWriter(fsnBefore, false), true);
+    fsn.getFSDirectory().getINode(rootDir)
+        .dumpTreeRecursively(out, new StringBuilder(), null);
+    out.close();
     
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -158,11 +178,13 @@ public class TestSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    // later check fsnStrMiddle to see if the edit log is recorded and applied
+    // later check fsnMiddle to see if the edit log is recorded and applied
     // correctly 
-    StringBuffer fsnStrMiddle = fsn.getFSDirectory().getINode(rootDir)
-        .dumpTreeRecursively();
-    
+    out = new PrintWriter(new FileWriter(fsnMiddle, false), true);
+    fsn.getFSDirectory().getINode(rootDir)
+        .dumpTreeRecursively(out, new StringBuilder(), null);
+    out.close();
+   
     // save namespace and restart cluster
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
@@ -174,18 +196,38 @@ public class TestSnapshot {
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
     // dump the namespace loaded from fsimage
-    StringBuffer fsnStrAfter = fsn.getFSDirectory().getINode(rootDir)
-        .dumpTreeRecursively();
+    out = new PrintWriter(new FileWriter(fsnAfter, false), true);
+    fsn.getFSDirectory().getINode(rootDir)
+        .dumpTreeRecursively(out, new StringBuilder(), null);
+    out.close();
     
-    System.out.println("================== Original FSDir ==================");
-    System.out.println(fsnStrBefore.toString());
-    System.out.println("================== FSDir After Applying Edit Logs ==================");
-    System.out.println(fsnStrMiddle.toString());
-    System.out.println("================ FSDir After FSImage Saving/Loading ================");
-    System.out.println(fsnStrAfter.toString());
-    System.out.println("====================================================");
-    assertEquals(fsnStrBefore.toString(), fsnStrMiddle.toString());
-    assertEquals(fsnStrBefore.toString(), fsnStrAfter.toString());
+    compareFile(fsnBefore, fsnMiddle);
+    compareFile(fsnBefore, fsnAfter);
+  }
+  
+  /** compare two file's content */
+  private void compareFile(File file1, File file2) throws IOException {
+    BufferedReader reader1 = new BufferedReader(new FileReader(file1));
+    BufferedReader reader2 = new BufferedReader(new FileReader(file2));
+    try {
+      String line1 = "";
+      String line2 = "";
+      while ((line1 = reader1.readLine()) != null
+          && (line2 = reader2.readLine()) != null) {
+        // skip the hashCode part of the object string during the comparison,
+        // also ignore the difference between INodeFile/INodeFileWithSnapshot
+        line1 = line1.replaceAll("INodeFileWithSnapshot", "INodeFile");
+        line2 = line2.replaceAll("INodeFileWithSnapshot", "INodeFile");
+        line1 = line1.replaceAll("@[\\dabcdef]+", "");
+        line2 = line2.replaceAll("@[\\dabcdef]+", "");
+        assertEquals(line1, line2);
+      }
+      Assert.assertNull(reader1.readLine());
+      Assert.assertNull(reader2.readLine());
+    } finally {
+      reader1.close();
+      reader2.close();
+    }
   }
   
   /**

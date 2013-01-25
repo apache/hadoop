@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -431,8 +432,8 @@ public abstract class INode implements Comparable<byte[]> {
 
   @VisibleForTesting
   public String getObjectString() {
-    final String s = super.toString();
-    return s.substring(s.lastIndexOf(getClass().getSimpleName()));
+    return getClass().getSimpleName() + "@"
+        + Integer.toHexString(super.hashCode());
   }
 
   @VisibleForTesting
@@ -693,14 +694,20 @@ public abstract class INode implements Comparable<byte[]> {
         String blocksInfo = ((INodeFile) this).printBlocksInfo();
         out.print(", blocks=[" + blocksInfo + "]");
       }
-      if (this instanceof INodeFileWithSnapshot) {
-        INodeFileWithSnapshot nodeWithLink = (INodeFileWithSnapshot) this;
-        FileWithSnapshot next = nodeWithLink.getNext();
-        out.print(", next="
-            + (next != null ? next.asINodeFile().getObjectString() : "null"));
-        if (this instanceof INodeFileSnapshot) {
+      if (this instanceof FileWithSnapshot) {
+        if (this instanceof INodeFileSnapshot
+            || this instanceof INodeFileUnderConstructionSnapshot) {
           out.print(", computedSize="
               + ((INodeFileSnapshot) this).computeFileSize(true));
+        }
+        FileWithSnapshot nodeWithLink = (FileWithSnapshot) this;
+        FileWithSnapshot next = nodeWithLink.getNext();
+        // An INodeFileWithSnapshot whose next link pointing to itself should be
+        // equivalent with a normal INodeFile 
+        if (!(this instanceof INodeFileWithSnapshot && 
+            ((INodeFileWithSnapshot) this).getNext() == this)) {
+          out.print(", next="
+              + (next != null ? next.asINodeFile().getObjectString() : "null"));
         }
       }
       out.println();

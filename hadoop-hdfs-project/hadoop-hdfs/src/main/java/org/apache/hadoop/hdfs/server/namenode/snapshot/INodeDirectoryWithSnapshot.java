@@ -528,7 +528,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       diff.deleted = deletedList;
     }
     
-    public Diff getDiff() {
+    Diff getDiff() {
       return diff;
     }
 

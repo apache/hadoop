@@ -39,6 +39,20 @@ public class INodeFileUnderConstructionWithSnapshot
     super(f.asINodeFile(), clientName, clientMachine, clientNode);
   }
 
+  /**
+   * The constructor that creates an
+   * {@link INodeFileUnderConstructionWithSnapshot} based on an
+   * {@link INodeFileUnderConstruction}
+   * 
+   * @param child The given {@link INodeFileUnderConstruction} instance
+   */
+  public INodeFileUnderConstructionWithSnapshot(
+      INodeFileUnderConstruction child) {
+    super(child, child.getClientName(), child.getClientMachine(), child
+        .getClientNode());
+    next = this;
+  }
+  
   @Override
   protected INodeFileWithSnapshot toINodeFile(final long mtime) {
     assertAllBlocksComplete();
@@ -46,7 +60,8 @@ public class INodeFileUnderConstructionWithSnapshot
     final INodeFileWithSnapshot f = new INodeFileWithSnapshot(this);
     f.setModificationTime(mtime, null);
     f.setAccessTime(atime, null);
-    Util.replace(this, f);
+    // link f with this
+    this.insertBefore(f);
     return f;
   }
 

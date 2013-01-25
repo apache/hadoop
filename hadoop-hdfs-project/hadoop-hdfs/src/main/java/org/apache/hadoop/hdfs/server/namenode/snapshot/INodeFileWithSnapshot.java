@@ -43,7 +43,7 @@ public class INodeFileWithSnapshot extends INodeFile
     final INodeFileUnderConstructionWithSnapshot f
         = new INodeFileUnderConstructionWithSnapshot(this,
             clientName, clientMachine, clientNode);
-    Util.replace(this, f);
+    this.insertBefore(f);
     return f;
   }
 
