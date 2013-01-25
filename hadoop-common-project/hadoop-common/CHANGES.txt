@@ -262,6 +262,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
     (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
 
+    HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
+    should not state that secret is randomly generated. (tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
