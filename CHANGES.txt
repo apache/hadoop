@@ -160,6 +160,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4907. TrackerDistributedCacheManager issues too many 
     getFileStatus calls. (sandyr via tucu)
+    
+    MAPREDUCE-2931. LocalJobRunner should support parallel mapper execution.
+    (Sandy Ryza via tomwhite)
 
   OPTIMIZATIONS
 
