@@ -84,7 +84,7 @@ class DomainSocketFactory {
   DomainSocket create(InetSocketAddress addr, DFSInputStream stream) {
     // If there is no domain socket path configured, we can't use domain
     // sockets.
-    if (conf.domainSocketPath == null) return null;
+    if (conf.domainSocketPath.isEmpty()) return null;
     // UNIX domain sockets can only be used to talk to local peers
     if (!DFSClient.isLocalAddress(addr)) return null;
     // If the DomainSocket code is not loaded, we can't create
