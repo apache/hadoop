@@ -152,6 +152,9 @@ Trunk (Unreleased)
     HADOOP-9245. mvn clean without running mvn install before fails.
     (Karthik Kambatla via suresh)
 
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
