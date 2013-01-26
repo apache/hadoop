@@ -401,7 +401,8 @@
       
       boolean isFirst = true;
       for (Counters.Counter counter : totalGroup) {
-        String name = counter.getDisplayName();
+        String displayName = counter.getDisplayName();
+        String name = counter.getName();
         String mapValue = decimal.format(mapGroup.getCounter(name));
         String reduceValue = decimal.format(reduceGroup.getCounter(name));
         String totalValue = decimal.format(counter.getCounter());
@@ -416,7 +417,7 @@
             <%
           }
           %>
-          <td><%=HtmlQuoting.quoteHtmlChars(name)%></td>
+          <td><%=HtmlQuoting.quoteHtmlChars(displayName)%></td>
           <td align="right"><%=mapValue%></td>
           <td align="right"><%=reduceValue%></td>
           <td align="right"><%=totalValue%></td>
