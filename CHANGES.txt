@@ -451,6 +451,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-2264. Job status exceeds 100% in some cases. 
     (devaraj.k & sandyr via tucu)
 
+    MAPREDUCE-4963. StatisticsCollector improperly keeps track of "Last Day" 
+    and "Last Hour" statistics for new TaskTrackers. (rkanter via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

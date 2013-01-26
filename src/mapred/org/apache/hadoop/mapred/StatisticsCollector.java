@@ -206,6 +206,7 @@ class StatisticsCollector {
       private final LinkedList<Integer> buckets = new LinkedList<Integer>();
       private int value;
       private int currentValue;
+      private int updates;
 
       public synchronized int getValue() {
         return value;
@@ -261,9 +262,6 @@ class StatisticsCollector {
     final int collectBuckets;
     final int updatesPerBucket;
     
-    private int updates;
-    private int buckets;
-
     TimeWindowStatUpdater(TimeWindow w, int updatePeriod) {
       if (updatePeriod > w.updateGranularity) {
         throw new RuntimeException(
@@ -274,18 +272,14 @@ class StatisticsCollector {
     }
 
     synchronized void update() {
-      updates++;
-      if (updates == updatesPerBucket) {
-        for(TimeStat stat : statToCollect.values()) {
+      for (TimeStat stat : statToCollect.values()) {
+        stat.updates++;
+        if (stat.updates == updatesPerBucket) {
           stat.addBucket();
+          stat.updates = 0;
         }
-        updates = 0;
-        buckets++;
-        if (buckets > collectBuckets) {
-          for (TimeStat stat : statToCollect.values()) {
-            stat.removeBucket();
-          }
-          buckets--;
+        if (stat.buckets.size() > collectBuckets) {
+          stat.removeBucket();
         }
       }
     }
