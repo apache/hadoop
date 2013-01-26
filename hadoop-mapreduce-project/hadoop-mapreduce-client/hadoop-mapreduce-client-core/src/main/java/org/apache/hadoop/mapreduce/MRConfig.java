@@ -85,6 +85,9 @@ public interface MRConfig {
 
   public static final boolean SHUFFLE_SSL_ENABLED_DEFAULT = false;
 
+  public static final String SHUFFLE_CONSUMER_PLUGIN =
+    "mapreduce.job.reduce.shuffle.consumer.plugin.class";
+
   /**
    * Configuration key to enable/disable IFile readahead.
    */

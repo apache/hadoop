@@ -340,6 +340,7 @@ public class ReduceTask extends Task {
     // Initialize the codec
     codec = initCodec();
     RawKeyValueIterator rIter = null;
+    ShuffleConsumerPlugin shuffleConsumerPlugin = null; 
     
     boolean isLocal = false; 
     // local if
@@ -358,8 +359,14 @@ public class ReduceTask extends Task {
         (null != combinerClass) ? 
  	     new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
 
-      Shuffle shuffle = 
-        new Shuffle(getTaskID(), job, FileSystem.getLocal(job), umbilical, 
+      Class<? extends ShuffleConsumerPlugin> clazz =
+            job.getClass(MRConfig.SHUFFLE_CONSUMER_PLUGIN, Shuffle.class, ShuffleConsumerPlugin.class);
+						
+      shuffleConsumerPlugin = ReflectionUtils.newInstance(clazz, job);
+      LOG.info("Using ShuffleConsumerPlugin: " + shuffleConsumerPlugin);
+
+      ShuffleConsumerPlugin.Context shuffleContext = 
+        new ShuffleConsumerPlugin.Context(getTaskID(), job, FileSystem.getLocal(job), umbilical, 
                     super.lDirAlloc, reporter, codec, 
                     combinerClass, combineCollector, 
                     spilledRecordsCounter, reduceCombineInputCounter,
@@ -368,7 +375,8 @@ public class ReduceTask extends Task {
                     mergedMapOutputsCounter,
                     taskStatus, copyPhase, sortPhase, this,
                     mapOutputFile);
-      rIter = shuffle.run();
+      shuffleConsumerPlugin.init(shuffleContext);
+      rIter = shuffleConsumerPlugin.run();
     } else {
       // local job runner doesn't have a copy phase
       copyPhase.complete();
@@ -398,6 +406,10 @@ public class ReduceTask extends Task {
     } else {
       runOldReducer(job, umbilical, reporter, rIter, comparator, 
                     keyClass, valueClass);
+    }
+
+    if (shuffleConsumerPlugin != null) {
+      shuffleConsumerPlugin.close();
     }
     done(umbilical, reporter);
   }

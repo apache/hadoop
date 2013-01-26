@@ -18,6 +18,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
     vinodkv)
 
+    MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
+    (Avner BenHanoch via acmurthy) 
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input
