@@ -1454,4 +1454,12 @@
   <value>jhs/_HOST@REALM.TLD</value>
 </property>
 
+<property>
+  <name>mapreduce.job.map.output.collector.class</name>
+  <value>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</value>
+  <description>
+    It defines the MapOutputCollector implementation to use.
+  </description>
+</property>
+
 </configuration>
