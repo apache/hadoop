@@ -218,6 +218,7 @@ public class Merger {
     CompressionCodec codec = null;
     long segmentOffset = 0;
     long segmentLength = -1;
+    long rawDataLength = -1;
     
     Counters.Counter mapOutputsCounter = null;
 
@@ -233,6 +234,15 @@ public class Merger {
   throws IOException {
       this(conf, fs, file, 0, fs.getFileStatus(file).getLen(), codec, preserve, 
            mergedMapOutputsCounter);
+    }
+    
+    public Segment(Configuration conf, FileSystem fs, Path file,
+        CompressionCodec codec, boolean preserve,
+        Counters.Counter mergedMapOutputsCounter, long rawDataLength)
+            throws IOException {
+      this(conf, fs, file, 0, fs.getFileStatus(file).getLen(), codec, preserve, 
+          mergedMapOutputsCounter);
+      this.rawDataLength = rawDataLength;
     }
 
     public Segment(Configuration conf, FileSystem fs, Path file,
@@ -260,6 +270,11 @@ public class Merger {
     
     public Segment(Reader<K, V> reader, boolean preserve) {
       this(reader, preserve, null);
+    }
+
+    public Segment(Reader<K, V> reader, boolean preserve, long rawDataLength) {
+      this(reader, preserve, null);
+      this.rawDataLength = rawDataLength;
     }
     
     public Segment(Reader<K, V> reader, boolean preserve, 
@@ -300,6 +315,10 @@ public class Merger {
         segmentLength : reader.getLength();
     }
     
+    public long getRawDataLength() {
+      return (rawDataLength > 0) ? rawDataLength : getLength();
+    }
+
     boolean nextRawKey() throws IOException {
       return reader.nextRawKey(key);
     }
@@ -633,7 +652,7 @@ public class Merger {
             totalBytesProcessed = 0;
             totalBytes = 0;
             for (int i = 0; i < segmentsToMerge.size(); i++) {
-              totalBytes += segmentsToMerge.get(i).getLength();
+              totalBytes += segmentsToMerge.get(i).getRawDataLength();
             }
           }
           if (totalBytes != 0) //being paranoid
@@ -702,7 +721,7 @@ public class Merger {
           // size will match(almost) if combiner is not called in merge.
           long inputBytesOfThisMerge = totalBytesProcessed -
                                        bytesProcessedInPrevMerges;
-          totalBytes -= inputBytesOfThisMerge - tempSegment.getLength();
+          totalBytes -= inputBytesOfThisMerge - tempSegment.getRawDataLength();
           if (totalBytes != 0) {
             progPerByte = 1.0f / (float)totalBytes;
           }
@@ -768,7 +787,7 @@ public class Merger {
       for (int i = 0; i < numSegments; i++) {
         // Not handling empty segments here assuming that it would not affect
         // much in calculation of mergeProgress.
-        segmentSizes.add(segments.get(i).getLength());
+        segmentSizes.add(segments.get(i).getRawDataLength());
       }
       
       // If includeFinalMerge is true, allow the following while loop iterate
