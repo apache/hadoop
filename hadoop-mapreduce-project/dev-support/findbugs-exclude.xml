@@ -268,7 +268,7 @@
      This class is unlikely to get subclassed, so ignore
     -->
      <Match>
-       <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeManager" />
+       <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl" />
        <Bug pattern="SC_START_IN_CTOR" />
      </Match>
 

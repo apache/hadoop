@@ -17,118 +17,35 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import java.io.InputStream;
 import java.io.IOException;
-import java.io.OutputStream;
+
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BoundedByteArrayOutputStream;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapOutputFile;
+
+import org.apache.hadoop.mapred.Reporter;
+
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
-public class MapOutput<K,V> {
-  private static final Log LOG = LogFactory.getLog(MapOutput.class);
+public abstract class MapOutput<K, V> {
   private static AtomicInteger ID = new AtomicInteger(0);
   
-  public static enum Type {
-    WAIT,
-    MEMORY,
-    DISK
-  }
-  
   private final int id;
-  
-  private final MergeManager<K,V> merger;
   private final TaskAttemptID mapId;
-  
   private final long size;
-  
-  private final byte[] memory;
-  private BoundedByteArrayOutputStream byteStream;
-  
-  private final FileSystem localFS;
-  private final Path tmpOutputPath;
-  private final Path outputPath;
-  private final OutputStream disk; 
-  
-  private final Type type;
-  
   private final boolean primaryMapOutput;
   
-  public MapOutput(TaskAttemptID mapId, MergeManager<K,V> merger, long size, 
-            JobConf conf, LocalDirAllocator localDirAllocator,
-            int fetcher, boolean primaryMapOutput, MapOutputFile mapOutputFile)
-         throws IOException {
+  public MapOutput(TaskAttemptID mapId, long size, boolean primaryMapOutput) {
     this.id = ID.incrementAndGet();
     this.mapId = mapId;
-    this.merger = merger;
-
-    type = Type.DISK;
-
-    memory = null;
-    byteStream = null;
-
     this.size = size;
-    
-    this.localFS = FileSystem.getLocal(conf);
-    outputPath =
-      mapOutputFile.getInputFileForWrite(mapId.getTaskID(),size);
-    tmpOutputPath = outputPath.suffix(String.valueOf(fetcher));
-
-    disk = localFS.create(tmpOutputPath);
-    
     this.primaryMapOutput = primaryMapOutput;
   }
-  
-  public MapOutput(TaskAttemptID mapId, MergeManager<K,V> merger, int size, 
-            boolean primaryMapOutput) {
-    this.id = ID.incrementAndGet();
-    this.mapId = mapId;
-    this.merger = merger;
-
-    type = Type.MEMORY;
-    byteStream = new BoundedByteArrayOutputStream(size);
-    memory = byteStream.getBuffer();
-
-    this.size = size;
-    
-    localFS = null;
-    disk = null;
-    outputPath = null;
-    tmpOutputPath = null;
-    
-    this.primaryMapOutput = primaryMapOutput;
-  }
-
-  public MapOutput(TaskAttemptID mapId) {
-    this.id = ID.incrementAndGet();
-    this.mapId = mapId;
-    
-    type = Type.WAIT;
-    merger = null;
-    memory = null;
-    byteStream = null;
-    
-    size = -1;
-    
-    localFS = null;
-    disk = null;
-    outputPath = null;
-    tmpOutputPath = null;
-
-    this.primaryMapOutput = false;
-}
   
   public boolean isPrimaryMapOutput() {
     return primaryMapOutput;
@@ -147,62 +64,28 @@ public class MapOutput<K,V> {
     return id;
   }
 
-  public Path getOutputPath() {
-    return outputPath;
-  }
-
-  public byte[] getMemory() {
-    return memory;
-  }
-
-  public BoundedByteArrayOutputStream getArrayStream() {
-    return byteStream;
-  }
-  
-  public OutputStream getDisk() {
-    return disk;
-  }
-
   public TaskAttemptID getMapId() {
     return mapId;
-  }
-
-  public Type getType() {
-    return type;
   }
 
   public long getSize() {
     return size;
   }
 
-  public void commit() throws IOException {
-    if (type == Type.MEMORY) {
-      merger.closeInMemoryFile(this);
-    } else if (type == Type.DISK) {
-      localFS.rename(tmpOutputPath, outputPath);
-      merger.closeOnDiskFile(outputPath);
-    } else {
-      throw new IOException("Cannot commit MapOutput of type WAIT!");
-    }
-  }
+  public abstract void shuffle(MapHost host, InputStream input,
+                               long compressedLength,
+                               long decompressedLength,
+                               ShuffleClientMetrics metrics,
+                               Reporter reporter) throws IOException;
+
+  public abstract void commit() throws IOException;
   
-  public void abort() {
-    if (type == Type.MEMORY) {
-      merger.unreserve(memory.length);
-    } else if (type == Type.DISK) {
-      try {
-        localFS.delete(tmpOutputPath, false);
-      } catch (IOException ie) {
-        LOG.info("failure to clean up " + tmpOutputPath, ie);
-      }
-    } else {
-      throw new IllegalArgumentException
-                   ("Cannot commit MapOutput with of type WAIT!");
-    }
-  }
-  
+  public abstract void abort();
+
+  public abstract String getDescription();
+
   public String toString() {
-    return "MapOutput(" + mapId + ", " + type + ")";
+    return "MapOutput(" + mapId + ", " + getDescription() + ")";
   }
   
   public static class MapOutputComparator<K, V> 

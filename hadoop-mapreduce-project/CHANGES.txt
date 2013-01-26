@@ -23,6 +23,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
 
+    MAPREDUCE-4808. Refactor MapOutput and MergeManager to facilitate reuse 
+    by Shuffle implementations. (masokan via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input

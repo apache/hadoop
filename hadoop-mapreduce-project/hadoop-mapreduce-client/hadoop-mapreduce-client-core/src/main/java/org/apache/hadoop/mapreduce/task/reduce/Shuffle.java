@@ -21,17 +21,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
-import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Task;
-import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapred.ShuffleConsumerPlugin;
@@ -77,17 +70,21 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     this.taskStatus = context.getStatus();
     this.reduceTask = context.getReduceTask();
     
-    scheduler = 
-      new ShuffleScheduler<K,V>(jobConf, taskStatus, this, copyPhase, 
-                                context.getShuffledMapsCounter(), 
-                                context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
-    merger = new MergeManager<K, V>(reduceId, jobConf, context.getLocalFS(),
-                                    context.getLocalDirAllocator(), reporter, context.getCodec(),
-                                    context.getCombinerClass(), context.getCombineCollector(), 
-                                    context.getSpilledRecordsCounter(), 
-                                    context.getReduceCombineInputCounter(), 
-                                    context.getMergedMapOutputsCounter(), 
-                                    this, context.getMergePhase(), context.getMapOutputFile());
+    scheduler = new ShuffleScheduler<K,V>(jobConf, taskStatus, this,
+        copyPhase, context.getShuffledMapsCounter(),
+        context.getReduceShuffleBytes(), context.getFailedShuffleCounter());
+    merger = createMergeManager(context);
+  }
+
+  protected MergeManager<K, V> createMergeManager(
+      ShuffleConsumerPlugin.Context context) {
+    return new MergeManagerImpl<K, V>(reduceId, jobConf, context.getLocalFS(),
+        context.getLocalDirAllocator(), reporter, context.getCodec(),
+        context.getCombinerClass(), context.getCombineCollector(), 
+        context.getSpilledRecordsCounter(),
+        context.getReduceCombineInputCounter(),
+        context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
+        context.getMapOutputFile());
   }
 
   @Override
