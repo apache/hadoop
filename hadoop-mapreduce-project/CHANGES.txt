@@ -11,15 +11,8 @@ Trunk (Unreleased)
     MAPREDUCE-2669. Add new examples for Mean, Median, and Standard Deviation.
     (Plamen Jeliazkov via shv)
 
-    MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
-    (Avner BenHanoch via acmurthy) 
-
-    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
-
     MAPREDUCE-4887. Add RehashPartitioner, to smooth distributions
     with poor implementations of Object#hashCode().  (Radim Kolar via cutting)
-
-    MAPREDUCE-4808. Refactor MapOutput and MergeManager to facilitate reuse by Shuffle implementations. (masokan via tucu)
 
   IMPROVEMENTS
 
@@ -77,9 +70,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
-
-    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
-    (masokan via tucu)
 
   BUG FIXES
 
@@ -180,6 +170,14 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4810. Added new admin command options for MR AM. (Jerry Chen via
     vinodkv)
 
+    MAPREDUCE-4049. Experimental api to allow for alternate shuffle plugins.
+    (Avner BenHanoch via acmurthy) 
+
+    MAPREDUCE-4807. Allow MapOutputBuffer to be pluggable. (masokan via tucu)
+
+    MAPREDUCE-4808. Refactor MapOutput and MergeManager to facilitate reuse 
+    by Shuffle implementations. (masokan via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-3678. The Map tasks logs should have the value of input
@@ -210,6 +208,9 @@ Release 2.0.3-alpha - Unreleased
     calls. (sandyr via tucu)
 
     MAPREDUCE-4949. Enable multiple pi jobs to run in parallel. (sandyr via tucu)
+
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
 
   OPTIMIZATIONS
 
