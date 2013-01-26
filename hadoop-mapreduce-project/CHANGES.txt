@@ -50,6 +50,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4949. Enable multiple pi jobs to run in parallel. (sandyr via tucu)
 
+    MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
+    (masokan via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

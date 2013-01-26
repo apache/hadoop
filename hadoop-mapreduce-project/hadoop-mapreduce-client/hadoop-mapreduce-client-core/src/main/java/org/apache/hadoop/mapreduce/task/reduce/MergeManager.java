@@ -60,8 +60,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
-@SuppressWarnings(value={"unchecked"})
-@InterfaceAudience.Private
+@SuppressWarnings(value={"unchecked", "deprecation"})
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
 public class MergeManager<K, V> {
   
