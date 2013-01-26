@@ -124,3 +124,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4429. When the latest snapshot exists, INodeFileUnderConstruction should
   be replaced with INodeFileWithSnapshot but not INodeFile.  (Jing Zhao
   via szetszwo)
+
+  HDFS-4441. Move INodeDirectoryWithSnapshot.Diff and the related classes to a
+  package.  (szetszwo)

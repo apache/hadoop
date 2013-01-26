@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -29,8 +31,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /** I-node for closed file. */
@@ -119,7 +123,7 @@ public class INodeFile extends INode implements BlockCollection {
 
   @Override
   public Pair<? extends INodeFile, ? extends INodeFile> createSnapshotCopy() {
-    return parent.replaceINodeFile(this).createSnapshotCopy();
+    return parent.replaceChild4INodeFileWithSnapshot(this).createSnapshotCopy();
   }
 
   /** @return true unconditionally. */
@@ -321,18 +325,23 @@ public class INodeFile extends INode implements BlockCollection {
   public int numBlocks() {
     return blocks == null ? 0 : blocks.length;
   }
-  
-  /**
-   * @return A String containing all the blockInfo
-   */
-  String printBlocksInfo() {
-    if (blocks == null) {
-      return "";
+
+  @VisibleForTesting
+  @Override
+  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
+      final Snapshot snapshot) {
+    super.dumpTreeRecursively(out, prefix, snapshot);
+    out.print(", fileSize=" + computeFileSize(true));
+    out.print(", blocks=" + (blocks == null? null: Arrays.asList(blocks)));
+    if (this instanceof FileWithSnapshot) {
+      final FileWithSnapshot withSnapshot = (FileWithSnapshot) this;
+      final FileWithSnapshot next = withSnapshot.getNext();
+      // next link pointing to itself is equivalent to no link 
+      if (withSnapshot.getNext() != this) {
+        out.print(", next="
+            + (next != null ? next.asINodeFile().getObjectString() : "null"));
+      }
     }
-    StringBuilder buffer = new StringBuilder();
-    for (BlockInfo blk : blocks) {
-      buffer.append(blk.toString() + " ");
-    }
-    return buffer.toString();
+    out.println();
   }
 }

@@ -3296,14 +3296,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     leaseManager.removeLease(pendingFile.getClientName(), src);
     
     if (latestSnapshot != null) {
-      if (!(pendingFile instanceof INodeFileUnderConstructionWithSnapshot)) {
-        // replace INodeFileUnderConstruction with
-        // INodeFileUnderConstructionWithSnapshot. This replacement does not
-        // need to be recorded in snapshot.
+      if (pendingFile.getClass() == INodeFileUnderConstruction.class) {
+        // Replace it with INodeFileUnderConstructionWithSnapshot.
+        // This replacement does not need to be recorded in snapshot.
         INodeFileUnderConstructionWithSnapshot pendingFileWithSnaphsot = 
             new INodeFileUnderConstructionWithSnapshot(pendingFile);
-        dir.replaceINodeFile(src, pendingFile,
-            pendingFileWithSnaphsot, null);
+        dir.replaceINodeFile(src, pendingFile, pendingFileWithSnaphsot, null);
         pendingFile = pendingFileWithSnaphsot;
       }
       pendingFile = (INodeFileUnderConstruction) pendingFile

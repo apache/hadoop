@@ -35,13 +35,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
 
@@ -55,7 +54,7 @@ import com.google.common.primitives.SignedBytes;
  * directory inodes.
  */
 @InterfaceAudience.Private
-public abstract class INode implements Comparable<byte[]> {
+public abstract class INode implements Diff.Element<byte[]> {
   public static final Log LOG = LogFactory.getLog(INode.class);
 
   static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
@@ -80,16 +79,6 @@ public abstract class INode implements Comparable<byte[]> {
     public Pair(L left, R right) {
       this.left = left;
       this.right = right;
-    }
-  }
-
-  /** A triple of objects. */
-  public static class Triple<L, M, R> extends Pair<L, R> {
-    public final M middle;
-    
-    public Triple(L left, M middle, R right) {
-      super(left, right);
-      this.middle = middle;
     }
   }
 
@@ -406,6 +395,11 @@ public abstract class INode implements Comparable<byte[]> {
     return name;
   }
 
+  @Override
+  public byte[] getKey() {
+    return getLocalNameBytes();
+  }
+
   /**
    * Set local file name
    */
@@ -686,35 +680,9 @@ public abstract class INode implements Comparable<byte[]> {
     out.print(getObjectString());
     out.print("), parent=");
     out.print(parent == null? null: parent.getLocalName() + "/");
-    out.print(", permission=" + getFsPermission(snapshot) + ", group="
-        + getGroupName(snapshot) + ", user=" + getUserName(snapshot));
-    if (!this.isDirectory()) {
-      if (this.isFile()) {
-        // print block information
-        String blocksInfo = ((INodeFile) this).printBlocksInfo();
-        out.print(", blocks=[" + blocksInfo + "]");
-      }
-      if (this instanceof FileWithSnapshot) {
-        if (this instanceof INodeFileSnapshot
-            || this instanceof INodeFileUnderConstructionSnapshot) {
-          out.print(", computedSize="
-              + ((INodeFileSnapshot) this).computeFileSize(true));
-        }
-        FileWithSnapshot nodeWithLink = (FileWithSnapshot) this;
-        FileWithSnapshot next = nodeWithLink.getNext();
-        // An INodeFileWithSnapshot whose next link pointing to itself should be
-        // equivalent with a normal INodeFile 
-        if (!(this instanceof INodeFileWithSnapshot && 
-            ((INodeFileWithSnapshot) this).getNext() == this)) {
-          out.print(", next="
-              + (next != null ? next.asINodeFile().getObjectString() : "null"));
-        }
-      }
-      out.println();
-    } else {
-      final INodeDirectory dir = (INodeDirectory) this;
-      out.println(", size=" + dir.getChildrenList(snapshot).size());
-    }
+    out.print(", permission=" + getFsPermission(snapshot));
+    out.print(", group=" + getGroupName(snapshot));
+    out.print(", user=" + getUserName(snapshot));
   }
   
   /**

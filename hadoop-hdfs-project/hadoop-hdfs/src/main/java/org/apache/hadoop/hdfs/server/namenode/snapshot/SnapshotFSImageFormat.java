@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.Diff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.ChildrenDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -108,12 +108,12 @@ public class SnapshotFSImageFormat {
   }
   
   /**
-   * Search the given {@link Diff} to find an inode matching the specific name.
+   * Search the given {@link ChildrenDiff} to find an inode matching the specific name.
    * @param createdNodeName The name of the node for searching.
-   * @param diff The given {@link Diff} where to search the node.
+   * @param diff The given {@link ChildrenDiff} where to search the node.
    * @return The matched inode. Return null if no matched inode can be found.
    */
-  private static INode findCreated(byte[] createdNodeName, Diff diff) {
+  private static INode findCreated(byte[] createdNodeName, ChildrenDiff diff) {
     INode c = diff.searchCreated(createdNodeName);
     INode d = diff.searchDeleted(createdNodeName);
     if (c == null && d != null) {

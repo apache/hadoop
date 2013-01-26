@@ -32,25 +32,22 @@ public class INodeFileUnderConstructionWithSnapshot
     extends INodeFileUnderConstruction implements FileWithSnapshot {
   private FileWithSnapshot next;
 
-  INodeFileUnderConstructionWithSnapshot(final FileWithSnapshot f,
+  INodeFileUnderConstructionWithSnapshot(final INodeFile f,
       final String clientName,
       final String clientMachine,
       final DatanodeDescriptor clientNode) {
-    super(f.asINodeFile(), clientName, clientMachine, clientNode);
+    super(f, clientName, clientMachine, clientNode);
+    next = this;
   }
 
   /**
-   * The constructor that creates an
-   * {@link INodeFileUnderConstructionWithSnapshot} based on an
-   * {@link INodeFileUnderConstruction}
+   * Construct an {@link INodeFileUnderConstructionWithSnapshot} based on an
+   * {@link INodeFileUnderConstruction}.
    * 
-   * @param child The given {@link INodeFileUnderConstruction} instance
+   * @param f The given {@link INodeFileUnderConstruction} instance
    */
-  public INodeFileUnderConstructionWithSnapshot(
-      INodeFileUnderConstruction child) {
-    super(child, child.getClientName(), child.getClientMachine(), child
-        .getClientNode());
-    next = this;
+  public INodeFileUnderConstructionWithSnapshot(INodeFileUnderConstruction f) {
+    this(f, f.getClientName(), f.getClientMachine(), f.getClientNode());
   }
   
   @Override

@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.Diff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.ChildrenDiff;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -108,7 +108,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     INodeFile fileNode = (INodeFile) fsdir.getINode(file.toString());
     INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
         .getINode(dir.toString());
-    Diff diff = dirNode.getLastSnapshotDiff().getDiff();
+    ChildrenDiff diff = dirNode.getLastSnapshotDiff().getDiff();
     INode nodeInCreated = diff.searchCreated(fileNode.getLocalNameBytes());
     assertTrue(fileNode == nodeInCreated);
     INode nodeInDeleted = diff.searchDeleted(fileNode.getLocalNameBytes());
@@ -187,7 +187,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     assertEquals(BLOCKSIZE * 2, ((INodeFile) fileNode).computeFileSize(true));
     INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
         .getINode(dir.toString());
-    Diff diff = dirNode.getLastSnapshotDiff().getDiff();
+    ChildrenDiff diff = dirNode.getLastSnapshotDiff().getDiff();
     INode nodeInDeleted_S0 = diff.searchDeleted(fileNode.getLocalNameBytes());
     assertTrue(nodeInDeleted_S0 instanceof INodeFileUnderConstructionSnapshot);
     assertEquals(BLOCKSIZE * 2,

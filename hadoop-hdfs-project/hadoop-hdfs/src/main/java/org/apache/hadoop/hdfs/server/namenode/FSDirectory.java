@@ -1218,34 +1218,18 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  private void unprotectedReplaceINode(String path, INode oldnode,
-      INode newnode, Snapshot latest) throws IOException {    
+  void unprotectedReplaceINodeFile(final String path, final INodeFile oldnode,
+      final INodeFile newnode, final Snapshot latest) {
     Preconditions.checkState(hasWriteLock());
 
-    INodeDirectory parent = oldnode.getParent();
-    // Remove the node from the namespace 
-    if (parent == null) {
-      final String mess
-          = "FSDirectory.unprotectedReplaceINode: failed to remove " + path;
-      NameNode.stateChangeLog.warn("DIR* " + mess);
-      throw new IOException(mess);
-    }
-    
+    final INodeDirectory parent = oldnode.getParent();
     final INode removed = parent.removeChild(oldnode, latest);
     Preconditions.checkState(removed == oldnode,
         "removed != oldnode=%s, removed=%s", oldnode, removed);
 
-    parent = oldnode.getParent();
     oldnode.setParent(null);
     parent.addChild(newnode, true, latest);
-  }
 
-  void unprotectedReplaceINodeFile(String path, INodeFile oldnode,
-      INodeFile newnode, Snapshot latest
-      ) throws IOException, UnresolvedLinkException {
-    unprotectedReplaceINode(path, oldnode, newnode, latest);
-    newnode.setLocalName(oldnode.getLocalNameBytes());
-    
     /* Currently oldnode and newnode are assumed to contain the same
      * blocks. Otherwise, blocks need to be removed from the blocksMap.
      */

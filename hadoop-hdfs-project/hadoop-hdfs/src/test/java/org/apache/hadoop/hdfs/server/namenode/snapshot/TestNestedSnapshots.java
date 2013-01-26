@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
@@ -176,6 +178,39 @@ public class TestNestedSnapshots {
         final Path p = SnapshotTestHelper.getSnapshotPath(dir, "s" + s, file);
         //the file #f exists in snapshot #s iff s > f.
         Assert.assertEquals(s > f, hdfs.exists(p));
+      }
+    }
+  }
+
+  /**
+   * Test {@link Snapshot#ID_COMPARATOR}.
+   */
+  @Test
+  public void testIdCmp() {
+    final PermissionStatus perm = PermissionStatus.createImmutable(
+        "user", "group", FsPermission.createImmutable((short)0));
+    final INodeDirectory dir = new INodeDirectory(0, "foo", perm);
+    final INodeDirectorySnapshottable snapshottable
+        = new INodeDirectorySnapshottable(dir);
+    final Snapshot[] snapshots = {
+      new Snapshot(1, "s1", snapshottable),
+      new Snapshot(1, "s1", snapshottable),
+      new Snapshot(2, "s2", snapshottable),
+      new Snapshot(2, "s2", snapshottable),
+    };
+
+    Assert.assertEquals(0, Snapshot.ID_COMPARATOR.compare(null, null));
+    for(Snapshot s : snapshots) {
+      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) < 0);
+      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) > 0);
+      
+      for(Snapshot t : snapshots) {
+        final int expected = s.getRoot().getLocalName().compareTo(
+            t.getRoot().getLocalName());
+        final int computed = Snapshot.ID_COMPARATOR.compare(s, t);
+        Assert.assertEquals(expected > 0, computed > 0);
+        Assert.assertEquals(expected == 0, computed == 0);
+        Assert.assertEquals(expected < 0, computed < 0);
       }
     }
   }
