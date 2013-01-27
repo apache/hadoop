@@ -432,6 +432,12 @@
 </property>
 
 <property>
+  <name>fs.du.interval</name>
+  <value>60000</value>
+  <description>File space usage statistics refresh interval in msec.</description>
+</property>
+
+<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>
