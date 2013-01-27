@@ -459,6 +459,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9231. Parametrize staging URL for the uniformity of
     distributionManagement. (Konstantin Boudnik via suresh)
 
+    HADOOP-9241. DU refresh interval is not configurable (harsh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
