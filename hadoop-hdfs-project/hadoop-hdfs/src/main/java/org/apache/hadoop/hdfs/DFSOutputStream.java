@@ -790,13 +790,18 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     private int findNewDatanode(final DatanodeInfo[] original
         ) throws IOException {
       if (nodes.length != original.length + 1) {
-        throw new IOException("Failed to add a datanode.  "
-            + "User may turn off this feature by setting "
-            + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY
-            + " in configuration, where the current policy is "
-            + dfsClient.dtpReplaceDatanodeOnFailure
-            + ".  (Nodes: current=" + Arrays.asList(nodes)
-            + ", original=" + Arrays.asList(original) + ")");
+        throw new IOException(
+            new StringBuilder()
+            .append("Failed to replace a bad datanode on the existing pipeline ")
+            .append("due to no more good datanodes being available to try. ")
+            .append("(Nodes: current=").append(Arrays.asList(nodes))
+            .append(", original=").append(Arrays.asList(original)).append("). ")
+            .append("The current failed datanode replacement policy is ")
+            .append(dfsClient.dtpReplaceDatanodeOnFailure).append(", and ")
+            .append("a client may configure this via '")
+            .append(DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY)
+            .append("' in its configuration.")
+            .toString());
       }
       for(int i = 0; i < nodes.length; i++) {
         int j = 0;
