@@ -177,6 +177,16 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | appsSubmitted | int | The number of applications submitted |
 *---------------+--------------+-------------------------------+
+| appsCompleted | int | The number of applications completed |
+*---------------+--------------+-------------------------------+
+| appsPending | int | The number of applications pending |
+*---------------+--------------+-------------------------------+
+| appsRunning | int | The number of applications running |
+*---------------+--------------+-------------------------------+
+| appsFailed | int | The number of applications failed |
+*---------------+--------------+-------------------------------+
+| appsKilled | int | The number of applications killed |
+*---------------+--------------+-------------------------------+
 | reservedMB    | long         | The amount of memory reserved in MB |
 *---------------+--------------+-------------------------------+
 | availableMB   | long         | The amount of memory available in MB |
@@ -186,6 +196,10 @@ ResourceManager REST API's.
 | totalMB       | long         | The amount of total memory in MB |
 *---------------+--------------+-------------------------------+
 | containersAllocated | int | The number of containers allocated |
+*---------------+--------------+-------------------------------+
+| containersReserved | int | The number of containers reserved |
+*---------------+--------------+-------------------------------+
+| containersPending | int | The number of containers pending |
 *---------------+--------------+-------------------------------+
 | totalNodes | int | The total number of nodes |
 *---------------+--------------+-------------------------------+
@@ -223,20 +237,26 @@ ResourceManager REST API's.
 
 +---+
   {
-    "clusterMetrics":
-    {
-      "appsSubmitted":4,
+    "clusterMetrics":{
+      "appsSubmitted":0,
+      "appsCompleted":0,
+      "appsPending":0,
+      "appsRunning":0,
+      "appsFailed":0,
+      "appsKilled":0,
       "reservedMB":0,
-      "availableMB":8192,
+      "availableMB":17408,
       "allocatedMB":0,
-      "totalMB":8192,
       "containersAllocated":0,
+      "containersReserved":0,
+      "containersPending":0,
+      "totalMB":17408,
       "totalNodes":1,
-      "activeNodes":1,
       "lostNodes":0,
       "unhealthyNodes":0,
       "decommissionedNodes":0,
-      "rebootedNodes":0
+      "rebootedNodes":0,
+      "activeNodes":1
     }
   }
 +---+
@@ -264,18 +284,25 @@ ResourceManager REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <clusterMetrics>
-  <appsSubmitted>4</appsSubmitted>
+  <appsSubmitted>0</appsSubmitted>
+  <appsCompleted>0</appsCompleted>
+  <appsPending>0</appsPending>
+  <appsRunning>0</appsRunning>
+  <appsFailed>0</appsFailed>
+  <appsKilled>0</appsKilled>
   <reservedMB>0</reservedMB>
-  <availableMB>8192</availableMB>
+  <availableMB>17408</availableMB>
   <allocatedMB>0</allocatedMB>
   <containersAllocated>0</containersAllocated>
-  <totalMB>8192</totalMB>
+  <containersReserved>0</containersReserved>
+  <containersPending>0</containersPending>
+  <totalMB>17408</totalMB>
   <totalNodes>1</totalNodes>
-  <activeNodes>1</activeNodes>
   <lostNodes>0</lostNodes>
   <unhealthyNodes>0</unhealthyNodes>
   <decommissionedNodes>0</decommissionedNodes>
   <rebootedNodes>0</rebootedNodes>
+  <activeNodes>1</activeNodes>
 </clusterMetrics>
 +---+
 
