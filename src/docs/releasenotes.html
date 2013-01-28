@@ -54,10 +54,25 @@
 <h3>Other Jiras (describe bug fixes and minor changes)</h3>
 <ul>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8418">HADOOP-8418</a>.
+     Major bug reported by vicaya and fixed by crystal_gaoyu (security)<br>
+     <b>Fix UGI for IBM JDK running on Windows</b><br>
+     <blockquote>The login module and user principal classes are different for 32 and 64-bit Windows in IBM J9 JDK 6 SR10. Hadoop 1.0.3 does not run on either because it uses the 32 bit login module and the 64-bit user principal class.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8561">HADOOP-8561</a>.
+     Major improvement reported by vicaya and fixed by crystal_gaoyu (security)<br>
+     <b>Introduce HADOOP_PROXY_USER for secure impersonation in child hadoop client processes</b><br>
+     <blockquote>To solve the problem for an authenticated user to type hadoop shell commands in a web console, we can introduce an HADOOP_PROXY_USER environment variable to allow proper impersonation in the child hadoop client processes.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8880">HADOOP-8880</a>.
      Major bug reported by gkesavan and fixed by gkesavan <br>
      <b>Missing jersey jars as dependency in the pom causes hive tests to fail</b><br>
      <blockquote>ivy.xml has the dependency included where as the same dependency is not updated in the pom template.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9051">HADOOP-9051</a>.
+     Minor test reported by mgong@vmware.com and fixed by vicaya (test)<br>
+     <b>Òant testÓ will build failed for  trying to delete a file</b><br>
+     <blockquote>Run &quot;ant test&quot; on branch-1 of hadoop-common.<br>When the test process reach &quot;test-core-excluding-commit-and-smoke&quot;<br><br>It will invoke the &quot;macro-test-runner&quot; to clear and rebuild the test environment.<br>Then the ant task command  &lt;delete dir=&quot;@{test.dir}/logs&quot; /&gt;<br>failed for trying to delete an non-existent file.<br><br>following is the test result logs:<br>test-core-excluding-commit-and-smoke:<br>   [delete] Deleting: /home/jdu/bdc/hadoop-topology-branch1-new/hadoop-common/build/test/testsfailed<br>   [delete] Dele...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9111">HADOOP-9111</a>.
      Minor improvement reported by jingzhao and fixed by jingzhao (test)<br>
@@ -83,6 +98,21 @@
      Major bug reported by tlipcon and fixed by adi2 <br>
      <b>&quot;Text File Busy&quot; errors launching MR tasks</b><br>
      <blockquote>Some very small percentage of tasks fail with a &quot;Text file busy&quot; error.<br><br>The following was the original diagnosis:<br>{quote}<br>Our use of PrintWriter in TaskController.writeCommand is unsafe, since that class swallows all IO exceptions. We&apos;re not currently checking for errors, which I&apos;m seeing result in occasional task failures with the message &quot;Text file busy&quot; - assumedly because the close() call is failing silently for some reason.<br>{quote}<br>.. but turned out to be another issue as well (see below)</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4272">MAPREDUCE-4272</a>.
+     Major bug reported by vicaya and fixed by crystal_gaoyu (task)<br>
+     <b>SortedRanges.Range#compareTo is not spec compliant</b><br>
+     <blockquote>SortedRanges.Range#compareTo does not satisfy the requirement of Comparable#compareTo, where &quot;the implementor must ensure {noformat}sgn(x.compareTo(y)) == -sgn(y.compareTo(x)){noformat} for all x and y.&quot;<br><br>This is manifested as TestStreamingBadRecords failures in alternative JDKs.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4396">MAPREDUCE-4396</a>.
+     Minor bug reported by vicaya and fixed by crystal_gaoyu (client)<br>
+     <b>Make LocalJobRunner work with private distributed cache</b><br>
+     <blockquote>Some LocalJobRunner related unit tests fails if user directory permission and/or umask is too restrictive.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4397">MAPREDUCE-4397</a>.
+     Major improvement reported by vicaya and fixed by crystal_gaoyu (task-controller)<br>
+     <b>Introduce HADOOP_SECURITY_CONF_DIR for task-controller</b><br>
+     <blockquote>The linux task controller currently hard codes the directory in which to look for its config file at compile time (via the HADOOP_CONF_DIR macro). Adding a new environment variable to look for task-controller&apos;s conf dir (with strict permission checks) would make installation much more flexible.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4696">MAPREDUCE-4696</a>.
      Minor bug reported by gopalv and fixed by gopalv <br>
@@ -114,6 +144,10 @@
      <b>TestRecoveryManager fails on branch-1</b><br>
      <blockquote>Looks like the tests are extremely flaky and just hang.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4888">MAPREDUCE-4888</a>.
+     Blocker bug reported by revans2 and fixed by vinodkv (mrv1)<br>
+     <b>NLineInputFormat drops data in 1.1 and beyond</b><br>
+     <blockquote>When trying to root cause why MAPREDUCE-4782 did not cause us issues on 1.0.2, I found out that HADOOP-7823 introduced essentially the exact same error into org.apache.hadoop.mapred.lib.NLineInputFormat.<br><br>In 1.X org.apache.hadoop.mapred.lib.NLineInputFormat and org.apache.hadoop.mapreduce.lib.input.NLineInputFormat are separate implementations.  The latter had an off by one error in it until MAPREDUCE-4782 fixed it. The former had no error in it until HADOOP-7823 introduced it in 1.1 and MAPR...</blockquote></li>
 
 </ul>
 
