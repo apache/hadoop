@@ -454,6 +454,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4962. jobdetails.jsp uses display name instead of real name 
     to get counters. (sandyr via tucu)
 
+    HDFS-4444. Add space between total transaction time and number of
+    transactions in FSEditLog#printStatistics. (Stephen Chu via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
