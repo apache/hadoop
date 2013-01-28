@@ -89,7 +89,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     new TreeSet<InMemoryMapOutput<K,V>>(new MapOutputComparator<K, V>());
   private final MergeThread<InMemoryMapOutput<K,V>, K,V> inMemoryMerger;
   
-  Set<CompressAwarePath> onDiskMapOutputs = new TreeSet<CompressAwarePath>();
+  Set<Path> onDiskMapOutputs = new TreeSet<Path>();
   private final OnDiskMerger onDiskMerger;
   
   private final long memoryLimit;
@@ -336,7 +336,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
              inMemoryMergedMapOutputs.size());
   }
   
-  public synchronized void closeOnDiskFile(CompressAwarePath file) {
+  public synchronized void closeOnDiskFile(Path file) {
     onDiskMapOutputs.add(file);
     
     if (onDiskMapOutputs.size() >= (2 * ioSortFactor - 1)) {
@@ -356,7 +356,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     List<InMemoryMapOutput<K, V>> memory = 
       new ArrayList<InMemoryMapOutput<K, V>>(inMemoryMergedMapOutputs);
     memory.addAll(inMemoryMapOutputs);
-    List<CompressAwarePath> disk = new ArrayList<CompressAwarePath>(onDiskMapOutputs);
+    List<Path> disk = new ArrayList<Path>(onDiskMapOutputs);
     return finalMerge(jobConf, rfs, memory, disk);
   }
    
@@ -456,7 +456,6 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                         codec, null);
 
       RawKeyValueIterator rIter = null;
-      CompressAwarePath compressAwarePath;
       try {
         LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
                  " segments...");
@@ -475,8 +474,6 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
           combineCollector.setWriter(writer);
           combineAndSpill(rIter, reduceCombineInputCounter);
         }
-        compressAwarePath = new CompressAwarePath(outputPath,
-            writer.getRawLength());
         writer.close();
 
         LOG.info(reduceId +  
@@ -492,12 +489,12 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       }
 
       // Note the output of the merge
-      closeOnDiskFile(compressAwarePath);
+      closeOnDiskFile(outputPath);
     }
 
   }
   
-  private class OnDiskMerger extends MergeThread<CompressAwarePath,K,V> {
+  private class OnDiskMerger extends MergeThread<Path,K,V> {
     
     public OnDiskMerger(MergeManagerImpl<K, V> manager) {
       super(manager, Integer.MAX_VALUE, exceptionReporter);
@@ -506,7 +503,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     }
     
     @Override
-    public void merge(List<CompressAwarePath> inputs) throws IOException {
+    public void merge(List<Path> inputs) throws IOException {
       // sanity check
       if (inputs == null || inputs.isEmpty()) {
         LOG.info("No ondisk files to merge...");
@@ -521,8 +518,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                " map outputs on disk. Triggering merge...");
       
       // 1. Prepare the list of files to be merged. 
-      for (CompressAwarePath file : inputs) {
-        approxOutputSize += localFS.getFileStatus(file.getPath()).getLen();
+      for (Path file : inputs) {
+        approxOutputSize += localFS.getFileStatus(file).getLen();
       }
 
       // add the checksum length
@@ -539,7 +536,6 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                         (Class<V>) jobConf.getMapOutputValueClass(),
                         codec, null);
       RawKeyValueIterator iter  = null;
-      CompressAwarePath compressAwarePath;
       Path tmpDir = new Path(reduceId.toString());
       try {
         iter = Merger.merge(jobConf, rfs,
@@ -552,15 +548,13 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                             mergedMapOutputsCounter, null);
 
         Merger.writeFile(iter, writer, reporter, jobConf);
-        compressAwarePath = new CompressAwarePath(outputPath,
-            writer.getRawLength());
         writer.close();
       } catch (IOException e) {
         localFS.delete(outputPath, true);
         throw e;
       }
 
-      closeOnDiskFile(compressAwarePath);
+      closeOnDiskFile(outputPath);
 
       LOG.info(reduceId +
           " Finished merging " + inputs.size() + 
@@ -659,7 +653,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
 
   private RawKeyValueIterator finalMerge(JobConf job, FileSystem fs,
                                        List<InMemoryMapOutput<K,V>> inMemoryMapOutputs,
-                                       List<CompressAwarePath> onDiskMapOutputs
+                                       List<Path> onDiskMapOutputs
                                        ) throws IOException {
     LOG.info("finalMerge called with " + 
              inMemoryMapOutputs.size() + " in-memory map-outputs and " + 
@@ -718,8 +712,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         try {
           Merger.writeFile(rIter, writer, reporter, job);
           // add to list of final disk outputs.
-          onDiskMapOutputs.add(new CompressAwarePath(outputPath,
-              writer.getRawLength()));
+          onDiskMapOutputs.add(outputPath);
         } catch (IOException e) {
           if (null != outputPath) {
             try {
@@ -749,19 +742,15 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     // segments on disk
     List<Segment<K,V>> diskSegments = new ArrayList<Segment<K,V>>();
     long onDiskBytes = inMemToDiskBytes;
-    long rawBytes = inMemToDiskBytes;
-    CompressAwarePath[] onDisk = onDiskMapOutputs.toArray(
-        new CompressAwarePath[onDiskMapOutputs.size()]);
-    for (CompressAwarePath file : onDisk) {
-      long fileLength = fs.getFileStatus(file.getPath()).getLen();
-      onDiskBytes += fileLength;
-      rawBytes += (file.getRawDataLength() > 0) ? file.getRawDataLength() : fileLength;
-
-      LOG.debug("Disk file: " + file + " Length is " + fileLength);
-      diskSegments.add(new Segment<K, V>(job, fs, file.getPath(), codec, keepInputs,
+    Path[] onDisk = onDiskMapOutputs.toArray(new Path[onDiskMapOutputs.size()]);
+    for (Path file : onDisk) {
+      onDiskBytes += fs.getFileStatus(file).getLen();
+      LOG.debug("Disk file: " + file + " Length is " + 
+          fs.getFileStatus(file).getLen());
+      diskSegments.add(new Segment<K, V>(job, fs, file, codec, keepInputs,
                                          (file.toString().endsWith(
                                              Task.MERGED_OUTPUT_PREFIX) ?
-                                          null : mergedMapOutputsCounter), file.getRawDataLength()
+                                          null : mergedMapOutputsCounter)
                                         ));
     }
     LOG.info("Merging " + onDisk.length + " files, " +
@@ -797,32 +786,12 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         return diskMerge;
       }
       finalSegments.add(new Segment<K,V>(
-            new RawKVIteratorReader(diskMerge, onDiskBytes), true, rawBytes));
+            new RawKVIteratorReader(diskMerge, onDiskBytes), true));
     }
     return Merger.merge(job, fs, keyClass, valueClass,
                  finalSegments, finalSegments.size(), tmpDir,
                  comparator, reporter, spilledRecordsCounter, null,
                  null);
   
-  }
-
-  static class CompressAwarePath
-  {
-    private long rawDataLength;
-
-    private Path path;
-
-    public CompressAwarePath(Path path, long rawDataLength) {
-      this.path = path;
-      this.rawDataLength = rawDataLength;
-    }
-
-    public long getRawDataLength() {
-      return rawDataLength;
-    }
-
-    public Path getPath() {
-      return path;
-    }
   }
 }
