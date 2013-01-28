@@ -54,6 +54,9 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9217. Print thread dumps when hadoop-common tests fail.
     (Andrey Klochkov via suresh)
 
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
