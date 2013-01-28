@@ -253,6 +253,9 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-133 Update web services docs for RM clusterMetrics (Ravi Prakash via
+    kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
