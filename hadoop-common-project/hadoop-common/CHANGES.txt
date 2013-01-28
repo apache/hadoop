@@ -91,6 +91,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9181. Set daemon flag for HttpServer's QueuedThreadPool (Liang 
     Xie via tgraves)
 
+    HADOOP-9255. relnotes.py missing last jira (tgraves)
+
 Release 0.23.5 - 2012-11-28
 
   INCOMPATIBLE CHANGES
