@@ -328,6 +328,9 @@ Trunk (Unreleased)
 
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
+    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
