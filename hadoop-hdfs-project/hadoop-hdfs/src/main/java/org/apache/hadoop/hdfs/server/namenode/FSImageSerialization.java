@@ -33,10 +33,12 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
@@ -84,7 +86,8 @@ public class FSImageSerialization {
   // from the input stream
   //
   static INodeFileUnderConstruction readINodeUnderConstruction(
-                            DataInputStream in) throws IOException {
+      DataInputStream in, boolean supportSnapshot) throws IOException {
+    boolean withSnapshot = false;
     byte[] name = readBytes(in);
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
@@ -103,6 +106,9 @@ public class FSImageSerialization {
       blocks[i] = new BlockInfoUnderConstruction(
         blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
     }
+    if (supportSnapshot) {
+      withSnapshot = in.readBoolean();
+    }
     PermissionStatus perm = PermissionStatus.read(in);
     String clientName = readString(in);
     String clientMachine = readString(in);
@@ -113,16 +119,11 @@ public class FSImageSerialization {
     assert numLocs == 0 : "Unexpected block locations";
 
     //TODO: get inodeId from fsimage after inodeId is persisted
-    return new INodeFileUnderConstruction(INodeId.GRANDFATHER_INODE_ID,
-                                          name,
-                                          blockReplication, 
-                                          modificationTime,
-                                          preferredBlockSize,
-                                          blocks,
-                                          perm,
-                                          clientName,
-                                          clientMachine,
-                                          null);
+    INodeFileUnderConstruction node = new INodeFileUnderConstruction(
+        INodeId.GRANDFATHER_INODE_ID, name, blockReplication, modificationTime,
+        preferredBlockSize, blocks, perm, clientName, clientMachine, null);
+    return withSnapshot ? new INodeFileUnderConstructionWithSnapshot(node)
+        : node;
   }
 
   // Helper function that writes an INodeUnderConstruction
@@ -141,6 +142,7 @@ public class FSImageSerialization {
     for (int i = 0; i < nrBlocks; i++) {
       cons.getBlocks()[i].write(out);
     }
+    out.writeBoolean(cons instanceof INodeFileUnderConstructionWithSnapshot);
     cons.getPermissionStatus().write(out);
     writeString(cons.getClientName(), out);
     writeString(cons.getClientMachine(), out);
@@ -204,10 +206,10 @@ public class FSImageSerialization {
   /**
    * Serialize a {@link INodeFile} node
    * @param node The node to write
-   * @param out The {@link DataOutput} where the fields are written
+   * @param out The {@link DataOutputStream} where the fields are written
    * @param writeBlock Whether to write block information
    */
-  public static void writeINodeFile(INodeFile node, DataOutput out,
+  public static void writeINodeFile(INodeFile node, DataOutputStream out,
       boolean writeBlock) throws IOException {
     byte[] name = node.getLocalNameBytes();
     out.writeShort(name.length);
@@ -227,11 +229,19 @@ public class FSImageSerialization {
       out.writeInt(0); // # of blocks
       out.writeBoolean(false);
     }
-    if (node instanceof INodeFileSnapshot) {
-      out.writeLong(((INodeFileSnapshot) node).computeFileSize(true));
+    if (node instanceof INodeFileSnapshot
+        || node instanceof INodeFileUnderConstructionSnapshot) {
+      out.writeLong(node.computeFileSize(true));
+      if (node instanceof INodeFileUnderConstructionSnapshot) {
+        out.writeBoolean(true);
+        writeString(((INodeFileUnderConstruction) node).getClientName(), out);
+        writeString(((INodeFileUnderConstruction) node).getClientMachine(), out);
+      } else {
+        out.writeBoolean(false);
+      }
     } else {
       out.writeLong(-1);
-      out.writeBoolean(node instanceof INodeFileWithSnapshot);
+      out.writeBoolean(node instanceof FileWithSnapshot);
     }
     FsPermission filePerm = TL_DATA.get().FILE_PERM;
     filePerm.fromShort(fileINode.getFsPermissionShort());
@@ -243,7 +253,7 @@ public class FSImageSerialization {
   /**
    * Save one inode's attributes to the image.
    */
-  static void saveINode2Image(INode node, DataOutput out)
+  static void saveINode2Image(INode node, DataOutputStream out)
       throws IOException {
     if (node.isDirectory()) {
       writeINodeDirectory((INodeDirectory) node, out);

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 
 /**
@@ -33,6 +35,17 @@ public class INodeFileUnderConstructionSnapshot
     super(f, f.getClientName(), f.getClientMachine(), f.getClientNode());
     this.size = f.computeFileSize(true);
     f.insertAfter(this);
+  }
+  
+  /**
+   * A constructor generating an {@link INodeFileUnderConstructionSnapshot}
+   * based on an {@link INodeFile}, the file size at the snapshot time, client
+   * name, and client machine. Used while loading {@link FSImage}
+   */
+  public INodeFileUnderConstructionSnapshot(INodeFile f, long size,
+      String clientName, String clientMachine) {
+    super(f, clientName, clientMachine, null);
+    this.size = size;
   }
 
   @Override

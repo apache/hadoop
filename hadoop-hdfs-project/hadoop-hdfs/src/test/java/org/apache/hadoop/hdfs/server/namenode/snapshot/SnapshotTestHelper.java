@@ -20,6 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +39,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.junit.Assert;
 
 /**
  * Helper for writing snapshot related tests
@@ -89,6 +98,80 @@ public class SnapshotTestHelper {
     FileStatus[] currentFiles = hdfs.listStatus(snapshottedDir);
     FileStatus[] snapshotFiles = hdfs.listStatus(snapshotRoot);
     assertEquals(currentFiles.length, snapshotFiles.length);
+  }
+  
+  /**
+   * Compare two dumped trees that are stored in two files. The following is an
+   * example of the dumped tree:
+   * 
+   * <pre>
+   * information of root
+   * +- the first child of root (e.g., /foo)
+   *   +- the first child of /foo
+   *   ...
+   *   \- the last child of /foo (e.g., /foo/bar)
+   *     +- the first child of /foo/bar
+   *     ...
+   *   snapshots of /foo
+   *   +- snapshot s_1
+   *   ...
+   *   \- snapshot s_n
+   * +- second child of root
+   *   ...
+   * \- last child of root
+   * 
+   * The following information is dumped for each inode:
+   * localName (className@hashCode) parent permission group user
+   * 
+   * Specific information for different types of INode: 
+   * {@link INodeDirectory}:childrenSize 
+   * {@link INodeFile}: fileSize, block list. Check {@link BlockInfo#toString()} 
+   * and {@link BlockInfoUnderConstruction#toString()} for detailed information.
+   * {@link FileWithSnapshot}: next link
+   * </pre>
+   * @see INode#dumpTreeRecursively()
+   */
+  public static void compareDumpedTreeInFile(File file1, File file2)
+      throws IOException {
+    BufferedReader reader1 = new BufferedReader(new FileReader(file1));
+    BufferedReader reader2 = new BufferedReader(new FileReader(file2));
+    try {
+      String line1 = "";
+      String line2 = "";
+      while ((line1 = reader1.readLine()) != null
+          && (line2 = reader2.readLine()) != null) {
+        // skip the hashCode part of the object string during the comparison,
+        // also ignore the difference between INodeFile/INodeFileWithSnapshot
+        line1 = line1.replaceAll("INodeFileWithSnapshot", "INodeFile");
+        line2 = line2.replaceAll("INodeFileWithSnapshot", "INodeFile");
+        line1 = line1.replaceAll("@[\\dabcdef]+", "");
+        line2 = line2.replaceAll("@[\\dabcdef]+", "");
+        
+        // skip the replica field of the last block of an
+        // INodeFileUnderConstruction
+        line1 = line1.replaceAll("replicas=\\[.*\\]", "replicas=[]");
+        line2 = line2.replaceAll("replicas=\\[.*\\]", "replicas=[]");
+        
+        // skip the specific fields of BlockInfoUnderConstruction when the node
+        // is an INodeFileSnapshot or an INodeFileUnderConstructionSnapshot
+        if (line1.contains("(INodeFileSnapshot)")
+            || line1.contains("(INodeFileUnderConstructionSnapshot)")) {
+          line1 = line1.replaceAll(
+           "\\{blockUCState=\\w+, primaryNodeIndex=[-\\d]+, replicas=\\[\\]\\}",
+           "");
+          line2 = line2.replaceAll(
+           "\\{blockUCState=\\w+, primaryNodeIndex=[-\\d]+, replicas=\\[\\]\\}",
+           "");
+        }
+        
+        assertEquals(line1, line2);
+      }
+      Assert.assertNull(reader1.readLine());
+      Assert.assertNull(reader2.readLine());
+    } finally {
+      reader1.close();
+      reader2.close();
+    }
   }
 
   /**

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,7 +57,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     /** Serialize {@link #created} */
-    private void writeCreated(DataOutput out) throws IOException {
+    private void writeCreated(DataOutputStream out) throws IOException {
         final List<INode> created = getCreatedList();
         out.writeInt(created.size());
         for (INode node : created) {
@@ -69,7 +69,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     /** Serialize {@link #deleted} */
-    private void writeDeleted(DataOutput out) throws IOException {
+    private void writeDeleted(DataOutputStream out) throws IOException {
         final List<INode> deleted = getDeletedList();
         out.writeInt(deleted.size());
         for (INode node : deleted) {
@@ -90,7 +90,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
               // SnapshotDiff, we may put two inodes sharing the same name but
               // with totally different blocks in the created and deleted list of
               // the same SnapshotDiff.
-              if (cNode.getBlocks() == dNode.getBlocks()) {
+              if (INodeFile.isOfSameFile(cNode, dNode)) {
                 FSImageSerialization.writeINodeFile(dNode, out, false);
               } else {
                 FSImageSerialization.writeINodeFile(dNode, out, true);
@@ -101,7 +101,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     /** Serialize to out */
-    private void write(DataOutput out) throws IOException {
+    private void write(DataOutputStream out) throws IOException {
       writeCreated(out);
       writeDeleted(out);    
     }
@@ -283,7 +283,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     /** Serialize fields to out */
-    void write(DataOutput out) throws IOException {
+    void write(DataOutputStream out) throws IOException {
       out.writeInt(childrenSize);
       // No need to write all fields of Snapshot here, since the snapshot must
       // have been recorded before when writing the FSImage. We only need to

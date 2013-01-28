@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
@@ -623,14 +624,20 @@ public abstract class INode implements Diff.Element<byte[]> {
    * @param computeFileSize non-negative computeFileSize means the node is 
    *                        INodeFileSnapshot
    * @param snapshottable whether the node is {@link INodeDirectorySnapshottable}
-   * @param withSnapshot whether the node is {@link INodeDirectoryWithSnapshot}                       
+   * @param withSnapshot whether the node is {@link INodeDirectoryWithSnapshot}
+   * @param underConstruction whether the node is 
+   *                          {@link INodeFileUnderConstructionSnapshot}
+   * @param clientName clientName of {@link INodeFileUnderConstructionSnapshot}
+   * @param clientMachine clientMachine of 
+   *                      {@link INodeFileUnderConstructionSnapshot}
    * @return an inode
    */
   static INode newINode(long id, PermissionStatus permissions,
       BlockInfo[] blocks, String symlink, short replication,
       long modificationTime, long atime, long nsQuota, long dsQuota,
       long preferredBlockSize, int numBlocks, boolean withLink,
-      long computeFileSize, boolean snapshottable, boolean withSnapshot) {
+      long computeFileSize, boolean snapshottable, boolean withSnapshot, 
+      boolean underConstruction, String clientName, String clientMachine) {
     if (symlink.length() != 0) { // check if symbolic link
       return new INodeSymlink(id, symlink, modificationTime, atime, permissions);
     }  else if (blocks == null && numBlocks < 0) { 
@@ -650,9 +657,13 @@ public abstract class INode implements Diff.Element<byte[]> {
     // file
     INodeFile fileNode = new INodeFile(id, permissions, blocks, replication,
         modificationTime, atime, preferredBlockSize);
-    return computeFileSize >= 0 ? new INodeFileSnapshot(fileNode,
-        computeFileSize) : (withLink ? new INodeFileWithSnapshot(fileNode)
-        : fileNode);
+    if (computeFileSize >= 0) {
+      return underConstruction ? new INodeFileUnderConstructionSnapshot(
+          fileNode, computeFileSize, clientName, clientMachine)
+          : new INodeFileSnapshot(fileNode, computeFileSize); 
+    } else {
+      return withLink ? new INodeFileWithSnapshot(fileNode) : fileNode;
+    }
   }
 
   /**

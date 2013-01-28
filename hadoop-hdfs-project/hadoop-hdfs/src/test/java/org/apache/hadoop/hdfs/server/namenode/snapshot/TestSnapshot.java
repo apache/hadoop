@@ -20,11 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,12 +30,12 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -48,7 +45,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDi
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -94,6 +90,7 @@ public class TestSnapshot {
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .build();
     cluster.waitActive();
@@ -201,33 +198,8 @@ public class TestSnapshot {
         .dumpTreeRecursively(out, new StringBuilder(), null);
     out.close();
     
-    compareFile(fsnBefore, fsnMiddle);
-    compareFile(fsnBefore, fsnAfter);
-  }
-  
-  /** compare two file's content */
-  private void compareFile(File file1, File file2) throws IOException {
-    BufferedReader reader1 = new BufferedReader(new FileReader(file1));
-    BufferedReader reader2 = new BufferedReader(new FileReader(file2));
-    try {
-      String line1 = "";
-      String line2 = "";
-      while ((line1 = reader1.readLine()) != null
-          && (line2 = reader2.readLine()) != null) {
-        // skip the hashCode part of the object string during the comparison,
-        // also ignore the difference between INodeFile/INodeFileWithSnapshot
-        line1 = line1.replaceAll("INodeFileWithSnapshot", "INodeFile");
-        line2 = line2.replaceAll("INodeFileWithSnapshot", "INodeFile");
-        line1 = line1.replaceAll("@[\\dabcdef]+", "");
-        line2 = line2.replaceAll("@[\\dabcdef]+", "");
-        assertEquals(line1, line2);
-      }
-      Assert.assertNull(reader1.readLine());
-      Assert.assertNull(reader2.readLine());
-    } finally {
-      reader1.close();
-      reader2.close();
-    }
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnMiddle);
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);
   }
   
   /**
@@ -334,7 +306,7 @@ public class TestSnapshot {
       // If the node does not have files in it, create files
       if (node.fileList == null) {
         node.initFileList(hdfs, node.nodePath.getName(), BLOCKSIZE,
-            REPLICATION, seed, 5);
+            REPLICATION, seed, 6);
       }
       
       //
@@ -361,20 +333,18 @@ public class TestSnapshot {
           node.fileList.get((node.nullFileIndex + 1) % node.fileList.size()),
           hdfs);
 
-      // TODO: temporarily disable file append testing before supporting
-      // INodeFileUnderConstructionWithSnapshot in FSImage saving/loading
-//      Modification append = new FileAppend(
-//          node.fileList.get((node.nullFileIndex + 2) % node.fileList.size()),
-//          hdfs, (int) BLOCKSIZE);
-      Modification chmod = new FileChangePermission(
+      Modification append = new FileAppend(
           node.fileList.get((node.nullFileIndex + 2) % node.fileList.size()),
+          hdfs, (int) BLOCKSIZE);
+      Modification chmod = new FileChangePermission(
+          node.fileList.get((node.nullFileIndex + 3) % node.fileList.size()),
           hdfs, genRandomPermission());
       String[] userGroup = genRandomOwner();
       Modification chown = new FileChown(
-          node.fileList.get((node.nullFileIndex + 3) % node.fileList.size()),
+          node.fileList.get((node.nullFileIndex + 4) % node.fileList.size()),
           hdfs, userGroup[0], userGroup[1]);
       Modification replication = new FileChangeReplication(
-          node.fileList.get((node.nullFileIndex + 4) % node.fileList.size()),
+          node.fileList.get((node.nullFileIndex + 5) % node.fileList.size()),
           hdfs, (short) (random.nextInt(REPLICATION) + 1));
       node.nullFileIndex = (node.nullFileIndex + 1) % node.fileList.size();
       Modification dirChange = new DirCreationOrDeletion(node.nodePath, hdfs,
@@ -382,8 +352,7 @@ public class TestSnapshot {
       
       mList.add(create);
       mList.add(delete);
-      //TODO
-      //mList.add(append);
+      mList.add(append);
       mList.add(chmod);
       mList.add(chown);
       mList.add(replication);
@@ -580,11 +549,7 @@ public class TestSnapshot {
     @Override
     void modify() throws Exception {
       assertTrue(fs.exists(file));
-      FSDataOutputStream out = fs.append(file);
-      byte[] buffer = new byte[appendLen];
-      random.nextBytes(buffer);
-      out.write(buffer);
-      out.close();
+      DFSTestUtil.appendFile(fs, file, appendLen);
     }
 
     @Override

@@ -127,3 +127,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4441. Move INodeDirectoryWithSnapshot.Diff and the related classes to a
   package.  (szetszwo)
+
+  HDFS-4432. Support INodeFileUnderConstructionWithSnapshot in FSImage
+  saving/loading. (Jing Zhao via suresh)

@@ -17,16 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.EnumSet;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.junit.After;
 import org.junit.Before;
@@ -38,9 +44,10 @@ import org.junit.Test;
 public class TestFSImageWithSnapshot {
   static final long seed = 0;
   static final short REPLICATION = 3;
-  static final long BLOCKSIZE = 1024;
+  static final int BLOCKSIZE = 1024;
   static final long txid = 1;
 
+  private final Path rootDir = new Path("/");
   private final Path dir = new Path("/TestSnapshot");
   private static String testDir =
       System.getProperty("test.build.data", "build/test/data");
@@ -64,6 +71,81 @@ public class TestFSImageWithSnapshot {
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Create a temp fsimage file for testing.
+   * @param dir The directory where the fsimage file resides
+   * @param imageTxId The transaction id of the fsimage
+   * @return The file of the image file
+   */
+  private File getImageFile(String dir, long imageTxId) {
+    return new File(dir, String.format("%s_%019d", NameNodeFile.IMAGE,
+        imageTxId));
+  }
+  
+  /** 
+   * Create a temp file for dumping the fsdir
+   * @param dir directory for the temp file
+   * @param suffix suffix of of the temp file
+   * @return the temp file
+   */
+  private File getDumpTreeFile(String dir, String suffix) {
+    return new File(dir, String.format("dumpTree_%s", suffix));
+  }
+  
+  /** 
+   * Dump the fsdir tree to a temp file
+   * @param fileSuffix suffix of the temp file for dumping
+   * @return the temp file
+   */
+  private File dumpTree2File(String fileSuffix) throws IOException {
+    File file = getDumpTreeFile(testDir, fileSuffix);
+    PrintWriter out = new PrintWriter(new FileWriter(file, false), true);
+    fsn.getFSDirectory().getINode(rootDir.toString())
+        .dumpTreeRecursively(out, new StringBuilder(), null);
+    out.close();
+    return file;
+  }
+  
+  /** Append a file without closing the output stream */
+  private HdfsDataOutputStream appendFileWithoutClosing(Path file, int length)
+      throws IOException {
+    byte[] toAppend = new byte[length];
+    Random random = new Random();
+    random.nextBytes(toAppend);
+    HdfsDataOutputStream out = (HdfsDataOutputStream) hdfs.append(file);
+    out.write(toAppend);
+    return out;
+  }
+  
+  /** Save the fsimage to a temp file */
+  private File saveFSImageToTempFile() throws IOException {
+    SaveNamespaceContext context = new SaveNamespaceContext(fsn, txid,
+        new Canceler());
+    FSImageFormat.Saver saver = new FSImageFormat.Saver(context);
+    FSImageCompression compression = FSImageCompression.createCompression(conf);
+    File imageFile = getImageFile(testDir, txid);
+    fsn.readLock();
+    try {
+      saver.save(imageFile, compression);
+    } finally {
+      fsn.readUnlock();
+    }
+    return imageFile;
+  }
+  
+  /** Load the fsimage from a temp file */
+  private void loadFSImageFromTempFile(File imageFile) throws IOException {
+    FSImageFormat.Loader loader = new FSImageFormat.Loader(conf, fsn);
+    fsn.writeLock();
+    fsn.getFSDirectory().writeLock();
+    try {
+      loader.load(imageFile);
+    } finally {
+      fsn.getFSDirectory().writeUnlock();
+      fsn.writeUnlock();
     }
   }
   
@@ -106,21 +188,10 @@ public class TestFSImageWithSnapshot {
     hdfs.delete(sub2file2, true);
     
     // dump the fsdir tree
-    StringBuffer fsnStrBefore = fsn.getFSDirectory().rootDir
-        .dumpTreeRecursively();
+    File fsnBefore = dumpTree2File("before");
     
     // save the namesystem to a temp file
-    SaveNamespaceContext context = new SaveNamespaceContext(fsn, txid,
-        new Canceler());
-    FSImageFormat.Saver saver = new FSImageFormat.Saver(context);
-    FSImageCompression compression = FSImageCompression.createCompression(conf);
-    File dstFile = getStorageFile(testDir, txid);
-    fsn.readLock();
-    try {
-      saver.save(dstFile, compression);
-    } finally {
-      fsn.readUnlock();
-    }
+    File imageFile = saveFSImageToTempFile();
 
     // restart the cluster, and format the cluster
     cluster.shutdown();
@@ -131,32 +202,68 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
     
     // load the namesystem from the temp file
-    FSImageFormat.Loader loader = new FSImageFormat.Loader(conf, fsn);
-    fsn.writeLock();
-    try {
-      loader.load(dstFile);
-    } finally {
-      fsn.writeUnlock();
-    }
+    loadFSImageFromTempFile(imageFile);
     
     // dump the fsdir tree again
-    StringBuffer fsnStrAfter = fsn.getFSDirectory().rootDir
-        .dumpTreeRecursively();
+    File fsnAfter = dumpTree2File("after");
     
     // compare two dumped tree
-    System.out.println(fsnStrBefore.toString());
-    System.out.println("\n" + fsnStrAfter.toString());
-    assertEquals(fsnStrBefore.toString(), fsnStrAfter.toString());
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);
   }
   
   /**
-   * Create a temp fsimage file for testing.
-   * @param dir The directory where the fsimage file resides
-   * @param imageTxId The transaction id of the fsimage
-   * @return The file of the image file
+   * Test the fsimage saving/loading while file appending.
    */
-  private File getStorageFile(String dir, long imageTxId) {
-    return new File(dir, String.format("%s_%019d", NameNodeFile.IMAGE,
-        imageTxId));
+  @Test
+  public void testSaveLoadImageWithAppending() throws Exception {
+    Path sub1 = new Path(dir, "sub1");
+    Path sub1file1 = new Path(sub1, "sub1file1");
+    Path sub1file2 = new Path(sub1, "sub1file2");
+    DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, REPLICATION, seed);
+    
+    // 1. create snapshot s0
+    hdfs.allowSnapshot(dir.toString());
+    hdfs.createSnapshot(dir, "s0");
+    
+    // 2. create snapshot s1 before appending sub1file1 finishes
+    HdfsDataOutputStream out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
+    out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+    // also append sub1file2
+    DFSTestUtil.appendFile(hdfs, sub1file2, BLOCKSIZE);
+    hdfs.createSnapshot(dir, "s1");
+    out.close();
+    
+    // 3. create snapshot s2 before appending finishes
+    out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
+    out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+    hdfs.createSnapshot(dir, "s2");
+    out.close();
+    
+    // 4. save fsimage before appending finishes
+    out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
+    out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+    // dump fsdir
+    File fsnBefore = dumpTree2File("before");
+    // save the namesystem to a temp file
+    File imageFile = saveFSImageToTempFile();
+    
+    // 5. load fsimage and compare
+    // first restart the cluster, and format the cluster
+    out.close();
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(true)
+        .numDataNodes(REPLICATION).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    // then load the fsimage
+    loadFSImageFromTempFile(imageFile);
+    
+    // dump the fsdir tree again
+    File fsnAfter = dumpTree2File("after");
+    
+    // compare two dumped tree
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);
   }
 }

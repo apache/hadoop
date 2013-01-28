@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -54,6 +53,14 @@ public class INodeFile extends INode implements BlockCollection {
 
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
+  /**
+   * Check the first block to see if two INodes are about the same file
+   */
+  public static boolean isOfSameFile(INodeFile file1, INodeFile file2) {
+    BlockInfo[] blk1 = file1.getBlocks();
+    BlockInfo[] blk2 = file2.getBlocks();
+    return blk1 != null && blk2 != null && blk1[0] == blk2[0];
+  }
 
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
   private static class HeaderFormat {
@@ -332,7 +339,8 @@ public class INodeFile extends INode implements BlockCollection {
       final Snapshot snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
     out.print(", fileSize=" + computeFileSize(true));
-    out.print(", blocks=" + (blocks == null? null: Arrays.asList(blocks)));
+    // only compare the first block
+    out.print(", blocks=" + (blocks == null? null: blocks[0]));
     if (this instanceof FileWithSnapshot) {
       final FileWithSnapshot withSnapshot = (FileWithSnapshot) this;
       final FileWithSnapshot next = withSnapshot.getNext();

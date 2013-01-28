@@ -133,8 +133,7 @@ public class SnapshotFSImageFormat {
       // 
       // For case 1), c and d should be both INodeFile and should share
       // the same blockInfo list.
-      if (c.isFile()
-          && ((INodeFile) c).getBlocks() == ((INodeFile) d).getBlocks()) {
+      if (c.isFile() && INodeFile.isOfSameFile((INodeFile) c, (INodeFile) d)) {
         return c;
       } else {
         return d;
@@ -200,11 +199,12 @@ public class SnapshotFSImageFormat {
                   + DFSUtil.bytes2String(deletedNodeName)
                   + " in deleted list while loading FSImage.");
         }
-        // deleted must be an INodeFileSnapshot
-        INodeFileSnapshot deletedWithLink = (INodeFileSnapshot) deleted;
+        // deleted must be an FileWithSnapshot (INodeFileSnapshot or 
+        // INodeFileUnderConstructionSnapshot)
+        FileWithSnapshot deletedWithLink = (FileWithSnapshot) deleted;
         INodeFile cNode = (INodeFile) createdList.get(c);
         INodeFileWithSnapshot cNodeWithLink = (INodeFileWithSnapshot) cNode;
-        deletedWithLink.setBlocks(cNode.getBlocks());
+        ((INodeFile) deleted).setBlocks(cNode.getBlocks());
         // insert deleted into the circular list
         cNodeWithLink.insertBefore(deletedWithLink);
       }

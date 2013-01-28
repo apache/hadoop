@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -111,8 +112,12 @@ import org.apache.hadoop.io.Text;
  *     [list of BlockInfo] (when {@link Feature#SNAPSHOT} is not supported or 
  *     containsBlock is true),
  *     {
- *       snapshotFileSize: long,
- *       isINodeFileWithLink: byte (if ComputedFileSize is negative),
+ *       snapshotFileSize: long (negative is the file is not a snapshot copy),
+ *       isINodeFileUnderConstructionSnapshot: byte (if snapshotFileSize 
+ *       is positive), 
+ *       {clientName: short + byte[], clientMachine: short + byte[]} (when 
+ *       isINodeFileUnderConstructionSnapshot is true),
+ *       isINodeFileWithSnapshot: byte (if snapshotFileSize is negative),
  *     } (when {@link Feature#SNAPSHOT} is supported), 
  *     fsPermission: short, PermissionStatus
  *   } for INodeFile
@@ -236,6 +241,8 @@ public class FSImageFormat {
               "imgVersion " + imgVersion +
               " expected to be " + getLayoutVersion());
         }
+        boolean supportSnapshot = LayoutVersion.supports(Feature.SNAPSHOT,
+            imgVersion);
 
         // read namespaceID: first appeared in version -2
         in.readInt();
@@ -254,7 +261,7 @@ public class FSImageFormat {
           imgTxId = 0;
         }
         
-        if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
+        if (supportSnapshot) {
           namesystem.getSnapshotManager().read(in);
         }
 
@@ -274,7 +281,7 @@ public class FSImageFormat {
         LOG.info("Number of files = " + numFiles);
         if (LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
             imgVersion)) {
-          if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
+          if (supportSnapshot) {
             loadLocalNameINodesWithSnapshot(in);
           } else {
             loadLocalNameINodes(numFiles, in);
@@ -283,7 +290,7 @@ public class FSImageFormat {
           loadFullNameINodes(numFiles, in);
         }
 
-        loadFilesUnderConstruction(in);
+        loadFilesUnderConstruction(in, supportSnapshot);
 
         loadSecretManagerState(in);
 
@@ -558,8 +565,11 @@ public class FSImageFormat {
     int numBlocks = in.readInt();
     BlockInfo blocks[] = null;
 
+    String clientName = "";
+    String clientMachine = "";
+    boolean underConstruction = false;
     if (numBlocks >= 0) {
-      // to indicate INodeFileWithLink, blocks may be set as null while
+      // to indicate INodeFileWithSnapshot, blocks may be set as null while
       // numBlocks is set to 0
       blocks = LayoutVersion.supports(Feature.SNAPSHOT, imgVersion) ? (in
             .readBoolean() ? new BlockInfo[numBlocks] : null)
@@ -573,6 +583,12 @@ public class FSImageFormat {
         computeFileSize = in.readLong();
         if (computeFileSize < 0) {
           withLink = in.readBoolean();
+        } else {
+          underConstruction = in.readBoolean();
+          if (underConstruction) {
+            clientName = FSImageSerialization.readString(in);
+            clientMachine = FSImageSerialization.readString(in);
+          }
         }
       }
     }
@@ -603,13 +619,14 @@ public class FSImageFormat {
     
     PermissionStatus permissions = PermissionStatus.read(in);
 
-    return INode.newINode(inodeId, permissions, blocks, symlink, replication,
-        modificationTime, atime, nsQuota, dsQuota, blockSize, numBlocks,
-        withLink, computeFileSize, snapshottable, withSnapshot);
+      return INode.newINode(inodeId, permissions, blocks, symlink, replication,
+          modificationTime, atime, nsQuota, dsQuota, blockSize, numBlocks,
+          withLink, computeFileSize, snapshottable, withSnapshot,
+          underConstruction, clientName, clientMachine);
   }
 
-    private void loadFilesUnderConstruction(DataInputStream in)
-    throws IOException {
+    private void loadFilesUnderConstruction(DataInputStream in,
+        boolean supportSnapshot) throws IOException {
       FSDirectory fsDir = namesystem.dir;
       int size = in.readInt();
 
@@ -617,12 +634,17 @@ public class FSImageFormat {
 
       for (int i = 0; i < size; i++) {
         INodeFileUnderConstruction cons =
-          FSImageSerialization.readINodeUnderConstruction(in);
+          FSImageSerialization.readINodeUnderConstruction(in, supportSnapshot);
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
         final INodesInPath iip = fsDir.getINodesInPath(path);
         INodeFile oldnode = INodeFile.valueOf(iip.getINode(0), path);
+        cons.setLocalName(oldnode.getLocalNameBytes());
+        if (oldnode instanceof FileWithSnapshot
+            && cons instanceof FileWithSnapshot) {
+          ((FileWithSnapshot) oldnode).insertBefore((FileWithSnapshot) cons);
+        }
         fsDir.unprotectedReplaceINodeFile(path, oldnode, cons,
             iip.getLatestSnapshot());
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
