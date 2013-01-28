@@ -431,6 +431,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4359. Slow RPC responses from NN can prevent metrics collection on
     DNs. (liang xie via atm)
 
+    HDFS-4444. Add space between total transaction time and number of
+    transactions in FSEditLog#printStatistics. (Stephen Chu via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
