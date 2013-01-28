@@ -134,6 +134,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9241. DU refresh interval is not configurable (harsh)
 
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
