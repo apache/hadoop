@@ -150,7 +150,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
 
   public INodeDirectorySnapshottable(INodeDirectory dir) {
     super(dir, true, dir instanceof INodeDirectoryWithSnapshot ? 
-        ((INodeDirectoryWithSnapshot) dir).getSnapshotDiffs() : null);
+        ((INodeDirectoryWithSnapshot) dir).getDiffs(): null);
   }
   
   /** @return the number of existing snapshots. */
@@ -252,7 +252,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           + "snapshot with the same name \"" + name + "\".");
     }
 
-    addSnapshotDiff(s, this, true);
+    getDiffs().addSnapshotDiff(s, this, true);
     snapshotsByNames.add(-i - 1, s);
 
     //set modification time
@@ -264,7 +264,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   
   /**
    * Remove the snapshot with the given name from {@link #snapshotsByNames},
-   * and delete all the corresponding SnapshotDiff.
+   * and delete all the corresponding DirectoryDiff.
    * 
    * @param snapshotName The name of the snapshot to be removed
    * @param collectedBlocks Used to collect information to update blocksMap
@@ -286,14 +286,14 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   }
   
   /**
-   * Recursively delete SnapshotDiff associated with the given snapshot under a
+   * Recursively delete DirectoryDiff associated with the given snapshot under a
    * directory
    */
   private void deleteDiffsForSnapshot(Snapshot snapshot, INodeDirectory dir,
       BlocksMapUpdateInfo collectedBlocks) {
     if (dir instanceof INodeDirectoryWithSnapshot) {
       INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
-      sdir.deleteSnapshotDiff(snapshot, collectedBlocks);
+      sdir.getDiffs().deleteSnapshotDiff(snapshot, collectedBlocks);
     }
     ReadOnlyList<INode> children = dir.getChildrenList(null);
     for (INode child : children) {
@@ -401,7 +401,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       out.println();
       out.print(prefix);
       int n = 0;
-      for(SnapshotDiff diff : getSnapshotDiffs()) {
+      for(DirectoryDiff diff : getDiffs()) {
         if (diff.isSnapshotRoot()) {
           n++;
         }
@@ -415,12 +415,12 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
         @Override
         public Iterator<Pair<? extends INode, Snapshot>> iterator() {
           return new Iterator<Pair<? extends INode, Snapshot>>() {
-            final Iterator<SnapshotDiff> i = getSnapshotDiffs().iterator();
-            private SnapshotDiff next = findNext();
+            final Iterator<DirectoryDiff> i = getDiffs().iterator();
+            private DirectoryDiff next = findNext();
   
-            private SnapshotDiff findNext() {
+            private DirectoryDiff findNext() {
               for(; i.hasNext(); ) {
-                final SnapshotDiff diff = i.next();
+                final DirectoryDiff diff = i.next();
                 if (diff.isSnapshotRoot()) {
                   return diff;
                 }

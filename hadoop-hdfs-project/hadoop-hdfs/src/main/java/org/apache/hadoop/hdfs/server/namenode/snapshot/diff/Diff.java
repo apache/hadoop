@@ -451,23 +451,10 @@ public class Diff<K, E extends Diff.Element<K>> {
     }
   }
 
-  /** Convert the element list to a compact string. */
-  static <E> String toString(List<E> elements) {
-    if (elements == null || elements.isEmpty()) {
-      return "<empty>";
-    }
-    final StringBuilder b = new StringBuilder("[")
-        .append(elements.get(0));
-    for(int i = 1; i < elements.size(); i++) {
-      b.append(", ").append(elements.get(i));
-    }
-    return b.append("]").toString();
-  }
-
   @Override
   public String toString() {
     return getClass().getSimpleName()
-        + "{created=" + toString(created)
-        + ", deleted=" + toString(deleted) + "}";
+        +  "{created=" + getCreatedList()
+        + ", deleted=" + getDeletedList() + "}";
   }
 }

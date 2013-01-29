@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.ChildrenDiff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.SnapshotDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -70,13 +70,13 @@ public class SnapshotFSImageFormat {
   public static void saveSnapshotDiffs(INodeDirectoryWithSnapshot sNode,
       DataOutputStream out) throws IOException {
     // # of SnapshotDiff
-    List<SnapshotDiff> diffs = sNode.getSnapshotDiffs();
+    List<DirectoryDiff> diffs = sNode.getDiffs().asList();
     // Record the SnapshotDiff in reversed order, so that we can find the
     // correct reference for INodes in the created list when loading the
     // FSImage
     out.writeInt(diffs.size());
     for (int i = diffs.size() - 1; i >= 0; i--) {
-      SnapshotDiff sdiff = diffs.get(i);
+      DirectoryDiff sdiff = diffs.get(i);
       sdiff.write(out);
     }
   }
@@ -91,8 +91,8 @@ public class SnapshotFSImageFormat {
       INodeDirectoryWithSnapshot parent) throws IOException {
     // the INode in the created list should be a reference to another INode
     // in posterior SnapshotDiffs or one of the current children
-    for (SnapshotDiff postDiff : parent.getSnapshotDiffs()) {
-      INode created = findCreated(createdNodeName, postDiff.getDiff());
+    for (DirectoryDiff postDiff : parent.getDiffs()) {
+      INode created = findCreated(createdNodeName, postDiff.getChildrenDiff());
       if (created != null) {
         return created;
       } // else go to the next SnapshotDiff
@@ -266,8 +266,8 @@ public class SnapshotFSImageFormat {
       DataInputStream in, FSImageFormat.Loader loader)
       throws IOException {
     for (int i = 0; i < numSnapshotDiffs; i++) {
-      SnapshotDiff diff = loadSnapshotDiff(parentWithSnapshot, in, loader);
-      parentWithSnapshot.insertDiff(diff);
+      DirectoryDiff diff = loadSnapshotDiff(parentWithSnapshot, in, loader);
+      parentWithSnapshot.getDiffs().insert(diff);
     }
   }
   
@@ -321,7 +321,7 @@ public class SnapshotFSImageFormat {
    *               using.
    * @return A {@link SnapshotDiff}.
    */
-  private static SnapshotDiff loadSnapshotDiff(
+  private static DirectoryDiff loadSnapshotDiff(
       INodeDirectoryWithSnapshot parent, DataInputStream in,
       FSImageFormat.Loader loader) throws IOException {
     // 1. Load SnapshotDiff#childrenSize
@@ -342,9 +342,10 @@ public class SnapshotFSImageFormat {
     List<INode> deletedList = loadDeletedList(parent, createdList, in, loader);
     
     // 6. Compose the SnapshotDiff
-    SnapshotDiff sdiff = parent.new SnapshotDiff(snapshot, childrenSize,
-        snapshotINode, parent.getSnapshotDiffs().isEmpty() ? null : parent
-            .getSnapshotDiffs().get(0), createdList, deletedList);
+    List<DirectoryDiff> diffs = parent.getDiffs().asList();
+    DirectoryDiff sdiff = parent.new DirectoryDiff(snapshot, snapshotINode,
+        diffs.isEmpty() ? null : diffs.get(0),
+        childrenSize, createdList, deletedList);
     return sdiff;
   }
   

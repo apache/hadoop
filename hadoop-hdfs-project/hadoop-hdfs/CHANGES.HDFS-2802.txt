@@ -133,3 +133,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4131. Add capability to namenode to get snapshot diff. (Jing Zhao via
   suresh)
+
+  HDFS-4447. Refactor INodeDirectoryWithSnapshot for support general INode diff
+  lists.  (szetszwo)

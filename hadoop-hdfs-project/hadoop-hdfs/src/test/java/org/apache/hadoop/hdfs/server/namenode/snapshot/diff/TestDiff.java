@@ -124,10 +124,10 @@ public class TestDiff {
         c = diffs.get(i).apply2Previous(c);
       }
       if (!hasIdenticalElements(current, c)) {
-        System.out.println("previous = " + Diff.toString(previous));
+        System.out.println("previous = " + previous);
         System.out.println();
-        System.out.println("current  = " + Diff.toString(current));
-        System.out.println("c        = " + Diff.toString(c));
+        System.out.println("current  = " + current);
+        System.out.println("c        = " + c);
         throw new AssertionError("current and c are not identical.");
       }
 
@@ -137,10 +137,10 @@ public class TestDiff {
         p = diffs.get(i).apply2Current(p);
       }
       if (!hasIdenticalElements(previous, p)) {
-        System.out.println("previous = " + Diff.toString(previous));
-        System.out.println("p        = " + Diff.toString(p));
+        System.out.println("previous = " + previous);
+        System.out.println("p        = " + p);
         System.out.println();
-        System.out.println("current  = " + Diff.toString(current));
+        System.out.println("current  = " + current);
         throw new AssertionError("previous and p are not identical.");
       }
     }
@@ -155,20 +155,20 @@ public class TestDiff {
       // check if current == previous + combined
       final List<INode> c = combined.apply2Previous(previous);
       if (!hasIdenticalElements(current, c)) {
-        System.out.println("previous = " + Diff.toString(previous));
+        System.out.println("previous = " + previous);
         System.out.println();
-        System.out.println("current  = " + Diff.toString(current));
-        System.out.println("c        = " + Diff.toString(c));
+        System.out.println("current  = " + current);
+        System.out.println("c        = " + c);
         throw new AssertionError("current and c are not identical.");
       }
 
       // check if previous == current - combined
       final List<INode> p = combined.apply2Current(current);
       if (!hasIdenticalElements(previous, p)) {
-        System.out.println("previous = " + Diff.toString(previous));
-        System.out.println("p        = " + Diff.toString(p));
+        System.out.println("previous = " + previous);
+        System.out.println("p        = " + p);
         System.out.println();
-        System.out.println("current  = " + Diff.toString(current));
+        System.out.println("current  = " + current);
         throw new AssertionError("previous and p are not identical.");
       }
     }
@@ -228,10 +228,6 @@ public class TestDiff {
     return true;
   }
 
-  static String toString(Diff<byte[], INode> diff) {
-    return diff.toString();
-  }
-
   static String toString(INode inode) {
     return inode == null? null
         : inode.getLocalName() + ":" + inode.getModificationTime();
@@ -256,13 +252,13 @@ public class TestDiff {
       final boolean testUndo = RANDOM.nextInt(UNDO_TEST_P) == 0;
       String before = null;
       if (testUndo) {
-        before = toString(diff);
+        before = diff.toString();
       }
 
       final int undoInfo = diff.create(inode);
 
       if (testUndo) {
-        final String after = toString(diff);
+        final String after = diff.toString();
         //undo
         diff.undoCreate(inode, undoInfo);
         assertDiff(before, diff);
@@ -281,13 +277,13 @@ public class TestDiff {
       final boolean testUndo = RANDOM.nextInt(UNDO_TEST_P) == 0;
       String before = null;
       if (testUndo) {
-        before = toString(diff);
+        before = diff.toString();
       }
 
       final UndoInfo<INode> undoInfo = diff.delete(inode);
 
       if (testUndo) {
-        final String after = toString(diff);
+        final String after = diff.toString();
         //undo
         diff.undoDelete(inode, undoInfo);
         assertDiff(before, diff);
@@ -311,13 +307,13 @@ public class TestDiff {
       final boolean testUndo = RANDOM.nextInt(UNDO_TEST_P) == 0;
       String before = null;
       if (testUndo) {
-        before = toString(diff);
+        before = diff.toString();
       }
 
       final UndoInfo<INode> undoInfo = diff.modify(oldinode, newinode);
 
       if (testUndo) {
-        final String after = toString(diff);
+        final String after = diff.toString();
         //undo
         diff.undoModify(oldinode, newinode, undoInfo);
         assertDiff(before, diff);
@@ -329,6 +325,6 @@ public class TestDiff {
   }
   
   static void assertDiff(String s, Diff<byte[], INode> diff) {
-    Assert.assertEquals(s, toString(diff));
+    Assert.assertEquals(s, diff.toString());
   }
 }

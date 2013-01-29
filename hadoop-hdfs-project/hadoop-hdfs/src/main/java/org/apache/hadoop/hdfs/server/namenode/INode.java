@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructio
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
-import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -57,20 +56,6 @@ import com.google.common.primitives.SignedBytes;
 @InterfaceAudience.Private
 public abstract class INode implements Diff.Element<byte[]> {
   public static final Log LOG = LogFactory.getLog(INode.class);
-
-  static final ReadOnlyList<INode> EMPTY_READ_ONLY_LIST
-      = ReadOnlyList.Util.emptyList();
-  
-  /**
-   * Assert that the snapshot parameter must be null since this class only take
-   * care current state. Subclasses should override the methods for handling the
-   * snapshot states.
-   */
-  static void assertNull(Snapshot snapshot) {
-    if (snapshot != null) {
-      throw new AssertionError("snapshot is not null: " + snapshot);
-    }
-  }
 
   /** A pair of objects. */
   public static class Pair<L, R> {
