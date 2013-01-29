@@ -331,6 +331,8 @@ Trunk (Unreleased)
     HADOOP-9246 Execution phase for hadoop-maven-plugin should be
     process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
 
+    HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES

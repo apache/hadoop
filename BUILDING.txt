@@ -6,7 +6,6 @@ Requirements:
 * Unix System
 * JDK 1.6
 * Maven 3.0
-* Forrest 0.8 (if generating docs)
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
 * CMake 2.6 or newer (if compiling native code)
