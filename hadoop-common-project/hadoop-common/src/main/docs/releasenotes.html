@@ -12,6 +12,21 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 0.23.5</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-354">YARN-354</a>.
+     Blocker bug reported by Liang Xie and fixed by Liang Xie <br>
+     <b>WebAppProxyServer exits immediately after startup</b><br>
+     <blockquote>Please see HDFS-4426 for detail, i found the yarn WebAppProxyServer is broken by HADOOP-9181 as well, here's the hot fix, and i verified manually in our test cluster.
+
+I'm really applogized for bring about such trouble...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-334">YARN-334</a>.
+     Critical bug reported by Thomas Graves and fixed by Thomas Graves <br>
+     <b>Maven RAT plugin is not checking all source files</b><br>
+     <blockquote>yarn side of HADOOP-9097
+
+
+
+Running 'mvn apache-rat:check' passes, but running RAT by hand (by downloading the JAR) produces some warnings for Java files, amongst others.
+</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-325">YARN-325</a>.
      Blocker bug reported by Jason Lowe and fixed by Arun C Murthy (capacityscheduler)<br>
      <b>RM CapacityScheduler can deadlock when getQueueInfo() is called and a container is completing</b><br>
@@ -221,6 +236,10 @@ For NMs which come up after an unclean shutdown, the NM should look through its 
      Major bug reported by Rahul Jain and fixed by Devaraj K (jobtracker)<br>
      <b>getClusterStatus() fails with null pointer exception when running jobs in local mode</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4426">HDFS-4426</a>.
+     Blocker bug reported by Jason Lowe and fixed by Arpit Agarwal (namenode)<br>
+     <b>Secondary namenode shuts down immediately after startup</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4385">HDFS-4385</a>.
      Critical bug reported by Thomas Graves and fixed by Thomas Graves (build)<br>
      <b>Maven RAT plugin is not checking all source files</b><br>
@@ -265,12 +284,16 @@ For NMs which come up after an unclean shutdown, the NM should look through its 
      Major bug reported by Jean-Daniel Cryans and fixed by Jean-Daniel Cryans <br>
      <b>Cannot read a local block that's being written to when using the local read short circuit</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9255">HADOOP-9255</a>.
+     Critical bug reported by Thomas Graves and fixed by Thomas Graves (scripts)<br>
+     <b>relnotes.py missing last jira</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9217">HADOOP-9217</a>.
      Major test reported by Andrey Klochkov and fixed by Andrey Klochkov (test)<br>
      <b>Print thread dumps when hadoop-common tests fail</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9181">HADOOP-9181</a>.
-     Major bug reported by liang xie and fixed by liang xie <br>
+     Major bug reported by Liang Xie and fixed by Liang Xie <br>
      <b>Set daemon flag for HttpServer's QueuedThreadPool</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9169">HADOOP-9169</a>.
@@ -315,7 +338,7 @@ For NMs which come up after an unclean shutdown, the NM should look through its 
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8931">HADOOP-8931</a>.
      Trivial improvement reported by Eli Collins and fixed by Eli Collins <br>
-     <b>Add Java version to startup message </b><br>
+     <b>Add Java version to startup message</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8561">HADOOP-8561</a>.
      Major improvement reported by Luke Lu and fixed by Yu Gao (security)<br>
