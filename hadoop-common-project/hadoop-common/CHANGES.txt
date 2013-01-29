@@ -328,6 +328,11 @@ Trunk (Unreleased)
 
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
+    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
+
+    HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -574,6 +579,9 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-9215. when using cmake-2.6, libhadoop.so doesn't get created
     (only libhadoop.so.1.0.0) (Colin Patrick McCabe via todd)
+
+    HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
+    should not state that secret is randomly generated. (tucu)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -1293,6 +1301,10 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
     (Andrey Klochkov via suresh)
 
+    HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
+    re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
+
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1309,6 +1321,8 @@ Release 0.23.6 - UNRELEASED
     HADOOP-9105. FsShell -moveFromLocal erroneously fails (daryn via bobby)
 
     HADOOP-9097. Maven RAT plugin is not checking all source files (tgraves)
+
+    HADOOP-9255. relnotes.py missing last jira (tgraves)
 
 Release 0.23.5 - 2012-11-28
 

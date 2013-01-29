@@ -91,7 +91,11 @@
                                     "values": "string"
                                    }
           },
-          {"name": "jobQueueName", "type": "string"}
+          {"name": "jobQueueName", "type": "string"},
+          {"name": "workflowId", "type": "string"},
+          {"name": "workflowName", "type": "string"},
+          {"name": "workflowNodeName", "type": "string"},
+          {"name": "workflowAdjacencies", "type": "string"}
       ]
      },
 
@@ -191,7 +195,9 @@
           {"name": "trackerName", "type": "string"},
           {"name": "httpPort", "type": "int"},
           {"name": "shufflePort", "type": "int"},
-          {"name": "containerId", "type": "string"}
+          {"name": "containerId", "type": "string"},
+          {"name": "locality", "type": "string"},
+          {"name": "avataar", "type": "string"}
       ]
      },
 
