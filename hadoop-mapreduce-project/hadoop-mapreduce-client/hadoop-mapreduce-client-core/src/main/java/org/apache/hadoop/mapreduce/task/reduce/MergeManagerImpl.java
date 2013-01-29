@@ -522,7 +522,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       
       // 1. Prepare the list of files to be merged. 
       for (CompressAwarePath file : inputs) {
-        approxOutputSize += localFS.getFileStatus(file.getPath()).getLen();
+        approxOutputSize += localFS.getFileStatus(file).getLen();
       }
 
       // add the checksum length
@@ -753,12 +753,12 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     CompressAwarePath[] onDisk = onDiskMapOutputs.toArray(
         new CompressAwarePath[onDiskMapOutputs.size()]);
     for (CompressAwarePath file : onDisk) {
-      long fileLength = fs.getFileStatus(file.getPath()).getLen();
+      long fileLength = fs.getFileStatus(file).getLen();
       onDiskBytes += fileLength;
       rawBytes += (file.getRawDataLength() > 0) ? file.getRawDataLength() : fileLength;
 
       LOG.debug("Disk file: " + file + " Length is " + fileLength);
-      diskSegments.add(new Segment<K, V>(job, fs, file.getPath(), codec, keepInputs,
+      diskSegments.add(new Segment<K, V>(job, fs, file, codec, keepInputs,
                                          (file.toString().endsWith(
                                              Task.MERGED_OUTPUT_PREFIX) ?
                                           null : mergedMapOutputsCounter), file.getRawDataLength()
@@ -806,23 +806,26 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   
   }
 
-  static class CompressAwarePath
-  {
+  static class CompressAwarePath extends Path {
     private long rawDataLength;
 
-    private Path path;
-
     public CompressAwarePath(Path path, long rawDataLength) {
-      this.path = path;
+      super(path.toUri());
       this.rawDataLength = rawDataLength;
     }
 
     public long getRawDataLength() {
       return rawDataLength;
     }
-
-    public Path getPath() {
-      return path;
+    
+    @Override
+    public boolean equals(Object other) {
+      return super.equals(other);
+    }
+    
+    @Override
+    public int hashCode() {
+      return super.hashCode();
     }
   }
 }

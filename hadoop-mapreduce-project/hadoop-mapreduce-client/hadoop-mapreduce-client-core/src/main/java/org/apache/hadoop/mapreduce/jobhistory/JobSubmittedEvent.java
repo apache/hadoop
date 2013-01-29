@@ -52,6 +52,29 @@ public class JobSubmittedEvent implements HistoryEvent {
   public JobSubmittedEvent(JobID id, String jobName, String userName,
       long submitTime, String jobConfPath,
       Map<JobACL, AccessControlList> jobACLs, String jobQueueName) {
+    this(id, jobName, userName, submitTime, jobConfPath, jobACLs,
+        jobQueueName, "", "", "", "");
+  }
+
+  /**
+   * Create an event to record job submission
+   * @param id The job Id of the job
+   * @param jobName Name of the job
+   * @param userName Name of the user who submitted the job
+   * @param submitTime Time of submission
+   * @param jobConfPath Path of the Job Configuration file
+   * @param jobACLs The configured acls for the job.
+   * @param jobQueueName The job-queue to which this job was submitted to
+   * @param workflowId The Id of the workflow
+   * @param workflowName The name of the workflow
+   * @param workflowNodeName The node name of the workflow
+   * @param workflowAdjacencies The adjacencies of the workflow
+   */
+  public JobSubmittedEvent(JobID id, String jobName, String userName,
+      long submitTime, String jobConfPath,
+      Map<JobACL, AccessControlList> jobACLs, String jobQueueName,
+      String workflowId, String workflowName, String workflowNodeName,
+      String workflowAdjacencies) {
     datum.jobid = new Utf8(id.toString());
     datum.jobName = new Utf8(jobName);
     datum.userName = new Utf8(userName);
@@ -65,6 +88,18 @@ public class JobSubmittedEvent implements HistoryEvent {
     datum.acls = jobAcls;
     if (jobQueueName != null) {
       datum.jobQueueName = new Utf8(jobQueueName);
+    }
+    if (workflowId != null) {
+      datum.workflowId = new Utf8(workflowId);
+    }
+    if (workflowName != null) {
+      datum.workflowName = new Utf8(workflowName);
+    }
+    if (workflowNodeName != null) {
+      datum.workflowNodeName = new Utf8(workflowNodeName);
+    }
+    if (workflowAdjacencies != null) {
+      datum.workflowAdjacencies = new Utf8(workflowAdjacencies);
     }
   }
 
@@ -104,6 +139,34 @@ public class JobSubmittedEvent implements HistoryEvent {
       }
     }
     return jobAcls;
+  }
+  /** Get the id of the workflow */
+  public String getWorkflowId() {
+    if (datum.workflowId != null) {
+      return datum.workflowId.toString();
+    }
+    return null;
+  }
+  /** Get the name of the workflow */
+  public String getWorkflowName() {
+    if (datum.workflowName != null) {
+      return datum.workflowName.toString();
+    }
+    return null;
+  }
+  /** Get the node name of the workflow */
+  public String getWorkflowNodeName() {
+    if (datum.workflowNodeName != null) {
+      return datum.workflowNodeName.toString();
+    }
+    return null;
+  }
+  /** Get the adjacencies of the workflow */
+  public String getWorkflowAdjacencies() {
+    if (datum.workflowAdjacencies != null) {
+      return datum.workflowAdjacencies.toString();
+    }
+    return null;
   }
   /** Get the event type */
   public EventType getEventType() { return EventType.JOB_SUBMITTED; }

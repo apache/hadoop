@@ -247,13 +247,6 @@
                     </copy>
 
                     <!-- Docs -->
-                    <exec dir="${project.build.directory}/docs-src"
-                          executable="${env.FORREST_HOME}/bin/forrest"
-                          failonerror="true">
-                    </exec>
-                    <copy todir="${project.build.directory}/site">
-                      <fileset dir="${project.build.directory}/docs-src/build/site"/>
-                    </copy>
                     <copy file="${project.build.directory}/docs-src/releasenotes.html"
                           todir="${project.build.directory}/site"/>
                     <style basedir="${basedir}/src/main/resources"

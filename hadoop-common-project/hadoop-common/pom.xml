@@ -274,7 +274,7 @@
         <executions>
           <execution>
             <id>version-info</id>
-            <phase>compile</phase>
+            <phase>generate-resources</phase>
             <goals>
               <goal>version-info</goal>
             </goals>

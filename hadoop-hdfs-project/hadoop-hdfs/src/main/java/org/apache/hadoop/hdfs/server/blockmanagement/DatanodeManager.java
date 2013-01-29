@@ -419,7 +419,7 @@ public class DatanodeManager {
   }
 
   /** Add a datanode. */
-  private void addDatanode(final DatanodeDescriptor node) {
+  void addDatanode(final DatanodeDescriptor node) {
     // To keep host2DatanodeMap consistent with datanodeMap,
     // remove  from host2DatanodeMap the datanodeDescriptor removed
     // from datanodeMap before adding node to host2DatanodeMap.

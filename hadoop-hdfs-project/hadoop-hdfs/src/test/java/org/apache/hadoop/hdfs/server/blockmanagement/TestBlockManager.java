@@ -34,13 +34,16 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -484,5 +487,71 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY));
+  }
+
+  @Test
+  public void testSafeModeIBR() throws Exception {
+    DatanodeDescriptor node = spy(nodes.get(0));
+    node.setStorageID("dummy-storage");
+    node.isAlive = true;
+
+    DatanodeRegistration nodeReg =
+        new DatanodeRegistration(node, null, null, "");
+
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+    
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node); // swap in spy    
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertTrue(node.isFirstBlockReport());
+    // send block report, should be processed
+    reset(node);
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
+    // send block report again, should NOT be processed
+    reset(node);
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node, never()).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
+
+    // re-register as if node restarted, should update existing node
+    bm.getDatanodeManager().removeDatanode(node);
+    reset(node);
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    verify(node).updateRegInfo(nodeReg);
+    assertTrue(node.isFirstBlockReport()); // ready for report again
+    // send block report, should be processed after restart
+    reset(node);
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
+  }
+  
+  @Test
+  public void testSafeModeIBRAfterIncremental() throws Exception {
+    DatanodeDescriptor node = spy(nodes.get(0));
+    node.setStorageID("dummy-storage");
+    node.isAlive = true;
+
+    DatanodeRegistration nodeReg =
+        new DatanodeRegistration(node, null, null, "");
+
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node); // swap in spy    
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertTrue(node.isFirstBlockReport());
+    // send block report while pretending to already have blocks
+    reset(node);
+    doReturn(1).when(node).numBlocks();
+    bm.processReport(node, "pool", new BlockListAsLongs(null, null));
+    verify(node).receivedBlockReport();
+    assertFalse(node.isFirstBlockReport());
   }
 }

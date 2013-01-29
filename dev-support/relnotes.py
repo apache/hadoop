@@ -155,7 +155,7 @@ class JiraIter:
     end=1
     count=100
     while (at < end):
-      params = urllib.urlencode({'jql': "project in (HADOOP,HDFS,MAPREDUCE,YARN) and fixVersion in ('"+"' , '".join(versions)+"') and resolution = Fixed", 'startAt':at+1, 'maxResults':count})
+      params = urllib.urlencode({'jql': "project in (HADOOP,HDFS,MAPREDUCE,YARN) and fixVersion in ('"+"' , '".join(versions)+"') and resolution = Fixed", 'startAt':at, 'maxResults':count})
       resp = urllib.urlopen("https://issues.apache.org/jira/rest/api/2/search?%s"%params)
       data = json.loads(resp.read())
       if (data.has_key('errorMessages')):

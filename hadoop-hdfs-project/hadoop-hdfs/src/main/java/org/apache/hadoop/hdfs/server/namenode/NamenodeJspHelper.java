@@ -592,7 +592,7 @@ class NamenodeJspHelper {
           + "<td class=\"pcused\">"
           + ServletUtil.percentageGraph((int) Double.parseDouble(percentUsed),
               100) 
-          + "<td align=\"right\" class=\"pcremaining`\">"
+          + "<td align=\"right\" class=\"pcremaining\">"
           + percentRemaining 
           + "<td title=" + "\"blocks scheduled : "
           + d.getBlocksScheduled() + "\" class=\"blocks\">" + d.numBlocks()+"\n"

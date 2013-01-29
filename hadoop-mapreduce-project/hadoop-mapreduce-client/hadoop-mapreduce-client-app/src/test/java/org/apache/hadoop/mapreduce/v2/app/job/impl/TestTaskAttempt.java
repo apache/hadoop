@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletion;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.Locality;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -157,6 +158,7 @@ public class TestTaskAttempt{
         createMapTaskAttemptImplForTest(eventHandler, splitInfo);
     TaskAttemptImpl spyTa = spy(mockTaskAttempt);
     when(spyTa.resolveHost(hosts[0])).thenReturn("host1");
+    spyTa.dataLocalHosts = spyTa.resolveHosts(splitInfo.getLocations());
 
     TaskAttemptEvent mockTAEvent = mock(TaskAttemptEvent.class);
     rct.transition(spyTa, mockTAEvent);
@@ -360,6 +362,8 @@ public class TestTaskAttempt{
     taImpl.handle(new TaskAttemptEvent(attemptId,
         TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED));
     assertFalse(eventHandler.internalError);
+    assertEquals("Task attempt is not assigned on the local node", 
+        Locality.NODE_LOCAL, taImpl.getLocality());
   }
 
   @Test
@@ -398,7 +402,7 @@ public class TestTaskAttempt{
           mock(Token.class), new Credentials(),
           new SystemClock(), appCtx);
 
-    NodeId nid = BuilderUtils.newNodeId("127.0.0.1", 0);
+    NodeId nid = BuilderUtils.newNodeId("127.0.0.2", 0);
     ContainerId contId = BuilderUtils.newContainerId(appAttemptId, 3);
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(contId);
@@ -416,6 +420,8 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
     assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
         eventHandler.internalError);
+    assertEquals("Task attempt is not assigned on the local rack",
+        Locality.RACK_LOCAL, taImpl.getLocality());
   }
 
   @Test
@@ -439,7 +445,7 @@ public class TestTaskAttempt{
     jobConf.set(MRJobConfig.APPLICATION_ATTEMPT_ID, "10");
 
     TaskSplitMetaInfo splits = mock(TaskSplitMetaInfo.class);
-    when(splits.getLocations()).thenReturn(new String[] {"127.0.0.1"});
+    when(splits.getLocations()).thenReturn(new String[] {});
 
     AppContext appCtx = mock(AppContext.class);
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
@@ -475,6 +481,8 @@ public class TestTaskAttempt{
         TaskAttemptEventType.TA_CONTAINER_CLEANED));
     assertFalse("InternalError occurred trying to handle TA_CONTAINER_CLEANED",
         eventHandler.internalError);
+    assertEquals("Task attempt is assigned locally", Locality.OFF_SWITCH,
+        taImpl.getLocality());
   }
 
   @Test
