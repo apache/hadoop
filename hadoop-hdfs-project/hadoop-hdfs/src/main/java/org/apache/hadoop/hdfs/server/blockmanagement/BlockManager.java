@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -1394,7 +1395,7 @@ public class BlockManager {
 
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
-      if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0) {
+      if (namesystem.isInStartupSafeMode() && !node.isFirstBlockReport()) {
         blockLog.info("BLOCK* processReport: "
             + "discarded non-initial block report from " + nodeID.getName()
             + " because namenode still in startup phase");
@@ -1408,13 +1409,17 @@ public class BlockManager {
       } else {
         processReport(node, newReport);
       }
+      node.receivedBlockReport();
     } finally {
       endTime = Util.now();
       namesystem.writeUnlock();
     }
 
     // Log the block report processing stats from Namenode perspective
-    NameNode.getNameNodeMetrics().addBlockReport((int) (endTime - startTime));
+    final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+    if (metrics != null) {
+      metrics.addBlockReport((int) (endTime - startTime));
+    }
     blockLog.info("BLOCK* processReport: from "
         + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
         + ", processing time: " + (endTime - startTime) + " msecs");

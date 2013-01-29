@@ -132,6 +132,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
+  
+  /* Set to true after processing first block report.  Will be reset to false
+   * if the node re-registers.  This enables a NN in safe-mode to reprocess
+   * the first block report in case the DN is now reporting different blocks
+   */
+  private boolean processedBlockReport = false;
+  
   /** 
    * When set to true, the node is not in include list and is not allowed
    * to communicate with the namenode
@@ -575,6 +582,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeReg DatanodeID to update registration for.
    */
   public void updateRegInfo(DatanodeID nodeReg) {
+    processedBlockReport = false; // must re-process IBR after re-registration
     super.updateRegInfo(nodeReg);
   }
 
@@ -592,5 +600,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.bandwidth = bandwidth;
   }
 
+  public void receivedBlockReport() {
+    processedBlockReport = true;
+  }
 
+  boolean isFirstBlockReport() {
+    return !processedBlockReport;
+  }
 }

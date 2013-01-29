@@ -11,6 +11,7 @@ Release 0.23.7 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
 Release 0.23.6 - UNRELEASED
 

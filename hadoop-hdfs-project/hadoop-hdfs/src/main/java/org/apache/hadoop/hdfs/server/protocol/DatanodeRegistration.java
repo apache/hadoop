@@ -59,6 +59,10 @@ implements Writable, NodeRegistration {
     this("");
   }
   
+  public DatanodeRegistration(DatanodeID node) {
+    super(node);
+  }
+  
   /**
    * Create DatanodeRegistration
    */
