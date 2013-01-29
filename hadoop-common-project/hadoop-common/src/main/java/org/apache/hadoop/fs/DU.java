@@ -20,7 +20,6 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 
 import java.io.BufferedReader;
@@ -65,8 +64,8 @@ public class DU extends Shell {
    * @throws IOException if we fail to refresh the disk usage
    */
   public DU(File path, Configuration conf) throws IOException {
-    this(path, conf.getLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY,
-                CommonConfigurationKeys.FS_DU_INTERVAL_DEFAULT));
+    this(path, 600000L);
+    //10 minutes default refresh interval
   }
 
   /**
