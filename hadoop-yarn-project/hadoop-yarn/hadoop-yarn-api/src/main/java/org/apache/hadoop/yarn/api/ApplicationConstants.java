@@ -138,6 +138,11 @@ public interface ApplicationConstants {
     CLASSPATH("CLASSPATH"),
     
     /**
+     * $APP_CLASSPATH
+     */
+    APP_CLASSPATH("APP_CLASSPATH"),
+    
+    /**
      * $LD_LIBRARY_PATH
      */
     LD_LIBRARY_PATH("LD_LIBRARY_PATH"),
