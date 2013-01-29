@@ -1325,6 +1325,23 @@
   <description>The amount of memory the MR AppMaster needs.</description>
 </property>
 
+<property>
+   <name>mapreduce.job.classloader</name>
+   <value>false</value>
+  <description>Whether to use a separate (isolated) classloader for
+    user classes in the task JVM.</description>
+</property>
+
+<property>
+   <name>mapreduce.job.classloader.system.classes</name>
+   <value>java.,javax.,org.apache.commons.logging.,org.apache.log4j.,org.apache.hadoop.</value>
+  <description>A comma-separated list of classes that should be loaded from the
+    system classpath, not the user-supplied JARs, when mapreduce.job.classloader
+    is enabled. Names ending in '.' (period) are treated as package names,
+    and names starting with a '-' are treated as negative matches.
+  </description>
+</property>
+
 <!-- jobhistory properties -->
 
 <property>

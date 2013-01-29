@@ -11,6 +11,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4907. TrackerDistributedCacheManager issues too many 
     getFileStatus calls  (Sandy Ryza via tgraves)
 
+    MAPREDUCE-1700. User supplied dependencies may conflict with MapReduce
+    system JARs. (tomwhite)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
