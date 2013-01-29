@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapOutputFile;
 
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -112,7 +113,9 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   @Override
   public void commit() throws IOException {
     localFS.rename(tmpOutputPath, outputPath);
-    merger.closeOnDiskFile(outputPath);
+    CompressAwarePath compressAwarePath = new CompressAwarePath(outputPath,
+        getSize());
+    merger.closeOnDiskFile(compressAwarePath);
   }
   
   @Override

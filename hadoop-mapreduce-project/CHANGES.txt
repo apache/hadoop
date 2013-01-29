@@ -275,6 +275,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4803. Remove duplicate copy of TestIndexCache. (Mariappan Asokan
     via sseth)
 
+    MAPREDUCE-2264. Job status exceeds 100% in some cases. 
+    (devaraj.k and sandyr via tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
