@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -46,10 +47,12 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskStateInternal;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -254,6 +257,7 @@ public class TestTaskImpl {
     mockTask.handle(new TaskEvent(taskId, 
         TaskEventType.T_SCHEDULE));
     assertTaskScheduledState();
+    assertTaskAttemptAvataar(Avataar.VIRGIN);
   }
   
   private void killTask(TaskId taskId) {
@@ -337,6 +341,19 @@ public class TestTaskImpl {
    */
   private void assertTaskSucceededState() {
     assertEquals(TaskState.SUCCEEDED, mockTask.getState());
+  }
+
+  /**
+   * {@link Avataar}
+   */
+  private void assertTaskAttemptAvataar(Avataar avataar) {
+    for (TaskAttempt taskAttempt : mockTask.getAttempts().values()) {
+      if (((TaskAttemptImpl) taskAttempt).getAvataar() == avataar) {
+        return;
+      }
+    }
+    fail("There is no " + (avataar == Avataar.VIRGIN ? "virgin" : "speculative")
+        + "task attempt");
   }
   
   @Test
@@ -516,6 +533,9 @@ public class TestTaskImpl {
     
     // The task should still be in the succeeded state
     assertTaskSucceededState();
+    
+    // The task should contain speculative a task attempt
+    assertTaskAttemptAvataar(Avataar.SPECULATIVE);
   }
   
   @Test

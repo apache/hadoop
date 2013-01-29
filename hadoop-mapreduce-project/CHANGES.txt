@@ -212,6 +212,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4809. Change visibility of classes for pluggable sort changes. 
     (masokan via tucu)
 
+    MAPREDUCE-4838. Add additional fields like Locality, Avataar to the
+    JobHistory logs. (Zhijie Shen via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
