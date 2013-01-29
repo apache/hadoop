@@ -623,6 +623,17 @@ public class INodeDirectory extends INode {
   }
   
   /**
+   * Compare the metadata with another INodeDirectory
+   */
+  public boolean metadataEquals(INodeDirectory other) {
+    return other != null && getNsQuota() == other.getNsQuota()
+        && getDsQuota() == other.getDsQuota()
+        && getUserName().equals(other.getUserName())
+        && getGroupName().equals(other.getGroupName())
+        && getFsPermission().equals(other.getFsPermission());
+  }
+  
+  /**
    * Used by
    * {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)}.
    * Contains INodes information resolved from a given path.

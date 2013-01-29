@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffReport;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -233,4 +234,30 @@ public class SnapshotManager implements SnapshotStats {
       this.snapshottables.removeAll(toRemoveList);
     }
   }
+  
+  /**
+   * Compute the difference between two snapshots of a directory, or between a
+   * snapshot of the directory and its current tree.
+   */
+  public SnapshotDiffReport diff(final String path, final String from,
+      final String to) throws IOException {
+    if ((from == null || from.isEmpty())
+        && (to == null || to.isEmpty())) {
+      // both fromSnapshot and toSnapshot indicate the current tree
+      return null;
+    }
+    // if the start point is equal to the end point, return null
+    if (from.equals(to)) {
+      return null;
+    }
+
+    // Find the source root directory path where the snapshots were taken.
+    // All the check for path has been included in the valueOf method.
+    INodesInPath inodesInPath = fsdir.getMutableINodesInPath(path.toString());
+    final INodeDirectorySnapshottable snapshotRoot = INodeDirectorySnapshottable
+        .valueOf(inodesInPath.getLastINode(), path);
+    
+    return snapshotRoot.computeDiff(from, to);
+  }
+ 
 }

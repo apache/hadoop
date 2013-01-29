@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
@@ -50,7 +51,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    * of the children list of an INodeDirectory.
    */
   public static class ChildrenDiff extends Diff<byte[], INode> {
-    private ChildrenDiff() {}
+    ChildrenDiff() {}
     
     private ChildrenDiff(final List<INode> created, final List<INode> deleted) {
       super(created, deleted);
@@ -115,6 +116,59 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         }
       }
       return dirList;
+    }
+    
+    /**
+     * Print out the content of the Diff. In general, "M"/"+"/"-" are used to 
+     * represent files/directories that were modified, created, and deleted, 
+     * respectively.
+     * 
+     * @param str A StringBuilder used to storing the description of the Diff.
+     * @param parent The directory that the Diff is about. Used to get the full 
+     *               path of the INodes contained in the Diff.             
+     */
+    public void printDiff(StringBuilder str, INodeDirectoryWithSnapshot parent,
+        boolean reverse) {
+      final String mStr = "M\t";
+      final String cStr = reverse ? "-\t" : "+\t";
+      final String dStr = reverse ? "+\t" : "-\t";
+      StringBuilder cBuffer = new StringBuilder();
+      StringBuilder dBuffer = new StringBuilder();
+      StringBuilder mBuffer = new StringBuilder();
+      int c = 0;
+      int d = 0;
+      List<INode> created = getCreatedList();
+      List<INode> deleted = getDeletedList();
+      for (; c < created.size() && d < deleted.size(); ) {
+        INode cnode = created.get(c);
+        INode dnode = deleted.get(d);
+        if (cnode.equals(dnode)) {
+          mBuffer.append(mStr + parent.getFullPathName() + Path.SEPARATOR
+              + cnode.getLocalName() + "\n");
+          c++;
+          d++;
+        } else if (cnode.compareTo(dnode.getLocalNameBytes()) < 0) {
+          cBuffer.append(cStr + parent.getFullPathName() + Path.SEPARATOR
+              + cnode.getLocalName() + "\n");
+          c++;
+        } else {
+          dBuffer.append(dStr + parent.getFullPathName() + Path.SEPARATOR
+              + dnode.getLocalName() + "\n");
+          d++;
+        }
+      }   
+      for (; d < deleted.size(); d++) {
+        dBuffer.append(dStr + parent.getFullPathName() + Path.SEPARATOR
+            + deleted.get(d).getLocalName() + "\n");
+      }    
+      for (; c < created.size(); c++) {
+        cBuffer.append(cStr + parent.getFullPathName() + Path.SEPARATOR
+            + created.get(c).getLocalName() + "\n");
+      }
+      
+      str.append(cBuffer);
+      str.append(dBuffer);
+      str.append(mBuffer);
     }
   }
   
@@ -323,6 +377,79 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       withSnapshot.addSnapshotDiff(latest, dir, false);
     }
     return withSnapshot;
+  }
+  
+  /**
+   * Compute the difference between Snapshots.
+   * 
+   * @param fromSnapshot Start point of the diff computation. Null indicates
+   *          current tree.
+   * @param toSnapshot End point of the diff computation. Null indicates current
+   *          tree.
+   * @param diff Used to capture the changes happening to the children. Note
+   *          that the diff still represents (later_snapshot - earlier_snapshot)
+   *          although toSnapshot can be before fromSnapshot.
+   * @return Whether changes happened between the startSnapshot and endSnaphsot.
+   */
+  boolean computeDiffBetweenSnapshots(Snapshot fromSnapshot,
+      Snapshot toSnapshot, ChildrenDiff diff) {
+    Snapshot earlierSnapshot = fromSnapshot;
+    Snapshot laterSnapshot = toSnapshot;
+    if (fromSnapshot == null
+        || (toSnapshot != null && Snapshot.ID_COMPARATOR.compare(fromSnapshot,
+            toSnapshot) > 0)) {
+      earlierSnapshot = toSnapshot;
+      laterSnapshot = fromSnapshot;
+    }
+    
+    int earlierDiffIndex = Collections.binarySearch(diffs, earlierSnapshot);
+    if (earlierDiffIndex < 0 && (-earlierDiffIndex - 1) == diffs.size()) {
+      // if the earlierSnapshot is after the latest SnapshotDiff stored in diffs,
+      // no modification happened after the earlierSnapshot
+      return false;
+    }
+    int laterDiffIndex = diffs.size();
+    if (laterSnapshot != null) {
+      laterDiffIndex = Collections.binarySearch(diffs, laterSnapshot);
+      if (laterDiffIndex == -1 || laterDiffIndex == 0) {
+        // if the endSnapshot is the earliest SnapshotDiff stored in
+        // diffs, or before it, no modification happened before the endSnapshot
+        return false;
+      }
+    }
+    
+    earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
+        : earlierDiffIndex;
+    laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
+        : laterDiffIndex;
+    boolean dirMetadataChanged = false;
+    INodeDirectory dirCopy = null;
+    for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
+      SnapshotDiff sdiff = diffs.get(i);
+      diff.combinePosterior(sdiff.diff, null);
+      if (dirMetadataChanged == false && sdiff.snapshotINode != null) {
+        if (dirCopy == null) {
+          dirCopy = sdiff.snapshotINode;
+        } else {
+          if (!dirCopy.metadataEquals(sdiff.snapshotINode)) {
+            dirMetadataChanged = true;
+          }
+        }
+      }
+    }
+
+    if (!diff.isEmpty() || dirMetadataChanged) {
+      return true;
+    } else if (dirCopy != null) {
+      for (int i = laterDiffIndex; i < diffs.size(); i++) {
+        if (diffs.get(i).snapshotINode != null
+            && !dirCopy.metadataEquals(diffs.get(i).snapshotINode)) {
+          return true;
+        }
+      }
+      return !dirCopy.metadataEquals(this);
+    }
+    return false;
   }
 
   /** Diff list sorted by snapshot IDs, i.e. in chronological order. */

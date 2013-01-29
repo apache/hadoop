@@ -130,3 +130,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4432. Support INodeFileUnderConstructionWithSnapshot in FSImage
   saving/loading. (Jing Zhao via suresh)
+
+  HDFS-4131. Add capability to namenode to get snapshot diff. (Jing Zhao via
+  suresh)

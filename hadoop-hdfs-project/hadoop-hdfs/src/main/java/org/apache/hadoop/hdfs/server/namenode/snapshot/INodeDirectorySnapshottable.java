@@ -21,14 +21,19 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
 
@@ -54,6 +59,76 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           "Directory is not a snapshottable directory: " + src);
     }
     return (INodeDirectorySnapshottable)dir;
+  }
+  
+  /**
+   * A class describing the difference between snapshots of a snapshottable
+   * directory.
+   */
+  public static class SnapshotDiffReport {
+    public static final Comparator<INode> INODE_COMPARATOR = 
+        new Comparator<INode>() {
+      @Override
+      public int compare(INode left, INode right) {
+        if (left == null) {
+          return right == null ? 0 : -1;
+        } else {
+          return right == null ? 1 : left.compareTo(right.getLocalNameBytes());
+        }
+      }
+    };
+    
+    /** The root directory of the snapshots */
+    private final INodeDirectorySnapshottable snapshotRoot;
+    /** The starting point of the difference */
+    private final Snapshot from;
+    /** The end point of the difference */
+    private final Snapshot to;
+    /**
+     * A map capturing the detailed difference. Each key indicates a directory
+     * whose metadata or children have been changed between the two snapshots,
+     * while its associated value is a {@link Diff} storing the changes happened
+     * to the children (files).
+     */
+    private final SortedMap<INodeDirectoryWithSnapshot, ChildrenDiff> diffMap;
+    
+    public SnapshotDiffReport(INodeDirectorySnapshottable snapshotRoot,
+        Snapshot start, Snapshot end) {
+      this.snapshotRoot = snapshotRoot;
+      this.from = start;
+      this.to = end;
+      this.diffMap = new TreeMap<INodeDirectoryWithSnapshot, ChildrenDiff>(
+          INODE_COMPARATOR);
+    }
+    
+    /** Add a dir-diff pair into {@link #diffMap} */
+    public void addDiff(INodeDirectoryWithSnapshot dir, ChildrenDiff diff) {
+      diffMap.put(dir, diff);
+    }
+    
+    /**
+     * dump the diff
+     */
+    public String dump() {
+      StringBuilder strBuffer = new StringBuilder();
+      String fromStr = from == null ? "current directory" : "snapshot "
+          + from.getRoot().getLocalName();
+      String toStr = to == null ? "current directory" : "snapshot "
+          + to.getRoot().getLocalName();
+      strBuffer.append("Diffence between snapshot " + fromStr + " and " + toStr
+          + " under directory " + snapshotRoot.getFullPathName() + ":\n");
+      
+      if (!diffMap.isEmpty()) {
+        for (Map.Entry<INodeDirectoryWithSnapshot, ChildrenDiff> entry : diffMap
+            .entrySet()) {
+          strBuffer.append("M\t" + entry.getKey().getFullPathName() + "\n");
+          entry.getValue().printDiff(strBuffer, entry.getKey(),
+              from == null || 
+              (to != null && Snapshot.ID_COMPARATOR.compare(from, to) > 0));
+        }
+      }
+      return strBuffer.toString();
+    }
   }
 
   /**
@@ -229,6 +304,80 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     }
   }
 
+  /**
+   * Compute the difference between two snapshots (or a snapshot and the current
+   * directory) of the directory.
+   * 
+   * @param from The name of the start point of the comparison. Null indicating
+   *          the current tree.
+   * @param to The name of the end point. Null indicating the current tree.
+   * @return The difference between the start/end points.
+   * @throws SnapshotException If there is no snapshot matching the starting
+   *           point, or if endSnapshotName is not null but cannot be identified
+   *           as a previous snapshot.
+   */
+  SnapshotDiffReport computeDiff(final String from, final String to)
+      throws SnapshotException {
+    Snapshot fromSnapshot = getSnapshotByName(from);
+    Snapshot toSnapshot = getSnapshotByName(to); 
+    SnapshotDiffReport diffs = new SnapshotDiffReport(this, fromSnapshot,
+        toSnapshot);
+    computeDiffInDir(this, diffs);
+    return diffs;
+  }
+  
+  /**
+   * Find the snapshot matching the given name.
+   * 
+   * @param snapshotName The name of the snapshot.
+   * @return The corresponding snapshot. Null if snapshotName is null or empty.
+   * @throws SnapshotException If snapshotName is not null or empty, but there
+   *           is no snapshot matching the name.
+   */
+  private Snapshot getSnapshotByName(String snapshotName)
+      throws SnapshotException {
+    Snapshot s = null;
+    if (snapshotName != null && !snapshotName.isEmpty()) {
+      final int index = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
+      if (index < 0) {
+        throw new SnapshotException("Cannot find the snapshot of directory "
+            + this.getFullPathName() + " with name " + snapshotName);
+      }
+      s = snapshotsByNames.get(index);
+    }
+    return s;
+  }
+  
+  /**
+   * Recursively compute the difference between snapshots under a given
+   * directory.
+   * @param dir The directory under which the diff is computed.
+   * @param diffReport data structure used to store the diff.
+   */
+  private void computeDiffInDir(INodeDirectory dir,
+      SnapshotDiffReport diffReport) {
+    ChildrenDiff diff = new ChildrenDiff();
+    if (dir instanceof INodeDirectoryWithSnapshot) {
+      boolean change = ((INodeDirectoryWithSnapshot) dir)
+          .computeDiffBetweenSnapshots(diffReport.from,
+              diffReport.to, diff);
+      if (change) {
+        diffReport.addDiff((INodeDirectoryWithSnapshot) dir,
+            diff); 
+      }
+    }
+    ReadOnlyList<INode> children = dir.getChildrenList(null);
+    for (INode child : children) {
+      if (child instanceof INodeDirectory
+          && diff.searchCreated(child.getLocalNameBytes()) == null) {
+        // Compute diff recursively for children that are directories. We do not
+        // need to compute diff for those contained in the created list since 
+        // directory contained in the created list must be new created.
+        computeDiffInDir((INodeDirectory) child, diffReport);
+      }
+    }
+  }
+  
   /**
    * Replace itself with {@link INodeDirectoryWithSnapshot} or
    * {@link INodeDirectory} depending on the latest snapshot.

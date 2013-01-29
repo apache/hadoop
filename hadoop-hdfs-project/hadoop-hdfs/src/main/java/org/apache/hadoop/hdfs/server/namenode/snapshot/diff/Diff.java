@@ -180,6 +180,12 @@ public class Diff<K, E extends Diff.Element<K>> {
     return d < 0 ? null : deleted.get(d);
   }
   
+  /** @return true if no changes contained in the diff */
+  public boolean isEmpty() {
+    return (created == null || created.isEmpty())
+        && (deleted == null || deleted.isEmpty());
+  }
+  
   /**
    * Insert the element to created.
    * @param i the insertion point defined
