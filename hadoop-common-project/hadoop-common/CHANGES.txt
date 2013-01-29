@@ -149,9 +149,6 @@ Trunk (Unreleased)
     HADOOP-8924. Add maven plugin alternative to shell script to save
     package-info.java. (Chris Nauroth via suresh)
 
-    HADOOP-9245. mvn clean without running mvn install before fails.
-    (Karthik Kambatla via suresh)
-
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
@@ -321,6 +318,12 @@ Trunk (Unreleased)
 
     HADOOP-9202. test-patch.sh fails during mvn eclipse:eclipse if patch adds
     a new module to the build (Chris Nauroth via bobby)
+
+    HADOOP-9245. mvn clean without running mvn install before fails.
+    (Karthik Kambatla via suresh)
+
+    HADOOP-9249. hadoop-maven-plugins version-info goal causes build failure
+    when running with Clover. (Chris Nauroth via suresh)
 
   OPTIMIZATIONS
 
