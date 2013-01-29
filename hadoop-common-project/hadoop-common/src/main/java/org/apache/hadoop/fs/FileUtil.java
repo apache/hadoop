@@ -19,12 +19,19 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1009,4 +1016,91 @@ public class FileUtil {
     }
     return fileNames;
   }  
+  
+  /**
+   * Create a jar file at the given path, containing a manifest with a classpath
+   * that references all specified entries.
+   * 
+   * Some platforms may have an upper limit on command line length.  For example,
+   * the maximum command line length on Windows is 8191 characters, but the
+   * length of the classpath may exceed this.  To work around this limitation,
+   * use this method to create a small intermediate jar with a manifest that
+   * contains the full classpath.  It returns the absolute path to the new jar,
+   * which the caller may set as the classpath for a new process.
+   * 
+   * Environment variable evaluation is not supported within a jar manifest, so
+   * this method expands environment variables before inserting classpath entries
+   * to the manifest.  The method parses environment variables according to
+   * platform-specific syntax (%VAR% on Windows, or $VAR otherwise).  On Windows,
+   * environment variables are case-insensitive.  For example, %VAR% and %var%
+   * evaluate to the same value.
+   * 
+   * Specifying the classpath in a jar manifest does not support wildcards, so
+   * this method expands wildcards internally.  Any classpath entry that ends
+   * with * is translated to all files at that path with extension .jar or .JAR.
+   * 
+   * @param inputClassPath String input classpath to bundle into the jar manifest
+   * @param pwd Path to working directory to save jar
+   * @return String absolute path to new jar
+   * @throws IOException if there is an I/O error while writing the jar file
+   */
+  public static String createJarWithClassPath(String inputClassPath, Path pwd)
+      throws IOException {
+    // Replace environment variables, case-insensitive on Windows
+    @SuppressWarnings("unchecked")
+    Map<String, String> env = Shell.WINDOWS ?
+      new CaseInsensitiveMap(System.getenv()) : System.getenv();
+    String[] classPathEntries = inputClassPath.split(File.pathSeparator);
+    for (int i = 0; i < classPathEntries.length; ++i) {
+      classPathEntries[i] = StringUtils.replaceTokens(classPathEntries[i],
+        StringUtils.ENV_VAR_PATTERN, env);
+    }
+    File workingDir = new File(pwd.toString());
+    workingDir.mkdirs();
+
+    // Append all entries
+    List<String> classPathEntryList = new ArrayList<String>(
+      classPathEntries.length);
+    for (String classPathEntry: classPathEntries) {
+      if (classPathEntry.endsWith("*")) {
+        // Append all jars that match the wildcard
+        Path globPath = new Path(classPathEntry).suffix("{.jar,.JAR}");
+        FileStatus[] wildcardJars = FileContext.getLocalFSFileContext().util()
+          .globStatus(globPath);
+        if (wildcardJars != null) {
+          for (FileStatus wildcardJar: wildcardJars) {
+            classPathEntryList.add(wildcardJar.getPath().toUri().toURL()
+              .toExternalForm());
+          }
+        }
+      } else {
+        // Append just this jar
+        classPathEntryList.add(new File(classPathEntry).toURI().toURL()
+          .toExternalForm());
+      }
+    }
+    String jarClassPath = StringUtils.join(" ", classPathEntryList);
+
+    // Create the manifest
+    Manifest jarManifest = new Manifest();
+    jarManifest.getMainAttributes().putValue(
+        Attributes.Name.MANIFEST_VERSION.toString(), "1.0");
+    jarManifest.getMainAttributes().putValue(
+        Attributes.Name.CLASS_PATH.toString(), jarClassPath);
+
+    // Write the manifest to output JAR file
+    File classPathJar = File.createTempFile("classpath-", ".jar", workingDir);
+    FileOutputStream fos = null;
+    BufferedOutputStream bos = null;
+    JarOutputStream jos = null;
+    try {
+      fos = new FileOutputStream(classPathJar);
+      bos = new BufferedOutputStream(fos);
+      jos = new JarOutputStream(bos, jarManifest);
+    } finally {
+      IOUtils.cleanup(LOG, jos, bos, fos);
+    }
+
+    return classPathJar.getCanonicalPath();
+  }
 }

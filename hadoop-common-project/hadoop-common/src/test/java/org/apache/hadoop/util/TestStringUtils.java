@@ -23,7 +23,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.junit.Test;
@@ -293,6 +296,49 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("Should not truncate when IP address is passed",
             "10.10.5.68",
             StringUtils.simpleHostname("10.10.5.68"));
+  }
+
+  @Test
+  public void testReplaceTokensShellEnvVars() {
+    Pattern pattern = StringUtils.SHELL_ENV_VAR_PATTERN;
+    Map<String, String> replacements = new HashMap<String, String>();
+    replacements.put("FOO", "one");
+    replacements.put("BAZ", "two");
+    replacements.put("NUMBERS123", "one-two-three");
+    replacements.put("UNDER_SCORES", "___");
+
+    assertEquals("one", StringUtils.replaceTokens("$FOO", pattern,
+      replacements));
+    assertEquals("two", StringUtils.replaceTokens("$BAZ", pattern,
+      replacements));
+    assertEquals("", StringUtils.replaceTokens("$BAR", pattern, replacements));
+    assertEquals("", StringUtils.replaceTokens("", pattern, replacements));
+    assertEquals("one-two-three", StringUtils.replaceTokens("$NUMBERS123",
+      pattern, replacements));
+    assertEquals("___", StringUtils.replaceTokens("$UNDER_SCORES", pattern,
+      replacements));
+    assertEquals("//one//two//", StringUtils.replaceTokens("//$FOO/$BAR/$BAZ//",
+      pattern, replacements));
+  }
+
+  @Test
+  public void testReplaceTokensWinEnvVars() {
+    Pattern pattern = StringUtils.WIN_ENV_VAR_PATTERN;
+    Map<String, String> replacements = new HashMap<String, String>();
+    replacements.put("foo", "zoo");
+    replacements.put("baz", "zaz");
+
+    assertEquals("zoo", StringUtils.replaceTokens("%foo%", pattern,
+      replacements));
+    assertEquals("zaz", StringUtils.replaceTokens("%baz%", pattern,
+      replacements));
+    assertEquals("", StringUtils.replaceTokens("%bar%", pattern,
+      replacements));
+    assertEquals("", StringUtils.replaceTokens("", pattern, replacements));
+    assertEquals("zoo__zaz", StringUtils.replaceTokens("%foo%_%bar%_%baz%",
+      pattern, replacements));
+    assertEquals("begin zoo__zaz end", StringUtils.replaceTokens(
+      "begin %foo%_%bar%_%baz% end", pattern, replacements));
   }
 
   // Benchmark for StringUtils split

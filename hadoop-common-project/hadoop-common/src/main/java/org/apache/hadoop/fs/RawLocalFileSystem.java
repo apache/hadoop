@@ -612,17 +612,9 @@ public class RawLocalFileSystem extends FileSystem {
       NativeIO.POSIX.chmod(pathToFile(p).getCanonicalPath(),
                      permission.toShort());
     } else {
-      execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
-          String.format("%05o", permission.toShort()));
+      String perm = String.format("%04o", permission.toShort());
+      Shell.execCommand(Shell.getSetPermissionCommand(perm, false,
+        FileUtil.makeShellPath(pathToFile(p), true)));
     }
   }
-
-  private static String execCommand(File f, String... cmd) throws IOException {
-    String[] args = new String[cmd.length + 1];
-    System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = FileUtil.makeShellPath(f, true);
-    String output = Shell.execCommand(args);
-    return output;
-  }
-
 }

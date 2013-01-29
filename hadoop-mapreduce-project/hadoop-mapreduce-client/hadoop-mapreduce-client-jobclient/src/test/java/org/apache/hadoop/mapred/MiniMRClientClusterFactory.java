@@ -45,7 +45,7 @@ public class MiniMRClientClusterFactory {
 
     FileSystem fs = FileSystem.get(conf);
 
-    Path testRootDir = new Path("target", caller.getName() + "-tmpDir")
+    Path testRootDir = new Path("target", caller.getSimpleName() + "-tmpDir")
         .makeQualified(fs);
     Path appJar = new Path(testRootDir, "MRAppJar.jar");
 
@@ -66,9 +66,9 @@ public class MiniMRClientClusterFactory {
     job.addFileToClassPath(remoteCallerJar);
 
     MiniMRYarnCluster miniMRYarnCluster = new MiniMRYarnCluster(caller
-        .getName(), noOfNMs);
+        .getSimpleName(), noOfNMs);
     job.getConfiguration().set("minimrclientcluster.caller.name",
-        caller.getName());
+        caller.getSimpleName());
     job.getConfiguration().setInt("minimrclientcluster.nodemanagers.number",
         noOfNMs);
     miniMRYarnCluster.init(job.getConfiguration());

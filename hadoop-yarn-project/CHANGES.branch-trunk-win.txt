@@ -22,3 +22,5 @@ branch-trunk-win changes - unreleased
   YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
   Gong via acmurthy) 
 
+  YARN-316. YARN container launch may exceed maximum Windows command line 
+  length due to long classpath. (Chris Nauroth via suresh)

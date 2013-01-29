@@ -55,6 +55,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   private static final Log LOG = LogFactory
       .getLog(DefaultContainerExecutor.class);
 
+  private static final int WIN_MAX_PATH = 260;
+
   private final FileContext lfs;
 
   public DefaultContainerExecutor() {
@@ -148,6 +150,17 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       new WindowsLocalWrapperScriptBuilder(containerIdStr, containerWorkDir) :
       new UnixLocalWrapperScriptBuilder(containerWorkDir);
 
+    // Fail fast if attempting to launch the wrapper script would fail due to
+    // Windows path length limitation.
+    if (Shell.WINDOWS &&
+        sb.getWrapperScriptPath().toString().length() > WIN_MAX_PATH) {
+      throw new IOException(String.format(
+        "Cannot launch container using script at path %s, because it exceeds " +
+        "the maximum supported path length of %d characters.  Consider " +
+        "configuring shorter directories in %s.", sb.getWrapperScriptPath(),
+        WIN_MAX_PATH, YarnConfiguration.NM_LOCAL_DIRS));
+    }
+
     Path pidFile = getPidFilePath(containerId);
     if (pidFile != null) {
       sb.writeLocalWrapperScript(launchDst, pidFile);
@@ -168,7 +181,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
       // Setup command to run
       String[] command = Shell.getRunCommand(
-        sb.getWrapperScriptPath().toUri().getPath().toString(), containerIdStr);
+        sb.getWrapperScriptPath().toString(), containerIdStr);
 
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
@@ -277,7 +290,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         ".tmp");
       pout.println("@move /Y " + normalizedPidFile + ".tmp " +
         normalizedPidFile);
-      pout.println("@call " + launchDst.toUri().getPath().toString());
+      pout.println("@call " + launchDst.toString());
     }
   }
 

@@ -29,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -83,15 +85,51 @@ public class MiniYARNCluster extends CompositeService {
     super(testName.replace("$", ""));
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
-    this.testWorkDir = new File("target",
-        testName.replace("$", ""));
+    String testSubDir = testName.replace("$", "");
+    File targetWorkDir = new File("target", testSubDir);
     try {
       FileContext.getLocalFSFileContext().delete(
-          new Path(testWorkDir.getAbsolutePath()), true);
+          new Path(targetWorkDir.getAbsolutePath()), true);
     } catch (Exception e) {
       LOG.warn("COULD NOT CLEANUP", e);
       throw new YarnException("could not cleanup test dir", e);
     } 
+
+    if (Shell.WINDOWS) {
+      // The test working directory can exceed the maximum path length supported
+      // by some Windows APIs and cmd.exe (260 characters).  To work around this,
+      // create a symlink in temporary storage with a much shorter path,
+      // targeting the full path to the test working directory.  Then, use the
+      // symlink as the test working directory.
+      String targetPath = targetWorkDir.getAbsolutePath();
+      File link = new File(System.getProperty("java.io.tmpdir"),
+        String.valueOf(System.currentTimeMillis()));
+      String linkPath = link.getAbsolutePath();
+
+      try {
+        FileContext.getLocalFSFileContext().delete(new Path(linkPath), true);
+      } catch (IOException e) {
+        throw new YarnException("could not cleanup symlink: " + linkPath, e);
+      }
+
+      // Guarantee target exists before creating symlink.
+      targetWorkDir.mkdirs();
+
+      ShellCommandExecutor shexec = new ShellCommandExecutor(
+        Shell.getSymlinkCommand(targetPath, linkPath));
+      try {
+        shexec.execute();
+      } catch (IOException e) {
+        throw new YarnException(String.format(
+          "failed to create symlink from %s to %s, shell output: %s", linkPath,
+          targetPath, shexec.getOutput()), e);
+      }
+
+      this.testWorkDir = link;
+    } else {
+      this.testWorkDir = targetWorkDir;
+    }
+
     resourceManagerWrapper = new ResourceManagerWrapper();
     addService(resourceManagerWrapper);
     nodeManagers = new CustomNodeManager[noOfNodeManagers];
@@ -192,6 +230,19 @@ public class MiniYARNCluster extends CompositeService {
         resourceManager.stop();
       }
       super.stop();
+
+      if (Shell.WINDOWS) {
+        // On Windows, clean up the short temporary symlink that was created to
+        // work around path length limitation.
+        String testWorkDirPath = testWorkDir.getAbsolutePath();
+        try {
+          FileContext.getLocalFSFileContext().delete(new Path(testWorkDirPath),
+            true);
+        } catch (IOException e) {
+          LOG.warn("could not cleanup symlink: " +
+            testWorkDir.getAbsolutePath());
+        }
+      }
     }
   }
 
@@ -220,7 +271,7 @@ public class MiniYARNCluster extends CompositeService {
       for (int i = 0; i < numDirs; i++) {
         dirs[i]= new File(testWorkDir, MiniYARNCluster.this.getName()
             + "-" + dirType + "Dir-nm-" + index + "_" + i);
-        dirs[i].mkdir();
+        dirs[i].mkdirs();
         LOG.info("Created " + dirType + "Dir in " + dirs[i].getAbsolutePath());
         String delimiter = (i > 0) ? "," : "";
         dirsString = dirsString.concat(delimiter + dirs[i].getAbsolutePath());
