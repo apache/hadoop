@@ -381,6 +381,23 @@ public class TestJobHistory extends TestCase {
                    (status.equals("SUCCESS") || status.equals("FAILED") ||
                     status.equals("KILLED")));
 
+        // Validate task Avataar
+        String avataar = attempt.get(Keys.AVATAAR);
+        assertTrue("Unexpected LOCALITY \"" + avataar + "\" is seen in " +
+            " history file for task attempt " + id,
+            (avataar.equals("VIRGIN") || avataar.equals("SPECULATIVE"))
+        );
+        
+        // Map Task Attempts should have valid LOCALITY
+        if (type.equals("MAP")) {
+          String locality = attempt.get(Keys.LOCALITY);
+          assertTrue("Unexpected LOCALITY \"" + locality + "\" is seen in " +
+              " history file for task attempt " + id,
+              (locality.equals("NODE_LOCAL") || locality.equals("GROUP_LOCAL") ||
+                  locality.equals("RACK_LOCAL") || locality.equals("OFF_SWITCH"))
+          );
+        }
+ 
         // Reduce Task Attempts should have valid SHUFFLE_FINISHED time and
         // SORT_FINISHED time
         if (type.equals("REDUCE") && status.equals("SUCCESS")) {

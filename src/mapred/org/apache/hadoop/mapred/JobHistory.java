@@ -475,7 +475,8 @@ public class JobHistory {
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
     TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS,
-    VIEW_JOB, MODIFY_JOB, JOB_QUEUE, FAIL_REASON
+    VIEW_JOB, MODIFY_JOB, JOB_QUEUE, FAIL_REASON, LOCALITY, AVATAAR,
+    WORKFLOW_ID, WORKFLOW_NAME, WORKFLOW_NODE_NAME, WORKFLOW_ADJACENCIES
   }
 
   /**
@@ -787,6 +788,10 @@ public class JobHistory {
                   Keys[] keys, String[] values) {
     log(writers, recordType, keys, values, null);
   }
+
+  static class JobHistoryLogger {
+    static final Log LOG = LogFactory.getLog(JobHistoryLogger.class);
+  }
   
   /**
    * Log a number of keys and values with record. the array length of keys and values
@@ -820,14 +825,18 @@ public class JobHistory {
       builder.append(DELIMITER); 
     }
     builder.append(LINE_DELIMITER_CHAR);
-    
+
+    String logLine = builder.toString();
     for (Iterator<PrintWriter> iter = writers.iterator(); iter.hasNext();) {
       PrintWriter out = iter.next();
-      out.println(builder.toString());
+      out.println(logLine);
       if (out.checkError() && id != null) {
         LOG.info("Logging failed for job " + id + "removing PrintWriter from FileManager");
         iter.remove();
       }
+    }
+    if (recordType != RecordTypes.Meta) {
+      JobHistoryLogger.LOG.debug(logLine);
     }
   }
   
@@ -1264,6 +1273,34 @@ public class JobHistory {
         user = "NA";
       }
       return user;
+    }
+    
+    /**
+     * Get the workflow adjacencies from the job conf
+     * The string returned is of the form "key"="value" "key"="value" ...
+     */
+    public static String getWorkflowAdjacencies(Configuration conf) {
+      int prefixLen = JobConf.WORKFLOW_ADJACENCY_PREFIX_STRING.length();
+      Map<String,String> adjacencies = 
+          conf.getValByRegex(JobConf.WORKFLOW_ADJACENCY_PREFIX_PATTERN);
+      if (adjacencies.isEmpty())
+        return "";
+      int size = 0;
+      for (Entry<String,String> entry : adjacencies.entrySet()) {
+        int keyLen = entry.getKey().length();
+        size += keyLen - prefixLen;
+        size += entry.getValue().length() + 6;
+      }
+      StringBuilder sb = new StringBuilder(size);
+      for (Entry<String,String> entry : adjacencies.entrySet()) {
+        int keyLen = entry.getKey().length();
+        sb.append("\"");
+        sb.append(escapeString(entry.getKey().substring(prefixLen, keyLen)));
+        sb.append("\"=\"");
+        sb.append(escapeString(entry.getValue()));
+        sb.append("\" ");
+      }
+      return sb.toString();
     }
     
     /**
@@ -1729,11 +1766,19 @@ public class JobHistory {
                        new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER,
                                   Keys.SUBMIT_TIME, Keys.JOBCONF,
                                   Keys.VIEW_JOB, Keys.MODIFY_JOB,
-                                  Keys.JOB_QUEUE}, 
+                                  Keys.JOB_QUEUE, Keys.WORKFLOW_ID,
+                                  Keys.WORKFLOW_NAME, Keys.WORKFLOW_NODE_NAME,
+                                  Keys.WORKFLOW_ADJACENCIES}, 
                        new String[]{jobId.toString(), jobName, user, 
                                     String.valueOf(submitTime) , jobConfPath,
                                     viewJobACL, modifyJobACL,
-                                    jobConf.getQueueName()}, jobId
+                                    jobConf.getQueueName(),
+                                    jobConf.get(jobConf.WORKFLOW_ID, ""),
+                                    jobConf.get(jobConf.WORKFLOW_NAME, ""),
+                                    jobConf.get(jobConf.WORKFLOW_NODE_NAME, ""),
+                                    getWorkflowAdjacencies(jobConf)
+                                    }, 
+                                    jobId
                       ); 
            
       }catch(IOException e){
@@ -2134,7 +2179,14 @@ public class JobHistory {
     public static void logStarted(TaskAttemptID taskAttemptId, long startTime, String hostName){
       logStarted(taskAttemptId, startTime, hostName, -1, Values.MAP.name());
     }
-    
+
+    @Deprecated
+    public static void logStarted(TaskAttemptID taskAttemptId, long startTime,
+        String trackerName, int httpPort, String taskType) {
+      logStarted(taskAttemptId, startTime, trackerName, httpPort, taskType, 
+          Locality.OFF_SWITCH, Avataar.VIRGIN);
+    }
+
     /**
      * Log start time of this map task attempt.
      *  
@@ -2142,25 +2194,31 @@ public class JobHistory {
      * @param startTime start time of task attempt as reported by task tracker. 
      * @param trackerName name of the tracker executing the task attempt.
      * @param httpPort http port of the task tracker executing the task attempt
-     * @param taskType Whether the attempt is cleanup or setup or map 
+     * @param taskType Whether the attempt is cleanup or setup or map
+     * @param locality the data locality of the task attempt
+     * @param Avataar the avataar of the task attempt
      */
     public static void logStarted(TaskAttemptID taskAttemptId, long startTime,
                                   String trackerName, int httpPort, 
-                                  String taskType) {
+                                  String taskType,
+                                  Locality locality, Avataar avataar) {
       JobID id = taskAttemptId.getJobID();
       ArrayList<PrintWriter> writer = fileManager.getWriters(id); 
 
       if (null != writer){
         JobHistory.log(writer, RecordTypes.MapAttempt, 
                        new Keys[]{ Keys.TASK_TYPE, Keys.TASKID, 
-                                   Keys.TASK_ATTEMPT_ID, Keys.START_TIME, 
-                                   Keys.TRACKER_NAME, Keys.HTTP_PORT},
+                                   Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
+                                   Keys.TRACKER_NAME, Keys.HTTP_PORT,
+                                   Keys.LOCALITY, Keys.AVATAAR},
                        new String[]{taskType,
                                     taskAttemptId.getTaskID().toString(), 
                                     taskAttemptId.toString(), 
                                     String.valueOf(startTime), trackerName,
-                                    httpPort == -1 ? "" : 
-                                      String.valueOf(httpPort)}, id); 
+                                    httpPort == -1 ? "" : String.valueOf(httpPort),
+                                    locality.toString(), avataar.toString()},
+                       id
+                       ); 
       }
     }
     
@@ -2322,7 +2380,15 @@ public class JobHistory {
                                   long startTime, String hostName){
       logStarted(taskAttemptId, startTime, hostName, -1, Values.REDUCE.name());
     }
-    
+
+    @Deprecated
+    public static void logStarted(TaskAttemptID taskAttemptId, 
+        long startTime, String trackerName, 
+        int httpPort, 
+        String taskType) {
+      logStarted(taskAttemptId, startTime, trackerName, httpPort, taskType, 
+          Locality.OFF_SWITCH, Avataar.VIRGIN);
+    }
     /**
      * Log start time of  Reduce task attempt. 
      * 
@@ -2330,27 +2396,33 @@ public class JobHistory {
      * @param startTime start time
      * @param trackerName tracker name 
      * @param httpPort the http port of the tracker executing the task attempt
-     * @param taskType Whether the attempt is cleanup or setup or reduce 
+     * @param taskType Whether the attempt is cleanup or setup or reduce
+     * @param locality the data locality of the task attempt
+     * @param Avataar the avataar of the task attempt
      */
     public static void logStarted(TaskAttemptID taskAttemptId, 
                                   long startTime, String trackerName, 
                                   int httpPort, 
-                                  String taskType) {
-              JobID id = taskAttemptId.getJobID();
-	      ArrayList<PrintWriter> writer = fileManager.getWriters(id); 
+                                  String taskType,
+                                  Locality locality, Avataar avataar) {
+      JobID id = taskAttemptId.getJobID();
+	    ArrayList<PrintWriter> writer = fileManager.getWriters(id); 
 
-              if (null != writer){
-		  JobHistory.log(writer, RecordTypes.ReduceAttempt, 
-				 new Keys[]{  Keys.TASK_TYPE, Keys.TASKID, 
-					      Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
-					      Keys.TRACKER_NAME, Keys.HTTP_PORT},
-				 new String[]{taskType,
-					      taskAttemptId.getTaskID().toString(), 
-					      taskAttemptId.toString(), 
-					      String.valueOf(startTime), trackerName,
-					      httpPort == -1 ? "" : 
-						String.valueOf(httpPort)}, id); 
-              }
+      if (null != writer){
+        JobHistory.log(writer, RecordTypes.ReduceAttempt,
+            new Keys[] {Keys.TASK_TYPE, Keys.TASKID,
+                Keys.TASK_ATTEMPT_ID, Keys.START_TIME,
+                Keys.TRACKER_NAME, Keys.HTTP_PORT,
+                Keys.LOCALITY, Keys.AVATAAR},
+            new String[]{taskType,
+                taskAttemptId.getTaskID().toString(), 
+                taskAttemptId.toString(), 
+                String.valueOf(startTime), trackerName,
+                httpPort == -1 ? "" : 
+                String.valueOf(httpPort),
+                locality.toString(), avataar.toString()}, 
+            id); 
+        }
 	    }
 	    
 	    /**

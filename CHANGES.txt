@@ -163,6 +163,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4837. Add webservices for Jobtracker. (Arun C Murthy via hitesh)
 
+    MAPREDUCE-4838. Add additional fields like Locality, Avataar to the 
+    JobHistory logs. (Arun C Murthy and Zhijie Shen via sseth)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

@@ -27,13 +27,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapred.TaskStatus.State;
-import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.net.Node;
 
 
@@ -128,7 +129,11 @@ class TaskInProgress {
   private Counters counters = new Counters();
   
   private String user;
-  
+
+  private Map<TaskAttemptID, Locality> taskLocality = 
+      new ConcurrentHashMap<TaskAttemptID, Locality>();
+  private Map<TaskAttemptID, Avataar> taskAvataar = 
+      new ConcurrentHashMap<TaskAttemptID, Avataar>();
 
   /**
    * Constructor for MapTask
@@ -272,7 +277,23 @@ class TaskInProgress {
     execFinishTime = finishTime;
     JobHistory.Task.logUpdates(id, execFinishTime); // log the update
   }
+
+  public void setTaskAttemptLocality(TaskAttemptID taskAttemptID, Locality locality) {
+    taskLocality.put(taskAttemptID, locality);
+  }
   
+  public Locality getTaskAttemptLocality(TaskAttemptID taskAttemptId) {
+    return taskLocality.get(taskAttemptId);
+  }
+  
+  public void setTaskAttemptAvataar(TaskAttemptID taskAttemptId, Avataar avataar) {
+    taskAvataar.put(taskAttemptId, avataar);
+  }
+  
+  public Avataar getTaskAttemptAvataar(TaskAttemptID taskAttemptID) {
+    return taskAvataar.get(taskAttemptID);
+  }
+ 
   /**
    * Return the parent job
    */

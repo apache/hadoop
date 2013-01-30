@@ -313,6 +313,19 @@ public class JobConf extends Configuration {
   public static final String MAPRED_REDUCE_TASK_ENV =
     "mapred.reduce.child.env";
 
+  public static final String WORKFLOW_ID = "mapreduce.workflow.id";
+
+  public static final String WORKFLOW_NAME = "mapreduce.workflow.name";
+
+  public static final String WORKFLOW_NODE_NAME =
+      "mapreduce.workflow.node.name";
+
+  public static final String WORKFLOW_ADJACENCY_PREFIX_STRING =
+      "mapreduce.workflow.adjacency.";
+
+  public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
+      "^mapreduce\\.workflow\\.adjacency\\..+";
+
   private Credentials credentials = new Credentials();
   
   /**
