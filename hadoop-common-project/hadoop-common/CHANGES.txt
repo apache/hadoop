@@ -1,7 +1,5 @@
 Hadoop Change Log
 
-    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
-
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -271,6 +269,8 @@ Release 2.0.3-alpha - Unreleased
     should not state that secret is randomly generated. (tucu)
 
     HADOOP-9190. packaging docs is broken. (Andy Isaacson via tgraves)
+
+    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
