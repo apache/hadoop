@@ -834,11 +834,13 @@ public class FSImage extends Storage {
         + (FSNamesystem.now() - startTime)/1000 + " seconds.");
     
     // Load latest edits
-    if (latestNameCheckpointTime > latestEditsCheckpointTime)
+    if (latestNameCheckpointTime > latestEditsCheckpointTime) {
       // the image is already current, discard edits
       needToSave |= true;
-    else // latestNameCheckpointTime == latestEditsCheckpointTime
+      FSNamesystem.getFSNamesystem().dir.updateCountForINodeWithQuota();
+    } else { // latestNameCheckpointTime == latestEditsCheckpointTime
       needToSave |= (loadFSEdits(latestEditsSD, recovery) > 0);
+    }
     
     return needToSave;
   }
