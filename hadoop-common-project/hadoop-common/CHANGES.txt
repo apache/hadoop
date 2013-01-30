@@ -336,6 +336,8 @@ Trunk (Unreleased)
 
     HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
 
+    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
