@@ -14,7 +14,6 @@
  */
 %>
 <%@ page
-  contentType="text/html; charset=UTF-8"
   import="javax.servlet.*"
   import="javax.servlet.http.*"
   import="java.io.*"
@@ -28,6 +27,7 @@
   import="org.apache.hadoop.security.UserGroupInformation"
   import="java.security.PrivilegedExceptionAction"
   import="org.apache.hadoop.security.AccessControlException"
+  import="org.codehaus.jackson.map.ObjectMapper"
 %>
 <%!static SimpleDateFormat dateFormat = new SimpleDateFormat(
       "d-MMM-yyyy HH:mm:ss");
@@ -47,8 +47,353 @@
         + "</td><td width=\"100\"><form method=\"post\" action=\"" + url
         + "\"><input type=\"submit\" value=\"Cancel\" name=\"Cancel\""
         + "/></form></td></tr></table></body></html>");
-  }%>
+  }
+%>
+
+<%! 
+  public static class ErrorResponse {
+
+    private final long errorCode;
+    private final String errorDescription;
+
+    // Constructor
+    ErrorResponse(long ec, String ed) {
+
+      errorCode = ec;
+      errorDescription = ed;
+    }
+
+    // Getters
+    public long getErrorCode() { return errorCode; }
+    public String getErrorDescription() { return errorDescription; }
+  }
+
+  public static class TaskDetailsResponse {
+
+    public static class TaskAttemptInfo {
+
+      public static class TaskAttemptTrackerInfo {
+
+        private final String name;
+        private final String host;
+        private final int httpPort;
+        private final String url;
+        private final String node;
+
+        // Constructor
+        TaskAttemptTrackerInfo(String trackerName, JobTracker jobTracker) {
+
+          name = trackerName;
+
+          TaskTrackerStatus trackerStatus = jobTracker.getTaskTrackerStatus(name);
+          
+          if (trackerStatus != null) {
+
+            host = trackerStatus.getHost();
+            httpPort = trackerStatus.getHttpPort();
+            url = "http://" + host + ":" + httpPort;
+            node = jobTracker.getNode(host).toString();
+
+          } else {
+
+            host = null;
+            httpPort = 0;
+            url = null;
+            node = null;
+          }
+        }
+
+        // Getters
+        public String getName() { return name; }
+        public String getHost() { return host; }
+        public int getHttpPort() { return httpPort; }
+        public String getUrl() { return url; }
+        public String getNode() { return node; }
+      }
+
+      public static class EventTimingInfo {
+
+        private final String timestamp;
+        private final long durationSecs;
+
+        // Constructor
+        EventTimingInfo(long eventOccurrenceTimeMSecs, long previousEventOccurrenceTimeMSecs) {
+
+          timestamp = dateFormat.format(new Date(eventOccurrenceTimeMSecs));
+          durationSecs = (0 != previousEventOccurrenceTimeMSecs) ? 
+            /* Pass the difference through Math.abs() to take care of cases 
+             * where previousEventOccurrenceTimeMSecs is in the future (likely
+             * used only as a hack, when an event is in-progress).
+             */
+            (Math.abs(eventOccurrenceTimeMSecs - previousEventOccurrenceTimeMSecs)/1000) : 
+            0;
+        }
+
+        // Getters
+        public String getTimestamp() { return timestamp; }
+        public long getDurationSecs() { return durationSecs; }
+      }
+
+      private final String attemptId;
+      private final TaskAttemptTrackerInfo taskAttemptTrackerInfo;
+      private final TaskAttemptTrackerInfo cleanupAttemptTrackerInfo;
+      private final String status;
+      private final float progressPercentage;
+      private final EventTimingInfo startTimingInfo;
+      private final EventTimingInfo finishTimingInfo;
+      private final EventTimingInfo shuffleTimingInfo;
+      private final EventTimingInfo sortTimingInfo;
+      private final String taskAttemptLogUrl;
+      private final String cleanupAttemptLogUrl;
+
+      private String generateAttemptLogUrl(String trackerName, JobTracker jobTracker, boolean isCleanupAttempt) {
+
+        String attemptLogUrl = null;
+
+        TaskTrackerStatus trackerStatus = jobTracker.getTaskTrackerStatus(trackerName);
+
+        if (trackerStatus != null) {
+
+          attemptLogUrl = TaskLogServlet.getTaskLogUrl(trackerStatus.getHost(), 
+            String.valueOf(trackerStatus.getHttpPort()), attemptId);
+
+          if (attemptLogUrl != null) {
+            attemptLogUrl +=  "&all=true";
+
+            if (isCleanupAttempt) {
+              attemptLogUrl += "&cleanup=true";
+            }
+          }
+        }
+
+        return attemptLogUrl;
+      }
+
+      // Constructor
+      TaskAttemptInfo(String ai, String ttn, String ctn, TaskStatus ts, 
+        JobTracker jt, boolean isCleanupOrSetup) {
+
+        attemptId = ai;
+
+        taskAttemptTrackerInfo = new TaskAttemptTrackerInfo(ttn, jt);
+        cleanupAttemptTrackerInfo = (ctn != null) ? 
+          new TaskAttemptTrackerInfo(ctn, jt) : null;
+
+        status = ts.getRunState().toString();
+        progressPercentage = ts.getProgress() * 100.0f;
+
+        startTimingInfo = new EventTimingInfo
+          (ts.getStartTime(), 0);
+        finishTimingInfo = new EventTimingInfo
+          (ts.getFinishTime(), ts.getStartTime());
+
+        if (!ts.getIsMap() && !isCleanupOrSetup) {
+
+          shuffleTimingInfo = new EventTimingInfo
+            (ts.getShuffleFinishTime(), ts.getStartTime());
+          sortTimingInfo = new EventTimingInfo
+            (ts.getSortFinishTime(), ts.getShuffleFinishTime());
+
+        } else {
+
+          shuffleTimingInfo = null;
+          sortTimingInfo = null;
+        }
+
+        taskAttemptLogUrl = generateAttemptLogUrl(ttn, jt, false);
+        cleanupAttemptLogUrl = (ctn != null) ? 
+          generateAttemptLogUrl(ctn, jt, true) : null;
+      }
+
+      // Getters
+      public String getAttemptId() { return attemptId; }
+      public TaskAttemptTrackerInfo getTaskAttemptTrackerInfo() { return taskAttemptTrackerInfo; }
+      public TaskAttemptTrackerInfo getCleanupAttemptTrackerInfo() { return cleanupAttemptTrackerInfo; }
+      public String getStatus() { return status; }
+      public float getProgressPercentage() { return progressPercentage; }
+      public EventTimingInfo getStartTimingInfo() { return startTimingInfo; }
+      public EventTimingInfo getFinishTimingInfo() { return finishTimingInfo; }
+      public EventTimingInfo getShuffleTimingInfo() { return shuffleTimingInfo; }
+      public EventTimingInfo getSortTimingInfo() { return sortTimingInfo; }
+      public String getTaskAttemptLogUrl() { return taskAttemptLogUrl; }
+      public String getCleanupAttemptLogUrl() { return cleanupAttemptLogUrl; }
+    }
+
+    private final String jobId;
+    private final String taskId;
+    private final Collection<TaskAttemptInfo> taskAttemptsInfo;
+    private final Collection<String> inputSplitLocationsInfo;
+
+    // Constructor
+    TaskDetailsResponse(String ji, String ti) {
+
+      jobId = ji;
+      taskId = ti;
+
+      taskAttemptsInfo = new ArrayList<TaskAttemptInfo>();
+      inputSplitLocationsInfo = new ArrayList<String>();
+    }
+
+    // To add one TaskAttemptInfo object at a time.
+    void addTaskAttemptInfo(TaskAttemptInfo tai) { taskAttemptsInfo.add(tai); }
+
+    // To add one Input Split Location at a time.
+    void addInputSplitLocation(String isl) { inputSplitLocationsInfo.add(isl); }
+
+    // Getters
+    public String getJobId() { return jobId; }
+    public String getTaskId() { return taskId; }
+    public Collection<TaskAttemptInfo> getTaskAttemptsInfo() { return taskAttemptsInfo; }
+    public Collection<String> getInputSplitLocationsInfo() { return inputSplitLocationsInfo; }
+  }
+%>
+
 <%
+  String response_format = request.getParameter("format");
+
+  if (response_format != null) {
+    /* Eventually, the HTML output should also be driven off of these *Response
+     * objects. 
+     * 
+     * Someday. 
+     */
+    TaskDetailsResponse theTaskDetailsResponse = null;
+    ErrorResponse theErrorResponse = null;
+
+    JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+    String attemptid = request.getParameter("attemptid");
+    String tipid = request.getParameter("tipid");
+
+    /* Make sure at least one of the 2 possible query parameters were specified. */
+    if ((attemptid != null) || (tipid != null)) {
+
+      TaskAttemptID attemptidObj = TaskAttemptID.forName(attemptid);
+
+      // Obtain tipid for attemptId, if attemptId is available.
+      TaskID tipidObj =
+          (attemptidObj == null) ? TaskID.forName(tipid)
+                                 : attemptidObj.getTaskID();
+      if (tipidObj != null) {
+
+        // Obtain jobid from tipid
+        final JobID jobidObj = tipidObj.getJobID();
+        String jobid = jobidObj.toString();
+        
+        JobWithViewAccessCheck myJob = JSPUtil.checkAccessAndGetJob(tracker, jobidObj,
+            request, response);
+
+        /* Proceed only if the user is authorized to view this job. */
+        if (myJob.isViewJobAllowed()) {
+
+          JobInProgress job = myJob.getJob();
+
+          if (job != null) {
+
+            TaskInProgress tip = job.getTaskInProgress(tipidObj);
+
+            if (tip != null) { 
+
+              TaskStatus[] ts = tip.getTaskStatuses();
+
+              if ((ts != null) && (ts.length > 0)) {
+
+                boolean isCleanupOrSetup = (tip.isJobCleanupTask() || tip.isJobSetupTask());
+
+                theTaskDetailsResponse = 
+                  new TaskDetailsResponse(jobid, tipidObj.toString());
+
+                /* Generate Task Attempts. */
+                for (int i = 0; i < ts.length; i++) {
+
+                  TaskStatus status = ts[i];
+
+                  TaskAttemptID taskAttemptId = status.getTaskID();
+
+                  String taskTrackerName = status.getTaskTracker();
+                  String cleanupTrackerName = null;
+
+                  if (tip.isCleanupAttempt(taskAttemptId)) {
+                    cleanupTrackerName = tip.machineWhereCleanupRan(taskAttemptId);
+                  }
+
+                  theTaskDetailsResponse.addTaskAttemptInfo(
+                    new TaskDetailsResponse.TaskAttemptInfo(
+                      taskAttemptId.toString(),
+                      taskTrackerName,
+                      cleanupTrackerName,
+                      status, 
+                      tracker,
+                      isCleanupOrSetup
+                    )
+                  );
+                }
+
+                /* Generate Input Split Locations. */
+                if (ts[0].getIsMap() && !isCleanupOrSetup) {
+                  for (String splitLocation: StringUtils.split(tracker.getTip(tipidObj).
+                        getSplitNodes())) {
+                    theTaskDetailsResponse.addInputSplitLocation(splitLocation); 
+                  }
+                }
+              } else {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                theErrorResponse = new ErrorResponse(4103, "TaskAttempts For " + tipidObj.toString() + " Not Found");
+              }
+            }
+          } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            theErrorResponse = new ErrorResponse(4102, "JobID " + jobid + " Not Found");
+          }
+        } else {
+
+          /* TODO XXX Try and factor out JSPUtil.setErrorAndForward() for re-use
+           * (and to not make it blindly dispatch to job_authorization_error.jsp,
+           * which is all HTML. 
+           */
+
+          /* TODO XXX Make this return JSON, not HTML. */
+
+          /* Nothing to do here, since JSPUtil.setErrorAndForward() has already been 
+           * called from inside JSPUtil.checkAccessAndGetJob().
+           */
+        }
+      } else {
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        theErrorResponse = new ErrorResponse(4101, 
+          ((attemptid == null) ? ("TipID " + tipid) : ("AttemptID " + attemptid)) + " Invalid");
+      }
+    } else {
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      theErrorResponse = new ErrorResponse(4100, "Missing TipID/AttemptID");
+    }
+
+    /* ------------ Response generation begins here ------------ */
+
+    /* For now, "json" is the only supported format. 
+     *
+     * As more formats are supported, this should become a cascading 
+     * if-elsif-else block.
+     */
+    if ("json".equals(response_format)) {
+
+      response.setContentType("application/json");
+
+      ObjectMapper responseObjectMapper = new ObjectMapper();
+      /* A lack of an error response implies we have a meaningful 
+       * application response? Why not!
+       */
+      out.println(responseObjectMapper.writeValueAsString
+        ((theErrorResponse == null) ? theTaskDetailsResponse : theErrorResponse));
+
+    } else {
+      response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED);
+    }
+  } else {
+%>
+<%
+    // Spit out HTML only in the absence of the "format" query parameter.
+    response.setContentType("text/html; charset=UTF-8");
+
     final JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
 
     String attemptid = request.getParameter("attemptid");
@@ -347,4 +692,7 @@
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>
 <%
 out.println(ServletUtil.htmlFooter());
+%>
+<%
+} // if (response_format != null) 
 %>

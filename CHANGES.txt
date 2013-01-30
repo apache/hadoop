@@ -161,6 +161,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-2931. LocalJobRunner should support parallel mapper execution.
     (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4837. Add webservices for Jobtracker. (Arun C Murthy via hitesh)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
