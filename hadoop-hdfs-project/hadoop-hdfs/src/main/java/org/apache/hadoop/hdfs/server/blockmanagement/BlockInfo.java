@@ -88,11 +88,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   DatanodeDescriptor getDatanode(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
-    DatanodeDescriptor node = (DatanodeDescriptor)triplets[index*3];
-    assert node == null || 
-        DatanodeDescriptor.class.getName().equals(node.getClass().getName()) : 
-              "DatanodeDescriptor is expected at " + index*3;
-    return node;
+    return (DatanodeDescriptor)triplets[index*3];
   }
 
   private BlockInfo getPrevious(int index) {

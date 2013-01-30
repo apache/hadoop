@@ -67,6 +67,11 @@ public class Hadoop20JHParser implements JobHistoryParser {
     reader = new LineReader(input);
   }
 
+  public Hadoop20JHParser(LineReader reader) throws IOException {
+    super();
+    this.reader = reader;
+  }
+
   Map<String, HistoryEventEmitter> liveEmitters =
       new HashMap<String, HistoryEventEmitter>();
   Queue<HistoryEvent> remainingEvents = new LinkedList<HistoryEvent>();

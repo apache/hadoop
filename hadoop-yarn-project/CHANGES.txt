@@ -274,9 +274,15 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-133 Update web services docs for RM clusterMetrics (Ravi Prakash via
+    kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-343. Capacity Scheduler maximum-capacity value -1 is invalid (Xuan 
+    Gong via tgraves)
 
 Release 0.23.6 - UNRELEASED
 
@@ -334,6 +340,9 @@ Release 0.23.6 - UNRELEASED
     called and a container is completing (Arun C Murthy via tgraves)
 
     YARN-334. Maven RAT plugin is not checking all source files (tgraves)
+
+    YARN-354. WebAppProxyServer exits immediately after startup (Liang Xie via
+    jlowe)
 
 Release 0.23.5 - 2012-11-28
 

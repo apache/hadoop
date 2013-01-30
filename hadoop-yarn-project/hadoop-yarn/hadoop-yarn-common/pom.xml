@@ -93,6 +93,7 @@
         <executions>
           <execution>
             <id>version-info</id>
+            <phase>generate-resources</phase>
             <goals>
               <goal>version-info</goal>
             </goals>

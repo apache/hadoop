@@ -73,6 +73,14 @@ public class WebAppProxyServer extends CompositeService {
         YarnConfiguration.PROXY_PRINCIPAL);
   }
 
+  /**
+   * Wait for service to finish.
+   * (Normally, it runs forever.)
+   */
+  private void join() {
+    proxy.join();
+  }
+
   public static void main(String[] args) {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
@@ -84,6 +92,7 @@ public class WebAppProxyServer extends CompositeService {
       YarnConfiguration conf = new YarnConfiguration();
       proxy.init(conf);
       proxy.start();
+      proxy.join();
     } catch (Throwable t) {
       LOG.fatal("Error starting Proxy server", t);
       System.exit(-1);

@@ -33,6 +33,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.jobhistory.EventType;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -66,6 +69,7 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -105,6 +109,13 @@ public class TestJobImpl {
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.NUM_REDUCES, 0);
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+    conf.set(MRJobConfig.WORKFLOW_ID, "testId");
+    conf.set(MRJobConfig.WORKFLOW_NAME, "testName");
+    conf.set(MRJobConfig.WORKFLOW_NODE_NAME, "testNodeName");
+    conf.set(MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING + "key1", "value1");
+    conf.set(MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING + "key2", "value2");
+    
+ 
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
     dispatcher.start();
@@ -114,6 +125,9 @@ public class TestJobImpl {
     commitHandler.init(conf);
     commitHandler.start();
 
+    JobSubmittedEventHandler jseHandler = new JobSubmittedEventHandler("testId",
+        "testName", "testNodeName", "\"key2\"=\"value2\" \"key1\"=\"value1\" ");
+    dispatcher.register(EventType.class, jseHandler);
     JobImpl job = createStubbedJob(conf, dispatcher, 0);
     job.handle(new JobEvent(job.getID(), JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
@@ -121,6 +135,11 @@ public class TestJobImpl {
     assertJobState(job, JobStateInternal.SUCCEEDED);
     dispatcher.stop();
     commitHandler.stop();
+    try {
+      Assert.assertTrue(jseHandler.getAssertValue());
+    } catch (InterruptedException e) {
+      Assert.fail("Workflow related attributes are not tested properly");
+    }
   }
 
   @Test(timeout=20000)
@@ -612,6 +631,67 @@ public class TestJobImpl {
       }
     }
     Assert.assertEquals(state, job.getInternalState());
+  }
+
+  private static class JobSubmittedEventHandler implements
+      EventHandler<JobHistoryEvent> {
+
+    private String workflowId;
+    
+    private String workflowName;
+    
+    private String workflowNodeName;
+    
+    private String workflowAdjacencies;
+    
+    private Boolean assertBoolean;
+
+    public JobSubmittedEventHandler(String workflowId, String workflowName,
+        String workflowNodeName, String workflowAdjacencies) {
+      this.workflowId = workflowId;
+      this.workflowName = workflowName;
+      this.workflowNodeName = workflowNodeName;
+      this.workflowAdjacencies = workflowAdjacencies;
+      assertBoolean = null;
+    }
+
+    @Override
+    public void handle(JobHistoryEvent jhEvent) {
+      if (jhEvent.getType() != EventType.JOB_SUBMITTED) {
+        return;
+      }
+      JobSubmittedEvent jsEvent = (JobSubmittedEvent) jhEvent.getHistoryEvent();
+      if (!workflowId.equals(jsEvent.getWorkflowId())) {
+        setAssertValue(false);
+        return;
+      }
+      if (!workflowName.equals(jsEvent.getWorkflowName())) {
+        setAssertValue(false);
+        return;
+      }
+      if (!workflowNodeName.equals(jsEvent.getWorkflowNodeName())) {
+        setAssertValue(false);
+        return;
+      }
+      if (!workflowAdjacencies.equals(jsEvent.getWorkflowAdjacencies())) {
+        setAssertValue(false);
+        return;
+      }
+      setAssertValue(true);
+    }
+    
+    private synchronized void setAssertValue(Boolean bool) {
+      assertBoolean = bool;
+      notify();
+    }
+    
+    public synchronized boolean getAssertValue() throws InterruptedException {
+      while (assertBoolean == null) {
+        wait();
+      }
+      return assertBoolean;
+    }
+
   }
 
   private static class StubbedJob extends JobImpl {

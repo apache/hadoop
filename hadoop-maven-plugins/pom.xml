@@ -71,6 +71,17 @@
           </execution>
         </executions>
       </plugin>
+      <!--
+      Skip Clover instrumentation for this module to prevent error finding Clover
+      classes during plugin execution when running a build with Clover enabled.
+      -->
+      <plugin>
+        <groupId>com.atlassian.maven.plugins</groupId>
+        <artifactId>maven-clover2-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

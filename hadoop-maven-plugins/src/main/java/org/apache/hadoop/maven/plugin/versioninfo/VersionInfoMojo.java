@@ -46,7 +46,7 @@ import java.util.TimeZone;
  * build.  The version information includes build time, SCM URI, SCM branch, SCM
  * commit, and an MD5 checksum of the contents of the files in the codebase.
  */
-@Mojo(name="version-info", defaultPhase=LifecyclePhase.INITIALIZE)
+@Mojo(name="version-info")
 public class VersionInfoMojo extends AbstractMojo {
 
   @Parameter(defaultValue="${project}")

@@ -46,6 +46,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskFailedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
@@ -594,8 +595,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   }
 
   // This is always called in the Write Lock
-  private void addAndScheduleAttempt() {
+  private void addAndScheduleAttempt(Avataar avataar) {
     TaskAttempt attempt = createAttempt();
+    ((TaskAttemptImpl) attempt).setAvataar(avataar);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created attempt " + attempt.getID());
     }
@@ -749,7 +751,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
-      task.addAndScheduleAttempt();
+      task.addAndScheduleAttempt(Avataar.VIRGIN);
       task.scheduledTime = task.clock.getTime();
       TaskStartedEvent tse = new TaskStartedEvent(
           TypeConverter.fromYarn(task.taskId), task.getLaunchTime(),
@@ -772,7 +774,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
       LOG.info("Scheduling a redundant attempt for task " + task.taskId);
-      task.addAndScheduleAttempt();
+      task.addAndScheduleAttempt(Avataar.SPECULATIVE);
     }
   }
 
@@ -849,7 +851,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.finishedAttempts.add(taskAttemptId);
       task.inProgressAttempts.remove(taskAttemptId);
       if (task.successfulAttempt == null) {
-        task.addAndScheduleAttempt();
+        task.addAndScheduleAttempt(Avataar.VIRGIN);
       }
     }
   }
@@ -937,7 +939,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         task.inProgressAttempts.remove(taskAttemptId);
         if (task.inProgressAttempts.size() == 0
             && task.successfulAttempt == null) {
-          task.addAndScheduleAttempt();
+          task.addAndScheduleAttempt(Avataar.VIRGIN);
         }
       } else {
         task.handleTaskAttemptCompletion(
@@ -1053,7 +1055,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       // from the map splitInfo. So the bad node might be sent as a location
       // to the RM. But the RM would ignore that just like it would ignore
       // currently pending container requests affinitized to bad nodes.
-      task.addAndScheduleAttempt();
+      task.addAndScheduleAttempt(Avataar.VIRGIN);
       return TaskStateInternal.SCHEDULED;
     }
   }

@@ -244,6 +244,18 @@ public class TestCapacityScheduler {
   }
   
   @Test
+  public void testMaximumCapacitySetup() {
+    float delta = 0.0000001f;
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
+    conf.setMaximumCapacity(A, 50.0f);
+    assertEquals(50.0f, conf.getMaximumCapacity(A),delta);
+    conf.setMaximumCapacity(A, -1);
+    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
+  }
+  
+  
+  @Test
   public void testRefreshQueues() throws Exception {
     CapacityScheduler cs = new CapacityScheduler();
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();

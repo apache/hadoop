@@ -46,10 +46,13 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
    * @param httpPort The port number of the tracker
    * @param shufflePort The shuffle port number of the container
    * @param containerId The containerId for the task attempt.
+   * @param locality The locality of the task attempt
+   * @param avataar The avataar of the task attempt
    */
   public TaskAttemptStartedEvent( TaskAttemptID attemptId,  
       TaskType taskType, long startTime, String trackerName,
-      int httpPort, int shufflePort, ContainerId containerId) {
+      int httpPort, int shufflePort, ContainerId containerId,
+      String locality, String avataar) {
     datum.attemptId = new Utf8(attemptId.toString());
     datum.taskid = new Utf8(attemptId.getTaskID().toString());
     datum.startTime = startTime;
@@ -58,14 +61,21 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
     datum.httpPort = httpPort;
     datum.shufflePort = shufflePort;
     datum.containerId = new Utf8(containerId.toString());
+    if (locality != null) {
+      datum.locality = new Utf8(locality);
+    }
+    if (avataar != null) {
+      datum.avataar = new Utf8(avataar);
+    }
   }
 
   // TODO Remove after MrV1 is removed.
   // Using a dummy containerId to prevent jobHistory parse failures.
   public TaskAttemptStartedEvent(TaskAttemptID attemptId, TaskType taskType,
-      long startTime, String trackerName, int httpPort, int shufflePort) {
+      long startTime, String trackerName, int httpPort, int shufflePort,
+      String locality, String avataar) {
     this(attemptId, taskType, startTime, trackerName, httpPort, shufflePort,
-        ConverterUtils.toContainerId("container_-1_-1_-1_-1"));
+        ConverterUtils.toContainerId("container_-1_-1_-1_-1"), locality, avataar);
   }
 
   TaskAttemptStartedEvent() {}
@@ -105,4 +115,19 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
   public ContainerId getContainerId() {
     return ConverterUtils.toContainerId(datum.containerId.toString());
   }
+  /** Get the locality */
+  public String getLocality() {
+    if (datum.locality != null) {
+      return datum.locality.toString();
+    }
+    return null;
+  }
+  /** Get the avataar */
+  public String getAvataar() {
+    if (datum.avataar != null) {
+      return datum.avataar.toString();
+    }
+    return null;
+  }
+
 }

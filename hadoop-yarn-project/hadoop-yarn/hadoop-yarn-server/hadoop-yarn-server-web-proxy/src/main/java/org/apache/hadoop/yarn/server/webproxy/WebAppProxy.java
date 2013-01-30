@@ -114,4 +114,13 @@ public class WebAppProxy extends AbstractService {
     }
     super.stop();
   }
+
+  public void join() {
+    if(proxyServer != null) {
+      try {
+        proxyServer.join();
+      } catch (InterruptedException e) {
+      }
+    }
+  }
 }
