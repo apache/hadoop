@@ -76,6 +76,9 @@ Release 1.1.2 - 2013.01.27
     MAPREDUCE-4888. Fixed NLineInputFormat one-off error which dropped data.
     (vinodkv via acmurthy) 
 
+    HDFS-4423. Checkpoint exception may cause fatal damage to fsimage.
+    (Chris Nauroth via szetszwo)
+
 Release 1.1.1 - 2012.11.18
 
   INCOMPATIBLE CHANGES
