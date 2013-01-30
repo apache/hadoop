@@ -210,6 +210,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4259. Improve pipeline DN replacement failure message (harsh)
 
+    HDFS-3598. WebHDFS support for file concat. (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
