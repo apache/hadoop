@@ -310,10 +310,9 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /**
-   * THIS IS DFS only operations, it is not part of FileSystem
-   * move blocks from srcs to trg
+   * Move blocks from srcs to trg
    * and delete srcs afterwards
-   * all blocks should be the same size
+   * RESTRICTION: all blocks should be the same size
    * @param trg existing file to append to
    * @param psrcs list of files (same block size, same replication)
    * @throws IOException
