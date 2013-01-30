@@ -1,5 +1,7 @@
 Hadoop Change Log
 
+    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
