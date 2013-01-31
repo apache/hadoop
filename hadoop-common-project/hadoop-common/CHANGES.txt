@@ -325,6 +325,9 @@ Trunk (Unreleased)
     HADOOP-9249. hadoop-maven-plugins version-info goal causes build failure
     when running with Clover. (Chris Nauroth via suresh)
 
+    HADOOP-9264. Port change to use Java untar API on Windows from 
+    branch-1-win to trunk. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -585,6 +588,10 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
     should not state that secret is randomly generated. (tucu)
+
+    HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
+
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 

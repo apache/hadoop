@@ -314,6 +314,10 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4369. GetBlockKeysResponseProto does not handle null response.
     (suresh)
 
+    HDFS-4451. hdfs balancer command returns exit code 1 on success instead
+    of 0. (Joshua Blatt via suresh)
+
+
   NEW FEATURES
 
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
@@ -498,6 +502,8 @@ Release 2.0.3-alpha - Unreleased
     first byte (todd)
 
     HDFS-4259. Improve pipeline DN replacement failure message (harsh)
+
+    HDFS-3598. WebHDFS support for file concat. (Plamen Jeliazkov via shv)
 
   OPTIMIZATIONS
 
@@ -732,6 +738,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4444. Add space between total transaction time and number of
     transactions in FSEditLog#printStatistics. (Stephen Chu via suresh)
+
+    HDFS-4428. FsDatasetImpl should disclose what the error is when a rename
+    fails. (Colin Patrick McCabe via atm)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 

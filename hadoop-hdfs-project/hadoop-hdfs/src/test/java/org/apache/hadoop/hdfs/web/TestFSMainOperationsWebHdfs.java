@@ -27,11 +27,13 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
@@ -60,6 +62,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
     final Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       cluster.waitActive();
@@ -99,6 +102,30 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   @Override
   protected Path getDefaultWorkingDirectory() {
     return defaultWorkingDirectory;
+  }
+
+  @Test
+  public void testConcat() throws Exception {
+    Path[] paths = {new Path("/test/hadoop/file1"),
+                    new Path("/test/hadoop/file2"),
+                    new Path("/test/hadoop/file3")};
+
+    DFSTestUtil.createFile(fSys, paths[0], 1024, (short) 3, 0);
+    DFSTestUtil.createFile(fSys, paths[1], 1024, (short) 3, 0);
+    DFSTestUtil.createFile(fSys, paths[2], 1024, (short) 3, 0);
+
+    Path catPath = new Path("/test/hadoop/catFile");
+    DFSTestUtil.createFile(fSys, catPath, 1024, (short) 3, 0);
+    Assert.assertTrue(exists(fSys, catPath));
+
+    fSys.concat(catPath, paths);
+
+    Assert.assertFalse(exists(fSys, paths[0]));
+    Assert.assertFalse(exists(fSys, paths[1]));
+    Assert.assertFalse(exists(fSys, paths[2]));
+
+    FileStatus fileStatus = fSys.getFileStatus(catPath);
+    Assert.assertEquals(1024*4, fileStatus.getLen());
   }
 
   @Override
