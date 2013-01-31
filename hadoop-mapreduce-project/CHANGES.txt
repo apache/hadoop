@@ -63,6 +63,9 @@ Release 2.0.3-alpha - Unreleased
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4893. Fixed MR ApplicationMaster to do optimal assignment of
+    containers to get maximum locality. (Bikas Saha via vinodkv)
+
   BUG FIXES
 
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
