@@ -1333,8 +1333,9 @@ public class Balancer {
 
   // Exit status
   enum ReturnStatus {
-    SUCCESS(1),
-    IN_PROGRESS(0),
+    // These int values will map directly to the balancer process's exit code.
+    SUCCESS(0),
+    IN_PROGRESS(1),
     ALREADY_RUNNING(-1),
     NO_MOVE_BLOCK(-2),
     NO_MOVE_PROGRESS(-3),
@@ -1507,7 +1508,12 @@ public class Balancer {
   }
 
   static class Cli extends Configured implements Tool {
-    /** Parse arguments and then run Balancer */
+    /**
+     * Parse arguments and then run Balancer.
+     * 
+     * @param args command specific arguments.
+     * @return exit code. 0 indicates success, non-zero indicates failure.
+     */
     @Override
     public int run(String[] args) {
       final long startTime = Time.now();
