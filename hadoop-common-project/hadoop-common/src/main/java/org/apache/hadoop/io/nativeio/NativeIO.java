@@ -552,4 +552,35 @@ public class NativeIO {
       initialized = true;
     }
   }
+  
+  /**
+   * A version of renameTo that throws a descriptive exception when it fails.
+   *
+   * @param src                  The source path
+   * @param dst                  The destination path
+   * 
+   * @throws NativeIOException   On failure.
+   */
+  public static void renameTo(File src, File dst)
+      throws IOException {
+    if (!nativeLoaded) {
+      if (!src.renameTo(dst)) {
+        throw new IOException("renameTo(src=" + src + ", dst=" +
+          dst + ") failed.");
+      }
+    } else {
+      renameTo0(src.getAbsolutePath(), dst.getAbsolutePath());
+    }
+  }
+
+  /**
+   * A version of renameTo that throws a descriptive exception when it fails.
+   *
+   * @param src                  The source path
+   * @param dst                  The destination path
+   * 
+   * @throws NativeIOException   On failure.
+   */
+  private static native void renameTo0(String src, String dst)
+      throws NativeIOException;
 }

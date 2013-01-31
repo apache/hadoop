@@ -281,6 +281,9 @@ Release 0.23.7 - UNRELEASED
 
   BUG FIXES
 
+    YARN-343. Capacity Scheduler maximum-capacity value -1 is invalid (Xuan 
+    Gong via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -15,49 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.nativeio;
 
-/**
- * Enum representing POSIX errno values.
- */
-public enum Errno {
-  EPERM,
-  ENOENT,
-  ESRCH,
-  EINTR,
-  EIO,
-  ENXIO,
-  E2BIG,
-  ENOEXEC,
-  EBADF,
-  ECHILD,
-  EAGAIN,
-  ENOMEM,
-  EACCES,
-  EFAULT,
-  ENOTBLK,
-  EBUSY,
-  EEXIST,
-  EXDEV,
-  ENODEV,
-  ENOTDIR,
-  EISDIR,
-  EINVAL,
-  ENFILE,
-  EMFILE,
-  ENOTTY,
-  ETXTBSY,
-  EFBIG,
-  ENOSPC,
-  ESPIPE,
-  EROFS,
-  EMLINK,
-  EPIPE,
-  EDOM,
-  ERANGE,
-  ELOOP,
-  ENAMETOOLONG,
-  ENOTEMPTY,
+package org.apache.hadoop.hdfs.web.resources;
 
-  UNKNOWN;
+/** The concat source paths parameter. */
+public class ConcatSourcesParam extends StringParam {
+  /** Parameter name. */
+  public static final String NAME = "srcs";
+
+  public static final String DEFAULT = NULL;
+
+  private static final Domain DOMAIN = new Domain(NAME, null);
+
+  /**
+   * Constructor.
+   * @param str a string representation of the parameter value.
+   */
+  public ConcatSourcesParam(String str) {
+    super(DOMAIN, str);
+  }
+
+  @Override
+  public String getName() {
+    return NAME;
+  }
+
+  /** @return the absolute path. */
+  public final String[] getAbsolutePaths() {
+    final String[] paths = getValue().split(",");
+    return paths;
+  }
 }

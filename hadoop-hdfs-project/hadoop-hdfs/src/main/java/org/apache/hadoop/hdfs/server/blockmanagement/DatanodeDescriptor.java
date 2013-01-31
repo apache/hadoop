@@ -547,6 +547,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   @Override
   public void updateRegInfo(DatanodeID nodeReg) {
     super.updateRegInfo(nodeReg);
+    firstBlockReport = true; // must re-process IBR after re-registration
   }
 
   /**

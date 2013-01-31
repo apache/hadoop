@@ -100,6 +100,9 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final float MAXIMUM_CAPACITY_VALUE = 100;
   
   @Private
+  public static final float DEFAULT_MAXIMUM_CAPACITY_VALUE = -1.0f;
+  
+  @Private
   public static final int DEFAULT_USER_LIMIT = 100;
   
   @Private
@@ -206,6 +209,8 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public float getMaximumCapacity(String queue) {
     float maxCapacity = getFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY,
         MAXIMUM_CAPACITY_VALUE);
+    maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
+        MAXIMUM_CAPACITY_VALUE : maxCapacity;
     return maxCapacity;
   }
   

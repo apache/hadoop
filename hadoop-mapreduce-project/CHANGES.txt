@@ -217,6 +217,9 @@ Release 2.0.3-alpha - Unreleased
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4893. Fixed MR ApplicationMaster to do optimal assignment of
+    containers to get maximum locality. (Bikas Saha via vinodkv)
+
   BUG FIXES
 
     MAPREDUCE-4607. Race condition in ReduceTask completion can result in Task
@@ -277,6 +280,9 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-2264. Job status exceeds 100% in some cases. 
     (devaraj.k and sandyr via tucu)
+
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
