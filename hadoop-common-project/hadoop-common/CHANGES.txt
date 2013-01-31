@@ -46,6 +46,10 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8251. Fix SecurityUtil.fetchServiceTicket after HADOOP-6941 (todd
     via tgraves)
 
+    HADOOP-8878. uppercase namenode hostname causes hadoop dfs calls with 
+    webhdfs filesystem and fsck to fail when security is on  (Arpit Gupta
+    via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
