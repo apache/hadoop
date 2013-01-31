@@ -140,9 +140,16 @@ public class AggregatedLogDeletionService extends AbstractService {
       		" too small (" + retentionSecs + ")");
       return;
     }
+    long checkIntervalMsecs = 1000 * conf.getLong(
+        YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS);
+    if (checkIntervalMsecs <= 0) {
+      // when unspecified compute check interval as 1/10th of retention
+      checkIntervalMsecs = (retentionSecs * 1000) / 10;
+    }
     TimerTask task = new LogDeletionTask(conf, retentionSecs);
     timer = new Timer();
-    timer.scheduleAtFixedRate(task, 0, retentionSecs * 1000);
+    timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
     super.start();
   }
 
