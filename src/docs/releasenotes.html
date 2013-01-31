@@ -99,6 +99,11 @@
      <b>Improve confusing log message that prints exception when editlog read is completed</b><br>
      <blockquote>Namenode prints a log with an exception to indicate successful completion of reading of logs. This causes misunderstanding where people have interpreted it as failure to load editlog. The log message could be better.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4423">HDFS-4423</a>.
+     Blocker bug reported by chenfolin and fixed by cnauroth (namenode)<br>
+     <b>Checkpoint exception causes fatal damage to fsimage.</b><br>
+     <blockquote>The impact of class is org.apache.hadoop.hdfs.server.namenode.FSImage.java<br>{code}<br>boolean loadFSImage(MetaRecoveryContext recovery) throws IOException {<br>...<br>latestNameSD.read();<br>    needToSave |= loadFSImage(getImageFile(latestNameSD, NameNodeFile.IMAGE));<br>    LOG.info(&quot;Image file of size &quot; + imageSize + &quot; loaded in &quot; <br>        + (FSNamesystem.now() - startTime)/1000 + &quot; seconds.&quot;);<br>    <br>    // Load latest edits<br>    if (latestNameCheckpointTime &gt; latestEditsCheckpointTime)<br>      // the image i...</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2374">MAPREDUCE-2374</a>.
      Major bug reported by tlipcon and fixed by adi2 <br>
      <b>&quot;Text File Busy&quot; errors launching MR tasks</b><br>

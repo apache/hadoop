@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.1.2 - 2013.01.27
+Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
 
