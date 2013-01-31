@@ -583,6 +583,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
     should not state that secret is randomly generated. (tucu)
 
+    HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
