@@ -5792,26 +5792,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   /**
-   * Get the list of all the current snapshottable directories
+   * Get the list of snapshottable directories that are owned 
+   * by the current user. Return all the snapshottable directories if the 
+   * current user is a super user.
    * @return The list of all the current snapshottable directories
    * @throws IOException
    */
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
+    SnapshottableDirectoryStatus[] status = null;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      
-      SnapshottableDirectoryStatus[] status = snapshotManager
-          .getSnapshottableDirListing();
-      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-        logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-              "listSnapshottableDirectory", null, null, null);
-      }
-      return status;
+      FSPermissionChecker checker = new FSPermissionChecker(
+          fsOwner.getShortUserName(), supergroup);
+      status = snapshotManager
+          .getSnapshottableDirListing(checker.isSuper ? null : checker.user);
     } finally {
       readUnlock();
     }
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
+            "listSnapshottableDirectory", null, null, null);
+    }
+    return status;
   }
   
   /**

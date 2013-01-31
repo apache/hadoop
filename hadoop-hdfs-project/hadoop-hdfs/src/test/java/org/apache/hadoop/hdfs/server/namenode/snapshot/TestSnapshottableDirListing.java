@@ -17,17 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,6 +42,7 @@ public class TestSnapshottableDirListing {
   static final short REPLICATION = 3;
   static final long BLOCKSIZE = 1024;
 
+  private final Path root = new Path("/");
   private final Path dir1 = new Path("/TestSnapshot1");
   private final Path dir2 = new Path("/TestSnapshot2");
   
@@ -145,5 +150,69 @@ public class TestSnapshottableDirListing {
     assertEquals(1, dirs.length);
     assertEquals(dir2.getName(), dirs[0].getDirStatus().getLocalName());
     assertEquals(dir2, dirs[0].getFullPath());
+  }
+  
+  /**
+   * Test the listing with different user names to make sure only directories
+   * that are owned by the user are listed.
+   */
+  @Test
+  public void testListWithDifferentUser() throws Exception {
+    // first make dir1 and dir2 snapshottable
+    hdfs.allowSnapshot(dir1.toString());
+    hdfs.allowSnapshot(dir2.toString());
+    hdfs.setPermission(root, FsPermission.valueOf("-rwxrwxrwx"));
+    
+    // create two dirs and make them snapshottable under the name of user1
+    UserGroupInformation ugi1 = UserGroupInformation.createUserForTesting(
+        "user1", new String[] { "group1" });
+    DistributedFileSystem fs1 = (DistributedFileSystem) DFSTestUtil
+        .getFileSystemAs(ugi1, conf);
+    Path dir1_user1 = new Path("/dir1_user1");
+    Path dir2_user1 = new Path("/dir2_user1");
+    fs1.mkdirs(dir1_user1);
+    fs1.mkdirs(dir2_user1);
+    fs1.allowSnapshot(dir1_user1.toString());
+    fs1.allowSnapshot(dir2_user1.toString());
+    
+    // user2
+    UserGroupInformation ugi2 = UserGroupInformation.createUserForTesting(
+        "user2", new String[] { "group2" });
+    DistributedFileSystem fs2 = (DistributedFileSystem) DFSTestUtil
+        .getFileSystemAs(ugi2, conf);
+    Path dir_user2 = new Path("/dir_user2");
+    Path subdir_user2 = new Path(dir_user2, "subdir");
+    fs2.mkdirs(dir_user2);
+    fs2.mkdirs(subdir_user2);
+    fs2.allowSnapshot(dir_user2.toString());
+    fs2.allowSnapshot(subdir_user2.toString());
+    
+    // super user
+    String supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
+        DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+    UserGroupInformation superUgi = UserGroupInformation.createUserForTesting(
+        "superuser", new String[] { supergroup });
+    DistributedFileSystem fs3 = (DistributedFileSystem) DFSTestUtil
+        .getFileSystemAs(superUgi, conf);
+    
+    // list the snapshottable dirs for superuser
+    SnapshottableDirectoryStatus[] dirs = fs3.getSnapshottableDirListing();
+    // 6 snapshottable dirs: dir1, dir2, dir1_user1, dir2_user1, dir_user2, and
+    // subdir_user2
+    assertEquals(6, dirs.length);
+    
+    // list the snapshottable dirs for user1
+    dirs = fs1.getSnapshottableDirListing();
+    // 2 dirs owned by user1: dir1_user1 and dir2_user1
+    assertEquals(2, dirs.length);
+    assertEquals(dir1_user1, dirs[0].getFullPath());
+    assertEquals(dir2_user1, dirs[1].getFullPath());
+    
+    // list the snapshottable dirs for user2
+    dirs = fs2.getSnapshottableDirListing();
+    // 2 dirs owned by user2: dir_user2 and subdir_user2
+    assertEquals(2, dirs.length);
+    assertEquals(dir_user2, dirs[0].getFullPath());
+    assertEquals(subdir_user2, dirs[1].getFullPath());
   }
 }

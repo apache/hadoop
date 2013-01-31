@@ -566,7 +566,7 @@ public abstract class INode implements Diff.Element<byte[]> {
     return buf.toString();
   }
 
-  private static final byte[] EMPTY_BYTES = {};
+  public static final byte[] EMPTY_BYTES = {};
 
   @Override
   public final int compareTo(byte[] bytes) {

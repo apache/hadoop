@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
@@ -204,24 +205,33 @@ public class SnapshotManager implements SnapshotStats {
   }
   
   /**
-   * @return All the current snapshottable directories
+   * List all the snapshottable directories that are owned by the current user.
+   * @param userName Current user name.
+   * @return Snapshottable directories that are owned by the current user,
+   *         represented as an array of {@link SnapshottableDirectoryStatus}. If
+   *         {@code userName} is null, return all the snapshottable dirs.
    */
-  public SnapshottableDirectoryStatus[] getSnapshottableDirListing() {
+  public SnapshottableDirectoryStatus[] getSnapshottableDirListing(
+      String userName) {
     if (snapshottables.isEmpty()) {
       return null;
     }
     
-    SnapshottableDirectoryStatus[] status = 
-        new SnapshottableDirectoryStatus[snapshottables.size()];
-    for (int i = 0; i < snapshottables.size(); i++) {
-      INodeDirectorySnapshottable dir = snapshottables.get(i);
-      status[i] = new SnapshottableDirectoryStatus(dir.getModificationTime(),
-          dir.getAccessTime(), dir.getFsPermission(), dir.getUserName(),
-          dir.getGroupName(), dir.getLocalNameBytes(), dir.getNumSnapshots(),
-          dir.getSnapshotQuota(), dir.getParent() == null ? new byte[0]
-              : DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
+    List<SnapshottableDirectoryStatus> statusList = 
+        new ArrayList<SnapshottableDirectoryStatus>();
+    for (INodeDirectorySnapshottable dir : snapshottables) {
+      if (userName == null || userName.equals(dir.getUserName())) {
+        SnapshottableDirectoryStatus status = new SnapshottableDirectoryStatus(
+            dir.getModificationTime(), dir.getAccessTime(),
+            dir.getFsPermission(), dir.getUserName(), dir.getGroupName(),
+            dir.getLocalNameBytes(), dir.getNumSnapshots(),
+            dir.getSnapshotQuota(), dir.getParent() == null ? INode.EMPTY_BYTES
+                : DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
+        statusList.add(status);
+      }
     }
-    return status;
+    return statusList.toArray(new SnapshottableDirectoryStatus[statusList
+        .size()]);
   }
   
   /**
