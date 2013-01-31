@@ -66,7 +66,7 @@ public class SnapshotManager implements SnapshotStats {
    * If the path is already a snapshottable directory, update the quota.
    */
   public void setSnapshottable(final String path) throws IOException {
-    final INodesInPath iip = fsdir.getINodesInPath(path);
+    final INodesInPath iip = fsdir.getLastINodeInPath(path);
     final INodeDirectory d = INodeDirectory.valueOf(iip.getINode(0), path);
     if (d.isSnapshottable()) {
       //The directory is already a snapshottable directory.
@@ -88,7 +88,7 @@ public class SnapshotManager implements SnapshotStats {
    */
   public void resetSnapshottable(final String path
       ) throws IOException {
-    final INodesInPath iip = fsdir.getINodesInPath(path);
+    final INodesInPath iip = fsdir.getLastINodeInPath(path);
     final INodeDirectorySnapshottable s = INodeDirectorySnapshottable.valueOf(
         iip.getINode(0), path);
     if (s.getNumSnapshots() > 0) {
@@ -117,7 +117,7 @@ public class SnapshotManager implements SnapshotStats {
   public void createSnapshot(final String path, final String snapshotName
       ) throws IOException {
     // Find the source root directory path where the snapshot is taken.
-    final INodesInPath i = fsdir.getMutableINodesInPath(path);
+    final INodesInPath i = fsdir.getINodesInPath4Write(path);
     final INodeDirectorySnapshottable srcRoot
         = INodeDirectorySnapshottable.valueOf(i.getLastINode(), path);
     srcRoot.addSnapshot(snapshotCounter, snapshotName);
@@ -137,7 +137,7 @@ public class SnapshotManager implements SnapshotStats {
   public void deleteSnapshot(final String path, final String snapshotName,
       BlocksMapUpdateInfo collectedBlocks) throws IOException {
     // parse the path, and check if the path is a snapshot path
-    INodesInPath inodesInPath = fsdir.getMutableINodesInPath(path.toString());
+    INodesInPath inodesInPath = fsdir.getINodesInPath4Write(path.toString());
     // transfer the inode for path to an INodeDirectorySnapshottable.
     // the INodeDirectorySnapshottable#valueOf method will throw Exception 
     // if the path is not for a snapshottable directory
@@ -253,7 +253,7 @@ public class SnapshotManager implements SnapshotStats {
 
     // Find the source root directory path where the snapshots were taken.
     // All the check for path has been included in the valueOf method.
-    INodesInPath inodesInPath = fsdir.getMutableINodesInPath(path.toString());
+    INodesInPath inodesInPath = fsdir.getINodesInPath4Write(path.toString());
     final INodeDirectorySnapshottable snapshotRoot = INodeDirectorySnapshottable
         .valueOf(inodesInPath.getLastINode(), path);
     

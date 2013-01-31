@@ -1359,7 +1359,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           doAccessTime = false;
         }
 
-        final INodesInPath iip = dir.getINodesInPath(src);
+        final INodesInPath iip = dir.getLastINodeInPath(src);
         final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
         if (!iip.isSnapshot() //snapshots are readonly, so don't update atime.
             && doAccessTime && isAccessTimeSupported()) {
@@ -1480,7 +1480,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // replication and blocks sizes should be the same for ALL the blocks
 
     // check the target
-    final INodeFile trgInode = INodeFile.valueOf(dir.getMutableINode(target),
+    final INodeFile trgInode = INodeFile.valueOf(dir.getINode4Write(target),
         target);
     if(trgInode.isUnderConstruction()) {
       throw new HadoopIllegalArgumentException("concat: target file "
@@ -1516,7 +1516,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(i==srcs.length-1)
         endSrc=true;
 
-      final INodeFile srcInode = INodeFile.valueOf(dir.getMutableINode(src), src);
+      final INodeFile srcInode = INodeFile.valueOf(dir.getINode4Write(src), src);
       if(src.isEmpty() 
           || srcInode.isUnderConstruction()
           || srcInode.numBlocks() == 0) {
@@ -1599,7 +1599,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkPathAccess(src, FsAction.WRITE);
       }
-      final INodesInPath iip = dir.getMutableINodesInPath(src);
+      final INodesInPath iip = dir.getINodesInPath4Write(src);
       final INode inode = iip.getLastINode();
       if (inode != null) {
         dir.setTimes(src, inode, mtime, atime, true, iip.getLatestSnapshot());
@@ -1882,8 +1882,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // Verify that the destination does not exist as a directory already.
-    boolean pathExists = dir.existsMutable(src);
-    if (pathExists && dir.isDir(src)) {
+    final INodesInPath iip = dir.getINodesInPath4Write(src);
+    final INode myFile = iip.getLastINode();
+    if (myFile != null && myFile.isDirectory()) {
       throw new FileAlreadyExistsException("Cannot create file " + src
           + "; already exists as a directory.");
     }
@@ -1891,7 +1892,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
     boolean append = flag.contains(CreateFlag.APPEND);
     if (isPermissionEnabled) {
-      if (append || (overwrite && pathExists)) {
+      if (append || (overwrite && myFile != null)) {
         checkPathAccess(src, FsAction.WRITE);
       } else {
         checkAncestorAccess(src, FsAction.WRITE);
@@ -1906,8 +1907,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       blockManager.verifyReplication(src, replication, clientMachine);
       boolean create = flag.contains(CreateFlag.CREATE);
       
-      final INodesInPath iip = dir.getINodesInPath(src);
-      final INode myFile = iip.getINode(0);
       if (myFile == null) {
         if (!create) {
           throw new FileNotFoundException("failed to overwrite or append to non-existent file "
@@ -2326,7 +2325,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot add block to " + src, safeMode);
       }
 
-      final INodesInPath iip = dir.rootDir.getExistingPathINodes(src, true);
+      final INodesInPath iip = dir.getINodesInPath4Write(src);
       final INodeFileUnderConstruction pendingFile
           = checkLease(src, clientName, iip.getLastINode());
                                                            
@@ -2504,7 +2503,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new SafeModeException("Cannot complete file " + src, safeMode);
     }
 
-    final INodesInPath iip = dir.getINodesInPath(src);
+    final INodesInPath iip = dir.getLastINodeInPath(src);
     final INodeFileUnderConstruction pendingFile;
     try {
       pendingFile = checkLease(src, holder, iip.getINode(0)); 
@@ -3144,7 +3143,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert !isInSafeMode();
     assert hasWriteLock();
 
-    final INodesInPath iip = dir.getINodesInPath(src);
+    final INodesInPath iip = dir.getLastINodeInPath(src);
     final INodeFileUnderConstruction pendingFile
         = INodeFileUnderConstruction.valueOf(iip.getINode(0), src);
     int nrBlocks = pendingFile.numBlocks();

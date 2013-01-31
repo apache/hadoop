@@ -253,7 +253,7 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      final INodesInPath iip = fsDir.getINodesInPath(addCloseOp.path);
+      final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
       final INodeFile oldFile = toINodeFile(iip.getINode(0), addCloseOp.path);
       INodeFile newFile = oldFile;
       if (oldFile == null) { // this is OP_ADD on a new file (case 1)
@@ -304,7 +304,7 @@ public class FSEditLogLoader {
             " clientMachine " + addCloseOp.clientMachine);
       }
 
-      final INodesInPath iip = fsDir.getINodesInPath(addCloseOp.path);
+      final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
       final INodeFile oldFile = toINodeFile(iip.getINode(0), addCloseOp.path);
       if (oldFile == null) {
         throw new IOException("Operation trying to close non-existent file " +

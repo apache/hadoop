@@ -122,10 +122,6 @@ public class INodeDirectory extends INode {
     }
     return i;
   }
-  
-  protected INode getExistingChild(int i) {
-    return children.get(i);
-  }
 
   INode removeChild(INode node) {
     assertChildrenNonNull();
@@ -266,15 +262,22 @@ public class INodeDirectory extends INode {
   }
 
   /** @return the {@link INodesInPath} containing only the last inode. */
-  INodesInPath getINodesInPath(String path, boolean resolveLink
+  INodesInPath getLastINodeInPath(String path, boolean resolveLink
       ) throws UnresolvedLinkException {
     return getExistingPathINodes(getPathComponents(path), 1, resolveLink);
+  }
+
+  /** @return the {@link INodesInPath} containing all inodes in the path. */
+  INodesInPath getINodesInPath(String path, boolean resolveLink
+      ) throws UnresolvedLinkException {
+    final byte[][] components = getPathComponents(path);
+    return getExistingPathINodes(components, components.length, resolveLink);
   }
 
   /** @return the last inode in the path. */
   INode getNode(String path, boolean resolveLink) 
     throws UnresolvedLinkException {
-    return getINodesInPath(path, resolveLink).getINode(0);
+    return getLastINodeInPath(path, resolveLink).getINode(0);
   }
 
   /**
@@ -283,10 +286,9 @@ public class INodeDirectory extends INode {
    * @throws UnresolvedLinkException if symlink can't be resolved
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  INode getMutableNode(String src, boolean resolveLink)
+  INode getINode4Write(String src, boolean resolveLink)
       throws UnresolvedLinkException, SnapshotAccessControlException {
-    INode[] inodes = getMutableINodesInPath(src, resolveLink).getINodes();
-    return inodes[inodes.length - 1];
+    return getINodesInPath4Write(src, resolveLink).getLastINode();
   }
 
   /**
@@ -294,23 +296,14 @@ public class INodeDirectory extends INode {
    * @throws UnresolvedLinkException if symlink can't be resolved
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  INodesInPath getMutableINodesInPath(String src, boolean resolveLink)
+  INodesInPath getINodesInPath4Write(String src, boolean resolveLink)
       throws UnresolvedLinkException, SnapshotAccessControlException {
-    return getMutableINodesInPath(INode.getPathComponents(src), resolveLink);
-  }
-  
-  /**
-   * @return the INodesInPath of the components in src
-   * @throws UnresolvedLinkException if symlink can't be resolved
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  INodesInPath getMutableINodesInPath(byte[][] components, boolean resolveLink)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
+    final byte[][] components = INode.getPathComponents(src);
     INodesInPath inodesInPath = getExistingPathINodes(components,
         components.length, resolveLink);
     if (inodesInPath.isSnapshot()) {
       throw new SnapshotAccessControlException(
-          "Modification on RO snapshot is disallowed");
+          "Modification on a read-only snapshot is disallowed");
     }
     return inodesInPath;
   }
@@ -446,27 +439,6 @@ public class INodeDirectory extends INode {
   private static boolean isDotSnapshotDir(byte[] pathComponent) {
     return pathComponent == null ? false : HdfsConstants.DOT_SNAPSHOT_DIR
         .equalsIgnoreCase(DFSUtil.bytes2String(pathComponent));
-  }
-  
-  /**
-   * Retrieve the existing INodes along the given path. The first INode
-   * always exist and is this INode.
-   * 
-   * @param path the path to explore
-   * @param resolveLink indicates whether UnresolvedLinkException should 
-   *        be thrown when the path refers to a symbolic link.
-   * @return INodes array containing the existing INodes in the order they
-   *         appear when following the path from the root INode to the
-   *         deepest INodes. The array size will be the number of expected
-   *         components in the path, and non existing components will be
-   *         filled with null
-   *         
-   * @see #getExistingPathINodes(byte[][], int, boolean)
-   */
-  INodesInPath getExistingPathINodes(String path, boolean resolveLink) 
-    throws UnresolvedLinkException {
-    byte[][] components = getPathComponents(path);
-    return getExistingPathINodes(components, components.length, resolveLink);
   }
 
   /**
@@ -727,6 +699,10 @@ public class INodeDirectory extends INode {
     /** @return the last inode. */
     public INode getLastINode() {
       return inodes[inodes.length - 1];
+    }
+
+    byte[] getLastLocalName() {
+      return path[path.length - 1];
     }
     
     /**
