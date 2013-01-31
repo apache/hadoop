@@ -43,6 +43,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8346. Changes to support Kerberos with non Sun JVM (HADOOP-6941) 
     broke SPNEGO (Devaraj Das via tgraves)
 
+    HADOOP-8251. Fix SecurityUtil.fetchServiceTicket after HADOOP-6941 (todd
+    via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

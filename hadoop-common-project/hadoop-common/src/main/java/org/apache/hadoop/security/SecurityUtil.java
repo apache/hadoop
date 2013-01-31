@@ -170,7 +170,7 @@ public class SecurityUtil {
       } else {
         principalClass = Class.forName("sun.security.krb5.PrincipalName");
         credentialsClass = Class.forName("sun.security.krb5.Credentials");
-        krb5utilClass = Class.forName("sun.security.jgss.krb5");
+        krb5utilClass = Class.forName("sun.security.jgss.krb5.Krb5Util");
       }
       @SuppressWarnings("rawtypes")
       Constructor principalConstructor = principalClass.getConstructor(String.class, 
