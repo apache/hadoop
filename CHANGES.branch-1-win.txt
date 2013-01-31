@@ -340,3 +340,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-9177. Address issues that reported by static code analysis on
     winutils. (Ivan Mitic via suresh)
+
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
