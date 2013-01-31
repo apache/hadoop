@@ -14,6 +14,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)
 
+    HDFS-2495. Increase granularity of write operations in ReplicationMonitor
+    thus reducing contention for write lock. (Tomasz Nykiel via hairong)
+
   BUG FIXES
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 

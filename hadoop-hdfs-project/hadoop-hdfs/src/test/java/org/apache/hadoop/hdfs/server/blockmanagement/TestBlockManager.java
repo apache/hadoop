@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -359,25 +360,35 @@ public class TestBlockManager {
     bm.blocksMap.addINode(blockInfo, iNode);
     return blockInfo;
   }
-  
+
   private DatanodeDescriptor[] scheduleSingleReplication(Block block) {
-    assertEquals("Block not initially pending replication",
-        0, bm.pendingReplications.getNumReplicas(block));
-    assertTrue("computeReplicationWork should indicate replication is needed",
-        bm.computeReplicationWorkForBlock(block, 1));
+    // list for priority 1
+    List<Block> list_p1 = new ArrayList<Block>();
+    list_p1.add(block);
+
+    // list of lists for each priority
+    List<List<Block>> list_all = new ArrayList<List<Block>>();
+    list_all.add(new ArrayList<Block>()); // for priority 0
+    list_all.add(list_p1); // for priority 1
+
+    assertEquals("Block not initially pending replication", 0,
+        bm.pendingReplications.getNumReplicas(block));
+    assertEquals(
+        "computeReplicationWork should indicate replication is needed", 1,
+        bm.computeReplicationWorkForBlocks(list_all));
     assertTrue("replication is pending after work is computed",
         bm.pendingReplications.getNumReplicas(block) > 0);
-    
-    LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls =
-      getAllPendingReplications();
+
+    LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls = getAllPendingReplications();
     assertEquals(1, repls.size());
-    Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries().iterator().next();
+    Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries()
+        .iterator().next();
     DatanodeDescriptor[] targets = repl.getValue().targets;
-    
+
     DatanodeDescriptor[] pipeline = new DatanodeDescriptor[1 + targets.length];
     pipeline[0] = repl.getKey();
     System.arraycopy(targets, 0, pipeline, 1, targets.length);
-    
+
     return pipeline;
   }
 
