@@ -22,7 +22,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.Oid;
 
 public class KerberosUtil {
@@ -34,8 +33,7 @@ public class KerberosUtil {
       : "com.sun.security.auth.module.Krb5LoginModule";
   }
   
-  public static Oid getOidClassInstance(String servicePrincipal,
-      GSSManager gssManager) 
+  public static Oid getOidInstance(String oidName) 
       throws ClassNotFoundException, GSSException, NoSuchFieldException,
       IllegalAccessException {
     Class<?> oidClass;
@@ -44,7 +42,7 @@ public class KerberosUtil {
     } else {
       oidClass = Class.forName("sun.security.jgss.GSSUtil");
     }
-    Field oidField = oidClass.getDeclaredField("GSS_KRB5_MECH_OID");
+    Field oidField = oidClass.getDeclaredField(oidName);
     return (Oid)oidField.get(oidClass);
   }
 

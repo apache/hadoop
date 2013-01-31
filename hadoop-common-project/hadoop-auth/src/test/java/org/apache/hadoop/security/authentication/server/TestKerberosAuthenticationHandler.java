@@ -145,10 +145,10 @@ public class TestKerberosAuthenticationHandler extends TestCase {
         GSSContext gssContext = null;
         try {
           String servicePrincipal = KerberosTestUtils.getServerPrincipal();
+          Oid oid = KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL");
           GSSName serviceName = gssManager.createName(servicePrincipal,
-              GSSName.NT_HOSTBASED_SERVICE);
-          Oid oid = KerberosUtil.getOidClassInstance(servicePrincipal, 
-              gssManager);
+              oid);
+          oid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
           gssContext = gssManager.createContext(serviceName, oid, null,
                                                   GSSContext.DEFAULT_LIFETIME);
           gssContext.requestCredDeleg(true);
