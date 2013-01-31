@@ -510,7 +510,8 @@ public class RawLocalFileSystem extends FileSystem {
     
     RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-          f.lastModified(), new Path(f.getPath()).makeQualified(fs));
+          f.lastModified(), new Path(f.getPath()).makeQualified(fs.getUri(),
+            fs.getWorkingDirectory()));
     }
     
     @Override

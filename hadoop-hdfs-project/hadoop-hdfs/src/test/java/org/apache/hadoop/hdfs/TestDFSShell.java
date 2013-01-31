@@ -1473,7 +1473,8 @@ public class TestDFSShell {
     DistributedFileSystem dfs = null;
 
     try {
-      cluster = new MiniDFSCluster(conf, 2, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true)
+        .build();
       dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       mkdir(dfs, root);
@@ -1501,7 +1502,8 @@ public class TestDFSShell {
       corrupt(files);
 
       // Start the cluster again, but do not reformat, so prior files remain.
-      cluster = new MiniDFSCluster(conf, 2, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(false)
+        .build();
       dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       assertEquals(null, runner.run(1));

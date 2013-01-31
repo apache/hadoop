@@ -217,6 +217,7 @@ with tarfile.open(tar_name, "w:gz") as tar:
           <excludes>
             <exclude>.eclipse.templates/</exclude>
             <exclude>CHANGES.txt</exclude>
+            <exclude>CHANGES.branch-trunk-win.txt</exclude>
             <exclude>lib/jdiff/**</exclude>
           </excludes>
         </configuration>

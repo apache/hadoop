@@ -496,6 +496,7 @@
         <configuration>
           <excludes>
             <exclude>CHANGES.txt</exclude>
+            <exclude>CHANGES.branch-trunk-win.txt</exclude>
             <exclude>.idea/**</exclude>
             <exclude>src/main/conf/*</exclude>
             <exclude>src/main/docs/**</exclude>
@@ -507,6 +508,7 @@
             <exclude>src/test/all-tests</exclude>
             <exclude>src/test/resources/kdc/ldif/users.ldif</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
+            <exclude>src/test/java/org/apache/hadoop/fs/test-untar.tgz</exclude>
           </excludes>
         </configuration>
       </plugin>
