@@ -46,8 +46,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.balancer.Balancer.Cli;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Tool;
 import org.junit.Test;
 
 /**
@@ -94,7 +96,6 @@ public class TestBalancer {
         replicationFactor, r.nextLong());
     DFSTestUtil.waitReplication(fs, filePath, replicationFactor);
   }
-
 
   /* fill up a cluster with <code>numNodes</code> datanodes 
    * whose used space to be <code>size</code>
@@ -301,10 +302,12 @@ public class TestBalancer {
    * @param racks - array of racks for original nodes in cluster
    * @param newCapacity - new node's capacity
    * @param newRack - new node's rack
+   * @param useTool - if true run test via Cli with command-line argument 
+   *   parsing, etc.   Otherwise invoke balancer API directly.
    * @throws Exception
    */
   private void doTest(Configuration conf, long[] capacities, String[] racks, 
-      long newCapacity, String newRack) throws Exception {
+      long newCapacity, String newRack, boolean useTool) throws Exception {
     assertEquals(capacities.length, racks.length);
     int numOfDatanodes = capacities.length;
     cluster = new MiniDFSCluster.Builder(conf)
@@ -330,7 +333,11 @@ public class TestBalancer {
       totalCapacity += newCapacity;
 
       // run balancer and validate results
-      runBalancer(conf, totalUsedSpace, totalCapacity);
+      if (useTool) {
+        runBalancerCli(conf, totalUsedSpace, totalCapacity);
+      } else {
+        runBalancer(conf, totalUsedSpace, totalCapacity);
+      }
     } finally {
       cluster.shutdown();
     }
@@ -350,22 +357,38 @@ public class TestBalancer {
     waitForBalancer(totalUsedSpace, totalCapacity, client, cluster);
   }
   
+  private void runBalancerCli(Configuration conf,
+      long totalUsedSpace, long totalCapacity) throws Exception {
+    waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+
+    final String[] args = { "-policy", "datanode" };
+    final Tool tool = new Cli();    
+    tool.setConf(conf);
+    final int r = tool.run(args); // start rebalancing
+    
+    assertEquals("Tools should exit 0 on success", 0, r);
+    waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+    LOG.info("Rebalancing with default ctor.");
+    waitForBalancer(totalUsedSpace, totalCapacity, client, cluster);
+  }
+  
   /** one-node cluster test*/
-  private void oneNodeTest(Configuration conf) throws Exception {
+  private void oneNodeTest(Configuration conf, boolean useTool) throws Exception {
     // add an empty node with half of the CAPACITY & the same rack
-    doTest(conf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, RACK0);
+    doTest(conf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, 
+            RACK0, useTool);
   }
   
   /** two-node cluster test */
   private void twoNodeTest(Configuration conf) throws Exception {
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
-        CAPACITY, RACK2);
+        CAPACITY, RACK2, false);
   }
   
   /** test using a user-supplied conf */
   public void integrationTest(Configuration conf) throws Exception {
     initConf(conf);
-    oneNodeTest(conf);
+    oneNodeTest(conf, false);
   }
   
   /**
@@ -401,7 +424,7 @@ public class TestBalancer {
   
   void testBalancer0Internal(Configuration conf) throws Exception {
     initConf(conf);
-    oneNodeTest(conf);
+    oneNodeTest(conf, false);
     twoNodeTest(conf);
   }
 
@@ -464,6 +487,18 @@ public class TestBalancer {
     }
   }
 
+  /**
+   * Verify balancer exits 0 on success.
+   */
+  @Test(timeout=100000)
+  public void testExitZeroOnSuccess() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    
+    initConf(conf);
+    
+    oneNodeTest(conf, true);
+  }
+  
   /**
    * @param args
    */
