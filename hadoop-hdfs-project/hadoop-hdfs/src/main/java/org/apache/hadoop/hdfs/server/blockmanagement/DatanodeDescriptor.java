@@ -251,15 +251,24 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   /**
    * Move block to the head of the list of blocks belonging to the data-node.
+   * @return the index of the head of the blockList
    */
-  void moveBlockToHead(BlockInfo b) {
-    blockList = b.listRemove(blockList, this);
-    blockList = b.listInsert(blockList, this);
+  int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
+    blockList = b.moveBlockToHead(blockList, this, curIndex, headIndex);
+    return curIndex;
+  }
+
+  /**
+   * Used for testing only
+   * @return the head of the blockList
+   */
+  protected BlockInfo getHead(){
+    return blockList;
   }
 
   /**
    * Replace specified old block with a new one in the DataNodeDescriptor.
-   * 
+   *
    * @param oldBlock - block to be replaced
    * @param newBlock - a replacement block
    * @return the new block

@@ -118,6 +118,38 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     triplets[index*3+2] = to;
   }
 
+  /**
+   * Return the previous block on the block list for the datanode at
+   * position index. Set the previous block on the list to "to".
+   *
+   * @param index - the datanode index
+   * @param to - block to be set to previous on the list of blocks
+   * @return current previous block on the list of blocks
+   */
+  BlockInfo getSetPrevious(int index, BlockInfo to) {
+	assert this.triplets != null : "BlockInfo is not initialized";
+	assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
+    BlockInfo info = (BlockInfo)triplets[index*3+1];
+    triplets[index*3+1] = to;
+    return info;
+  }
+
+  /**
+   * Return the next block on the block list for the datanode at
+   * position index. Set the next block on the list to "to".
+   *
+   * @param index - the datanode index
+   * @param to - block to be set to next on the list of blocks
+   *    * @return current next block on the list of blocks
+   */
+  BlockInfo getSetNext(int index, BlockInfo to) {
+	assert this.triplets != null : "BlockInfo is not initialized";
+	assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
+    BlockInfo info = (BlockInfo)triplets[index*3+2];
+    triplets[index*3+2] = to;
+    return info;
+  }
+
   int getCapacity() {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert triplets.length % 3 == 0 : "Malformed BlockInfo";
@@ -251,6 +283,27 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     if(this == head)  // removing the head
       head = next;
     return head;
+  }
+
+  /**
+   * Remove this block from the list of blocks related to the specified
+   * DatanodeDescriptor. Insert it into the head of the list of blocks.
+   *
+   * @return the new head of the list.
+   */
+  public BlockInfo moveBlockToHead(BlockInfo head, DatanodeDescriptor dn,
+      int curIndex, int headIndex) {
+    if (head == this) {
+      return this;
+    }
+    BlockInfo next = this.getSetNext(curIndex, head);
+    BlockInfo prev = this.getSetPrevious(curIndex, null);
+
+    head.setPrevious(headIndex, this);
+    prev.setNext(prev.findDatanode(dn), next);
+    if (next != null)
+      next.setPrevious(next.findDatanode(dn), prev);
+    return this;
   }
 
   /**
