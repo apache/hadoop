@@ -738,6 +738,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4428. FsDatasetImpl should disclose what the error is when a rename
     fails. (Colin Patrick McCabe via atm)
 
+    HDFS-4151. hdfs balancer command returns exit code 1 on success instead
+    of 0. (Joshua Blatt via suresh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
