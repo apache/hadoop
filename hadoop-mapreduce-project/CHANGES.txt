@@ -281,6 +281,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-2264. Job status exceeds 100% in some cases. 
     (devaraj.k and sandyr via tucu)
 
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
