@@ -1122,7 +1122,7 @@ class FSDataset implements FSDatasetInterface {
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       roots[idx] = storage.getStorageDir(idx).getCurrentDir();
     }
-    asyncDiskService = new FSDatasetAsyncDiskService(roots);
+    asyncDiskService = new FSDatasetAsyncDiskService(this, roots);
     registerMBean(storage.getStorageID());
   }
 
@@ -2053,14 +2053,18 @@ class FSDataset implements FSDatasetInterface {
         volumeMap.remove(bpid, invalidBlks[i]);
       }
       File metaFile = DatanodeUtil.getMetaFile(f, invalidBlks[i].getGenerationStamp());
-      
+
       // Delete the block asynchronously to make sure we can do it fast enough
-      asyncDiskService.deleteAsync(v, bpid, f, metaFile,
-          invalidBlks[i].toString());
+      asyncDiskService.deleteAsync(v, f, metaFile,
+          new ExtendedBlock(bpid, invalidBlks[i]));
     }
     if (error) {
       throw new IOException("Error in deleting blocks.");
     }
+  }
+  
+  public void notifyNamenodeDeletedBlock(ExtendedBlock block){
+    datanode.notifyNamenodeDeletedBlock(block);
   }
 
   @Override // {@link FSDatasetInterface}

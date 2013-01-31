@@ -126,17 +126,19 @@ public interface DatanodeProtocol extends VersionedProtocol {
                                      long[] blocks) throws IOException;
     
   /**
-   * blockReceived() allows the DataNode to tell the NameNode about
-   * recently-received block data, with a hint for pereferred replica
-   * to be deleted when there is any excessive blocks.
+   * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about
+   * recently-received and -deleted block data. 
+   * 
+   * For the case of received blocks, a hint for preferred replica to be 
+   * deleted when there is any excessive blocks is provided.
    * For example, whenever client code
    * writes a new Block here, or another DataNode copies a Block to
    * this DataNode, it will call blockReceived().
    */
-  public void blockReceived(DatanodeRegistration registration,
+  public void blockReceivedAndDeleted(DatanodeRegistration registration,
                             String poolId,
-                            Block blocks[],
-                            String[] delHints) throws IOException;
+                            ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks)
+                            throws IOException;
 
   /**
    * errorReport() tells the NameNode about something that has gone

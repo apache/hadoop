@@ -5,6 +5,8 @@ Release 0.23.7 - UNRELEASED
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
 
   IMPROVEMENTS
 
