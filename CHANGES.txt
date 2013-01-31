@@ -462,6 +462,9 @@ Release 1.2.0 - unreleased
     HDFS-4444. Add space between total transaction time and number of
     transactions in FSEditLog#printStatistics. (Stephen Chu via suresh)
 
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

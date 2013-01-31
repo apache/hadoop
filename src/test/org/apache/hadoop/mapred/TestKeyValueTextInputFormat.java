@@ -47,14 +47,10 @@ public class TestKeyValueTextInputFormat extends TestCase {
   private static Path workDir = 
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestKeyValueTextInputFormat");
-
-  private static Path workDirFormat =
-      new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-          "TestKeyValueTextInputFormat-testFormat");
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
-    Path file = new Path(workDirFormat, "test.txt");
+    Path file = new Path(workDir, "test.txt");
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
@@ -63,8 +59,8 @@ public class TestKeyValueTextInputFormat extends TestCase {
     LOG.info("seed = "+seed);
     Random random = new Random(seed);
 
-    localFs.delete(workDirFormat, true);
-    FileInputFormat.setInputPaths(job, workDirFormat);
+    localFs.delete(workDir, true);
+    FileInputFormat.setInputPaths(job, workDir);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -140,32 +136,47 @@ public class TestKeyValueTextInputFormat extends TestCase {
   }
   
   public void testUTF8() throws Exception {
-    LineReader in = makeStream("abcd\u20acbdcd\u20ac");
-    Text line = new Text();
-    in.readLine(line);
-    assertEquals("readLine changed utf8 characters", 
-                 "abcd\u20acbdcd\u20ac", line.toString());
-    in = makeStream("abc\u200axyz");
-    in.readLine(line);
-    assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+    LineReader in = null;
+
+    try {
+      in = makeStream("abcd\u20acbdcd\u20ac");
+      Text line = new Text();
+      in.readLine(line);
+      assertEquals("readLine changed utf8 characters",
+                   "abcd\u20acbdcd\u20ac", line.toString());
+      in = makeStream("abc\u200axyz");
+      in.readLine(line);
+      assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+    }
   }
 
   public void testNewLines() throws Exception {
-    LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
-    Text out = new Text();
-    in.readLine(out);
-    assertEquals("line1 length", 1, out.getLength());
-    in.readLine(out);
-    assertEquals("line2 length", 2, out.getLength());
-    in.readLine(out);
-    assertEquals("line3 length", 0, out.getLength());
-    in.readLine(out);
-    assertEquals("line4 length", 3, out.getLength());
-    in.readLine(out);
-    assertEquals("line5 length", 4, out.getLength());
-    in.readLine(out);
-    assertEquals("line5 length", 5, out.getLength());
-    assertEquals("end of file", 0, in.readLine(out));
+    LineReader in = null;
+    try {
+      in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
+      Text out = new Text();
+      in.readLine(out);
+      assertEquals("line1 length", 1, out.getLength());
+      in.readLine(out);
+      assertEquals("line2 length", 2, out.getLength());
+      in.readLine(out);
+      assertEquals("line3 length", 0, out.getLength());
+      in.readLine(out);
+      assertEquals("line4 length", 3, out.getLength());
+      in.readLine(out);
+      assertEquals("line5 length", 4, out.getLength());
+      in.readLine(out);
+      assertEquals("line5 length", 5, out.getLength());
+      assertEquals("end of file", 0, in.readLine(out));
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+    }
   }
   
   private static void writeFile(FileSystem fs, Path name, 
@@ -187,15 +198,23 @@ public class TestKeyValueTextInputFormat extends TestCase {
                                       InputSplit split, 
                                       JobConf job) throws IOException {
     List<Text> result = new ArrayList<Text>();
-    RecordReader<Text, Text> reader = format.getRecordReader(split, job,
-                                                 voidReporter);
-    Text key = reader.createKey();
-    Text value = reader.createValue();
-    while (reader.next(key, value)) {
-      result.add(value);
-      value = (Text) reader.createValue();
+    RecordReader<Text, Text> reader = null;
+
+    try {
+      reader = format.getRecordReader(split, job, voidReporter);
+      Text key = reader.createKey();
+      Text value = reader.createValue();
+      while (reader.next(key, value)) {
+        result.add(value);
+        value = (Text) reader.createValue();
+      }
+
+      return result;
+    } finally {
+      if (reader != null) {
+        reader.close();
+      }
     }
-    return result;
   }
   
   /**
