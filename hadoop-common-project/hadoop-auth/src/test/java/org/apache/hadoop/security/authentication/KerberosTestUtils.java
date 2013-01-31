@@ -13,13 +13,15 @@
  */
 package org.apache.hadoop.security.authentication;
 
-import com.sun.security.auth.module.Krb5LoginModule;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
+
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
+
 import java.io.File;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
@@ -88,7 +90,7 @@ public class KerberosTestUtils {
       options.put("debug", "true");
 
       return new AppConfigurationEntry[]{
-        new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+        new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
                                   AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
                                   options),};
     }

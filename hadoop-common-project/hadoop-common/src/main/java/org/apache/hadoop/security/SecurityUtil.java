@@ -17,6 +17,10 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -48,9 +52,6 @@ import com.google.common.annotations.VisibleForTesting;
 //this will need to be replaced someday when there is a suitable replacement
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
-import sun.security.jgss.krb5.Krb5Util;
-import sun.security.krb5.Credentials;
-import sun.security.krb5.PrincipalName;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -154,12 +155,41 @@ public class SecurityUtil {
     String serviceName = "host/" + remoteHost.getHost();
     if (LOG.isDebugEnabled())
       LOG.debug("Fetching service ticket for host at: " + serviceName);
-    Credentials serviceCred = null;
+    Object serviceCred = null;
+    Method credsToTicketMeth;
+    Class<?> krb5utilClass;
     try {
-      PrincipalName principal = new PrincipalName(serviceName,
-          PrincipalName.KRB_NT_SRV_HST);
-      serviceCred = Credentials.acquireServiceCreds(principal
-          .toString(), Krb5Util.ticketToCreds(getTgtFromSubject()));
+      Class<?> principalClass;
+      Class<?> credentialsClass;
+      
+      if (System.getProperty("java.vendor").contains("IBM")) {
+        principalClass = Class.forName("com.ibm.security.krb5.PrincipalName");
+        
+        credentialsClass = Class.forName("com.ibm.security.krb5.Credentials");
+        krb5utilClass = Class.forName("com.ibm.security.jgss.mech.krb5");
+      } else {
+        principalClass = Class.forName("sun.security.krb5.PrincipalName");
+        credentialsClass = Class.forName("sun.security.krb5.Credentials");
+        krb5utilClass = Class.forName("sun.security.jgss.krb5");
+      }
+      @SuppressWarnings("rawtypes")
+      Constructor principalConstructor = principalClass.getConstructor(String.class, 
+          int.class);
+      Field KRB_NT_SRV_HST = principalClass.getDeclaredField("KRB_NT_SRV_HST");
+      Method acquireServiceCredsMeth = 
+          credentialsClass.getDeclaredMethod("acquireServiceCreds", 
+              String.class, credentialsClass);
+      Method ticketToCredsMeth = krb5utilClass.getDeclaredMethod("ticketToCreds", 
+          KerberosTicket.class);
+      credsToTicketMeth = krb5utilClass.getDeclaredMethod("credsToTicket", 
+          credentialsClass);
+      
+      Object principal = principalConstructor.newInstance(serviceName,
+          KRB_NT_SRV_HST.get(principalClass));
+      
+      serviceCred = acquireServiceCredsMeth.invoke(credentialsClass, 
+          principal.toString(), 
+          ticketToCredsMeth.invoke(krb5utilClass, getTgtFromSubject()));
     } catch (Exception e) {
       throw new IOException("Can't get service ticket for: "
           + serviceName, e);
@@ -167,8 +197,13 @@ public class SecurityUtil {
     if (serviceCred == null) {
       throw new IOException("Can't get service ticket for " + serviceName);
     }
-    Subject.getSubject(AccessController.getContext()).getPrivateCredentials()
-        .add(Krb5Util.credsToTicket(serviceCred));
+    try {
+      Subject.getSubject(AccessController.getContext()).getPrivateCredentials()
+          .add(credsToTicketMeth.invoke(krb5utilClass, serviceCred));
+    } catch (Exception e) {
+      throw new IOException("Can't get service ticket for: "
+          + serviceName, e);
+    }
   }
   
   /**
