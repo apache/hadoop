@@ -55,6 +55,9 @@ public enum Errno {
   EPIPE,
   EDOM,
   ERANGE,
+  ELOOP,
+  ENAMETOOLONG,
+  ENOTEMPTY,
 
   UNKNOWN;
 }

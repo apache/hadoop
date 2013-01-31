@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -398,13 +399,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final File dstfile = new File(destdir, b.getBlockName());
     final File srcmeta = FsDatasetUtil.getMetaFile(srcfile, b.getGenerationStamp());
     final File dstmeta = FsDatasetUtil.getMetaFile(dstfile, b.getGenerationStamp());
-    if (!srcmeta.renameTo(dstmeta)) {
+    try {
+      NativeIO.renameTo(srcmeta, dstmeta);
+    } catch (IOException e) {
       throw new IOException("Failed to move meta file for " + b
-          + " from " + srcmeta + " to " + dstmeta);
+          + " from " + srcmeta + " to " + dstmeta, e);
     }
-    if (!srcfile.renameTo(dstfile)) {
+    try {
+      NativeIO.renameTo(srcfile, dstfile);
+    } catch (IOException e) {
       throw new IOException("Failed to move block file for " + b
-          + " from " + srcfile + " to " + dstfile.getAbsolutePath());
+          + " from " + srcfile + " to " + dstfile.getAbsolutePath(), e);
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("addBlock: Moved " + srcmeta + " to " + dstmeta
@@ -531,10 +536,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Renaming " + oldmeta + " to " + newmeta);
     }
-    if (!oldmeta.renameTo(newmeta)) {
+    try {
+      NativeIO.renameTo(oldmeta, newmeta);
+    } catch (IOException e) {
       throw new IOException("Block " + replicaInfo + " reopen failed. " +
                             " Unable to move meta file  " + oldmeta +
-                            " to rbw dir " + newmeta);
+                            " to rbw dir " + newmeta, e);
     }
 
     // rename block file to rbw directory
@@ -542,14 +549,18 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       LOG.debug("Renaming " + blkfile + " to " + newBlkFile
           + ", file length=" + blkfile.length());
     }
-    if (!blkfile.renameTo(newBlkFile)) {
-      if (!newmeta.renameTo(oldmeta)) {  // restore the meta file
+    try {
+      NativeIO.renameTo(blkfile, newBlkFile);
+    } catch (IOException e) {
+      try {
+        NativeIO.renameTo(newmeta, oldmeta);
+      } catch (IOException ex) {
         LOG.warn("Cannot move meta file " + newmeta + 
-            "back to the finalized directory " + oldmeta);
+            "back to the finalized directory " + oldmeta, ex);
       }
       throw new IOException("Block " + replicaInfo + " reopen failed. " +
                               " Unable to move block file " + blkfile +
-                              " to rbw dir " + newBlkFile);
+                              " to rbw dir " + newBlkFile, e);
     }
     
     // Replace finalized replica by a RBW replica in replicas map
@@ -656,11 +667,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Renaming " + oldmeta + " to " + newmeta);
     }
-    if (!oldmeta.renameTo(newmeta)) {
+    try {
+      NativeIO.renameTo(oldmeta, newmeta);
+    } catch (IOException e) {
       replicaInfo.setGenerationStamp(oldGS); // restore old GS
       throw new IOException("Block " + replicaInfo + " reopen failed. " +
                             " Unable to move meta file  " + oldmeta +
-                            " to " + newmeta);
+                            " to " + newmeta, e);
     }
   }
 

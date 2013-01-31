@@ -24,11 +24,12 @@
 #include <grp.h>
 #include <jni.h>
 #include <pwd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "config.h"
@@ -502,6 +503,26 @@ ssize_t get_pw_buflen() {
   #endif
   return (ret > 512) ? ret : 512;
 }
+
+JNIEXPORT void JNICALL 
+Java_org_apache_hadoop_io_nativeio_NativeIO_renameTo0(JNIEnv *env, 
+jclass clazz, jstring jsrc, jstring jdst)
+{
+  const char *src = NULL, *dst = NULL;
+  
+  src = (*env)->GetStringUTFChars(env, jsrc, NULL);
+  if (!src) goto done; // exception was thrown
+  dst = (*env)->GetStringUTFChars(env, jdst, NULL);
+  if (!dst) goto done; // exception was thrown
+  if (rename(src, dst)) {
+    throw_ioe(env, errno);
+  }
+
+done:
+  if (src) (*env)->ReleaseStringUTFChars(env, jsrc, src);
+  if (dst) (*env)->ReleaseStringUTFChars(env, jdst, dst);
+}
+
 /**
  * vim: sw=2: ts=2: et:
  */
