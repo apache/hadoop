@@ -21,9 +21,12 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -624,14 +627,28 @@ public class FileUtil {
    * @throws IOException
    */
   public static void unTar(File inFile, File untarDir) throws IOException {
-    if (!untarDir.mkdirs()) {           
+    if (!untarDir.mkdirs()) {
       if (!untarDir.isDirectory()) {
         throw new IOException("Mkdirs failed to create " + untarDir);
       }
     }
 
-    StringBuilder untarCommand = new StringBuilder();
     boolean gzipped = inFile.toString().endsWith("gz");
+    if(Shell.WINDOWS) {
+      // Tar is not native to Windows. Use simple Java based implementation for 
+      // tests and simple tar archives
+      unTarUsingJava(inFile, untarDir, gzipped);
+    }
+    else {
+      // spawn tar utility to untar archive for full fledged unix behavior such 
+      // as resolving symlinks in tar archives
+      unTarUsingTar(inFile, untarDir, gzipped);
+    }
+  }
+  
+  private static void unTarUsingTar(File inFile, File untarDir,
+      boolean gzipped) throws IOException {
+    StringBuffer untarCommand = new StringBuffer();
     if (gzipped) {
       untarCommand.append(" gzip -dc '");
       untarCommand.append(FileUtil.makeShellPath(inFile));
@@ -656,7 +673,62 @@ public class FileUtil {
                   ". Tar process exited with exit code " + exitcode);
     }
   }
+  
+  private static void unTarUsingJava(File inFile, File untarDir,
+      boolean gzipped) throws IOException {
+    InputStream inputStream = null;
+    if (gzipped) {
+      inputStream = new BufferedInputStream(new GZIPInputStream(
+          new FileInputStream(inFile)));
+    } else {
+      inputStream = new BufferedInputStream(new FileInputStream(inFile));
+    }
 
+    TarArchiveInputStream tis = new TarArchiveInputStream(inputStream);
+
+    for (TarArchiveEntry entry = tis.getNextTarEntry(); entry != null;) {
+      unpackEntries(tis, entry, untarDir);
+      entry = tis.getNextTarEntry();
+    }
+  }
+  
+  private static void unpackEntries(TarArchiveInputStream tis,
+      TarArchiveEntry entry, File outputDir) throws IOException {
+    if (entry.isDirectory()) {
+      File subDir = new File(outputDir, entry.getName());
+      if (!subDir.mkdir() && !subDir.isDirectory()) {
+        throw new IOException("Mkdirs failed to create tar internal dir "
+            + outputDir);
+      }
+
+      for (TarArchiveEntry e : entry.getDirectoryEntries()) {
+        unpackEntries(tis, e, subDir);
+      }
+
+      return;
+    }
+
+    File outputFile = new File(outputDir, entry.getName());
+    if (!outputDir.exists()) {
+      if (!outputDir.mkdirs()) {
+        throw new IOException("Mkdirs failed to create tar internal dir "
+            + outputDir);
+      }
+    }
+
+    int count;
+    byte data[] = new byte[2048];
+    BufferedOutputStream outputStream = new BufferedOutputStream(
+        new FileOutputStream(outputFile));
+
+    while ((count = tis.read(data)) != -1) {
+      outputStream.write(data, 0, count);
+    }
+
+    outputStream.flush();
+    outputStream.close();
+  }
+  
   /**
    * Class for creating hardlinks.
    * Supports Unix, Cygwin, WindXP.
