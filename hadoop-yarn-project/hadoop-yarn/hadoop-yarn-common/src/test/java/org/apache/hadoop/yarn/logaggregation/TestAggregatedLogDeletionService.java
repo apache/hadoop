@@ -28,12 +28,19 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
 
 public class TestAggregatedLogDeletionService {
   
+  @Before
+  public void closeFilesystems() throws IOException {
+    // prevent the same mockfs instance from being reused due to FS cache
+    FileSystem.closeAll();
+  }
+
   @Test
   public void testDeletion() throws Exception {
     long now = System.currentTimeMillis();
@@ -121,6 +128,70 @@ public class TestAggregatedLogDeletionService {
     verify(mockFs).delete(app4Dir, true);
   }
 
+  @Test
+  public void testCheckInterval() throws Exception {
+    long RETENTION_SECS = 10 * 24 * 3600;
+    long now = System.currentTimeMillis();
+    long toDeleteTime = now - RETENTION_SECS*1000;
+
+    String root = "mockfs://foo/";
+    String remoteRootLogDir = root+"tmp/logs";
+    String suffix = "logs";
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
+    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "864000");
+    conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, "1");
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
+
+    // prevent us from picking up the same mockfs instance from another test
+    FileSystem.closeAll();
+    Path rootPath = new Path(root);
+    FileSystem rootFs = rootPath.getFileSystem(conf);
+    FileSystem mockFs = ((FilterFileSystem)rootFs).getRawFileSystem();
+
+    Path remoteRootLogPath = new Path(remoteRootLogDir);
+
+    Path userDir = new Path(remoteRootLogPath, "me");
+    FileStatus userDirStatus = new FileStatus(0, true, 0, 0, now, userDir);
+
+    when(mockFs.listStatus(remoteRootLogPath)).thenReturn(
+        new FileStatus[]{userDirStatus});
+
+    Path userLogDir = new Path(userDir, suffix);
+    Path app1Dir = new Path(userLogDir, "application_1_1");
+    FileStatus app1DirStatus = new FileStatus(0, true, 0, 0, now, app1Dir);
+
+    when(mockFs.listStatus(userLogDir)).thenReturn(
+        new FileStatus[]{app1DirStatus});
+
+    Path app1Log1 = new Path(app1Dir, "host1");
+    FileStatus app1Log1Status = new FileStatus(10, false, 1, 1, now, app1Log1);
+
+    when(mockFs.listStatus(app1Dir)).thenReturn(
+        new FileStatus[]{app1Log1Status});
+
+    AggregatedLogDeletionService deletionSvc =
+        new AggregatedLogDeletionService();
+    deletionSvc.init(conf);
+    deletionSvc.start();
+
+    verify(mockFs, timeout(10000).atLeast(4)).listStatus(any(Path.class));
+    verify(mockFs, never()).delete(app1Dir, true);
+
+    // modify the timestamp of the logs and verify it's picked up quickly
+    app1DirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, app1Dir);
+    app1Log1Status = new FileStatus(10, false, 1, 1, toDeleteTime, app1Log1);
+    when(mockFs.listStatus(userLogDir)).thenReturn(
+        new FileStatus[]{app1DirStatus});
+    when(mockFs.listStatus(app1Dir)).thenReturn(
+        new FileStatus[]{app1Log1Status});
+
+    verify(mockFs, timeout(10000)).delete(app1Dir, true);
+
+    deletionSvc.stop();
+  }
   
   static class MockFileSystem extends FilterFileSystem {
     MockFileSystem() {

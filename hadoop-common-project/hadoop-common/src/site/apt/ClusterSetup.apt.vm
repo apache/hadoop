@@ -325,6 +325,13 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | | How long to keep aggregation logs before deleting them. -1 disables. |
 | | | Be careful, set this too small and you will spam the name node. |
 *-------------------------+-------------------------+------------------------+
+| <<<yarn.log-aggregation.retain-check-interval-seconds>>> | | |
+| | <-1> | |
+| | | Time between checks for aggregated log retention. If set to 0 or a |
+| | | negative value then the value is computed as one-tenth of the |
+| | | aggregated log retention time. |
+| | | Be careful, set this too small and you will spam the name node. |
+*-------------------------+-------------------------+------------------------+
 
 
 

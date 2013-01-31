@@ -370,6 +370,15 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
   
   /**
+   * How long to wait between aggregated log retention checks. If set to
+   * a value <= 0 then the value is computed as one-tenth of the log retention
+   * setting. Be careful set this too small and you will spam the name node.
+   */
+  public static final String LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS =
+      YARN_PREFIX + "log-aggregation.retain-check-interval-seconds";
+  public static final long DEFAULT_LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS = -1;
+
+  /**
    * Number of seconds to retain logs on the NodeManager. Only applicable if Log
    * aggregation is disabled
    */
