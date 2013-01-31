@@ -643,8 +643,6 @@ public class FileUtil {
     untarCommand.append("cd '");
     untarCommand.append(FileUtil.makeShellPath(untarDir)); 
     untarCommand.append("' ; ");
-
-    // Force the archive path as local on Windows as it can have a colon
     untarCommand.append("tar -xf ");
 
     if (gzipped) {
