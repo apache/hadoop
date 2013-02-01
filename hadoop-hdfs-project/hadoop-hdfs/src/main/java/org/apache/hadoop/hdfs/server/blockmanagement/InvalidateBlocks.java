@@ -30,8 +30,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 
-/** 
+/**
  * Keeps a Collection for every named machine containing blocks
  * that have recently been invalidated and are thought to live
  * on the machine in question.
@@ -39,8 +40,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 @InterfaceAudience.Private
 class InvalidateBlocks {
   /** Mapping: StorageID -> Collection of Blocks */
-  private final Map<String, Collection<Block>> node2blocks =
-      new TreeMap<String, Collection<Block>>();
+  private final Map<String, LightWeightHashSet<Block>> node2blocks =
+      new TreeMap<String, LightWeightHashSet<Block>>();
   /** The total number of blocks in the map. */
   private long numBlocks = 0L;
 
@@ -67,9 +68,9 @@ class InvalidateBlocks {
    */
   synchronized void add(final Block block, final DatanodeInfo datanode,
       final boolean log) {
-    Collection<Block> set = node2blocks.get(datanode.getStorageID());
+    LightWeightHashSet<Block> set = node2blocks.get(datanode.getStorageID());
     if (set == null) {
-      set = new HashSet<Block>();
+      set = new LightWeightHashSet<Block>();
       node2blocks.put(datanode.getStorageID(), set);
     }
     if (set.add(block)) {
@@ -83,7 +84,7 @@ class InvalidateBlocks {
 
   /** Remove a storage from the invalidatesSet */
   synchronized void remove(final String storageID) {
-    final Collection<Block> blocks = node2blocks.remove(storageID);
+    final LightWeightHashSet<Block> blocks = node2blocks.remove(storageID);
     if (blocks != null) {
       numBlocks -= blocks.size();
     }
@@ -91,7 +92,7 @@ class InvalidateBlocks {
 
   /** Remove the block from the specified storage. */
   synchronized void remove(final String storageID, final Block block) {
-    final Collection<Block> v = node2blocks.get(storageID);
+    final LightWeightHashSet<Block> v = node2blocks.get(storageID);
     if (v != null && v.remove(block)) {
       numBlocks--;
       if (v.isEmpty()) {
@@ -109,8 +110,8 @@ class InvalidateBlocks {
       return;
     }
 
-    for(Map.Entry<String,Collection<Block>> entry : node2blocks.entrySet()) {
-      final Collection<Block> blocks = entry.getValue();
+    for(Map.Entry<String,LightWeightHashSet<Block>> entry : node2blocks.entrySet()) {
+      final LightWeightHashSet<Block> blocks = entry.getValue();
       if (blocks.size() > 0) {
         out.println(datanodeManager.getDatanode(entry.getKey()).getName() + blocks);
       }
@@ -143,21 +144,17 @@ class InvalidateBlocks {
 
   private synchronized List<Block> invalidateWork(
       final String storageId, final DatanodeDescriptor dn) {
-    final Collection<Block> set = node2blocks.get(storageId);
+    final LightWeightHashSet<Block> set = node2blocks.get(storageId);
     if (set == null) {
       return null;
     }
 
     // # blocks that can be sent in one message is limited
     final int limit = datanodeManager.blockInvalidateLimit;
-    final List<Block> toInvalidate = new ArrayList<Block>(limit);
-    final Iterator<Block> it = set.iterator();
-    for(int count = 0; count < limit && it.hasNext(); count++) {
-      toInvalidate.add(it.next());
-      it.remove();
-    }
+    final List<Block> toInvalidate = set.pollN(limit);
+
     // If we send everything in this message, remove this node entry
-    if (!it.hasNext()) {
+    if (set.isEmpty()) {
       remove(storageId);
     }
 

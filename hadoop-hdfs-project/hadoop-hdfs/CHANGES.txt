@@ -17,6 +17,10 @@ Release 0.23.7 - UNRELEASED
     HDFS-2495. Increase granularity of write operations in ReplicationMonitor
     thus reducing contention for write lock. (Tomasz Nykiel via hairong)
 
+    HDFS-2476. More CPU efficient data structure for under-replicated,
+               over-replicated, and invalidated blocks.
+               (Tomasz Nykiel via todd)
+
   BUG FIXES
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
