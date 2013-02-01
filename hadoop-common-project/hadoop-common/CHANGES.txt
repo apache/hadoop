@@ -59,6 +59,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
     should not state that secret is randomly generated. (tucu)
 
+    HADOOP-9231. Parametrize staging URL for the uniformity of
+    distributionManagement. (Konstantin Boudnik via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
