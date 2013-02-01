@@ -27,6 +27,10 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
     (Robert Parker via jeagles)
 
+    MAPREDUCE-3952. In MR2, when Total input paths to process == 1,
+    CombinefileInputFormat.getSplits() returns 0 split. (Bhallamudi 
+    Venkata Siva Kamesh via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

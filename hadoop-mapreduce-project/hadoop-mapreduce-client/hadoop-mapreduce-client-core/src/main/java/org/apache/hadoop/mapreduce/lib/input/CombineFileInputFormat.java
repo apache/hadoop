@@ -498,6 +498,7 @@ public abstract class CombineFileInputFormat<K, V>
       if (locations == null) {
         blocks = new OneBlockInfo[0];
       } else {
+
         if (!isSplitable) {
           // if the file is not splitable, just create the one block with
           // full file length
@@ -515,7 +516,7 @@ public abstract class CombineFileInputFormat<K, V>
             long left = locations[i].getLength();
             long myOffset = locations[i].getOffset();
             long myLength = 0;
-            while (left > 0) {
+            do {
               if (maxSize == 0) {
                 myLength = left;
               } else {
@@ -537,7 +538,7 @@ public abstract class CombineFileInputFormat<K, V>
               myOffset += myLength;
 
               blocksList.add(oneblock);
-            }
+            } while (left > 0);
           }
           blocks = blocksList.toArray(new OneBlockInfo[blocksList.size()]);
         }
