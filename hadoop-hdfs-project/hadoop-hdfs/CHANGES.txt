@@ -30,6 +30,10 @@ Release 0.23.7 - UNRELEASED
     HDFS-4444. Add space between total transaction time and number of
     transactions in FSEditLog#printStatistics. (Stephen Chu via tgraves)
 
+    HDFS-3119. Overreplicated block is not deleted even after the replication
+    factor is reduced after sync follwed by closing that file. (Ashish Singhi
+    via umamahesh)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

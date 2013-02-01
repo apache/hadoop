@@ -1727,10 +1727,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /** 
    * Check all blocks of a file. If any blocks are lower than their intended
-   * replication factor, then insert them into neededReplication
+   * replication factor, then insert them into neededReplication and if 
+   * the blocks are more than the intended replication factor then insert 
+   * them into invalidateBlocks.
    */
   private void checkReplicationFactor(INodeFile file) {
-    int numExpectedReplicas = file.getReplication();
+    short numExpectedReplicas = file.getReplication();
     Block[] pendingBlocks = file.getBlocks();
     int nrBlocks = pendingBlocks.length;
     for (int i = 0; i < nrBlocks; i++) {

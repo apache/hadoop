@@ -2468,7 +2468,7 @@ public class BlockManager {
     }
   }
 
-  public void checkReplication(Block block, int numExpectedReplicas) {
+  public void checkReplication(Block block, short numExpectedReplicas) {
     // filter out containingNodes that are marked for decommission.
     NumberReplicas number = countNodes(block);
     if (isNeededReplication(block, numExpectedReplicas, number.liveReplicas())) { 
@@ -2476,6 +2476,10 @@ public class BlockManager {
                              number.liveReplicas(),
                              number.decommissionedReplicas(),
                              numExpectedReplicas);
+      return;
+    }
+    if (number.liveReplicas() > numExpectedReplicas) {
+      processOverReplicatedBlock(block, numExpectedReplicas, null, null);
     }
   }
 
