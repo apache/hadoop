@@ -1297,6 +1297,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8849. FileUtil#fullyDelete should grant the target directories +rwx
     permissions (Ivan A. Veselovsky via bobby)
 
+    HADOOP-9067. provide test for LocalFileSystem.reportChecksumFailure
+    (Ivan A. Veselovsky via bobby) 
+
   OPTIMIZATIONS
 
   BUG FIXES
