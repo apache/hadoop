@@ -17,26 +17,32 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-
-import junit.framework.TestCase;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.junit.Test;
 
-public class TestReplicationPolicy extends TestCase {
+public class TestReplicationPolicy {
+  private Random random= DFSUtil.getRandom();
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 6;
   private static final Configuration CONF = new HdfsConfiguration();
@@ -90,6 +96,7 @@ public class TestReplicationPolicy extends TestCase {
    * the 1st is on dataNodes[0] and the 2nd is on a different rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget1() throws Exception {
     dataNodes[0].updateHeartbeat(
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 
@@ -150,6 +157,7 @@ public class TestReplicationPolicy extends TestCase {
    * should be placed on a third rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget2() throws Exception { 
     HashMap<Node, Node> excludedNodes;
     DatanodeDescriptor[] targets;
@@ -225,6 +233,7 @@ public class TestReplicationPolicy extends TestCase {
    * and the rest should be placed on the third rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget3() throws Exception {
     // make data node 0 to be not qualified to choose
     dataNodes[0].updateHeartbeat(
@@ -278,6 +287,7 @@ public class TestReplicationPolicy extends TestCase {
    * the 3rd replica should be placed on the same rack as the 1st replica,
    * @throws Exception
    */
+  @Test
   public void testChoooseTarget4() throws Exception {
     // make data node 0 & 1 to be not qualified to choose: not enough disk space
     for(int i=0; i<2; i++) {
@@ -325,6 +335,7 @@ public class TestReplicationPolicy extends TestCase {
    * the 3rd replica should be placed on the same rack as the 2nd replica,
    * @throws Exception
    */
+  @Test
   public void testChooseTarget5() throws Exception {
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(filename,
@@ -354,6 +365,7 @@ public class TestReplicationPolicy extends TestCase {
    * the 1st replica. The 3rd replica can be placed randomly.
    * @throws Exception
    */
+  @Test
   public void testRereplicate1() throws Exception {
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
     chosenNodes.add(dataNodes[0]);    
@@ -388,6 +400,7 @@ public class TestReplicationPolicy extends TestCase {
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
+  @Test
   public void testRereplicate2() throws Exception {
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
     chosenNodes.add(dataNodes[0]);
@@ -417,6 +430,7 @@ public class TestReplicationPolicy extends TestCase {
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
+  @Test
   public void testRereplicate3() throws Exception {
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
     chosenNodes.add(dataNodes[0]);
@@ -450,4 +464,122 @@ public class TestReplicationPolicy extends TestCase {
     assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]));
   }
   
+  /**
+   * Test for the high priority blocks are processed before the low priority
+   * blocks.
+   */
+  @Test(timeout = 60000)
+  public void testReplicationWithPriority() throws Exception {
+    int DFS_NAMENODE_REPLICATION_INTERVAL = 1000;
+    int HIGH_PRIORITY = 0;
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .format(true).build();
+    try {
+      cluster.waitActive();
+      final UnderReplicatedBlocks neededReplications = (UnderReplicatedBlocks) cluster
+          .getNameNode().getNamesystem().getBlockManager().neededReplications;
+      for (int i = 0; i < 100; i++) {
+        // Adding the blocks directly to normal priority
+        neededReplications.add(new Block(random.nextLong()), 2, 0, 3);
+      }
+      // Lets wait for the replication interval, to start process normal
+      // priority blocks
+      Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
+      
+      // Adding the block directly to high priority list
+      neededReplications.add(new Block(random.nextLong()), 1, 0, 3);
+      
+      // Lets wait for the replication interval
+      Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
+
+      // Check replication completed successfully. Need not wait till it process
+      // all the 100 normal blocks.
+      assertFalse("Not able to clear the element from high priority list",
+          neededReplications.iterator(HIGH_PRIORITY).hasNext());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Test for the ChooseUnderReplicatedBlocks are processed based on priority
+   */
+  @Test
+  public void testChooseUnderReplicatedBlocks() throws Exception {
+    UnderReplicatedBlocks underReplicatedBlocks = new UnderReplicatedBlocks();
+
+    for (int i = 0; i < 5; i++) {
+      // Adding QUEUE_HIGHEST_PRIORITY block
+      underReplicatedBlocks.add(new Block(random.nextLong()), 1, 0, 3);
+
+      // Adding QUEUE_VERY_UNDER_REPLICATED block
+      underReplicatedBlocks.add(new Block(random.nextLong()), 2, 0, 7);
+
+      // Adding QUEUE_UNDER_REPLICATED block
+      underReplicatedBlocks.add(new Block(random.nextLong()), 6, 0, 6);
+
+      // Adding QUEUE_REPLICAS_BADLY_DISTRIBUTED block
+      underReplicatedBlocks.add(new Block(random.nextLong()), 5, 0, 6);
+
+      // Adding QUEUE_WITH_CORRUPT_BLOCKS block
+      underReplicatedBlocks.add(new Block(random.nextLong()), 0, 0, 3);
+    }
+
+    // Choose 6 blocks from UnderReplicatedBlocks. Then it should pick 5 blocks
+    // from
+    // QUEUE_HIGHEST_PRIORITY and 1 block from QUEUE_VERY_UNDER_REPLICATED.
+    List<List<Block>> chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(6);
+    assertTheChosenBlocks(chosenBlocks, 5, 1, 0, 0, 0);
+
+    // Choose 10 blocks from UnderReplicatedBlocks. Then it should pick 4 blocks from
+    // QUEUE_VERY_UNDER_REPLICATED, 5 blocks from QUEUE_UNDER_REPLICATED and 1
+    // block from QUEUE_REPLICAS_BADLY_DISTRIBUTED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(10);
+    assertTheChosenBlocks(chosenBlocks, 0, 4, 5, 1, 0);
+
+    // Adding QUEUE_HIGHEST_PRIORITY
+    underReplicatedBlocks.add(new Block(random.nextLong()), 1, 0, 3);
+
+    // Choose 10 blocks from UnderReplicatedBlocks. Then it should pick 1 block from
+    // QUEUE_HIGHEST_PRIORITY, 4 blocks from QUEUE_REPLICAS_BADLY_DISTRIBUTED
+    // and 5 blocks from QUEUE_WITH_CORRUPT_BLOCKS.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(10);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 4, 5);
+
+    // Since it is reached to end of all lists,
+    // should start picking the blocks from start.
+    // Choose 7 blocks from UnderReplicatedBlocks. Then it should pick 6 blocks from
+    // QUEUE_HIGHEST_PRIORITY, 1 block from QUEUE_VERY_UNDER_REPLICATED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(7);
+    assertTheChosenBlocks(chosenBlocks, 6, 1, 0, 0, 0);
+  }
+  
+  /** asserts the chosen blocks with expected priority blocks */
+  private void assertTheChosenBlocks(
+      List<List<Block>> chosenBlocks, int firstPrioritySize,
+      int secondPrioritySize, int thirdPrioritySize, int fourthPrioritySize,
+      int fifthPrioritySize) {
+    assertEquals(
+        "Not returned the expected number of QUEUE_HIGHEST_PRIORITY blocks",
+        firstPrioritySize, chosenBlocks.get(
+            UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY).size());
+    assertEquals(
+        "Not returned the expected number of QUEUE_VERY_UNDER_REPLICATED blocks",
+        secondPrioritySize, chosenBlocks.get(
+            UnderReplicatedBlocks.QUEUE_VERY_UNDER_REPLICATED).size());
+    assertEquals(
+        "Not returned the expected number of QUEUE_UNDER_REPLICATED blocks",
+        thirdPrioritySize, chosenBlocks.get(
+            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED).size());
+    assertEquals(
+        "Not returned the expected number of QUEUE_REPLICAS_BADLY_DISTRIBUTED blocks",
+        fourthPrioritySize, chosenBlocks.get(
+            UnderReplicatedBlocks.QUEUE_REPLICAS_BADLY_DISTRIBUTED).size());
+    assertEquals(
+        "Not returned the expected number of QUEUE_WITH_CORRUPT_BLOCKS blocks",
+        fifthPrioritySize, chosenBlocks.get(
+            UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS).size());
+  }
 }
