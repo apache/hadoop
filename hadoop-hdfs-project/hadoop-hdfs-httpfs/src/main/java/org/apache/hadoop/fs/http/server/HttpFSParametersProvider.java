@@ -58,6 +58,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{DoAsParam.class});
     PARAMS_DEF.put(Operation.APPEND,
       new Class[]{DoAsParam.class, DataParam.class});
+    PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
     PARAMS_DEF.put(Operation.CREATE,
       new Class[]{DoAsParam.class, PermissionParam.class, OverwriteParam.class,
                   ReplicationParam.class, BlockSizeParam.class, DataParam.class});
@@ -385,6 +386,25 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public ReplicationParam() {
       super(NAME, (short) -1);
+    }
+  }
+
+  /**
+   * Class for concat sources parameter.
+   */
+  @InterfaceAudience.Private
+  public static class SourcesParam extends StringParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SOURCES_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public SourcesParam() {
+      super(NAME, null);
     }
   }
 

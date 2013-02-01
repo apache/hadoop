@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
@@ -202,6 +204,30 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       Assert.assertEquals(is.read(), 2);
       Assert.assertEquals(is.read(), -1);
       is.close();
+      fs.close();
+    }
+  }
+
+  private void testConcat() throws Exception {
+    Configuration config = getProxiedFSConf();
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(config);
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path1 = new Path("/test/foo.txt");
+      Path path2 = new Path("/test/bar.txt");
+      Path path3 = new Path("/test/derp.txt");
+      DFSTestUtil.createFile(fs, path1, 1024, (short) 3, 0);
+      DFSTestUtil.createFile(fs, path2, 1024, (short) 3, 0);
+      DFSTestUtil.createFile(fs, path3, 1024, (short) 3, 0);
+      fs.close();
+      fs = getHttpFSFileSystem();
+      fs.concat(path1, new Path[]{path2, path3});
+      fs.close();
+      fs = FileSystem.get(config);
+      Assert.assertTrue(fs.exists(path1));
+      Assert.assertFalse(fs.exists(path2));
+      Assert.assertFalse(fs.exists(path3));
       fs.close();
     }
   }
@@ -450,7 +476,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   }
 
   protected enum Operation {
-    GET, OPEN, CREATE, APPEND, RENAME, DELETE, LIST_STATUS, WORKING_DIRECTORY, MKDIRS,
+    GET, OPEN, CREATE, APPEND, CONCAT, RENAME, DELETE, LIST_STATUS, WORKING_DIRECTORY, MKDIRS,
     SET_TIMES, SET_PERMISSION, SET_OWNER, SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY
   }
 
@@ -468,6 +494,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       case APPEND:
         testAppend();
         break;
+      case CONCAT:
+        testConcat();
       case RENAME:
         testRename();
         break;

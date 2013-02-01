@@ -22,22 +22,23 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
-import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
-import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DoAsParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.LenParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ModifiedTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OffsetParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OwnerParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PermissionParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
-import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.Groups;
@@ -403,9 +404,9 @@ public class HttpFSServer {
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
-    String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case APPEND: {
+        String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
         if (!hasData) {
           response = Response.temporaryRedirect(
@@ -418,6 +419,18 @@ public class HttpFSServer {
           AUDIT_LOG.info("[{}]", path);
           response = Response.ok().type(MediaType.APPLICATION_JSON).build();
         }
+        break;
+      }
+      case CONCAT: {
+        System.out.println("HTTPFS SERVER CONCAT");
+        String sources = params.get(SourcesParam.NAME, SourcesParam.class);
+
+        FSOperations.FSConcat command =
+            new FSOperations.FSConcat(path, sources.split(","));
+        fsExecute(user, null, command);
+        AUDIT_LOG.info("[{}]", path);
+        System.out.println("SENT RESPONSE");
+        response = Response.ok().build();
         break;
       }
       default: {
