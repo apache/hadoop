@@ -499,6 +499,10 @@ public abstract class CombineFileInputFormat<K, V>
         blocks = new OneBlockInfo[0];
       } else {
 
+        if(locations.length == 0) {
+          locations = new BlockLocation[] { new BlockLocation() };
+        }
+
         if (!isSplitable) {
           // if the file is not splitable, just create the one block with
           // full file length
