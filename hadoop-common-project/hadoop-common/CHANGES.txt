@@ -56,6 +56,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8214. make hadoop script recognize a full set of deprecated commands
     (rvs via tgraves)
 
+    HADOOP-8857. hadoop.http.authentication.signature.secret.file docs 
+    should not state that secret is randomly generated. (tucu)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
