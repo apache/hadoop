@@ -26,6 +26,7 @@ import java.io.*;
 
 import static org.junit.Assert.*;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,8 +37,9 @@ public class TestLocalFileSystem {
   private static final String TEST_ROOT_DIR
     = System.getProperty("test.build.data","build/test/data") + "/work-dir/localfs";
 
+  private final File base = new File(TEST_ROOT_DIR);
   private Configuration conf;
-  private FileSystem fileSys;
+  private LocalFileSystem fileSys;
 
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
@@ -50,6 +52,13 @@ public class TestLocalFileSystem {
     conf = new Configuration();
     fileSys = FileSystem.getLocal(conf);
     fileSys.delete(new Path(TEST_ROOT_DIR), true);
+  }
+  
+  @After
+  public void after() throws IOException {
+    base.setWritable(true);
+    FileUtil.fullyDelete(base);
+    assertTrue(!base.exists());
   }
 
   /**
@@ -266,10 +275,83 @@ public class TestLocalFileSystem {
     LocalFileSystem fs = FileSystem.getLocal(conf);
     File colonFile = new File(TEST_ROOT_DIR, "foo:bar");
     colonFile.mkdirs();
-    colonFile.createNewFile();
     FileStatus[] stats = fs.listStatus(new Path(TEST_ROOT_DIR));
     assertEquals("Unexpected number of stats", 1, stats.length);
     assertEquals("Bad path from stat", colonFile.getAbsolutePath(),
         stats[0].getPath().toUri().getPath());
   }
+  
+  @Test
+  public void testReportChecksumFailure() throws IOException {
+    base.mkdirs();
+    assertTrue(base.exists() && base.isDirectory());
+    
+    final File dir1 = new File(base, "dir1");
+    final File dir2 = new File(dir1, "dir2");
+    dir2.mkdirs();
+    assertTrue(dir2.exists() && dir2.canWrite());
+    
+    final String dataFileName = "corruptedData";
+    final Path dataPath = new Path(new File(dir2, dataFileName).toURI());
+    final Path checksumPath = fileSys.getChecksumFile(dataPath);
+    final FSDataOutputStream fsdos = fileSys.create(dataPath);
+    try {
+      fsdos.writeUTF("foo");
+    } finally {
+      fsdos.close();
+    }
+    assertTrue(fileSys.pathToFile(dataPath).exists());
+    final long dataFileLength = fileSys.getFileStatus(dataPath).getLen();
+    assertTrue(dataFileLength > 0);
+    
+    // check the the checksum file is created and not empty:
+    assertTrue(fileSys.pathToFile(checksumPath).exists());
+    final long checksumFileLength = fileSys.getFileStatus(checksumPath).getLen();
+    assertTrue(checksumFileLength > 0);
+    
+    // this is a hack to force the #reportChecksumFailure() method to stop
+    // climbing up at the 'base' directory and use 'dir1/bad_files' as the 
+    // corrupted files storage:
+    base.setWritable(false);
+    
+    FSDataInputStream dataFsdis = fileSys.open(dataPath);
+    FSDataInputStream checksumFsdis = fileSys.open(checksumPath);
+    
+    boolean retryIsNecessary = fileSys.reportChecksumFailure(dataPath, dataFsdis, 0, checksumFsdis, 0);
+    assertTrue(!retryIsNecessary);
+    
+    // the data file should be moved:
+    assertTrue(!fileSys.pathToFile(dataPath).exists());
+    // the checksum file should be moved:
+    assertTrue(!fileSys.pathToFile(checksumPath).exists());
+    
+    // check that the files exist in the new location where they were moved:
+    File[] dir1files = dir1.listFiles(new FileFilter() {
+      @Override
+      public boolean accept(File pathname) {
+        return pathname != null && !pathname.getName().equals("dir2");
+      }
+    });
+    assertTrue(dir1files != null);
+    assertTrue(dir1files.length == 1);
+    File badFilesDir = dir1files[0];
+    
+    File[] badFiles = badFilesDir.listFiles();
+    assertTrue(badFiles != null);
+    assertTrue(badFiles.length == 2);
+    boolean dataFileFound = false;
+    boolean checksumFileFound = false;
+    for (File badFile: badFiles) {
+      if (badFile.getName().startsWith(dataFileName)) {
+        assertTrue(dataFileLength == badFile.length());
+        dataFileFound = true;
+      } else if (badFile.getName().contains(dataFileName + ".crc")) {
+        assertTrue(checksumFileLength == badFile.length());
+        checksumFileFound = true;
+      }
+    }
+    assertTrue(dataFileFound);
+    assertTrue(checksumFileFound);
+  }
+  
 }
