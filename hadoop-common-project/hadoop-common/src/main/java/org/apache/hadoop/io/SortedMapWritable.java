@@ -205,4 +205,27 @@ public class SortedMapWritable extends AbstractMapWritable
       e.getValue().write(out);
     }
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
+    if (obj instanceof SortedMapWritable) {
+      Map map = (Map) obj;
+      if (size() != map.size()) {
+        return false;
+      }
+
+      return entrySet().equals(map.entrySet());
+    }
+
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return instance.hashCode();
+  }
 }
