@@ -50,15 +50,16 @@ fi
 COMMAND=$1
 case $COMMAND in
   #hdfs commands
-  namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer|fetchdt)
+  namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer|fetchdt|oiv|dfsgroups)
     echo "DEPRECATED: Use of this script to execute hdfs command is deprecated." 1>&2
     echo "Instead use the hdfs command for it." 1>&2
     echo "" 1>&2
     #try to locate hdfs and if present, delegate to it.  
+    shift
     if [ -f "${HADOOP_HDFS_HOME}"/bin/hdfs ]; then
-      exec "${HADOOP_HDFS_HOME}"/bin/hdfs "$@"
+      exec "${HADOOP_HDFS_HOME}"/bin/hdfs ${COMMAND/dfsgroups/groups} "$@"
     elif [ -f "${HADOOP_PREFIX}"/bin/hdfs ]; then
-      exec "${HADOOP_PREFIX}"/bin/hdfs "$@"
+      exec "${HADOOP_PREFIX}"/bin/hdfs ${COMMAND/dfsgroups/groups} "$@"
     else
       echo "HADOOP_HDFS_HOME not found!"
       exit 1
@@ -66,15 +67,16 @@ case $COMMAND in
     ;;
 
   #mapred commands for backwards compatibility
-  pipes|job|queue)
+  pipes|job|queue|mrgroups|mradmin|jobtracker|tasktracker)
     echo "DEPRECATED: Use of this script to execute mapred command is deprecated." 1>&2
     echo "Instead use the mapred command for it." 1>&2
     echo "" 1>&2
     #try to locate mapred and if present, delegate to it.
+    shift
     if [ -f "${HADOOP_MAPRED_HOME}"/bin/mapred ]; then
-      exec "${HADOOP_MAPRED_HOME}"/bin/mapred "$@"
+      exec "${HADOOP_MAPRED_HOME}"/bin/mapred ${COMMAND/mrgroups/groups} "$@"
     elif [ -f "${HADOOP_PREFIX}"/bin/mapred ]; then
-      exec "${HADOOP_PREFIX}"/bin/mapred "$@"
+      exec "${HADOOP_PREFIX}"/bin/mapred ${COMMAND/mrgroups/groups} "$@"
     else
       echo "HADOOP_MAPRED_HOME not found!"
       exit 1
