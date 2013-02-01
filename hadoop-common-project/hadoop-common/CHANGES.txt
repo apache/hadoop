@@ -592,6 +592,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9221. Convert remaining xdocs to APT. (Andy Isaacson via atm)
 
     HADOOP-8981. TestMetricsSystemImpl fails on Windows. (Xuan Gong via suresh)
+    
+    HADOOP-9124. SortedMapWritable violates contract of Map interface for
+    equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
 
 Release 2.0.2-alpha - 2012-09-07 
 
