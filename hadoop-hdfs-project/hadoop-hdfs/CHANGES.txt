@@ -216,6 +216,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3598. WebHDFS support for file concat. (Plamen Jeliazkov via shv)
 
+    HDFS-4456. Add concat to HttpFS and WebHDFS REST API docs. (plamenj2003 via tucu)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
