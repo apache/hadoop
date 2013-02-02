@@ -215,6 +215,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4838. Add additional fields like Locality, Avataar to the
     JobHistory logs. (Zhijie Shen via sseth)
 
+    MAPREDUCE-4971. Minor extensibility enhancements to Counters & 
+    FileOutputFormat. (Arun C Murthy via sseth)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4893. Fixed MR ApplicationMaster to do optimal assignment of

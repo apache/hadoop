@@ -92,7 +92,7 @@ public class FileOutputCommitter extends OutputCommitter {
   }
 
   @Private
-  Path getTaskAttemptPath(TaskAttemptContext context) throws IOException {
+  public Path getTaskAttemptPath(TaskAttemptContext context) throws IOException {
     Path out = getOutputPath(context);
     return out == null ? null : getTaskAttemptPath(context, out);
   }
