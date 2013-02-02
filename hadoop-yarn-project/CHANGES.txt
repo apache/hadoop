@@ -213,6 +213,9 @@ Release 2.0.3-alpha - Unreleased
     does not have permission causes the client to wait forever.
     (shenhong via tomwhite)
 
+    YARN-372. Move InlineDispatcher from hadoop-yarn-server-resourcemanager to
+    hadoop-yarn-common (sseth via hitesh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
