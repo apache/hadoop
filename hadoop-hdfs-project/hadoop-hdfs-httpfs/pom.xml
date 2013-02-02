@@ -537,20 +537,20 @@
                     <delete dir="${project.build.directory}/tomcat.exp"/>
                     <mkdir dir="${project.build.directory}/tomcat.exp"/>
 
-                    <!-- This script preserves permissions and symlinks. -->
-                    <!-- Python requires resetting indentation to far left. -->
-                    <echo file="${project.build.directory}/tomcat-untar.py">
-from os.path import abspath
-import tarfile
+                    <!-- Using Unix script to preserve file permissions -->
+                    <echo file="${project.build.directory}/tomcat-untar.sh">
 
-src = abspath(r"${basedir}/downloads/apache-tomcat-${tomcat.version}.tar.gz")
-dest = abspath(r"${project.build.directory}/tomcat.exp")
-
-with tarfile.open(src, "r:gz") as tar:
-  tar.extractall(path=dest)
+                      which cygpath 2&gt; /dev/null
+                      if [ $? != 0 ]; then
+                      BUILD_DIR="${project.build.directory}"
+                      else
+                      BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+                      fi
+                      cd $BUILD_DIR/tomcat.exp
+                      gzip -cd ../../downloads/apache-tomcat-${tomcat.version}.tar.gz | tar xf -
                     </echo>
-                    <exec executable="python" dir="${project.build.directory}" failonerror="true">
-                      <arg line="tomcat-untar.py"/>
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./tomcat-untar.sh"/>
                     </exec>
 
                     <move file="${project.build.directory}/tomcat.exp/apache-tomcat-${tomcat.version}"
@@ -580,21 +580,20 @@ with tarfile.open(src, "r:gz") as tar:
                 </goals>
                 <configuration>
                   <target if="tar">
-                    <!-- This script preserves permissions and symlinks. -->
-                    <!-- Python requires resetting indentation to far left. -->
-                    <echo file="${project.build.directory}/dist-maketar.py">
-from os.path import abspath, join
-import tarfile
+                    <!-- Using Unix script to preserve symlinks -->
+                    <echo file="${project.build.directory}/dist-maketar.sh">
 
-base_name = "${project.artifactId}" + "-" + "${project.version}"
-dir_name = abspath(join(r"${project.build.directory}", base_name))
-tar_name = dir_name + ".tar.gz"
-
-with tarfile.open(tar_name, "w:gz") as tar:
-  tar.add(dir_name, arcname=base_name)
+                      which cygpath 2&gt; /dev/null
+                      if [ $? != 0 ]; then
+                      BUILD_DIR="${project.build.directory}"
+                      else
+                      BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+                      fi
+                      cd $BUILD_DIR
+                      tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                     </echo>
-                    <exec executable="python" dir="${project.build.directory}" failonerror="true">
-                      <arg value="dist-maketar.py" />
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./dist-maketar.sh"/>
                     </exec>
                   </target>
                 </configuration>
