@@ -71,7 +71,8 @@ public class INodeSymlink extends INode {
   }
   
   @Override
-  int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
+  int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+      final BlocksMapUpdateInfo collectedBlocks) {
     return 1;
   }
 

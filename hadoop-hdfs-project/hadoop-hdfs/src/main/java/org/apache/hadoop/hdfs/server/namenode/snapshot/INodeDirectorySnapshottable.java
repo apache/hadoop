@@ -273,37 +273,18 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    */
   Snapshot removeSnapshot(String snapshotName,
       BlocksMapUpdateInfo collectedBlocks) throws SnapshotException {
-    final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
-    if (indexOfOld < 0) {
+    final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
+    if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
           + " from path " + this.getFullPathName()
           + ": the snapshot does not exist.");
     } else {
-      Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
-      deleteDiffsForSnapshot(snapshot, this, collectedBlocks);
+      final Snapshot snapshot = snapshotsByNames.remove(i);
+      destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
       return snapshot;
     }
   }
   
-  /**
-   * Recursively delete DirectoryDiff associated with the given snapshot under a
-   * directory
-   */
-  private void deleteDiffsForSnapshot(Snapshot snapshot, INodeDirectory dir,
-      BlocksMapUpdateInfo collectedBlocks) {
-    if (dir instanceof INodeDirectoryWithSnapshot) {
-      INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
-      sdir.getDiffs().deleteSnapshotDiff(snapshot, collectedBlocks);
-    }
-    ReadOnlyList<INode> children = dir.getChildrenList(null);
-    for (INode child : children) {
-      if (child instanceof INodeDirectory) {
-        deleteDiffsForSnapshot(snapshot, (INodeDirectory) child,
-            collectedBlocks);
-      }
-    }
-  }
-
   /**
    * Compute the difference between two snapshots (or a snapshot and the current
    * directory) of the directory.

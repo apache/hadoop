@@ -219,7 +219,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         @Override
         public void process(INode inode) {
           if (inode != null && inode instanceof INodeFile) {
-            ((INodeFile)inode).collectSubtreeBlocksAndClear(collectedBlocks);
+            ((INodeFile)inode).destroySubtreeAndCollectBlocks(null,
+                collectedBlocks);
           }
         }
       });
@@ -601,5 +602,15 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       }
     }
     return dirNum;
+  }
+
+  @Override
+  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+      final BlocksMapUpdateInfo collectedBlocks) {
+    final int n = super.destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
+    if (snapshot != null) {
+      getDiffs().deleteSnapshotDiff(snapshot, collectedBlocks);
+    }
+    return n;
   }
 }

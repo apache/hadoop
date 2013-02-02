@@ -100,12 +100,16 @@ public class INodeFileWithSnapshot extends INodeFile
   }
 
   @Override
-  public int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
+  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+      final BlocksMapUpdateInfo collectedBlocks) {
+    if (snapshot != null) {
+      return 0;
+    }
     if (next == null || next == this) {
       // this is the only remaining inode.
-      return super.collectSubtreeBlocksAndClear(info);
+      return super.destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
     } else {
-      return Util.collectSubtreeBlocksAndClear(this, info);
+      return Util.collectSubtreeBlocksAndClear(this, collectedBlocks);
     }
   }
 }

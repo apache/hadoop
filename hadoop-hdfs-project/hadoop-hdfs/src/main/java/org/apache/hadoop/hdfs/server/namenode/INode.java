@@ -314,16 +314,19 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   /**
-   * Collect all the blocks in all children of this INode. Count and return the
-   * number of files in the sub tree. Also clears references since this INode is
-   * deleted.
+   * Destroy the subtree under this inode and collect the blocks from the
+   * descents for further block deletion/update. If snapshot is null, the
+   * subtree resides in the current state; otherwise, the subtree resides in the
+   * given snapshot. The method also clears the references in the deleted inodes
+   * and remove the corresponding snapshot information, if there is any.
    * 
-   * @param info
-   *          Containing all the blocks collected from the children of this
-   *          INode. These blocks later should be removed/updated in the
-   *          blocksMap.
+   * @param snapshot the snapshot to be deleted; null means the current state.
+   * @param collectedBlocks blocks collected from the descents for further block
+   *                        deletion/update will be added to the given map.
+   * @return the number of deleted files in the subtree.
    */
-  abstract int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info);
+  abstract int destroySubtreeAndCollectBlocks(Snapshot snapshot,
+      BlocksMapUpdateInfo collectedBlocks);
 
   /** Compute {@link ContentSummary}. */
   public final ContentSummary computeContentSummary() {

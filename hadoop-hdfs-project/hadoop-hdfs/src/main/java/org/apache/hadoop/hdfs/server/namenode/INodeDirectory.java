@@ -581,16 +581,16 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  int collectSubtreeBlocksAndClear(BlocksMapUpdateInfo info) {
-    int total = 1;
-    if (children == null) {
-      return total;
+  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+      final BlocksMapUpdateInfo collectedBlocks) {
+    int total = 0;
+    for (INode child : getChildrenList(snapshot)) {
+      total += child.destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
     }
-    for (INode child : children) {
-      total += child.collectSubtreeBlocksAndClear(info);
+    if (snapshot == null) {
+      parent = null;
+      children = null;
     }
-    parent = null;
-    children = null;
     return total;
   }
   

@@ -143,3 +143,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4361. When listing snapshottable directories, only return those
   where the user has permission to take snapshots.  (Jing Zhao via szetszwo)
+
+  HDFS-4464. Combine collectSubtreeBlocksAndClear with deleteDiffsForSnapshot
+  and rename it to destroySubtreeAndCollectBlocks.  (szetszwo)

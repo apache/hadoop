@@ -60,7 +60,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @return The SnapshotDiff containing the deleted snapshot. 
    *         Null if the snapshot with the given name does not exist. 
    */
-  final AbstractINodeDiff<N, D> deleteSnapshotDiff(Snapshot snapshot,
+  final D deleteSnapshotDiff(final Snapshot snapshot,
       final BlocksMapUpdateInfo collectedBlocks) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     if (snapshotIndex < 0) {
