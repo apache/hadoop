@@ -5636,7 +5636,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public boolean isAvoidingStaleDataNodesForWrite() {
     return this.blockManager.getDatanodeManager()
-        .isAvoidingStaleDataNodesForWrite();
+        .shouldAvoidStaleDataNodesForWrite();
   }
 
   /**

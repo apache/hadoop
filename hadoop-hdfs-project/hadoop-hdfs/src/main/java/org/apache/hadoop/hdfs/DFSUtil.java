@@ -134,7 +134,7 @@ public class DFSUtil {
   /**
    * Comparator for sorting DataNodeInfo[] based on decommissioned/stale states.
    * Decommissioned/stale nodes are moved to the end of the array on sorting
-   * with this compartor.
+   * with this comparator.
    */ 
   @InterfaceAudience.Private 
   public static class DecomStaleComparator implements Comparator<DatanodeInfo> {
@@ -144,7 +144,7 @@ public class DFSUtil {
      * Constructor of DecomStaleComparator
      * 
      * @param interval
-     *          The time invertal for marking datanodes as stale is passed from
+     *          The time interval for marking datanodes as stale is passed from
      *          outside, since the interval may be changed dynamically
      */
     public DecomStaleComparator(long interval) {
