@@ -230,6 +230,10 @@ public class Counters
   public static class Group implements CounterGroupBase<Counter> {
     private CounterGroupBase<Counter> realGroup;
     
+    protected Group() {
+      realGroup = null;
+    }
+    
     Group(GenericGroup group) {
       this.realGroup = group;
     }

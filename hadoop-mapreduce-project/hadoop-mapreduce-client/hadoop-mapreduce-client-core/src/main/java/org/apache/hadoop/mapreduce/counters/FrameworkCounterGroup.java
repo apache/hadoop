@@ -29,6 +29,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
@@ -66,7 +67,17 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
       key = ref;
       this.groupName = groupName;
     }
+    
+    @Private
+    public T getKey() {
+      return key;
+    }
 
+    @Private
+    public String getGroupName() {
+      return groupName;
+    }
+    
     @Override
     public String getName() {
       return key.name();
