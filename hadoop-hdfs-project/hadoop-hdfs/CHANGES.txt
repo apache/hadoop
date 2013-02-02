@@ -21,6 +21,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4451. hdfs balancer command returns exit code 1 on success instead
     of 0. (Joshua Blatt via suresh)
 
+    HDFS-4350. Make enabling of stale marking on read and write paths
+    independent. (Andrew Wang via suresh)
+
 
   NEW FEATURES
 
