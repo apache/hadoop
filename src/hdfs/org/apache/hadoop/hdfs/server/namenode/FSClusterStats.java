@@ -38,6 +38,6 @@ public interface FSClusterStats {
    * @return True if the cluster is currently avoiding using stale DataNodes for
    *         writing targets, and false otherwise.
    */
-  public boolean isAvoidingStaleDataNodesForWrite();
+  public boolean shouldAvoidStaleDataNodesForWrite();
 }
     

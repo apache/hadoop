@@ -141,7 +141,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     boolean avoidStaleNodes = (stats != null && stats
-        .isAvoidingStaleDataNodesForWrite());
+        .shouldAvoidStaleDataNodesForWrite());
     DatanodeDescriptor localNode = chooseTarget(numOfReplicas, writer,
         excludedNodes, blocksize, maxNodesPerRack, results, avoidStaleNodes);
       

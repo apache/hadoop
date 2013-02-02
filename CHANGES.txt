@@ -4,6 +4,9 @@ Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4350. Make enabling of stale marking on read and write paths
+    independent. (Andrew Wang via suresh)
+
   NEW FEATURES
 
     MAPREDUCE-4660. Update task placement policy for network topology

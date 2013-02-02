@@ -180,7 +180,7 @@ public class DFSUtil {
      * Constructor of StaleComparator
      * 
      * @param interval
-     *          The time invertal for marking datanodes as stale is passed from
+     *          The time interval for marking datanodes as stale is passed from
      *          outside, since the interval may be changed dynamically
      */
     public StaleComparator(long interval) {

@@ -66,7 +66,7 @@ public class TestGetBlocks extends TestCase {
    */
   public void testReadSelectNonStaleDatanode() throws Exception {
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     // DataNode will send out heartbeat every 15 minutes
     // In this way, when we have set a datanode as stale,
     // its heartbeat will not come to refresh its state

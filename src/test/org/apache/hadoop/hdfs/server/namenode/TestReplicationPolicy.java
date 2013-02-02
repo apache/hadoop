@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 
 import java.io.IOException;
@@ -71,18 +72,24 @@ public class TestReplicationPolicy extends TestCase {
     try {
       FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
       CONF.set("dfs.http.address", "0.0.0.0:0");
+      CONF.setBoolean(
+          DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
       NameNode.format(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {
       e.printStackTrace();
       throw (RuntimeException)new RuntimeException().initCause(e);
     }
+    // Override fsNamesystem to always avoid stale datanodes
     FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
     replicator = fsNamesystem.replicator;
     cluster = fsNamesystem.clusterMap;
+    ArrayList<DatanodeDescriptor> heartbeats = fsNamesystem.heartbeats;
     // construct network topology
     for(int i=0; i<NUM_OF_DATANODES; i++) {
+      dataNodes[i].isAlive = true;
       cluster.add(dataNodes[i]);
+      heartbeats.add(dataNodes[i]);
     }
     for(int i=0; i<NUM_OF_DATANODES; i++) {
       dataNodes[i].updateHeartbeat(
@@ -353,10 +360,10 @@ public class TestReplicationPolicy extends TestCase {
   public void testChooseTargetWithMoreThanAvailableNodesWithStaleness()
       throws Exception {
     try {
-      namenode.getNamesystem().setAvoidStaleDataNodesForWrite(true);
+      namenode.getNamesystem().setNumStaleNodes(NUM_OF_DATANODES);
       testChooseTargetWithMoreThanAvailableNodes();
     } finally {
-      namenode.getNamesystem().setAvoidStaleDataNodesForWrite(false);
+      namenode.getNamesystem().setNumStaleNodes(0);
     }
   }
   
@@ -424,10 +431,10 @@ public class TestReplicationPolicy extends TestCase {
   }
 
   public void testChooseTargetWithStaleNodes() throws Exception {
-    // Enable avoiding writing to stale DataNodes
-    namenode.getNamesystem().setAvoidStaleDataNodesForWrite(true);
     // Set dataNodes[0] as stale
     dataNodes[0].setLastUpdate(System.currentTimeMillis() - staleInterval - 1);
+    namenode.getNamesystem().heartbeatCheck();
+    assertTrue(namenode.getNamesystem().shouldAvoidStaleDataNodesForWrite());
 
     DatanodeDescriptor[] targets;
     // We set the dataNodes[0] as stale, thus should choose dataNodes[1] since
@@ -445,8 +452,8 @@ public class TestReplicationPolicy extends TestCase {
     assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
 
     // reset
-    namenode.getNamesystem().setAvoidStaleDataNodesForWrite(false);
     dataNodes[0].setLastUpdate(System.currentTimeMillis());
+    namenode.getNamesystem().heartbeatCheck();
   }
 
   /**
@@ -458,13 +465,12 @@ public class TestReplicationPolicy extends TestCase {
    * @throws Exception
    */
   public void testChooseTargetWithHalfStaleNodes() throws Exception {
-    // Enable stale datanodes checking
-    namenode.getNamesystem().setAvoidStaleDataNodesForWrite(true);
     // Set dataNodes[0], dataNodes[1], and dataNodes[2] as stale
     for (int i = 0; i < 3; i++) {
       dataNodes[i]
           .setLastUpdate(System.currentTimeMillis() - staleInterval - 1);
     }
+    namenode.getNamesystem().heartbeatCheck();
 
     DatanodeDescriptor[] targets;
     // We set the datanode[0~2] as stale, thus should not choose them
@@ -490,11 +496,11 @@ public class TestReplicationPolicy extends TestCase {
     assertTrue(containsWithinRange(dataNodes[5], targets, 0, 3));
 
     // reset
-    namenode.getNamesystem().setAvoidStaleDataNodesForWrite(false);
     for (int i = 0; i < dataNodes.length; i++) {
       dataNodes[i].setLastUpdate(System.currentTimeMillis());
     }
-  }   
+    namenode.getNamesystem().heartbeatCheck();
+  }
   
   /**
    * This testcase tests re-replication, when dataNodes[0] is already chosen.
@@ -601,7 +607,8 @@ public class TestReplicationPolicy extends TestCase {
   
   public void testChooseTargetWithMoreThanHalfStaleNodes() throws Exception {
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY, true);
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
     // DataNode will send out heartbeat every 15 minutes
@@ -640,7 +647,7 @@ public class TestReplicationPolicy extends TestCase {
           .getNumStaleNodes();
       assertEquals(numStaleNodes, 2);
       assertTrue(miniCluster.getNameNode().getNamesystem()
-          .isAvoidingStaleDataNodesForWrite());
+          .shouldAvoidStaleDataNodesForWrite());
       // Check metrics
       assertGauge("StaleDataNodes", numStaleNodes, miniCluster.getNameNode()
           .getNamesystem());
@@ -670,7 +677,7 @@ public class TestReplicationPolicy extends TestCase {
       // According to our strategy, stale datanodes will be included for writing
       // to avoid hotspots
       assertFalse(miniCluster.getNameNode().getNamesystem()
-          .isAvoidingStaleDataNodesForWrite());
+          .shouldAvoidStaleDataNodesForWrite());
       // Check metrics
       assertGauge("StaleDataNodes", numStaleNodes, miniCluster.getNameNode()
           .getNamesystem());
@@ -693,7 +700,7 @@ public class TestReplicationPolicy extends TestCase {
           .getNumStaleNodes();
       assertEquals(numStaleNodes, 2);
       assertTrue(miniCluster.getNameNode().getNamesystem()
-          .isAvoidingStaleDataNodesForWrite());
+          .shouldAvoidStaleDataNodesForWrite());
       // Check metrics
       assertGauge("StaleDataNodes", numStaleNodes, miniCluster.getNameNode()
           .getNamesystem());
