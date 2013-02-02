@@ -192,6 +192,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
 
+    YARN-372. Move InlineDispatcher from hadoop-yarn-server-resourcemanager to
+    hadoop-yarn-common (sseth via hitesh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
     YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
