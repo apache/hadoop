@@ -31,6 +31,9 @@ import java.util.TreeMap;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
@@ -65,7 +68,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    * A class describing the difference between snapshots of a snapshottable
    * directory.
    */
-  public static class SnapshotDiffReport {
+  public static class SnapshotDiffInfo {
     public static final Comparator<INode> INODE_COMPARATOR = 
         new Comparator<INode>() {
       @Override
@@ -92,7 +95,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
      */
     private final SortedMap<INodeDirectoryWithSnapshot, ChildrenDiff> diffMap;
     
-    public SnapshotDiffReport(INodeDirectorySnapshottable snapshotRoot,
+    public SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot,
         Snapshot start, Snapshot end) {
       this.snapshotRoot = snapshotRoot;
       this.from = start;
@@ -106,28 +109,37 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       diffMap.put(dir, diff);
     }
     
-    /**
-     * dump the diff
+    /** 
+     * Get the name of the given snapshot. 
+     * @param s The given snapshot.
+     * @return The name of the snapshot, or an empty string if {@code s} is null
      */
-    public String dump() {
-      StringBuilder strBuffer = new StringBuilder();
-      String fromStr = from == null ? "current directory" : "snapshot "
-          + from.getRoot().getLocalName();
-      String toStr = to == null ? "current directory" : "snapshot "
-          + to.getRoot().getLocalName();
-      strBuffer.append("Diffence between snapshot " + fromStr + " and " + toStr
-          + " under directory " + snapshotRoot.getFullPathName() + ":\n");
-      
-      if (!diffMap.isEmpty()) {
-        for (Map.Entry<INodeDirectoryWithSnapshot, ChildrenDiff> entry : diffMap
-            .entrySet()) {
-          strBuffer.append("M\t" + entry.getKey().getFullPathName() + "\n");
-          entry.getValue().printDiff(strBuffer, entry.getKey(),
-              from == null || 
-              (to != null && Snapshot.ID_COMPARATOR.compare(from, to) > 0));
-        }
+    private static String getSnapshotName(Snapshot s) {
+      return s != null ? s.getRoot().getLocalName() : "";
+    }
+    
+    /** @return True if {@link #from} is earlier than {@link #to} */
+    private boolean isFromEarlier() {
+      return to == null
+          || (from != null && Snapshot.ID_COMPARATOR.compare(from, to) < 0);
+    }
+    
+    /**
+     * Generate a {@link SnapshotDiffReport} based on detailed diff information.
+     * @return A {@link SnapshotDiffReport} describing the difference
+     */
+    public SnapshotDiffReport generateReport() {
+      List<DiffReportEntry> diffList = new ArrayList<DiffReportEntry>();
+      for (Map.Entry<INodeDirectoryWithSnapshot, ChildrenDiff> entry : diffMap
+          .entrySet()) {
+        diffList.add(new DiffReportEntry(DiffType.MODIFY, entry.getKey()
+            .getFullPathName()));
+        List<DiffReportEntry> subList = entry.getValue().generateReport(
+            entry.getKey(), isFromEarlier());
+        diffList.addAll(subList);
       }
-      return strBuffer.toString();
+      return new SnapshotDiffReport(snapshotRoot.getFullPathName(),
+          getSnapshotName(from), getSnapshotName(to), diffList);
     }
   }
 
@@ -297,11 +309,11 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    *           point, or if endSnapshotName is not null but cannot be identified
    *           as a previous snapshot.
    */
-  SnapshotDiffReport computeDiff(final String from, final String to)
+  SnapshotDiffInfo computeDiff(final String from, final String to)
       throws SnapshotException {
     Snapshot fromSnapshot = getSnapshotByName(from);
     Snapshot toSnapshot = getSnapshotByName(to); 
-    SnapshotDiffReport diffs = new SnapshotDiffReport(this, fromSnapshot,
+    SnapshotDiffInfo diffs = new SnapshotDiffInfo(this, fromSnapshot,
         toSnapshot);
     computeDiffInDir(this, diffs);
     return diffs;
@@ -336,7 +348,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    * @param diffReport data structure used to store the diff.
    */
   private void computeDiffInDir(INodeDirectory dir,
-      SnapshotDiffReport diffReport) {
+      SnapshotDiffInfo diffReport) {
     ChildrenDiff diff = new ChildrenDiff();
     if (dir instanceof INodeDirectoryWithSnapshot) {
       boolean change = ((INodeDirectoryWithSnapshot) dir)

@@ -28,6 +28,8 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -119,56 +121,53 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     /**
-     * Print out the content of the Diff. In general, "M"/"+"/"-" are used to 
-     * represent files/directories that were modified, created, and deleted, 
-     * respectively.
-     * 
-     * @param str A StringBuilder used to storing the description of the Diff.
-     * @param parent The directory that the Diff is about. Used to get the full 
-     *               path of the INodes contained in the Diff.             
+     * Interpret the diff and generate a list of {@link DiffReportEntry}.
+     * @param parent The directory that the diff belongs to.
+     * @param fromEarlier True indicates {@code diff=later-earlier}, 
+     *                            False indicates {@code diff=earlier-later}
+     * @return A list of {@link DiffReportEntry} as the diff report.
      */
-    public void printDiff(StringBuilder str, INodeDirectoryWithSnapshot parent,
-        boolean reverse) {
-      final String mStr = "M\t";
-      final String cStr = reverse ? "-\t" : "+\t";
-      final String dStr = reverse ? "+\t" : "-\t";
-      StringBuilder cBuffer = new StringBuilder();
-      StringBuilder dBuffer = new StringBuilder();
-      StringBuilder mBuffer = new StringBuilder();
-      int c = 0;
-      int d = 0;
+    public List<DiffReportEntry> generateReport(
+        INodeDirectoryWithSnapshot parent, boolean fromEarlier) {
+      List<DiffReportEntry> mList = new ArrayList<DiffReportEntry>();
+      List<DiffReportEntry> cList = new ArrayList<DiffReportEntry>();
+      List<DiffReportEntry> dList = new ArrayList<DiffReportEntry>();
+      int c = 0, d = 0;
       List<INode> created = getCreatedList();
       List<INode> deleted = getDeletedList();
       for (; c < created.size() && d < deleted.size(); ) {
         INode cnode = created.get(c);
         INode dnode = deleted.get(d);
         if (cnode.equals(dnode)) {
-          mBuffer.append(mStr + parent.getFullPathName() + Path.SEPARATOR
-              + cnode.getLocalName() + "\n");
+          mList.add(new DiffReportEntry(DiffType.MODIFY, parent
+              .getFullPathName() + Path.SEPARATOR + cnode.getLocalName()));
           c++;
           d++;
         } else if (cnode.compareTo(dnode.getLocalNameBytes()) < 0) {
-          cBuffer.append(cStr + parent.getFullPathName() + Path.SEPARATOR
-              + cnode.getLocalName() + "\n");
+          cList.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
+              : DiffType.DELETE, parent.getFullPathName() + Path.SEPARATOR
+              + cnode.getLocalName()));
           c++;
         } else {
-          dBuffer.append(dStr + parent.getFullPathName() + Path.SEPARATOR
-              + dnode.getLocalName() + "\n");
+          dList.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
+              : DiffType.CREATE, parent.getFullPathName() + Path.SEPARATOR
+              + dnode.getLocalName()));
           d++;
         }
-      }   
-      for (; d < deleted.size(); d++) {
-        dBuffer.append(dStr + parent.getFullPathName() + Path.SEPARATOR
-            + deleted.get(d).getLocalName() + "\n");
-      }    
-      for (; c < created.size(); c++) {
-        cBuffer.append(cStr + parent.getFullPathName() + Path.SEPARATOR
-            + created.get(c).getLocalName() + "\n");
       }
-      
-      str.append(cBuffer);
-      str.append(dBuffer);
-      str.append(mBuffer);
+      for (; d < deleted.size(); d++) {
+        dList.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
+            : DiffType.CREATE, parent.getFullPathName() + Path.SEPARATOR
+            + deleted.get(d).getLocalName()));
+      }
+      for (; c < created.size(); c++) {
+        cList.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
+            : DiffType.DELETE, parent.getFullPathName() + Path.SEPARATOR
+            + created.get(c).getLocalName()));
+      }
+      cList.addAll(dList);
+      cList.addAll(mList);
+      return cList;
     }
   }
   
@@ -322,7 +321,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   /** A list of directory diffs. */
-  class DirectoryDiffList extends AbstractINodeDiffList<INodeDirectory, DirectoryDiff> {
+  class DirectoryDiffList extends
+      AbstractINodeDiffList<INodeDirectory, DirectoryDiff> {
     @Override
     INodeDirectoryWithSnapshot getCurrentINode() {
       return INodeDirectoryWithSnapshot.this;
@@ -530,7 +530,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     return removed;
   }
-
+  
   @Override
   public ReadOnlyList<INode> getChildrenList(Snapshot snapshot) {
     final DirectoryDiff diff = diffs.getDiff(snapshot);

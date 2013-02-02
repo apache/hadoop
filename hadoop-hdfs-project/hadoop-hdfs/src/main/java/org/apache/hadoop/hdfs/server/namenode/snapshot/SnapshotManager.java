@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -249,7 +249,7 @@ public class SnapshotManager implements SnapshotStats {
    * Compute the difference between two snapshots of a directory, or between a
    * snapshot of the directory and its current tree.
    */
-  public SnapshotDiffReport diff(final String path, final String from,
+  public SnapshotDiffInfo diff(final String path, final String from,
       final String to) throws IOException {
     if ((from == null || from.isEmpty())
         && (to == null || to.isEmpty())) {

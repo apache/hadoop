@@ -70,6 +70,10 @@ abstract class AbstractINodeDiffList<N extends INode,
       if (snapshotIndex > 0) {
         // combine the to-be-removed diff with its previous diff
         final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
+        if (previous.snapshotINode == null) {
+          // TODO: add a new testcase for this
+          previous.snapshotINode = removed.snapshotINode;
+        }
         previous.combinePosteriorAndCollectBlocks(removed, collectedBlocks);
         previous.setPosterior(removed.getPosterior());
       }

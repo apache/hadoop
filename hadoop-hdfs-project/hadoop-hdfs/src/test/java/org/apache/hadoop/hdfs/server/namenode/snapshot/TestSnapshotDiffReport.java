@@ -17,16 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,10 +51,9 @@ public class TestSnapshotDiffReport {
   
   protected Configuration conf;
   protected MiniDFSCluster cluster;
-  protected FSNamesystem fsn;
   protected DistributedFileSystem hdfs;
   
-  private int snapshotNum = 0;
+  private HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
   @Before
   public void setUp() throws Exception {
@@ -56,8 +61,6 @@ public class TestSnapshotDiffReport {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .format(true).build();
     cluster.waitActive();
-
-    fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
   }
 
@@ -68,10 +71,20 @@ public class TestSnapshotDiffReport {
     }
   }
   
-  /** 
-   * Create/modify/delete files and create snapshots under a given directory. 
+  private String genSnapshotName(Path snapshotDir) {
+    int sNum = -1;
+    if (snapshotNumberMap.containsKey(snapshotDir)) {
+      sNum = snapshotNumberMap.get(snapshotDir);
+    }
+    snapshotNumberMap.put(snapshotDir, ++sNum);
+    return "s" + sNum;
+  }
+  
+  /**
+   * Create/modify/delete files under a given directory, also create snapshots
+   * of directories.
    */ 
-  private void modifyAndCreateSnapshot(Path modifyDir, Path snapshotDir)
+  private void modifyAndCreateSnapshot(Path modifyDir, Path[] snapshotDirs)
       throws Exception {
     Path file10 = new Path(modifyDir, "file10");
     Path file11 = new Path(modifyDir, "file11");
@@ -87,9 +100,11 @@ public class TestSnapshotDiffReport {
         seed);
     DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, (short) (REPLICATION - 1),
         seed);
-    // create snapshot s1
-    hdfs.allowSnapshot(snapshotDir.toString());
-    hdfs.createSnapshot(snapshotDir, "s" + snapshotNum++);
+    // create snapshot
+    for (Path snapshotDir : snapshotDirs) {
+      hdfs.allowSnapshot(snapshotDir.toString());
+      hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
+    }
     
     // delete file11
     hdfs.delete(file11, true);
@@ -102,8 +117,10 @@ public class TestSnapshotDiffReport {
     // create file15
     DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, seed);
     
-    // create snapshot s2
-    hdfs.createSnapshot(snapshotDir, "s" + snapshotNum++);
+    // create snapshot
+    for (Path snapshotDir : snapshotDirs) {
+      hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
+    }
     
     // create file11 again
     DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, seed);
@@ -116,83 +133,125 @@ public class TestSnapshotDiffReport {
     // modify file15
     hdfs.setReplication(file15, (short) (REPLICATION - 1));
     
-    // create snapshot s3 for dir
-    hdfs.createSnapshot(snapshotDir, "s" + snapshotNum++);
+    // create snapshot
+    for (Path snapshotDir : snapshotDirs) {
+      hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
+    }
     // modify file10
     hdfs.setReplication(file10, (short) (REPLICATION - 1));
   }
   
-  /**
-   * Test the functionality of
-   * {@link FSNamesystem#getSnapshotDiffReport(String, String, String)}.
-   * TODO: without the definision of a DiffReport class, this test temporarily 
-   * check the output string of {@link SnapshotDiffReport#dump()} 
-   */
+  /** check the correctness of the diff reports */
+  private void verifyDiffReport(Path dir, String from, String to,
+      DiffReportEntry... entries) throws IOException {
+    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(dir, from, to);
+    // reverse the order of from and to
+    SnapshotDiffReport inverseReport = hdfs
+        .getSnapshotDiffReport(dir, to, from);
+    System.out.println(report.toString());
+    System.out.println(inverseReport.toString() + "\n");
+    
+    assertEquals(entries.length, report.getDiffList().size());
+    assertEquals(entries.length, inverseReport.getDiffList().size());
+    
+    for (DiffReportEntry entry : entries) {
+      if (entry.getType() == DiffType.MODIFY) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(entry));
+      } else if (entry.getType() == DiffType.DELETE) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(
+            new DiffReportEntry(DiffType.CREATE, entry.getFullPath())));
+      } else if (entry.getType() == DiffType.CREATE) {
+        assertTrue(report.getDiffList().contains(entry));
+        assertTrue(inverseReport.getDiffList().contains(
+            new DiffReportEntry(DiffType.DELETE, entry.getFullPath())));
+      }
+    }
+  }
+  
+  /** Test the computation and representation of diff between snapshots */
   @Test
-  public void testDiff() throws Exception {
-    modifyAndCreateSnapshot(sub1, sub1);
-    modifyAndCreateSnapshot(new Path(sub1, "subsub1/subsubsub1"), sub1);
+  public void testDiffReport() throws Exception {
+    Path subsub1 = new Path(sub1, "subsub1");
+    Path subsubsub1 = new Path(subsub1, "subsubsub1");
+    hdfs.mkdirs(subsubsub1);
+    modifyAndCreateSnapshot(sub1, new Path[]{sub1, subsubsub1});
+    modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1, subsubsub1});
     
-    SnapshotDiffReport diffs = fsn.getSnapshotDiffReport(sub1.toString(), "s0", "s2");
-    String diffStr = diffs.dump();
-    System.out.println(diffStr);
+    try {
+      hdfs.getSnapshotDiffReport(subsub1, "s1", "s2");
+      fail("Expect exception when getting snapshot diff report: " + subsub1
+          + " is not a snapshottable directory.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Directory is not a snapshottable directory: " + subsub1, e);
+    }
+    
+    // diff between the same snapshot
+    SnapshotDiffReport report = hdfs.getSnapshotDiffReport(sub1, "s0", "s0");
+    System.out.println(report);
+    assertEquals(0, report.getDiffList().size());
+    
+    report = hdfs.getSnapshotDiffReport(sub1, "", "");
+    System.out.println(report);
+    assertEquals(0, report.getDiffList().size());
+    
+    report = hdfs.getSnapshotDiffReport(subsubsub1, "s0", "s2");
+    System.out.println(report);
+    assertEquals(0, report.getDiffList().size());
+    
+    verifyDiffReport(sub1, "s0", "s2", 
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1"),
+        new DiffReportEntry(DiffType.CREATE, "/TestSnapshot/sub1/file15"),
+        new DiffReportEntry(DiffType.DELETE, "/TestSnapshot/sub1/file12"),
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file11"),
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file13"));
 
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1"));
-    assertTrue(diffStr.contains("+\t/TestSnapshot/sub1/file15"));
-    assertTrue(diffStr.contains("-\t/TestSnapshot/sub1/file12"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file11"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file13"));
-    assertFalse(diffStr.contains("file14"));
-
-    diffs = fsn.getSnapshotDiffReport(sub1.toString(), "s0", "s5");
-    diffStr = diffs.dump();
-    System.out.println(diffStr);
+    verifyDiffReport(sub1, "s0", "s5", 
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1"),
+        new DiffReportEntry(DiffType.CREATE, "/TestSnapshot/sub1/file15"),
+        new DiffReportEntry(DiffType.DELETE, "/TestSnapshot/sub1/file12"),
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file10"),
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file11"),
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file13"),
+        new DiffReportEntry(DiffType.MODIFY,
+            "/TestSnapshot/sub1/subsub1/subsubsub1"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file10"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file11"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file13"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file15"));
     
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1"));
-    assertTrue(diffStr.contains("+\t/TestSnapshot/sub1/file15"));
-    assertTrue(diffStr.contains("+\t/TestSnapshot/sub1/subsub1"));
-    assertTrue(diffStr.contains("-\t/TestSnapshot/sub1/file12"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file10"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file11"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file13"));
-    assertFalse(diffStr.contains("file14"));
+    verifyDiffReport(sub1, "s2", "s5",
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1"),
+        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file10"),
+        new DiffReportEntry(DiffType.MODIFY,
+            "/TestSnapshot/sub1/subsub1/subsubsub1"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file10"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file11"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file13"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file15"));
     
-    diffs = fsn.getSnapshotDiffReport(sub1.toString(), "s0", "");
-    diffStr = diffs.dump();
-    System.out.println(diffStr);
-    
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1"));
-    assertTrue(diffStr.contains("+\t/TestSnapshot/sub1/file15"));
-    assertTrue(diffStr.contains("+\t/TestSnapshot/sub1/subsub1"));
-    assertTrue(diffStr.contains("-\t/TestSnapshot/sub1/file12"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file10"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file11"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file13"));
-    assertFalse(diffStr.contains("file14"));
-    
-    diffs = fsn.getSnapshotDiffReport(sub1.toString(), "s2", "s5");
-    diffStr = diffs.dump();
-    System.out.println(diffStr);
-    
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1"));
-    assertTrue(diffStr.contains("+\t/TestSnapshot/sub1/subsub1"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/file10"));
-    
-    diffs = fsn.getSnapshotDiffReport(sub1.toString(), "s3", "");
-    diffStr = diffs.dump();
-    System.out.println(diffStr);
-    
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1"));
-    assertTrue(diffStr.contains("M\t/TestSnapshot/sub1/subsub1/subsubsub1"));
-    assertTrue(diffStr
-        .contains("+\t/TestSnapshot/sub1/subsub1/subsubsub1/file15"));
-    assertTrue(diffStr
-        .contains("-\t/TestSnapshot/sub1/subsub1/subsubsub1/file12"));
-    assertTrue(diffStr
-        .contains("M\t/TestSnapshot/sub1/subsub1/subsubsub1/file10"));
-    assertTrue(diffStr
-        .contains("M\t/TestSnapshot/sub1/subsub1/subsubsub1/file11"));
-    assertTrue(diffStr
-        .contains("M\t/TestSnapshot/sub1/subsub1/subsubsub1/file13"));
+    verifyDiffReport(sub1, "s3", "",
+        new DiffReportEntry(DiffType.MODIFY,
+            "/TestSnapshot/sub1/subsub1/subsubsub1"),
+        new DiffReportEntry(DiffType.CREATE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file15"),
+        new DiffReportEntry(DiffType.DELETE,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file12"),
+        new DiffReportEntry(DiffType.MODIFY,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file10"),
+        new DiffReportEntry(DiffType.MODIFY,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file11"),
+        new DiffReportEntry(DiffType.MODIFY,
+            "/TestSnapshot/sub1/subsub1/subsubsub1/file13"));
   }
 }

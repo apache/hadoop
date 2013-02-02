@@ -146,3 +146,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4464. Combine collectSubtreeBlocksAndClear with deleteDiffsForSnapshot
   and rename it to destroySubtreeAndCollectBlocks.  (szetszwo)
+
+  HDFS-4414. Add support for getting snapshot diff from DistributedFileSystem.
+  (Jing Zhao via suresh)

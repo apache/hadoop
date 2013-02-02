@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.ipc.RemoteException;
@@ -310,6 +311,41 @@ public class TestSnapshotDeletion {
         file12_s1.toString());
     short blockReplicationFile12 = nodeFile12.getBlockReplication();
     assertEquals(REPLICATION - 1, blockReplicationFile12);
+  }
+  
+  /** Test deleting snapshots with modification on the metadata of directory */ 
+  @Test
+  public void testDeleteSnapshotWithDirModification() throws Exception {
+    Path file = new Path(sub1, "file");
+    DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, seed);
+    hdfs.setOwner(sub1, "user1", "group1");
+    
+    // create snapshot s1 for sub1, and change the metadata of sub1
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
+    hdfs.setOwner(sub1, "user2", "group2");
+    
+    // create snapshot s2 for sub1, but do not modify sub1 afterwards
+    hdfs.createSnapshot(sub1, "s2");
+    
+    // create snapshot s3 for sub1, and change the metadata of sub1
+    hdfs.createSnapshot(sub1, "s3");
+    hdfs.setOwner(sub1, "user3", "group3");
+    
+    // delete snapshot s3
+    hdfs.deleteSnapshot(sub1, "s3");
+    // check sub1's metadata in snapshot s2
+    FileStatus statusOfS2 = hdfs.getFileStatus(new Path(sub1,
+        HdfsConstants.DOT_SNAPSHOT_DIR + "/s2"));
+    assertEquals("user2", statusOfS2.getOwner());
+    assertEquals("group2", statusOfS2.getGroup());
+    
+    // delete snapshot s2
+    hdfs.deleteSnapshot(sub1, "s2");
+    // check sub1's metadata in snapshot s1
+    FileStatus statusOfS1 = hdfs.getFileStatus(new Path(sub1,
+        HdfsConstants.DOT_SNAPSHOT_DIR + "/s1"));
+    assertEquals("user1", statusOfS1.getOwner());
+    assertEquals("group1", statusOfS1.getGroup());
   }
   
 }

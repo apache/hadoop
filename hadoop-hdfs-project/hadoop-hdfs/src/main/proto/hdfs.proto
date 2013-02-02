@@ -228,6 +228,25 @@ message SnapshottableDirectoryListingProto {
 }
 
 /**
+ * Snapshot diff report entry
+ */
+message SnapshotDiffReportEntryProto {
+  required string fullpath = 1;
+  required string modificationLabel = 2;
+}
+
+/**
+ * Snapshot diff report
+ */
+message SnapshotDiffReportProto {
+  // full path of the directory where snapshots were taken
+  required string snapshotRoot = 1;
+  required string fromSnapshot = 2;
+  required string toSnapshot = 3;
+  repeated SnapshotDiffReportEntryProto diffReportEntries = 4;
+}
+
+/**
  * Common node information shared by all the nodes in the cluster
  */
 message StorageInfoProto {
