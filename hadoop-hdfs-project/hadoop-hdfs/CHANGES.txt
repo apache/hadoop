@@ -750,6 +750,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4452. getAdditionalBlock() can create multiple blocks if the client
     times out and retries. (shv)
 
+    HDFS-4445. All BKJM ledgers are not checked while tailing, So failover will fail.
+    (Vinay via umamahesh)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
