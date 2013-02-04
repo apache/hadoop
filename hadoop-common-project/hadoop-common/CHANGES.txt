@@ -599,6 +599,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9124. SortedMapWritable violates contract of Map interface for
     equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
 
+    HADOOP-9252. In StringUtils, humanReadableInt(..) has a race condition and
+    the synchronization of limitDecimalTo2(double) can be avoided.  (szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
