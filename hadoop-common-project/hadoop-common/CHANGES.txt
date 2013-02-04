@@ -135,6 +135,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9247. Parametrize Clover "generateXxx" properties to make them
     re-definable via -D in mvn calls. (Ivan A. Veselovsky via suresh)
 
+    HADOOP-9276. Allow BoundedByteArrayOutputStream to be resettable.
+    (Arun Murthy via hitesh)
+
   OPTIMIZATIONS
 
     HADOOP-8866. SampleQuantiles#query is O(N^2) instead of O(N). (Andrew Wang
