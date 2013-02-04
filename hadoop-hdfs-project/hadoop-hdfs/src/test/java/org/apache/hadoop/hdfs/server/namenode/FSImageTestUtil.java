@@ -506,7 +506,11 @@ public abstract class FSImageTestUtil {
       props.load(fis);
       IOUtils.closeStream(fis);
   
-      props.setProperty(key, value);
+      if (value == null || value.isEmpty()) {
+        props.remove(key);
+      } else {
+        props.setProperty(key, value);
+      }
       
       out = new FileOutputStream(versionFile);
       props.store(out, null);
