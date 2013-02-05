@@ -460,6 +460,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4404. Create file failure when the machine of first attempted NameNode
     is down. (Todd Lipcon via atm)
 
+    HDFS-4344. dfshealth.jsp throws NumberFormatException when
+    dfs.hosts/dfs.hosts.exclude includes port number. (Andy Isaacson via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

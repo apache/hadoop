@@ -944,7 +944,7 @@ public class DatanodeManager {
       port = DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT;
     } else {
       hostStr = hostLine.substring(0, idx);
-      port = Integer.valueOf(hostLine.substring(idx));
+      port = Integer.valueOf(hostLine.substring(idx+1));
     }
 
     if (InetAddresses.isInetAddress(hostStr)) {
