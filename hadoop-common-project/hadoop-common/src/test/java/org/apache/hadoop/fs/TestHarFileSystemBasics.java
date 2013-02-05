@@ -28,6 +28,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,8 +47,18 @@ public class TestHarFileSystemBasics {
 
   private static final String ROOT_PATH = System.getProperty("test.build.data",
       "build/test/data");
-  private static final Path rootPath = new Path(
-      new File(ROOT_PATH).getAbsolutePath() + "/localfs");
+  private static final Path rootPath;
+  static {
+    String root = new Path(new File(ROOT_PATH).getAbsolutePath(), "localfs")
+      .toUri().getPath();
+    // Strip drive specifier on Windows, which would make the HAR URI invalid and
+    // cause tests to fail.
+    if (Shell.WINDOWS) {
+      root = root.substring(root.indexOf(':') + 1);
+    }
+    rootPath = new Path(root);
+  }
+
   // NB: .har suffix is necessary
   private static final Path harPath = new Path(rootPath, "path1/path2/my.har");
 
