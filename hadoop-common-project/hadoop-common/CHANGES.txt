@@ -283,6 +283,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9252. In StringUtils, humanReadableInt(..) has a race condition and
     the synchronization of limitDecimalTo2(double) can be avoided.  (szetszwo)
 
+    HADOOP-9260. Hadoop version may be not correct when starting name node or
+    data node. (Chris Nauroth via jlowe)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
