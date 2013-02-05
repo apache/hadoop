@@ -42,6 +42,8 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
     (Arpit Agarwal via tgraves)
 
+    MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

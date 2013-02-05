@@ -126,7 +126,7 @@ namespace HadoopPipes {
     static const char lineSeparator = '\n';
 
     void writeBuffer(const string& buffer) {
-      fprintf(stream, quoteString(buffer, "\t\n").c_str());
+      fputs(quoteString(buffer, "\t\n").c_str(), stream);
     }
 
   public:
