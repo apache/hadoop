@@ -783,7 +783,7 @@ public abstract class Storage extends StorageInfo {
     props.setProperty("storageType", storageType.toString());
     props.setProperty("namespaceID", String.valueOf(namespaceID));
     // Set clusterID in version with federation support
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (versionSupportsFederation()) {
       props.setProperty("clusterID", clusterID);
     }
     props.setProperty("cTime", String.valueOf(cTime));

@@ -34,6 +34,9 @@ Release 0.23.7 - UNRELEASED
     factor is reduced after sync follwed by closing that file. (Ashish Singhi
     via umamahesh)
 
+    HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
+    pre-federation version of HDFS. (atm)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

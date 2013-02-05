@@ -22,6 +22,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -99,6 +101,10 @@ public class StorageInfo implements Writable {
     namespaceID = in.readInt();
     clusterID = WritableUtils.readString(in);
     cTime = in.readLong();
+  }
+
+  public boolean versionSupportsFederation() {
+    return LayoutVersion.supports(Feature.FEDERATION, layoutVersion);
   }
   
   public String toString() {
