@@ -23,22 +23,34 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.hadoop.net.StandardSocketFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestDFSClientFailover {
   
@@ -89,6 +101,63 @@ public class TestDFSClientFailover {
     assertTrue(fs2.exists(withPort));
 
     fs.close();
+  }
+  
+  /**
+   * Test that even a non-idempotent method will properly fail-over if the
+   * first IPC attempt times out trying to connect. Regression test for
+   * HDFS-4404. 
+   */
+  @Test
+  public void testFailoverOnConnectTimeout() throws Exception {
+    conf.setClass(CommonConfigurationKeysPublic.HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY,
+        InjectingSocketFactory.class, SocketFactory.class);
+    // Set up the InjectingSocketFactory to throw a ConnectTimeoutException
+    // when connecting to the first NN.
+    InjectingSocketFactory.portToInjectOn = cluster.getNameNodePort(0);
+
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    
+    // Make the second NN the active one.
+    cluster.shutdownNameNode(0);
+    cluster.transitionToActive(1);
+    
+    // Call a non-idempotent method, and ensure the failover of the call proceeds
+    // successfully.
+    IOUtils.closeStream(fs.create(TEST_FILE));
+  }
+  
+  private static class InjectingSocketFactory extends StandardSocketFactory {
+
+    static SocketFactory defaultFactory = SocketFactory.getDefault();
+
+    static int portToInjectOn;
+    
+    @Override
+    public Socket createSocket() throws IOException {
+      Socket spy = Mockito.spy(defaultFactory.createSocket());
+      // Simplify our spying job by not having to also spy on the channel
+      Mockito.doReturn(null).when(spy).getChannel();
+      // Throw a ConnectTimeoutException when connecting to our target "bad"
+      // host.
+      Mockito.doThrow(new ConnectTimeoutException("injected"))
+        .when(spy).connect(
+            Mockito.argThat(new MatchesPort()),
+            Mockito.anyInt());
+      return spy;
+    }
+
+    private class MatchesPort extends BaseMatcher<SocketAddress> {
+      @Override
+      public boolean matches(Object arg0) {
+        return ((InetSocketAddress)arg0).getPort() == portToInjectOn;
+      }
+
+      @Override
+      public void describeTo(Description desc) {
+        desc.appendText("matches port " + portToInjectOn);
+      }
+    }
   }
   
   /**

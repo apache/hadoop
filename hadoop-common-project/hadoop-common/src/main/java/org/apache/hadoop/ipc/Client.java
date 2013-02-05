@@ -68,6 +68,7 @@ import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcPayloadHeaderPro
 import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcPayloadOperationProto;
 import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcStatusProto;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
@@ -510,14 +511,14 @@ public class Client {
           }
           this.socket.setSoTimeout(pingInterval);
           return;
-        } catch (SocketTimeoutException toe) {
+        } catch (ConnectTimeoutException toe) {
           /* Check for an address change and update the local reference.
            * Reset the failure counter if the address was changed
            */
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
           }
-          handleConnectionFailure(timeoutFailures++,
+          handleConnectionTimeout(timeoutFailures++,
               maxRetriesOnSocketTimeouts, toe);
         } catch (IOException ie) {
           if (updateAddress()) {
@@ -679,7 +680,7 @@ public class Client {
       socket = null;
     }
 
-    /* Handle connection failures
+    /* Handle connection failures due to timeout on connect
      *
      * If the current number of retries is equal to the max number of retries,
      * stop retrying and throw the exception; Otherwise backoff 1 second and
@@ -693,7 +694,7 @@ public class Client {
      * @param ioe failure reason
      * @throws IOException if max number of retries is reached
      */
-    private void handleConnectionFailure(
+    private void handleConnectionTimeout(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
 
       closeConnection();

@@ -457,6 +457,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
     pre-federation version of HDFS. (atm)
 
+    HDFS-4404. Create file failure when the machine of first attempted NameNode
+    is down. (Todd Lipcon via atm)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.
