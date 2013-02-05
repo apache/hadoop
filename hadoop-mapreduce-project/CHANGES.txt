@@ -139,6 +139,8 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
+    MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via atm)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
