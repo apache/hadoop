@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.net.ConnectTimeoutException;
 
 /**
  * <p>
@@ -543,6 +544,7 @@ public class RetryPolicies {
           e instanceof NoRouteToHostException ||
           e instanceof UnknownHostException ||
           e instanceof StandbyException ||
+          e instanceof ConnectTimeoutException ||
           isWrappedStandbyException(e)) {
         return new RetryAction(
             RetryAction.RetryDecision.FAILOVER_AND_RETRY,
