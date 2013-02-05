@@ -167,6 +167,11 @@
     <Field name="minimumAllocation" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer"/>
+    <Field name="renewalTimer" />
+    <Bug code="IS"/>
+  </Match>
 
   <!-- Don't care if putIfAbsent value is ignored -->
   <Match>

@@ -261,7 +261,7 @@ public class DelegationTokenRenewer extends AbstractService {
    * done else false. 
    * @throws IOException
    */
-  public synchronized void addApplication(
+  public void addApplication(
       ApplicationId applicationId, Credentials ts, boolean shouldCancelAtEnd) 
   throws IOException {
     if (ts == null) {
