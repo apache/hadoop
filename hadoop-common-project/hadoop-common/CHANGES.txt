@@ -286,6 +286,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-9260. Hadoop version may be not correct when starting name node or
     data node. (Chris Nauroth via jlowe)
 
+    HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
+    HarFileSystem. (Chris Nauroth via szetszwo)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
