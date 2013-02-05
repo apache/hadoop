@@ -107,6 +107,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-277. Use AMRMClient in DistributedShell to exemplify the approach.
     (Bikas Saha via hitesh)
 
+    YARN-360. Allow apps to concurrently register tokens for renewal.
+    (Daryn Sharp via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
