@@ -58,6 +58,7 @@ import org.apache.hadoop.mapred.lib.LazyOutputFormat;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 
@@ -515,7 +516,7 @@ public class Submitter extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int exitCode =  new Submitter().run(args);
-    System.exit(exitCode);
+    ExitUtil.terminate(exitCode);
   }
 
 }

@@ -19,6 +19,9 @@ Release 0.23.7 - UNRELEASED
     YARN-360. Allow apps to concurrently register tokens for renewal.
     (Daryn Sharp via sseth)
 
+    MAPREDUCE-4905. test org.apache.hadoop.mapred.pipes 
+    (Aleksey Gorshkov via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
