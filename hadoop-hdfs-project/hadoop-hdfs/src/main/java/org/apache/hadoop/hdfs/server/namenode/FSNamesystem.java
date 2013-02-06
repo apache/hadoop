@@ -1772,16 +1772,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create a new file entry in the namespace.
    * 
    * For description of parameters and exceptions thrown see 
-   * {@link ClientProtocol#create()}
+   * {@link ClientProtocol#create()}, except it returns valid  file status
+   * upon success
    */
-  void startFile(String src, PermissionStatus permissions, String holder,
-      String clientMachine, EnumSet<CreateFlag> flag, boolean createParent,
-      short replication, long blockSize) throws AccessControlException,
-      SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
+  HdfsFileStatus startFile(String src, PermissionStatus permissions,
+      String holder, String clientMachine, EnumSet<CreateFlag> flag,
+      boolean createParent, short replication, long blockSize)
+      throws AccessControlException, SafeModeException,
+      FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
     try {
-      startFileInt(src, permissions, holder, clientMachine, flag, createParent,
-                   replication, blockSize);
+      return startFileInt(src, permissions, holder, clientMachine, flag,
+          createParent, replication, blockSize);
     } catch (AccessControlException e) {
       if (isAuditEnabled() && isExternalInvocation()) {
         logAuditEvent(false, UserGroupInformation.getCurrentUser(),
@@ -1792,18 +1794,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private void startFileInt(String src, PermissionStatus permissions, String holder,
-      String clientMachine, EnumSet<CreateFlag> flag, boolean createParent,
-      short replication, long blockSize) throws AccessControlException,
-      SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
+  private HdfsFileStatus startFileInt(String src, PermissionStatus permissions,
+      String holder, String clientMachine, EnumSet<CreateFlag> flag,
+      boolean createParent, short replication, long blockSize)
+      throws AccessControlException, SafeModeException,
+      FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
     boolean skipSync = false;
+    final HdfsFileStatus stat;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
 
       startFileInternal(src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize);
+      stat = dir.getFileInfo(src, false);
     } catch (StandbyException se) {
       skipSync = true;
       throw se;
@@ -1817,11 +1822,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } 
 
     if (isAuditEnabled() && isExternalInvocation()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     getRemoteIp(),
                     "create", src, null, stat);
     }
+    return stat;
   }
 
   /**
@@ -2192,11 +2197,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  LocatedBlock getAdditionalBlock(String src,
-                                         String clientName,
-                                         ExtendedBlock previous,
-                                         HashMap<Node, Node> excludedNodes
-                                         ) 
+  LocatedBlock getAdditionalBlock(String src, long fileId, String clientName,
+      ExtendedBlock previous, HashMap<Node, Node> excludedNodes)
       throws LeaseExpiredException, NotReplicatedYetException,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
       IOException {
@@ -2215,7 +2217,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       final INode[] inodes = analyzeFileState(
-          src, clientName, previous, onRetryBlock).getINodes();
+          src, fileId, clientName, previous, onRetryBlock).getINodes();
       final INodeFileUnderConstruction pendingFile =
           (INodeFileUnderConstruction) inodes[inodes.length - 1];
 
@@ -2245,7 +2247,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // while chooseTarget() was executing.
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       INodesInPath inodesInPath =
-          analyzeFileState(src, clientName, previous, onRetryBlock);
+          analyzeFileState(src, fileId, clientName, previous, onRetryBlock);
       INode[] inodes = inodesInPath.getINodes();
       final INodeFileUnderConstruction pendingFile =
           (INodeFileUnderConstruction) inodes[inodes.length - 1];
@@ -2277,6 +2279,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   INodesInPath analyzeFileState(String src,
+                                long fileId,
                                 String clientName,
                                 ExtendedBlock previous,
                                 LocatedBlock[] onRetryBlock)
@@ -2298,7 +2301,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         dir.rootDir.getExistingPathINodes(src, true);
     final INode[] inodes = inodesInPath.getINodes();
     final INodeFileUnderConstruction pendingFile
-        = checkLease(src, clientName, inodes[inodes.length - 1]);
+        = checkLease(src, fileId, clientName, inodes[inodes.length - 1]);
     BlockInfo lastBlockInFile = pendingFile.getLastBlock();
     if (!Block.matchingIdAndGenStamp(previousBlock, lastBlockInFile)) {
       // The block that the client claims is the current last block
@@ -2467,14 +2470,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   // make sure that we still have the lease on this file.
-  private INodeFileUnderConstruction checkLease(String src, String holder) 
-      throws LeaseExpiredException, UnresolvedLinkException {
+  private INodeFileUnderConstruction checkLease(String src, String holder)
+      throws LeaseExpiredException, UnresolvedLinkException,
+      FileNotFoundException {
     assert hasReadOrWriteLock();
-    return checkLease(src, holder, dir.getINode(src));
+    return checkLease(src, INodeId.GRANDFATHER_INODE_ID, holder,
+        dir.getINode(src));
   }
-
-  private INodeFileUnderConstruction checkLease(String src, String holder,
-      INode file) throws LeaseExpiredException {
+  
+  private INodeFileUnderConstruction checkLease(String src, long fileId,
+      String holder, INode file) throws LeaseExpiredException,
+      FileNotFoundException {
     assert hasReadOrWriteLock();
     if (file == null || !(file instanceof INodeFile)) {
       Lease lease = leaseManager.getLease(holder);
@@ -2495,6 +2501,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
           + pendingFile.getClientName() + " but is accessed by " + holder);
     }
+    INodeId.checkId(fileId, pendingFile);
     return pendingFile;
   }
  

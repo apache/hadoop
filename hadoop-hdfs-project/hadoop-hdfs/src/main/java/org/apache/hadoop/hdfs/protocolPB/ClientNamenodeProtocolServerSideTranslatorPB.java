@@ -268,14 +268,19 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public CreateResponseProto create(RpcController controller,
       CreateRequestProto req) throws ServiceException {
     try {
-      server.create(req.getSrc(), PBHelper.convert(req.getMasked()),
-          req.getClientName(), PBHelper.convert(req.getCreateFlag()),
-          req.getCreateParent(), (short) req.getReplication(),
-          req.getBlockSize());
+      HdfsFileStatus result = server.create(req.getSrc(),
+          PBHelper.convert(req.getMasked()), req.getClientName(),
+          PBHelper.convert(req.getCreateFlag()), req.getCreateParent(),
+          (short) req.getReplication(), req.getBlockSize());
+
+      if (result != null) {
+        return CreateResponseProto.newBuilder().setFs(PBHelper.convert(result))
+            .build();
+      }
+      return VOID_CREATE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return VOID_CREATE_RESPONSE;
   }
   
   @Override
@@ -348,13 +353,14 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     
     try {
       List<DatanodeInfoProto> excl = req.getExcludeNodesList();
-      LocatedBlock result = server.addBlock(req.getSrc(), req.getClientName(),
+      LocatedBlock result = server.addBlock(
+          req.getSrc(),
+          req.getClientName(),
           req.hasPrevious() ? PBHelper.convert(req.getPrevious()) : null,
-          (excl == null || 
-           excl.size() == 0) ? null : 
-            PBHelper.convert(excl.toArray(new DatanodeInfoProto[excl.size()])));
-      return AddBlockResponseProto.newBuilder().setBlock(
-          PBHelper.convert(result)).build();
+          (excl == null || excl.size() == 0) ? null : PBHelper.convert(excl
+              .toArray(new DatanodeInfoProto[excl.size()])), req.getFileId());
+      return AddBlockResponseProto.newBuilder()
+          .setBlock(PBHelper.convert(result)).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

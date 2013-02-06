@@ -71,6 +71,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -517,8 +518,8 @@ public class TestFileCreation {
           + "The file has " + locations.locatedBlockCount() + " blocks.");
 
       // add one block to the file
-      LocatedBlock location = client.getNamenode().addBlock(file1.toString(), 
-          client.clientName, null, null);
+      LocatedBlock location = client.getNamenode().addBlock(file1.toString(),
+          client.clientName, null, null, INodeId.GRANDFATHER_INODE_ID);
       System.out.println("testFileCreationError2: "
           + "Added block " + location.getBlock());
 
@@ -568,8 +569,8 @@ public class TestFileCreation {
       final Path f = new Path("/foo.txt");
       createFile(dfs, f, 3);
       try {
-        cluster.getNameNodeRpc().addBlock(f.toString(), 
-            client.clientName, null, null);
+        cluster.getNameNodeRpc().addBlock(f.toString(), client.clientName,
+            null, null, INodeId.GRANDFATHER_INODE_ID);
         fail();
       } catch(IOException ioe) {
         FileSystem.LOG.info("GOOD!", ioe);
