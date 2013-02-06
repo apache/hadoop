@@ -6,9 +6,6 @@ Trunk - Unreleased
 
   NEW FEATURES
 
-    YARN-3. Add support for CPU isolation/monitoring of containers. 
-    (adferguson via tucu)
-
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
@@ -36,6 +33,9 @@ Release 2.0.3-alpha - 2013-02-06
   NEW FEATURES
 
     YARN-145. Add a Web UI to the fair share scheduler. (Sandy Ryza via tomwhite)
+
+    YARN-3. Add support for CPU isolation/monitoring of containers. 
+    (adferguson via tucu)
 
     YARN-230. RM Restart phase 1 - includes support for saving/restarting all
     applications on an RM bounce. (Bikas Saha via acmurthy)
