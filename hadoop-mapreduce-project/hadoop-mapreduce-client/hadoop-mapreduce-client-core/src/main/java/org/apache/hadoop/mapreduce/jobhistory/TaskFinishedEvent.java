@@ -95,14 +95,10 @@ public class TaskFinishedEvent implements HistoryEvent {
   }
 
   /** Get task id */
-  public TaskID getTaskId() { return TaskID.forName(taskid.toString()); }
+  public TaskID getTaskId() { return taskid; }
   /** Get successful task attempt id */
   public TaskAttemptID getSuccessfulTaskAttemptId() {
-    if(successfulAttemptId != null)
-    {
-      return TaskAttemptID.forName(successfulAttemptId.toString());
-    }
-    return null;
+    return successfulAttemptId;
   }
   /** Get the task finish time */
   public long getFinishTime() { return finishTime; }
@@ -110,7 +106,7 @@ public class TaskFinishedEvent implements HistoryEvent {
   public Counters getCounters() { return counters; }
   /** Get task type */
   public TaskType getTaskType() {
-    return TaskType.valueOf(taskType.toString());
+    return taskType;
   }
   /** Get task status */
   public String getTaskStatus() { return status.toString(); }
