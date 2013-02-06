@@ -76,6 +76,9 @@ Release 2.0.3-alpha - 2013-02-06
     MAPREDUCE-4971. Minor extensibility enhancements to Counters & 
     FileOutputFormat. (Arun C Murthy via sseth)
 
+    MAPREDUCE-4977. Documentation for pluggable shuffle and pluggable sort. 
+    (tucu)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4893. Fixed MR ApplicationMaster to do optimal assignment of

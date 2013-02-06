@@ -65,6 +65,7 @@
 
     <menu name="MapReduce" inherit="top">
       <item name="Encrypted Shuffle" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html"/>
+      <item name="Pluggable Shuffle/Sort" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html"/>
     </menu>
     
     <menu name="YARN" inherit="top">
