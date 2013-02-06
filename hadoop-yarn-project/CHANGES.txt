@@ -25,6 +25,11 @@ Release 0.23.7 - UNRELEASED
     YARN-364. AggregatedLogDeletionService can take too long to delete logs
     (jlowe)
 
+    YARN-29. Add a yarn-client module (Vinod Kumar Vavilapalli via tgraves)
+
+    YARN-83. Change package of YarnClient to include apache (Bikas Saha via
+    tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
