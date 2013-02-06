@@ -32,6 +32,9 @@ Release 0.23.7 - UNRELEASED
 
     YARN-40. Provide support for missing yarn commands (Devaraj K via tgraves)
 
+    YARN-355. Fixes a bug where RM app submission could jam under load.
+    (Daryn Sharp via sseth)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
