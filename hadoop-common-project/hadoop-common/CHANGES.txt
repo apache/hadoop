@@ -67,6 +67,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9124. SortedMapWritable violates contract of Map interface for
     equals() and hashCode(). (Surenkumar Nihalani via tgraves)
 
+    HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
+    HarFileSystem. (Chris Nauroth via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
