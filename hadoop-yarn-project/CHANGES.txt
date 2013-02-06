@@ -1,7 +1,7 @@
 Hadoop YARN Change Log
 
-Release 2.0.3-alpha - Unreleased
-  
+Release 2.0.3-alpha - 2013-02-06 
+
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
