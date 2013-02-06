@@ -264,6 +264,9 @@ public class TestRMAppAttemptTransitions {
     assertNull(applicationAttempt.getFinalApplicationStatus());
     
     // Check events
+    verify(masterService).
+        unregisterAttempt(applicationAttempt.getAppAttemptId());
+    
     verify(application).handle(any(RMAppRejectedEvent.class));
   }
 
@@ -443,7 +446,6 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptRunningState(container, host, rpcPort, trackingUrl);
   }
     
-
   @Test
   public void testNewToKilled() {
     applicationAttempt.handle(

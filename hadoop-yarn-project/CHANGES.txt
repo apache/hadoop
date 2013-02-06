@@ -35,6 +35,9 @@ Release 0.23.7 - UNRELEASED
     YARN-355. Fixes a bug where RM app submission could jam under load.
     (Daryn Sharp via sseth)
 
+    YARN-150. AppRejectedTransition does not unregister app from master service
+    and scheduler (Bikas Shah via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

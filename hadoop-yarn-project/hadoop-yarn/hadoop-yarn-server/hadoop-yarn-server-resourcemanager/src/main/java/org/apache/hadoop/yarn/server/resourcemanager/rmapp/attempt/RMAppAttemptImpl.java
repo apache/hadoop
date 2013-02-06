@@ -572,6 +572,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
       RMAppAttemptRejectedEvent rejectedEvent = (RMAppAttemptRejectedEvent) event;
 
+      // Tell the AMS. Unregister from the ApplicationMasterService
+      appAttempt.masterService
+          .unregisterAttempt(appAttempt.applicationAttemptId);
+      
       // Save the diagnostic message
       String message = rejectedEvent.getMessage();
       appAttempt.setDiagnostics(message);
