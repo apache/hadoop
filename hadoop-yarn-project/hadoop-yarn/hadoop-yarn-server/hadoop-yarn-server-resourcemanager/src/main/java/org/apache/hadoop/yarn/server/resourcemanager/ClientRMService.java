@@ -430,6 +430,7 @@ public class ClientRMService extends AbstractService implements
     report.setRackName(rmNode.getRackName());
     report.setCapability(rmNode.getTotalCapability());
     report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
+    report.setHttpAddress(rmNode.getHttpAddress());
     
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());

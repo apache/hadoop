@@ -67,6 +67,8 @@ if [ $# = 0 ]; then
   echo "  rmadmin              admin tools" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
+  echo "  application          prints application(s) report/kill application"
+  echo "  node                 prints node report(s)"
   echo "  logs                 dump container logs"
   echo "  classpath            prints the class path needed to get the"
   echo "                       Hadoop jar and the required libraries"
@@ -170,6 +172,12 @@ if [ "$COMMAND" = "classpath" ] ; then
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
   CLASS='org.apache.hadoop.yarn.server.resourcemanager.tools.RMAdmin'
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "application" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "node" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "resourcemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rm-config/log4j.properties

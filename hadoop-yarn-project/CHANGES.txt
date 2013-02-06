@@ -30,6 +30,8 @@ Release 0.23.7 - UNRELEASED
     YARN-83. Change package of YarnClient to include apache (Bikas Saha via
     tgraves)
 
+    YARN-40. Provide support for missing yarn commands (Devaraj K via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
