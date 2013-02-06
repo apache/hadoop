@@ -70,6 +70,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
     HarFileSystem. (Chris Nauroth via tgraves)
 
+    HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
+    suresh)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
