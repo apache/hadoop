@@ -474,6 +474,7 @@ abstract class TaskRunner extends Thread {
 
   private void setupLog4jProperties(Vector<String> vargs, TaskAttemptID taskid,
       long logSize) {
+    vargs.add("-Dlog4j.configuration=task-log4j.properties");
     vargs.add("-Dhadoop.log.dir=" + 
         new File(System.getProperty("hadoop.log.dir")).getAbsolutePath());
     vargs.add("-Dhadoop.root.logger=INFO,TLA");

@@ -476,6 +476,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4434. Backport MR-2779 (JobSplitWriter.java can't handle large 
     job.split file) to branch-1. (kkambatl via tucu)
 
+    MAPREDUCE-4970. Child tasks (try to) create security audit log files.
+    (sandyr via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

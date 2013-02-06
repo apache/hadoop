@@ -846,7 +846,9 @@
           log4j</a> via the <a href="http://commons.apache.org/logging/">Apache 
           Commons Logging</a> framework for logging. Edit the 
           <code>conf/log4j.properties</code> file to customize the Hadoop 
-          daemons' logging configuration (log-formats and so on).</p>
+          daemons' logging configuration (log-formats and so on). Edit
+          conf/task-log4j.properties file to customize the logging
+          configuration for MapReduce tasks.</p>
           
           <section>
             <title>History Logging</title>
