@@ -535,6 +535,39 @@
   </property>
 
   <property>
+    <description>The class which should help the LCE handle resources.</description>
+    <name>yarn.nodemanager.linux-container-executor.resources-handler.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler</value>
+    <!-- <value>org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler</value> -->
+  </property>
+
+  <property>
+    <description>The cgroups hierarchy under which to place YARN proccesses (cannot contain commas).
+    If yarn.nodemanager.linux-container-executor.cgroups.mount is false (that is, if cgroups have
+    been pre-configured), then this cgroups hierarchy must already exist and be writable by the
+    NodeManager user, otherwise the NodeManager may fail.
+    Only used when the LCE resources handler is set to the CgroupsLCEResourcesHandler.</description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.hierarchy</name>
+    <value>/hadoop-yarn</value>
+  </property>
+
+  <property>
+    <description>Whether the LCE should attempt to mount cgroups if not found.
+    Only used when the LCE resources handler is set to the CgroupsLCEResourcesHandler.</description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.mount</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Where the LCE should attempt to mount cgroups if not found. Common locations
+    include /sys/fs/cgroup and /cgroup; the default location can vary depending on the Linux
+    distribution in use. This path must exist before the NodeManager is launched.
+    Only used when the LCE resources handler is set to the CgroupsLCEResourcesHandler, and
+    yarn.nodemanager.linux-container-executor.cgroups.mount is true.</description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.mount-path</name>
+  </property>
+
+  <property>
     <description>T-file compression types used to compress aggregated logs.</description>
     <name>yarn.nodemanager.log-aggregation.compression-type</name>
     <value>none</value>

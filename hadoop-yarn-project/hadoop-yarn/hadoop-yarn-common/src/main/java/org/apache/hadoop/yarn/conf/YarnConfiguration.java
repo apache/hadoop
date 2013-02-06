@@ -514,6 +514,24 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_GROUP =
     NM_PREFIX + "linux-container-executor.group";
   
+  /** The type of resource enforcement to use with the
+   *  linux container executor.
+   */
+  public static final String NM_LINUX_CONTAINER_RESOURCES_HANDLER = 
+  NM_PREFIX + "linux-container-executor.resources-handler.class";
+  
+  /** The path the linux container executor should use for cgroups */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_HIERARCHY =
+    NM_PREFIX + "linux-container-executor.cgroups.hierarchy";
+  
+  /** Whether the linux container executor should mount cgroups if not found */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT =
+    NM_PREFIX + "linux-container-executor.cgroups.mount";
+  
+  /** Where the linux container executor should mount cgroups if not found */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
+    NM_PREFIX + "linux-container-executor.cgroups.mount-path";
+  
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 
     NM_PREFIX + "log-aggregation.compression-type";
