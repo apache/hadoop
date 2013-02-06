@@ -225,7 +225,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
   }
 
   @SuppressWarnings("unchecked")
-  protected synchronized void submitApplication(
+  protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
