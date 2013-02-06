@@ -234,6 +234,9 @@ Release 2.0.3-alpha - 2013-02-06
     YARN-370. Fix SchedulerUtils to correctly round up the resource for
     containers. (Zhijie Shen via acmurthy) 
 
+    YARN-355. Fixes a bug where RM app submission could jam under load.
+    (Daryn Sharp via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
