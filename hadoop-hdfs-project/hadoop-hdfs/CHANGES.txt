@@ -762,6 +762,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4344. dfshealth.jsp throws NumberFormatException when
     dfs.hosts/dfs.hosts.exclude includes port number. (Andy Isaacson via atm)
 
+    HDFS-4468.  Use the new StringUtils methods added by HADOOP-9252 and fix
+    TestHDFSCLI and TestQuota. (szetszwo)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

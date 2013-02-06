@@ -1182,7 +1182,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^1\.0k\s+hdfs:///dir0/data1k</expected-output>
+          <expected-output>^1\.0 K\s+hdfs:///dir0/data1k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15590,7 +15590,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota=1.0k diskspace consumed=[0-9.]+[kmg]*</expected-output>
+          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota = 1024 B = 1 KB but diskspace consumed = [0-9]+ B = [0-9.]+ [KMG]B*</expected-output>
         </comparator>
       </comparators>
     </test>

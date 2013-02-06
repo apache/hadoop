@@ -70,8 +70,8 @@ public class TestQuota {
       throw new DSQuotaExceededException(bytes, bytes);
     } catch(DSQuotaExceededException e) {
       
-      assertEquals("The DiskSpace quota is exceeded: quota=1.0k " +
-          "diskspace consumed=1.0k", e.getMessage());
+      assertEquals("The DiskSpace quota is exceeded: quota = 1024 B = 1 KB"
+          + " but diskspace consumed = 1024 B = 1 KB", e.getMessage());
     }
   }
   
