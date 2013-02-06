@@ -1,10 +1,22 @@
 Hadoop MapReduce Change Log
 
-Release 2.0.3-alpha - Unreleased
-  
+Release 2.0.4-beta - UNRELEASED
+
   INCOMPATIBLE CHANGES
 
-    MAPREDUCE-4123. Remove the 'mapred groups' command, which is no longer 
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.0.3-alpha - 2013-02-06 
+
+  INCOMPATIBLE CHANGES
+
+    MAPREDUCE-4123. Remove the 'mapred groups' command, which is no longer
     supported. (Devaraj K via sseth)
 
     MAPREDUCE-4938. Use token request messages defined in hadoop common.
