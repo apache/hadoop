@@ -473,6 +473,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4967. TestJvmReuse fails on assertion. (kkambatl via tucu)
 
+    MAPREDUCE-4434. Backport MR-2779 (JobSplitWriter.java can't handle large 
+    job.split file) to branch-1. (kkambatl via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
