@@ -471,6 +471,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4843. When using DefaultTaskController, JobLocalizer not thread 
     safe. (kkambatl via tucu)
 
+    MAPREDUCE-4967. TestJvmReuse fails on assertion. (kkambatl via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
