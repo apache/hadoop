@@ -24,6 +24,11 @@
   <version>2.0.4-SNAPSHOT</version>
   <name>hadoop-yarn-client</name>
 
+  <properties>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <yarn.basedir>${project.parent.basedir}</yarn.basedir>
+  </properties>
+
   <dependencies>
   	<dependency>
   		<groupId>org.apache.hadoop</groupId>

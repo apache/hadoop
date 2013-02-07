@@ -12,6 +12,9 @@ Release 2.0.4-beta - UNRELEASED
 
   BUG FIXES
 
+    YARN-383. AMRMClientImpl should handle null rmClient in stop()
+    (Hitesh Shah via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
