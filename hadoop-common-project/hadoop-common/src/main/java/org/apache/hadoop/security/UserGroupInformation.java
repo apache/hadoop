@@ -290,17 +290,25 @@ public class UserGroupInformation {
   
   private static String OS_LOGIN_MODULE_NAME;
   private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
+  
   private static final boolean windows =
       System.getProperty("os.name").startsWith("Windows");
   private static final boolean is64Bit =
       System.getProperty("os.arch").contains("64");
+  private static final boolean ibmJava = System.getProperty("java.vendor").contains("IBM");
+  private static final boolean aix = System.getProperty("os.name").equals("AIX");
+
   /* Return the OS login module class name */
   private static String getOSLoginModuleName() {
-    if (System.getProperty("java.vendor").contains("IBM")) {
-      return windows ? (is64Bit
-          ? "com.ibm.security.auth.module.Win64LoginModule"
-          : "com.ibm.security.auth.module.NTLoginModule")
-        : "com.ibm.security.auth.module.LinuxLoginModule";
+    if (ibmJava) {
+      if (windows) {
+        return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
+            : "com.ibm.security.auth.module.NTLoginModule";
+      } else if (aix) {
+        return "com.ibm.security.auth.module.AIXLoginModule";
+      } else {
+        return "com.ibm.security.auth.module.LinuxLoginModule";
+      }
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
         : "com.sun.security.auth.module.UnixLoginModule";
@@ -312,11 +320,14 @@ public class UserGroupInformation {
   private static Class<? extends Principal> getOsPrincipalClass() {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
-      if (System.getProperty("java.vendor").contains("IBM")) {
+      if (ibmJava) {
         if (windows) {
           return (Class<? extends Principal>) (is64Bit
             ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
             : cl.loadClass("com.ibm.security.auth.NTUserPrincipal"));
+        } else if (aix) {
+          return (Class<? extends Principal>)
+             cl.loadClass("com.ibm.security.auth.AIXPrincipal");
         } else {
           return (Class<? extends Principal>) (is64Bit
             ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
@@ -407,12 +418,21 @@ public class UserGroupInformation {
     private static final Map<String,String> USER_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
-      USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-      USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
-      USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+      if (ibmJava) {
+        USER_KERBEROS_OPTIONS.put("useDefaultCcache", "true");
+      } else {
+        USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+        USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+      }
       String ticketCache = System.getenv("KRB5CCNAME");
       if (ticketCache != null) {
-        USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+        if (ibmJava) {
+          // The first value searched when "useDefaultCcache" is used.
+          System.setProperty("KRB5CCNAME", ticketCache);
+        } else {
+          USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+        }
       }
       USER_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
     }
@@ -423,10 +443,14 @@ public class UserGroupInformation {
     private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = 
       new HashMap<String,String>();
     static {
-      KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
+      if (ibmJava) {
+        KEYTAB_KERBEROS_OPTIONS.put("credsType", "both");
+      } else {
+        KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
+        KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
+        KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
+      }
       KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);      
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
@@ -451,12 +475,22 @@ public class UserGroupInformation {
       } else if (USER_KERBEROS_CONFIG_NAME.equals(appName)) {
         return USER_KERBEROS_CONF;
       } else if (KEYTAB_KERBEROS_CONFIG_NAME.equals(appName)) {
-        KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
+        if (ibmJava) {
+          KEYTAB_KERBEROS_OPTIONS.put("useKeytab",
+              prependFileAuthority(keytabFile));
+        } else {
+          KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
+        }
         KEYTAB_KERBEROS_OPTIONS.put("principal", keytabPrincipal);
         return KEYTAB_KERBEROS_CONF;
       }
       return null;
     }
+  }
+
+  private static String prependFileAuthority(String keytabPath) {
+    return keytabPath.startsWith("file://") ? keytabPath
+        : "file://" + keytabPath;
   }
 
   /**
@@ -655,6 +689,7 @@ public class UserGroupInformation {
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
+        LOG.debug("failure to login", le);
         throw new IOException("failure to login", le);
       }
       if (LOG.isDebugEnabled()) {
