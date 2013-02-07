@@ -45,19 +45,39 @@ public class TestListFiles {
 
   final protected static Configuration conf = new Configuration();
   protected static FileSystem fs;
-  final protected static Path TEST_DIR = getTestDir();
+  protected static Path TEST_DIR;
   final private static int FILE_LEN = 10;
-  final private static Path FILE1 = new Path(TEST_DIR, "file1");
-  final private static Path DIR1 = new Path(TEST_DIR, "dir1");
-  final private static Path FILE2 = new Path(DIR1, "file2");
-  final private static Path FILE3 = new Path(DIR1, "file3");
+  private static Path FILE1;
+  private static Path DIR1;
+  private static Path FILE2;
+  private static Path FILE3;
+
+  static {
+    setTestPaths(new Path(
+      System.getProperty("test.build.data", "build/test/data/work-dir/localfs"),
+      "main_"));
+  }
 
   protected static Path getTestDir() {
-    return new Path(
-      System.getProperty("test.build.data","build/test/data/work-dir/localfs"),
-      "main_");
+    return TEST_DIR;
   }
-  
+
+  /**
+   * Sets the root testing directory and reinitializes any additional test paths
+   * that are under the root.  This method is intended to be called from a
+   * subclass's @BeforeClass method if there is a need to override the testing
+   * directory.
+   * 
+   * @param testDir Path root testing directory
+   */
+  protected static void setTestPaths(Path testDir) {
+    TEST_DIR = testDir;
+    FILE1 = new Path(TEST_DIR, "file1");
+    DIR1 = new Path(TEST_DIR, "dir1");
+    FILE2 = new Path(DIR1, "file2");
+    FILE3 = new Path(DIR1, "file3");
+  }
+
   @BeforeClass
   public static void testSetUp() throws Exception {
     fs = FileSystem.getLocal(conf);
