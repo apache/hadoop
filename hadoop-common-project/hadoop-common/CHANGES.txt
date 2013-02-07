@@ -149,6 +149,8 @@ Trunk (Unreleased)
     HADOOP-8924. Add maven plugin alternative to shell script to save
     package-info.java. (Chris Nauroth via suresh)
 
+    HADOOP-9277. Improve javadoc for FileContext. (Andrew Wang via suresh)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
