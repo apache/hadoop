@@ -12,6 +12,9 @@ Release 2.0.4-beta - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4671. AM does not tell the RM about container requests which are
+    no longer needed. (Bikas Saha via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
