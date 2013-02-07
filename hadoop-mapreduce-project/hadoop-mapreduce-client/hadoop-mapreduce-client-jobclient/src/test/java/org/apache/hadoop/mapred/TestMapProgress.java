@@ -61,8 +61,12 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class TestMapProgress extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestMapProgress.class);
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-           "test.build.data", "/tmp")).getAbsolutePath() + "/mapPahseprogress";
+  private static String TEST_ROOT_DIR;
+  static {
+    String root = new File(System.getProperty("test.build.data", "/tmp"))
+      .getAbsolutePath();
+    TEST_ROOT_DIR = new Path(root, "mapPhaseprogress").toString();
+  }
 
   static class FakeUmbilical implements TaskUmbilicalProtocol {
 

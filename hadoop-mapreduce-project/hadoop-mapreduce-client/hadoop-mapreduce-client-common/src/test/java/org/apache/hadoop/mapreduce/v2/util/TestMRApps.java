@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,6 +40,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -69,9 +72,9 @@ public class TestMRApps {
   }
   
   private static void delete(File dir) throws IOException {
-    Path p = new Path("file://"+dir.getAbsolutePath());
     Configuration conf = new Configuration();
-    FileSystem fs = p.getFileSystem(conf);
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path p = fs.makeQualified(new Path(dir.getAbsolutePath()));
     fs.delete(p, true);
   }
 
@@ -165,18 +168,21 @@ public class TestMRApps {
     Job job = Job.getInstance();
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
-    assertTrue(environment.get("CLASSPATH").startsWith("$PWD:"));
+    assertTrue(environment.get("CLASSPATH").startsWith(
+      ApplicationConstants.Environment.PWD.$() + File.pathSeparator));
     String yarnAppClasspath = 
         job.getConfiguration().get(
             YarnConfiguration.YARN_APPLICATION_CLASSPATH);
     if (yarnAppClasspath != null) {
-      yarnAppClasspath = yarnAppClasspath.replaceAll(",\\s*", ":").trim();
+      yarnAppClasspath = yarnAppClasspath.replaceAll(",\\s*", File.pathSeparator)
+        .trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(yarnAppClasspath));
     String mrAppClasspath = 
         job.getConfiguration().get(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH);
     if (mrAppClasspath != null) {
-      mrAppClasspath = mrAppClasspath.replaceAll(",\\s*", ":").trim();
+      mrAppClasspath = mrAppClasspath.replaceAll(",\\s*", File.pathSeparator)
+        .trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(mrAppClasspath));
   }
@@ -188,16 +194,18 @@ public class TestMRApps {
     out.close();
     Job job = Job.getInstance();
     Configuration conf = job.getConfiguration();
-    conf.set(MRJobConfig.CLASSPATH_ARCHIVES, "file://" 
-        + testTGZ.getAbsolutePath());
-    conf.set(MRJobConfig.CACHE_ARCHIVES, "file://"
-        + testTGZ.getAbsolutePath() + "#testTGZ");
+    String testTGZQualifiedPath = FileSystem.getLocal(conf).makeQualified(new Path(
+      testTGZ.getAbsolutePath())).toString();
+    conf.set(MRJobConfig.CLASSPATH_ARCHIVES, testTGZQualifiedPath);
+    conf.set(MRJobConfig.CACHE_ARCHIVES, testTGZQualifiedPath + "#testTGZ");
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
-    assertTrue(environment.get("CLASSPATH").startsWith("$PWD:"));
+    assertTrue(environment.get("CLASSPATH").startsWith(
+      ApplicationConstants.Environment.PWD.$() + File.pathSeparator));
     String confClasspath = job.getConfiguration().get(YarnConfiguration.YARN_APPLICATION_CLASSPATH);
     if (confClasspath != null) {
-      confClasspath = confClasspath.replaceAll(",\\s*", ":").trim();
+      confClasspath = confClasspath.replaceAll(",\\s*", File.pathSeparator)
+        .trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(confClasspath));
     assertTrue(environment.get("CLASSPATH").contains("testTGZ"));
@@ -213,8 +221,12 @@ public class TestMRApps {
       fail("Got exception while setting classpath");
     }
     String env_str = env.get("CLASSPATH");
-    assertSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
-      env_str.indexOf("$PWD:job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*"), 0);
+    String expectedClasspath = StringUtils.join(File.pathSeparator,
+      Arrays.asList(ApplicationConstants.Environment.PWD.$(), "job.jar/job.jar",
+        "job.jar/classes/", "job.jar/lib/*",
+        ApplicationConstants.Environment.PWD.$() + "/*"));
+    assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
+      env_str.startsWith(expectedClasspath));
   }
 
   @Test public void testSetClasspathWithNoUserPrecendence() {
@@ -227,12 +239,13 @@ public class TestMRApps {
       fail("Got exception while setting classpath");
     }
     String env_str = env.get("CLASSPATH");
-    int index = 
-         env_str.indexOf("job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*");
-    assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not"
-            + " in the classpath!", index, -1);
-    assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",
-      index, 0);
+    String expectedClasspath = StringUtils.join(File.pathSeparator,
+      Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+        ApplicationConstants.Environment.PWD.$() + "/*"));
+    assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
+      + " the classpath!", env_str.contains(expectedClasspath));
+    assertFalse("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",
+      env_str.startsWith(expectedClasspath));
   }
   
   @Test public void testSetClasspathWithJobClassloader() throws IOException {
@@ -242,13 +255,16 @@ public class TestMRApps {
     MRApps.setClasspath(env, conf);
     String cp = env.get("CLASSPATH");
     String appCp = env.get("APP_CLASSPATH");
-    assertSame("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is"
-        + " in the classpath!", cp.indexOf("jar:job"), -1);
-    assertSame("MAPREDUCE_JOB_CLASSLOADER true, but PWD is"
-        + " in the classpath!", cp.indexOf("PWD"), -1);
-    assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not"
-        + " in the app classpath!",
-        "$PWD:job.jar/job.jar:job.jar/classes/:job.jar/lib/*:$PWD/*", appCp);
+    assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is in the"
+      + " classpath!", cp.contains("jar" + File.pathSeparator + "job"));
+    assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!",
+      cp.contains("PWD"));
+    String expectedAppClasspath = StringUtils.join(File.pathSeparator,
+      Arrays.asList(ApplicationConstants.Environment.PWD.$(), "job.jar/job.jar",
+        "job.jar/classes/", "job.jar/lib/*",
+        ApplicationConstants.Environment.PWD.$() + "/*"));
+    assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
+      + " classpath!", expectedAppClasspath, appCp);
   }
   
   @Test

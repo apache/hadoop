@@ -13,3 +13,5 @@ branch-trunk-win changes - unreleased
 
   MAPREDUCE-4870. Fix TestMRJobsWithHistoryService. (Chris Nauroth via acmurthy)
 
+  MAPREDUCE-4983. Fixed various platform specific assumptions in various tests,
+  so that they can pass on Windows too. (Chris Nauroth via vinodkv)
