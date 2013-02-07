@@ -1,5 +1,17 @@
 Hadoop MapReduce Change Log
 
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
@@ -63,6 +75,9 @@ Release 2.0.3-alpha - 2013-02-06
 
     MAPREDUCE-4971. Minor extensibility enhancements to Counters & 
     FileOutputFormat. (Arun C Murthy via sseth)
+
+    MAPREDUCE-4977. Documentation for pluggable shuffle and pluggable sort. 
+    (tucu)
 
   OPTIMIZATIONS
 
@@ -534,6 +549,9 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
     number of map completion event type conversions. (Jason Lowe via sseth)
+
+    MAPREDUCE-4822. Unnecessary conversions in History Events. (Chu Tong via
+    jlowe)
 
   BUG FIXES
 
