@@ -587,7 +587,7 @@ public class NNStorage extends Storage implements Closeable,
     }
 
     // Set Block pool ID in version with federation support
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (versionSupportsFederation()) {
       String sbpid = props.getProperty("blockpoolID");
       setBlockPoolID(sd.getRoot(), sbpid);
     }
@@ -634,7 +634,7 @@ public class NNStorage extends Storage implements Closeable,
                            ) throws IOException {
     super.setPropertiesFromFields(props, sd);
     // Set blockpoolID in version with federation support
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (versionSupportsFederation()) {
       props.setProperty("blockpoolID", blockpoolID);
     }
   }

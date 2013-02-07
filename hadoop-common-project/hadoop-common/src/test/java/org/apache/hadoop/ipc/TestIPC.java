@@ -26,6 +26,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
 
 import java.util.Random;
@@ -586,7 +587,7 @@ public class TestIPC {
   private void assertRetriesOnSocketTimeouts(Configuration conf,
       int maxTimeoutRetries) throws IOException, InterruptedException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
-    doThrow(new SocketTimeoutException()).when(mockFactory).createSocket();
+    doThrow(new ConnectTimeoutException("fake")).when(mockFactory).createSocket();
     Client client = new Client(IntWritable.class, conf, mockFactory);
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 9090);
     try {

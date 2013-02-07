@@ -88,4 +88,61 @@ public class TestBoundedByteArrayOutputStream extends TestCase {
     assertTrue("Writing beyond limit did not throw an exception",
         caughtException);
   }
+  
+  
+  static class ResettableBoundedByteArrayOutputStream 
+  extends BoundedByteArrayOutputStream {
+
+    public ResettableBoundedByteArrayOutputStream(int capacity) {
+      super(capacity);
+    }
+
+    public void resetBuffer(byte[] buf, int offset, int length) {
+      super.resetBuffer(buf, offset, length);
+    }
+    
+  }
+  
+  public void testResetBuffer() throws IOException {
+    
+    ResettableBoundedByteArrayOutputStream stream = 
+      new ResettableBoundedByteArrayOutputStream(SIZE);
+
+    // Write to the stream, get the data back and check for contents
+    stream.write(INPUT, 0, SIZE);
+    assertTrue("Array Contents Mismatch",
+        Arrays.equals(INPUT, stream.getBuffer()));
+    
+    // Try writing beyond end of buffer. Should throw an exception
+    boolean caughtException = false;
+    
+    try {
+      stream.write(INPUT[0]);
+    } catch (Exception e) {
+      caughtException = true;
+    }
+    
+    assertTrue("Writing beyond limit did not throw an exception",
+        caughtException);
+    
+    //Reset the stream and try, should succeed
+    byte[] newBuf = new byte[SIZE];
+    stream.resetBuffer(newBuf, 0, newBuf.length);
+    assertTrue("Limit did not get reset correctly", 
+        (stream.getLimit() == SIZE));
+    stream.write(INPUT, 0, SIZE);
+    assertTrue("Array Contents Mismatch",
+        Arrays.equals(INPUT, stream.getBuffer()));
+  
+    // Try writing one more byte, should fail
+    caughtException = false;
+    try {
+      stream.write(INPUT[0]);
+    } catch (Exception e) {
+      caughtException = true;
+    }
+    assertTrue("Writing beyond limit did not throw an exception",
+        caughtException);
+  }
+
 }

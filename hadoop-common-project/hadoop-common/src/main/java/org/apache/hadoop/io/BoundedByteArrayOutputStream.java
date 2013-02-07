@@ -32,9 +32,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class BoundedByteArrayOutputStream extends OutputStream {
-  private final byte[] buffer;
+  private byte[] buffer;
+  private int startOffset;
   private int limit;
-  private int count;
+  private int currentPointer;
 
   /**
    * Create a BoundedByteArrayOutputStream with the specified
@@ -52,20 +53,30 @@ public class BoundedByteArrayOutputStream extends OutputStream {
    * @param limit The maximum limit upto which data can be written
    */
   public BoundedByteArrayOutputStream(int capacity, int limit) {
+    this(new byte[capacity], 0, limit);
+  }
+
+  protected BoundedByteArrayOutputStream(byte[] buf, int offset, int limit) {
+    resetBuffer(buf, offset, limit);
+  }
+  
+  protected void resetBuffer(byte[] buf, int offset, int limit) {
+    int capacity = buf.length - offset;
     if ((capacity < limit) || (capacity | limit) < 0) {
       throw new IllegalArgumentException("Invalid capacity/limit");
     }
-    this.buffer = new byte[capacity];
-    this.limit = limit;
-    this.count = 0;
+    this.buffer = buf;
+    this.startOffset = offset;
+    this.currentPointer = offset;
+    this.limit = offset + limit;
   }
-
+  
   @Override
   public void write(int b) throws IOException {
-    if (count >= limit) {
+    if (currentPointer >= limit) {
       throw new EOFException("Reaching the limit of the buffer.");
     }
-    buffer[count++] = (byte) b;
+    buffer[currentPointer++] = (byte) b;
   }
 
   @Override
@@ -77,12 +88,12 @@ public class BoundedByteArrayOutputStream extends OutputStream {
       return;
     }
 
-    if (count + len > limit) {
+    if (currentPointer + len > limit) {
       throw new EOFException("Reach the limit of the buffer");
     }
 
-    System.arraycopy(b, off, buffer, count, len);
-    count += len;
+    System.arraycopy(b, off, buffer, currentPointer, len);
+    currentPointer += len;
   }
 
   /**
@@ -90,17 +101,17 @@ public class BoundedByteArrayOutputStream extends OutputStream {
    * @param newlim New Limit
    */
   public void reset(int newlim) {
-    if (newlim > buffer.length) {
+    if (newlim > (buffer.length - startOffset)) {
       throw new IndexOutOfBoundsException("Limit exceeds buffer size");
     }
     this.limit = newlim;
-    this.count = 0;
+    this.currentPointer = startOffset;
   }
 
   /** Reset the buffer */
   public void reset() {
-    this.limit = buffer.length;
-    this.count = 0;
+    this.limit = buffer.length - startOffset;
+    this.currentPointer = startOffset;
   }
 
   /** Return the current limit */
@@ -119,6 +130,10 @@ public class BoundedByteArrayOutputStream extends OutputStream {
    * currently in the buffer.
    */
   public int size() {
-    return count;
+    return currentPointer - startOffset;
+  }
+  
+  public int available() {
+    return limit - currentPointer;
   }
 }

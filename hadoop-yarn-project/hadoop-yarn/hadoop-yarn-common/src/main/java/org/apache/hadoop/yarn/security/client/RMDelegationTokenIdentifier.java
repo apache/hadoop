@@ -19,10 +19,28 @@
 package org.apache.hadoop.yarn.security.client;
 
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Delegation Token Identifier that identifies the delegation tokens from the 
@@ -50,5 +68,101 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
   @Override
   public Text getKind() {
     return KIND_NAME;
+  }
+  
+  public static class Renewer extends TokenRenewer {
+
+    @Override
+    public boolean handleKind(Text kind) {
+      return KIND_NAME.equals(kind);
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+
+    private static
+    AbstractDelegationTokenSecretManager<RMDelegationTokenIdentifier> localSecretManager;
+    private static InetSocketAddress localServiceAddress;
+    
+    @Private
+    public static void setSecretManager(
+        AbstractDelegationTokenSecretManager<RMDelegationTokenIdentifier> secretManager,
+        InetSocketAddress serviceAddress) {
+      localSecretManager = secretManager;
+      localServiceAddress = serviceAddress;
+    }
+    
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf) throws IOException,
+        InterruptedException {
+      final ClientRMProtocol rmClient = getRmClient(token, conf);
+      if (rmClient != null) {
+        try {
+          RenewDelegationTokenRequest request =
+              Records.newRecord(RenewDelegationTokenRequest.class);
+          request.setDelegationToken(convertToProtoToken(token));
+          return rmClient.renewDelegationToken(request).getNextExpirationTime();
+        } finally {
+          RPC.stopProxy(rmClient);
+        }
+      } else {
+        return localSecretManager.renewToken(
+            (Token<RMDelegationTokenIdentifier>)token, getRenewer(token));
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf) throws IOException,
+        InterruptedException {
+      final ClientRMProtocol rmClient = getRmClient(token, conf);
+      if (rmClient != null) {
+        try {
+          CancelDelegationTokenRequest request =
+              Records.newRecord(CancelDelegationTokenRequest.class);
+          request.setDelegationToken(convertToProtoToken(token));
+          rmClient.cancelDelegationToken(request);
+        } finally {
+          RPC.stopProxy(rmClient);
+        }
+      } else {
+        localSecretManager.cancelToken(
+            (Token<RMDelegationTokenIdentifier>)token, getRenewer(token));
+      }
+    }
+    
+    private static ClientRMProtocol getRmClient(Token<?> token,
+        Configuration conf) {
+      InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
+      if (localSecretManager != null) {
+        // return null if it's our token
+        if (localServiceAddress.getAddress().isAnyLocalAddress()) {
+            if (NetUtils.isLocalAddress(addr.getAddress()) &&
+                addr.getPort() == localServiceAddress.getPort()) {
+              return null;
+            }
+        } else if (addr.equals(localServiceAddress)) {
+          return null;
+        }
+      }
+      final YarnRPC rpc = YarnRPC.create(conf);
+      return (ClientRMProtocol)rpc.getProxy(ClientRMProtocol.class, addr, conf);        
+    }
+
+    // get renewer so we can always renew our own tokens
+    @SuppressWarnings("unchecked")
+    private static String getRenewer(Token<?> token) throws IOException {
+      return ((Token<RMDelegationTokenIdentifier>)token).decodeIdentifier()
+          .getRenewer().toString();
+    }
+    
+    private static DelegationToken convertToProtoToken(Token<?> token) {
+      return BuilderUtils.newDelegationToken(
+          token.getIdentifier(), token.getKind().toString(),
+          token.getPassword(), token.getService().toString());
+    }
   }
 }

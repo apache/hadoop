@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.web.resources;
 /** The concat source paths parameter. */
 public class ConcatSourcesParam extends StringParam {
   /** Parameter name. */
-  public static final String NAME = "srcs";
+  public static final String NAME = "sources";
 
   public static final String DEFAULT = NULL;
 

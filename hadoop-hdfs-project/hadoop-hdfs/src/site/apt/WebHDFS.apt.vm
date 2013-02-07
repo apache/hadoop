@@ -109,6 +109,9 @@ WebHDFS REST API
     * {{{Append to a File}<<<APPEND>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.append)
 
+    * {{{Concat File(s)}<<<CONCAT>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.concat)
+
   * HTTP DELETE
 
     * {{{Delete a File/Directory}<<<DELETE>>>}}
@@ -297,6 +300,32 @@ Content-Length: 0
   See also:
   {{{Buffer Size}<<<buffersize>>>}},
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.append
+
+
+** {Concat File(s)}
+
+  * Submit a HTTP POST request.
+
++---------------------------------
+curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CONCAT&sources=<SOURCES>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  This REST API call is available as of Hadoop version 2.0.3.
+  Please note that <SOURCES> is a comma seperated list of absolute paths.
+  (Example: sources=/test/file1,/test/file2,/test/file3)
+
+  See also:
+  {{{Sources}<<<sources>>>}},
+   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.concat
 
 
 ** {Open and Read a File}
@@ -1725,6 +1754,29 @@ var tokenProperties =
   See also:
   {{{Create and Write to a File}<<<CREATE>>>}},
   {{{Set Replication Factor}<<<SETREPLICATION>>>}}
+
+
+** {Sources}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<sources>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The comma seperated absolute paths used for concatenation. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | A list of comma seperated absolute FileSystem paths without scheme and authority. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | See the note in {{Delegation}}. |
+*----------------+-------------------------------------------------------------------+
+
+  <<Note>> that sources are absolute FileSystem paths.
+
+
+  See also:
+  {{{Concat File(s)}<<<CONCAT>>>}}
 
 
 ** {Token}

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.common;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 
 import com.google.common.base.Joiner;
 
@@ -76,6 +78,10 @@ public class StorageInfo {
     clusterID = from.clusterID;
     namespaceID = from.namespaceID;
     cTime = from.cTime;
+  }
+
+  public boolean versionSupportsFederation() {
+    return LayoutVersion.supports(Feature.FEDERATION, layoutVersion);
   }
   
   @Override

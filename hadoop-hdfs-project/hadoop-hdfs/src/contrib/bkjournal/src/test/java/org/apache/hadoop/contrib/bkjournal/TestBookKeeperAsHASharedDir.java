@@ -21,7 +21,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 import org.junit.Before;
-import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 
@@ -34,11 +33,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 
 import org.apache.hadoop.ipc.RemoteException;
@@ -349,6 +346,44 @@ public class TestBookKeeperAsHASharedDir {
     } finally {
       if (fs != null) {
         fs.close();
+      }
+    }
+  }
+
+  /**
+   * NameNode should load the edits correctly if the applicable edits are
+   * present in the BKJM.
+   */
+  @Test
+  public void testNameNodeMultipleSwitchesUsingBKJM() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, BKJMUtil
+          .createJournalURI("/correctEditLogSelection").toString());
+      BKJMUtil.addJournalManagerDefinition(conf);
+
+      cluster = new MiniDFSCluster.Builder(conf)
+          .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(0)
+          .manageNameDfsSharedDirs(false).build();
+      NameNode nn1 = cluster.getNameNode(0);
+      NameNode nn2 = cluster.getNameNode(1);
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+      nn1.getRpcServer().rollEditLog(); // Roll Edits from current Active.
+      // Transition to standby current active gracefully.
+      cluster.transitionToStandby(0);
+      // Make the other Active and Roll edits multiple times
+      cluster.transitionToActive(1);
+      nn2.getRpcServer().rollEditLog();
+      nn2.getRpcServer().rollEditLog();
+      // Now One more failover. So NN1 should be able to failover successfully.
+      cluster.transitionToStandby(1);
+      cluster.transitionToActive(0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }

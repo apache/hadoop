@@ -178,7 +178,7 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
 
   /** Get the task type */
   public TaskType getTaskType() {
-    return TaskType.valueOf(taskType.toString());
+    return taskType;
   }
   /** Get the task status */
   public String getTaskStatus() { return taskStatus.toString(); }

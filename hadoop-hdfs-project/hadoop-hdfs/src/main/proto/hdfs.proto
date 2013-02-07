@@ -170,6 +170,9 @@ message HdfsFileStatusProto {
   optional uint32 block_replication = 10 [default = 0]; // only 16bits used
   optional uint64 blocksize = 11 [default = 0];
   optional LocatedBlocksProto locations = 12;  // suppled only if asked by client
+
+  // Optional field for fileId
+  optional uint64 fileId = 13 [default = 0]; // default as an invalid id
 } 
 
 /**

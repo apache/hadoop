@@ -316,8 +316,7 @@ public class DFSAdmin extends FsShell {
       System.out.println("DFS Used: " + used
                          + " (" + StringUtils.byteDesc(used) + ")");
       System.out.println("DFS Used%: "
-                         + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
-                         + "%");
+          + StringUtils.formatPercent(used/(double)presentCapacity, 2));
       
       /* These counts are not always upto date. They are updated after  
        * iteration of an internal list. Should be updated in a few seconds to 

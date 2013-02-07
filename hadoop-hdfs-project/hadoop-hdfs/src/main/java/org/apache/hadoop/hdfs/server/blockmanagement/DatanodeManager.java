@@ -126,15 +126,26 @@ public class DatanodeManager {
   private final long heartbeatExpireInterval;
   /** Ask Datanode only up to this many blocks to delete. */
   final int blockInvalidateLimit;
-  
-  /** Whether or not to check stale DataNodes for read/write */
-  private final boolean checkForStaleDataNodes;
 
   /** The interval for judging stale DataNodes for read/write */
   private final long staleInterval;
   
-  /** Whether or not to avoid using stale DataNodes for writing */
-  private volatile boolean avoidStaleDataNodesForWrite;
+  /** Whether or not to avoid using stale DataNodes for reading */
+  private final boolean avoidStaleDataNodesForRead;
+
+  /**
+   * Whether or not to avoid using stale DataNodes for writing.
+   * Note that, even if this is configured, the policy may be
+   * temporarily disabled when a high percentage of the nodes
+   * are marked as stale.
+   */
+  private final boolean avoidStaleDataNodesForWrite;
+
+  /**
+   * When the ratio of stale datanodes reaches this number, stop avoiding 
+   * writing to stale datanodes, i.e., continue using stale nodes for writing.
+   */
+  private final float ratioUseStaleDataNodesForWrite;
   
   /** The number of stale DataNodes */
   private volatile int numStaleNodes;
@@ -183,14 +194,23 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY, blockInvalidateLimit);
     LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY
         + "=" + this.blockInvalidateLimit);
-    
-    checkForStaleDataNodes = conf.getBoolean(
-        DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY,
-        DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_DEFAULT);
 
-    staleInterval = getStaleIntervalFromConf(conf, heartbeatExpireInterval);
-    avoidStaleDataNodesForWrite = getAvoidStaleForWriteFromConf(conf,
-        checkForStaleDataNodes);
+    this.avoidStaleDataNodesForRead = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY,
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT);
+    this.avoidStaleDataNodesForWrite = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
+    this.staleInterval = getStaleIntervalFromConf(conf, heartbeatExpireInterval);
+    this.ratioUseStaleDataNodesForWrite = conf.getFloat(
+        DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY,
+        DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_DEFAULT);
+    Preconditions.checkArgument(
+        (ratioUseStaleDataNodesForWrite > 0 && 
+            ratioUseStaleDataNodesForWrite <= 1.0f),
+        DFSConfigKeys.DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY +
+        " = '" + ratioUseStaleDataNodesForWrite + "' is invalid. " +
+        "It should be a positive non-zero float value, not greater than 1.0f.");
   }
   
   private static long getStaleIntervalFromConf(Configuration conf,
@@ -228,22 +248,6 @@ public class DatanodeManager {
           + heartbeatExpireInterval + ".");
     }
     return staleInterval;
-  }
-  
-  static boolean getAvoidStaleForWriteFromConf(Configuration conf,
-      boolean checkForStale) {
-    boolean avoid = conf.getBoolean(
-        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
-        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
-    boolean avoidStaleDataNodesForWrite = checkForStale && avoid;
-    if (!checkForStale && avoid) {
-      LOG.warn("Cannot set "
-          + DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY
-          + " as false while setting "
-          + DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY
-          + " as true.");
-    }
-    return avoidStaleDataNodesForWrite;
   }
   
   void activate(final Configuration conf) {
@@ -299,7 +303,7 @@ public class DatanodeManager {
         client = new NodeBase(rName + NodeBase.PATH_SEPARATOR_STR + targethost);
     }
     
-    Comparator<DatanodeInfo> comparator = checkForStaleDataNodes ? 
+    Comparator<DatanodeInfo> comparator = avoidStaleDataNodesForRead ?
         new DFSUtil.DecomStaleComparator(staleInterval) : 
         DFSUtil.DECOM_COMPARATOR;
         
@@ -825,32 +829,20 @@ public class DatanodeManager {
   }
   
   /* Getter and Setter for stale DataNodes related attributes */
-  
-  /**
-   * @return whether or not to avoid writing to stale datanodes
-   */
-  public boolean isAvoidingStaleDataNodesForWrite() {
-    return avoidStaleDataNodesForWrite;
-  }
 
   /**
-   * Set the value of {@link DatanodeManager#avoidStaleDataNodesForWrite}. 
-   * The HeartbeatManager disable avoidStaleDataNodesForWrite when more than
-   * half of the DataNodes are marked as stale.
+   * Whether stale datanodes should be avoided as targets on the write path.
+   * The result of this function may change if the number of stale datanodes
+   * eclipses a configurable threshold.
    * 
-   * @param avoidStaleDataNodesForWrite
-   *          The value to set to
-   *          {@link DatanodeManager#avoidStaleDataNodesForWrite}
+   * @return whether stale datanodes should be avoided on the write path
    */
-  void setAvoidStaleDataNodesForWrite(boolean avoidStaleDataNodesForWrite) {
-    this.avoidStaleDataNodesForWrite = avoidStaleDataNodesForWrite;
-  }
-
-  /**
-   * @return Whether or not to check stale DataNodes for R/W
-   */
-  boolean isCheckingForStaleDataNodes() {
-    return checkForStaleDataNodes;
+  public boolean shouldAvoidStaleDataNodesForWrite() {
+    // If # stale exceeds maximum staleness ratio, disable stale
+    // datanode avoidance on the write path
+    return avoidStaleDataNodesForWrite &&
+        (numStaleNodes <= heartbeatManager.getLiveDatanodeCount()
+            * ratioUseStaleDataNodesForWrite);
   }
   
   /**
@@ -967,7 +959,7 @@ public class DatanodeManager {
       port = DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT;
     } else {
       hostStr = hostLine.substring(0, idx);
-      port = Integer.valueOf(hostLine.substring(idx));
+      port = Integer.valueOf(hostLine.substring(idx+1));
     }
 
     if (InetAddresses.isInetAddress(hostStr)) {

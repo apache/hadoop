@@ -123,6 +123,10 @@ public class CheckpointSignature extends StorageInfo
       blockpoolID.equals(si.getBlockPoolID());
   }
 
+  boolean namespaceIdMatches(FSImage si) {
+    return namespaceID == si.getStorage().namespaceID;
+  }
+
   void validateStorageInfo(FSImage si) throws IOException {
     if (!isSameCluster(si)
         || !storageVersionMatches(si.getStorage())) {
