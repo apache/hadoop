@@ -559,13 +559,18 @@ public class DataNode extends Configured
         new DataXceiverServer(tcpPeerServer, conf, this));
     this.threadGroup.setDaemon(true); // auto destroy when empty
 
-    DomainPeerServer domainPeerServer =
-              getDomainPeerServer(conf, streamingAddr.getPort());
-    if (domainPeerServer != null) {
-      this.localDataXceiverServer = new Daemon(threadGroup, 
-          new DataXceiverServer(domainPeerServer, conf, this));
-      LOG.info("Listening on UNIX domain socket: " +
-          domainPeerServer.getBindPath());
+    if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
+              DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT) ||
+        conf.getBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+              DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
+      DomainPeerServer domainPeerServer =
+                getDomainPeerServer(conf, streamingAddr.getPort());
+      if (domainPeerServer != null) {
+        this.localDataXceiverServer = new Daemon(threadGroup,
+            new DataXceiverServer(domainPeerServer, conf, this));
+        LOG.info("Listening on UNIX domain socket: " +
+            domainPeerServer.getBindPath());
+      }
     }
   }
 
