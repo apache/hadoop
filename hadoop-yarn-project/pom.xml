@@ -33,7 +33,6 @@
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
     <fork.mode>once</fork.mode>
-    <mr.basedir>${basedir}</mr.basedir>
     <hadoop.component>yarn</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
@@ -200,16 +199,6 @@
         </executions>
       </plugin>
       <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <configuration>
-            <findbugsXmlOutput>true</findbugsXmlOutput>
-            <xmlOutput>true</xmlOutput>
-            <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
-            <effort>Max</effort>
-          </configuration>
-       </plugin>
-       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>

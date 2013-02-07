@@ -249,4 +249,11 @@
     <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
   </Match>
 
+  <!-- rmClient can be ignored as only code blocks outside of rpc calls need to be synchronized -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.client.AMRMClientImpl" />
+    <Field name="rmClient" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+
 </FindBugsFilter>
