@@ -12,6 +12,10 @@ Release 2.0.4-beta - UNRELEASED
 
   BUG FIXES
 
+    HDFS-4458. In DFSUtil.getNameServiceUris(..), convert default fs URI using
+    NetUtils.createSocketAddr(..) for being consistent with other addresses.
+    (Binglin Chang via szetszwo)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
