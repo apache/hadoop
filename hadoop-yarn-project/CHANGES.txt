@@ -32,6 +32,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-385. Add missing fields - location and #containers to
     ResourceRequestPBImpl's toString(). (Sandy Ryza via sseth)
 
+    YARN-377. Use the new StringUtils methods added by HADOOP-9252 and fix
+    TestContainersMonitor.  (Chris Nauroth via szetszwo)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
