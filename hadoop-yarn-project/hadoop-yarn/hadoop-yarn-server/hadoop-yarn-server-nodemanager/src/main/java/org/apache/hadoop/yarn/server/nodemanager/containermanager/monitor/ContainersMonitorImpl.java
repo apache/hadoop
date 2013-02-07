@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -125,10 +125,10 @@ public class ContainersMonitorImpl extends AbstractService implements
         this.maxPmemAllottedForContainers >
         totalPhysicalMemoryOnNM * 0.80f) {
       LOG.warn("NodeManager configured with " +
-          StringUtils.humanReadableInt(maxPmemAllottedForContainers) +
+          TraditionalBinaryPrefix.long2String(maxPmemAllottedForContainers, "", 1) +
           " physical memory allocated to containers, which is more than " +
           "80% of the total physical memory available (" +
-          StringUtils.humanReadableInt(totalPhysicalMemoryOnNM) +
+          TraditionalBinaryPrefix.long2String(totalPhysicalMemoryOnNM, "", 1) +
           "). Thrashing might happen.");
     }
 
@@ -493,12 +493,12 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     private String formatUsageString(long currentVmemUsage, long vmemLimit,
         long currentPmemUsage, long pmemLimit) {
-      return String.format("%sb of %sb physical memory used; " +
-          "%sb of %sb virtual memory used",
-          StringUtils.humanReadableInt(currentPmemUsage),
-          StringUtils.humanReadableInt(pmemLimit),
-          StringUtils.humanReadableInt(currentVmemUsage),
-          StringUtils.humanReadableInt(vmemLimit));
+      return String.format("%sB of %sB physical memory used; " +
+          "%sB of %sB virtual memory used",
+          TraditionalBinaryPrefix.long2String(currentPmemUsage, "", 1),
+          TraditionalBinaryPrefix.long2String(pmemLimit, "", 1),
+          TraditionalBinaryPrefix.long2String(currentVmemUsage, "", 1),
+          TraditionalBinaryPrefix.long2String(vmemLimit, "", 1));
     }
   }
 
