@@ -24,3 +24,6 @@ branch-trunk-win changes - unreleased
 
   YARN-316. YARN container launch may exceed maximum Windows command line 
   length due to long classpath. (Chris Nauroth via suresh)
+
+  YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
+  via vinodkv)

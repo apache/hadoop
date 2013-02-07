@@ -180,8 +180,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
       // Setup command to run
-      String[] command = Shell.getRunCommand(
-        sb.getWrapperScriptPath().toString(), containerIdStr);
+      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
+        containerIdStr);
 
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
@@ -260,7 +260,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       pout.println();
       pout.println("echo $$ > " + pidFile.toString() + ".tmp");
       pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-      String exec = Shell.isSetsidAvailable? "exec setsid" : "exec";
+      String exec = ContainerExecutor.isSetsidAvailable? "exec setsid" : "exec";
       pout.println(exec + " /bin/bash -c \"" +
         launchDst.toUri().getPath().toString() + "\"");
     }
@@ -297,7 +297,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Override
   public boolean signalContainer(String user, String pid, Signal signal)
       throws IOException {
-    final String sigpid = Shell.isSetsidAvailable
+    final String sigpid = ContainerExecutor.isSetsidAvailable
         ? "-" + pid
         : pid;
     LOG.debug("Sending signal " + signal.getValue() + " to pid " + sigpid
@@ -324,8 +324,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    */
   private boolean containerIsAlive(String pid) throws IOException {
     try {
-      new ShellCommandExecutor(Shell.getCheckProcessIsAliveCommand(pid))
-        .execute();
+      new ShellCommandExecutor(getCheckProcessIsAliveCommand(pid)).execute();
       // successful execution means process is alive
       return true;
     }
@@ -343,7 +342,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * (for logging).
    */
   private void killContainer(String pid, Signal signal) throws IOException {
-    new ShellCommandExecutor(Shell.getSignalKillCommand(signal.getValue(), pid))
+    new ShellCommandExecutor(getSignalKillCommand(signal.getValue(), pid))
       .execute();
   }
 
