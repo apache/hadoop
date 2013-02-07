@@ -29,6 +29,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-383. AMRMClientImpl should handle null rmClient in stop()
     (Hitesh Shah via sseth)
 
+    YARN-385. Add missing fields - location and #containers to
+    ResourceRequestPBImpl's toString(). (Sandy Ryza via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
