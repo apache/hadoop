@@ -9,6 +9,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
   IMPROVEMENTS
+    HADOOP-9253. Capture ulimit info in the logs at service start time.
+    (Arpit Gupta via suresh)
 
   OPTIMIZATIONS
 
