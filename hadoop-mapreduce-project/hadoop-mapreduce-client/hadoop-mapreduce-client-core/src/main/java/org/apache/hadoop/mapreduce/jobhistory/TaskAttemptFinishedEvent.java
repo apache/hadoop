@@ -105,11 +105,11 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
   public TaskID getTaskId() { return attemptId.getTaskID(); }
   /** Get the task attempt id */
   public TaskAttemptID getAttemptId() {
-    return TaskAttemptID.forName(attemptId.toString());
+    return attemptId;
   }
   /** Get the task type */
   public TaskType getTaskType() {
-    return TaskType.valueOf(taskType.toString());
+    return taskType;
   }
   /** Get the task status */
   public String getTaskStatus() { return taskStatus.toString(); }

@@ -769,6 +769,10 @@ By checking if the demand has reached maxTasks in every iteration, we can avoid 
      Major new feature reported by Arun C Murthy and fixed by Arun C Murthy (capacityscheduler , scheduler)<br>
      <b>Enhance CS to schedule accounting for both memory and cpu cores</b><br>
      <blockquote>With YARN being a general purpose system, it would be useful for several applications (MPI et al) to specify not just memory but also CPU (cores) for their resource requirements. Thus, it would be useful to the CapacityScheduler to account for both.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4977">MAPREDUCE-4977</a>.
+     Major improvement reported by Alejandro Abdelnur and fixed by Alejandro Abdelnur (documentation)<br>
+     <b>Documentation for pluggable shuffle and pluggable sort</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4971">MAPREDUCE-4971</a>.
      Minor improvement reported by Arun C Murthy and fixed by Arun C Murthy <br>
      <b>Minor extensibility enhancements </b><br>
@@ -905,6 +909,10 @@ By checking if the demand has reached maxTasks in every iteration, we can avoid 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4825">MAPREDUCE-4825</a>.
      Major bug reported by Jason Lowe and fixed by Jason Lowe (mr-am)<br>
      <b>JobImpl.finished doesn't expect ERROR as a final job state</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4822">MAPREDUCE-4822</a>.
+     Trivial improvement reported by Robert Joseph Evans and fixed by Chu Tong (jobhistoryserver)<br>
+     <b>Unnecessary conversions in History Events</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4819">MAPREDUCE-4819</a>.
      Blocker bug reported by Jason Lowe and fixed by Bikas Saha (mr-am)<br>
@@ -1181,6 +1189,10 @@ By checking if the demand has reached maxTasks in every iteration, we can avoid 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4462">HDFS-4462</a>.
      Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (namenode)<br>
      <b>2NN will fail to checkpoint after an HDFS upgrade from a pre-federation version of HDFS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4458">HDFS-4458</a>.
+     Major bug reported by wenwupeng and fixed by Binglin Chang (balancer)<br>
+     <b>start balancer failed with "Failed to create file [/system/balancer.id]"  if configure IP on fs.defaultFS</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4456">HDFS-4456</a>.
      Major new feature reported by Tsz Wo (Nicholas), SZE and fixed by Plamen Jeliazkov (webhdfs)<br>
@@ -1936,6 +1948,10 @@ This feature is by default turned * off *. To turn on the feature, set the HDFS 
      Major new feature reported by Dmytro Molkov and fixed by Konstantin Shvachko (namenode)<br>
      <b>Plugable block id generation </b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9289">HADOOP-9289</a>.
+     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (fs)<br>
+     <b>FsShell rm -f fails for non-matching globs</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9278">HADOOP-9278</a>.
      Major bug reported by Chris Nauroth and fixed by Chris Nauroth (fs)<br>
      <b>HarFileSystem may leak file handle</b><br>
@@ -2083,6 +2099,10 @@ This feature is by default turned * off *. To turn on the feature, set the HDFS 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9072">HADOOP-9072</a>.
      Major bug reported by Robert Parker and fixed by Robert Parker <br>
      <b>Hadoop-Common-0.23-Build Fails to build in Jenkins</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9070">HADOOP-9070</a>.
+     Blocker sub-task reported by Daryn Sharp and fixed by Daryn Sharp (ipc)<br>
+     <b>Kerberos SASL server cannot find kerberos key</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9067">HADOOP-9067</a>.
      Minor test reported by Ivan A. Veselovsky and fixed by Ivan A. Veselovsky <br>

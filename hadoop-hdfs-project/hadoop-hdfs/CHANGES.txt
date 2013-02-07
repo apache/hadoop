@@ -466,6 +466,10 @@ Release 2.0.3-alpha - 2013-02-06
     HDFS-4468.  Use the new StringUtils methods added by HADOOP-9252 and fix
     TestHDFSCLI and TestQuota. (szetszwo)
 
+    HDFS-4458. In DFSUtil.getNameServiceUris(..), convert default fs URI using
+    NetUtils.createSocketAddr(..) for being consistent with other addresses.
+    (Binglin Chang via szetszwo)
+
   BREAKDOWN OF HDFS-3077 SUBTASKS
 
     HDFS-3077. Quorum-based protocol for reading and writing edit logs.

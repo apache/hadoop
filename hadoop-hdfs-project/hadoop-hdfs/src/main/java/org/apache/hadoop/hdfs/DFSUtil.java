@@ -764,6 +764,13 @@ public class DFSUtil {
     
     // Add the default URI if it is an HDFS URI.
     URI defaultUri = FileSystem.getDefaultUri(conf);
+    // checks if defaultUri is ip:port format
+    // and convert it to hostname:port format
+    if (defaultUri != null && (defaultUri.getPort() != -1)) {
+      defaultUri = createUri(defaultUri.getScheme(),
+          NetUtils.createSocketAddr(defaultUri.getHost(), 
+              defaultUri.getPort()));
+    }
     if (defaultUri != null &&
         HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
         !nonPreferredUris.contains(defaultUri)) {
