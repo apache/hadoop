@@ -61,7 +61,6 @@ Release 1.2.0 - unreleased
     NetworkTopology with NodeGroup and use generic code for choosing datanode
     in Balancer.  (Junping Du via szetszwo)
 
-
     HDFS-4256 Backport concatenation of files into a single file to branch-1
     (sanjay Radia)
 
@@ -168,6 +167,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4838. Add additional fields like Locality, Avataar to the 
     JobHistory logs. (Arun C Murthy and Zhijie Shen via sseth)
+
+    HADOOP-9253. Capture ulimit info in the logs at service start time.
+    (Arpit Gupta via suresh)
 
   OPTIMIZATIONS
 
