@@ -479,6 +479,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4970. Child tasks (try to) create security audit log files.
     (sandyr via tucu)
 
+    HADOOP-9124. SortedMapWritable violates contract of Map interface for
+    equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
