@@ -345,6 +345,8 @@ Release 2.0.4-beta - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
