@@ -38,6 +38,24 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.jobhistory.max-age-ms</name>
+  <value>2592000000</value>
+  <description> Job history files older than this many milliseconds will
+  be deleted when the history cleaner runs. Defaults to 2592000000 (30
+  days).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.cleaner.interval-ms</name>
+  <value>86400000</value>
+  <description> How often the job history cleaner checks for files to delete, 
+  in milliseconds. Defaults to 86400000 (one day). Files are only deleted if
+  they are older than mapreduce.jobhistory.max-age-ms.
+  </description>
+</property>
+
 <!-- i/o properties -->
 
 <property>

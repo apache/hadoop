@@ -484,6 +484,9 @@ Release 1.2.0 - unreleased
     HADOOP-9124. SortedMapWritable violates contract of Map interface for
     equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
 
+    MAPREDUCE-4643. Make job-history cleanup-period configurable. 
+    (sandyr via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

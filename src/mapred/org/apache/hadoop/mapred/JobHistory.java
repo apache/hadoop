@@ -129,9 +129,9 @@ public class JobHistory {
   final static FsPermission HISTORY_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0744); // rwxr--r--
   private static FileSystem LOGDIR_FS; // log dir filesystem
-  private static FileSystem DONEDIR_FS; // Done dir filesystem
+  protected static FileSystem DONEDIR_FS; // Done dir filesystem
   private static JobConf jtConf;
-  private static Path DONE = null; // folder for completed jobs
+  protected static Path DONE = null; // folder for completed jobs
   private static String DONE_BEFORE_SERIAL_TAIL = doneSubdirsBeforeSerialTail();
   private static String DONE_LEAF_FILES = DONE_BEFORE_SERIAL_TAIL + "/*";
   private static boolean aclsEnabled = false;
@@ -585,6 +585,19 @@ public class JobHistory {
     }
 
     fileManager.start();
+    
+    HistoryCleaner.cleanupFrequency =
+    	      conf.getLong("mapreduce.jobhistory.cleaner.interval-ms",
+    	      HistoryCleaner.DEFAULT_CLEANUP_FREQUENCY);
+    HistoryCleaner.maxAgeOfHistoryFiles =
+    	      conf.getLong("mapreduce.jobhistory.max-age-ms",
+    	      HistoryCleaner.DEFAULT_HISTORY_MAX_AGE);
+    LOG.info(String.format("Job History MaxAge is %d ms (%.2f days), " +
+    	      "Cleanup Frequency is %d ms (%.2f days)",
+    	      HistoryCleaner.maxAgeOfHistoryFiles,
+    	      ((float) HistoryCleaner.maxAgeOfHistoryFiles)/HistoryCleaner.ONE_DAY_IN_MS,
+    	      HistoryCleaner.cleanupFrequency,
+    	      ((float) HistoryCleaner.cleanupFrequency)/HistoryCleaner.ONE_DAY_IN_MS));
   }
 
   /**
@@ -2587,24 +2600,26 @@ public class JobHistory {
      */
     public void handle(RecordTypes recType, Map<Keys, String> values) throws IOException; 
   }
-
-  static long directoryTime(String year, String seg2, String seg3) {
-    // set to current time.  In debug mode, this is where the month
-    // and day get set.
+  
+  /**
+   * Returns the time in milliseconds, truncated to the day.
+   */
+  static long directoryTime(String year, String month, String day) {
     Calendar result = Calendar.getInstance();
-    // canonicalize by filling in unset fields
-    result.setTimeInMillis(System.currentTimeMillis());
 
     result.set(Calendar.YEAR, Integer.parseInt(year));
 
     // months are 0-based in Calendar, but people will expect January
     // to be month #1 .  Therefore the number is bumped before we make the 
     // directory name and must be debumped to seek the time.
-    result.set(Calendar.MONTH, Integer.parseInt(seg2) - 1);
+    result.set(Calendar.MONTH, Integer.parseInt(month) - 1);
 
-    result.set(Calendar.DAY_OF_MONTH, Integer.parseInt(seg3));
-
-    return result.getTimeInMillis();
+    result.set(Calendar.DAY_OF_MONTH, Integer.parseInt(day));
+    
+    // truncate to day granularity
+    long timeInMillis = result.getTimeInMillis();
+    return timeInMillis - 
+        timeInMillis % HistoryCleaner.ONE_DAY_IN_MS;
   }
   
   /**
@@ -2615,8 +2630,10 @@ public class JobHistory {
    */
   public static class HistoryCleaner implements Runnable {
     static final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000L;
-    static final long DIRECTORY_LIFE_IN_MS = 30 * ONE_DAY_IN_MS;
-    static final long RUN_INTERVAL = ONE_DAY_IN_MS;
+    static final long DEFAULT_HISTORY_MAX_AGE = 30 * ONE_DAY_IN_MS;
+    static final long DEFAULT_CLEANUP_FREQUENCY = ONE_DAY_IN_MS;
+    static long cleanupFrequency = DEFAULT_CLEANUP_FREQUENCY;
+    static long maxAgeOfHistoryFiles = DEFAULT_HISTORY_MAX_AGE;
     private long now; 
     private static final AtomicBoolean isRunning = new AtomicBoolean(false); 
     private static long lastRan = 0; 
@@ -2633,12 +2650,15 @@ public class JobHistory {
       }
       now = System.currentTimeMillis();
       // clean history only once a day at max
-      if (lastRan != 0 && (now - lastRan) < RUN_INTERVAL) {
+      if (lastRan != 0 && (now - lastRan) < cleanupFrequency) {
         isRunning.set(false);
         return; 
       }
       lastRan = now;
-
+      clean(now);
+    }
+    
+    public void clean(long now) {
       Set<String> deletedPathnames = new HashSet<String>();
 
       // XXXXX debug code
@@ -2649,13 +2669,19 @@ public class JobHistory {
         Path[] datedDirectories
           = FileUtil.stat2Paths(localGlobber(DONEDIR_FS, DONE,
                                              DONE_BEFORE_SERIAL_TAIL, null));
-        // find directories older than 30 days
+
+        // any file with a timestamp earlier than cutoff should be deleted
+        long cutoff = now - maxAgeOfHistoryFiles;
+        Calendar cutoffDay = Calendar.getInstance();
+        cutoffDay.setTimeInMillis(cutoff - cutoff % ONE_DAY_IN_MS);
+        
+        // find directories older than the maximum age
         for (int i = 0; i < datedDirectories.length; ++i) {
           String thisDir = datedDirectories[i].toString();
           Matcher pathMatcher = parseDirectory.matcher(thisDir);
 
           if (pathMatcher.matches()) {
-            long dirTime = directoryTime(pathMatcher.group(1),
+            long dirDay = directoryTime(pathMatcher.group(1),
                                          pathMatcher.group(2),
                                          pathMatcher.group(3));
 
@@ -2664,44 +2690,48 @@ public class JobHistory {
                   + " as year/month/day = " + pathMatcher.group(1) + "/"
                   + pathMatcher.group(2) + "/" + pathMatcher.group(3));
             }
-
-            if (dirTime < now - DIRECTORY_LIFE_IN_MS) {
-
+            
+            if (dirDay <= cutoffDay.getTimeInMillis()) {
               if (LOG.isDebugEnabled()) {
-                Calendar then = Calendar.getInstance();
-                then.setTimeInMillis(dirTime);
                 Calendar nnow = Calendar.getInstance();
                 nnow.setTimeInMillis(now);
+                Calendar then = Calendar.getInstance();
+                then.setTimeInMillis(dirDay);
                 
                 LOG.debug("HistoryCleaner.run directory: " + thisDir
                     + " because its time is " + then + " but it's now " + nnow);
               }
-
-              // remove every file in the directory and save the name
-              // so we can remove it from jobHistoryFileMap
-              Path[] deletees
-                = FileUtil.stat2Paths(localGlobber(DONEDIR_FS,
-                                                   datedDirectories[i],
-                                                   "/*/*", // sn + individual files
-                                                   null));
-
-              for (int j = 0; j < deletees.length; ++j) {
-
-                if (LOG.isDebugEnabled() && !printedOneDeletee) {
-                  LOG.debug("HistoryCleaner.run deletee: "
-                      + deletees[j].toString());
-                  printedOneDeletee = true;
-                }
-
-                DONEDIR_FS.delete(deletees[j]);
-                deletedPathnames.add(deletees[j].toString());
-              }
-              synchronized (existingDoneSubdirs) {
-                if (!existingDoneSubdirs.contains(datedDirectories[i]))
-                  {
-                    LOG.warn("JobHistory: existingDoneSubdirs doesn't contain "
-                             + datedDirectories[i] + ", but should.");
+            }
+            
+            // if dirDay is cutoffDay, some files may be old enough and others not
+            if (dirDay == cutoffDay.getTimeInMillis()) {
+              // remove old enough files in the directory
+              FileStatus[] possibleDeletees = DONEDIR_FS.listStatus(datedDirectories[i]);
+              
+              for (int j = 0; j < possibleDeletees.length; ++j) {
+            	  if (possibleDeletees[j].getModificationTime() < now - 
+            	      maxAgeOfHistoryFiles) {
+            	    Path deletee = possibleDeletees[j].getPath();
+                  if (LOG.isDebugEnabled() && !printedOneDeletee) {
+                    LOG.debug("HistoryCleaner.run deletee: "
+                        + deletee.toString());
+                    printedOneDeletee = true;
                   }
+
+                  DONEDIR_FS.delete(deletee);
+                  deletedPathnames.add(deletee.toString());
+            	  }
+              }
+            }
+
+            // if the directory is older than cutoffDay, we can flat out
+            // delete it because all the files in it are old enough
+            if (dirDay < cutoffDay.getTimeInMillis()) {
+              synchronized (existingDoneSubdirs) {
+                if (!existingDoneSubdirs.contains(datedDirectories[i])) {
+                  LOG.warn("JobHistory: existingDoneSubdirs doesn't contain "
+                      + datedDirectories[i] + ", but should.");
+                }
                 DONEDIR_FS.delete(datedDirectories[i], true);
                 existingDoneSubdirs.remove(datedDirectories[i]);
               }
