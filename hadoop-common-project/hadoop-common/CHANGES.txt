@@ -17,6 +17,10 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9067. provide test for LocalFileSystem.reportChecksumFailure
     (Ivan A. Veselovsky via bobby)
 
+    HADOOP-9253. Capture ulimit info in the logs at service start time.
+    (Arpit Gupta via tgraves)
+ 
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
