@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -238,8 +238,9 @@ public class TestSnapshotPathINodes {
     // No SnapshotRoot dir is included in the resolved inodes  
     assertSnapshot(nodesInPath, true, snapshot, -1);
     // The last INode should be the INode for sub1
-    assertEquals(inodes[inodes.length - 1].getFullPathName(), sub1.toString());
-    assertFalse(inodes[inodes.length - 1] instanceof INodeFileSnapshot);
+    final INode last = nodesInPath.getLastINode();
+    assertEquals(last.getFullPathName(), sub1.toString());
+    assertFalse(last instanceof INodeFileWithSnapshot);
   }
   
   /** 
@@ -406,7 +407,7 @@ public class TestSnapshotPathINodes {
     // Check the INode for snapshot of file1
     INode snapshotFileNode = ssInodes[ssInodes.length - 1]; 
     assertEquals(snapshotFileNode.getLocalName(), file1.getName());
-    assertTrue(snapshotFileNode instanceof INodeFileSnapshot);
+    assertTrue(snapshotFileNode instanceof INodeFileWithSnapshot);
     // The modification time of the snapshot INode should be the same with the
     // original INode before modification
     assertEquals(inodes[inodes.length - 1].getModificationTime(),

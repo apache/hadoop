@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
 
@@ -80,7 +81,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     this.clientNode = clientNode;
   }
   
-  protected INodeFileUnderConstruction(final INodeFile that,
+  public INodeFileUnderConstruction(final INodeFile that,
       final String clientName,
       final String clientMachine,
       final DatanodeDescriptor clientNode) {
@@ -127,6 +128,13 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
         getBlocks(), getFileReplication(), getPreferredBlockSize());
   }
   
+  @Override
+  public INodeFileUnderConstruction recordModification(final Snapshot latest) {
+    return latest == null? this
+        : parent.replaceChild4INodeFileUcWithSnapshot(this)
+            .recordModification(latest);
+  }
+
   /** Assert all blocks are complete. */
   protected void assertAllBlocksComplete() {
     final BlockInfo[] blocks = getBlocks();

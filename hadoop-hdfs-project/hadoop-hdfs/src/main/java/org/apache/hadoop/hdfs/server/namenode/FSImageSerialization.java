@@ -36,9 +36,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
@@ -229,16 +228,10 @@ public class FSImageSerialization {
       out.writeInt(0); // # of blocks
       out.writeBoolean(false);
     }
-    if (node instanceof INodeFileSnapshot
-        || node instanceof INodeFileUnderConstructionSnapshot) {
-      out.writeLong(node.computeFileSize(true));
-      if (node instanceof INodeFileUnderConstructionSnapshot) {
-        out.writeBoolean(true);
-        writeString(((INodeFileUnderConstruction) node).getClientName(), out);
-        writeString(((INodeFileUnderConstruction) node).getClientMachine(), out);
-      } else {
-        out.writeBoolean(false);
-      }
+//  TODO: fix snapshot fsimage
+    if (node instanceof INodeFileWithSnapshot) {
+      out.writeLong(node.computeFileSize(true, null));
+      out.writeBoolean(false);
     } else {
       out.writeLong(-1);
       out.writeBoolean(node instanceof FileWithSnapshot);

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -142,13 +143,14 @@ public class TestSnapshotReplication {
     assertEquals(expectedBlockRep, inodeOfCurrentFile.getBlockReplication());
     // Then check replication for every snapshot
     for (Path ss : snapshotRepMap.keySet()) {
-      final INodeFile ssInode = getINodeFile(ss);
+      final INodesInPath iip = fsdir.getLastINodeInPath(ss.toString());
+      final INodeFile ssInode = (INodeFile)iip.getLastINode();
       // The replication number derived from the
       // INodeFileWithLink#getBlockReplication should always == expectedBlockRep
       assertEquals(expectedBlockRep, ssInode.getBlockReplication());
       // Also check the number derived from INodeFile#getFileReplication
       assertEquals(snapshotRepMap.get(ss).shortValue(),
-          ssInode.getFileReplication());
+          ssInode.getFileReplication(iip.getPathSnapshot()));
     }
   }
   

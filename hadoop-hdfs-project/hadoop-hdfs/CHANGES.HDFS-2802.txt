@@ -149,3 +149,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4414. Add support for getting snapshot diff from DistributedFileSystem.
   (Jing Zhao via suresh)
+
+  HDFS-4446. Support file snapshots with diff lists.  (szetszwo)

@@ -36,11 +36,10 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.ChildrenDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -82,17 +81,6 @@ public class TestINodeFileUnderConstructionWithSnapshot {
   }
   
   /**
-   * Check if the given nodes can form a circular list
-   */
-  private void checkCircularList(FileWithSnapshot... nodes) {
-    for (int i = 0; i < nodes.length; i++) {
-      FileWithSnapshot next = nodes[i].getNext();
-      FileWithSnapshot expectedNext = nodes[(i + 1) % nodes.length];
-      Assert.assertTrue(next == expectedNext);
-    }
-  }
-  
-  /**
    * Test snapshot after file appending
    */
   @Test
@@ -106,12 +94,13 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // check the circular list and corresponding inodes: there should only be a
     // reference of the current node in the created list
     INodeFile fileNode = (INodeFile) fsdir.getINode(file.toString());
+    final byte[] filename = fileNode.getLocalNameBytes(); 
     INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
         .getINode(dir.toString());
     ChildrenDiff diff = dirNode.getDiffs().getLast().getChildrenDiff();
-    INode nodeInCreated = diff.searchCreated(fileNode.getLocalNameBytes());
+    INodeFile nodeInCreated = (INodeFile)diff.searchCreated(filename);
     assertTrue(fileNode == nodeInCreated);
-    INode nodeInDeleted = diff.searchDeleted(fileNode.getLocalNameBytes());
+    INodeFile nodeInDeleted = (INodeFile)diff.searchDeleted(filename);
     assertNull(nodeInDeleted);
     
     // 2. create snapshot --> modify the file --> append
@@ -120,40 +109,37 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     DFSTestUtil.appendFile(hdfs, file, BLOCKSIZE);
     
     // check the circular list and corresponding inodes
-    diff = dirNode.getDiffs().getLast().getChildrenDiff();
+    DirectoryDiff last = dirNode.getDiffs().getLast();
+    Snapshot snapshot = last.snapshot;
+    diff = last.getChildrenDiff();
     fileNode = (INodeFile) fsdir.getINode(file.toString());
-    nodeInCreated = diff.searchCreated(fileNode.getLocalNameBytes());
+    nodeInCreated = (INodeFile)diff.searchCreated(filename);
     assertTrue(fileNode == nodeInCreated);
-    assertEquals(REPLICATION - 1,
-        ((INodeFile) nodeInCreated).getFileReplication());
-    assertEquals(BLOCKSIZE * 3, ((INodeFile) fileNode).computeFileSize(true));
-    nodeInDeleted = diff.searchDeleted(fileNode.getLocalNameBytes());
-    assertEquals(REPLICATION,
-        ((INodeFile) nodeInDeleted).getFileReplication());
-    assertEquals(BLOCKSIZE * 2,
-        ((INodeFile) nodeInDeleted).computeFileSize(true));
-    checkCircularList((INodeFileWithSnapshot) fileNode,
-        (INodeFileSnapshot) nodeInDeleted);
-    
+    assertEquals(REPLICATION - 1, fileNode.getFileReplication());
+    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(true));
+    nodeInDeleted = (INodeFile)diff.searchDeleted(filename);
+    assertEquals(REPLICATION, nodeInDeleted.getFileReplication(snapshot));
+    assertEquals(BLOCKSIZE * 2, nodeInDeleted.computeFileSize(true, snapshot));
+    SnapshotTestHelper.checkCircularList(fileNode, nodeInDeleted);
+
     // 3. create snapshot --> append
     hdfs.createSnapshot(dir, "s2");
     DFSTestUtil.appendFile(hdfs, file, BLOCKSIZE);
     
     // check the circular list and corresponding inodes
-    diff = dirNode.getDiffs().getLast().getChildrenDiff();
+    last = dirNode.getDiffs().getLast();
+    snapshot = last.snapshot;
+    diff = last.getChildrenDiff();
     fileNode = (INodeFile) fsdir.getINode(file.toString());
-    nodeInCreated = diff.searchCreated(fileNode.getLocalNameBytes());
+    nodeInCreated = (INodeFile)diff.searchCreated(filename);
     assertTrue(fileNode == nodeInCreated);
-    assertEquals(REPLICATION - 1,
-        ((INodeFile) nodeInCreated).getFileReplication());
-    assertEquals(BLOCKSIZE * 4, ((INodeFile) fileNode).computeFileSize(true));
-    INode nodeInDeleted2 = diff.searchDeleted(fileNode.getLocalNameBytes());
-    assertEquals(REPLICATION - 1,
-        ((INodeFile) nodeInDeleted2).getFileReplication());
-    assertEquals(BLOCKSIZE * 3,
-        ((INodeFile) nodeInDeleted2).computeFileSize(true));
-    checkCircularList((INodeFileWithSnapshot) fileNode,
-        (INodeFileSnapshot) nodeInDeleted2, (INodeFileSnapshot) nodeInDeleted);
+    assertEquals(REPLICATION - 1,  nodeInCreated.getFileReplication());
+    assertEquals(BLOCKSIZE * 4, fileNode.computeFileSize(true));
+    INodeFile nodeInDeleted2 = (INodeFile)diff.searchDeleted(filename);
+    assertEquals(REPLICATION - 1, nodeInDeleted2.getFileReplication());
+    assertEquals(BLOCKSIZE * 3, nodeInDeleted2.computeFileSize(true, snapshot));
+    SnapshotTestHelper.checkCircularList(fileNode, nodeInDeleted2, nodeInDeleted);
+
   }
   
   private HdfsDataOutputStream appendFileWithoutClosing(Path file, int length)
@@ -181,17 +167,19 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s0");
     out.close();
     
-    // check: an INodeFileUnderConstructionSnapshot should be stored into s0's
+    // check: an INodeFileUnderConstructionWithSnapshot should be stored into s0's
     // deleted list, with size BLOCKSIZE*2
     INodeFile fileNode = (INodeFile) fsdir.getINode(file.toString());
+    final byte[] filename = fileNode.getLocalNameBytes(); 
     assertEquals(BLOCKSIZE * 2, ((INodeFile) fileNode).computeFileSize(true));
     INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
         .getINode(dir.toString());
-    ChildrenDiff diff = dirNode.getDiffs().getLast().getChildrenDiff();
-    INode nodeInDeleted_S0 = diff.searchDeleted(fileNode.getLocalNameBytes());
-    assertTrue(nodeInDeleted_S0 instanceof INodeFileUnderConstructionSnapshot);
-    assertEquals(BLOCKSIZE * 2,
-        ((INodeFile) nodeInDeleted_S0).computeFileSize(true));
+    DirectoryDiff last = dirNode.getDiffs().getLast();
+    Snapshot s0 = last.snapshot;
+    ChildrenDiff diff = last.getChildrenDiff();
+    INodeFileUnderConstructionWithSnapshot nodeInDeleted_S0
+        = (INodeFileUnderConstructionWithSnapshot)diff.searchDeleted(filename);
+    assertEquals(BLOCKSIZE * 2, nodeInDeleted_S0.computeFileSize(true, s0));
     
     // 2. append without closing stream
     out = appendFileWithoutClosing(file, BLOCKSIZE);
@@ -200,31 +188,30 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // re-check nodeInDeleted_S0
     dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
     diff = dirNode.getDiffs().getLast().getChildrenDiff();
-    nodeInDeleted_S0 = diff.searchDeleted(fileNode.getLocalNameBytes());
-    assertTrue(nodeInDeleted_S0 instanceof INodeFileUnderConstructionSnapshot);
-    assertEquals(BLOCKSIZE * 2,
-        ((INodeFile) nodeInDeleted_S0).computeFileSize(true));
+    nodeInDeleted_S0
+        = (INodeFileUnderConstructionWithSnapshot)diff.searchDeleted(filename);
+    assertEquals(BLOCKSIZE * 2, nodeInDeleted_S0.computeFileSize(true, s0));
     
     // 3. take snapshot --> close stream
     hdfs.createSnapshot(dir, "s1");
     out.close();
     
-    // check: an INodeFileUnderConstructionSnapshot with size BLOCKSIZE*3 should
+    // check: an INodeFileUnderConstructionWithSnapshot with size BLOCKSIZE*3 should
     // have been stored in s1's deleted list
     fileNode = (INodeFile) fsdir.getINode(file.toString());
     dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
-    diff = dirNode.getDiffs().getLast().getChildrenDiff();
-    INode nodeInCreated_S1 = diff.searchCreated(fileNode.getLocalNameBytes());
+    last = dirNode.getDiffs().getLast();
+    Snapshot s1 = last.snapshot;
+    diff = last.getChildrenDiff();
+    INodeFile nodeInCreated_S1 = (INodeFile)diff.searchCreated(filename);
     assertTrue(fileNode == nodeInCreated_S1);
     assertTrue(fileNode instanceof INodeFileWithSnapshot);
-    INode nodeInDeleted_S1 = diff.searchDeleted(fileNode.getLocalNameBytes());
-    assertTrue(nodeInDeleted_S1 instanceof INodeFileUnderConstructionSnapshot);
-    assertEquals(BLOCKSIZE * 3,
-        ((INodeFile) nodeInDeleted_S1).computeFileSize(true));
+    INodeFile nodeInDeleted_S1 = (INodeFile)diff.searchDeleted(filename);
+    assertTrue(nodeInDeleted_S1 instanceof INodeFileUnderConstructionWithSnapshot);
+    assertEquals(BLOCKSIZE * 3, nodeInDeleted_S1.computeFileSize(true, s1));
     // also check the circular linked list
-    checkCircularList((INodeFileWithSnapshot) fileNode,
-        (INodeFileUnderConstructionSnapshot) nodeInDeleted_S1,
-        (INodeFileUnderConstructionSnapshot) nodeInDeleted_S0);
+    SnapshotTestHelper.checkCircularList(
+        fileNode, nodeInDeleted_S1, nodeInDeleted_S0);
     
     // 4. modify file --> append without closing stream --> take snapshot -->
     // close stream
@@ -234,7 +221,6 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     out.close();
     
     // re-check the size of nodeInDeleted_S1
-    assertEquals(BLOCKSIZE * 3,
-        ((INodeFile) nodeInDeleted_S1).computeFileSize(true));
+    assertEquals(BLOCKSIZE * 3, nodeInDeleted_S1.computeFileSize(true, s1));
   }  
 }

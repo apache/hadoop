@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
@@ -140,8 +141,7 @@ public class INodeDirectory extends INode {
     assertChildrenNonNull();
 
     if (latest != null) {
-      final INodeDirectoryWithSnapshot dir = replaceSelf4INodeDirectoryWithSnapshot(latest);
-      return dir.removeChild(child, latest);
+      return recordModification(latest).removeChild(child, latest);
     }
 
     final int i = searchChildren(child.getLocalNameBytes());
@@ -163,76 +163,70 @@ public class INodeDirectory extends INode {
       replaceSelf(q);
       return q;
     } else {
-      final INodeDirectoryWithSnapshot s
-          = INodeDirectoryWithSnapshot.newInstance(this, null);
+      final INodeDirectoryWithSnapshot s = new INodeDirectoryWithSnapshot(this);
       s.setQuota(nsQuota, dsQuota, null);
-      replaceSelf(s);
-      s.saveSelf2Snapshot(latest, this);
-      return s;
+      return replaceSelf(s).saveSelf2Snapshot(latest, this);
     }
   }
   /** Replace itself with an {@link INodeDirectorySnapshottable}. */
   public INodeDirectorySnapshottable replaceSelf4INodeDirectorySnapshottable(
       Snapshot latest) {
+    Preconditions.checkState(!(this instanceof INodeDirectorySnapshottable),
+        "this is already an INodeDirectorySnapshottable, this=%s", this);
     final INodeDirectorySnapshottable s = new INodeDirectorySnapshottable(this);
-    replaceSelf(s);
-    s.saveSelf2Snapshot(latest, this);
+    replaceSelf(s).saveSelf2Snapshot(latest, this);
     return s;
   }
 
   /** Replace itself with an {@link INodeDirectoryWithSnapshot}. */
-  public INodeDirectoryWithSnapshot replaceSelf4INodeDirectoryWithSnapshot(
-      Snapshot latest) {
+  public INodeDirectoryWithSnapshot replaceSelf4INodeDirectoryWithSnapshot() {
     Preconditions.checkState(!(this instanceof INodeDirectoryWithSnapshot),
         "this is already an INodeDirectoryWithSnapshot, this=%s", this);
-
-    final INodeDirectoryWithSnapshot withSnapshot
-        = INodeDirectoryWithSnapshot.newInstance(this, latest);
-    replaceSelf(withSnapshot);
-    return withSnapshot;
+    return replaceSelf(new INodeDirectoryWithSnapshot(this));
   }
 
   /** Replace itself with {@link INodeDirectory}. */
   public INodeDirectory replaceSelf4INodeDirectory() {
     Preconditions.checkState(getClass() != INodeDirectory.class,
         "the class is already INodeDirectory, this=%s", this);
-
-    final INodeDirectory newNode = new INodeDirectory(this, true);
-    replaceSelf(newNode);
-    return newNode;
+    return replaceSelf(new INodeDirectory(this, true));
   }
 
   /** Replace itself with the given directory. */
-  private final void replaceSelf(INodeDirectory newDir) {
+  private final <N extends INodeDirectory> N replaceSelf(final N newDir) {
     final INodeDirectory parent = getParent();
     Preconditions.checkArgument(parent != null, "parent is null, this=%s", this);
+    return parent.replaceChild(newDir);
+  }
 
-    final int i = parent.searchChildrenForExistingINode(newDir);
-    final INode oldDir = parent.children.set(i, newDir);
-    oldDir.setParent(null);
+  private final <N extends INode> N replaceChild(final N newChild) {
+    assertChildrenNonNull();
+    final int i = searchChildrenForExistingINode(newChild);
+    final INode oldChild = children.set(i, newChild);
+    oldChild.clearReferences();
+    return newChild;
   }
 
   /** Replace a child {@link INodeFile} with an {@link INodeFileWithSnapshot}. */
-  INodeFileWithSnapshot replaceChild4INodeFileWithSnapshot(final INodeFile child) {
-    assertChildrenNonNull();
+  INodeFileWithSnapshot replaceChild4INodeFileWithSnapshot(
+      final INodeFile child) {
     Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
-        "Child file is already an INodeFileWithLink, child=" + child);
+        "Child file is already an INodeFileWithSnapshot, child=" + child);
+    return replaceChild(new INodeFileWithSnapshot(child, null));
+  }
 
-    final INodeFileWithSnapshot newChild = new INodeFileWithSnapshot(child);
-    final int i = searchChildrenForExistingINode(newChild);
-    children.set(i, newChild);
-    return newChild;
+  /** Replace a child {@link INodeFile} with an {@link INodeFileUnderConstructionWithSnapshot}. */
+  INodeFileUnderConstructionWithSnapshot replaceChild4INodeFileUcWithSnapshot(
+      final INodeFileUnderConstruction child) {
+    Preconditions.checkArgument(!(child instanceof INodeFileUnderConstructionWithSnapshot),
+        "Child file is already an INodeFileUnderConstructionWithSnapshot, child=" + child);
+    return replaceChild(new INodeFileUnderConstructionWithSnapshot(child));
   }
 
   @Override
   public INodeDirectory recordModification(Snapshot latest) {
-    if (latest == null) {
-      return this;
-    }
-    final INodeDirectoryWithSnapshot withSnapshot
-        = replaceSelf4INodeDirectoryWithSnapshot(latest);
-    withSnapshot.saveSelf2Snapshot(latest, this);
-    return withSnapshot;
+    return latest == null? this
+        : replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest);
   }
 
   /**
@@ -240,12 +234,13 @@ public class INodeDirectory extends INode {
    * 
    * @return the child inode, which may be replaced.
    */
-  public INode saveChild2Snapshot(INode child, Snapshot latest) {
+  public INode saveChild2Snapshot(final INode child, final Snapshot latest,
+      final INode snapshotCopy) {
     if (latest == null) {
       return child;
     }
-    return replaceSelf4INodeDirectoryWithSnapshot(latest)
-        .saveChild2Snapshot(child, latest);
+    return replaceSelf4INodeDirectoryWithSnapshot()
+        .saveChild2Snapshot(child, latest, snapshotCopy);
   }
 
   /**
@@ -471,8 +466,7 @@ public class INodeDirectory extends INode {
   public boolean addChild(final INode node, final boolean setModTime,
       final Snapshot latest) {
     if (latest != null) {
-      final INodeDirectoryWithSnapshot dir = replaceSelf4INodeDirectoryWithSnapshot(latest);
-      return dir.addChild(node, setModTime, latest);
+      return recordModification(latest).addChild(node, setModTime, latest);
     }
 
     if (children == null) {
@@ -581,15 +575,28 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+  public void clearReferences() {
+    super.clearReferences();
+    setChildren(null);
+  }
+
+  public int destroySubtreeAndCollectBlocksRecursively(final Snapshot snapshot,
       final BlocksMapUpdateInfo collectedBlocks) {
     int total = 0;
     for (INode child : getChildrenList(snapshot)) {
       total += child.destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
     }
+    return total;
+  }
+
+  @Override
+  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+      final BlocksMapUpdateInfo collectedBlocks) {
+    int total = destroySubtreeAndCollectBlocksRecursively(
+        snapshot, collectedBlocks);
     if (snapshot == null) {
-      parent = null;
-      children = null;
+      total++; //count this dir only if this object is destroyed  
+      clearReferences();
     }
     return total;
   }
@@ -691,9 +698,12 @@ public class INodeDirectory extends INode {
       return inodes;
     }
     
-    /** @return the i-th inode. */
+    /**
+     * @return the i-th inode if i >= 0;
+     *         otherwise, i < 0, return the (length + i)-th inode.
+     */
     public INode getINode(int i) {
-      return inodes[i];
+      return inodes[i >= 0? i: inodes.length + i];
     }
     
     /** @return the last inode. */

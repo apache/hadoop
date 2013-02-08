@@ -23,6 +23,7 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -89,17 +90,16 @@ public class Snapshot implements Comparable<byte[]> {
   private final Root root;
 
   Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
+    this(id, DFSUtil.string2Bytes(name), dir, dir);
+  }
+
+  Snapshot(int id, byte[] name, INodeDirectory dir,
+      INodeDirectorySnapshottable parent) {
     this.id = id;
     this.root = new Root(dir);
 
     this.root.setLocalName(name);
-    this.root.setParent(dir);
-  }
-  
-  /** Constructor used when loading fsimage */
-  Snapshot(int id, INodeDirectory root) {
-    this.id = id;
-    this.root = new Root(root);
+    this.root.setParent(parent);
   }
   
   /** @return the root directory of the snapshot. */

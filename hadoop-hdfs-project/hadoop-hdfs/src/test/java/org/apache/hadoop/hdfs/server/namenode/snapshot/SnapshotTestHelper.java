@@ -33,17 +33,29 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.Util;
+import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 
 /**
@@ -51,6 +63,34 @@ import org.junit.Assert;
  */
 public class SnapshotTestHelper {
   public static final Log LOG = LogFactory.getLog(SnapshotTestHelper.class);
+
+  /** Disable the logs that are not very useful for snapshot related tests. */
+  static void disableLogs() {
+    final String[] lognames = {
+        "org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceScanner",
+        "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl",
+        "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetAsyncDiskService",
+    };
+    for(String n : lognames) {
+      setLevel2OFF(LogFactory.getLog(n));
+    }
+
+    setLevel2OFF(LogFactory.getLog(UserGroupInformation.class));
+    setLevel2OFF(LogFactory.getLog(BlockManager.class));
+    setLevel2OFF(LogFactory.getLog(FSNamesystem.class));
+
+    setLevel2OFF(DataNode.LOG);
+    setLevel2OFF(BlockPoolSliceStorage.LOG);
+    setLevel2OFF(LeaseManager.LOG);
+    setLevel2OFF(NameNode.stateChangeLog);
+    setLevel2OFF(NameNode.blockStateChangeLog);
+    setLevel2OFF(DFSClient.LOG);
+    setLevel2OFF(Server.LOG);
+  }
+
+  static void setLevel2OFF(Object log) {
+    ((Log4JLogger)log).getLogger().setLevel(Level.OFF);
+  }
 
   private SnapshotTestHelper() {
     // Cannot be instantinatied
@@ -77,6 +117,7 @@ public class SnapshotTestHelper {
    */
   public static Path createSnapshot(DistributedFileSystem hdfs,
       Path snapshotRoot, String snapshotName) throws Exception {
+    LOG.info("createSnapshot " + snapshotName + " for " + snapshotRoot);
     assertTrue(hdfs.exists(snapshotRoot));
     hdfs.allowSnapshot(snapshotRoot.toString());
     hdfs.createSnapshot(snapshotRoot, snapshotName);
@@ -97,7 +138,9 @@ public class SnapshotTestHelper {
     // Compare the snapshot with the current dir
     FileStatus[] currentFiles = hdfs.listStatus(snapshottedDir);
     FileStatus[] snapshotFiles = hdfs.listStatus(snapshotRoot);
-    assertEquals(currentFiles.length, snapshotFiles.length);
+    assertEquals("snapshottedDir=" + snapshottedDir
+        + ", snapshotRoot=" + snapshotRoot,
+        currentFiles.length, snapshotFiles.length);
   }
   
   /**
@@ -200,6 +243,26 @@ public class SnapshotTestHelper {
       }
     }
     return null;
+  }
+  
+  /**
+   * Check if the given nodes can form a circular list
+   */
+  static void checkCircularList(INodeFile... nodes) {
+    for (int i = 0; i < nodes.length; i++) {
+      FileWithSnapshot next = ((FileWithSnapshot)nodes[i]).getNext();
+      INodeFile expectedNext = nodes[(i + 1) % nodes.length];
+      if (next != expectedNext) {
+        final StringBuilder b = new StringBuilder("nodes = [")
+            .append(nodes[0].getObjectString());
+        for(int j = 1; j < nodes.length; j++) {
+          b.append(", ").append(nodes[i].getObjectString());
+        }
+        b.append("]\nbut the circular list of nodes[").append(i).append("] is ")
+         .append(Util.circularListString((FileWithSnapshot)nodes[i]));
+        throw new AssertionError(b.toString());
+      }
+    }
   }
 
   /**

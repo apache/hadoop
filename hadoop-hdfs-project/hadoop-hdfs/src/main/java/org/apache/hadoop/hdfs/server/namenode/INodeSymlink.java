@@ -46,8 +46,8 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  public Pair<INodeSymlink, INodeSymlink> createSnapshotCopy() {
-    return new Pair<INodeSymlink, INodeSymlink>(this, new INodeSymlink(this));
+  INode recordModification(Snapshot latest) {
+    return parent.saveChild2Snapshot(this, latest, new INodeSymlink(this));
   }
 
   /** @return true unconditionally. */

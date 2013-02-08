@@ -116,21 +116,10 @@ public class INodeFile extends INode implements BlockCollection {
     this.blocks = blklist;
   }
   
-  protected INodeFile(INodeFile that) {
+  public INodeFile(INodeFile that) {
     super(that);
     this.header = that.header;
     this.blocks = that.blocks;
-  }
-
-  @Override
-  INodeFile recordModification(final Snapshot latest) {
-    //TODO: change it to use diff list
-    return (INodeFile)super.recordModification(latest);
-  }
-
-  @Override
-  public Pair<? extends INodeFile, ? extends INodeFile> createSnapshotCopy() {
-    return parent.replaceChild4INodeFileWithSnapshot(this).createSnapshotCopy();
   }
 
   /** @return true unconditionally. */
@@ -150,24 +139,36 @@ public class INodeFile extends INode implements BlockCollection {
         clientName, clientMachine, clientNode); 
   }
 
+  @Override
+  public INodeFile recordModification(final Snapshot latest) {
+    return latest == null? this
+        : parent.replaceChild4INodeFileWithSnapshot(this)
+            .recordModification(latest);
+  }
+
   /**
    * Set the {@link FsPermission} of this {@link INodeFile}.
    * Since this is a file,
    * the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
   @Override
-  INode setPermission(FsPermission permission, Snapshot latest) {
+  final INode setPermission(FsPermission permission, Snapshot latest) {
     return super.setPermission(permission.applyUMask(UMASK), latest);
   }
 
   /** @return the replication factor of the file. */
-  public final short getFileReplication() {
+  public short getFileReplication(Snapshot snapshot) {
     return HeaderFormat.getReplication(header);
+  }
+
+  /** The same as getFileReplication(null). */
+  public final short getFileReplication() {
+    return getFileReplication(null);
   }
 
   @Override
   public short getBlockReplication() {
-    return getFileReplication();
+    return getFileReplication(null);
   }
 
   public void setFileReplication(short replication, Snapshot latest) {
@@ -242,7 +243,6 @@ public class INodeFile extends INode implements BlockCollection {
       return 0;
     }
 
-    parent = null;
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfo blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
@@ -250,6 +250,7 @@ public class INodeFile extends INode implements BlockCollection {
       }
     }
     setBlocks(null);
+    clearReferences();
     return 1;
   }
   
@@ -262,16 +263,22 @@ public class INodeFile extends INode implements BlockCollection {
 
   @Override
   long[] computeContentSummary(long[] summary) {
-    summary[0] += computeFileSize(true);
+    summary[0] += computeFileSize(true, null);
     summary[1]++;
     summary[3] += diskspaceConsumed();
     return summary;
   }
 
+  /** The same as computeFileSize(includesBlockInfoUnderConstruction, null). */
+  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+    return computeFileSize(includesBlockInfoUnderConstruction, null);
+  }
+
   /** Compute file size.
    * May or may not include BlockInfoUnderConstruction.
    */
-  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+  public long computeFileSize(boolean includesBlockInfoUnderConstruction,
+      Snapshot snapshot) {
     if (blocks == null || blocks.length == 0) {
       return 0;
     }
@@ -343,7 +350,7 @@ public class INodeFile extends INode implements BlockCollection {
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final Snapshot snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
-    out.print(", fileSize=" + computeFileSize(true));
+    out.print(", fileSize=" + computeFileSize(true, snapshot));
     // only compare the first block
     out.print(", blocks=" + (blocks == null? null: blocks[0]));
     if (this instanceof FileWithSnapshot) {

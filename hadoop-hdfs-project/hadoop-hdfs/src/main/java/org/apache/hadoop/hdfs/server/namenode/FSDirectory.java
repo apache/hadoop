@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
@@ -1123,28 +1124,35 @@ public class FSDirectory implements Closeable {
       BlocksMapUpdateInfo collectedBlocks, long mtime) {
     assert hasWriteLock();
 
-    // Remove the node from the namespace
-    final INode targetNode = removeLastINode(inodesInPath);
+    // check if target node exists
+    INode targetNode = inodesInPath.getLastINode();
     if (targetNode == null) {
       return 0;
     }
-    // set the parent's modification time
-    final INode[] inodes = inodesInPath.getINodes();
-    final Snapshot latestSnapshot = inodesInPath.getLatestSnapshot();
-    final INodeDirectory parent = (INodeDirectory)inodes[inodes.length - 2];
-    parent.updateModificationTime(mtime, latestSnapshot);
 
-    final INode snapshotCopy = parent.getChild(targetNode.getLocalNameBytes(),
-        latestSnapshot);
-    // if snapshotCopy == targetNode, it means that the file is also stored in
-    // a snapshot so that the block should not be removed.
-    final int filesRemoved = snapshotCopy == targetNode? 0
-        : targetNode.destroySubtreeAndCollectBlocks(null, collectedBlocks);
+    // check latest snapshot
+    final Snapshot latestSnapshot = inodesInPath.getLatestSnapshot();
+    final INode snapshotCopy = ((INodeDirectory)inodesInPath.getINode(-2))
+        .getChild(targetNode.getLocalNameBytes(), latestSnapshot);
+    if (snapshotCopy == targetNode) {
+      // it is also in a snapshot, record modification before delete it
+      targetNode = targetNode.recordModification(latestSnapshot);
+    }
+
+    // Remove the node from the namespace
+    final INode removed = removeLastINode(inodesInPath);
+    Preconditions.checkState(removed == targetNode);
+
+    // set the parent's modification time
+    targetNode.getParent().updateModificationTime(mtime, latestSnapshot);
+
+    final int inodesRemoved = targetNode.destroySubtreeAndCollectBlocks(
+        null, collectedBlocks);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           + targetNode.getFullPathName() + " is removed");
     }
-    return filesRemoved;
+    return inodesRemoved;
   }
   
   /**
@@ -1184,7 +1192,7 @@ public class FSDirectory implements Closeable {
   /**
    * Replaces the specified INodeFile with the specified one.
    */
-  public void replaceINodeFile(String path, INodeFile oldnode,
+  void replaceINodeFile(String path, INodeFile oldnode,
       INodeFile newnode, Snapshot latest) throws IOException {
     writeLock();
     try {
@@ -1194,17 +1202,27 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  /** Replace an INodeFile and record modification for the latest snapshot. */
   void unprotectedReplaceINodeFile(final String path, final INodeFile oldnode,
       final INodeFile newnode, final Snapshot latest) {
     Preconditions.checkState(hasWriteLock());
 
-    final INodeDirectory parent = oldnode.getParent();
+    INodeDirectory parent = oldnode.getParent();
     final INode removed = parent.removeChild(oldnode, latest);
     Preconditions.checkState(removed == oldnode,
         "removed != oldnode=%s, removed=%s", oldnode, removed);
 
-    oldnode.setParent(null);
-    parent.addChild(newnode, true, latest);
+    //cleanup the removed object
+    parent = removed.getParent(); //parent could be replaced.
+    removed.clearReferences();
+    if (removed instanceof FileWithSnapshot) {
+      final FileWithSnapshot withSnapshot = (FileWithSnapshot)removed;
+      if (withSnapshot.isEverythingDeleted()) {
+        withSnapshot.removeSelf();
+      }
+    }
+
+    parent.addChild(newnode, false, latest);
 
     /* Currently oldnode and newnode are assumed to contain the same
      * blocks. Otherwise, blocks need to be removed from the blocksMap.
@@ -1244,8 +1262,7 @@ public class FSDirectory implements Closeable {
       }
 
       INodeDirectory dirInode = (INodeDirectory)targetNode;
-      final ReadOnlyList<INode> contents = dirInode.getChildrenList(
-          inodesInPath.getPathSnapshot());
+      final ReadOnlyList<INode> contents = dirInode.getChildrenList(snapshot);
       int startChild = INodeDirectory.nextChild(contents, startAfter);
       int totalNumChildren = contents.size();
       int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
@@ -2141,8 +2158,8 @@ public class FSDirectory implements Closeable {
      long blocksize = 0;
      if (node instanceof INodeFile) {
        INodeFile fileNode = (INodeFile)node;
-       size = fileNode.computeFileSize(true);
-       replication = fileNode.getFileReplication();
+       size = fileNode.computeFileSize(true, snapshot);
+       replication = fileNode.getFileReplication(snapshot);
        blocksize = fileNode.getPreferredBlockSize();
      }
      return new HdfsFileStatus(
@@ -2171,11 +2188,11 @@ public class FSDirectory implements Closeable {
       LocatedBlocks loc = null;
       if (node instanceof INodeFile) {
         INodeFile fileNode = (INodeFile)node;
-        size = fileNode.computeFileSize(true);
-        replication = fileNode.getFileReplication();
+        size = fileNode.computeFileSize(true, snapshot);
+        replication = fileNode.getFileReplication(snapshot);
         blocksize = fileNode.getPreferredBlockSize();
         loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
-            fileNode.getBlocks(), fileNode.computeFileSize(false),
+            fileNode.getBlocks(), fileNode.computeFileSize(false, snapshot),
             fileNode.isUnderConstruction(), 0L, size, false);
         if (loc==null) {
           loc = new LocatedBlocks();

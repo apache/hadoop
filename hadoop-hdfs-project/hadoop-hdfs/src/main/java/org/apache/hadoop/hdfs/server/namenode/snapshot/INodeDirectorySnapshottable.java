@@ -264,13 +264,13 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           + "snapshot with the same name \"" + name + "\".");
     }
 
-    getDiffs().addSnapshotDiff(s, this, true);
+    final DirectoryDiff d = getDiffs().addSnapshotDiff(s);
+    d.snapshotINode = s.getRoot();
     snapshotsByNames.add(-i - 1, s);
 
     //set modification time
-    final long timestamp = Time.now();
-    s.getRoot().updateModificationTime(timestamp, null);
-    updateModificationTime(timestamp, null);
+    updateModificationTime(Time.now(), null);
+    s.getRoot().setModificationTime(getModificationTime(), null);
     return s;
   }
   
@@ -381,7 +381,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           "latest == null but getLastSnapshot() != null, this=%s", this);
       replaceSelf4INodeDirectory();
     } else {
-      replaceSelf4INodeDirectoryWithSnapshot(latest).recordModification(latest);
+      replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest);
     }
   }
 

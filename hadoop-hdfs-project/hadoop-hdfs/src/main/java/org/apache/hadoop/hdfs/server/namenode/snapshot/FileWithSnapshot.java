@@ -19,11 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapINodeUpdateEntry;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
-
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 
 /**
  * {@link INodeFile} with a link to the next element.
@@ -32,6 +30,38 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public interface FileWithSnapshot {
+  /**
+   * The difference of an {@link INodeFile} between two snapshots.
+   */
+  static class FileDiff extends AbstractINodeDiff<INodeFile, FileDiff> {
+    /** The file size at snapshot creation time. */
+    final long fileSize;
+
+    FileDiff(Snapshot snapshot, INodeFile file) {
+      super(snapshot, null, null);
+      fileSize = file.computeFileSize(true, null);
+    }
+
+    @Override
+    INodeFile createSnapshotCopyOfCurrentINode(INodeFile currentINode) {
+      final INodeFile copy = new INodeFile(currentINode);
+      copy.setBlocks(null);
+      return copy;
+    }
+
+    @Override
+    void combinePosteriorAndCollectBlocks(INodeFile currentINode,
+        FileDiff posterior, BlocksMapUpdateInfo collectedBlocks) {
+      Util.collectBlocksAndClear((FileWithSnapshot)currentINode, collectedBlocks);
+    }
+    
+    @Override
+    public String toString() {
+      return super.toString() + " fileSize=" + fileSize + ", rep="
+          + (snapshotINode == null? "?": snapshotINode.getFileReplication());
+    }
+  }
+
   /** @return the {@link INodeFile} view of this object. */
   public INodeFile asINodeFile();
   
@@ -49,10 +79,21 @@ public interface FileWithSnapshot {
   
   /** Remove self from the circular list */
   public void removeSelf();
-  
-  /** Utility methods for the classes which implement the interface. */
-  static class Util {
 
+  /** Is the current file deleted? */
+  public boolean isCurrentFileDeleted();
+
+  /** Are the current file and all snapshot copies deleted? */
+  public boolean isEverythingDeleted();
+
+  /** @return the max file replication in the inode and its snapshot copies. */
+  public short getMaxFileReplication();
+  
+  /** @return the max file size in the inode and its snapshot copies. */
+  public long computeMaxFileSize();
+
+  /** Utility methods for the classes which implement the interface. */
+  public static class Util {
     /** @return The previous node in the circular linked list */
     static FileWithSnapshot getPrevious(FileWithSnapshot file) {
       FileWithSnapshot previous = file.getNext();
@@ -76,17 +117,32 @@ public interface FileWithSnapshot {
       }
     }
 
+    /** @return the max file replication of the file in the diff list. */
+    static <N extends INodeFile, D extends AbstractINodeDiff<N, D>>
+        short getMaxFileReplication(short max,
+              final AbstractINodeDiffList<N, D> diffs) {
+      for(AbstractINodeDiff<N, D> d : diffs) {
+        if (d.snapshotINode != null) {
+          final short replication = d.snapshotINode.getFileReplication();
+          if (replication > max) {
+            max = replication;
+          }
+        }
+      }
+      return max;
+    }
+
     /**
      * @return the max file replication of the elements
      *         in the circular linked list.
      */
     static short getBlockReplication(final FileWithSnapshot file) {
-      short max = file.asINodeFile().getFileReplication();
+      short max = file.getMaxFileReplication();
       // i may be null since next will be set to null when the INode is deleted
       for(FileWithSnapshot i = file.getNext();
           i != file && i != null;
           i = i.getNext()) {
-        final short replication = i.asINodeFile().getFileReplication();
+        final short replication = i.getMaxFileReplication();
         if (replication > max) {
           max = replication;
         }
@@ -95,49 +151,54 @@ public interface FileWithSnapshot {
     }
 
     /**
-     * Remove the current inode from the circular linked list.
      * If some blocks at the end of the block list no longer belongs to
-     * any other inode, collect them and update the block list.
+     * any inode, collect them and update the block list.
      */
-    static int collectSubtreeBlocksAndClear(final FileWithSnapshot file,
+    static void collectBlocksAndClear(final FileWithSnapshot file,
         final BlocksMapUpdateInfo info) {
       final FileWithSnapshot next = file.getNext();
-      Preconditions.checkState(next != file, "this is the only remaining inode.");
 
-      // There are other inode(s) using the blocks.
-      // Compute max file size excluding this and find the last inode.
-      long max = next.asINodeFile().computeFileSize(true);
-      short maxReplication = next.asINodeFile().getFileReplication();
-      FileWithSnapshot last = next;
-      for(FileWithSnapshot i = next.getNext(); i != file; i = i.getNext()) {
-        final long size = i.asINodeFile().computeFileSize(true);
-        if (size > max) {
-          max = size;
+      // find max file size, max replication and the last inode.
+      long maxFileSize = file.computeMaxFileSize();
+      short maxReplication = file.getMaxFileReplication();
+      FileWithSnapshot last = null;
+      if (next != null && next != file) {
+        for(FileWithSnapshot i = next; i != file; i = i.getNext()) {
+          final long size = i.computeMaxFileSize();
+          if (size > maxFileSize) {
+            maxFileSize = size;
+          }
+          final short rep = i.getMaxFileReplication();
+          if (rep > maxReplication) {
+            maxReplication = rep;
+          }
+          last = i;
         }
-        final short rep = i.asINodeFile().getFileReplication();
-        if (rep > maxReplication) {
-          maxReplication = rep;
-        }
-        last = i;
       }
 
-      collectBlocksBeyondMaxAndClear(file, max, info);
-      
-      // remove this from the circular linked list.
-      last.setNext(next);
-      // Set the replication of the current INode to the max of all the other
-      // linked INodes, so that in case the current INode is retrieved from the
-      // blocksMap before it is removed or updated, the correct replication
-      // number can be retrieved.
-      file.asINodeFile().setFileReplication(maxReplication, null);
-      file.setNext(null);
-      // clear parent
-      file.asINodeFile().setParent(null);
-      return 1;
+      collectBlocksBeyondMax(file, maxFileSize, info);
+
+      if (file.isEverythingDeleted()) {
+        // Set the replication of the current INode to the max of all the other
+        // linked INodes, so that in case the current INode is retrieved from the
+        // blocksMap before it is removed or updated, the correct replication
+        // number can be retrieved.
+        if (maxReplication > 0) {
+          file.asINodeFile().setFileReplication(maxReplication, null);
+        }
+
+        // remove the file from the circular linked list.
+        if (last != null) {
+          last.setNext(next);
+        }
+        file.setNext(null);
+
+        file.asINodeFile().setBlocks(null);
+      }
     }
 
-    static void collectBlocksBeyondMaxAndClear(final FileWithSnapshot file,
-            final long max, final BlocksMapUpdateInfo info) {
+    private static void collectBlocksBeyondMax(final FileWithSnapshot file,
+        final long max, final BlocksMapUpdateInfo collectedBlocks) {
       final BlockInfo[] oldBlocks = file.asINodeFile().getBlocks();
       if (oldBlocks != null) {
         //find the minimum n such that the size of the first n blocks > max
@@ -146,13 +207,13 @@ public interface FileWithSnapshot {
           size += oldBlocks[n].getNumBytes();
         }
 
-        // Replace the INode for all the remaining blocks in blocksMap
+        // collect update blocks
         final FileWithSnapshot next = file.getNext();
-        final BlocksMapINodeUpdateEntry entry = new BlocksMapINodeUpdateEntry(
-            file.asINodeFile(), next.asINodeFile());
-        if (info != null) {
+        if (next != null && next != file && file.isEverythingDeleted() && collectedBlocks != null) {
+          final BlocksMapINodeUpdateEntry entry = new BlocksMapINodeUpdateEntry(
+              file.asINodeFile(), next.asINodeFile());
           for (int i = 0; i < n; i++) {
-            info.addUpdateBlock(oldBlocks[i], entry);
+            collectedBlocks.addUpdateBlock(oldBlocks[i], entry);
           }
         }
         
@@ -166,19 +227,31 @@ public interface FileWithSnapshot {
             newBlocks = new BlockInfo[n];
             System.arraycopy(oldBlocks, 0, newBlocks, 0, n);
           }
-          for(FileWithSnapshot i = next; i != file; i = i.getNext()) {
+          
+          // set new blocks
+          file.asINodeFile().setBlocks(newBlocks);
+          for(FileWithSnapshot i = next; i != null && i != file; i = i.getNext()) {
             i.asINodeFile().setBlocks(newBlocks);
           }
 
           // collect the blocks beyond max.  
-          if (info != null) {
+          if (collectedBlocks != null) {
             for(; n < oldBlocks.length; n++) {
-              info.addDeleteBlock(oldBlocks[n]);
+              collectedBlocks.addDeleteBlock(oldBlocks[n]);
             }
           }
         }
-        file.asINodeFile().setBlocks(null);
       }
+    }
+    
+    static String circularListString(final FileWithSnapshot file) {
+      final StringBuilder b = new StringBuilder("* -> ")
+          .append(file.asINodeFile().getObjectString());
+      FileWithSnapshot n = file.getNext();
+      for(; n != null && n != file; n = n.getNext()) {
+        b.append(" -> ").append(n.asINodeFile().getObjectString());
+      }
+      return b.append(n == null? " -> null": " -> *").toString();
     }
   }
 }

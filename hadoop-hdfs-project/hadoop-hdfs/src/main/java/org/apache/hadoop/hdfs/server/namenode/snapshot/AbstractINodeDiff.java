@@ -85,33 +85,38 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Copy the INode state to the snapshot if it is not done already. */
-  void checkAndInitINode(N snapshotCopy) {
+  void checkAndInitINode(N currentINode, N snapshotCopy) {
     if (snapshotINode == null) {
       if (snapshotCopy == null) {
-        @SuppressWarnings("unchecked")
-        final N right = (N)getCurrentINode().createSnapshotCopy().right;
-        snapshotCopy = right;
+        snapshotCopy = createSnapshotCopyOfCurrentINode(currentINode);
       }
       snapshotINode = snapshotCopy;
     }
   }
 
-  /** @return the current inode. */
-  abstract N getCurrentINode();
+  /** @return a snapshot copy of the current inode. */
+  abstract N createSnapshotCopyOfCurrentINode(N currentINode);
 
   /** @return the inode corresponding to the snapshot. */
   N getSnapshotINode() {
-    // get from this diff, then the posterior diff and then the current inode
+    // get from this diff, then the posterior diff
+    // and then null for the current inode
     for(AbstractINodeDiff<N, D> d = this; ; d = d.posteriorDiff) {
       if (d.snapshotINode != null) {
         return d.snapshotINode;
       } else if (d.posteriorDiff == null) {
-        return getCurrentINode();
+        return null;
       }
     }
   }
 
   /** Combine the posterior diff and collect blocks for deletion. */
-  abstract void combinePosteriorAndCollectBlocks(final D posterior,
-      final BlocksMapUpdateInfo collectedBlocks);
+  abstract void combinePosteriorAndCollectBlocks(final N currentINode,
+      final D posterior, final BlocksMapUpdateInfo collectedBlocks);
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + ": " + snapshot + " (post="
+        + (posteriorDiff == null? null: posteriorDiff.snapshot) + ")";
+  }
 }

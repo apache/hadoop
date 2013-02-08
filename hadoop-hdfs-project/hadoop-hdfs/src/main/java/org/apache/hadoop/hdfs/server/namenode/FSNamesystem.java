@@ -1376,8 +1376,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           dir.setTimes(src, inode, -1, now, false, iip.getLatestSnapshot());
         }
         return blockManager.createLocatedBlocks(inode.getBlocks(),
-            inode.computeFileSize(false), inode.isUnderConstruction(),
-            offset, length, needBlockToken);
+            inode.computeFileSize(false, iip.getPathSnapshot()),
+            inode.isUnderConstruction(), offset, length, needBlockToken);
       } finally {
         if (attempt == 0) {
           readUnlock();
@@ -3306,8 +3306,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         dir.replaceINodeFile(src, pendingFile, pendingFileWithSnaphsot, null);
         pendingFile = pendingFileWithSnaphsot;
       }
-      pendingFile = (INodeFileUnderConstruction) pendingFile
-          .recordModification(latestSnapshot);
+      pendingFile = pendingFile.recordModification(latestSnapshot);
     }
 
     // The file is no longer pending.

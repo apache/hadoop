@@ -245,10 +245,8 @@ public class SnapshotFSImageFormat {
     int snapshotId = in.readInt();
     byte[] snapshotName = new byte[in.readShort()];
     in.readFully(snapshotName);
-    INode rootNode = loader.loadINode(in);
-    rootNode.setLocalName(snapshotName);
-    rootNode.setParent(parent);
-    return new Snapshot(snapshotId, (INodeDirectory) rootNode);
+    final INodeDirectory rootNode = (INodeDirectory)loader.loadINode(in);
+    return new Snapshot(snapshotId, snapshotName, rootNode, parent);
   }
   
   /**
@@ -267,7 +265,7 @@ public class SnapshotFSImageFormat {
       throws IOException {
     for (int i = 0; i < numSnapshotDiffs; i++) {
       DirectoryDiff diff = loadSnapshotDiff(parentWithSnapshot, in, loader);
-      parentWithSnapshot.getDiffs().insert(diff);
+      parentWithSnapshot.getDiffs().addFirst(diff);
     }
   }
   
@@ -343,7 +341,7 @@ public class SnapshotFSImageFormat {
     
     // 6. Compose the SnapshotDiff
     List<DirectoryDiff> diffs = parent.getDiffs().asList();
-    DirectoryDiff sdiff = parent.new DirectoryDiff(snapshot, snapshotINode,
+    DirectoryDiff sdiff = new DirectoryDiff(snapshot, snapshotINode,
         diffs.isEmpty() ? null : diffs.get(0),
         childrenSize, createdList, deletedList);
     return sdiff;
