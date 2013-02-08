@@ -208,7 +208,7 @@ class FSPermissionChecker {
       if (mode.getOtherAction().implies(access)) { return; }
     }
     throw new AccessControlException("Permission denied: user=" + user
-        + ", access=" + access + ", inode=" + inode);
+        + ", access=" + access + ", inode=" + inode.getFullPathName());
   }
 
   private void checkStickyBit(INode parent, INode inode, Snapshot snapshot

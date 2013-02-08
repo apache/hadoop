@@ -303,11 +303,9 @@ public class TestSnapshotDeletion {
     
     // call getBlockReplication, check circular list after snapshot deletion
     INodeFile nodeFile13 = (INodeFile)fsdir.getINode(file13.toString());
-    SnapshotTestHelper.checkCircularList(nodeFile13);
     assertEquals(REP_1, nodeFile13.getBlockReplication());
 
     INodeFile nodeFile12 = (INodeFile)fsdir.getINode(file12_s1.toString());
-    SnapshotTestHelper.checkCircularList(nodeFile12);
     assertEquals(REP_1, nodeFile12.getBlockReplication());
   }
   

@@ -60,7 +60,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
@@ -1207,22 +1206,7 @@ public class FSDirectory implements Closeable {
       final INodeFile newnode, final Snapshot latest) {
     Preconditions.checkState(hasWriteLock());
 
-    INodeDirectory parent = oldnode.getParent();
-    final INode removed = parent.removeChild(oldnode, latest);
-    Preconditions.checkState(removed == oldnode,
-        "removed != oldnode=%s, removed=%s", oldnode, removed);
-
-    //cleanup the removed object
-    parent = removed.getParent(); //parent could be replaced.
-    removed.clearReferences();
-    if (removed instanceof FileWithSnapshot) {
-      final FileWithSnapshot withSnapshot = (FileWithSnapshot)removed;
-      if (withSnapshot.isEverythingDeleted()) {
-        withSnapshot.removeSelf();
-      }
-    }
-
-    parent.addChild(newnode, false, latest);
+    oldnode.getParent().replaceChild(newnode);
 
     /* Currently oldnode and newnode are assumed to contain the same
      * blocks. Otherwise, blocks need to be removed from the blocksMap.

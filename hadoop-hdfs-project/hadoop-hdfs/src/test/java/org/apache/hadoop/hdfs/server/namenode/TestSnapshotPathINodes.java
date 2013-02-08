@@ -411,7 +411,7 @@ public class TestSnapshotPathINodes {
     // The modification time of the snapshot INode should be the same with the
     // original INode before modification
     assertEquals(inodes[inodes.length - 1].getModificationTime(),
-        ssInodes[ssInodes.length - 1].getModificationTime());
+        snapshotFileNode.getModificationTime(ssNodesInPath.getPathSnapshot()));
 
     // Check the INode for /TestSnapshot/sub1/file1 again
     names = INode.getPathNames(file1.toString());

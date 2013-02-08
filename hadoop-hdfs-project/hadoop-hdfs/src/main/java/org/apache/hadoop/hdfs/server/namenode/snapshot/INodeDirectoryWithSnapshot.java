@@ -497,12 +497,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (removed == null) {
         //remove failed, undo
         diff.undoDelete(child, undoInfo);
-      } else {
-        //clean up the previously created file, if there is any.
-        final INode trashed = undoInfo.getTrashedElement();
-        if (trashed != null && trashed instanceof FileWithSnapshot) {
-          ((FileWithSnapshot)trashed).removeSelf();
-        }
       }
     }
     return removed;

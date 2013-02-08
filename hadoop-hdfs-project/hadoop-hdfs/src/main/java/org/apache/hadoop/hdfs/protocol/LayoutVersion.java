@@ -97,7 +97,7 @@ public class LayoutVersion {
         "Serialize block lists with delta-encoded variable length ints, " +
         "add OP_UPDATE_BLOCKS"),
     RESERVED_REL1_2_0(-41, -32, "Reserved for release 1.2.0", true, CONCAT),
-    SNAPSHOT(-41, -39, "Support for snapshot feature", false);
+    SNAPSHOT(-42, -40, "Support for snapshot feature", false);
     
     final int lv;
     final int ancestorLV;

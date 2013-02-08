@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -353,15 +352,6 @@ public class INodeFile extends INode implements BlockCollection {
     out.print(", fileSize=" + computeFileSize(true, snapshot));
     // only compare the first block
     out.print(", blocks=" + (blocks == null? null: blocks[0]));
-    if (this instanceof FileWithSnapshot) {
-      final FileWithSnapshot withSnapshot = (FileWithSnapshot) this;
-      final FileWithSnapshot next = withSnapshot.getNext();
-      // next link pointing to itself is equivalent to no link 
-      if (withSnapshot.getNext() != this) {
-        out.print(", next="
-            + (next != null ? next.asINodeFile().getObjectString() : "null"));
-      }
-    }
     out.println();
   }
 }

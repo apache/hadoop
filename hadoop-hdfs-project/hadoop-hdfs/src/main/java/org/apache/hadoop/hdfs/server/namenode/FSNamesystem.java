@@ -138,22 +138,21 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -168,7 +167,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapINodeUpdateEntry;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -2828,48 +2826,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *          of blocks that need to be removed from blocksMap
    */
   void removeBlocks(BlocksMapUpdateInfo blocks) {
-    Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> iter = blocks
-        .iterator();
-    while (iter.hasNext()) {
+    int start = 0;
+    int end = 0;
+    List<Block> toDeleteList = blocks.getToDeleteList();
+    while (start < toDeleteList.size()) {
+      end = BLOCK_DELETION_INCREMENT + start;
+      end = end > toDeleteList.size() ? toDeleteList.size() : end;
       writeLock();
       try {
-        for (int numberToHandle = BLOCK_DELETION_INCREMENT; iter.hasNext()
-            && numberToHandle > 0; numberToHandle--) {
-          Map.Entry<Block, BlocksMapINodeUpdateEntry> entry = iter.next();
-          updateBlocksMap(entry);
+        for (int i = start; i < end; i++) {
+          blockManager.removeBlock(toDeleteList.get(i));
         }
       } finally {
         writeUnlock();
       }
-    }
-  }
-  
-  /**
-   * Update the blocksMap for a given block.
-   * 
-   * @param entry
-   *          The update entry containing both the block and its new INode. The
-   *          block should be removed from the blocksMap if the INode is null,
-   *          otherwise the INode for the block will be updated in the
-   *          blocksMap.
-   */
-  private void updateBlocksMap(
-      Map.Entry<Block, BlocksMapINodeUpdateEntry> entry) {
-    Block block = entry.getKey();
-    BlocksMapINodeUpdateEntry value = entry.getValue();
-    if (value == null) {
-      blockManager.removeBlock(block);
-    } else {
-      BlockCollection toDelete = value.getToDelete();
-      BlockInfo originalBlockInfo = blockManager.getStoredBlock(block);
-      // The FSDirectory tree and the blocksMap share the same INode reference.
-      // Thus we use "==" to check if the INode for the block belongs to the
-      // current file (instead of the INode from a snapshot file).
-      if (originalBlockInfo != null
-          && toDelete == originalBlockInfo.getBlockCollection()) {
-        blockManager.addBlockCollection(originalBlockInfo,
-            value.getToReplace());
-      }
+      start = end;
     }
   }
   
@@ -2891,11 +2862,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean trackBlockCounts = isSafeModeTrackingBlocks();
     int numRemovedComplete = 0, numRemovedSafe = 0;
 
-    Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> blockIter = 
-        blocks.iterator();
-    while (blockIter.hasNext()) {
-      Map.Entry<Block, BlocksMapINodeUpdateEntry> entry = blockIter.next();
-      Block b = entry.getKey();
+    for (Block b : blocks.getToDeleteList()) {
       if (trackBlockCounts) {
         BlockInfo bi = blockManager.getStoredBlock(b);
         if (bi.isComplete()) {
@@ -2905,9 +2872,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
         }
       }
-      updateBlocksMap(entry);
+      blockManager.removeBlock(b);
     }
-
     if (trackBlockCounts) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Adjusting safe-mode totals for deletion of " + src + ":" +

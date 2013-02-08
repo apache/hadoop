@@ -199,7 +199,7 @@ public class INodeDirectory extends INode {
     return parent.replaceChild(newDir);
   }
 
-  private final <N extends INode> N replaceChild(final N newChild) {
+  final <N extends INode> N replaceChild(final N newChild) {
     assertChildrenNonNull();
     final int i = searchChildrenForExistingINode(newChild);
     final INode oldChild = children.set(i, newChild);
@@ -212,7 +212,7 @@ public class INodeDirectory extends INode {
       final INodeFile child) {
     Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
         "Child file is already an INodeFileWithSnapshot, child=" + child);
-    return replaceChild(new INodeFileWithSnapshot(child, null));
+    return replaceChild(new INodeFileWithSnapshot(child));
   }
 
   /** Replace a child {@link INodeFile} with an {@link INodeFileUnderConstructionWithSnapshot}. */

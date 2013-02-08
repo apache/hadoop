@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -31,35 +29,12 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 @InterfaceAudience.Private
 public class INodeFileWithSnapshot extends INodeFile
     implements FileWithSnapshot {
-  /**
-   * A list of file diffs.
-   */
-  static class FileDiffList extends AbstractINodeDiffList<INodeFile, FileDiff> {
-    final INodeFile currentINode;
-
-    FileDiffList(INodeFile currentINode, List<FileDiff> diffs) {
-      super(diffs);
-      this.currentINode = currentINode;
-    }
-
-    @Override
-    INodeFile getCurrentINode() {
-      return currentINode;
-    }
-
-    @Override
-    FileDiff addSnapshotDiff(Snapshot snapshot) {
-      return addLast(new FileDiff(snapshot, getCurrentINode()));
-    }
-  }
-
   private final FileDiffList diffs;
-  private FileWithSnapshot next;
 
-  public INodeFileWithSnapshot(INodeFile f, FileDiffList diffs) {
+  public INodeFileWithSnapshot(INodeFile f) {
     super(f);
-    this.diffs = new FileDiffList(this, diffs == null? null: diffs.asList());
-    setNext(this);
+    this.diffs = new FileDiffList(this, f instanceof FileWithSnapshot?
+        ((FileWithSnapshot)f).getFileDiffList().asList(): null);
   }
 
   @Override
@@ -67,21 +42,13 @@ public class INodeFileWithSnapshot extends INodeFile
       final String clientName,
       final String clientMachine,
       final DatanodeDescriptor clientNode) {
-    final INodeFileUnderConstructionWithSnapshot f
-        = new INodeFileUnderConstructionWithSnapshot(this,
-            clientName, clientMachine, clientNode, diffs);
-    this.insertBefore(f);
-    return f;
+    return new INodeFileUnderConstructionWithSnapshot(this,
+        clientName, clientMachine, clientNode);
   }
 
   @Override
   public boolean isCurrentFileDeleted() {
     return getParent() == null;
-  }
-
-  @Override
-  public boolean isEverythingDeleted() {
-    return isCurrentFileDeleted() && diffs.asList().isEmpty();
   }
 
   @Override
@@ -100,39 +67,8 @@ public class INodeFileWithSnapshot extends INodeFile
   }
 
   @Override
-  public FileWithSnapshot getNext() {
-    return next;
-  }
-
-  @Override
-  public void setNext(FileWithSnapshot next) {
-    this.next = next;
-  }
-
-  @Override
-  public void insertAfter(FileWithSnapshot inode) {
-    inode.setNext(this.getNext());
-    this.setNext(inode);
-  }
-  
-  @Override
-  public void insertBefore(FileWithSnapshot inode) {
-    inode.setNext(this);
-    if (this.next == null || this.next == this) {
-      this.next = inode;
-      return;
-    }
-    FileWithSnapshot previous = Util.getPrevious(this);
-    previous.setNext(inode);
-  }
-
-  @Override
-  public void removeSelf() {
-    if (this.next != null && this.next != this) {
-      FileWithSnapshot previous = Util.getPrevious(this);
-      previous.setNext(next);
-    }
-    this.next = null;
+  public FileDiffList getFileDiffList() {
+    return diffs;
   }
 
   @Override
@@ -140,12 +76,6 @@ public class INodeFileWithSnapshot extends INodeFile
     final INodeFile inode = diffs.getSnapshotINode(snapshot);
     return inode != null? inode.getFileReplication()
         : super.getFileReplication(null);
-  }
-
-  @Override
-  public short getMaxFileReplication() {
-    final short max = isCurrentFileDeleted()? 0: getFileReplication();
-    return Util.getMaxFileReplication(max, diffs);
   }
 
   @Override
@@ -159,16 +89,6 @@ public class INodeFileWithSnapshot extends INodeFile
     final FileDiff diff = diffs.getDiff(snapshot);
     return diff != null? diff.fileSize
         : super.computeFileSize(includesBlockInfoUnderConstruction, null);
-  }
-
-  @Override
-  public long computeMaxFileSize() {
-    if (isCurrentFileDeleted()) {
-      final FileDiff last = diffs.getLast();
-      return last == null? 0: last.fileSize;
-    } else { 
-      return super.computeFileSize(true, null);
-    }
   }
 
   @Override

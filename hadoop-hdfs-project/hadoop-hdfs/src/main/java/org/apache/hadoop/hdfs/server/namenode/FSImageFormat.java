@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -550,7 +549,6 @@ public class FSImageFormat {
     long computeFileSize = -1;
     boolean snapshottable = false;
     boolean withSnapshot = false;
-    boolean withLink = false;
     
     int imgVersion = getLayoutVersion();
     long inodeId = namesystem.allocateNewInodeId();
@@ -582,7 +580,6 @@ public class FSImageFormat {
       if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
         computeFileSize = in.readLong();
         if (computeFileSize < 0) {
-          withLink = in.readBoolean();
         } else {
           underConstruction = in.readBoolean();
           if (underConstruction) {
@@ -621,7 +618,7 @@ public class FSImageFormat {
 
       return INode.newINode(inodeId, permissions, blocks, symlink, replication,
           modificationTime, atime, nsQuota, dsQuota, blockSize, numBlocks,
-          withLink, computeFileSize, snapshottable, withSnapshot,
+          computeFileSize, snapshottable, withSnapshot,
           underConstruction, clientName, clientMachine);
   }
 
@@ -641,10 +638,6 @@ public class FSImageFormat {
         final INodesInPath iip = fsDir.getLastINodeInPath(path);
         INodeFile oldnode = INodeFile.valueOf(iip.getINode(0), path);
         cons.setLocalName(oldnode.getLocalNameBytes());
-        if (oldnode instanceof FileWithSnapshot
-            && cons instanceof FileWithSnapshot) {
-          ((FileWithSnapshot) oldnode).insertBefore((FileWithSnapshot) cons);
-        }
         fsDir.unprotectedReplaceINodeFile(path, oldnode, cons,
             iip.getLatestSnapshot());
         namesystem.leaseManager.addLease(cons.getClientName(), path); 

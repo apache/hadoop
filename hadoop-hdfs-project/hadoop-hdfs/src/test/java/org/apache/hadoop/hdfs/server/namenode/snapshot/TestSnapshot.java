@@ -25,6 +25,7 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -129,7 +130,7 @@ public class TestSnapshot {
   private void modifyCurrentDirAndCheckSnapshots(Modification[] modifications)
       throws Exception {
     for (Modification modification : modifications) {
-      System.out.println(++modificationCount + ") modification = " + modification);
+      System.out.println(++modificationCount + ") " + modification);
       modification.loadSnapshots();
       modification.modify();
       modification.checkSnapshots();
@@ -611,17 +612,30 @@ public class TestSnapshot {
         }
         assertEquals(s, originalSnapshotFileLen, currentSnapshotFileLen);
         // Read the snapshot file out of the boundary
-        if (currentSnapshotFileLen != -1L) {
+        if (currentSnapshotFileLen != -1L
+            && !(this instanceof FileAppendNotClose)) {
           FSDataInputStream input = fs.open(snapshotFile);
           int readLen = input.read(currentSnapshotFileLen, buffer, 0, 1);
-          assertEquals(readLen, -1);
+          if (readLen != -1) {
+            s = "FAILED: " + getClass().getSimpleName()
+                + ": file="  + file + ", snapshotFile" + snapshotFile
+                + "\n\n currentSnapshotFileLen = " + currentSnapshotFileLen
+                +   "\n                readLen = " + readLen
+                + "\n\nfile        : " + fsdir.getINode(file.toString()).toDetailString()
+                + "\n\nsnapshotFile: " + fsdir.getINode(snapshotFile.toString()).toDetailString();
+            
+            System.out.println(s);
+            SnapshotTestHelper.dumpTreeRecursively(fsdir.getINode("/"));
+          }
+          assertEquals(s, -1, readLen);
+          input.close();
         }
       }
     }
   }
 
   /**
-   * Appending a specified length to an existing file
+   * Appending a specified length to an existing file but not close the file
    */
   static class FileAppendNotClose extends FileAppend {
     HdfsDataOutputStream out;
@@ -638,7 +652,7 @@ public class TestSnapshot {
 
       out = (HdfsDataOutputStream)fs.append(file);
       out.write(toAppend);
-      out.hflush();
+      out.hsync(EnumSet.of(HdfsDataOutputStream.SyncFlag.UPDATE_LENGTH));
     }
   }
 
@@ -648,7 +662,8 @@ public class TestSnapshot {
   static class FileAppendClose extends FileAppend {
     final FileAppendNotClose fileAppendNotClose;
 
-    FileAppendClose(Path file, FileSystem fs, int len, FileAppendNotClose fileAppendNotClose) {
+    FileAppendClose(Path file, FileSystem fs, int len,
+        FileAppendNotClose fileAppendNotClose) {
       super(file, fs, len);
       this.fileAppendNotClose = fileAppendNotClose;
     }
@@ -656,6 +671,10 @@ public class TestSnapshot {
     @Override
     void modify() throws Exception {
       assertTrue(fs.exists(file));
+      byte[] toAppend = new byte[appendLen];
+      random.nextBytes(toAppend);
+
+      fileAppendNotClose.out.write(toAppend);
       fileAppendNotClose.out.close();
     }
   }

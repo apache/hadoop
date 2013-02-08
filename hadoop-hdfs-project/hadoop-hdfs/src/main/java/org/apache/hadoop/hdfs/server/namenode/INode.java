@@ -19,10 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +32,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
@@ -593,11 +591,10 @@ public abstract class INode implements Diff.Element<byte[]> {
    * @param dsQuota disk quota
    * @param preferredBlockSize block size
    * @param numBlocks number of blocks
-   * @param withLink whether the node is INodeWithLink
    * @param computeFileSize non-negative computeFileSize means the node is 
    *                        INodeFileSnapshot
    * @param snapshottable whether the node is {@link INodeDirectorySnapshottable}
-   * @param withSnapshot whether the node is {@link INodeDirectoryWithSnapshot}
+   * @param withSnapshot whether the node has snapshots
    * @param underConstruction whether the node is 
    *                          {@link INodeFileUnderConstructionSnapshot}
    * @param clientName clientName of {@link INodeFileUnderConstructionSnapshot}
@@ -608,7 +605,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   static INode newINode(long id, PermissionStatus permissions,
       BlockInfo[] blocks, String symlink, short replication,
       long modificationTime, long atime, long nsQuota, long dsQuota,
-      long preferredBlockSize, int numBlocks, boolean withLink,
+      long preferredBlockSize, int numBlocks,
       long computeFileSize, boolean snapshottable, boolean withSnapshot, 
       boolean underConstruction, String clientName, String clientMachine) {
     if (symlink.length() != 0) { // check if symbolic link
@@ -636,7 +633,7 @@ public abstract class INode implements Diff.Element<byte[]> {
 //          fileNode, computeFileSize, clientName, clientMachine)
 //          : new INodeFileWithSnapshot(fileNode, computeFileSize); 
 //    } else {
-      return withLink ? new INodeFileWithSnapshot(fileNode, null) : fileNode;
+      return withSnapshot ? new INodeFileWithSnapshot(fileNode) : fileNode;
 //    }
   }
 
@@ -673,84 +670,44 @@ public abstract class INode implements Diff.Element<byte[]> {
   /**
    * Information used for updating the blocksMap when deleting files.
    */
-  public static class BlocksMapUpdateInfo implements
-      Iterable<Map.Entry<Block, BlocksMapINodeUpdateEntry>> {
-    private final Map<Block, BlocksMapINodeUpdateEntry> updateMap;
+  public static class BlocksMapUpdateInfo {
+    /**
+     * The list of blocks that need to be removed from blocksMap
+     */
+    private List<Block> toDeleteList;
+    
+    public BlocksMapUpdateInfo(List<Block> toDeleteList) {
+      this.toDeleteList = toDeleteList == null ? new ArrayList<Block>()
+          : toDeleteList;
+    }
     
     public BlocksMapUpdateInfo() {
-      updateMap = new HashMap<Block, BlocksMapINodeUpdateEntry>();
+      toDeleteList = new ArrayList<Block>();
     }
     
     /**
-     * Add a to-be-deleted block. This block should belongs to a file without
-     * snapshots. We thus only need to put a block-null pair into the updateMap.
-     * 
+     * @return The list of blocks that need to be removed from blocksMap
+     */
+    public List<Block> getToDeleteList() {
+      return toDeleteList;
+    }
+    
+    /**
+     * Add a to-be-deleted block into the
+     * {@link BlocksMapUpdateInfo#toDeleteList}
      * @param toDelete the to-be-deleted block
      */
     public void addDeleteBlock(Block toDelete) {
       if (toDelete != null) {
-        updateMap.put(toDelete, null);
+        toDeleteList.add(toDelete);
       }
     }
     
     /**
-     * Add a given block, as well as its old and new BlockCollection
-     * information, into the updateMap.
-     * 
-     * @param toUpdateBlock
-     *          The given block
-     * @param entry
-     *          The BlocksMapINodeUpdateEntry instance containing both the
-     *          original BlockCollection of the given block and the new
-     *          BlockCollection of the given block for updating the blocksMap.
-     *          The new BlockCollection should be the INode of one of the
-     *          corresponding file's snapshot.
-     */
-    public void addUpdateBlock(Block toUpdateBlock,
-        BlocksMapINodeUpdateEntry entry) {
-      updateMap.put(toUpdateBlock, entry);
-    }
-
-    /**
-     * Clear {@link BlocksMapUpdateInfo#updateMap}
+     * Clear {@link BlocksMapUpdateInfo#toDeleteList}
      */
     public void clear() {
-      updateMap.clear();
-    }
-
-    @Override
-    public Iterator<Map.Entry<Block, BlocksMapINodeUpdateEntry>> iterator() {
-      return updateMap.entrySet().iterator();
-    }
-  }
-  
-  /**
-   * When deleting a file with snapshot, we cannot directly remove its record
-   * from blocksMap. Instead, we should consider replacing the original record
-   * in blocksMap with INode of snapshot.
-   */
-  public static class BlocksMapINodeUpdateEntry {
-    /**
-     * The BlockCollection of the file to be deleted
-     */
-    private final BlockCollection toDelete;
-    /**
-     * The BlockCollection of the to-be-deleted file's snapshot
-     */
-    private final BlockCollection toReplace;
-
-    public BlocksMapINodeUpdateEntry(BlockCollection toDelete,
-        BlockCollection toReplace) {
-      this.toDelete = toDelete;
-      this.toReplace = toReplace;
-    }
-
-    public BlockCollection getToDelete() {
-      return toDelete;
-    }
-
-    public BlockCollection getToReplace() {
-      return toReplace;
+      toDeleteList.clear();
     }
   }
 }

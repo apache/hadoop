@@ -201,12 +201,8 @@ public class SnapshotFSImageFormat {
         }
         // deleted must be an FileWithSnapshot (INodeFileSnapshot or 
         // INodeFileUnderConstructionSnapshot)
-        FileWithSnapshot deletedWithLink = (FileWithSnapshot) deleted;
         INodeFile cNode = (INodeFile) createdList.get(c);
-        INodeFileWithSnapshot cNodeWithLink = (INodeFileWithSnapshot) cNode;
         ((INodeFile) deleted).setBlocks(cNode.getBlocks());
-        // insert deleted into the circular list
-        cNodeWithLink.insertBefore(deletedWithLink);
       }
     }
     return deletedList;

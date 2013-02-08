@@ -123,9 +123,11 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   protected INodeFile toINodeFile(long mtime) {
     assertAllBlocksComplete();
 
-    return new INodeFile(getId(), getLocalNameBytes(), getPermissionStatus(),
-        mtime, getModificationTime(),
+    final INodeFile f = new INodeFile(getId(), getLocalNameBytes(),
+        getPermissionStatus(), mtime, getModificationTime(),
         getBlocks(), getFileReplication(), getPreferredBlockSize());
+    f.setParent(getParent());
+    return f;
   }
   
   @Override
