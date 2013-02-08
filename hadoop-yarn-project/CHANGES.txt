@@ -38,6 +38,9 @@ Release 0.23.7 - UNRELEASED
     YARN-150. AppRejectedTransition does not unregister app from master service
     and scheduler (Bikas Shah via tgraves)
 
+    YARN-362. Unexpected extra results when using webUI table search (Ravi
+    Prakash via jlowe)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
