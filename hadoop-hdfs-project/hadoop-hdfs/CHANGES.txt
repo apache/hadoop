@@ -12,6 +12,9 @@ Release 2.0.4-beta - UNRELEASED
 
   BUG FIXES
 
+    HDFS-4471. Namenode WebUI file browsing does not work with wildcard
+    addresses configured. (Andrew Wang via atm)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
