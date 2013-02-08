@@ -165,6 +165,7 @@ public class TestRMContainerAllocator {
     List<TaskAttemptContainerAssignedEvent> assigned = allocator.schedule();
     dispatcher.await();
     Assert.assertEquals("No of assignments must be 0", 0, assigned.size());
+    Assert.assertEquals(4, rm.getMyFifoScheduler().lastAsk.size());
 
     // send another request with different resource and priority
     ContainerRequestEvent event3 = createReq(jobId, 3, 1024,
@@ -176,7 +177,8 @@ public class TestRMContainerAllocator {
     assigned = allocator.schedule();
     dispatcher.await();
     Assert.assertEquals("No of assignments must be 0", 0, assigned.size());
-
+    Assert.assertEquals(3, rm.getMyFifoScheduler().lastAsk.size());
+    
     // update resources in scheduler
     nodeManager1.nodeHeartbeat(true); // Node heartbeat
     nodeManager2.nodeHeartbeat(true); // Node heartbeat
@@ -185,8 +187,14 @@ public class TestRMContainerAllocator {
 
     assigned = allocator.schedule();
     dispatcher.await();
+    Assert.assertEquals(0, rm.getMyFifoScheduler().lastAsk.size());
     checkAssignments(new ContainerRequestEvent[] { event1, event2, event3 },
         assigned, false);
+    
+    // check that the assigned container requests are cancelled
+    assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals(5, rm.getMyFifoScheduler().lastAsk.size());    
   }
 
   @Test
@@ -334,7 +342,7 @@ public class TestRMContainerAllocator {
   }
 
   private static class MyResourceManager extends MockRM {
-
+    
     public MyResourceManager(Configuration conf) {
       super(conf);
     }
@@ -357,6 +365,10 @@ public class TestRMContainerAllocator {
     @Override
     protected ResourceScheduler createScheduler() {
       return new MyFifoScheduler(this.getRMContext());
+    }
+    
+    MyFifoScheduler getMyFifoScheduler() {
+      return (MyFifoScheduler) scheduler;
     }
   }
 
@@ -1024,7 +1036,9 @@ public class TestRMContainerAllocator {
         assert (false);
       }
     }
-
+    
+    List<ResourceRequest> lastAsk = null;
+    
     // override this to copy the objects otherwise FifoScheduler updates the
     // numContainers in same objects as kept by RMContainerAllocator
     @Override
@@ -1038,6 +1052,7 @@ public class TestRMContainerAllocator {
             .getNumContainers());
         askCopy.add(reqCopy);
       }
+      lastAsk = ask;
       return super.allocate(applicationAttemptId, askCopy, release);
     }
   }
