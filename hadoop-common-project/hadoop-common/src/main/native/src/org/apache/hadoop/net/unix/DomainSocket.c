@@ -196,6 +196,21 @@ static jthrowable setup(JNIEnv *env, int *ofd, jobject jpath, int doConnect)
               terror(ret), addr.sun_path);
       goto done;
     }
+    /* We need to make the socket readable and writable for all users in the
+     * system.
+     *
+     * If the system administrator doesn't want the socket to be accessible to
+     * all users, he can simply adjust the +x permissions on one of the socket's
+     * parent directories.
+     *
+     * See HDFS-4485 for more discussion.
+     */
+    if (chmod(addr.sun_path, 0666)) {
+      ret = errno;
+      jthr = newException(env, "java/net/BindException",
+              "chmod(%s, 0666) failed: %s", addr.sun_path, terror(ret));
+      goto done;
+    }
     if (listen(fd, LISTEN_BACKLOG) < 0) {
       ret = errno;
       jthr = newException(env, "java/net/BindException",

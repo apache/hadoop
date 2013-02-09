@@ -41,3 +41,5 @@ HDFS-4438. TestDomainSocket fails when system umask is set to 0002. (Colin Patri
 HDFS-4440. Avoid annoying log message when dfs.domain.socket.path is not set. (Colin Patrick McCabe via atm)
 
 HDFS-4473. Don't create domain socket unless we need it. (Colin Patrick McCabe via atm)
+
+HDFS-4485. DN should chmod socket path a+w. (Colin Patrick McCabe via atm)
