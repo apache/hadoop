@@ -17,18 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.SequentialNumber;
 
 /**
- * An id which uniquely identifies an inode
+ * An id which uniquely identifies an inode. Id 1 to 1000 are reserved for
+ * potential future usage. The id won't be recycled and is not expected to wrap
+ * around in a very long time. Root inode id is always 1001. Id 0 is used for
+ * backward compatibility support.
  */
 @InterfaceAudience.Private
-class INodeId extends SequentialNumber {
+public class INodeId extends SequentialNumber {
   /**
-   * The last reserved inode id. Reserve id 1 to 1000 for potential future
-   * usage. The id won't be recycled and is not expected to wrap around in a
-   * very long time. Root inode id will be 1001.
+   * The last reserved inode id. 
    */
   public static final long LAST_RESERVED_ID = 1000L;
 
@@ -38,6 +41,19 @@ class INodeId extends SequentialNumber {
    */
   public static final long GRANDFATHER_INODE_ID = 0;
 
+  /**
+   * To check if the request id is the same as saved id. Don't check fileId
+   * with GRANDFATHER_INODE_ID for backward compatibility.
+   */
+  public static void checkId(long requestId, INode inode)
+      throws FileNotFoundException {
+    if (requestId != GRANDFATHER_INODE_ID && requestId != inode.getId()) {
+      throw new FileNotFoundException(
+          "ID mismatch. Request id and saved id: " + requestId + " , "
+              + inode.getId());
+    }
+  }
+  
   INodeId() {
     super(LAST_RESERVED_ID);
   }

@@ -147,7 +147,9 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
 
   @Override
   public synchronized void stop() {
-    RPC.stopProxy(this.rmClient);
+    if (this.rmClient != null) {
+      RPC.stopProxy(this.rmClient);
+    }
     super.stop();
   }
   

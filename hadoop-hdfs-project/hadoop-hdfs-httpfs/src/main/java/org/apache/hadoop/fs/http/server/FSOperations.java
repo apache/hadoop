@@ -199,6 +199,47 @@ public class FSOperations {
   }
 
   /**
+   * Executor that performs an append FileSystemAccess files system operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSConcat implements FileSystemAccess.FileSystemExecutor<Void> {
+    private Path path;
+    private Path[] sources;
+
+    /**
+     * Creates a Concat executor.
+     *
+     * @param path target path to concat to.
+     * @param sources comma seperated absolute paths to use as sources.
+     */
+    public FSConcat(String path, String[] sources) {
+      this.sources = new Path[sources.length];
+
+      for(int i = 0; i < sources.length; i++) {
+        this.sources[i] = new Path(sources[i]);
+      }
+
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return void.
+     *
+     * @throws IOException thrown if an IO error occured.
+     */
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.concat(path, sources);
+      return null;
+    }
+
+  }
+
+  /**
    * Executor that performs a content-summary FileSystemAccess files system operation.
    */
   @InterfaceAudience.Private

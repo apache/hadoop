@@ -13,3 +13,4 @@
 #
 org.apache.hadoop.yarn.security.ApplicationTokenIdentifier$Renewer
 org.apache.hadoop.yarn.security.ContainerTokenIdentifier$Renewer
+org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier$Renewer

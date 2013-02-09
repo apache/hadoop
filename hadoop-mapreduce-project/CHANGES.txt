@@ -152,7 +152,22 @@ Trunk (Unreleased)
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
-Release 2.0.3-alpha - Unreleased 
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4671. AM does not tell the RM about container requests which are
+    no longer needed. (Bikas Saha via sseth)
+
+Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
 
@@ -214,6 +229,12 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4838. Add additional fields like Locality, Avataar to the
     JobHistory logs. (Zhijie Shen via sseth)
+
+    MAPREDUCE-4971. Minor extensibility enhancements to Counters & 
+    FileOutputFormat. (Arun C Murthy via sseth)
+
+    MAPREDUCE-4977. Documentation for pluggable shuffle and pluggable sort. 
+    (tucu)
 
   OPTIMIZATIONS
 
@@ -283,6 +304,8 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
     (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -668,10 +691,16 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4905. test org.apache.hadoop.mapred.pipes 
+    (Aleksey Gorshkov via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
     number of map completion event type conversions. (Jason Lowe via sseth)
+
+    MAPREDUCE-4822. Unnecessary conversions in History Events. (Chu Tong via
+    jlowe)
 
   BUG FIXES
 

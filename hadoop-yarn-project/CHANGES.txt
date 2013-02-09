@@ -6,9 +6,6 @@ Trunk - Unreleased
 
   NEW FEATURES
 
-    YARN-3. Add support for CPU isolation/monitoring of containers. 
-    (adferguson via tucu)
-
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
@@ -17,13 +14,37 @@ Trunk - Unreleased
 
   BUG FIXES
 
-Release 2.0.3-alpha - Unreleased 
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-383. AMRMClientImpl should handle null rmClient in stop()
+    (Hitesh Shah via sseth)
+
+    YARN-385. Add missing fields - location and #containers to
+    ResourceRequestPBImpl's toString(). (Sandy Ryza via sseth)
+
+    YARN-377. Use the new StringUtils methods added by HADOOP-9252 and fix
+    TestContainersMonitor.  (Chris Nauroth via szetszwo)
+
+Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
     YARN-145. Add a Web UI to the fair share scheduler. (Sandy Ryza via tomwhite)
+
+    YARN-3. Add support for CPU isolation/monitoring of containers. 
+    (adferguson via tucu)
 
     YARN-230. RM Restart phase 1 - includes support for saving/restarting all
     applications on an RM bounce. (Bikas Saha via acmurthy)
@@ -106,6 +127,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-277. Use AMRMClient in DistributedShell to exemplify the approach.
     (Bikas Saha via hitesh)
+
+    YARN-360. Allow apps to concurrently register tokens for renewal.
+    (Daryn Sharp via sseth)
 
   OPTIMIZATIONS
 
@@ -213,6 +237,15 @@ Release 2.0.3-alpha - Unreleased
     does not have permission causes the client to wait forever.
     (shenhong via tomwhite)
 
+    YARN-372. Move InlineDispatcher from hadoop-yarn-server-resourcemanager to
+    hadoop-yarn-common (sseth via hitesh)
+
+    YARN-370. Fix SchedulerUtils to correctly round up the resource for
+    containers. (Zhijie Shen via acmurthy) 
+
+    YARN-355. Fixes a bug where RM app submission could jam under load.
+    (Daryn Sharp via sseth)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
@@ -279,10 +312,18 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-357. App submission should not be synchronized (daryn)
+
   BUG FIXES
 
     YARN-343. Capacity Scheduler maximum-capacity value -1 is invalid (Xuan 
     Gong via tgraves)
+
+    YARN-364. AggregatedLogDeletionService can take too long to delete logs
+    (jlowe)
+
+    YARN-362. Unexpected extra results when using webUI table search (Ravi
+    Prakash via jlowe)
 
 Release 0.23.6 - UNRELEASED
 

@@ -296,7 +296,28 @@ Trunk (Unreleased)
 
     HDFS-4382. Fix typo MAX_NOT_CHANGED_INTERATIONS. (Ted Yu via suresh)
 
-Release 2.0.3-alpha - Unreleased 
+    HDFS-4340. Update addBlock() to inculde inode id as additional argument.
+    (Brandon Li via suresh)
+
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    
+    HDFS-4470. Several HDFS tests attempt file operations on invalid HDFS
+    paths when running on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4471. Namenode WebUI file browsing does not work with wildcard
+    addresses configured. (Andrew Wang via atm)
+
+Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
@@ -316,6 +337,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4451. hdfs balancer command returns exit code 1 on success instead
     of 0. (Joshua Blatt via suresh)
+
+    HDFS-4350. Make enabling of stale marking on read and write paths
+    independent. (Andrew Wang via suresh)
 
 
   NEW FEATURES
@@ -504,6 +528,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-4259. Improve pipeline DN replacement failure message (harsh)
 
     HDFS-3598. WebHDFS support for file concat. (Plamen Jeliazkov via shv)
+
+    HDFS-4456. Add concat to HttpFS and WebHDFS REST API docs. (plamenj2003 via tucu)
 
   OPTIMIZATIONS
 
@@ -741,6 +767,28 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-4428. FsDatasetImpl should disclose what the error is when a rename
     fails. (Colin Patrick McCabe via atm)
+
+    HDFS-4452. getAdditionalBlock() can create multiple blocks if the client
+    times out and retries. (shv)
+
+    HDFS-4445. All BKJM ledgers are not checked while tailing, So failover will fail.
+    (Vinay via umamahesh)
+
+    HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
+    pre-federation version of HDFS. (atm)
+
+    HDFS-4404. Create file failure when the machine of first attempted NameNode
+    is down. (Todd Lipcon via atm)
+
+    HDFS-4344. dfshealth.jsp throws NumberFormatException when
+    dfs.hosts/dfs.hosts.exclude includes port number. (Andy Isaacson via atm)
+
+    HDFS-4468.  Use the new StringUtils methods added by HADOOP-9252 and fix
+    TestHDFSCLI and TestQuota. (szetszwo)
+
+    HDFS-4458. In DFSUtil.getNameServiceUris(..), convert default fs URI using
+    NetUtils.createSocketAddr(..) for being consistent with other addresses.
+    (Binglin Chang via szetszwo)
 
   BREAKDOWN OF HDFS-3077 SUBTASKS
 

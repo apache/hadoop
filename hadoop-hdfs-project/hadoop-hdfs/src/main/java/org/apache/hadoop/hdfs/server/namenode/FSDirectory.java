@@ -2157,7 +2157,8 @@ public class FSDirectory implements Closeable {
         node.getUserName(snapshot),
         node.getGroupName(snapshot),
         node.isSymlink() ? ((INodeSymlink)node).getSymlink() : null,
-        path);
+        path,
+        node.getId());
   }
 
    /**
@@ -2194,6 +2195,7 @@ public class FSDirectory implements Closeable {
           node.getGroupName(snapshot),
           node.isSymlink() ? ((INodeSymlink)node).getSymlink() : null,
           path,
+          node.getId(),
           loc);
       }
 

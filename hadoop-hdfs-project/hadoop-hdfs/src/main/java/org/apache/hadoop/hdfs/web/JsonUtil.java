@@ -219,6 +219,7 @@ public class JsonUtil {
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());
     m.put("replication", status.getReplication());
+    m.put("fileId", status.getFileId());
     return includeType ? toJsonString(FileStatus.class, m): JSON.toString(m);
   }
 
@@ -243,9 +244,10 @@ public class JsonUtil {
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
     final short replication = (short) (long) (Long) m.get("replication");
+    final long fileId = (Long) m.get("fileId");
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
         blockSize, mTime, aTime, permission, owner, group,
-        symlink, DFSUtil.string2Bytes(localName));
+        symlink, DFSUtil.string2Bytes(localName), fileId);
   }
 
   /** Convert an ExtendedBlock to a Json map. */

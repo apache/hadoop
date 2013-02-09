@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.http.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -86,6 +88,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String PERMISSION_PARAM = "permission";
   public static final String DESTINATION_PARAM = "destination";
   public static final String RECURSIVE_PARAM = "recursive";
+  public static final String SOURCES_PARAM = "sources";
   public static final String OWNER_PARAM = "owner";
   public static final String GROUP_PARAM = "group";
   public static final String MODIFICATION_TIME_PARAM = "modificationtime";
@@ -167,7 +170,7 @@ public class HttpFSFileSystem extends FileSystem
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
     INSTRUMENTATION(HTTP_GET),
-    APPEND(HTTP_POST),
+    APPEND(HTTP_POST), CONCAT(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
     DELETE(HTTP_DELETE);
@@ -526,6 +529,29 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.APPEND.toString());
     return uploadData(Operation.APPEND.getMethod(), f, params, bufferSize,
                       HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Concat existing files together.
+   * @param f the path to the target destination.
+   * @param psrcs the paths to the sources to use for the concatenation.
+   *
+   * @throws IOException
+   */
+  @Override
+  public void concat(Path f, Path[] psrcs) throws IOException {
+    List<String> strPaths = new ArrayList<String>(psrcs.length);
+    for(Path psrc : psrcs) {
+      strPaths.add(psrc.toUri().getPath());
+    }
+    String srcs = StringUtils.join(",", strPaths);
+
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.CONCAT.toString());
+    params.put(SOURCES_PARAM, srcs);
+    HttpURLConnection conn = getConnection(Operation.CONCAT.getMethod(),
+        params, f, true);
+    HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
   /**
