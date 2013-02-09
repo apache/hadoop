@@ -67,7 +67,7 @@ public class TestRBWBlockInvalidation {
     try {
       final FSNamesystem namesystem = cluster.getNamesystem();
       FileSystem fs = cluster.getFileSystem();
-      Path testPath = new Path(MiniDFSCluster.getBaseDirectory(), "foo1");
+      Path testPath = new Path("/tmp/TestRBWBlockInvalidation", "foo1");
       out = fs.create(testPath, (short) 2);
       out.writeBytes("HDFS-3157: " + testPath);
       out.hsync();
