@@ -9,12 +9,15 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
   IMPROVEMENTS
+
     HADOOP-9253. Capture ulimit info in the logs at service start time.
     (Arpit Gupta via suresh)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
