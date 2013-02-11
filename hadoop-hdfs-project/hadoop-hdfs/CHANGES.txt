@@ -37,7 +37,7 @@ Release 0.23.7 - UNRELEASED
     HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
     pre-federation version of HDFS. (atm)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 

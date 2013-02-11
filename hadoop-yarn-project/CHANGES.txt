@@ -41,7 +41,7 @@ Release 0.23.7 - UNRELEASED
     YARN-362. Unexpected extra results when using webUI table search (Ravi
     Prakash via jlowe)
 
-Release 0.23.6 - UNRELEASED
+Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
 
