@@ -61,6 +61,8 @@
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="WebHDFS REST API" href="hadoop-project-dist/hadoop-hdfs/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
+      <item name="Short Circuit Local Reads" 
+          href="hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
