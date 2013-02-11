@@ -20,6 +20,8 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9253. Capture ulimit info in the logs at service start time.
     (Arpit Gupta via tgraves)
  
+    HADOOP-8075. Lower native-hadoop library log from info to debug.
+    (Hızır Sefa İrken via eli)
 
   OPTIMIZATIONS
 
