@@ -268,7 +268,12 @@ public class GenericOptionsParser {
     }
 
     if (line.hasOption("jt")) {
-      conf.set("mapred.job.tracker", line.getOptionValue("jt"), 
+      String optionValue = line.getOptionValue("jt");
+      if (optionValue.equalsIgnoreCase("local")) {
+        conf.set("mapreduce.framework.name", optionValue);
+      }
+
+      conf.set("yarn.resourcemanager.address", optionValue, 
           "from -jt command line option");
     }
     if (line.hasOption("conf")) {

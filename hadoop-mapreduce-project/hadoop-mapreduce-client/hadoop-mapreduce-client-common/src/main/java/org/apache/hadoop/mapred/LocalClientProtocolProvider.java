@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 @InterfaceAudience.Private
 public class LocalClientProtocolProvider extends ClientProtocolProvider {
@@ -38,16 +37,7 @@ public class LocalClientProtocolProvider extends ClientProtocolProvider {
     if (!MRConfig.LOCAL_FRAMEWORK_NAME.equals(framework)) {
       return null;
     }
-    String tracker = conf.get(JTConfig.JT_IPC_ADDRESS, "local");
-    if ("local".equals(tracker)) {
-      conf.setInt("mapreduce.job.maps", 1);
-      return new LocalJobRunner(conf);
-    } else {
-
-      throw new IOException("Invalid \"" + JTConfig.JT_IPC_ADDRESS
-          + "\" configuration value for LocalJobRunner : \""
-          + tracker + "\"");
-    }
+    return new LocalJobRunner(conf);
   }
 
   @Override
