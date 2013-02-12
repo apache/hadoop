@@ -127,6 +127,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -376,11 +377,61 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   /**
+   * Check the supplied configuration for correctness.
+   * @param conf Supplies the configuration to validate.
+   * @throws IOException if the configuration could not be queried.
+   * @throws IllegalArgumentException if the configuration is invalid.
+   */
+  private static void checkConfiguration(Configuration conf)
+      throws IOException {
+
+    final Collection<URI> namespaceDirs =
+        FSNamesystem.getNamespaceDirs(conf);
+    final Collection<URI> editsDirs =
+        FSNamesystem.getNamespaceEditsDirs(conf);
+    final Collection<URI> requiredEditsDirs =
+        FSNamesystem.getRequiredNamespaceEditsDirs(conf);
+    final Collection<URI> sharedEditsDirs =
+        FSNamesystem.getSharedEditsDirs(conf);
+
+    for (URI u : requiredEditsDirs) {
+      if (u.toString().compareTo(
+              DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_DEFAULT) == 0) {
+        continue;
+      }
+
+      // Each required directory must also be in editsDirs or in
+      // sharedEditsDirs.
+      if (!editsDirs.contains(u) &&
+          !sharedEditsDirs.contains(u)) {
+        throw new IllegalArgumentException(
+            "Required edits directory " + u.toString() + " not present in " +
+            DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY + ". " +
+            DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY + "=" +
+            editsDirs.toString() + "; " +
+            DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY + "=" +
+            requiredEditsDirs.toString() + ". " +
+            DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY + "=" +
+            sharedEditsDirs.toString() + ".");
+      }
+    }
+
+    if (namespaceDirs.size() == 1) {
+      LOG.warn("Only one image storage directory ("
+          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of dataloss"
+          + " due to lack of redundant storage directories!");
+    }
+    if (editsDirs.size() == 1) {
+      LOG.warn("Only one namespace edits storage directory ("
+          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of dataloss"
+          + " due to lack of redundant storage directories!");
+    }
+  }
 
   /**
    * Instantiates an FSNamesystem loaded from the image and edits
    * directories specified in the passed Configuration.
-   * 
+   *
    * @param conf the Configuration which specifies the storage directories
    *             from which to load
    * @return an FSNamesystem which contains the loaded namespace
@@ -388,39 +439,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   public static FSNamesystem loadFromDisk(Configuration conf)
       throws IOException {
-    Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
-    List<URI> namespaceEditsDirs = 
-      FSNamesystem.getNamespaceEditsDirs(conf);
-    return loadFromDisk(conf, namespaceDirs, namespaceEditsDirs);
-  }
 
-  /**
-   * Instantiates an FSNamesystem loaded from the image and edits
-   * directories passed.
-   * 
-   * @param conf the Configuration which specifies the storage directories
-   *             from which to load
-   * @param namespaceDirs directories to load the fsimages
-   * @param namespaceEditsDirs directories to load the edits from
-   * @return an FSNamesystem which contains the loaded namespace
-   * @throws IOException if loading fails
-   */
-  public static FSNamesystem loadFromDisk(Configuration conf,
-      Collection<URI> namespaceDirs, List<URI> namespaceEditsDirs)
-      throws IOException {
-
-    if (namespaceDirs.size() == 1) {
-      LOG.warn("Only one image storage directory ("
-          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of dataloss"
-          + " due to lack of redundant storage directories!");
-    }
-    if (namespaceEditsDirs.size() == 1) {
-      LOG.warn("Only one namespace edits storage directory ("
-          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of dataloss"
-          + " due to lack of redundant storage directories!");
-    }
-
-    FSImage fsImage = new FSImage(conf, namespaceDirs, namespaceEditsDirs);
+    checkConfiguration(conf);
+    FSImage fsImage = new FSImage(conf,
+        FSNamesystem.getNamespaceDirs(conf),
+        FSNamesystem.getNamespaceEditsDirs(conf));
     FSNamesystem namesystem = new FSNamesystem(conf, fsImage);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     if (startOpt == StartupOption.RECOVER) {
@@ -865,7 +888,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
           "of the file system meta-data.");
     } else if (dirNames.isEmpty()) {
-      dirNames = Collections.singletonList("file:///tmp/hadoop/dfs/name");
+      dirNames = Collections.singletonList(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_DEFAULT);
     }
     return Util.stringCollectionAsURIs(dirNames);
   }
