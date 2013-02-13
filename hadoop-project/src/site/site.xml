@@ -51,11 +51,23 @@
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
       <item name="Cluster Setup" href="hadoop-project-dist/hadoop-common/ClusterSetup.html"/>
       <item name="File System Shell" href="hadoop-project-dist/hadoop-common/FileSystemShell.html"/>
+      <item name="Native Libraries" href="hadoop-project-dist/hadoop-common/NativeLibraries.html"/>
+      <item name="Superusers" href="hadoop-project-dist/hadoop-common/Superusers.html"/>
       <item name="Hadoop Commands Reference" href="hadoop-project-dist/hadoop-common/CommandsManual.html"/>
+      <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
+      <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
+      <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
+      <item name="HDFS Architecture" href="hadoop-project-dist/hadoop-hdfs/HdfsDesign.html"/>
+      <item name="Edits Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsEditsViewer.html"/>
+      <item name="Image Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsImageViewer.html"/>
+      <item name="Permissions and HDFS" href="hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html"/>
+      <item name="Quotas and HDFS" href="hadoop-project-dist/hadoop-hdfs/HdfsQuotaAdminGuide.html"/>
+      <item name="HFTP" href="hadoop-project-dist/hadoop-hdfs/Hftp.html"/>
+      <item name="C API libhdfs" href="hadoop-project-dist/hadoop-hdfs/LibHdfs.html"/>
       <item name="WebHDFS REST API" href="hadoop-project-dist/hadoop-hdfs/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
     </menu>

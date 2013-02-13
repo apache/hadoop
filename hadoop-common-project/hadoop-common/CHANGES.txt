@@ -79,6 +79,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
     suresh)
 
+    HADOOP-9302. HDFS docs not linked from top level (Andy Isaacson via 
+    tgraves)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
