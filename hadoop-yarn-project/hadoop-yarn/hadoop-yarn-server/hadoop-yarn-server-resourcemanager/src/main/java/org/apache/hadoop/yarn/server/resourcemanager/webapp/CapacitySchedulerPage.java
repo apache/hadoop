@@ -22,12 +22,15 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -63,8 +66,42 @@ class CapacitySchedulerPage extends RmView {
       lqinfo = (CapacitySchedulerLeafQueueInfo) info.qinfo;
     }
 
+    //Return a string describing one resource as a percentage of another
+    private String getPercentage(ResourceInfo numerator, ResourceInfo denominator) {
+      StringBuilder percentString = new StringBuilder("Memory: ");
+      if (numerator != null) {
+        percentString.append(numerator.getMemory());
+      }
+      if (denominator.getMemory() != 0) {
+        percentString.append(" (<span title='of used resources in this queue'>")
+          .append(StringUtils.format("%.2f", numerator.getMemory() * 100.0 /
+            denominator.getMemory()) + "%</span>)");
+      }
+      percentString.append(", vCores: ");
+      if (numerator != null) {
+        percentString.append(numerator.getvCores());
+      }
+      if (denominator.getvCores() != 0) {
+        percentString.append(" (<span title='of used resources in this queue'>")
+          .append(StringUtils.format("%.2f", numerator.getvCores() * 100.0 /
+          denominator.getvCores()) + "%</span>)");
+      }
+      return percentString.toString();
+    }
+
     @Override
     protected void render(Block html) {
+      StringBuilder activeUserList = new StringBuilder("");
+      ResourceInfo usedResources = lqinfo.getResourcesUsed();
+      ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
+      for (UserInfo entry: users) {
+        activeUserList.append(entry.getUsername()).append(" &lt;")
+          .append(getPercentage(entry.getResourcesUsed(), usedResources))
+          .append(", Active Apps: " + entry.getNumActiveApplications())
+          .append(", Pending Apps: " + entry.getNumPendingApplications())
+          .append("&gt;<br style='display:block'>"); //Force line break
+      }
+
       ResponseInfo ri = info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status").
           _("Queue State:", lqinfo.getQueueState()).
           _("Used Capacity:", percent(lqinfo.getUsedCapacity() / 100)).
@@ -81,7 +118,8 @@ class CapacitySchedulerPage extends RmView {
           _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
           _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
           _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
-          _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor()));
+          _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor())).
+          _r("Active users: ", activeUserList.toString());
 
       html._(InfoBlock.class);
 

@@ -46,7 +46,11 @@ public class InfoBlock extends HtmlBlock {
           th(item.key);
       String value = String.valueOf(item.value);
       if (item.url == null) {
-        tr.td(value);
+        if (!item.isRaw) {
+          tr.td(value);
+        } else {
+          tr.td()._r(value)._();
+        }
       } else {
         tr.
           td().
