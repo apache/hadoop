@@ -85,6 +85,12 @@ extends AbstractDelegationTokenIdentifier>
   private Thread tokenRemoverThread;
   protected volatile boolean running;
 
+  /**
+   * If the delegation token update thread holds this lock, it will
+   * not get interrupted.
+   */
+  protected Object noInterruptsLock = new Object();
+
   public AbstractDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
       long delegationTokenRemoverScanInterval) {
@@ -360,12 +366,22 @@ extends AbstractDelegationTokenIdentifier>
     }
   }
 
-  public synchronized void stopThreads() {
+
+  public void stopThreads() {
     if (LOG.isDebugEnabled())
       LOG.debug("Stopping expired delegation token remover thread");
     running = false;
+
     if (tokenRemoverThread != null) {
-      tokenRemoverThread.interrupt();
+      synchronized (noInterruptsLock) {
+        tokenRemoverThread.interrupt();
+      }
+
+      try {
+        tokenRemoverThread.join();
+      } catch (InterruptedException e) {
+        throw new RuntimeException("Unable to join on token removal thread", e);
+      }
     }
   }
   
@@ -381,24 +397,20 @@ extends AbstractDelegationTokenIdentifier>
         while (running) {
           long now = System.currentTimeMillis();
           if (lastMasterKeyUpdate + keyUpdateInterval < now) {
-            synchronized (AbstractDelegationTokenSecretManager.this) {
-              if (running) {
-                try {
-                  rollMasterKey();
-                  lastMasterKeyUpdate = now;
-                } catch (IOException e) {
-                  LOG.error("Master key updating failed. "
-                            + StringUtils.stringifyException(e));
-                }
+            if (running) {
+              try {
+                rollMasterKey();
+                lastMasterKeyUpdate = now;
+              } catch (IOException e) {
+                LOG.error("Master key updating failed. "
+                    + StringUtils.stringifyException(e));
               }
             }
           }
           if (lastTokenCacheCleanup + tokenRemoverScanInterval < now) {
-            synchronized (AbstractDelegationTokenSecretManager.this) {
-              if (running) {
-                removeExpiredToken();
-                lastTokenCacheCleanup = now;
-              }
+            if (running) {
+              removeExpiredToken();
+              lastTokenCacheCleanup = now;
             }
           }
           try {

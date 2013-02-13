@@ -487,6 +487,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4643. Make job-history cleanup-period configurable. 
     (sandyr via tucu)
 
+    HDFS-4466. Remove the deadlock from AbstractDelegationTokenSecretManager.
+    (Brandon Li via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
