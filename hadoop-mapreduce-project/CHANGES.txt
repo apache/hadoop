@@ -62,6 +62,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4893. MR AppMaster can do sub-optimal assignment of containers
     to map tasks leading to poor node locality (Bikas Saha via jlowe)
 
+    MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
+    speculative attempts (Robert Parker via jlowe)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
