@@ -85,6 +85,10 @@ class DomainSocketFactory {
     // If there is no domain socket path configured, we can't use domain
     // sockets.
     if (conf.domainSocketPath.isEmpty()) return null;
+    // If we can't do anything with the domain socket, don't create it.
+    if (!(conf.domainSocketDataTraffic || conf.shortCircuitLocalReads)) {
+      return null;
+    }
     // UNIX domain sockets can only be used to talk to local peers
     if (!DFSClient.isLocalAddress(addr)) return null;
     // If the DomainSocket code is not loaded, we can't create

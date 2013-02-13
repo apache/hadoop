@@ -45,3 +45,5 @@ HDFS-4473. Don't create domain socket unless we need it. (Colin Patrick McCabe v
 HDFS-4485. DN should chmod socket path a+w. (Colin Patrick McCabe via atm)
 
 HDFS-4453. Make a simple doc to describe the usage and design of the shortcircuit read feature. (Colin Patrick McCabe via atm)
+
+HDFS-4496. DFSClient: don't create a domain socket unless we need it (Colin Patrick McCabe via todd)
