@@ -1019,6 +1019,9 @@ Release 0.23.7 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-9302. HDFS docs not linked from top level (Andy Isaacson via
+    tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
