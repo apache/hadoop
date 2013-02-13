@@ -21,9 +21,12 @@ package org.apache.hadoop.mapreduce.v2.app.recover;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +38,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
@@ -108,7 +112,7 @@ public class RecoveryService extends CompositeService implements Recovery {
   private JobInfo jobInfo = null;
   private final Map<TaskId, TaskInfo> completedTasks =
     new HashMap<TaskId, TaskInfo>();
-
+  
   private final List<TaskEvent> pendingTaskScheduleEvents =
     new ArrayList<TaskEvent>();
 
@@ -193,6 +197,14 @@ public class RecoveryService extends CompositeService implements Recovery {
         .getAllTasks();
     for (TaskInfo taskInfo : taskInfos.values()) {
       if (TaskState.SUCCEEDED.toString().equals(taskInfo.getTaskStatus())) {
+        Iterator<Entry<TaskAttemptID, TaskAttemptInfo>> taskAttemptIterator = 
+            taskInfo.getAllTaskAttempts().entrySet().iterator();
+        while (taskAttemptIterator.hasNext()) {
+          Map.Entry<TaskAttemptID, TaskAttemptInfo> currentEntry = taskAttemptIterator.next();
+          if (!jobInfo.getAllCompletedTaskAttempts().containsKey(currentEntry.getKey())) {
+            taskAttemptIterator.remove();
+          }
+        }
         completedTasks
             .put(TypeConverter.toYarn(taskInfo.getTaskId()), taskInfo);
         LOG.info("Read from history task "
@@ -215,6 +227,7 @@ public class RecoveryService extends CompositeService implements Recovery {
         JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf, jobId);
     Path histDirPath =
         FileContext.getFileContext(conf).makeQualified(new Path(jobhistoryDir));
+    LOG.info("Trying file " + histDirPath.toString());
     FileContext fc = FileContext.getFileContext(histDirPath.toUri(), conf);
     // read the previous history file
     historyFile =
