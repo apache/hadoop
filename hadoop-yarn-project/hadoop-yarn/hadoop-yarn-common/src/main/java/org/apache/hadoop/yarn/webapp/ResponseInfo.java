@@ -34,19 +34,21 @@ public class ResponseInfo implements Iterable<ResponseInfo.Item> {
     public final String key;
     public final String url;
     public final Object value;
+    public final boolean isRaw;
 
-    Item(String key, String url, Object value) {
+    Item(String key, String url, Object value, boolean isRaw) {
       this.key = key;
       this.url = url;
       this.value = value;
+      this.isRaw = isRaw;
     }
 
-    public static Item of(String key, Object value) {
-      return new Item(key, null, value);
+    public static Item of(String key, Object value, boolean isRaw) {
+      return new Item(key, null, value, isRaw);
     }
 
     public static Item of(String key, String url, Object value) {
-      return new Item(key, url, value);
+      return new Item(key, url, value, false);
     }
   }
 
@@ -71,12 +73,18 @@ public class ResponseInfo implements Iterable<ResponseInfo.Item> {
   }
 
   public ResponseInfo _(String key, Object value) {
-    items.add(Item.of(key, value));
+    items.add(Item.of(key, value, false));
     return this;
   }
 
   public ResponseInfo _(String key, String url, Object anchor) {
     items.add(Item.of(key, url, anchor));
+    return this;
+  }
+
+  //Value is raw HTML and shouldn't be escaped
+  public ResponseInfo _r(String key, Object value) {
+    items.add(Item.of(key, value, true));
     return this;
   }
 
