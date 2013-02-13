@@ -65,6 +65,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
     speculative attempts (Robert Parker via jlowe)
 
+    MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
+    of the best attempt for a task. (Jason Lowe via sseth)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
