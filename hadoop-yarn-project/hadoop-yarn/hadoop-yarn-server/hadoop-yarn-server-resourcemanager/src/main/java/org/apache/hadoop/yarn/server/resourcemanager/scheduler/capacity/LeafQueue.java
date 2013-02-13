@@ -561,6 +561,19 @@ public class LeafQueue implements CSQueue {
     return user;
   }
 
+  /**
+   * @return an ArrayList of UserInfo objects who are active in this queue
+   */
+  public synchronized ArrayList<UserInfo> getUsers() {
+    ArrayList<UserInfo> usersToReturn = new ArrayList<UserInfo>();
+    for (Map.Entry<String, User> entry: users.entrySet()) {
+      usersToReturn.add(new UserInfo(entry.getKey(), Resources.clone(
+        entry.getValue().consumed), entry.getValue().getActiveApplications(),
+        entry.getValue().getPendingApplications()));
+    }
+    return usersToReturn;
+  }
+
   @Override
   public synchronized void reinitialize(
       CSQueue newlyParsedQueue, Resource clusterResource) 

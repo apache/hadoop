@@ -48,6 +48,7 @@ public class CapacitySchedulerQueueInfo {
   protected String queueName;
   protected QueueState state;
   protected CapacitySchedulerQueueInfoList queues;
+  protected ResourceInfo resourcesUsed;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -69,6 +70,7 @@ public class CapacitySchedulerQueueInfo {
     usedResources = q.getUsedResources().toString();
     queueName = q.getQueueName();
     state = q.getState();
+    resourcesUsed = new ResourceInfo(q.getUsedResources());
   }
 
   public float getCapacity() {
@@ -117,6 +119,10 @@ public class CapacitySchedulerQueueInfo {
 
   public CapacitySchedulerQueueInfoList getQueues() {
     return this.queues;
+  }
+
+  public ResourceInfo getResourcesUsed() {
+    return resourcesUsed;
   }
 
   /**
