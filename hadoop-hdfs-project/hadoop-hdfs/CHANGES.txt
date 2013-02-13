@@ -2073,6 +2073,9 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

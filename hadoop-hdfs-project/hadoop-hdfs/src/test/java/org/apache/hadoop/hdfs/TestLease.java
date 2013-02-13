@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
@@ -85,9 +86,26 @@ public class TestLease {
 
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
-      // make it look like lease has already expired.
+      // make it look like the soft limit has been exceeded.
       LeaseRenewer originalRenewer = dfs.getLeaseRenewer();
-      dfs.lastLeaseRenewal = Time.now() - 300000;
+      dfs.lastLeaseRenewal = Time.now()
+      - HdfsConstants.LEASE_SOFTLIMIT_PERIOD - 1000;
+      try {
+        dfs.renewLease();
+      } catch (IOException e) {}
+
+      // Things should continue to work it passes hard limit without
+      // renewing.
+      try {
+        d_out.write(buf, 0, 1024);
+        LOG.info("Write worked beyond the soft limit as expected.");
+      } catch (IOException e) {
+        Assert.fail("Write failed.");
+      }
+
+      // make it look like the hard limit has been exceeded.
+      dfs.lastLeaseRenewal = Time.now()
+      - HdfsConstants.LEASE_HARDLIMIT_PERIOD - 1000;
       dfs.renewLease();
 
       // this should not work.
