@@ -17,6 +17,9 @@ Release 2.0.4-beta - UNRELEASED
 
     MAPREDUCE-4994. -jt generic command line option does not work. (sandyr via tucu)
 
+    MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
+    of the best attempt for a task. (Jason Lowe via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
