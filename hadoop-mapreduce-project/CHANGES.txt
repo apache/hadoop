@@ -22,6 +22,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4905. test org.apache.hadoop.mapred.pipes 
     (Aleksey Gorshkov via bobby)
 
+    MAPREDUCE-4989. JSONify DataTables input data for Attempts page (Ravi
+    Prakash via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the

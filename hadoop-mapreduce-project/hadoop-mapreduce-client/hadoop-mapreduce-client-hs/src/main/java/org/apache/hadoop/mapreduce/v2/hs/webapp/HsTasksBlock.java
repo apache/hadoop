@@ -28,7 +28,6 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ReduceTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -204,9 +203,4 @@ public class HsTasksBlock extends HtmlBlock {
 
     footRow._()._()._();
   }
-
-  private String formatTime(long elapsed) {
-    return elapsed < 0 ? "N/A" : StringUtils.formatTime(elapsed);
-  }
-
 }
