@@ -37,6 +37,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4462. 2NN will fail to checkpoint after an HDFS upgrade from a
     pre-federation version of HDFS. (atm)
 
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
