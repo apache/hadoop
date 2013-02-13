@@ -209,7 +209,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/hdfs-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
               <sources>
@@ -228,7 +228,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/secondary-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
               <sources>
@@ -247,7 +247,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/journal-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.journalservice</packageName>
               <sources>
@@ -266,7 +266,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-src/main/jsp</workingDirectory>
+              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
               <webFragmentFile>${project.build.directory}/datanode-jsp-servlet-definitions.xml</webFragmentFile>
               <packageName>org.apache.hadoop.hdfs.server.datanode</packageName>
               <sources>
@@ -301,7 +301,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-source</id>
+            <id>add-jsp-generated-sources-directory</id>
             <phase>generate-sources</phase>
             <goals>
               <goal>add-source</goal>
@@ -309,7 +309,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <configuration>
               <sources>
                 <source>${project.build.directory}/generated-sources/java</source>
-                <source>${project.build.directory}/generated-src/main/jsp</source>
               </sources>
             </configuration>
           </execution>
@@ -323,14 +322,14 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </configuration>
         <executions>
           <execution>
-            <id>create-protobuf-generated-sources-directory</id>
+            <id>create-jsp-generated-sources-directory</id>
             <phase>initialize</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <target>
-                <mkdir dir="target/generated-sources/java" />
+                <mkdir dir="${project.build.directory}/generated-sources/java" />
               </target>
             </configuration>
           </execution>
@@ -408,80 +407,96 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
           <execution>
-            <id>compile-proto</id>
+            <id>compile-protoc</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/hdfs.proto</argument>
-                <argument>src/main/proto/GetUserMappingsProtocol.proto</argument>
-                <argument>src/main/proto/HAZKInfo.proto</argument>
-                <argument>src/main/proto/InterDatanodeProtocol.proto</argument>
-                <argument>src/main/proto/JournalProtocol.proto</argument>
-                <argument>src/main/proto/RefreshAuthorizationPolicyProtocol.proto</argument>
-                <argument>src/main/proto/RefreshUserMappingsProtocol.proto</argument>
-                <argument>src/main/proto/datatransfer.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>GetUserMappingsProtocol.proto</include>
+                  <include>HAZKInfo.proto</include>
+                  <include>InterDatanodeProtocol.proto</include>
+                  <include>JournalProtocol.proto</include>
+                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
+                  <include>RefreshUserMappingsProtocol.proto</include>
+                  <include>datatransfer.proto</include>
+                  <include>hdfs.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
-            <id>compile-proto-datanode</id>
+            <id>compile-protoc-datanode</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/ClientDatanodeProtocol.proto</argument>
-                <argument>src/main/proto/DatanodeProtocol.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>ClientDatanodeProtocol.proto</include>
+                  <include>DatanodeProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
-            <id>compile-proto-namenode</id>
+            <id>compile-protoc-namenode</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/ClientNamenodeProtocol.proto</argument>
-                <argument>src/main/proto/NamenodeProtocol.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>ClientNamenodeProtocol.proto</include>
+                  <include>NamenodeProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
           <execution>
-            <id>compile-proto-qjournal</id>
+            <id>compile-protoc-qjournal</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-I../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/QJournalProtocol.proto</argument>
-              </arguments>
+              <imports>
+                <param>${basedir}/../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>QJournalProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>
