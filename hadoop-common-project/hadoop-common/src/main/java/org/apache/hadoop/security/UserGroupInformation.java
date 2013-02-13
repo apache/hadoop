@@ -305,7 +305,8 @@ public class UserGroupInformation {
         return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
             : "com.ibm.security.auth.module.NTLoginModule";
       } else if (aix) {
-        return "com.ibm.security.auth.module.AIXLoginModule";
+        return is64Bit ? "com.ibm.security.auth.module.AIX64LoginModule"
+            : "com.ibm.security.auth.module.AIXLoginModule";
       } else {
         return "com.ibm.security.auth.module.LinuxLoginModule";
       }
@@ -320,24 +321,24 @@ public class UserGroupInformation {
   private static Class<? extends Principal> getOsPrincipalClass() {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
+      String principalClass = null;
       if (ibmJava) {
-        if (windows) {
-          return (Class<? extends Principal>) (is64Bit
-            ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
-            : cl.loadClass("com.ibm.security.auth.NTUserPrincipal"));
-        } else if (aix) {
-          return (Class<? extends Principal>)
-             cl.loadClass("com.ibm.security.auth.AIXPrincipal");
+        if (is64Bit) {
+          principalClass = "com.ibm.security.auth.UsernamePrincipal";
         } else {
-          return (Class<? extends Principal>) (is64Bit
-            ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
-            : cl.loadClass("com.ibm.security.auth.LinuxPrincipal"));
+          if (windows) {
+            principalClass = "com.ibm.security.auth.NTUserPrincipal";
+          } else if (aix) {
+            principalClass = "com.ibm.security.auth.AIXPrincipal";
+          } else {
+            principalClass = "com.ibm.security.auth.LinuxPrincipal";
+          }
         }
       } else {
-        return (Class<? extends Principal>) (windows
-           ? cl.loadClass("com.sun.security.auth.NTUserPrincipal")
-           : cl.loadClass("com.sun.security.auth.UnixPrincipal"));
+        principalClass = windows ? "com.sun.security.auth.NTUserPrincipal"
+            : "com.sun.security.auth.UnixPrincipal";
       }
+      return (Class<? extends Principal>) cl.loadClass(principalClass);
     } catch (ClassNotFoundException e) {
       LOG.error("Unable to find JAAS classes:" + e.getMessage());
     }

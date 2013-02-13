@@ -19,6 +19,8 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
 
+    HADOOP-9305. Add support for running the Hadoop client on 64-bit AIX. (atm)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
