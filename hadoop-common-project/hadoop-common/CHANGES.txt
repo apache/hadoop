@@ -364,6 +364,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9246 Execution phase for hadoop-maven-plugin should be
     process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
 
+    HADOOP-9297. remove old record IO generation and tests. (tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
