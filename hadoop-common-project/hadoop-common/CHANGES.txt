@@ -29,6 +29,9 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9245. mvn clean without running mvn install before fails.
     (Karthik Kambatla via suresh)
 
+    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
+    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
