@@ -371,38 +371,6 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
-            <id>create-recordcc-generated-sources-directory</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="target/generated-test-sources/java" />
-              </target>
-            </configuration>
-          </execution>
-          <execution>
-            <id>generate-test-sources</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-
-                <mkdir dir="${project.build.directory}/generated-test-sources/java"/>
-
-                <taskdef name="recordcc" classname="org.apache.hadoop.record.compiler.ant.RccTask">
-                  <classpath refid="maven.compile.classpath"/>
-                </taskdef>
-                <recordcc destdir="${project.build.directory}/generated-test-sources/java">
-                  <fileset dir="${basedir}/src/test/ddl" includes="**/*.jr"/>
-                </recordcc>
-              </target>
-            </configuration>
-          </execution>
-          <execution>
             <id>create-log-dir</id>
             <phase>process-test-resources</phase>
             <goals>
@@ -443,7 +411,7 @@
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-recordcc-test-source</id>
+            <id>add-avro-test-source</id>
             <phase>generate-sources</phase>
             <goals>
               <goal>add-test-source</goal>
