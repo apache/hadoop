@@ -35,66 +35,33 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
           <execution>
-            <id>create-protobuf-generated-sources-directory</id>
-            <phase>initialize</phase>
-            <configuration>
-              <target>
-                <mkdir dir="target/generated-sources/proto" />
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-sources</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-I../../../hadoop-common-project/hadoop-common/src/main/proto/</argument>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/proto</argument>
-                <argument>src/main/proto/yarn_protos.proto</argument>
-                <argument>src/main/proto/yarn_service_protos.proto</argument>
-                <argument>src/main/proto/AM_RM_protocol.proto</argument>
-                <argument>src/main/proto/client_RM_protocol.proto</argument>
-                <argument>src/main/proto/container_manager.proto</argument>
-                <argument>src/main/proto/yarn_server_resourcemanager_service_protos.proto</argument>
-                <argument>src/main/proto/RMAdminProtocol.proto</argument>
-              </arguments>
-            </configuration>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>add-source</id>
+            <id>compile-protoc</id>
             <phase>generate-sources</phase>
             <goals>
-              <goal>add-source</goal>
+              <goal>protoc</goal>
             </goals>
             <configuration>
-              <sources>
-                <source>target/generated-sources/proto</source>
-              </sources>
+              <imports>
+                <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>yarn_protos.proto</include>
+                  <include>yarn_service_protos.proto</include>
+                  <include>AM_RM_protocol.proto</include>
+                  <include>client_RM_protocol.proto</include>
+                  <include>container_manager.proto</include>
+                  <include>yarn_server_resourcemanager_service_protos.proto</include>
+                  <include>RMAdminProtocol.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
         </executions>

@@ -16,6 +16,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-8924. Add maven plugin alternative to shell script to save
     package-info.java. (Chris Nauroth via suresh)
 
+    HADOOP-9117. replace protoc ant plugin exec with a maven plugin. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
