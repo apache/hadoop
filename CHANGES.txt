@@ -490,6 +490,9 @@ Release 1.2.0 - unreleased
     HDFS-4466. Remove the deadlock from AbstractDelegationTokenSecretManager.
     (Brandon Li via suresh)
 
+    HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
+    the map. (Karthik Kambatla via tomwhite)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

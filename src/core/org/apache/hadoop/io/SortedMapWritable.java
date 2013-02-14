@@ -139,7 +139,7 @@ public class SortedMapWritable extends AbstractMapWritable
     for (Map.Entry<? extends WritableComparable, ? extends Writable> e:
       t.entrySet()) {
       
-      instance.put(e.getKey(), e.getValue());
+      put(e.getKey(), e.getValue());
     }
   }
 
