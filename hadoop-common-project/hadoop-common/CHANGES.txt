@@ -24,6 +24,9 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9305. Add support for running the Hadoop client on 64-bit AIX. (atm)
 
+    HADOOP-9245. mvn clean without running mvn install before fails.
+    (Karthik Kambatla via suresh)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
