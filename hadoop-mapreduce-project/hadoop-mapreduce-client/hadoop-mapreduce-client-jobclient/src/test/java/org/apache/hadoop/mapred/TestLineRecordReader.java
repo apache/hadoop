@@ -98,6 +98,7 @@ public class TestLineRecordReader extends TestCase {
       InterruptedException, ClassNotFoundException {
     Configuration conf = new Configuration();
     conf.set("textinputformat.record.delimiter", "\t\n");
+    conf.setInt("mapreduce.job.maps", 1);
     FileSystem localFs = FileSystem.getLocal(conf);
     // cleanup
     localFs.delete(workDir, true);
