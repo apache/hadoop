@@ -172,6 +172,8 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
     of the best attempt for a task. (Jason Lowe via sseth)
 
+    MAPREDUCE-4994. Addendum fixing testcases failures. (sandyr via tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

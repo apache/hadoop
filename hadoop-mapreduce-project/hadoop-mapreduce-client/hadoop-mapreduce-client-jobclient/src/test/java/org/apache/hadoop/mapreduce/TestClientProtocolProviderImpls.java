@@ -42,24 +42,10 @@ public class TestClientProtocolProviderImpls extends TestCase {
 
     }
 
-    try {
-      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
-      conf.set(JTConfig.JT_IPC_ADDRESS, "127.0.0.1:0");
-
-      new Cluster(conf);
-      fail("Cluster with Local Framework name should use local JT address");
-    } catch (IOException e) {
-
-    }
-
-    try {
-      conf.set(JTConfig.JT_IPC_ADDRESS, "local");
-      Cluster cluster = new Cluster(conf);
-      assertTrue(cluster.getClient() instanceof LocalJobRunner);
-      cluster.close();
-    } catch (IOException e) {
-
-    }
+    conf.set(MRConfig.FRAMEWORK_NAME, "local");
+    Cluster cluster = new Cluster(conf);
+    assertTrue(cluster.getClient() instanceof LocalJobRunner);
+    cluster.close();
   }
 
   @Test
