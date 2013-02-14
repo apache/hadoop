@@ -1062,14 +1062,18 @@ public class PBHelper {
     if (sdirStatusProto == null) {
       return null;
     }
-    return new SnapshottableDirectoryStatus(sdirStatusProto.getDirStatus()
-        .getModificationTime(), sdirStatusProto.getDirStatus().getAccessTime(),
-        PBHelper.convert(sdirStatusProto.getDirStatus().getPermission()),
-        sdirStatusProto.getDirStatus().getOwner(), sdirStatusProto
-            .getDirStatus().getGroup(), sdirStatusProto.getDirStatus()
-            .getPath().toByteArray(), sdirStatusProto.getSnapshotNumber(),
-        sdirStatusProto.getSnapshotQuota(), sdirStatusProto.getParentFullpath()
-            .toByteArray());
+    final HdfsFileStatusProto status = sdirStatusProto.getDirStatus();
+    return new SnapshottableDirectoryStatus(
+        status.getModificationTime(),
+        status.getAccessTime(),
+        PBHelper.convert(status.getPermission()),
+        status.getOwner(),
+        status.getGroup(),
+        status.getPath().toByteArray(),
+        status.getFileId(),
+        sdirStatusProto.getSnapshotNumber(),
+        sdirStatusProto.getSnapshotQuota(),
+        sdirStatusProto.getParentFullpath().toByteArray());
   }
   
   public static HdfsFileStatusProto convert(HdfsFileStatus fs) {

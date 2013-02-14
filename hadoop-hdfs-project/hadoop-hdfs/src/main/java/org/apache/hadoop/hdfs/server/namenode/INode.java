@@ -32,10 +32,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.util.StringUtils;
@@ -153,17 +149,9 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   INode(long id, byte[] name, PermissionStatus permissions,
-      INodeDirectory parent, long modificationTime, long accessTime) {
-    this(id, name, PermissionStatusFormat.toLong(permissions), parent,
+      long modificationTime, long accessTime) {
+    this(id, name, PermissionStatusFormat.toLong(permissions), null,
         modificationTime, accessTime);
-  }
-  
-  INode(long id, PermissionStatus permissions, long mtime, long atime) {
-    this(id, null, PermissionStatusFormat.toLong(permissions), null, mtime, atime);
-  }
-  
-  protected INode(long id, String name, PermissionStatus permissions) {
-    this(id, DFSUtil.string2Bytes(name), permissions, null, 0L, 0L);
   }
   
   /** @param other Other node to be copied */
@@ -264,6 +252,14 @@ public abstract class INode implements Diff.Element<byte[]> {
     return updatePermissionStatus(PermissionStatusFormat.MODE, mode, latest);
   }
 
+  /** Is this inode in the latest snapshot? */
+  public final boolean isInLatestSnapshot(final Snapshot latest) {
+    return latest != null
+        && (parent == null
+            || (parent.isInLatestSnapshot(latest)
+                && this == parent.getChild(getLocalNameBytes(), latest)));
+  }
+
   /**
    * This inode is being modified.  The previous version of the inode needs to
    * be recorded in the latest snapshot.
@@ -302,7 +298,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    *                        deletion/update will be added to the given map.
    * @return the number of deleted inodes in the subtree.
    */
-  abstract int destroySubtreeAndCollectBlocks(Snapshot snapshot,
+  public abstract int destroySubtreeAndCollectBlocks(Snapshot snapshot,
       BlocksMapUpdateInfo collectedBlocks);
 
   /** Compute {@link ContentSummary}. */
@@ -411,7 +407,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    * Get parent directory 
    * @return parent INode
    */
-  public INodeDirectory getParent() {
+  public final INodeDirectory getParent() {
     return this.parent;
   }
 
@@ -577,66 +573,6 @@ public abstract class INode implements Diff.Element<byte[]> {
     return Arrays.hashCode(this.name);
   }
   
-  /**
-   * Create an INode; the inode's name is not set yet
-   * 
-   * @param id preassigned inode id
-   * @param permissions permissions
-   * @param blocks blocks if a file
-   * @param symlink symblic link if a symbolic link
-   * @param replication replication factor
-   * @param modificationTime modification time
-   * @param atime access time
-   * @param nsQuota namespace quota
-   * @param dsQuota disk quota
-   * @param preferredBlockSize block size
-   * @param numBlocks number of blocks
-   * @param computeFileSize non-negative computeFileSize means the node is 
-   *                        INodeFileSnapshot
-   * @param snapshottable whether the node is {@link INodeDirectorySnapshottable}
-   * @param withSnapshot whether the node has snapshots
-   * @param underConstruction whether the node is 
-   *                          {@link INodeFileUnderConstructionSnapshot}
-   * @param clientName clientName of {@link INodeFileUnderConstructionSnapshot}
-   * @param clientMachine clientMachine of 
-   *                      {@link INodeFileUnderConstructionSnapshot}
-   * @return an inode
-   */
-  static INode newINode(long id, PermissionStatus permissions,
-      BlockInfo[] blocks, String symlink, short replication,
-      long modificationTime, long atime, long nsQuota, long dsQuota,
-      long preferredBlockSize, int numBlocks,
-      long computeFileSize, boolean snapshottable, boolean withSnapshot, 
-      boolean underConstruction, String clientName, String clientMachine) {
-    if (symlink.length() != 0) { // check if symbolic link
-      return new INodeSymlink(id, symlink, modificationTime, atime, permissions);
-    }  else if (blocks == null && numBlocks < 0) { 
-      //not sym link and numBlocks < 0? directory!
-      INodeDirectory dir = null;
-      if (nsQuota >= 0 || dsQuota >= 0) {
-        dir = new INodeDirectoryWithQuota(id, permissions, modificationTime,
-            nsQuota, dsQuota);
-      } else {
-        // regular directory
-        dir = new INodeDirectory(id, permissions, modificationTime);
-      }
-      return snapshottable ? new INodeDirectorySnapshottable(dir)
-          : (withSnapshot ? new INodeDirectoryWithSnapshot(dir)
-              : dir);
-    }
-    // file
-    INodeFile fileNode = new INodeFile(id, permissions, blocks, replication,
-        modificationTime, atime, preferredBlockSize);
-//    TODO: fix image for file diff.
-//    if (computeFileSize >= 0) {
-//      return underConstruction ? new INodeFileUnderConstructionSnapshot(
-//          fileNode, computeFileSize, clientName, clientMachine)
-//          : new INodeFileWithSnapshot(fileNode, computeFileSize); 
-//    } else {
-      return withSnapshot ? new INodeFileWithSnapshot(fileNode) : fileNode;
-//    }
-  }
-
   /**
    * Dump the subtree starting from this inode.
    * @return a text representation of the tree.

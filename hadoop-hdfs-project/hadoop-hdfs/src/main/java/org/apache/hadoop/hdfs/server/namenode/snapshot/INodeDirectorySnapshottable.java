@@ -264,7 +264,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           + "snapshot with the same name \"" + name + "\".");
     }
 
-    final DirectoryDiff d = getDiffs().addSnapshotDiff(s);
+    final DirectoryDiff d = getDiffs().addDiff(s, this);
     d.snapshotINode = s.getRoot();
     snapshotsByNames.add(-i - 1, s);
 

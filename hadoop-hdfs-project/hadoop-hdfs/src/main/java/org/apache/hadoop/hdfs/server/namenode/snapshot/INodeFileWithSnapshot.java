@@ -30,11 +30,17 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 public class INodeFileWithSnapshot extends INodeFile
     implements FileWithSnapshot {
   private final FileDiffList diffs;
+  private boolean isCurrentFileDeleted = false;
 
   public INodeFileWithSnapshot(INodeFile f) {
+    this(f, f instanceof FileWithSnapshot?
+        ((FileWithSnapshot)f).getDiffs(): null);
+  }
+
+  public INodeFileWithSnapshot(INodeFile f, FileDiffList diffs) {
     super(f);
-    this.diffs = new FileDiffList(this, f instanceof FileWithSnapshot?
-        ((FileWithSnapshot)f).getFileDiffList().asList(): null);
+    this.diffs = diffs != null? diffs: new FileDiffList();
+    this.diffs.setFactory(FileDiffFactory.INSTANCE);
   }
 
   @Override
@@ -43,20 +49,18 @@ public class INodeFileWithSnapshot extends INodeFile
       final String clientMachine,
       final DatanodeDescriptor clientNode) {
     return new INodeFileUnderConstructionWithSnapshot(this,
-        clientName, clientMachine, clientNode);
+        clientName, clientMachine, clientNode, getDiffs());
   }
 
   @Override
   public boolean isCurrentFileDeleted() {
-    return getParent() == null;
+    return isCurrentFileDeleted;
   }
 
   @Override
   public INodeFileWithSnapshot recordModification(final Snapshot latest) {
-    // if this object is NOT the latest snapshot copy, this object is created
-    // after the latest snapshot, then do NOT record modification.
-    if (this == getParent().getChild(getLocalNameBytes(), latest)) {
-      diffs.saveSelf2Snapshot(latest, null);
+    if (isInLatestSnapshot(latest)) {
+      diffs.saveSelf2Snapshot(latest, this, null);
     }
     return this;
   }
@@ -67,7 +71,7 @@ public class INodeFileWithSnapshot extends INodeFile
   }
 
   @Override
-  public FileDiffList getFileDiffList() {
+  public FileDiffList getDiffs() {
     return diffs;
   }
 
@@ -95,9 +99,9 @@ public class INodeFileWithSnapshot extends INodeFile
   public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
       final BlocksMapUpdateInfo collectedBlocks) {
     if (snapshot == null) {
-      clearReferences();
+      isCurrentFileDeleted = true;
     } else {
-      if (diffs.deleteSnapshotDiff(snapshot, collectedBlocks) == null) {
+      if (diffs.deleteSnapshotDiff(snapshot, this, collectedBlocks) == null) {
         //snapshot diff not found and nothing is deleted.
         return 0;
       }

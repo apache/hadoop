@@ -153,3 +153,5 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4446. Support file snapshots with diff lists.  (szetszwo)
 
   HDFS-4480. Eliminate the file snapshot circular linked list.  (szetszwo)
+
+  HDFS-4481. Change fsimage to support snapshot file diffs.  (szetszwo)

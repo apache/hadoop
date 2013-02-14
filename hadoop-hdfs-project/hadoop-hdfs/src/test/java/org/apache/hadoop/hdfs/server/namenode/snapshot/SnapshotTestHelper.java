@@ -45,14 +45,18 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
+import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
+import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -64,7 +68,7 @@ public class SnapshotTestHelper {
   public static final Log LOG = LogFactory.getLog(SnapshotTestHelper.class);
 
   /** Disable the logs that are not very useful for snapshot related tests. */
-  static void disableLogs() {
+  public static void disableLogs() {
     final String[] lognames = {
         "org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceScanner",
         "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl",
@@ -73,11 +77,15 @@ public class SnapshotTestHelper {
     for(String n : lognames) {
       setLevel2OFF(LogFactory.getLog(n));
     }
-
+    
     setLevel2OFF(LogFactory.getLog(UserGroupInformation.class));
     setLevel2OFF(LogFactory.getLog(BlockManager.class));
     setLevel2OFF(LogFactory.getLog(FSNamesystem.class));
-
+    setLevel2OFF(LogFactory.getLog(DirectoryScanner.class));
+    setLevel2OFF(LogFactory.getLog(MetricsSystemImpl.class));
+    
+    setLevel2OFF(DataBlockScanner.LOG);
+    setLevel2OFF(HttpServer.LOG);
     setLevel2OFF(DataNode.LOG);
     setLevel2OFF(BlockPoolSliceStorage.LOG);
     setLevel2OFF(LeaseManager.LOG);
@@ -175,6 +183,15 @@ public class SnapshotTestHelper {
    */
   public static void compareDumpedTreeInFile(File file1, File file2)
       throws IOException {
+    try {
+      compareDumpedTreeInFile(file1, file2, false);
+    } catch(Throwable t) {
+      LOG.info("FAILED compareDumpedTreeInFile(" + file1 + ", " + file2 + ")", t);
+      compareDumpedTreeInFile(file1, file2, true);
+    }
+  }
+  private static void compareDumpedTreeInFile(File file1, File file2,
+      boolean print) throws IOException {
     BufferedReader reader1 = new BufferedReader(new FileReader(file1));
     BufferedReader reader2 = new BufferedReader(new FileReader(file2));
     try {
@@ -182,6 +199,11 @@ public class SnapshotTestHelper {
       String line2 = "";
       while ((line1 = reader1.readLine()) != null
           && (line2 = reader2.readLine()) != null) {
+        if (print) {
+          System.out.println();
+          System.out.println("1) " + line1);
+          System.out.println("2) " + line2);
+        }
         // skip the hashCode part of the object string during the comparison,
         // also ignore the difference between INodeFile/INodeFileWithSnapshot
         line1 = line1.replaceAll("INodeFileWithSnapshot", "INodeFile");

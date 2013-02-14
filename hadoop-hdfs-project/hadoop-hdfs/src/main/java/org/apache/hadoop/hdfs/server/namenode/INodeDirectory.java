@@ -59,21 +59,14 @@ public class INodeDirectory extends INode {
   }
 
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
-  final static String ROOT_NAME = "";
+  final static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
 
   private List<INode> children = null;
 
-  public INodeDirectory(long id, String name, PermissionStatus permissions) {
-    super(id, name, permissions);
-  }
-
-  public INodeDirectory(long id, PermissionStatus permissions, long mTime) {
-    super(id, permissions, mTime, 0);
-  }
-  
   /** constructor */
-  INodeDirectory(long id, byte[] name, PermissionStatus permissions, long mtime) {
-    super(id, name, permissions, null, mtime, 0L);
+  public INodeDirectory(long id, byte[] name, PermissionStatus permissions,
+      long mtime) {
+    super(id, name, permissions, mtime, 0L);
   }
   
   /**
@@ -124,12 +117,6 @@ public class INodeDirectory extends INode {
     return i;
   }
 
-  INode removeChild(INode node) {
-    assertChildrenNonNull();
-    final int i = searchChildren(node.getLocalNameBytes());
-    return i >= 0? children.remove(i): null;
-  }
-
   /**
    * Remove the specified child from this directory.
    * 
@@ -140,8 +127,9 @@ public class INodeDirectory extends INode {
   public INode removeChild(INode child, Snapshot latest) {
     assertChildrenNonNull();
 
-    if (latest != null) {
-      return recordModification(latest).removeChild(child, latest);
+    if (isInLatestSnapshot(latest)) {
+      return replaceSelf4INodeDirectoryWithSnapshot()
+          .removeChild(child, latest);
     }
 
     final int i = searchChildren(child.getLocalNameBytes());
@@ -196,15 +184,16 @@ public class INodeDirectory extends INode {
   private final <N extends INodeDirectory> N replaceSelf(final N newDir) {
     final INodeDirectory parent = getParent();
     Preconditions.checkArgument(parent != null, "parent is null, this=%s", this);
-    return parent.replaceChild(newDir);
+    parent.replaceChild(this, newDir);
+    return newDir;
   }
 
-  final <N extends INode> N replaceChild(final N newChild) {
+  public void replaceChild(final INode oldChild, final INode newChild) {
     assertChildrenNonNull();
     final int i = searchChildrenForExistingINode(newChild);
-    final INode oldChild = children.set(i, newChild);
+    final INode removed = children.set(i, newChild);
+    Preconditions.checkState(removed == oldChild);
     oldChild.clearReferences();
-    return newChild;
   }
 
   /** Replace a child {@link INodeFile} with an {@link INodeFileWithSnapshot}. */
@@ -212,7 +201,9 @@ public class INodeDirectory extends INode {
       final INodeFile child) {
     Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
         "Child file is already an INodeFileWithSnapshot, child=" + child);
-    return replaceChild(new INodeFileWithSnapshot(child));
+    final INodeFileWithSnapshot newChild = new INodeFileWithSnapshot(child);
+    replaceChild(child, newChild);
+    return newChild;
   }
 
   /** Replace a child {@link INodeFile} with an {@link INodeFileUnderConstructionWithSnapshot}. */
@@ -220,13 +211,17 @@ public class INodeDirectory extends INode {
       final INodeFileUnderConstruction child) {
     Preconditions.checkArgument(!(child instanceof INodeFileUnderConstructionWithSnapshot),
         "Child file is already an INodeFileUnderConstructionWithSnapshot, child=" + child);
-    return replaceChild(new INodeFileUnderConstructionWithSnapshot(child));
+    final INodeFileUnderConstructionWithSnapshot newChild
+        = new INodeFileUnderConstructionWithSnapshot(child, null);
+    replaceChild(child, newChild);
+    return newChild;
   }
 
   @Override
   public INodeDirectory recordModification(Snapshot latest) {
-    return latest == null? this
-        : replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest);
+    return isInLatestSnapshot(latest)?
+        replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest)
+        : this;
   }
 
   /**
@@ -463,10 +458,11 @@ public class INodeDirectory extends INode {
    * @return false if the child with this name already exists; 
    *         otherwise, return true;
    */
-  public boolean addChild(final INode node, final boolean setModTime,
+  public boolean addChild(INode node, final boolean setModTime,
       final Snapshot latest) {
-    if (latest != null) {
-      return recordModification(latest).addChild(node, setModTime, latest);
+    if (isInLatestSnapshot(latest)) {
+      return replaceSelf4INodeDirectoryWithSnapshot()
+          .addChild(node, setModTime, latest);
     }
 
     if (children == null) {
@@ -483,7 +479,7 @@ public class INodeDirectory extends INode {
       updateModificationTime(node.getModificationTime(), latest);
     }
     if (node.getGroupName() == null) {
-      node.setGroup(getGroupName(), latest);
+      node.setGroup(getGroupName(), null);
     }
     return true;
   }
@@ -739,6 +735,10 @@ public class INodeDirectory extends INode {
     
     void setINode(int i, INode inode) {
       inodes[i] = inode;
+    }
+    
+    void setLastINode(INode last) {
+      inodes[inodes.length - 1] = last;
     }
     
     /**

@@ -24,8 +24,10 @@ import java.io.PrintWriter;
 import java.util.EnumSet;
 import java.util.Random;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,6 +45,11 @@ import org.junit.Test;
  * Test FSImage save/load when Snapshot is supported
  */
 public class TestFSImageWithSnapshot {
+  {
+    SnapshotTestHelper.disableLogs();
+    ((Log4JLogger)INode.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   static final long seed = 0;
   static final short REPLICATION = 3;
   static final int BLOCKSIZE = 1024;
@@ -160,36 +168,49 @@ public class TestFSImageWithSnapshot {
    * 6. Dump the FSDirectory again and compare the two dumped string.
    * </pre>
    */
-//  TODO: fix snapshot fsimage
-//  @Test
+  @Test
   public void testSaveLoadImage() throws Exception {
+    int s = 0;
     // make changes to the namesystem
     hdfs.mkdirs(dir);
     hdfs.allowSnapshot(dir.toString());
-    hdfs.createSnapshot(dir, "s0");
-    
+
+    hdfs.createSnapshot(dir, "s" + ++s);
     Path sub1 = new Path(dir, "sub1");
+    hdfs.mkdirs(sub1);
+    hdfs.setPermission(sub1, new FsPermission((short)0777));
+    Path sub11 = new Path(sub1, "sub11");
+    hdfs.mkdirs(sub11);
+    checkImage(s);
+
+    hdfs.createSnapshot(dir, "s" + ++s);
     Path sub1file1 = new Path(sub1, "sub1file1");
     Path sub1file2 = new Path(sub1, "sub1file2");
     DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, REPLICATION, seed);
+    checkImage(s);
     
-    hdfs.createSnapshot(dir, "s1");
-    
+    hdfs.createSnapshot(dir, "s" + ++s);
     Path sub2 = new Path(dir, "sub2");
     Path sub2file1 = new Path(sub2, "sub2file1");
     Path sub2file2 = new Path(sub2, "sub2file2");
     DFSTestUtil.createFile(hdfs, sub2file1, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, sub2file2, BLOCKSIZE, REPLICATION, seed);
+    checkImage(s);
+
+    hdfs.createSnapshot(dir, "s" + ++s);
     hdfs.setReplication(sub1file1, (short) (REPLICATION - 1));
     hdfs.delete(sub1file2, true);
-    
-    hdfs.createSnapshot(dir, "s2");
     hdfs.setOwner(sub2, "dr.who", "unknown");
     hdfs.delete(sub2file2, true);
-    
+    checkImage(s);
+  }
+
+  void checkImage(int s) throws IOException {
+    final String name = "s" + s;
+
     // dump the fsdir tree
-    File fsnBefore = dumpTree2File("before");
+    File fsnBefore = dumpTree2File(name + "_before");
     
     // save the namesystem to a temp file
     File imageFile = saveFSImageToTempFile();
@@ -206,7 +227,7 @@ public class TestFSImageWithSnapshot {
     loadFSImageFromTempFile(imageFile);
     
     // dump the fsdir tree again
-    File fsnAfter = dumpTree2File("after");
+    File fsnAfter = dumpTree2File(name + "_after");
     
     // compare two dumped tree
     SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);
@@ -215,8 +236,7 @@ public class TestFSImageWithSnapshot {
   /**
    * Test the fsimage saving/loading while file appending.
    */
-//  TODO: fix snapshot fsimage
-//  @Test
+  @Test
   public void testSaveLoadImageWithAppending() throws Exception {
     Path sub1 = new Path(dir, "sub1");
     Path sub1file1 = new Path(sub1, "sub1file1");

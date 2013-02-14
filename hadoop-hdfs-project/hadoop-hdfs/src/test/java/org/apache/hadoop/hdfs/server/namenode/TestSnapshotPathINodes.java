@@ -275,7 +275,9 @@ public class TestSnapshotPathINodes {
       assertSnapshot(nodesInPath, true, snapshot, 3);
   
       // Check the INode for file1 (snapshot file)
-      assertINodeFile(inodes[inodes.length - 1], file1);
+      final INode inode = inodes[inodes.length - 1];
+      assertEquals(file1.getName(), inode.getLocalName());
+      assertEquals(INodeFileWithSnapshot.class, inode.getClass());
     }
 
     // Check the INodes for path /TestSnapshot/sub1/file1

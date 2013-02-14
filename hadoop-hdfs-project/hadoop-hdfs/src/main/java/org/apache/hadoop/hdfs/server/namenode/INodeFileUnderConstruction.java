@@ -132,9 +132,10 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   
   @Override
   public INodeFileUnderConstruction recordModification(final Snapshot latest) {
-    return latest == null? this
-        : parent.replaceChild4INodeFileUcWithSnapshot(this)
-            .recordModification(latest);
+    return isInLatestSnapshot(latest)?
+        parent.replaceChild4INodeFileUcWithSnapshot(this)
+            .recordModification(latest)
+        : this;
   }
 
   /** Assert all blocks are complete. */

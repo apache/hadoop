@@ -52,15 +52,6 @@ public class INodeFile extends INode implements BlockCollection {
 
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
-  /**
-   * Check the first block to see if two INodes are about the same file
-   */
-  public static boolean isOfSameFile(INodeFile file1, INodeFile file2) {
-    BlockInfo[] blk1 = file1.getBlocks();
-    BlockInfo[] blk2 = file2.getBlocks();
-    return blk1 != null && blk2 != null && blk1[0] == blk2[0];
-  }
-
   /** Format: [16 bits for replication][48 bits for PreferredBlockSize] */
   private static class HeaderFormat {
     /** Number of bits for Block size */
@@ -100,16 +91,9 @@ public class INodeFile extends INode implements BlockCollection {
 
   private BlockInfo[] blocks;
 
-  INodeFile(long id, PermissionStatus permissions, BlockInfo[] blklist,
-                      short replication, long modificationTime,
-                      long atime, long preferredBlockSize) {
-    this(id, null, permissions, modificationTime, atime, blklist, replication,
-        preferredBlockSize);
-  }
-
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
       BlockInfo[] blklist, short replication, long preferredBlockSize) {
-    super(id, name, permissions, null, mtime, atime);
+    super(id, name, permissions, mtime, atime);
     header = HeaderFormat.combineReplication(header, replication);
     header = HeaderFormat.combinePreferredBlockSize(header, preferredBlockSize);
     this.blocks = blklist;
@@ -140,9 +124,10 @@ public class INodeFile extends INode implements BlockCollection {
 
   @Override
   public INodeFile recordModification(final Snapshot latest) {
-    return latest == null? this
-        : parent.replaceChild4INodeFileWithSnapshot(this)
-            .recordModification(latest);
+    return isInLatestSnapshot(latest)?
+        parent.replaceChild4INodeFileWithSnapshot(this)
+            .recordModification(latest)
+        : this;
   }
 
   /**
@@ -171,8 +156,9 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   public void setFileReplication(short replication, Snapshot latest) {
-    if (latest != null) {
-      recordModification(latest).setFileReplication(replication, null);
+    final INodeFile nodeToUpdate = recordModification(latest);
+    if (nodeToUpdate != this) {
+      nodeToUpdate.setFileReplication(replication, null);
       return;
     }
     header = HeaderFormat.combineReplication(header, replication);
@@ -239,9 +225,14 @@ public class INodeFile extends INode implements BlockCollection {
   public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
       final BlocksMapUpdateInfo collectedBlocks) {
     if (snapshot != null) {
+      // never delete blocks for snapshot since the current file still exists
       return 0;
     }
 
+    return destroySelfAndCollectBlocks(collectedBlocks);
+  }
+
+  public int destroySelfAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks) {
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfo blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
@@ -351,7 +342,8 @@ public class INodeFile extends INode implements BlockCollection {
     super.dumpTreeRecursively(out, prefix, snapshot);
     out.print(", fileSize=" + computeFileSize(true, snapshot));
     // only compare the first block
-    out.print(", blocks=" + (blocks == null? null: blocks[0]));
+    out.print(", blocks=");
+    out.print(blocks == null || blocks.length == 0? null: blocks[0]);
     out.println();
   }
 }

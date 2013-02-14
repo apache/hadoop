@@ -303,8 +303,8 @@ public class FSDirectory implements Closeable {
       newNode = new INodeFileUnderConstruction(id, permissions, replication,
           preferredBlockSize, modificationTime, clientName, clientMachine, null);
     } else {
-      newNode = new INodeFile(id, permissions, BlockInfo.EMPTY_ARRAY,
-          replication, modificationTime, atime, preferredBlockSize);
+      newNode = new INodeFile(id, null, permissions, modificationTime, atime,
+          BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize);
     }
 
     try {
@@ -766,7 +766,8 @@ public class FSDirectory implements Closeable {
           INode rmdst = removedDst;
           removedDst = null;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-          filesDeleted = rmdst.destroySubtreeAndCollectBlocks(null, collectedBlocks);
+          filesDeleted = rmdst.destroySubtreeAndCollectBlocks(
+              null, collectedBlocks);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
         }
 
@@ -1129,22 +1130,18 @@ public class FSDirectory implements Closeable {
       return 0;
     }
 
-    // check latest snapshot
+    // record modification
     final Snapshot latestSnapshot = inodesInPath.getLatestSnapshot();
-    final INode snapshotCopy = ((INodeDirectory)inodesInPath.getINode(-2))
-        .getChild(targetNode.getLocalNameBytes(), latestSnapshot);
-    if (snapshotCopy == targetNode) {
-      // it is also in a snapshot, record modification before delete it
-      targetNode = targetNode.recordModification(latestSnapshot);
-    }
+    targetNode = targetNode.recordModification(latestSnapshot);
+    inodesInPath.setLastINode(targetNode);
 
     // Remove the node from the namespace
-    final INode removed = removeLastINode(inodesInPath);
-    Preconditions.checkState(removed == targetNode);
+    removeLastINode(inodesInPath);
 
     // set the parent's modification time
     targetNode.getParent().updateModificationTime(mtime, latestSnapshot);
 
+    // collect block
     final int inodesRemoved = targetNode.destroySubtreeAndCollectBlocks(
         null, collectedBlocks);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1192,10 +1189,10 @@ public class FSDirectory implements Closeable {
    * Replaces the specified INodeFile with the specified one.
    */
   void replaceINodeFile(String path, INodeFile oldnode,
-      INodeFile newnode, Snapshot latest) throws IOException {
+      INodeFile newnode) throws IOException {
     writeLock();
     try {
-      unprotectedReplaceINodeFile(path, oldnode, newnode, latest);
+      unprotectedReplaceINodeFile(path, oldnode, newnode);
     } finally {
       writeUnlock();
     }
@@ -1203,10 +1200,10 @@ public class FSDirectory implements Closeable {
 
   /** Replace an INodeFile and record modification for the latest snapshot. */
   void unprotectedReplaceINodeFile(final String path, final INodeFile oldnode,
-      final INodeFile newnode, final Snapshot latest) {
+      final INodeFile newnode) {
     Preconditions.checkState(hasWriteLock());
 
-    oldnode.getParent().replaceChild(newnode);
+    oldnode.getParent().replaceChild(oldnode, newnode);
 
     /* Currently oldnode and newnode are assumed to contain the same
      * blocks. Otherwise, blocks need to be removed from the blocksMap.
@@ -1853,6 +1850,8 @@ public class FSDirectory implements Closeable {
     INode removedNode = ((INodeDirectory)inodes[pos-1]).removeChild(
         inodes[pos], inodesInPath.getLatestSnapshot());
     if (removedNode != null) {
+      Preconditions.checkState(removedNode == inodes[pos]);
+
       inodesInPath.setINode(pos - 1, removedNode.getParent());
       INode.DirCounts counts = new INode.DirCounts();
       removedNode.spaceConsumedInTree(counts);
@@ -2245,8 +2244,8 @@ public class FSDirectory implements Closeable {
       long mtime, long atime, PermissionStatus perm)
       throws UnresolvedLinkException, QuotaExceededException {
     assert hasWriteLock();
-    final INodeSymlink symlink = new INodeSymlink(id, target, mtime, atime,
-        perm);
+    final INodeSymlink symlink = new INodeSymlink(id, null, perm, mtime, atime,
+        target);
     return addINode(path, symlink) ? symlink : null;
   }
   

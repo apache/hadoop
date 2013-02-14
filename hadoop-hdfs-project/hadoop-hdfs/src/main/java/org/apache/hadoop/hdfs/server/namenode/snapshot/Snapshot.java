@@ -90,15 +90,15 @@ public class Snapshot implements Comparable<byte[]> {
   private final Root root;
 
   Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
-    this(id, DFSUtil.string2Bytes(name), dir, dir);
+    this(id, dir, dir);
+    this.root.setLocalName(DFSUtil.string2Bytes(name));
   }
 
-  Snapshot(int id, byte[] name, INodeDirectory dir,
+  Snapshot(int id, INodeDirectory dir,
       INodeDirectorySnapshottable parent) {
     this.id = id;
     this.root = new Root(dir);
 
-    this.root.setLocalName(name);
     this.root.setParent(parent);
   }
   

@@ -23,6 +23,7 @@ import java.util.Random;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.Container;
@@ -240,7 +241,8 @@ public class TestDiff {
   }
 
   static INode newINode(int n, int width) {
-    return new INodeDirectory(n, String.format("n%0" + width + "d", n), PERM);
+    byte[] name = DFSUtil.string2Bytes(String.format("n%0" + width + "d", n));
+    return new INodeDirectory(n, name, PERM, 0L);
   }
 
   static void create(INode inode, final List<INode> current, Diff<byte[], INode> diff) {

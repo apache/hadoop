@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+
+import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
@@ -43,6 +47,16 @@ import com.google.common.base.Preconditions;
 abstract class AbstractINodeDiff<N extends INode,
                                  D extends AbstractINodeDiff<N, D>>
     implements Comparable<Snapshot> {
+  /** A factory for creating diff and snapshot copy of an inode. */
+  static abstract class Factory<N extends INode,
+                                D extends AbstractINodeDiff<N, D>> {
+    /** @return an {@link AbstractINodeDiff}. */
+    abstract D createDiff(Snapshot snapshot, N currentINode);
+
+    /** @return a snapshot copy of the current inode. */
+    abstract N createSnapshotCopy(N currentINode);
+  }
+
   /** The snapshot will be obtained after this diff is applied. */
   final Snapshot snapshot;
   /** The snapshot inode data.  It is null when there is no change. */
@@ -84,18 +98,15 @@ abstract class AbstractINodeDiff<N extends INode,
     posteriorDiff = posterior;
   }
 
-  /** Copy the INode state to the snapshot if it is not done already. */
-  void checkAndInitINode(N currentINode, N snapshotCopy) {
+  /** Save the INode state to the snapshot if it is not done already. */
+  void saveSnapshotCopy(N snapshotCopy, Factory<N, D> factory, N currentINode) {
     if (snapshotINode == null) {
       if (snapshotCopy == null) {
-        snapshotCopy = createSnapshotCopyOfCurrentINode(currentINode);
+        snapshotCopy = factory.createSnapshotCopy(currentINode);
       }
       snapshotINode = snapshotCopy;
     }
   }
-
-  /** @return a snapshot copy of the current inode. */
-  abstract N createSnapshotCopyOfCurrentINode(N currentINode);
 
   /** @return the inode corresponding to the snapshot. */
   N getSnapshotINode() {
@@ -119,4 +130,12 @@ abstract class AbstractINodeDiff<N extends INode,
     return getClass().getSimpleName() + ": " + snapshot + " (post="
         + (posteriorDiff == null? null: posteriorDiff.snapshot) + ")";
   }
+
+  void writeSnapshotPath(DataOutputStream out) throws IOException {
+    // Assume the snapshot is recorded before.
+    // The root path is sufficient for looking up the Snapshot object.
+    FSImageSerialization.writeString(snapshot.getRoot().getFullPathName(), out);
+  }
+  
+  abstract void write(DataOutputStream out) throws IOException;
 }

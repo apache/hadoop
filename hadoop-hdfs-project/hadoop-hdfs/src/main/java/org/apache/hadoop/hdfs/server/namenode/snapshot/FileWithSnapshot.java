@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.List;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 
@@ -43,11 +45,11 @@ public interface FileWithSnapshot {
       fileSize = file.computeFileSize(true, null);
     }
 
-    @Override
-    INodeFile createSnapshotCopyOfCurrentINode(INodeFile currentINode) {
-      final INodeFile copy = new INodeFile(currentINode);
-      copy.setBlocks(null);
-      return copy;
+    /** Constructor used by FSImage loading */
+    FileDiff(Snapshot snapshot, INodeFile snapshotINode,
+        FileDiff posteriorDiff, long fileSize) {
+      super(snapshot, snapshotINode, posteriorDiff);
+      this.fileSize = fileSize;
     }
 
     @Override
@@ -61,35 +63,51 @@ public interface FileWithSnapshot {
       return super.toString() + " fileSize=" + fileSize + ", rep="
           + (snapshotINode == null? "?": snapshotINode.getFileReplication());
     }
+
+    /** Serialize fields to out */
+    void write(DataOutputStream out) throws IOException {
+      writeSnapshotPath(out);
+      out.writeLong(fileSize);
+
+      // write snapshotINode
+      if (snapshotINode != null) {
+        out.writeBoolean(true);
+        FSImageSerialization.writeINodeFile(snapshotINode, out, true);
+      } else {
+        out.writeBoolean(false);
+      }
+    }
+  }
+
+  static class FileDiffFactory
+      extends AbstractINodeDiff.Factory<INodeFile, FileDiff> {
+    static final FileDiffFactory INSTANCE = new FileDiffFactory();
+
+    @Override
+    FileDiff createDiff(Snapshot snapshot, INodeFile file) {
+      return new FileDiff(snapshot, file);
+    }
+
+    @Override
+    INodeFile createSnapshotCopy(INodeFile currentINode) {
+      final INodeFile copy = new INodeFile(currentINode);
+      copy.setBlocks(null);
+      return copy;
+    }
   }
 
   /**
    * A list of {@link FileDiff}.
    */
-  static class FileDiffList extends AbstractINodeDiffList<INodeFile, FileDiff> {
-    final INodeFile currentINode;
-
-    FileDiffList(INodeFile currentINode, List<FileDiff> diffs) {
-      super(diffs);
-      this.currentINode = currentINode;
-    }
-
-    @Override
-    INodeFile getCurrentINode() {
-      return currentINode;
-    }
-
-    @Override
-    FileDiff addSnapshotDiff(Snapshot snapshot) {
-      return addLast(new FileDiff(snapshot, getCurrentINode()));
-    }
+  public static class FileDiffList
+      extends AbstractINodeDiffList<INodeFile, FileDiff> {
   }
 
   /** @return the {@link INodeFile} view of this object. */
   public INodeFile asINodeFile();
 
   /** @return the file diff list. */
-  public FileDiffList getFileDiffList();
+  public FileDiffList getDiffs();
 
   /** Is the current file deleted? */
   public boolean isCurrentFileDeleted();
@@ -103,7 +121,7 @@ public interface FileWithSnapshot {
     static short getBlockReplication(final FileWithSnapshot file) {
       short max = file.isCurrentFileDeleted()? 0
           : file.asINodeFile().getFileReplication();
-      for(FileDiff d : file.getFileDiffList().asList()) {
+      for(FileDiff d : file.getDiffs().asList()) {
         if (d.snapshotINode != null) {
           final short replication = d.snapshotINode.getFileReplication();
           if (replication > max) {
@@ -120,22 +138,23 @@ public interface FileWithSnapshot {
      */
     static void collectBlocksAndClear(final FileWithSnapshot file,
         final BlocksMapUpdateInfo info) {
+      // check if everything is deleted.
+      if (file.isCurrentFileDeleted()
+          && file.getDiffs().asList().isEmpty()) {
+        file.asINodeFile().destroySelfAndCollectBlocks(info);
+        return;
+      }
+
       // find max file size.
       final long max;
       if (file.isCurrentFileDeleted()) {
-        final FileDiff last = file.getFileDiffList().getLast();
+        final FileDiff last = file.getDiffs().getLast();
         max = last == null? 0: last.fileSize;
       } else { 
         max = file.asINodeFile().computeFileSize(true, null);
       }
 
       collectBlocksBeyondMax(file, max, info);
-
-      // if everything is deleted, set blocks to null.
-      if (file.isCurrentFileDeleted()
-          && file.getFileDiffList().asList().isEmpty()) {
-        file.asINodeFile().setBlocks(null);
-      }
     }
 
     private static void collectBlocksBeyondMax(final FileWithSnapshot file,

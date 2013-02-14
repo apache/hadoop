@@ -34,25 +34,19 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 abstract class AbstractINodeDiffList<N extends INode,
                                      D extends AbstractINodeDiff<N, D>> 
     implements Iterable<D> {
+  private AbstractINodeDiff.Factory<N, D> factory;
+
   /** Diff list sorted by snapshot IDs, i.e. in chronological order. */
   private final List<D> diffs = new ArrayList<D>();
 
-  AbstractINodeDiffList(final List<D> diffs) {
-    if (diffs != null) {
-      this.diffs.addAll(diffs);
-    }
+  void setFactory(AbstractINodeDiff.Factory<N, D> factory) {
+    this.factory = factory;
   }
 
   /** @return this list as a unmodifiable {@link List}. */
   final List<D> asList() {
     return Collections.unmodifiableList(diffs);
   }
-
-  /** @return the current inode. */
-  abstract N getCurrentINode();
-  
-  /** Add a {@link AbstractINodeDiff} for the given snapshot and inode. */
-  abstract D addSnapshotDiff(Snapshot snapshot); 
 
   /**
    * Delete the snapshot with the given name. The synchronization of the diff
@@ -66,7 +60,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @return The SnapshotDiff containing the deleted snapshot. 
    *         Null if the snapshot with the given name does not exist. 
    */
-  final D deleteSnapshotDiff(final Snapshot snapshot,
+  final D deleteSnapshotDiff(final Snapshot snapshot, final N currentINode,
       final BlocksMapUpdateInfo collectedBlocks) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     if (snapshotIndex < 0) {
@@ -85,7 +79,8 @@ abstract class AbstractINodeDiffList<N extends INode,
         } else if (removed.snapshotINode != null) {
           removed.snapshotINode.clearReferences();
         }
-        previous.combinePosteriorAndCollectBlocks(getCurrentINode(), removed, collectedBlocks);
+        previous.combinePosteriorAndCollectBlocks(currentINode, removed,
+            collectedBlocks);
         previous.setPosterior(removed.getPosterior());
       }
       removed.setPosterior(null);
@@ -93,8 +88,13 @@ abstract class AbstractINodeDiffList<N extends INode,
     }
   }
 
+  /** Add an {@link AbstractINodeDiff} for the given snapshot. */
+  final D addDiff(Snapshot latest, N currentINode) {
+    return addLast(factory.createDiff(latest, currentINode));
+  }
+
   /** Append the diff at the end of the list. */
-  final D addLast(D diff) {
+  private final D addLast(D diff) {
     final D last = getLast();
     diffs.add(diff);
     if (last != null) {
@@ -154,17 +154,17 @@ abstract class AbstractINodeDiffList<N extends INode,
    * Check if the latest snapshot diff exists.  If not, add it.
    * @return the latest snapshot diff, which is never null.
    */
-  final D checkAndAddLatestSnapshotDiff(Snapshot latest) {
+  final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode) {
     final D last = getLast();
     return last != null && last.snapshot.equals(latest)? last
-        : addSnapshotDiff(latest);
+        : addDiff(latest, currentINode);
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  void saveSelf2Snapshot(Snapshot latest, N snapshotCopy) {
+  void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy) {
     if (latest != null) {
-      checkAndAddLatestSnapshotDiff(latest).checkAndInitINode(
-          getCurrentINode(), snapshotCopy);
+      checkAndAddLatestSnapshotDiff(latest, currentINode).saveSnapshotCopy(
+          snapshotCopy, factory, currentINode);
     }
   }
   

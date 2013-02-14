@@ -162,12 +162,16 @@ public class Diff<K, E extends Diff.Element<K>> {
     return deleted == null? Collections.<E>emptyList(): deleted;
   }
 
+  public int searchCreatedIndex(final K name) {
+    return search(created, name);
+  }
+
   /**
    * @return null if the element is not found;
    *         otherwise, return the element in the c-list.
    */
   public E searchCreated(final K name) {
-    final int c = search(created, name);
+    final int c = searchCreatedIndex(name);
     return c < 0 ? null : created.get(c);
   }
   

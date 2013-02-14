@@ -31,23 +31,22 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 public class INodeSymlink extends INode {
   private final byte[] symlink; // The target URI
 
-  INodeSymlink(long id, String value, long mtime, long atime,
-      PermissionStatus permissions) {
-    super(id, permissions, mtime, atime);
-    this.symlink = DFSUtil.string2Bytes(value);
+  INodeSymlink(long id, byte[] name, PermissionStatus permissions,
+      long mtime, long atime, String symlink) {
+    super(id, name, permissions, mtime, atime);
+    this.symlink = DFSUtil.string2Bytes(symlink);
   }
   
   INodeSymlink(INodeSymlink that) {
     super(that);
-
-    //copy symlink
-    this.symlink = new byte[that.symlink.length];
-    System.arraycopy(that.symlink, 0, this.symlink, 0, that.symlink.length);
+    this.symlink = that.symlink;
   }
 
   @Override
   INode recordModification(Snapshot latest) {
-    return parent.saveChild2Snapshot(this, latest, new INodeSymlink(this));
+    return isInLatestSnapshot(latest)?
+        parent.saveChild2Snapshot(this, latest, new INodeSymlink(this))
+        : this;
   }
 
   /** @return true unconditionally. */
@@ -71,7 +70,7 @@ public class INodeSymlink extends INode {
   }
   
   @Override
-  int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
       final BlocksMapUpdateInfo collectedBlocks) {
     return 1;
   }

@@ -33,11 +33,9 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
@@ -81,16 +79,35 @@ public class FSImageSerialization {
     final FsPermission FILE_PERM = new FsPermission((short) 0);
   }
 
+  private static void writePermissionStatus(INode inode, DataOutput out
+      ) throws IOException {
+    final FsPermission p = TL_DATA.get().FILE_PERM;
+    p.fromShort(inode.getFsPermissionShort());
+    PermissionStatus.write(out, inode.getUserName(), inode.getGroupName(), p);
+  }
+
+  private static void writeBlocks(final Block[] blocks,
+      final DataOutputStream out) throws IOException {
+    if (blocks == null) {
+      out.writeInt(0);
+    } else {
+      out.writeInt(blocks.length);
+      for (Block blk : blocks) {
+        blk.write(out);
+      }
+    }
+  }
+
   // Helper function that reads in an INodeUnderConstruction
   // from the input stream
   //
   static INodeFileUnderConstruction readINodeUnderConstruction(
-      DataInputStream in, boolean supportSnapshot) throws IOException {
-    boolean withSnapshot = false;
+      DataInputStream in) throws IOException {
     byte[] name = readBytes(in);
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();
+  
     int numBlocks = in.readInt();
     BlockInfo[] blocks = new BlockInfo[numBlocks];
     Block blk = new Block();
@@ -105,9 +122,6 @@ public class FSImageSerialization {
       blocks[i] = new BlockInfoUnderConstruction(
         blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
     }
-    if (supportSnapshot) {
-      withSnapshot = in.readBoolean();
-    }
     PermissionStatus perm = PermissionStatus.read(in);
     String clientName = readString(in);
     String clientMachine = readString(in);
@@ -118,11 +132,9 @@ public class FSImageSerialization {
     assert numLocs == 0 : "Unexpected block locations";
 
     //TODO: get inodeId from fsimage after inodeId is persisted
-    INodeFileUnderConstruction node = new INodeFileUnderConstruction(
+    return new INodeFileUnderConstruction(
         INodeId.GRANDFATHER_INODE_ID, name, blockReplication, modificationTime,
         preferredBlockSize, blocks, perm, clientName, clientMachine, null);
-    return withSnapshot ? new INodeFileUnderConstructionWithSnapshot(node)
-        : node;
   }
 
   // Helper function that writes an INodeUnderConstruction
@@ -136,17 +148,45 @@ public class FSImageSerialization {
     out.writeShort(cons.getFileReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
-    int nrBlocks = cons.getBlocks().length;
-    out.writeInt(nrBlocks);
-    for (int i = 0; i < nrBlocks; i++) {
-      cons.getBlocks()[i].write(out);
-    }
-    out.writeBoolean(cons instanceof INodeFileUnderConstructionWithSnapshot);
+
+    writeBlocks(cons.getBlocks(), out);
     cons.getPermissionStatus().write(out);
+
     writeString(cons.getClientName(), out);
     writeString(cons.getClientMachine(), out);
 
     out.writeInt(0); //  do not store locations of last block
+  }
+
+  /**
+   * Serialize a {@link INodeFile} node
+   * @param node The node to write
+   * @param out The {@link DataOutputStream} where the fields are written
+   * @param writeBlock Whether to write block information
+   */
+  public static void writeINodeFile(INodeFile file, DataOutputStream out,
+      boolean writeUnderConstruction) throws IOException {
+    writeLocalName(file, out);
+    out.writeShort(file.getFileReplication());
+    out.writeLong(file.getModificationTime());
+    out.writeLong(file.getAccessTime());
+    out.writeLong(file.getPreferredBlockSize());
+
+    writeBlocks(file.getBlocks(), out);
+    SnapshotFSImageFormat.saveFileDiffList(file, out);
+
+    if (writeUnderConstruction) {
+      if (file instanceof INodeFileUnderConstruction) {
+        out.writeBoolean(true);
+        final INodeFileUnderConstruction uc = (INodeFileUnderConstruction)file;
+        writeString(uc.getClientName(), out);
+        writeString(uc.getClientMachine(), out);
+      } else {
+        out.writeBoolean(false);
+      }
+    }
+
+    writePermissionStatus(file, out);
   }
 
   /**
@@ -156,14 +196,13 @@ public class FSImageSerialization {
    */
   public static void writeINodeDirectory(INodeDirectory node, DataOutput out)
       throws IOException {
-    byte[] name = node.getLocalNameBytes();
-    out.writeShort(name.length);
-    out.write(name);
+    writeLocalName(node, out);
     out.writeShort(0);  // replication
     out.writeLong(node.getModificationTime());
     out.writeLong(0);   // access time
     out.writeLong(0);   // preferred block size
     out.writeInt(-1);   // # of blocks
+
     out.writeLong(node.getNsQuota());
     out.writeLong(node.getDsQuota());
     if (node instanceof INodeDirectorySnapshottable) {
@@ -172,11 +211,8 @@ public class FSImageSerialization {
       out.writeBoolean(false);
       out.writeBoolean(node instanceof INodeDirectoryWithSnapshot);
     }
-    FsPermission filePerm = TL_DATA.get().FILE_PERM;
-    filePerm.fromShort(node.getFsPermissionShort());
-    PermissionStatus.write(out, node.getUserName(),
-                           node.getGroupName(),
-                           filePerm);
+    
+    writePermissionStatus(node, out);
   }
   
   /**
@@ -186,74 +222,28 @@ public class FSImageSerialization {
    */
   private static void writeINodeSymlink(INodeSymlink node, DataOutput out)
       throws IOException {
-    byte[] name = node.getLocalNameBytes();
-    out.writeShort(name.length);
-    out.write(name);
+    writeLocalName(node, out);
     out.writeShort(0);  // replication
     out.writeLong(0);   // modification time
     out.writeLong(0);   // access time
     out.writeLong(0);   // preferred block size
     out.writeInt(-2);   // # of blocks
+
     Text.writeString(out, node.getSymlinkString());
-    FsPermission filePerm = TL_DATA.get().FILE_PERM;
-    filePerm.fromShort(node.getFsPermissionShort());
-    PermissionStatus.write(out, node.getUserName(),
-                           node.getGroupName(),
-                           filePerm);
-  }
-  
-  /**
-   * Serialize a {@link INodeFile} node
-   * @param node The node to write
-   * @param out The {@link DataOutputStream} where the fields are written
-   * @param writeBlock Whether to write block information
-   */
-  public static void writeINodeFile(INodeFile node, DataOutputStream out,
-      boolean writeBlock) throws IOException {
-    byte[] name = node.getLocalNameBytes();
-    out.writeShort(name.length);
-    out.write(name);
-    INodeFile fileINode = node;
-    out.writeShort(fileINode.getFileReplication());
-    out.writeLong(fileINode.getModificationTime());
-    out.writeLong(fileINode.getAccessTime());
-    out.writeLong(fileINode.getPreferredBlockSize());
-    if (writeBlock) {
-      Block[] blocks = fileINode.getBlocks();
-      out.writeInt(blocks.length);
-      out.writeBoolean(true);
-      for (Block blk : blocks)
-        blk.write(out);
-    } else {
-      out.writeInt(0); // # of blocks
-      out.writeBoolean(false);
-    }
-//  TODO: fix snapshot fsimage
-    if (node instanceof INodeFileWithSnapshot) {
-      out.writeLong(node.computeFileSize(true, null));
-      out.writeBoolean(false);
-    } else {
-      out.writeLong(-1);
-      out.writeBoolean(node instanceof FileWithSnapshot);
-    }
-    FsPermission filePerm = TL_DATA.get().FILE_PERM;
-    filePerm.fromShort(fileINode.getFsPermissionShort());
-    PermissionStatus.write(out, fileINode.getUserName(),
-                           fileINode.getGroupName(),
-                           filePerm);
+    writePermissionStatus(node, out);
   }
   
   /**
    * Save one inode's attributes to the image.
    */
-  static void saveINode2Image(INode node, DataOutputStream out)
+  public static void saveINode2Image(INode node, DataOutputStream out)
       throws IOException {
     if (node.isDirectory()) {
       writeINodeDirectory((INodeDirectory) node, out);
     } else if (node.isSymlink()) {
       writeINodeSymlink((INodeSymlink) node, out);      
     } else {
-      writeINodeFile((INodeFile) node, out, true);
+      writeINodeFile((INodeFile) node, out, false);
     }
   }
 
@@ -273,7 +263,7 @@ public class FSImageSerialization {
   }
 
   @SuppressWarnings("deprecation")
-  static void writeString(String str, DataOutputStream out) throws IOException {
+  public static void writeString(String str, DataOutputStream out) throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     ustr.set(str);
     ustr.write(out);
@@ -336,7 +326,13 @@ public class FSImageSerialization {
     return DFSUtil.bytes2byteArray(ustr.getBytes(),
       ustr.getLength(), (byte) Path.SEPARATOR_CHAR);
   }
-
+  
+  private static void writeLocalName(INode inode, DataOutput out)
+      throws IOException {
+    final byte[] name = inode.getLocalNameBytes();
+    out.writeShort(name.length);
+    out.write(name);
+  }
 
   /**
    * Write an array of blocks as compactly as possible. This uses

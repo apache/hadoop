@@ -268,8 +268,7 @@ public class TestSnapshot {
       modifyCurrentDirAndCheckSnapshots(new Modification[]{chmod, chown});
       
       // check fsimage saving/loading
-//      TODO: fix fsimage
-//      checkFSImage();
+      checkFSImage();
     }
   }
 

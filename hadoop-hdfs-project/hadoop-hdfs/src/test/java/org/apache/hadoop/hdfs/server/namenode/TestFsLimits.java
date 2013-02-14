@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -154,8 +155,7 @@ public class TestFsLimits {
     if (fs == null) fs = new MockFSDirectory();
 
     INode child = new INodeDirectory(getMockNamesystem().allocateNewInodeId(),
-        name, perms);
-    child.setLocalName(name);
+        DFSUtil.string2Bytes(name), perms, 0L);
     
     Class<?> generated = null;
     try {

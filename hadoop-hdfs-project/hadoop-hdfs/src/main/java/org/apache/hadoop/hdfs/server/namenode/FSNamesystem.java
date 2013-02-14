@@ -179,7 +179,6 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
@@ -1988,13 +1987,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog, Snapshot latestSnapshot) throws IOException {
-    if (latestSnapshot != null) {
-      file = file.recordModification(latestSnapshot);
-    }
+    file = file.recordModification(latestSnapshot);
     final INodeFileUnderConstruction cons = file.toUnderConstruction(
         leaseHolder, clientMachine, clientNode);
 
-    dir.replaceINodeFile(src, file, cons, latestSnapshot);
+    dir.replaceINodeFile(src, file, cons);
     leaseManager.addLease(cons.getClientName(), src);
     
     LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
@@ -3325,22 +3322,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
     
-    if (latestSnapshot != null) {
-      if (pendingFile.getClass() == INodeFileUnderConstruction.class) {
-        // Replace it with INodeFileUnderConstructionWithSnapshot.
-        // This replacement does not need to be recorded in snapshot.
-        INodeFileUnderConstructionWithSnapshot pendingFileWithSnaphsot = 
-            new INodeFileUnderConstructionWithSnapshot(pendingFile);
-        dir.replaceINodeFile(src, pendingFile, pendingFileWithSnaphsot, null);
-        pendingFile = pendingFileWithSnaphsot;
-      }
-      pendingFile = pendingFile.recordModification(latestSnapshot);
-    }
+    pendingFile = pendingFile.recordModification(latestSnapshot);
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
     final INodeFile newFile = pendingFile.toINodeFile(now());
-    dir.replaceINodeFile(src, pendingFile, newFile, latestSnapshot);
+    dir.replaceINodeFile(src, pendingFile, newFile);
 
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);

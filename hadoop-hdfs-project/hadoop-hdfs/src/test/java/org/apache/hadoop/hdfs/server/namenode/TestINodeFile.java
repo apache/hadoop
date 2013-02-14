@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -50,10 +51,15 @@ public class TestINodeFile {
   static final short BLOCKBITS = 48;
   static final long BLKSIZE_MAXVALUE = ~(0xffffL << BLOCKBITS);
 
-  private String userName = "Test";
+  private final PermissionStatus perm = new PermissionStatus(
+      "userName", null, FsPermission.getDefault());
   private short replication;
   private long preferredBlockSize;
 
+  INodeFile createINodeFile(short replication, long preferredBlockSize) {
+    return new INodeFile(INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L,
+        null, replication, preferredBlockSize);
+  }
   /**
    * Test for the Replication value. Sets a value and checks if it was set
    * correct.
@@ -62,9 +68,7 @@ public class TestINodeFile {
   public void testReplication () {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
-        new PermissionStatus(userName, null, FsPermission.getDefault()), null,
-        replication, 0L, 0L, preferredBlockSize);
+    INodeFile inf = createINodeFile(replication, preferredBlockSize);
     assertEquals("True has to be returned in this case", replication,
                  inf.getFileReplication());
   }
@@ -79,9 +83,7 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = -1;
     preferredBlockSize = 128*1024*1024;
-    new INodeFile(INodeId.GRANDFATHER_INODE_ID, new PermissionStatus(userName,
-        null, FsPermission.getDefault()), null, replication, 0L, 0L,
-        preferredBlockSize);
+    createINodeFile(replication, preferredBlockSize);
   }
 
   /**
@@ -92,9 +94,7 @@ public class TestINodeFile {
   public void testPreferredBlockSize () {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
-        new PermissionStatus(userName, null, FsPermission.getDefault()), null,
-        replication, 0L, 0L, preferredBlockSize);
+    INodeFile inf = createINodeFile(replication, preferredBlockSize);
    assertEquals("True has to be returned in this case", preferredBlockSize,
         inf.getPreferredBlockSize());
  }
@@ -103,9 +103,7 @@ public class TestINodeFile {
   public void testPreferredBlockSizeUpperBound () {
     replication = 3;
     preferredBlockSize = BLKSIZE_MAXVALUE;
-    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
-        new PermissionStatus(userName, null, FsPermission.getDefault()), null,
-        replication, 0L, 0L, preferredBlockSize);
+    INodeFile inf = createINodeFile(replication, preferredBlockSize);
     assertEquals("True has to be returned in this case", BLKSIZE_MAXVALUE,
                  inf.getPreferredBlockSize());
   }
@@ -120,9 +118,7 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = 3;
     preferredBlockSize = -1;
-    new INodeFile(INodeId.GRANDFATHER_INODE_ID, new PermissionStatus(userName,
-        null, FsPermission.getDefault()), null, replication, 0L, 0L,
-        preferredBlockSize);
+    createINodeFile(replication, preferredBlockSize);
   } 
 
   /**
@@ -135,26 +131,20 @@ public class TestINodeFile {
               throws IllegalArgumentException {
     replication = 3;
     preferredBlockSize = BLKSIZE_MAXVALUE+1;
-    new INodeFile(INodeId.GRANDFATHER_INODE_ID, new PermissionStatus(userName,
-        null, FsPermission.getDefault()), null, replication, 0L, 0L,
-        preferredBlockSize);
+    createINodeFile(replication, preferredBlockSize);
  }
 
   @Test
   public void testGetFullPathName() {
-    PermissionStatus perms = new PermissionStatus(
-      userName, null, FsPermission.getDefault());
-
     replication = 3;
     preferredBlockSize = 128*1024*1024;
-    INodeFile inf = new INodeFile(INodeId.GRANDFATHER_INODE_ID, perms, null,
-        replication, 0L, 0L, preferredBlockSize);
+    INodeFile inf = createINodeFile(replication, preferredBlockSize);
     inf.setLocalName("f");
 
     INodeDirectory root = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID,
-        INodeDirectory.ROOT_NAME, perms);
-    INodeDirectory dir = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID, "d",
-        perms);
+        INodeDirectory.ROOT_NAME, perm, 0L);
+    INodeDirectory dir = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID,
+        DFSUtil.string2Bytes("d"), perm, 0L);
 
     assertEquals("f", inf.getFullPathName());
     assertEquals("", inf.getLocalParentDir());
@@ -250,9 +240,7 @@ public class TestINodeFile {
     preferredBlockSize = 128 * 1024 * 1024;
     INodeFile[] iNodes = new INodeFile[nCount];
     for (int i = 0; i < nCount; i++) {
-      PermissionStatus perms = new PermissionStatus(userName, null,
-          FsPermission.getDefault());
-      iNodes[i] = new INodeFile(i, perms, null, replication, 0L, 0L,
+      iNodes[i] = new INodeFile(i, null, perm, 0L, 0L, null, replication,
           preferredBlockSize);
       iNodes[i].setLocalName(fileNamePrefix +  Integer.toString(i));
       BlockInfo newblock = new BlockInfo(replication);
@@ -270,8 +258,6 @@ public class TestINodeFile {
   @Test
   public void testValueOf () throws IOException {
     final String path = "/testValueOf";
-    final PermissionStatus perm = new PermissionStatus(
-        userName, null, FsPermission.getDefault());
     final short replication = 3;
 
     {//cast from null
@@ -303,8 +289,7 @@ public class TestINodeFile {
     }
 
     {//cast from INodeFile
-      final INode from = new INodeFile(INodeId.GRANDFATHER_INODE_ID, perm,
-          null, replication, 0L, 0L, preferredBlockSize);
+      final INode from = createINodeFile(replication, preferredBlockSize);
 
      //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
@@ -349,8 +334,8 @@ public class TestINodeFile {
     }
 
     {//cast from INodeDirectory
-      final INode from = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID, perm,
-          0L);
+      final INode from = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID, null,
+          perm, 0L);
 
       //cast to INodeFile, should fail
       try {
