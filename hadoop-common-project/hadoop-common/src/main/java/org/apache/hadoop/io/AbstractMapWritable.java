@@ -29,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Abstract base class for MapWritable and SortedMapWritable
  * 
@@ -45,10 +47,12 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   private AtomicReference<Configuration> conf;
   
   /* Class to id mappings */
-  private Map<Class, Byte> classToIdMap = new ConcurrentHashMap<Class, Byte>();
+  @VisibleForTesting
+  Map<Class, Byte> classToIdMap = new ConcurrentHashMap<Class, Byte>();
   
   /* Id to Class mappings */
-  private Map<Byte, Class> idToClassMap = new ConcurrentHashMap<Byte, Class>();
+  @VisibleForTesting
+  Map<Byte, Class> idToClassMap = new ConcurrentHashMap<Byte, Class>();
   
   /* The number of new classes (those not established by the constructor) */
   private volatile byte newClasses = 0;
