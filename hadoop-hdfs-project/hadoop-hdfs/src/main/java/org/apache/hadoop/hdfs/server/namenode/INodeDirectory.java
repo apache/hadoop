@@ -834,21 +834,20 @@ public class INodeDirectory extends INode {
       prefix.setLength(prefix.length() - 2);
       prefix.append("  ");
     }
-    dumpTreeRecursively(out, prefix,
-        new Iterable<Pair<? extends INode, Snapshot>>() {
+    dumpTreeRecursively(out, prefix, new Iterable<SnapshotAndINode>() {
       final Iterator<INode> i = getChildrenList(snapshot).iterator();
       
       @Override
-      public Iterator<Pair<? extends INode, Snapshot>> iterator() {
-        return new Iterator<Pair<? extends INode, Snapshot>>() {
+      public Iterator<SnapshotAndINode> iterator() {
+        return new Iterator<SnapshotAndINode>() {
           @Override
           public boolean hasNext() {
             return i.hasNext();
           }
 
           @Override
-          public Pair<INode, Snapshot> next() {
-            return new Pair<INode, Snapshot>(i.next(), snapshot);
+          public SnapshotAndINode next() {
+            return new SnapshotAndINode(snapshot, i.next());
           }
 
           @Override
@@ -867,14 +866,29 @@ public class INodeDirectory extends INode {
    */
   @VisibleForTesting
   protected static void dumpTreeRecursively(PrintWriter out,
-      StringBuilder prefix, Iterable<Pair<? extends INode, Snapshot>> subs) {
+      StringBuilder prefix, Iterable<SnapshotAndINode> subs) {
     if (subs != null) {
-      for(final Iterator<Pair<? extends INode, Snapshot>> i = subs.iterator(); i.hasNext();) {
-        final Pair<? extends INode, Snapshot> pair = i.next();
+      for(final Iterator<SnapshotAndINode> i = subs.iterator(); i.hasNext();) {
+        final SnapshotAndINode pair = i.next();
         prefix.append(i.hasNext()? DUMPTREE_EXCEPT_LAST_ITEM: DUMPTREE_LAST_ITEM);
-        pair.left.dumpTreeRecursively(out, prefix, pair.right);
+        pair.inode.dumpTreeRecursively(out, prefix, pair.snapshot);
         prefix.setLength(prefix.length() - 2);
       }
+    }
+  }
+
+  /** A pair of Snapshot and INode objects. */
+  protected static class SnapshotAndINode {
+    public final Snapshot snapshot;
+    public final INode inode;
+
+    public SnapshotAndINode(Snapshot snapshot, INode inode) {
+      this.snapshot = snapshot;
+      this.inode = inode;
+    }
+
+    public SnapshotAndINode(Snapshot snapshot) {
+      this(snapshot, snapshot.getRoot());
     }
   }
 }

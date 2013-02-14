@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
@@ -413,6 +412,11 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
+  public INodeDirectory getSnapshotINode(Snapshot snapshot) {
+    return diffs.getSnapshotINode(snapshot, this);
+  }
+
+  @Override
   public INodeDirectoryWithSnapshot recordModification(final Snapshot latest) {
     return isInLatestSnapshot(latest)?
         saveSelf2Snapshot(latest, null): this;
@@ -505,37 +509,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   public INode getChild(byte[] name, Snapshot snapshot) {
     final DirectoryDiff diff = diffs.getDiff(snapshot);
     return diff != null? diff.getChild(name, true, this): super.getChild(name, null);
-  }
-
-  @Override
-  public String getUserName(Snapshot snapshot) {
-    final INodeDirectory inode = diffs.getSnapshotINode(snapshot);
-    return inode != null? inode.getUserName(): super.getUserName(null);
-  }
-
-  @Override
-  public String getGroupName(Snapshot snapshot) {
-    final INodeDirectory inode = diffs.getSnapshotINode(snapshot);
-    return inode != null? inode.getGroupName(): super.getGroupName(null);
-  }
-
-  @Override
-  public FsPermission getFsPermission(Snapshot snapshot) {
-    final INodeDirectory inode = diffs.getSnapshotINode(snapshot);
-    return inode != null? inode.getFsPermission(): super.getFsPermission(null);
-  }
-
-  @Override
-  public long getAccessTime(Snapshot snapshot) {
-    final INodeDirectory inode = diffs.getSnapshotINode(snapshot);
-    return inode != null? inode.getAccessTime(): super.getAccessTime(null);
-  }
-
-  @Override
-  public long getModificationTime(Snapshot snapshot) {
-    final INodeDirectory inode = diffs.getSnapshotINode(snapshot);
-    return inode != null? inode.getModificationTime()
-        : super.getModificationTime(null);
   }
 
   @Override

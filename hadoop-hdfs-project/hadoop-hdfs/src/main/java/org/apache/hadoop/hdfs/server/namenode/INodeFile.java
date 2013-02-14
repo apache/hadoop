@@ -123,6 +123,11 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
+  public INodeFile getSnapshotINode(final Snapshot snapshot) {
+    return this;
+  }
+
+  @Override
   public INodeFile recordModification(final Snapshot latest) {
     return isInLatestSnapshot(latest)?
         parent.replaceChild4INodeFileWithSnapshot(this)
@@ -141,7 +146,11 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   /** @return the replication factor of the file. */
-  public short getFileReplication(Snapshot snapshot) {
+  public final short getFileReplication(Snapshot snapshot) {
+    if (snapshot != null) {
+      return getSnapshotINode(snapshot).getFileReplication();
+    }
+
     return HeaderFormat.getReplication(header);
   }
 

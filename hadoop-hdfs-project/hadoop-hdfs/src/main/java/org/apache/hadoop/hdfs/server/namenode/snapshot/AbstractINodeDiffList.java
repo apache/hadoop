@@ -145,9 +145,15 @@ abstract class AbstractINodeDiffList<N extends INode,
     }
   }
 
-  N getSnapshotINode(Snapshot snapshot) {
+  /**
+   * @return the inode corresponding to the given snapshot.
+   *         Note that the current inode is returned if there is no change
+   *         between the given snapshot and the current state. 
+   */
+  N getSnapshotINode(final Snapshot snapshot, final N currentINode) {
     final D diff = getDiff(snapshot);
-    return diff == null? null: diff.getSnapshotINode();
+    final N inode = diff == null? null: diff.getSnapshotINode();
+    return inode == null? currentINode: inode;
   }
 
   /**
