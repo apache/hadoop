@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
 
 /**
@@ -75,27 +78,44 @@ public class SnapshotDiffReport {
   public static class DiffReportEntry {
     /** The type of the difference. */
     private final DiffType type;
-    /** The full path of the file/directory where changes have happened */
-    private final String fullPath;
+    /**
+     * The relative path (related to the snapshot root) of the file/directory
+     * where changes have happened
+     */
+    private final byte[] relativePath;
 
-    public DiffReportEntry(DiffType type, String fullPath) {
+    public DiffReportEntry(DiffType type, byte[] path) {
       this.type = type;
-      this.fullPath = fullPath;
+      this.relativePath = path;
+    }
+    
+    public DiffReportEntry(DiffType type, byte[][] pathComponents) {
+      this.type = type;
+      this.relativePath = DFSUtil.byteArray2bytes(pathComponents);
     }
     
     @Override
     public String toString() {
-      return type.getLabel() + "\t" + fullPath;
+      return type.getLabel() + "\t" + getRelativePathString();
     }
     
     public DiffType getType() {
       return type;
     }
 
-    public String getFullPath() {
-      return fullPath;
+    public String getRelativePathString() {
+      String path = DFSUtil.bytes2String(relativePath);
+      if (path.isEmpty()) {
+        return ".";
+      } else {
+        return "." + Path.SEPARATOR + path;
+      }
     }
 
+    public byte[] getRelativePath() {
+      return relativePath;
+    }
+    
     @Override
     public boolean equals(Object other) {
       if (this == other) {
@@ -104,14 +124,14 @@ public class SnapshotDiffReport {
       if (other != null && other instanceof DiffReportEntry) {
         DiffReportEntry entry = (DiffReportEntry) other;
         return type.equals(entry.getType())
-            && fullPath.equals(entry.getFullPath());
+            && Arrays.equals(relativePath, entry.getRelativePath());
       }
       return false;
     }
     
     @Override
     public int hashCode() {
-      return fullPath.hashCode();
+      return Arrays.hashCode(relativePath);
     }
   }
   

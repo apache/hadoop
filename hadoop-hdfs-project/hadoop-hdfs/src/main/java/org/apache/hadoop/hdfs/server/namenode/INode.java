@@ -390,6 +390,13 @@ public abstract class INode implements Diff.Element<byte[]> {
     return FSDirectory.getFullPathName(this);
   }
 
+  /** 
+   * @return The full path name represented in a list of byte array
+   */
+  public byte[][] getRelativePathNameBytes(INode ancestor) {
+    return FSDirectory.getRelativePathNameBytes(this, ancestor);
+  }
+  
   @Override
   public String toString() {
     return getLocalName();
@@ -565,12 +572,10 @@ public abstract class INode implements Diff.Element<byte[]> {
     return buf.toString();
   }
 
-  public static final byte[] EMPTY_BYTES = {};
-
   @Override
   public final int compareTo(byte[] bytes) {
-    final byte[] left = name == null? EMPTY_BYTES: name;
-    final byte[] right = bytes == null? EMPTY_BYTES: bytes;
+    final byte[] left = name == null? DFSUtil.EMPTY_BYTES: name;
+    final byte[] right = bytes == null? DFSUtil.EMPTY_BYTES: bytes;
     return SignedBytes.lexicographicalComparator().compare(left, right);
   }
 

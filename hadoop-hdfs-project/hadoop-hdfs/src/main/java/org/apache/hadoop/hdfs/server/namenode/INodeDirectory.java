@@ -675,7 +675,8 @@ public class INodeDirectory extends INode {
     }
     
     private void updateLatestSnapshot(Snapshot s) {
-      if (Snapshot.ID_COMPARATOR.compare(snapshot, s) < 0) {
+      if (snapshot == null
+          || (s != null && Snapshot.ID_COMPARATOR.compare(snapshot, s) < 0)) {
         snapshot = s;
       }
     }

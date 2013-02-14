@@ -157,3 +157,5 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4481. Change fsimage to support snapshot file diffs.  (szetszwo)
 
   HDFS-4500. Refactor snapshot INode methods.  (szetszwo)
+
+  HDFS-4487. Fix snapshot diff report for HDFS-4446.  (Jing Zhao via szetszwo)

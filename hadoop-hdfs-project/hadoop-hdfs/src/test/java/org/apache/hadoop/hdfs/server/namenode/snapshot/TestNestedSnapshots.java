@@ -185,8 +185,8 @@ public class TestNestedSnapshots {
 
     Assert.assertEquals(0, Snapshot.ID_COMPARATOR.compare(null, null));
     for(Snapshot s : snapshots) {
-      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) < 0);
-      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) > 0);
+      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) > 0);
+      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) < 0);
       
       for(Snapshot t : snapshots) {
         final int expected = s.getRoot().getLocalName().compareTo(

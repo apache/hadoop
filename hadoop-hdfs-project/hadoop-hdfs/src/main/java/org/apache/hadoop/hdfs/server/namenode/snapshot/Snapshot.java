@@ -33,15 +33,19 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
 public class Snapshot implements Comparable<byte[]> {
-  /** Compare snapshot IDs with null <= s for any snapshot s. */
+  /**
+   * Compare snapshot IDs. Null indicates the current status thus is greater
+   * than non-null snapshots.
+   */
   public static final Comparator<Snapshot> ID_COMPARATOR
       = new Comparator<Snapshot>() {
     @Override
     public int compare(Snapshot left, Snapshot right) {
+      // null means the current state, thus should be the largest
       if (left == null) {
-        return right == null? 0: -1;
+        return right == null? 0: 1;
       } else {
-        return right == null? 1: left.id - right.id; 
+        return right == null? -1: left.id - right.id; 
       }
     }
   };
@@ -52,12 +56,22 @@ public class Snapshot implements Comparable<byte[]> {
     for(; inode != null; inode = inode.getParent()) {
       if (inode instanceof INodeDirectorySnapshottable) {
         final Snapshot s = ((INodeDirectorySnapshottable)inode).getLastSnapshot();
-        if (ID_COMPARATOR.compare(latest, s) < 0) {
+        if (latest == null
+            || (s != null && ID_COMPARATOR.compare(latest, s) < 0)) {
           latest = s;
         }
       }
     }
     return latest;
+  }
+  
+  /** 
+   * Get the name of the given snapshot. 
+   * @param s The given snapshot.
+   * @return The name of the snapshot, or an empty string if {@code s} is null
+   */
+  public static String getSnapshotName(Snapshot s) {
+    return s != null ? s.getRoot().getLocalName() : "";
   }
 
   /** The root directory of the snapshot. */

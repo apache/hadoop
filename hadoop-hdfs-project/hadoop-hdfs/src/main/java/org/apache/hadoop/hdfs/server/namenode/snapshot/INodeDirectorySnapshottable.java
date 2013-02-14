@@ -22,11 +22,10 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,11 +35,12 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.SignedBytes;
 
 /**
  * Directories where taking snapshots is allowed.
@@ -69,6 +69,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    * directory.
    */
   public static class SnapshotDiffInfo {
+    /** Compare two inodes based on their full names */
     public static final Comparator<INode> INODE_COMPARATOR = 
         new Comparator<INode>() {
       @Override
@@ -76,7 +77,13 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
         if (left == null) {
           return right == null ? 0 : -1;
         } else {
-          return right == null ? 1 : left.compareTo(right.getLocalNameBytes());
+          if (right == null) {
+            return 1;
+          } else {
+            int cmp = compare(left.getParent(), right.getParent());
+            return cmp == 0 ? SignedBytes.lexicographicalComparator().compare(
+                left.getLocalNameBytes(), right.getLocalNameBytes()) : cmp;
+          }
         }
       }
     };
@@ -88,40 +95,46 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     /** The end point of the difference */
     private final Snapshot to;
     /**
-     * A map capturing the detailed difference. Each key indicates a directory
-     * whose metadata or children have been changed between the two snapshots,
-     * while its associated value is a {@link Diff} storing the changes happened
-     * to the children (files).
+     * The list recording modified INodeFile and INodeDirectory. Sorted based on
+     * their names.
+     */ 
+    private final List<INode> diffList = new ArrayList<INode>();;
+    /**
+     * A map capturing the detailed difference about file creation/deletion.
+     * Each key indicates a directory whose children have been changed between
+     * the two snapshots, while its associated value is a {@link ChildrenDiff}
+     * storing the changes (creation/deletion) happened to the children (files).
      */
-    private final SortedMap<INodeDirectoryWithSnapshot, ChildrenDiff> diffMap;
+    private final Map<INodeDirectoryWithSnapshot, ChildrenDiff> diffMap = 
+        new HashMap<INodeDirectoryWithSnapshot, ChildrenDiff>();
     
-    public SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot,
-        Snapshot start, Snapshot end) {
+    SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot, Snapshot start,
+        Snapshot end) {
       this.snapshotRoot = snapshotRoot;
       this.from = start;
       this.to = end;
-      this.diffMap = new TreeMap<INodeDirectoryWithSnapshot, ChildrenDiff>(
-          INODE_COMPARATOR);
     }
     
-    /** Add a dir-diff pair into {@link #diffMap} */
-    public void addDiff(INodeDirectoryWithSnapshot dir, ChildrenDiff diff) {
+    /** Add a dir-diff pair */
+    private void addDirDiff(INodeDirectoryWithSnapshot dir, ChildrenDiff diff) {
       diffMap.put(dir, diff);
+      int i = Collections.binarySearch(diffList, dir, INODE_COMPARATOR);
+      if (i < 0) {
+        diffList.add(-i - 1, dir);
+      }
     }
     
-    /** 
-     * Get the name of the given snapshot. 
-     * @param s The given snapshot.
-     * @return The name of the snapshot, or an empty string if {@code s} is null
-     */
-    private static String getSnapshotName(Snapshot s) {
-      return s != null ? s.getRoot().getLocalName() : "";
+    /** Add a modified file */ 
+    private void addFileDiff(INodeFile file) {
+      int i = Collections.binarySearch(diffList, file, INODE_COMPARATOR);
+      if (i < 0) {
+        diffList.add(-i - 1, file);
+      }
     }
     
     /** @return True if {@link #from} is earlier than {@link #to} */
     private boolean isFromEarlier() {
-      return to == null
-          || (from != null && Snapshot.ID_COMPARATOR.compare(from, to) < 0);
+      return Snapshot.ID_COMPARATOR.compare(from, to) < 0;
     }
     
     /**
@@ -129,17 +142,20 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
      * @return A {@link SnapshotDiffReport} describing the difference
      */
     public SnapshotDiffReport generateReport() {
-      List<DiffReportEntry> diffList = new ArrayList<DiffReportEntry>();
-      for (Map.Entry<INodeDirectoryWithSnapshot, ChildrenDiff> entry : diffMap
-          .entrySet()) {
-        diffList.add(new DiffReportEntry(DiffType.MODIFY, entry.getKey()
-            .getFullPathName()));
-        List<DiffReportEntry> subList = entry.getValue().generateReport(
-            entry.getKey(), isFromEarlier());
-        diffList.addAll(subList);
+      List<DiffReportEntry> diffReportList = new ArrayList<DiffReportEntry>();
+      for (INode node : diffList) {
+        diffReportList.add(new DiffReportEntry(DiffType.MODIFY, node
+            .getRelativePathNameBytes(snapshotRoot)));
+        if (node.isDirectory()) {
+          ChildrenDiff dirDiff = diffMap.get(node);
+          List<DiffReportEntry> subList = dirDiff.generateReport(snapshotRoot,
+              (INodeDirectoryWithSnapshot) node, isFromEarlier());
+          diffReportList.addAll(subList);
+        }
       }
       return new SnapshotDiffReport(snapshotRoot.getFullPathName(),
-          getSnapshotName(from), getSnapshotName(to), diffList);
+          Snapshot.getSnapshotName(from), Snapshot.getSnapshotName(to),
+          diffReportList);
     }
   }
 
@@ -315,7 +331,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     Snapshot toSnapshot = getSnapshotByName(to); 
     SnapshotDiffInfo diffs = new SnapshotDiffInfo(this, fromSnapshot,
         toSnapshot);
-    computeDiffInDir(this, diffs);
+    computeDiffRecursively(this, diffs);
     return diffs;
   }
   
@@ -343,30 +359,41 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   
   /**
    * Recursively compute the difference between snapshots under a given
-   * directory.
-   * @param dir The directory under which the diff is computed.
+   * directory/file.
+   * @param node The directory/file under which the diff is computed.
    * @param diffReport data structure used to store the diff.
    */
-  private void computeDiffInDir(INodeDirectory dir,
+  private void computeDiffRecursively(INode node, 
       SnapshotDiffInfo diffReport) {
     ChildrenDiff diff = new ChildrenDiff();
-    if (dir instanceof INodeDirectoryWithSnapshot) {
-      boolean change = ((INodeDirectoryWithSnapshot) dir)
-          .computeDiffBetweenSnapshots(diffReport.from,
-              diffReport.to, diff);
-      if (change) {
-        diffReport.addDiff((INodeDirectoryWithSnapshot) dir,
-            diff); 
+    if (node instanceof INodeDirectory) {
+      INodeDirectory dir = (INodeDirectory) node;
+      if (dir instanceof INodeDirectoryWithSnapshot) {
+        INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
+        boolean change = sdir.computeDiffBetweenSnapshots(
+            diffReport.from, diffReport.to, diff);
+        if (change) {
+          diffReport.addDirDiff(sdir, diff);
+        }
       }
-    }
-    ReadOnlyList<INode> children = dir.getChildrenList(null);
-    for (INode child : children) {
-      if (child instanceof INodeDirectory
-          && diff.searchCreated(child.getLocalNameBytes()) == null) {
-        // Compute diff recursively for children that are directories. We do not
-        // need to compute diff for those contained in the created list since 
-        // directory contained in the created list must be new created.
-        computeDiffInDir((INodeDirectory) child, diffReport);
+      ReadOnlyList<INode> children = dir.getChildrenList(diffReport
+          .isFromEarlier() ? diffReport.to : diffReport.from);
+      for (INode child : children) {
+        if (diff.searchCreated(child.getLocalNameBytes()) == null
+            && diff.searchDeleted(child.getLocalNameBytes()) == null) {
+          computeDiffRecursively(child, diffReport);
+        }
+      }
+    } else if (node instanceof FileWithSnapshot) {
+      FileWithSnapshot file = (FileWithSnapshot) node;
+      Snapshot earlierSnapshot = diffReport.isFromEarlier() ? diffReport.from
+          : diffReport.to;
+      Snapshot laterSnapshot = diffReport.isFromEarlier() ? diffReport.to
+          : diffReport.from;
+      boolean change = file.getDiffs().changedBetweenSnapshots(earlierSnapshot,
+          laterSnapshot);
+      if (change) {
+        diffReport.addFileDiff(file.asINodeFile());
       }
     }
   }

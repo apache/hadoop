@@ -193,7 +193,7 @@ public class SnapshotFSImageFormat {
     int deletedSize = in.readInt();
     List<INode> deletedList = new ArrayList<INode>(deletedSize);
     for (int i = 0; i < deletedSize; i++) {
-      final INode deleted = loader.loadINodeWithLocalName(false, in);
+      final INode deleted = loader.loadINodeWithLocalName(true, in);
       deletedList.add(deleted);
       // set parent: the parent field of an INode in the deleted list is not 
       // useful, but set the parent here to be consistent with the original 

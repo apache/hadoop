@@ -91,6 +91,8 @@ import com.google.protobuf.BlockingService;
 public class DFSUtil {
   public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
   
+  public static final byte[] EMPTY_BYTES = {};
+  
   private DFSUtil() { /* Hidden constructor */ }
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
     @Override
@@ -257,6 +259,37 @@ public class DFSUtil {
       }
     }
     return result.toString();
+  }
+  
+  /**
+   * Given a list of path components returns a byte array
+   */
+  public static byte[] byteArray2bytes(byte[][] pathComponents) {
+    if (pathComponents.length == 0) {
+      return EMPTY_BYTES;
+    } else if (pathComponents.length == 1
+        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
+      return new byte[]{(byte) Path.SEPARATOR_CHAR};
+    }
+    int length = 0;
+    for (int i = 0; i < pathComponents.length; i++) {
+      length += pathComponents[i].length;
+      if (i < pathComponents.length - 1) {
+        length++; // for SEPARATOR
+      }
+    }
+    byte[] path = new byte[length];
+    int index = 0;
+    for (int i = 0; i < pathComponents.length; i++) {
+      System.arraycopy(pathComponents[i], 0, path, index,
+          pathComponents[i].length);
+      index += pathComponents[i].length;
+      if (i < pathComponents.length - 1) {
+        path[index] = (byte) Path.SEPARATOR_CHAR;
+        index++;
+      }
+    }
+    return path;
   }
 
   /** Convert an object representing a path to a string. */

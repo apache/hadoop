@@ -1496,21 +1496,49 @@ public class FSDirectory implements Closeable {
     return fullPathName.toString();
   }
 
-  /** Return the full path name of the specified inode */
-  static String getFullPathName(INode inode) {
-    // calculate the depth of this inode from root
+  /**
+   * @return the relative path of an inode from one of its ancestors,
+   *         represented by an array of inodes.
+   */
+  private static INode[] getRelativePathINodes(INode inode, INode ancestor) {
+    // calculate the depth of this inode from the ancestor
     int depth = 0;
-    for (INode i = inode; i != null; i = i.parent) {
+    for (INode i = inode; i != null && !i.equals(ancestor); i = i.parent) {
       depth++;
     }
     INode[] inodes = new INode[depth];
 
     // fill up the inodes in the path from this inode to root
     for (int i = 0; i < depth; i++) {
-      inodes[depth-i-1] = inode;
+      inodes[depth - i - 1] = inode;
       inode = inode.parent;
     }
-    return getFullPathName(inodes, depth-1);
+    return inodes;
+  }
+  
+  private static INode[] getFullPathINodes(INode inode) {
+    return getRelativePathINodes(inode, null);
+  }
+  
+  /** Return the full path name of the specified inode */
+  static String getFullPathName(INode inode) {
+    INode[] inodes = getFullPathINodes(inode);
+    return getFullPathName(inodes, inodes.length - 1);
+  }
+  
+  /**
+   * For a given inode, get its relative path from its ancestor.
+   * @param inode The given inode.
+   * @param ancestor An ancestor inode of the given inode.
+   * @return The relative path name represented in an array of byte array.
+   */
+  static byte[][] getRelativePathNameBytes(INode inode, INode ancestor) {
+    INode[] inodes = getRelativePathINodes(inode, ancestor);
+    byte[][] path = new byte[inodes.length][];
+    for (int i = 0; i < inodes.length; i++) {
+      path[i] = inodes[i].getLocalNameBytes();
+    }
+    return path;
   }
   
   /**

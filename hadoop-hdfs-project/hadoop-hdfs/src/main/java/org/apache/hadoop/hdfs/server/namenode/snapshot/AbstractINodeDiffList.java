@@ -144,6 +144,34 @@ abstract class AbstractINodeDiffList<N extends INode,
       return j < diffs.size()? diffs.get(j): null;
     }
   }
+  
+  /**
+   * Check if changes have happened between two snapshots.
+   * @param earlierSnapshot The snapshot taken earlier
+   * @param laterSnapshot The snapshot taken later
+   * @return Whether or not modifications (including diretory/file metadata
+   *         change, file creation/deletion under the directory) have happened
+   *         between snapshots.
+   */
+  final boolean changedBetweenSnapshots(Snapshot earlierSnapshot,
+      Snapshot laterSnapshot) {
+    final int size = diffs.size();
+    int earlierDiffIndex = Collections.binarySearch(diffs, earlierSnapshot);
+    if (-earlierDiffIndex - 1 == size) {
+      // if the earlierSnapshot is after the latest SnapshotDiff stored in
+      // diffs, no modification happened after the earlierSnapshot
+      return false;
+    }
+    if (laterSnapshot != null) {
+      int laterDiffIndex = Collections.binarySearch(diffs, laterSnapshot);
+      if (laterDiffIndex == -1 || laterDiffIndex == 0) {
+        // if the laterSnapshot is the earliest SnapshotDiff stored in diffs, or
+        // before it, no modification happened before the laterSnapshot
+        return false;
+      }
+    }
+    return true;
+  }
 
   /**
    * @return the inode corresponding to the given snapshot.

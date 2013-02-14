@@ -788,7 +788,7 @@ public class FSImageFormat {
         byte[] byteStore = new byte[4*HdfsConstants.MAX_PATH_LENGTH];
         ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
         // save the root
-        FSImageSerialization.saveINode2Image(fsDir.rootDir, out);
+        FSImageSerialization.saveINode2Image(fsDir.rootDir, out, false);
         // save the rest of the nodes
         saveImage(strbuf, fsDir.rootDir, out, null);
         // save files under construction
@@ -826,7 +826,7 @@ public class FSImageFormat {
       int i = 0;
       for(INode child : children) {
         // print all children first
-        FSImageSerialization.saveINode2Image(child, out);
+        FSImageSerialization.saveINode2Image(child, out, false);
         if (child.isDirectory()) {
           dirNum++;
         }

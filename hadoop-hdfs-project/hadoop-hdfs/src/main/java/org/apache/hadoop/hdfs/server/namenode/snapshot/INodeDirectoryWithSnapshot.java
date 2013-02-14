@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
@@ -77,7 +76,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         final List<INode> deleted = getDeletedList();
         out.writeInt(deleted.size());
         for (INode node : deleted) {
-          FSImageSerialization.saveINode2Image(node, out);
+          FSImageSerialization.saveINode2Image(node, out, true);
         }
     }
     
@@ -100,52 +99,62 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     
     /**
      * Interpret the diff and generate a list of {@link DiffReportEntry}.
+     * @root The snapshot root of the diff report.
      * @param parent The directory that the diff belongs to.
      * @param fromEarlier True indicates {@code diff=later-earlier}, 
      *                            False indicates {@code diff=earlier-later}
      * @return A list of {@link DiffReportEntry} as the diff report.
      */
     public List<DiffReportEntry> generateReport(
-        INodeDirectoryWithSnapshot parent, boolean fromEarlier) {
-      List<DiffReportEntry> mList = new ArrayList<DiffReportEntry>();
+        INodeDirectorySnapshottable root, INodeDirectoryWithSnapshot parent,
+        boolean fromEarlier) {
       List<DiffReportEntry> cList = new ArrayList<DiffReportEntry>();
       List<DiffReportEntry> dList = new ArrayList<DiffReportEntry>();
       int c = 0, d = 0;
       List<INode> created = getCreatedList();
       List<INode> deleted = getDeletedList();
+      byte[][] parentPath = parent.getRelativePathNameBytes(root);
+      byte[][] fullPath = new byte[parentPath.length + 1][];
+      System.arraycopy(parentPath, 0, fullPath, 0, parentPath.length);
       for (; c < created.size() && d < deleted.size(); ) {
         INode cnode = created.get(c);
         INode dnode = deleted.get(d);
         if (cnode.equals(dnode)) {
-          mList.add(new DiffReportEntry(DiffType.MODIFY, parent
-              .getFullPathName() + Path.SEPARATOR + cnode.getLocalName()));
+          fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
+          if (cnode.isSymlink() && dnode.isSymlink()) {
+            dList.add(new DiffReportEntry(DiffType.MODIFY, fullPath));
+          } else {
+            // must be the case: delete first and then create an inode with the
+            // same name
+            cList.add(new DiffReportEntry(DiffType.CREATE, fullPath));
+            dList.add(new DiffReportEntry(DiffType.DELETE, fullPath));
+          }
           c++;
           d++;
         } else if (cnode.compareTo(dnode.getLocalNameBytes()) < 0) {
+          fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
           cList.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
-              : DiffType.DELETE, parent.getFullPathName() + Path.SEPARATOR
-              + cnode.getLocalName()));
+              : DiffType.DELETE, fullPath));
           c++;
         } else {
+          fullPath[fullPath.length - 1] = dnode.getLocalNameBytes();
           dList.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
-              : DiffType.CREATE, parent.getFullPathName() + Path.SEPARATOR
-              + dnode.getLocalName()));
+              : DiffType.CREATE, fullPath));
           d++;
         }
       }
       for (; d < deleted.size(); d++) {
+        fullPath[fullPath.length - 1] = deleted.get(d).getLocalNameBytes();
         dList.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
-            : DiffType.CREATE, parent.getFullPathName() + Path.SEPARATOR
-            + deleted.get(d).getLocalName()));
+            : DiffType.CREATE, fullPath));
       }
       for (; c < created.size(); c++) {
+        fullPath[fullPath.length - 1] = created.get(c).getLocalNameBytes();
         cList.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
-            : DiffType.DELETE, parent.getFullPathName() + Path.SEPARATOR
-            + created.get(c).getLocalName()));
+            : DiffType.DELETE, fullPath));
       }
-      cList.addAll(dList);
-      cList.addAll(mList);
-      return cList;
+      dList.addAll(cList);
+      return dList;
     }
   }
   
@@ -329,35 +338,27 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       Snapshot toSnapshot, ChildrenDiff diff) {
     Snapshot earlierSnapshot = fromSnapshot;
     Snapshot laterSnapshot = toSnapshot;
-    if (fromSnapshot == null
-        || (toSnapshot != null && Snapshot.ID_COMPARATOR.compare(fromSnapshot,
-            toSnapshot) > 0)) {
+    if (Snapshot.ID_COMPARATOR.compare(fromSnapshot, toSnapshot) > 0) {
       earlierSnapshot = toSnapshot;
       laterSnapshot = fromSnapshot;
+    }
+    
+    boolean modified = diffs.changedBetweenSnapshots(earlierSnapshot,
+        laterSnapshot);
+    if (!modified) {
+      return false;
     }
     
     final List<DirectoryDiff> difflist = diffs.asList();
     final int size = difflist.size();
     int earlierDiffIndex = Collections.binarySearch(difflist, earlierSnapshot);
-    if (earlierDiffIndex < 0 && (-earlierDiffIndex - 1) == size) {
-      // if the earlierSnapshot is after the latest SnapshotDiff stored in diffs,
-      // no modification happened after the earlierSnapshot
-      return false;
-    }
-    int laterDiffIndex = size;
-    if (laterSnapshot != null) {
-      laterDiffIndex = Collections.binarySearch(difflist, laterSnapshot);
-      if (laterDiffIndex == -1 || laterDiffIndex == 0) {
-        // if the endSnapshot is the earliest SnapshotDiff stored in
-        // diffs, or before it, no modification happened before the endSnapshot
-        return false;
-      }
-    }
-    
+    int laterDiffIndex = laterSnapshot == null ? size : Collections
+        .binarySearch(difflist, laterSnapshot);
     earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
         : earlierDiffIndex;
     laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
         : laterDiffIndex;
+    
     boolean dirMetadataChanged = false;
     INodeDirectory dirCopy = null;
     for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {

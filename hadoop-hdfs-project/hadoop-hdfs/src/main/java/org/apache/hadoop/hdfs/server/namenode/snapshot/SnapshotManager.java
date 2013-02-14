@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
@@ -225,8 +224,9 @@ public class SnapshotManager implements SnapshotStats {
             dir.getModificationTime(), dir.getAccessTime(),
             dir.getFsPermission(), dir.getUserName(), dir.getGroupName(),
             dir.getLocalNameBytes(), dir.getId(), dir.getNumSnapshots(),
-            dir.getSnapshotQuota(), dir.getParent() == null ? INode.EMPTY_BYTES
-                : DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
+            dir.getSnapshotQuota(), dir.getParent() == null ? 
+                DFSUtil.EMPTY_BYTES : 
+                DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
         statusList.add(status);
       }
     }

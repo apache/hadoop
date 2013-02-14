@@ -27,6 +27,7 @@ import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -43,6 +44,7 @@ import org.junit.Test;
 public class TestSnapshotDiffReport {
   protected static final long seed = 0;
   protected static final short REPLICATION = 3;
+  protected static final short REPLICATION_1 = 2;
   protected static final long BLOCKSIZE = 1024;
   public static final int SNAPSHOTNUMBER = 10;
   
@@ -92,14 +94,10 @@ public class TestSnapshotDiffReport {
     Path file13 = new Path(modifyDir, "file13");
     Path file14 = new Path(modifyDir, "file14");
     Path file15 = new Path(modifyDir, "file15");
-    DFSTestUtil.createFile(hdfs, file10, BLOCKSIZE, (short) (REPLICATION - 1),
-        seed);
-    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, (short) (REPLICATION - 1),
-        seed);
-    DFSTestUtil.createFile(hdfs, file12, BLOCKSIZE, (short) (REPLICATION - 1),
-        seed);
-    DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, (short) (REPLICATION - 1),
-        seed);
+    DFSTestUtil.createFile(hdfs, file10, BLOCKSIZE, REPLICATION_1, seed);
+    DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION_1, seed);
+    DFSTestUtil.createFile(hdfs, file12, BLOCKSIZE, REPLICATION_1, seed);
+    DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, REPLICATION_1, seed);
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.allowSnapshot(snapshotDir.toString());
@@ -161,18 +159,17 @@ public class TestSnapshotDiffReport {
       } else if (entry.getType() == DiffType.DELETE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.CREATE, entry.getFullPath())));
+            new DiffReportEntry(DiffType.CREATE, entry.getRelativePath())));
       } else if (entry.getType() == DiffType.CREATE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.DELETE, entry.getFullPath())));
+            new DiffReportEntry(DiffType.DELETE, entry.getRelativePath())));
       }
     }
   }
   
   /** Test the computation and representation of diff between snapshots */
-//  TODO: fix diff report
-//  @Test
+  @Test
   public void testDiffReport() throws Exception {
     Path subsub1 = new Path(sub1, "subsub1");
     Path subsubsub1 = new Path(subsub1, "subsubsub1");
@@ -203,56 +200,94 @@ public class TestSnapshotDiffReport {
     assertEquals(0, report.getDiffList().size());
     
     verifyDiffReport(sub1, "s0", "s2", 
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1"),
-        new DiffReportEntry(DiffType.CREATE, "/TestSnapshot/sub1/file15"),
-        new DiffReportEntry(DiffType.DELETE, "/TestSnapshot/sub1/file12"),
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file11"),
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file13"));
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")));
 
     verifyDiffReport(sub1, "s0", "s5", 
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1"),
-        new DiffReportEntry(DiffType.CREATE, "/TestSnapshot/sub1/file15"),
-        new DiffReportEntry(DiffType.DELETE, "/TestSnapshot/sub1/file12"),
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file10"),
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file11"),
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file13"),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
         new DiffReportEntry(DiffType.MODIFY,
-            "/TestSnapshot/sub1/subsub1/subsubsub1"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file10"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file11"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file13"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file15"));
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
     
     verifyDiffReport(sub1, "s2", "s5",
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1"),
-        new DiffReportEntry(DiffType.MODIFY, "/TestSnapshot/sub1/file10"),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
         new DiffReportEntry(DiffType.MODIFY,
-            "/TestSnapshot/sub1/subsub1/subsubsub1"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file10"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file11"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file13"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file15"));
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
     
     verifyDiffReport(sub1, "s3", "",
         new DiffReportEntry(DiffType.MODIFY,
-            "/TestSnapshot/sub1/subsub1/subsubsub1"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1")),
         new DiffReportEntry(DiffType.CREATE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file15"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
         new DiffReportEntry(DiffType.DELETE,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file12"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
         new DiffReportEntry(DiffType.MODIFY,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file10"),
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.MODIFY,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file11"),
-        new DiffReportEntry(DiffType.MODIFY,
-            "/TestSnapshot/sub1/subsub1/subsubsub1/file13"));
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")));
   }
+  
+  /**
+   * Make changes under a sub-directory, then delete the sub-directory. Make
+   * sure the diff report computation correctly retrieve the diff from the
+   * deleted sub-directory.
+   */
+  @Test
+  public void testDiffReport2() throws Exception {
+    Path subsub1 = new Path(sub1, "subsub1");
+    Path subsubsub1 = new Path(subsub1, "subsubsub1");
+    hdfs.mkdirs(subsubsub1);
+    modifyAndCreateSnapshot(subsubsub1, new Path[]{sub1});
+    
+    // delete subsub1
+    hdfs.delete(subsub1, true);
+    // check diff report between s0 and s2
+    verifyDiffReport(sub1, "s0", "s2", 
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/subsubsub1")), 
+        new DiffReportEntry(DiffType.CREATE, 
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(DiffType.MODIFY,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")));
+    // check diff report between s0 and the current status
+    verifyDiffReport(sub1, "s0", "", 
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("subsub1")));
+  }
+  
 }

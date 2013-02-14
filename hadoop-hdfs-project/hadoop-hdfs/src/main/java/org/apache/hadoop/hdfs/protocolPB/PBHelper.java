@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -299,8 +300,8 @@ public class PBHelper {
 
   public static BlockKeyProto convert(BlockKey key) {
     byte[] encodedKey = key.getEncodedKey();
-    ByteString keyBytes = ByteString.copyFrom(encodedKey == null ? new byte[0]
-        : encodedKey);
+    ByteString keyBytes = ByteString.copyFrom(encodedKey == null ? 
+        DFSUtil.EMPTY_BYTES : encodedKey);
     return BlockKeyProto.newBuilder().setKeyId(key.getKeyId())
         .setKeyBytes(keyBytes).setExpiryDate(key.getExpiryDate()).build();
   }
@@ -1119,8 +1120,8 @@ public class PBHelper {
     int snapshotNumber = status.getSnapshotNumber();
     int snapshotQuota = status.getSnapshotQuota();
     byte[] parentFullPath = status.getParentFullPath();
-    ByteString parentFullPathBytes = ByteString
-        .copyFrom(parentFullPath == null ? new byte[0] : parentFullPath);
+    ByteString parentFullPathBytes = ByteString.copyFrom(
+        parentFullPath == null ? DFSUtil.EMPTY_BYTES : parentFullPath);
     HdfsFileStatusProto fs = convert(status.getDirStatus());
     SnapshottableDirectoryStatusProto.Builder builder = 
         SnapshottableDirectoryStatusProto
@@ -1411,20 +1412,23 @@ public class PBHelper {
     }
     DiffType type = DiffType.getTypeFromLabel(entry
         .getModificationLabel());
-    return type != null ? new DiffReportEntry(type, entry.getFullpath())
-        : null;
+    return type == null ? null : 
+      new DiffReportEntry(type, entry.getFullpath().toByteArray());
   }
   
   public static SnapshotDiffReportEntryProto convert(DiffReportEntry entry) {
     if (entry == null) {
       return null;
     }
-    String fullPath = entry.getFullPath();
+    byte[] fullPath = entry.getRelativePath();
+    ByteString fullPathString = ByteString
+        .copyFrom(fullPath == null ? DFSUtil.EMPTY_BYTES : fullPath);
+    
     String modification = entry.getType().getLabel();
     
     SnapshotDiffReportEntryProto entryProto = SnapshotDiffReportEntryProto
-        .newBuilder().setFullpath(fullPath).setModificationLabel(modification)
-        .build();
+        .newBuilder().setFullpath(fullPathString)
+        .setModificationLabel(modification).build();
     return entryProto;
   }
   

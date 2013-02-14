@@ -236,14 +236,15 @@ public class FSImageSerialization {
   /**
    * Save one inode's attributes to the image.
    */
-  public static void saveINode2Image(INode node, DataOutputStream out)
+  public static void saveINode2Image(INode node, DataOutputStream out,
+      boolean writeUnderConstruction)
       throws IOException {
     if (node.isDirectory()) {
       writeINodeDirectory((INodeDirectory) node, out);
     } else if (node.isSymlink()) {
       writeINodeSymlink((INodeSymlink) node, out);      
     } else {
-      writeINodeFile((INodeFile) node, out, false);
+      writeINodeFile((INodeFile) node, out, writeUnderConstruction);
     }
   }
 

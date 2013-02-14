@@ -234,7 +234,7 @@ message SnapshottableDirectoryListingProto {
  * Snapshot diff report entry
  */
 message SnapshotDiffReportEntryProto {
-  required string fullpath = 1;
+  required bytes fullpath = 1;
   required string modificationLabel = 2;
 }
 
