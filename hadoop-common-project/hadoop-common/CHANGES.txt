@@ -37,6 +37,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
     the map. (Karthik Kambatla via tomwhite)
 
+    HADOOP-9304. remove addition of avro genreated-sources dirs to build. (tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
