@@ -13,6 +13,9 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9253. Capture ulimit info in the logs at service start time.
     (Arpit Gupta via suresh)
 
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

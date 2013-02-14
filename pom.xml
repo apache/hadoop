@@ -91,6 +91,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>hadoop-project</module>
     <module>hadoop-project-dist</module>
     <module>hadoop-assemblies</module>
+    <module>hadoop-maven-plugins</module>
     <module>hadoop-common-project</module>
     <module>hadoop-hdfs-project</module>
     <module>hadoop-yarn-project</module>
