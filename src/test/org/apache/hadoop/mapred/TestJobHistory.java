@@ -1322,6 +1322,7 @@ public class TestJobHistory extends TestCase {
 
     try {
       Calendar runTime = Calendar.getInstance();
+      runTime.clear();
       runTime.set(2013, 1, 8, 12, 0);
       long runTimeMillis = runTime.getTimeInMillis();
       

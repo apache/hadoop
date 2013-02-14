@@ -2606,6 +2606,7 @@ public class JobHistory {
    */
   static long directoryTime(String year, String month, String day) {
     Calendar result = Calendar.getInstance();
+    result.clear();
 
     result.set(Calendar.YEAR, Integer.parseInt(year));
 
@@ -2618,8 +2619,7 @@ public class JobHistory {
     
     // truncate to day granularity
     long timeInMillis = result.getTimeInMillis();
-    return timeInMillis - 
-        timeInMillis % HistoryCleaner.ONE_DAY_IN_MS;
+    return timeInMillis;
   }
   
   /**
@@ -2673,7 +2673,11 @@ public class JobHistory {
         // any file with a timestamp earlier than cutoff should be deleted
         long cutoff = now - maxAgeOfHistoryFiles;
         Calendar cutoffDay = Calendar.getInstance();
-        cutoffDay.setTimeInMillis(cutoff - cutoff % ONE_DAY_IN_MS);
+        cutoffDay.setTimeInMillis(cutoff);
+        cutoffDay.set(Calendar.HOUR_OF_DAY, 0);
+        cutoffDay.set(Calendar.MINUTE, 0);
+        cutoffDay.set(Calendar.SECOND, 0);
+        cutoffDay.set(Calendar.MILLISECOND, 0);
         
         // find directories older than the maximum age
         for (int i = 0; i < datedDirectories.length; ++i) {
