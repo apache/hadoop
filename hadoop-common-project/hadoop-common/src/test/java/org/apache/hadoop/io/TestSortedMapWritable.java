@@ -164,4 +164,18 @@ public class TestSortedMapWritable {
     assertTrue(failureReason, !mapA.equals(mapB));
     assertTrue(failureReason, !mapB.equals(mapA));
   }
+
+  @Test(timeout = 1000)
+  public void testPutAll() {
+    SortedMapWritable map1 = new SortedMapWritable();
+    SortedMapWritable map2 = new SortedMapWritable();
+    map1.put(new Text("key"), new Text("value"));
+    map2.putAll(map1);
+
+    assertEquals("map1 entries don't match map2 entries", map1, map2);
+    assertTrue(
+        "map2 doesn't have class information from map1",
+        map2.classToIdMap.containsKey(Text.class)
+            && map2.idToClassMap.containsValue(Text.class));
+  }
 }
