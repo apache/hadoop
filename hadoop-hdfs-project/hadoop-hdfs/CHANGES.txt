@@ -317,6 +317,10 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4471. Namenode WebUI file browsing does not work with wildcard
     addresses configured. (Andrew Wang via atm)
 
+    HDFS-4342. Directories configured in dfs.namenode.edits.dir.required
+    but not in dfs.namenode.edits.dir are silently ignored.  (Arpit Agarwal
+    via szetszwo)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
@@ -2291,6 +2295,9 @@ Release 0.23.7 - UNRELEASED
   BUG FIXES
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
+
+    HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
+    (kihwal)
 
 Release 0.23.6 - UNRELEASED
 

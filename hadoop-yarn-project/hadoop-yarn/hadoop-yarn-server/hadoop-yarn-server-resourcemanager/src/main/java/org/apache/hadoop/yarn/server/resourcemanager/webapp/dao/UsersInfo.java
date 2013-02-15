@@ -15,9 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module org.apache.hadoop.record {
-    class RecInt {
-        int data;
-    }
-}
 
+package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
+
+import java.util.ArrayList;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
+
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
+public class UsersInfo {
+  @XmlElement(name="user")
+  protected ArrayList<UserInfo> usersList = new ArrayList<UserInfo>();
+
+  public UsersInfo() {
+  }
+
+  public UsersInfo(ArrayList<UserInfo> usersList) {
+    this.usersList = usersList;
+  }
+
+  public ArrayList<UserInfo> getUsersList() {
+    return usersList;
+  }
+}

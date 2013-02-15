@@ -35,6 +35,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-377. Use the new StringUtils methods added by HADOOP-9252 and fix
     TestContainersMonitor.  (Chris Nauroth via szetszwo)
 
+    YARN-391. Formatting fixes for LCEResourceHandler classes.
+    (Steve Loughran via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
@@ -309,6 +312,9 @@ Release 0.23.7 - UNRELEASED
 
     YARN-133 Update web services docs for RM clusterMetrics (Ravi Prakash via
     kihwal)
+
+    YARN-249. Capacity Scheduler web page should show list of active users per 
+    queue like it used to (in 1.x) (Ravi Prakash via tgraves)
 
   OPTIMIZATIONS
 

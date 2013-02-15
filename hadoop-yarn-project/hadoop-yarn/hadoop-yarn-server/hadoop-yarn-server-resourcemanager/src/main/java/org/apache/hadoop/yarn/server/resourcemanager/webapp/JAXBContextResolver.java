@@ -30,6 +30,7 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
@@ -42,9 +43,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UsersInfo;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 
 @Singleton
@@ -61,7 +64,8 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
       SchedulerTypeInfo.class, NodeInfo.class, UserMetricsInfo.class,
       CapacitySchedulerInfo.class, ClusterMetricsInfo.class,
       SchedulerInfo.class, AppsInfo.class, NodesInfo.class,
-      RemoteExceptionData.class, CapacitySchedulerQueueInfoList.class};
+      RemoteExceptionData.class, CapacitySchedulerQueueInfoList.class,
+      ResourceInfo.class, UsersInfo.class, UserInfo.class};
 
   public JAXBContextResolver() throws Exception {
     this.types = new HashSet<Class>(Arrays.asList(cTypes));

@@ -80,17 +80,17 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
             NM_LINUX_CONTAINER_CGROUPS_MOUNT, false);
     this.cgroupMountPath = conf.get(YarnConfiguration.
             NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, null);
-	
+
     // remove extra /'s at end or start of cgroupPrefix
     if (cgroupPrefix.charAt(0) == '/') {
-    	cgroupPrefix = cgroupPrefix.substring(1);
+      cgroupPrefix = cgroupPrefix.substring(1);
     }
 
     int len = cgroupPrefix.length();
     if (cgroupPrefix.charAt(len - 1) == '/') {
-    	cgroupPrefix = cgroupPrefix.substring(0, len - 1);
+      cgroupPrefix = cgroupPrefix.substring(0, len - 1);
     }
-   
+  
     // mount cgroups if requested
     if (cgroupMount && cgroupMountPath != null) {
       ArrayList<String> cgroupKVs = new ArrayList<String>();
@@ -98,14 +98,14 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
                     CONTROLLER_CPU);
       lce.mountCgroups(cgroupKVs, cgroupPrefix);
     }
-    
+
     initializeControllerPaths();
   }
 
 
   boolean isCpuWeightEnabled() {
     return this.cpuWeightEnabled;
-  }	
+  }
 
   /*
    * Next four functions are for an individual cgroup.
@@ -155,7 +155,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
         }
       }
     }
-  }	
+  }
 
   private void deleteCgroup(String controller, String groupName) {
     String path = pathForCgroup(controller, groupName);
@@ -165,7 +165,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     if (! new File(path).delete()) {
       LOG.warn("Unable to delete cgroup at: " + path);
     }
-  }	
+  }
 
   /*
    * Next three functions operate on all the resources we are enforcing.
@@ -178,7 +178,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   private void setupLimits(ContainerId containerId,
                            Resource containerResource) throws IOException {
     String containerName = containerId.toString();
-    
+
     if (isCpuWeightEnabled()) {
       createCgroup(CONTROLLER_CPU, containerName);
       updateCgroup(CONTROLLER_CPU, containerName, "shares",
@@ -202,7 +202,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
     if (isCpuWeightEnabled()) {
       deleteCgroup(CONTROLLER_CPU, containerName);
-    }	
+    }
   }
 
   /*
@@ -222,7 +222,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     String containerName = containerId.toString();
 
     StringBuilder sb = new StringBuilder("cgroups=");
-    
+
     if (isCpuWeightEnabled()) {
       sb.append(pathForCgroup(CONTROLLER_CPU, containerName) + "/cgroup.procs");
       sb.append(",");
@@ -231,7 +231,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     if (sb.charAt(sb.length() - 1) == ',') {
       sb.deleteCharAt(sb.length() - 1);
     }
-    
+
     return sb.toString();
   }
 
@@ -255,8 +255,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     BufferedReader in = null;
 
     try {
-      in = new BufferedReader(new FileReader(new File(MTAB_FILE)));	
-    	
+      in = new BufferedReader(new FileReader(new File(MTAB_FILE)));
+
       for (String str = in.readLine(); str != null;
           str = in.readLine()) {
         Matcher m = MTAB_FILE_FORMAT.matcher(str);
@@ -316,6 +316,6 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     } else {
       throw new IOException("Not able to enforce cpu weights; cannot find "
           + "cgroup for cpu controller in " + MTAB_FILE);
-    }	
+    }
   }
 }

@@ -78,6 +78,7 @@ import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
@@ -781,6 +782,26 @@ public class NameNode {
   }
 
   /**
+   * Clone the supplied configuration but remove the shared edits dirs.
+   *
+   * @param conf Supplies the original configuration.
+   * @return Cloned configuration without the shared edit dirs.
+   * @throws IOException on failure to generate the configuration.
+   */
+  private static Configuration getConfigurationWithoutSharedEdits(
+      Configuration conf)
+      throws IOException {
+    List<URI> editsDirs = FSNamesystem.getNamespaceEditsDirs(conf, false);
+    String editsDirsString = Joiner.on(",").join(editsDirs);
+
+    Configuration confWithoutShared = new Configuration(conf);
+    confWithoutShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+    confWithoutShared.setStrings(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        editsDirsString);
+    return confWithoutShared;
+  }
+
+  /**
    * Format a new shared edits dir and copy in enough edit log segments so that
    * the standby NN can start up.
    * 
@@ -809,11 +830,8 @@ public class NameNode {
 
     NNStorage existingStorage = null;
     try {
-      Configuration confWithoutShared = new Configuration(conf);
-      confWithoutShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
-      FSNamesystem fsns = FSNamesystem.loadFromDisk(confWithoutShared,
-          FSNamesystem.getNamespaceDirs(conf),
-          FSNamesystem.getNamespaceEditsDirs(conf, false));
+      FSNamesystem fsns =
+          FSNamesystem.loadFromDisk(getConfigurationWithoutSharedEdits(conf));
       
       existingStorage = fsns.getFSImage().getStorage();
       NamespaceInfo nsInfo = existingStorage.getNamespaceInfo();

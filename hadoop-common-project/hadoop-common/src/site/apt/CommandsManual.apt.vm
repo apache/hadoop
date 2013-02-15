@@ -350,10 +350,11 @@ Administration Commands
 
    Runs a HDFS dfsadmin client.
 
-   Usage: <<<hadoop dfsadmin [GENERIC_OPTIONS] [-report] [-safemode enter | leave | get | wait] [-refreshNodes] [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] [-setQuota <quota> <dirname>...<dirname>] [-clrQuota <dirname>...<dirname>] [-help [cmd]]>>>
+   Usage: <<<hadoop dfsadmin [GENERIC_OPTIONS] [-report] [-safemode enter | leave | get | wait] [-refreshNodes] [-finalizeUpgrade] [-upgradeProgress status | details | force] [-metasave filename] [-setQuota <quota> <dirname>...<dirname>] [-clrQuota <dirname>...<dirname>] [-restoreFailedStorage true|false|check] [-help [cmd]]>>>
 
 *-----------------+-----------------------------------------------------------+
 || COMMAND_OPTION || Description
+*-----------------+-----------------------------------------------------------+
 | -report         | Reports basic filesystem information and statistics.
 *-----------------+-----------------------------------------------------------+
 | -safemode enter / leave / get / wait | Safe mode maintenance command. Safe
@@ -402,6 +403,10 @@ Administration Commands
                   | 1. the directory does not exist or is a file, or \
                   | 2. user is not an administrator.  It does not fault if the
                   | directory has no quota.
+*-----------------+-----------------------------------------------------------+
+| -restoreFailedStorage true / false / check | This option will turn on/off automatic attempt to restore failed storage replicas.
+                  | If a failed storage becomes available again the system will attempt to restore
+                  | edits and/or fsimage during checkpoint. 'check' option will return current setting.
 *-----------------+-----------------------------------------------------------+
 | -help [cmd]     | Displays help for the given command or all commands if none
                   | is specified.
