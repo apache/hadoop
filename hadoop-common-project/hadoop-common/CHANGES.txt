@@ -148,6 +148,8 @@ Trunk (Unreleased)
 
     HADOOP-9277. Improve javadoc for FileContext. (Andrew Wang via suresh)
 
+    HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
