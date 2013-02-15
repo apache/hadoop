@@ -286,6 +286,10 @@
       <!-- protobuf generated code -->
       <Class name="~org\.apache\.hadoop\.security\.proto\.SecurityProtos.*"/>
     </Match>
+    <Match>
+      <!-- protobuf generated code -->
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.TestProtos.*"/>
+    </Match>
 
     <!--
        Manually checked, misses child thread manually syncing on parent's intrinsic lock.

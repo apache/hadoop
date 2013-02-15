@@ -140,6 +140,7 @@ public class HsTasksBlock extends HtmlBlock {
         attemptFinishTime = ta.getFinishTime();
         attemptElapsed = ta.getElapsedTime();
       }
+
       tasksTableData.append("[\"")
       .append("<a href='" + url("task", tid)).append("'>")
       .append(tid).append("</a>\",\"")
@@ -205,9 +206,4 @@ public class HsTasksBlock extends HtmlBlock {
 
     footRow._()._()._();
   }
-
-  private String formatTime(long elapsed) {
-    return elapsed < 0 ? "N/A" : StringUtils.formatTime(elapsed);
-  }
-
 }

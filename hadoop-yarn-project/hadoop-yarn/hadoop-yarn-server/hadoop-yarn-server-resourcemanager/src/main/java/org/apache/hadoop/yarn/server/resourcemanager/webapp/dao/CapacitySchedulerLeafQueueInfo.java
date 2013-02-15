@@ -35,6 +35,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected int maxActiveApplications;
   protected int maxActiveApplicationsPerUser;
   protected int userLimit;
+  protected UsersInfo users; // To add another level in the XML
   protected float userLimitFactor;
 
   CapacitySchedulerLeafQueueInfo() {
@@ -50,6 +51,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     maxActiveApplications = q.getMaximumActiveApplications();
     maxActiveApplicationsPerUser = q.getMaximumActiveApplicationsPerUser();
     userLimit = q.getUserLimit();
+    users = new UsersInfo(q.getUsers());
     userLimitFactor = q.getUserLimitFactor();
   }
 
@@ -83,6 +85,11 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public int getUserLimit() {
     return userLimit;
+  }
+
+  //Placing here because of JERSEY-1199
+  public UsersInfo getUsers() {
+    return users;
   }
 
   public float getUserLimitFactor() {

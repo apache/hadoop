@@ -378,6 +378,8 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of sub-queue information|
 *---------------+--------------+-------------------------------+
+| resourcesUsed | A single resource object | The total amount of resources used by this queue |
+*---------------+--------------+-------------------------------+
 
 ** Elements of the queues object for a Leaf queue - contains all elements in parent plus the following:
 
@@ -404,6 +406,32 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | userLimitFactor | float | The user limit factor set in the configuration |
 *---------------+--------------+-------------------------------+
+| users | array of users(JSON)/zero or more user objects(XML) | A collection of user objects containing resources used |
+*---------------+--------------+-------------------------------+
+
+** Elements of the user object for users:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| username | String | The username of the user using the resources |
+*---------------+--------------+-------------------------------+
+| resourcesUsed | A single resource object | The amount of resources used by the user in this queue |
+*---------------+--------------+-------------------------------+
+| numActiveApplications | int | The number of active applications for this user in this queue |
+*---------------+--------------+-------------------------------+
+| numPendingApplications | int | The number of pending applications for this user in this queue |
+*---------------+--------------+-------------------------------+
+
+** Elements of the resource object for resourcesUsed in user and queues:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                   |
+*---------------+--------------+-------------------------------+
+| memory | int | The amount of memory used (in MB) |
+*---------------+--------------+-------------------------------+
+| vCores | int | The number of virtual cores |
+*---------------+--------------+-------------------------------+
 
 *** Response Examples
 
@@ -428,199 +456,262 @@ ResourceManager REST API's.
 
 +---+
 {
-   "scheduler" : {
-      "schedulerInfo" : {
-         "queueName" : "root",
-         "maxCapacity" : 100,
-         "type" : "capacityScheduler",
-         "queues" : {
-            "queue" : [
-               {
-                  "numPendingApplications" : 0,
-                  "queueName" : "default",
-                  "userLimitFactor" : 1,
-                  "maxApplications" : 1,
-                  "usedCapacity" : 0,
-                  "numContainers" : 0,
-                  "state" : "RUNNING",
-                  "maxCapacity" : 90,
-                  "numApplications" : 0,
-                  "usedResources" : "memory: 0",
-                  "absoluteMaxCapacity" : 90,
-                  "maxActiveApplications" : 1,
-                  "numActiveApplications" : 0,
-                  "absoluteUsedCapacity" : 0,
-                  "userLimit" : 100,
-                  "absoluteCapacity" : 70,
-                  "maxActiveApplicationsPerUser" : 1,
-                  "capacity" : 70,
-                  "type" : "capacitySchedulerLeafQueueInfo",
-                  "maxApplicationsPerUser" : 1
-               },
-               {
-                  "queueName" : "test",
-                  "absoluteCapacity" : 20,
-                  "usedCapacity" : 0,
-                  "capacity" : 20,
-                  "state" : "RUNNING",
-                  "maxCapacity" : 100,
-                  "numApplications" : 0,
-                  "usedResources" : "memory: 0",
-                  "absoluteMaxCapacity" : 100,
-                  "queues" : {
-                     "queue" : [
-                        {
-                           "queueName" : "a1",
-                           "absoluteCapacity" : 12,
-                           "usedCapacity" : 0,
-                           "capacity" : 60.000004,
-                           "state" : "RUNNING",
-                           "maxCapacity" : 100,
-                           "numApplications" : 0,
-                           "usedResources" : "memory: 0",
-                           "absoluteMaxCapacity" : 100,
-                           "queues" : {
-                              "queue" : [
-                                 {
-                                    "numPendingApplications" : 0,
-                                    "queueName" : "a11",
-                                    "userLimitFactor" : 1,
-                                    "maxApplications" : 0,
-                                    "usedCapacity" : 0,
-                                    "numContainers" : 0,
-                                    "state" : "RUNNING",
-                                    "maxCapacity" : 100,
-                                    "numApplications" : 0,
-                                    "usedResources" : "memory: 0",
-                                    "absoluteMaxCapacity" : 100,
-                                    "maxActiveApplications" : 1,
-                                    "numActiveApplications" : 0,
-                                    "absoluteUsedCapacity" : 0,
-                                    "userLimit" : 100,
-                                    "absoluteCapacity" : 10.200001,
-                                    "maxActiveApplicationsPerUser" : 1,
-                                    "capacity" : 85,
-                                    "type" : "capacitySchedulerLeafQueueInfo",
-                                    "maxApplicationsPerUser" : 0
-                                 },
-                                 {
-                                    "numPendingApplications" : 0,
-                                    "queueName" : "a12",
-                                    "userLimitFactor" : 1,
-                                    "maxApplications" : 0,
-                                    "usedCapacity" : 0,
-                                    "numContainers" : 0,
-                                    "state" : "RUNNING",
-                                    "maxCapacity" : 100,
-                                    "numApplications" : 0,
-                                    "usedResources" : "memory: 0",
-                                    "absoluteMaxCapacity" : 100,
-                                    "maxActiveApplications" : 1,
-                                    "numActiveApplications" : 0,
-                                    "absoluteUsedCapacity" : 0,
-                                    "userLimit" : 100,
-                                    "absoluteCapacity" : 1.8000001,
-                                    "maxActiveApplicationsPerUser" : 1,
-                                    "capacity" : 15.000001,
-                                    "type" : "capacitySchedulerLeafQueueInfo",
-                                    "maxApplicationsPerUser" : 0
-                                 }
-                              ]
-                           },
-                           "absoluteUsedCapacity" : 0
-                        },
-                        {
-                           "numPendingApplications" : 0,
-                           "queueName" : "a2",
-                           "userLimitFactor" : 1,
-                           "maxApplications" : 0,
-                           "usedCapacity" : 0,
-                           "numContainers" : 0,
-                           "state" : "RUNNING",
-                           "maxCapacity" : 100,
-                           "numApplications" : 0,
-                           "usedResources" : "memory: 0",
-                           "absoluteMaxCapacity" : 100,
-                           "maxActiveApplications" : 1,
-                           "numActiveApplications" : 0,
-                           "absoluteUsedCapacity" : 0,
-                           "userLimit" : 100,
-                           "absoluteCapacity" : 8.000001,
-                           "maxActiveApplicationsPerUser" : 1,
-                           "capacity" : 40,
-                           "type" : "capacitySchedulerLeafQueueInfo",
-                           "maxApplicationsPerUser" : 0
-                        }
-                     ]
-                  },
-                  "absoluteUsedCapacity" : 0
-               },
-               {
-                  "queueName" : "test2",
-                  "absoluteCapacity" : 10,
-                  "usedCapacity" : 0,
-                  "capacity" : 10,
-                  "state" : "RUNNING",
-                  "maxCapacity" : 15.000001,
-                  "numApplications" : 0,
-                  "usedResources" : "memory: 0",
-                  "absoluteMaxCapacity" : 15.000001,
-                  "queues" : {
-                     "queue" : [
-                        {
-                           "numPendingApplications" : 0,
-                           "queueName" : "a3",
-                           "userLimitFactor" : 1,
-                           "maxApplications" : 0,
-                           "usedCapacity" : 0,
-                           "numContainers" : 0,
-                           "state" : "RUNNING",
-                           "maxCapacity" : 100,
-                           "numApplications" : 0,
-                           "usedResources" : "memory: 0",
-                           "absoluteMaxCapacity" : 15.000001,
-                           "maxActiveApplications" : 1,
-                           "numActiveApplications" : 0,
-                           "absoluteUsedCapacity" : 0,
-                           "userLimit" : 100,
-                           "absoluteCapacity" : 9,
-                           "maxActiveApplicationsPerUser" : 1,
-                           "capacity" : 90,
-                           "type" : "capacitySchedulerLeafQueueInfo",
-                           "maxApplicationsPerUser" : 0
-                        },
-                        {
-                           "numPendingApplications" : 0,
-                           "queueName" : "a4",
-                           "userLimitFactor" : 1,
-                           "maxApplications" : 0,
-                           "usedCapacity" : 0,
-                           "numContainers" : 0,
-                           "state" : "RUNNING",
-                           "maxCapacity" : 100,
-                           "numApplications" : 0,
-                           "usedResources" : "memory: 0",
-                           "absoluteMaxCapacity" : 15.000001,
-                           "maxActiveApplications" : 1,
-                           "numActiveApplications" : 0,
-                           "absoluteUsedCapacity" : 0,
-                           "userLimit" : 100,
-                           "absoluteCapacity" : 1.0000001,
-                           "maxActiveApplicationsPerUser" : 1,
-                           "capacity" : 10,
-                           "type" : "capacitySchedulerLeafQueueInfo",
-                           "maxApplicationsPerUser" : 0
-                        }
-                     ]
-                  },
-                  "absoluteUsedCapacity" : 0
-               }
-            ]
-         },
-         "usedCapacity" : 0,
-         "capacity" : 100
-      }
-   }
+    "scheduler": {
+        "schedulerInfo": {
+            "capacity": 100.0, 
+            "maxCapacity": 100.0, 
+            "queueName": "root", 
+            "queues": {
+                "queue": [
+                    {
+                        "absoluteCapacity": 10.5, 
+                        "absoluteMaxCapacity": 50.0, 
+                        "absoluteUsedCapacity": 0.0, 
+                        "capacity": 10.5, 
+                        "maxCapacity": 50.0, 
+                        "numApplications": 0, 
+                        "queueName": "a", 
+                        "queues": {
+                            "queue": [
+                                {
+                                    "absoluteCapacity": 3.15, 
+                                    "absoluteMaxCapacity": 25.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 30.000002, 
+                                    "maxCapacity": 50.0, 
+                                    "numApplications": 0, 
+                                    "queueName": "a1", 
+                                    "queues": {
+                                        "queue": [
+                                            {
+                                                "absoluteCapacity": 2.6775, 
+                                                "absoluteMaxCapacity": 25.0, 
+                                                "absoluteUsedCapacity": 0.0, 
+                                                "capacity": 85.0, 
+                                                "maxActiveApplications": 1, 
+                                                "maxActiveApplicationsPerUser": 1, 
+                                                "maxApplications": 267, 
+                                                "maxApplicationsPerUser": 267, 
+                                                "maxCapacity": 100.0, 
+                                                "numActiveApplications": 0, 
+                                                "numApplications": 0, 
+                                                "numContainers": 0, 
+                                                "numPendingApplications": 0, 
+                                                "queueName": "a1a", 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "state": "RUNNING", 
+                                                "type": "capacitySchedulerLeafQueueInfo", 
+                                                "usedCapacity": 0.0, 
+                                                "usedResources": "<memory:0, vCores:0>", 
+                                                "userLimit": 100, 
+                                                "userLimitFactor": 1.0, 
+                                                "users": null
+                                            }, 
+                                            {
+                                                "absoluteCapacity": 0.47250003, 
+                                                "absoluteMaxCapacity": 25.0, 
+                                                "absoluteUsedCapacity": 0.0, 
+                                                "capacity": 15.000001, 
+                                                "maxActiveApplications": 1, 
+                                                "maxActiveApplicationsPerUser": 1, 
+                                                "maxApplications": 47, 
+                                                "maxApplicationsPerUser": 47, 
+                                                "maxCapacity": 100.0, 
+                                                "numActiveApplications": 0, 
+                                                "numApplications": 0, 
+                                                "numContainers": 0, 
+                                                "numPendingApplications": 0, 
+                                                "queueName": "a1b", 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "state": "RUNNING", 
+                                                "type": "capacitySchedulerLeafQueueInfo", 
+                                                "usedCapacity": 0.0, 
+                                                "usedResources": "<memory:0, vCores:0>", 
+                                                "userLimit": 100, 
+                                                "userLimitFactor": 1.0, 
+                                                "users": null
+                                            }
+                                        ]
+                                    }, 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>"
+                                }, 
+                                {
+                                    "absoluteCapacity": 7.35, 
+                                    "absoluteMaxCapacity": 50.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 70.0, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 735, 
+                                    "maxApplicationsPerUser": 73500, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 0, 
+                                    "numApplications": 0, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 0, 
+                                    "queueName": "a2", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": null
+                                }
+                            ]
+                        }, 
+                        "resourcesUsed": {
+                            "memory": 0, 
+                            "vCores": 0
+                        }, 
+                        "state": "RUNNING", 
+                        "usedCapacity": 0.0, 
+                        "usedResources": "<memory:0, vCores:0>"
+                    }, 
+                    {
+                        "absoluteCapacity": 89.5, 
+                        "absoluteMaxCapacity": 100.0, 
+                        "absoluteUsedCapacity": 0.0, 
+                        "capacity": 89.5, 
+                        "maxCapacity": 100.0, 
+                        "numApplications": 2, 
+                        "queueName": "b", 
+                        "queues": {
+                            "queue": [
+                                {
+                                    "absoluteCapacity": 53.7, 
+                                    "absoluteMaxCapacity": 100.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 60.000004, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 5370, 
+                                    "maxApplicationsPerUser": 537000, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 1, 
+                                    "numApplications": 2, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 1, 
+                                    "queueName": "b1", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": {
+                                        "user": [
+                                            {
+                                                "numActiveApplications": 0, 
+                                                "numPendingApplications": 1, 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "username": "user2"
+                                            }, 
+                                            {
+                                                "numActiveApplications": 1, 
+                                                "numPendingApplications": 0, 
+                                                "resourcesUsed": {
+                                                    "memory": 0, 
+                                                    "vCores": 0
+                                                }, 
+                                                "username": "user1"
+                                            }
+                                        ]
+                                    }
+                                }, 
+                                {
+                                    "absoluteCapacity": 35.3525, 
+                                    "absoluteMaxCapacity": 100.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 39.5, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 3535, 
+                                    "maxApplicationsPerUser": 353500, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 0, 
+                                    "numApplications": 0, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 0, 
+                                    "queueName": "b2", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": null
+                                }, 
+                                {
+                                    "absoluteCapacity": 0.4475, 
+                                    "absoluteMaxCapacity": 100.0, 
+                                    "absoluteUsedCapacity": 0.0, 
+                                    "capacity": 0.5, 
+                                    "maxActiveApplications": 1, 
+                                    "maxActiveApplicationsPerUser": 100, 
+                                    "maxApplications": 44, 
+                                    "maxApplicationsPerUser": 4400, 
+                                    "maxCapacity": 100.0, 
+                                    "numActiveApplications": 0, 
+                                    "numApplications": 0, 
+                                    "numContainers": 0, 
+                                    "numPendingApplications": 0, 
+                                    "queueName": "b3", 
+                                    "resourcesUsed": {
+                                        "memory": 0, 
+                                        "vCores": 0
+                                    }, 
+                                    "state": "RUNNING", 
+                                    "type": "capacitySchedulerLeafQueueInfo", 
+                                    "usedCapacity": 0.0, 
+                                    "usedResources": "<memory:0, vCores:0>", 
+                                    "userLimit": 100, 
+                                    "userLimitFactor": 100.0, 
+                                    "users": null
+                                }
+                            ]
+                        }, 
+                        "resourcesUsed": {
+                            "memory": 0, 
+                            "vCores": 0
+                        }, 
+                        "state": "RUNNING", 
+                        "usedCapacity": 0.0, 
+                        "usedResources": "<memory:0, vCores:0>"
+                    }
+                ]
+            }, 
+            "type": "capacityScheduler", 
+            "usedCapacity": 0.0
+        }
+    }
 }
 +---+
 
@@ -653,48 +744,27 @@ ResourceManager REST API's.
     <maxCapacity>100.0</maxCapacity>
     <queueName>root</queueName>
     <queues>
-      <queue xsi:type="capacitySchedulerLeafQueueInfo">
-        <capacity>70.0</capacity>
-        <usedCapacity>0.0</usedCapacity>
-        <maxCapacity>90.0</maxCapacity>
-        <absoluteCapacity>70.0</absoluteCapacity>
-        <absoluteMaxCapacity>90.0</absoluteMaxCapacity>
-        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-        <numApplications>0</numApplications>
-        <usedResources>memory: 0</usedResources>
-        <queueName>default</queueName>
-        <state>RUNNING</state>
-        <numActiveApplications>0</numActiveApplications>
-        <numPendingApplications>0</numPendingApplications>
-        <numContainers>0</numContainers>
-        <maxApplications>1</maxApplications>
-        <maxApplicationsPerUser>1</maxApplicationsPerUser>
-        <maxActiveApplications>1</maxActiveApplications>
-        <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
-        <userLimit>100</userLimit>
-        <userLimitFactor>1.0</userLimitFactor>
-      </queue>
       <queue>
-        <capacity>20.0</capacity>
+        <capacity>10.5</capacity>
         <usedCapacity>0.0</usedCapacity>
-        <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>20.0</absoluteCapacity>
-        <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+        <maxCapacity>50.0</maxCapacity>
+        <absoluteCapacity>10.5</absoluteCapacity>
+        <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
-        <usedResources>memory: 0</usedResources>
-        <queueName>test</queueName>
+        <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+        <queueName>a</queueName>
         <state>RUNNING</state>
         <queues>
           <queue>
-            <capacity>60.000004</capacity>
+            <capacity>30.000002</capacity>
             <usedCapacity>0.0</usedCapacity>
-            <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>12.0</absoluteCapacity>
-            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <maxCapacity>50.0</maxCapacity>
+            <absoluteCapacity>3.15</absoluteCapacity>
+            <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
-            <usedResources>memory: 0</usedResources>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>a1</queueName>
             <state>RUNNING</state>
             <queues>
@@ -702,124 +772,206 @@ ResourceManager REST API's.
                 <capacity>85.0</capacity>
                 <usedCapacity>0.0</usedCapacity>
                 <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>10.200001</absoluteCapacity>
-                <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+                <absoluteCapacity>2.6775</absoluteCapacity>
+                <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <numApplications>0</numApplications>
-                <usedResources>memory: 0</usedResources>
-                <queueName>a11</queueName>
+                <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+                <queueName>a1a</queueName>
                 <state>RUNNING</state>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
                 <numActiveApplications>0</numActiveApplications>
                 <numPendingApplications>0</numPendingApplications>
                 <numContainers>0</numContainers>
-                <maxApplications>0</maxApplications>
-                <maxApplicationsPerUser>0</maxApplicationsPerUser>
+                <maxApplications>267</maxApplications>
+                <maxApplicationsPerUser>267</maxApplicationsPerUser>
                 <maxActiveApplications>1</maxActiveApplications>
                 <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
                 <userLimit>100</userLimit>
+                <users/>
                 <userLimitFactor>1.0</userLimitFactor>
               </queue>
               <queue xsi:type="capacitySchedulerLeafQueueInfo">
                 <capacity>15.000001</capacity>
                 <usedCapacity>0.0</usedCapacity>
                 <maxCapacity>100.0</maxCapacity>
-                <absoluteCapacity>1.8000001</absoluteCapacity>
-                <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+                <absoluteCapacity>0.47250003</absoluteCapacity>
+                <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <numApplications>0</numApplications>
-                <usedResources>memory: 0</usedResources>
-                <queueName>a12</queueName>
+                <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+                <queueName>a1b</queueName>
                 <state>RUNNING</state>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
                 <numActiveApplications>0</numActiveApplications>
                 <numPendingApplications>0</numPendingApplications>
                 <numContainers>0</numContainers>
-                <maxApplications>0</maxApplications>
-                <maxApplicationsPerUser>0</maxApplicationsPerUser>
+                <maxApplications>47</maxApplications>
+                <maxApplicationsPerUser>47</maxApplicationsPerUser>
                 <maxActiveApplications>1</maxActiveApplications>
                 <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
                 <userLimit>100</userLimit>
+                <users/>
                 <userLimitFactor>1.0</userLimitFactor>
               </queue>
             </queues>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
           </queue>
           <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>40.0</capacity>
+            <capacity>70.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>8.000001</absoluteCapacity>
-            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <absoluteCapacity>7.35</absoluteCapacity>
+            <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
-            <usedResources>memory: 0</usedResources>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>a2</queueName>
             <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
             <numActiveApplications>0</numActiveApplications>
             <numPendingApplications>0</numPendingApplications>
             <numContainers>0</numContainers>
-            <maxApplications>0</maxApplications>
-            <maxApplicationsPerUser>0</maxApplicationsPerUser>
+            <maxApplications>735</maxApplications>
+            <maxApplicationsPerUser>73500</maxApplicationsPerUser>
             <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
             <userLimit>100</userLimit>
-            <userLimitFactor>1.0</userLimitFactor>
+            <users/>
+            <userLimitFactor>100.0</userLimitFactor>
           </queue>
         </queues>
+        <resourcesUsed>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resourcesUsed>
       </queue>
       <queue>
-        <capacity>10.0</capacity>
+        <capacity>89.5</capacity>
         <usedCapacity>0.0</usedCapacity>
-        <maxCapacity>15.000001</maxCapacity>
-        <absoluteCapacity>10.0</absoluteCapacity>
-        <absoluteMaxCapacity>15.000001</absoluteMaxCapacity>
+        <maxCapacity>100.0</maxCapacity>
+        <absoluteCapacity>89.5</absoluteCapacity>
+        <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-        <numApplications>0</numApplications>
-        <usedResources>memory: 0</usedResources>
-        <queueName>test2</queueName>
+        <numApplications>2</numApplications>
+        <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+        <queueName>b</queueName>
         <state>RUNNING</state>
         <queues>
           <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>90.0</capacity>
+            <capacity>60.000004</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>9.0</absoluteCapacity>
-            <absoluteMaxCapacity>15.000001</absoluteMaxCapacity>
+            <absoluteCapacity>53.7</absoluteCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
-            <numApplications>0</numApplications>
-            <usedResources>memory: 0</usedResources>
-            <queueName>a3</queueName>
+            <numApplications>2</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>b1</queueName>
             <state>RUNNING</state>
-            <numActiveApplications>0</numActiveApplications>
-            <numPendingApplications>0</numPendingApplications>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+            <numActiveApplications>1</numActiveApplications>
+            <numPendingApplications>1</numPendingApplications>
             <numContainers>0</numContainers>
-            <maxApplications>0</maxApplications>
-            <maxApplicationsPerUser>0</maxApplicationsPerUser>
+            <maxApplications>5370</maxApplications>
+            <maxApplicationsPerUser>537000</maxApplicationsPerUser>
             <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
             <userLimit>100</userLimit>
-            <userLimitFactor>1.0</userLimitFactor>
+            <users>
+              <user>
+                <username>user2</username>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
+                <numPendingApplications>1</numPendingApplications>
+                <numActiveApplications>0</numActiveApplications>
+              </user>
+              <user>
+                <username>user1</username>
+                <resourcesUsed>
+                  <memory>0</memory>
+                  <vCores>0</vCores>
+                </resourcesUsed>
+                <numPendingApplications>0</numPendingApplications>
+                <numActiveApplications>1</numActiveApplications>
+              </user>
+            </users>
+            <userLimitFactor>100.0</userLimitFactor>
           </queue>
           <queue xsi:type="capacitySchedulerLeafQueueInfo">
-            <capacity>10.0</capacity>
+            <capacity>39.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>1.0000001</absoluteCapacity>
-            <absoluteMaxCapacity>15.000001</absoluteMaxCapacity>
+            <absoluteCapacity>35.3525</absoluteCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
-            <usedResources>memory: 0</usedResources>
-            <queueName>a4</queueName>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>b2</queueName>
             <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
             <numActiveApplications>0</numActiveApplications>
             <numPendingApplications>0</numPendingApplications>
             <numContainers>0</numContainers>
-            <maxApplications>0</maxApplications>
-            <maxApplicationsPerUser>0</maxApplicationsPerUser>
+            <maxApplications>3535</maxApplications>
+            <maxApplicationsPerUser>353500</maxApplicationsPerUser>
             <maxActiveApplications>1</maxActiveApplications>
-            <maxActiveApplicationsPerUser>1</maxActiveApplicationsPerUser>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
             <userLimit>100</userLimit>
-            <userLimitFactor>1.0</userLimitFactor>
+            <users/>
+            <userLimitFactor>100.0</userLimitFactor>
+          </queue>
+          <queue xsi:type="capacitySchedulerLeafQueueInfo">
+            <capacity>0.5</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>0.4475</absoluteCapacity>
+            <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <numApplications>0</numApplications>
+            <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
+            <queueName>b3</queueName>
+            <state>RUNNING</state>
+            <resourcesUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+            </resourcesUsed>
+            <numActiveApplications>0</numActiveApplications>
+            <numPendingApplications>0</numPendingApplications>
+            <numContainers>0</numContainers>
+            <maxApplications>44</maxApplications>
+            <maxApplicationsPerUser>4400</maxApplicationsPerUser>
+            <maxActiveApplications>1</maxActiveApplications>
+            <maxActiveApplicationsPerUser>100</maxActiveApplicationsPerUser>
+            <userLimit>100</userLimit>
+            <users/>
+            <userLimitFactor>100.0</userLimitFactor>
           </queue>
         </queues>
+        <resourcesUsed>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resourcesUsed>
       </queue>
     </queues>
   </schedulerInfo>

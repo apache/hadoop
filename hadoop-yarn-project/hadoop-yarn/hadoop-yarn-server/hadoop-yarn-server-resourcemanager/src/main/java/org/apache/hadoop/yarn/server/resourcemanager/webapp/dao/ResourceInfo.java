@@ -15,9 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module org.apache.hadoop.record {
-    class RecString {
-        ustring data;
-    }
-}
 
+package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+
+import org.apache.hadoop.yarn.api.records.Resource;
+
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
+public class ResourceInfo {
+  int memory;
+  int vCores;
+  
+  public ResourceInfo() { 
+  }
+
+  public ResourceInfo(Resource res) {
+    memory = res.getMemory();
+    vCores = res.getVirtualCores();
+  }
+
+  public int getMemory() {
+    return memory;
+  }
+
+  public int getvCores() {
+    return vCores;
+  }
+}

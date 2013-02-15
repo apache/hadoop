@@ -33,7 +33,7 @@ public class DefaultLCEResourcesHandler implements LCEResourcesHandler {
   private Configuration conf;
   
   public DefaultLCEResourcesHandler() {
-  }	
+  }
   
   public void setConf(Configuration conf) {
         this.conf = conf;
@@ -42,7 +42,7 @@ public class DefaultLCEResourcesHandler implements LCEResourcesHandler {
   @Override
   public Configuration getConf() {
     return  conf;
-  }	
+  }
   
   public void init(LinuxContainerExecutor lce) {
   }

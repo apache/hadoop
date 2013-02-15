@@ -27,10 +27,12 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -44,6 +46,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
@@ -355,10 +358,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
   private void verifySubQueue(JSONObject info, String q, 
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 11;
+    int numExpectedElements = 12;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 20;
+      numExpectedElements = 22;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -397,6 +400,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       lqi.userLimit = info.getInt("userLimit");
       lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
       verifyLeafQueueGeneric(q, lqi);
+      // resourcesUsed and users (per-user resources used) are checked in
+      // testPerUserResource()
     }
   }
 
@@ -463,5 +468,144 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         info.userLimit);
     assertEquals("userLimitFactor doesn't match",
         csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
+  }
+
+  //Return a child Node of node with the tagname or null if none exists 
+  private Node getChildNodeByName(Node node, String tagname) {
+    NodeList nodeList = node.getChildNodes();
+    for (int i=0; i < nodeList.getLength(); ++i) {
+      if (nodeList.item(i).getNodeName().equals(tagname)) {
+        return nodeList.item(i);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Test per user resources and resourcesUsed elements in the web services XML
+   * @throws Exception
+   */
+  @Test
+  public void testPerUserResourcesXML() throws Exception {
+    //Start RM so that it accepts app submissions
+    rm.start();
+    try {
+      rm.submitApp(10, "app1", "user1", null, "b1");
+      rm.submitApp(20, "app2", "user2", null, "b1");
+
+      //Get the XML from ws/v1/cluster/scheduler
+      WebResource r = resource();
+      ClientResponse response = r.path("ws/v1/cluster/scheduler")
+        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+      String xml = response.getEntity(String.class);
+      DocumentBuilder db = DocumentBuilderFactory.newInstance()
+        .newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(xml));
+      //Parse the XML we got
+      Document dom = db.parse(is);
+
+      //Get all users elements (1 for each leaf queue)
+      NodeList allUsers = dom.getElementsByTagName("users");
+      for (int i=0; i<allUsers.getLength(); ++i) {
+        Node perUserResources = allUsers.item(i);
+        String queueName = getChildNodeByName(perUserResources
+          .getParentNode(), "queueName").getTextContent();
+        if (queueName.equals("b1")) {
+          //b1 should have two users (user1 and user2) which submitted jobs
+          assertEquals(2, perUserResources.getChildNodes().getLength());
+          NodeList users = perUserResources.getChildNodes();
+          for (int j=0; j<users.getLength(); ++j) {
+            Node user = users.item(j);
+            String username = getChildNodeByName(user, "username")
+              .getTextContent(); 
+            assertTrue(username.equals("user1") || username.equals("user2"));
+            //Should be a parsable integer
+            Integer.parseInt(getChildNodeByName(getChildNodeByName(user,
+              "resourcesUsed"), "memory").getTextContent());
+            Integer.parseInt(getChildNodeByName(user, "numActiveApplications")
+              .getTextContent());
+            Integer.parseInt(getChildNodeByName(user, "numPendingApplications")
+                .getTextContent());
+          }
+        } else {
+        //Queues other than b1 should have 0 users
+          assertEquals(0, perUserResources.getChildNodes().getLength());
+        }
+      }
+      NodeList allResourcesUsed = dom.getElementsByTagName("resourcesUsed");
+      for (int i=0; i<allResourcesUsed.getLength(); ++i) {
+        Node resourcesUsed = allResourcesUsed.item(i);
+        Integer.parseInt(getChildNodeByName(resourcesUsed, "memory")
+            .getTextContent());
+        Integer.parseInt(getChildNodeByName(resourcesUsed, "vCores")
+              .getTextContent());
+      }
+    } finally {
+      rm.stop();
+    }
+  }
+
+  private void checkResourcesUsed(JSONObject queue) throws JSONException {
+    queue.getJSONObject("resourcesUsed").getInt("memory");
+    queue.getJSONObject("resourcesUsed").getInt("vCores");
+  }
+
+  //Also checks resourcesUsed
+  private JSONObject getSubQueue(JSONObject queue, String subQueue)
+    throws JSONException {
+    JSONArray queues = queue.getJSONObject("queues").getJSONArray("queue");
+    for (int i=0; i<queues.length(); ++i) {
+      checkResourcesUsed(queues.getJSONObject(i));
+      if (queues.getJSONObject(i).getString("queueName").equals(subQueue) ) {
+        return queues.getJSONObject(i);
+      }
+    }
+    return null;
+  }
+
+  @Test
+  public void testPerUserResourcesJSON() throws Exception {
+    //Start RM so that it accepts app submissions
+    rm.start();
+    try {
+      rm.submitApp(10, "app1", "user1", null, "b1");
+      rm.submitApp(20, "app2", "user2", null, "b1");
+
+      //Get JSON
+      WebResource r = resource();
+      ClientResponse response = r.path("ws").path("v1").path("cluster")
+          .path("scheduler/").accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject json = response.getEntity(JSONObject.class);
+
+      JSONObject schedulerInfo = json.getJSONObject("scheduler").getJSONObject(
+        "schedulerInfo");
+      JSONObject b1 = getSubQueue(getSubQueue(schedulerInfo, "b"), "b1");
+      //Check users user1 and user2 exist in b1
+      JSONArray users = b1.getJSONObject("users").getJSONArray("user");
+      for (int i=0; i<2; ++i) {
+        JSONObject user = users.getJSONObject(i);
+        assertTrue("User isn't user1 or user2",user.getString("username")
+          .equals("user1") || user.getString("username").equals("user2"));
+        user.getInt("numActiveApplications");
+        user.getInt("numPendingApplications");
+        checkResourcesUsed(user);
+      }
+    } finally {
+      rm.stop();
+    }
+  }
+
+
+  @Test
+  public void testResourceInfo() {
+    Resource res = Resources.createResource(10, 1);
+    // If we add a new resource (e.g disks), then
+    // CapacitySchedulerPage and these RM WebServices + docs need to be updated
+    // eg. ResourceInfo
+    assertEquals("<memory:10, vCores:1>", res.toString());
   }
 }

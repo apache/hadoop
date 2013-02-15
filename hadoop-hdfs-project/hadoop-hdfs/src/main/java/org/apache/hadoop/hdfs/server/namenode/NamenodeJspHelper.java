@@ -25,6 +25,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -453,7 +454,13 @@ class NamenodeJspHelper {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();
     }
-    String addr = nn.getNameNodeAddressHostPortString();
+
+    InetSocketAddress rpcAddr = nn.getNameNodeAddress();
+    String rpcHost = rpcAddr.getAddress().isAnyLocalAddress()
+      ? URI.create(request.getRequestURL().toString()).getHost()
+      : rpcAddr.getAddress().getHostAddress();
+    String addr = rpcHost + ":" + rpcAddr.getPort();
+
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = HttpConfig.getSchemePrefix() + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="

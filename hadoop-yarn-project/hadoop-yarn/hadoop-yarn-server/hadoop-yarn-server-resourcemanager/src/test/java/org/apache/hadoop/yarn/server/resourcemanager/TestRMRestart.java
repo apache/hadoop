@@ -152,7 +152,7 @@ public class TestRMRestart {
         .getApplicationId());
     
     // create unmanaged app
-    RMApp appUnmanaged = rm1.submitApp(200, "", "", null, true);
+    RMApp appUnmanaged = rm1.submitApp(200, "someApp", "someUser", null, true, null);
     ApplicationAttemptId unmanagedAttemptId = 
                         appUnmanaged.getCurrentAppAttempt().getAppAttemptId();
     // assert appUnmanaged info is saved

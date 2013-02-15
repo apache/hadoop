@@ -293,6 +293,51 @@
               </source>
             </configuration>
           </execution>
+          <execution>
+            <id>compile-protoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>protoc</goal>
+            </goals>
+            <configuration>
+              <imports>
+                <param>${basedir}/src/main/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/main/proto</directory>
+                <includes>
+                  <include>HAServiceProtocol.proto</include>
+                  <include>IpcConnectionContext.proto</include>
+                  <include>ProtocolInfo.proto</include>
+                  <include>RpcHeader.proto</include>
+                  <include>ZKFCProtocol.proto</include>
+                  <include>ProtobufRpcEngine.proto</include>
+                  <include>Security.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-sources/java</output>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-test-protoc</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>protoc</goal>
+            </goals>
+            <configuration>
+              <imports>
+                <param>${basedir}/src/test/proto</param>
+              </imports>
+              <source>
+                <directory>${basedir}/src/test/proto</directory>
+                <includes>
+                  <include>test.proto</include>
+                  <include>test_rpc_service.proto</include>
+                </includes>
+              </source>
+              <output>${project.build.directory}/generated-test-sources/java</output>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -331,39 +376,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
-          <execution>
-            <id>create-protobuf-generated-sources-directory</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="target/generated-sources/java" />
-                <mkdir dir="target/generated-test-sources/java" />
-              </target>
-            </configuration>
-          </execution>
-          <execution>
-            <id>generate-test-sources</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-
-                <mkdir dir="${project.build.directory}/generated-test-sources/java"/>
-
-                <taskdef name="recordcc" classname="org.apache.hadoop.record.compiler.ant.RccTask">
-                  <classpath refid="maven.compile.classpath"/>
-                </taskdef>
-                <recordcc destdir="${project.build.directory}/generated-test-sources/java">
-                  <fileset dir="${basedir}/src/test/ddl" includes="**/*.jr"/>
-                </recordcc>
-              </target>
-            </configuration>
-          </execution>
           <execution>
             <id>create-log-dir</id>
             <phase>process-test-resources</phase>
@@ -413,79 +425,6 @@
                 <copy file="src/main/resources/core-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
               </tasks>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>compile-proto</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-Isrc/main/proto/</argument>
-                <argument>--java_out=target/generated-sources/java</argument>
-                <argument>src/main/proto/HAServiceProtocol.proto</argument>
-                <argument>src/main/proto/IpcConnectionContext.proto</argument>
-                <argument>src/main/proto/ProtocolInfo.proto</argument>
-                <argument>src/main/proto/RpcHeader.proto</argument>
-                <argument>src/main/proto/ZKFCProtocol.proto</argument>
-                <argument>src/main/proto/ProtobufRpcEngine.proto</argument>
-                <argument>src/main/proto/Security.proto</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-test-proto</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>protoc</executable>
-              <arguments>
-                <argument>-Isrc/test/proto/</argument>
-                <argument>--java_out=target/generated-test-sources/java</argument>
-                <argument>src/test/proto/test.proto</argument>
-                <argument>src/test/proto/test_rpc_service.proto</argument>
-              </arguments>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>add-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>add-test-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-test-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-test-sources/java</source>
-              </sources>
             </configuration>
           </execution>
         </executions>

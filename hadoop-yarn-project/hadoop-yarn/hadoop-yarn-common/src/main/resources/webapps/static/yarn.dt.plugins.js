@@ -74,19 +74,19 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
 }
 
 function renderHadoopDate(data, type, full) {
-  if (type === 'display') {
+  if (type === 'display' || type === 'filter') {
     if(data === '0') {
       return "N/A";
     }
     return new Date(parseInt(data)).toUTCString();
   }
-  // 'filter', 'sort', 'type' and undefined all just use the number
+  // 'sort', 'type' and undefined all just use the number
   // If date is 0, then for purposes of sorting it should be consider max_int
   return data === '0' ? '9007199254740992' : data;  
 }
 
 function renderHadoopElapsedTime(data, type, full) {
-  if (type === 'display') {
+  if (type === 'display' || type === 'filter') {
     var timeDiff = parseInt(data);
     if(timeDiff < 0)
       return "N/A";
@@ -110,18 +110,31 @@ function renderHadoopElapsedTime(data, type, full) {
     toReturn += "sec";
     return toReturn;
   }
-  // 'filter', 'sort', 'type' and undefined all just use the number
+  // 'sort', 'type' and undefined all just use the number
   return data;  
 }
 
 function parseHadoopID(data, type, full) {
-  if (type === 'display' || type === 'filter') {
+  if (type === 'display') {
     return data;
+  }
+  //Return the visible string rather than the entire HTML tag
+  if (type === 'filter') {
+    return data.split('>')[1].split('<')[0];
   }
   //Parse the ID for 'sort', 'type' and undefined
   //The number after the last '_' and before the end tag '<'
   var splits = data.split('_');
   return splits[parseInt(splits.length-1)].split('<')[0];
+}
+
+//JSON array element is "20000 attempt_1360183373897_0001_m_000002_0"
+function parseHadoopAttemptID(data, type, full) {
+  if (type === 'display' || type === 'filter') {
+    return data.split(' ')[1];
+  }
+  //For sorting use the order as defined in the JSON element
+  return data.split(' ')[0];
 }
 
 function parseHadoopProgress(data, type, full) {

@@ -146,10 +146,9 @@ Trunk (Unreleased)
     HADOOP-9162. Add utility to check native library availability.
     (Binglin Chang via suresh)
 
-    HADOOP-8924. Add maven plugin alternative to shell script to save
-    package-info.java. (Chris Nauroth via suresh)
-
     HADOOP-9277. Improve javadoc for FileContext. (Andrew Wang via suresh)
+
+    HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
 
   BUG FIXES
 
@@ -321,9 +320,6 @@ Trunk (Unreleased)
     HADOOP-9202. test-patch.sh fails during mvn eclipse:eclipse if patch adds
     a new module to the build (Chris Nauroth via bobby)
 
-    HADOOP-9245. mvn clean without running mvn install before fails.
-    (Karthik Kambatla via suresh)
-
     HADOOP-9249. hadoop-maven-plugins version-info goal causes build failure
     when running with Clover. (Chris Nauroth via suresh)
 
@@ -336,9 +332,6 @@ Trunk (Unreleased)
 
     HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
-    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
-    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
-
     HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
 
 Release 2.0.4-beta - UNRELEASED
@@ -350,12 +343,35 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
   IMPROVEMENTS
+
     HADOOP-9253. Capture ulimit info in the logs at service start time.
     (Arpit Gupta via suresh)
+
+    HADOOP-8924. Add maven plugin alternative to shell script to save
+    package-info.java. (Chris Nauroth via suresh)
+
+    HADOOP-9117. replace protoc ant plugin exec with a maven plugin. (tucu)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-9305. Add support for running the Hadoop client on 64-bit AIX. (atm)
+
+    HADOOP-9245. mvn clean without running mvn install before fails.
+    (Karthik Kambatla via suresh)
+
+    HADOOP-9246 Execution phase for hadoop-maven-plugin should be
+    process-resources (Karthik Kambatla and Chris Nauroth via jlowe)
+
+    HADOOP-9297. remove old record IO generation and tests. (tucu)
+
+    HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
+    the map. (Karthik Kambatla via tomwhite)
+
+    HADOOP-9304. remove addition of avro genreated-sources dirs to build. (tucu)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -1337,6 +1353,12 @@ Release 0.23.7 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9302. HDFS docs not linked from top level (Andy Isaacson via
+    tgraves)
+
+    HADOOP-9303. command manual dfsadmin missing entry for restoreFailedStorage
+    option (Andy Isaacson via tgraves)
 
 Release 0.23.6 - UNRELEASED
 
