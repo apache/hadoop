@@ -108,7 +108,8 @@ public class SchedulerUtils {
     Resource normalized = 
         Resources.normalize(
             resourceCalculator, ask.getCapability(), minimumResource);
-    ask.setCapability(normalized);
+    ask.getCapability().setMemory(normalized.getMemory());
+    ask.getCapability().setVirtualCores(normalized.getVirtualCores());
   }
 
 }

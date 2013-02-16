@@ -67,7 +67,7 @@ class Ls extends FsCommand {
   protected boolean humanReadable = false;
   protected String formatSize(long size) {
     return humanReadable
-      ? StringUtils.humanReadableInt(size)
+      ? StringUtils.TraditionalBinaryPrefix.long2String(size, "", 1)
       : String.valueOf(size);
   }
 

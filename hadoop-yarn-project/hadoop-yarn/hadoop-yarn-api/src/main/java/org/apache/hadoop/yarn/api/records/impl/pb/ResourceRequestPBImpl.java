@@ -166,6 +166,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   @Override
   public String toString() {
     return "{Priority: " + getPriority() + ", Capability: " + getCapability()
-        + "}";
+        + ", # Containers: " + getNumContainers()
+        + ", Location: " + getHostName() + "}";
   }
 }

@@ -108,7 +108,7 @@ public abstract class GetGroupsTestBase {
     for (String group : user.getGroupNames()) {
       expectedOutput += " " + group;
     }
-    return expectedOutput + "\n";
+    return expectedOutput + System.getProperty("line.separator");
   }
   
   private String runTool(Configuration conf, String[] args, boolean success)

@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 import org.junit.Before;
@@ -51,7 +54,7 @@ public class TestSecondaryNameNodeUpgrade {
     }
   }
 
-  private void doIt(String param, String val) throws IOException {
+  private void doIt(Map<String, String> paramsToCorrupt) throws IOException {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     SecondaryNameNode snn = null;
@@ -76,8 +79,12 @@ public class TestSecondaryNameNodeUpgrade {
       snn.shutdown();
 
       for (File versionFile : versionFiles) {
-        System.out.println("Changing '" + param + "' to '" + val + "' in " + versionFile);
-        FSImageTestUtil.corruptVersionFile(versionFile, param, val);
+        for (Map.Entry<String, String> paramToCorrupt : paramsToCorrupt.entrySet()) {
+          String param = paramToCorrupt.getKey();
+          String val = paramToCorrupt.getValue();
+          System.out.println("Changing '" + param + "' to '" + val + "' in " + versionFile);
+          FSImageTestUtil.corruptVersionFile(versionFile, param, val);
+        }
       }
 
       snn = new SecondaryNameNode(conf);
@@ -94,13 +101,19 @@ public class TestSecondaryNameNodeUpgrade {
 
   @Test
   public void testUpgradeLayoutVersionSucceeds() throws IOException {
-    doIt("layoutVersion", "-39");
+    doIt(ImmutableMap.of("layoutVersion", "-39"));
+  }
+
+  @Test
+  public void testUpgradePreFedSucceeds() throws IOException {
+    doIt(ImmutableMap.of("layoutVersion", "-19", "clusterID", "",
+          "blockpoolID", ""));
   }
 
   @Test
   public void testChangeNsIDFails() throws IOException {
     try {
-      doIt("namespaceID", "2");
+      doIt(ImmutableMap.of("namespaceID", "2"));
       Assert.fail("Should throw InconsistentFSStateException");
     } catch(IOException e) {
       GenericTestUtils.assertExceptionContains("Inconsistent checkpoint fields", e);

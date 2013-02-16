@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSUtil.percent2String;
+
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -64,6 +67,14 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.google.common.base.Preconditions;
 
 class NamenodeJspHelper {
+  static String fraction2String(double value) {
+    return StringUtils.format("%.2f", value);
+  }
+
+  static String fraction2String(long numerator, long denominator) {
+    return fraction2String(numerator/(double)denominator);
+  }
+
   static String getSafeModeText(FSNamesystem fsn) {
     if (!fsn.isInSafeMode())
       return "";
@@ -361,20 +372,20 @@ class NamenodeJspHelper {
           + "DFS Remaining" + colTxt() + ":" + colTxt()
           + StringUtils.byteDesc(remaining) + rowTxt() + colTxt() + "DFS Used%"
           + colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
+          + percent2String(percentUsed) + rowTxt()
           + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentRemaining) + " %"
+          + percent2String(percentRemaining)
           + rowTxt() + colTxt() + "Block Pool Used" + colTxt() + ":" + colTxt()
           + StringUtils.byteDesc(bpUsed) + rowTxt()
           + colTxt() + "Block Pool Used%"+ colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentBpUsed) + " %" 
+          + percent2String(percentBpUsed) 
           + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
           + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
           + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
-          + StringUtils.limitDecimalTo2(min) + " %"
-          + colTxt() + StringUtils.limitDecimalTo2(median) + " %"
-          + colTxt() + StringUtils.limitDecimalTo2(max) + " %"
-          + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
+          + percent2String(min)
+          + colTxt() + percent2String(median)
+          + colTxt() + percent2String(max)
+          + colTxt() + percent2String(dev)
           + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
           + colTxt() + ":" + colTxt() + live.size()
@@ -443,7 +454,13 @@ class NamenodeJspHelper {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();
     }
-    String addr = nn.getNameNodeAddressHostPortString();
+
+    InetSocketAddress rpcAddr = nn.getNameNodeAddress();
+    String rpcHost = rpcAddr.getAddress().isAnyLocalAddress()
+      ? URI.create(request.getRequestURL().toString()).getHost()
+      : rpcAddr.getAddress().getHostAddress();
+    String addr = rpcHost + ":" + rpcAddr.getPort();
+
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = HttpConfig.getSchemePrefix() + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="
@@ -562,9 +579,9 @@ class NamenodeJspHelper {
       long u = d.getDfsUsed();
       long nu = d.getNonDfsUsed();
       long r = d.getRemaining();
-      String percentUsed = StringUtils.limitDecimalTo2(d.getDfsUsedPercent());
-      String percentRemaining = StringUtils.limitDecimalTo2(d
-          .getRemainingPercent());
+      final double percentUsedValue = d.getDfsUsedPercent();
+      String percentUsed = fraction2String(percentUsedValue);
+      String percentRemaining = fraction2String(d.getRemainingPercent());
 
       String adminState = d.getAdminState().toString();
 
@@ -572,32 +589,30 @@ class NamenodeJspHelper {
       long currentTime = Time.now();
       
       long bpUsed = d.getBlockPoolUsed();
-      String percentBpUsed = StringUtils.limitDecimalTo2(d
-          .getBlockPoolUsedPercent());
+      String percentBpUsed = fraction2String(d.getBlockPoolUsedPercent());
 
       out.print("<td class=\"lastcontact\"> "
           + ((currentTime - timestamp) / 1000)
           + "<td class=\"adminstate\">"
           + adminState
           + "<td align=\"right\" class=\"capacity\">"
-          + StringUtils.limitDecimalTo2(c * 1.0 / diskBytes)
+          + fraction2String(c, diskBytes)
           + "<td align=\"right\" class=\"used\">"
-          + StringUtils.limitDecimalTo2(u * 1.0 / diskBytes)
+          + fraction2String(u, diskBytes)
           + "<td align=\"right\" class=\"nondfsused\">"
-          + StringUtils.limitDecimalTo2(nu * 1.0 / diskBytes)
+          + fraction2String(nu, diskBytes)
           + "<td align=\"right\" class=\"remaining\">"
-          + StringUtils.limitDecimalTo2(r * 1.0 / diskBytes)
+          + fraction2String(r, diskBytes)
           + "<td align=\"right\" class=\"pcused\">"
           + percentUsed
           + "<td class=\"pcused\">"
-          + ServletUtil.percentageGraph((int) Double.parseDouble(percentUsed),
-              100) 
+          + ServletUtil.percentageGraph((int)percentUsedValue, 100) 
           + "<td align=\"right\" class=\"pcremaining\">"
           + percentRemaining 
           + "<td title=" + "\"blocks scheduled : "
           + d.getBlocksScheduled() + "\" class=\"blocks\">" + d.numBlocks()+"\n"
           + "<td align=\"right\" class=\"bpused\">"
-          + StringUtils.limitDecimalTo2(bpUsed * 1.0 / diskBytes)
+          + fraction2String(bpUsed, diskBytes)
           + "<td align=\"right\" class=\"pcbpused\">"
           + percentBpUsed
           + "<td align=\"right\" class=\"volfails\">"

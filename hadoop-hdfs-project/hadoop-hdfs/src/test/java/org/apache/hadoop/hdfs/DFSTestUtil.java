@@ -33,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
@@ -620,6 +621,9 @@ public class DFSTestUtil {
    */
   public static byte[] urlGetBytes(URL url) throws IOException {
     URLConnection conn = url.openConnection();
+    HttpURLConnection hc = (HttpURLConnection)conn;
+    
+    assertEquals(HttpURLConnection.HTTP_OK, hc.getResponseCode());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
     return out.toByteArray();

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -42,23 +43,35 @@ public class TestSchedulerUtils {
 
     // case negative memory
     ask.setCapability(Resources.createResource(-1024));
+    Resource before = ask.getCapability();
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource);
+    Resource after = ask.getCapability();
     assertEquals(minMemory, ask.getCapability().getMemory());
+    assertTrue(before == after);
 
     // case zero memory
     ask.setCapability(Resources.createResource(0));
+    before = ask.getCapability();
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource);
+    after = ask.getCapability();
     assertEquals(minMemory, ask.getCapability().getMemory());
+    assertTrue(before == after);
 
     // case memory is a multiple of minMemory
     ask.setCapability(Resources.createResource(2 * minMemory));
+    before = ask.getCapability();
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource);
+    after = ask.getCapability();
     assertEquals(2 * minMemory, ask.getCapability().getMemory());
+    assertTrue(before == after);
 
     // case memory is not a multiple of minMemory
     ask.setCapability(Resources.createResource(minMemory + 10));
+    before = ask.getCapability();
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource);
+    after = ask.getCapability();
     assertEquals(2 * minMemory, ask.getCapability().getMemory());
+    assertTrue(before == after);
 
   }
   
@@ -73,24 +86,33 @@ public class TestSchedulerUtils {
 
     // case negative memory/vcores
     ask.setCapability(Resources.createResource(-1024, -1));
+    Resource before = ask.getCapability();
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource);
+    Resource after = ask.getCapability();
     assertEquals(minResource, ask.getCapability());
+    assertTrue(before == after);
 
     // case zero memory/vcores
     ask.setCapability(Resources.createResource(0, 0));
+    before = ask.getCapability();
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource);
+    after = ask.getCapability();
     assertEquals(minResource, ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(1024, ask.getCapability().getMemory());
+    assertTrue(before == after);
 
     // case non-zero memory & zero cores
     ask.setCapability(Resources.createResource(1536, 0));
+    before = ask.getCapability();
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource);
+    after = ask.getCapability();
     assertEquals(Resources.createResource(2048, 1), ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(2048, ask.getCapability().getMemory());
+    assertTrue(before == after);
   }
 }

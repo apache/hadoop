@@ -141,7 +141,7 @@ public class SortedMapWritable extends AbstractMapWritable
     for (Map.Entry<? extends WritableComparable, ? extends Writable> e:
       t.entrySet()) {
       
-      instance.put(e.getKey(), e.getValue());
+      put(e.getKey(), e.getValue());
     }
   }
 
@@ -202,5 +202,28 @@ public class SortedMapWritable extends AbstractMapWritable
       out.writeByte(getId(e.getValue().getClass()));
       e.getValue().write(out);
     }
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
+    if (obj instanceof SortedMapWritable) {
+      Map map = (Map) obj;
+      if (size() != map.size()) {
+        return false;
+      }
+
+      return entrySet().equals(map.entrySet());
+    }
+
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return instance.hashCode();
   }
 }

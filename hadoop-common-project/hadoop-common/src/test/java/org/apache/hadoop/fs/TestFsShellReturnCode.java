@@ -304,6 +304,46 @@ public class TestFsShellReturnCode {
   }
   
   @Test
+  public void testRmWithNonexistentGlob() throws Exception {
+    Configuration conf = new Configuration();
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream err = new PrintStream(bytes);
+    final PrintStream oldErr = System.err;
+    System.setErr(err);
+    final String results;
+    try {
+      int exit = shell.run(new String[]{"-rm", "nomatch*"});
+      assertEquals(1, exit);
+      results = bytes.toString();
+      assertTrue(results.contains("rm: `nomatch*': No such file or directory"));
+    } finally {
+      IOUtils.closeStream(err);
+      System.setErr(oldErr);
+    }
+  }
+
+  @Test
+  public void testRmForceWithNonexistentGlob() throws Exception {
+    Configuration conf = new Configuration();
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream err = new PrintStream(bytes);
+    final PrintStream oldErr = System.err;
+    System.setErr(err);
+    try {
+      int exit = shell.run(new String[]{"-rm", "-f", "nomatch*"});
+      assertEquals(0, exit);
+      assertTrue(bytes.toString().isEmpty());
+    } finally {
+      IOUtils.closeStream(err);
+      System.setErr(oldErr);
+    }
+  }
+
+  @Test
   public void testInvalidDefaultFS() throws Exception {
     // if default fs doesn't exist or is invalid, but the path provided in 
     // arguments is valid - fsshell should work

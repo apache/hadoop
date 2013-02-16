@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
+package org.apache.hadoop.yarn.event;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class InlineDispatcher extends AsyncDispatcher {
   private static final Log LOG = LogFactory.getLog(InlineDispatcher.class);
 
@@ -48,7 +49,7 @@ public class InlineDispatcher extends AsyncDispatcher {
     return new TestEventHandler();
   }
   
-  static class EmptyEventHandler implements EventHandler<Event> {
+  public static class EmptyEventHandler implements EventHandler<Event> {
     @Override
     public void handle(Event event) {
       //do nothing      

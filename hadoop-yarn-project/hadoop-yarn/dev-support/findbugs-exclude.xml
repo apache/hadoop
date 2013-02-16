@@ -167,6 +167,11 @@
     <Field name="minimumAllocation" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer"/>
+    <Field name="renewalTimer" />
+    <Bug code="IS"/>
+  </Match>
 
   <!-- Don't care if putIfAbsent value is ignored -->
   <Match>
@@ -242,6 +247,13 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler" />
     <Method name="parseMtab" />
     <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
+  </Match>
+
+  <!-- rmClient can be ignored as only code blocks outside of rpc calls need to be synchronized -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.client.AMRMClientImpl" />
+    <Field name="rmClient" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
 </FindBugsFilter>

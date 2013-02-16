@@ -999,17 +999,14 @@
 </property>
 
 <property>
-  <name>dfs.namenode.check.stale.datanode</name>
+  <name>dfs.namenode.avoid.read.stale.datanode</name>
   <value>false</value>
   <description>
-    Indicate whether or not to check "stale" datanodes whose 
+    Indicate whether or not to avoid reading from &quot;stale&quot; datanodes whose
     heartbeat messages have not been received by the namenode 
-    for more than a specified time interval. If this configuration 
-    parameter is set as true, the system will keep track 
-    of the number of stale datanodes. The stale datanodes will be 
+    for more than a specified time interval. Stale datanodes will be
     moved to the end of the node list returned for reading. See
-    dfs.namenode.avoid.write.stale.datanode for details on how this 
-    affects writes. 
+    dfs.namenode.avoid.write.stale.datanode for a similar setting for writes.
   </description>
 </property>
 
@@ -1017,13 +1014,13 @@
   <name>dfs.namenode.avoid.write.stale.datanode</name>
   <value>false</value>
   <description>
-    Indicate whether or not to avoid writing to "stale" datanodes whose 
+    Indicate whether or not to avoid writing to &quot;stale&quot; datanodes whose 
     heartbeat messages have not been received by the namenode 
-    for more than a specified time interval. If this configuration 
-    parameter and dfs.namenode.check.stale.datanode are both set as true, 
-    the writing will avoid using stale datanodes unless a high number 
-    of datanodes are marked as stale. See 
-    dfs.namenode.write.stale.datanode.ratio for details.
+    for more than a specified time interval. Writes will avoid using 
+    stale datanodes unless more than a configured ratio 
+    (dfs.namenode.write.stale.datanode.ratio) of datanodes are marked as 
+    stale. See dfs.namenode.avoid.read.stale.datanode for a similar setting
+    for reads.
   </description>
 </property>
 

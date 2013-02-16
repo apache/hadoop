@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.util;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -39,7 +40,7 @@ import org.apache.hadoop.io.Text;
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
 @InterfaceStability.Unstable
-public class LineReader {
+public class LineReader implements Closeable {
   private static final int DEFAULT_BUFFER_SIZE = 64 * 1024;
   private int bufferSize = DEFAULT_BUFFER_SIZE;
   private InputStream in;

@@ -309,6 +309,88 @@ public class TestNameEditsConfigs {
   }
 
   /**
+   * Test edits.dir.required configuration options.
+   * 1. Directory present in dfs.namenode.edits.dir.required but not in
+   *    dfs.namenode.edits.dir. Expected to fail.
+   * 2. Directory present in both dfs.namenode.edits.dir.required and
+   *    dfs.namenode.edits.dir. Expected to succeed.
+   * 3. Directory present only in dfs.namenode.edits.dir. Expected to
+   *    succeed.
+   */
+  @Test
+  public void testNameEditsRequiredConfigs() throws IOException {
+    MiniDFSCluster cluster = null;
+    File nameAndEditsDir = new File(base_dir, "name_and_edits");
+    File nameAndEditsDir2 = new File(base_dir, "name_and_edits2");
+
+    // 1
+    // Bad configuration. Add a directory to dfs.namenode.edits.dir.required
+    // without adding it to dfs.namenode.edits.dir.
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.set(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
+          nameAndEditsDir2.toURI().toString());
+      conf.set(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          nameAndEditsDir.toURI().toString());
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .manageNameDfsDirs(false)
+          .build();
+      fail("Successfully started cluster but should not have been able to.");
+    } catch (IllegalArgumentException iae) { // expect to fail
+      LOG.info("EXPECTED: cluster start failed due to bad configuration" + iae);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      cluster = null;
+    }
+
+    // 2
+    // Good configuration. Add a directory to both dfs.namenode.edits.dir.required
+    // and dfs.namenode.edits.dir.
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setStrings(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          nameAndEditsDir.toURI().toString(),
+          nameAndEditsDir2.toURI().toString());
+      conf.set(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
+          nameAndEditsDir2.toURI().toString());
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .manageNameDfsDirs(false)
+          .build();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+
+    // 3
+    // Good configuration. Adds a directory to dfs.namenode.edits.dir but not to
+    // dfs.namenode.edits.dir.required.
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setStrings(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          nameAndEditsDir.toURI().toString(),
+          nameAndEditsDir2.toURI().toString());
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .manageNameDfsDirs(false)
+          .build();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
    * Test various configuration options of dfs.namenode.name.dir and dfs.namenode.edits.dir
    * This test tries to simulate failure scenarios.
    * 1. Start cluster with shared name and edits dir

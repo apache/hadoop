@@ -18,6 +18,10 @@
 package org.apache.hadoop.hdfs;
 
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -29,14 +33,19 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -85,9 +94,26 @@ public class TestLease {
 
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
-      // make it look like lease has already expired.
+      // make it look like the soft limit has been exceeded.
       LeaseRenewer originalRenewer = dfs.getLeaseRenewer();
-      dfs.lastLeaseRenewal = Time.now() - 300000;
+      dfs.lastLeaseRenewal = Time.now()
+      - HdfsConstants.LEASE_SOFTLIMIT_PERIOD - 1000;
+      try {
+        dfs.renewLease();
+      } catch (IOException e) {}
+
+      // Things should continue to work it passes hard limit without
+      // renewing.
+      try {
+        d_out.write(buf, 0, 1024);
+        LOG.info("Write worked beyond the soft limit as expected.");
+      } catch (IOException e) {
+        Assert.fail("Write failed.");
+      }
+
+      // make it look like the hard limit has been exceeded.
+      dfs.lastLeaseRenewal = Time.now()
+      - HdfsConstants.LEASE_HARDLIMIT_PERIOD - 1000;
       dfs.renewLease();
 
       // this should not work.
@@ -256,6 +282,7 @@ public class TestLease {
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testFactory() throws Exception {
     final String[] groups = new String[]{"supergroup"};
@@ -263,6 +290,20 @@ public class TestLease {
     for(int i = 0; i < ugi.length; i++) {
       ugi[i] = UserGroupInformation.createUserForTesting("user" + i, groups);
     }
+
+    Mockito.doReturn(
+        new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
+            (short) 777), "owner", "group", new byte[0], new byte[0],
+            1010)).when(mcp).getFileInfo(anyString());
+    Mockito
+        .doReturn(
+            new HdfsFileStatus(0, false, 1, 1024, 0, 0, new FsPermission(
+                (short) 777), "owner", "group", new byte[0], new byte[0],
+                1010))
+        .when(mcp)
+        .create(anyString(), (FsPermission) anyObject(), anyString(),
+            (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
+            anyShort(), anyLong());
 
     final Configuration conf = new Configuration();
     final DFSClient c1 = createDFSClientAs(ugi[0], conf);

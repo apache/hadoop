@@ -30,8 +30,11 @@ import java.util.TreeMap;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Progressable;
@@ -50,6 +53,9 @@ import org.apache.hadoop.util.Progressable;
  */
 
 public class HarFileSystem extends FilterFileSystem {
+
+  private static final Log LOG = LogFactory.getLog(HarFileSystem.class);
+
   public static final int VERSION = 3;
 
   private static final Map<URI, HarMetaData> harMetaCache =
@@ -1025,68 +1031,69 @@ public class HarFileSystem extends FilterFileSystem {
     }
 
     private void parseMetaData() throws IOException {
-      FSDataInputStream in = fs.open(masterIndexPath);
-      FileStatus masterStat = fs.getFileStatus(masterIndexPath);
-      masterIndexTimestamp = masterStat.getModificationTime();
-      LineReader lin = new LineReader(in, getConf());
-      Text line = new Text();
-      long read = lin.readLine(line);
+      Text line;
+      long read;
+      FSDataInputStream in = null;
+      LineReader lin = null;
 
-     // the first line contains the version of the index file
-      String versionLine = line.toString();
-      String[] arr = versionLine.split(" ");
-      version = Integer.parseInt(arr[0]);
-      // make it always backwards-compatible
-      if (this.version > HarFileSystem.VERSION) {
-        throw new IOException("Invalid version " + 
-            this.version + " expected " + HarFileSystem.VERSION);
-      }
-
-      // each line contains a hashcode range and the index file name
-      String[] readStr = null;
-      while(read < masterStat.getLen()) {
-        int b = lin.readLine(line);
-        read += b;
-        readStr = line.toString().split(" ");
-        int startHash = Integer.parseInt(readStr[0]);
-        int endHash  = Integer.parseInt(readStr[1]);
-        stores.add(new Store(Long.parseLong(readStr[2]), 
-            Long.parseLong(readStr[3]), startHash,
-            endHash));
-        line.clear();
-      }
       try {
-        // close the master index
-        lin.close();
-      } catch(IOException io){
-        // do nothing just a read.
+        in = fs.open(masterIndexPath);
+        FileStatus masterStat = fs.getFileStatus(masterIndexPath);
+        masterIndexTimestamp = masterStat.getModificationTime();
+        lin = new LineReader(in, getConf());
+        line = new Text();
+        read = lin.readLine(line);
+
+        // the first line contains the version of the index file
+        String versionLine = line.toString();
+        String[] arr = versionLine.split(" ");
+        version = Integer.parseInt(arr[0]);
+        // make it always backwards-compatible
+        if (this.version > HarFileSystem.VERSION) {
+          throw new IOException("Invalid version " + 
+              this.version + " expected " + HarFileSystem.VERSION);
+        }
+
+        // each line contains a hashcode range and the index file name
+        String[] readStr = null;
+        while(read < masterStat.getLen()) {
+          int b = lin.readLine(line);
+          read += b;
+          readStr = line.toString().split(" ");
+          int startHash = Integer.parseInt(readStr[0]);
+          int endHash  = Integer.parseInt(readStr[1]);
+          stores.add(new Store(Long.parseLong(readStr[2]), 
+              Long.parseLong(readStr[3]), startHash,
+              endHash));
+          line.clear();
+        }
+      } finally {
+        IOUtils.cleanup(LOG, lin, in);
       }
 
       FSDataInputStream aIn = fs.open(archiveIndexPath);
-      FileStatus archiveStat = fs.getFileStatus(archiveIndexPath);
-      archiveIndexTimestamp = archiveStat.getModificationTime();
-      LineReader aLin;
-
-      // now start reading the real index file
-      for (Store s: stores) {
-        read = 0;
-        aIn.seek(s.begin);
-        aLin = new LineReader(aIn, getConf());
-        while (read + s.begin < s.end) {
-          int tmp = aLin.readLine(line);
-          read += tmp;
-          String lineFeed = line.toString();
-          String[] parsed = lineFeed.split(" ");
-          parsed[0] = decodeFileName(parsed[0]);
-          archive.put(new Path(parsed[0]), new HarStatus(lineFeed));
-          line.clear();
-        }
-      }
       try {
-        // close the archive index
-        aIn.close();
-      } catch(IOException io) {
-        // do nothing just a read.
+        FileStatus archiveStat = fs.getFileStatus(archiveIndexPath);
+        archiveIndexTimestamp = archiveStat.getModificationTime();
+        LineReader aLin;
+
+        // now start reading the real index file
+        for (Store s: stores) {
+          read = 0;
+          aIn.seek(s.begin);
+          aLin = new LineReader(aIn, getConf());
+          while (read + s.begin < s.end) {
+            int tmp = aLin.readLine(line);
+            read += tmp;
+            String lineFeed = line.toString();
+            String[] parsed = lineFeed.split(" ");
+            parsed[0] = decodeFileName(parsed[0]);
+            archive.put(new Path(parsed[0]), new HarStatus(lineFeed));
+            line.clear();
+          }
+        }
+      } finally {
+        IOUtils.cleanup(LOG, aIn);
       }
     }
   }

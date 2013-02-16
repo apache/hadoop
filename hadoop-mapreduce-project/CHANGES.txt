@@ -152,7 +152,29 @@ Trunk (Unreleased)
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
-Release 2.0.3-alpha - Unreleased 
+Release 2.0.4-beta - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4671. AM does not tell the RM about container requests which are
+    no longer needed. (Bikas Saha via sseth)
+
+    MAPREDUCE-4994. -jt generic command line option does not work. (sandyr via tucu)
+
+    MAPREDUCE-5000. Fixes getCounters when speculating by fixing the selection
+    of the best attempt for a task. (Jason Lowe via sseth)
+
+    MAPREDUCE-4994. Addendum fixing testcases failures. (sandyr via tucu)
+
+Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
 
@@ -215,7 +237,16 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4838. Add additional fields like Locality, Avataar to the
     JobHistory logs. (Zhijie Shen via sseth)
 
+    MAPREDUCE-4971. Minor extensibility enhancements to Counters & 
+    FileOutputFormat. (Arun C Murthy via sseth)
+
+    MAPREDUCE-4977. Documentation for pluggable shuffle and pluggable sort. 
+    (tucu)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-4893. Fixed MR ApplicationMaster to do optimal assignment of
+    containers to get maximum locality. (Bikas Saha via vinodkv)
 
   BUG FIXES
 
@@ -277,6 +308,11 @@ Release 2.0.3-alpha - Unreleased
 
     MAPREDUCE-2264. Job status exceeds 100% in some cases. 
     (devaraj.k and sandyr via tucu)
+
+    MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
+    (Arpit Agarwal via suresh)
+
+    MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -662,15 +698,27 @@ Release 0.23.7 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4905. test org.apache.hadoop.mapred.pipes 
+    (Aleksey Gorshkov via bobby)
+
+    MAPREDUCE-4989. JSONify DataTables input data for Attempts page (Ravi
+    Prakash via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
     number of map completion event type conversions. (Jason Lowe via sseth)
 
+    MAPREDUCE-4822. Unnecessary conversions in History Events. (Chu Tong via
+    jlowe)
+
   BUG FIXES
 
     MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
     (Robert Parker via jeagles)
+
+    MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
+    speculative attempts (Robert Parker via jlowe)
 
 Release 0.23.6 - UNRELEASED
 

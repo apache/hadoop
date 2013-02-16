@@ -546,4 +546,44 @@ public class TestFileUtil {
     long expected = 2 * (3 + System.getProperty("line.separator").length());
     Assert.assertEquals(expected, du);
   }
+
+  private void doUntarAndVerify(File tarFile, File untarDir) 
+                                 throws IOException {
+    if (untarDir.exists() && !FileUtil.fullyDelete(untarDir)) {
+      throw new IOException("Could not delete directory '" + untarDir + "'");
+    }
+    FileUtil.unTar(tarFile, untarDir);
+
+    String parentDir = untarDir.getCanonicalPath() + Path.SEPARATOR + "name";
+    File testFile = new File(parentDir + Path.SEPARATOR + "version");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 0);
+    String imageDir = parentDir + Path.SEPARATOR + "image";
+    testFile = new File(imageDir + Path.SEPARATOR + "fsimage");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 157);
+    String currentDir = parentDir + Path.SEPARATOR + "current";
+    testFile = new File(currentDir + Path.SEPARATOR + "fsimage");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 4331);
+    testFile = new File(currentDir + Path.SEPARATOR + "edits");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 1033);
+    testFile = new File(currentDir + Path.SEPARATOR + "fstime");
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(testFile.length() == 8);
+  }
+
+  @Test
+  public void testUntar() throws IOException {
+    String tarGzFileName = System.getProperty("test.cache.data",
+        "build/test/cache") + "/test-untar.tgz";
+    String tarFileName = System.getProperty("test.cache.data",
+        "build/test/cache") + "/test-untar.tar";
+    String dataDir = System.getProperty("test.build.data", "build/test/data");
+    File untarDir = new File(dataDir, "untarDir");
+
+    doUntarAndVerify(new File(tarGzFileName), untarDir);
+    doUntarAndVerify(new File(tarFileName), untarDir);
+  }
 }

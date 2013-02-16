@@ -35,6 +35,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
@@ -71,6 +72,16 @@ public abstract class FileSystemCounterGroup<C extends Counter>
     public FSCounter(String scheme, FileSystemCounter ref) {
       this.scheme = scheme;
       key = ref;
+    }
+    
+    @Private
+    public String getScheme() {
+      return scheme;
+    }
+    
+    @Private
+    public FileSystemCounter getFileSystemCounter() {
+      return key;
     }
 
     @Override

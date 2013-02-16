@@ -422,13 +422,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void create(String src, 
-                     FsPermission masked,
-                     String clientName, 
-                     EnumSetWritable<CreateFlag> flag,
-                     boolean createParent,
-                     short replication,
-                     long blockSize) throws IOException {
+  public HdfsFileStatus create(String src, FsPermission masked,
+      String clientName, EnumSetWritable<CreateFlag> flag,
+      boolean createParent, short replication, long blockSize)
+      throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.create: file "
@@ -438,12 +435,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("create: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    namesystem.startFile(src,
-        new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
-            null, masked),
-        clientName, clientMachine, flag.get(), createParent, replication, blockSize);
+    HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
+        UserGroupInformation.getCurrentUser().getShortUserName(), null, masked),
+        clientName, clientMachine, flag.get(), createParent, replication,
+        blockSize);
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
+    return fileStatus;
   }
 
   @Override // ClientProtocol
@@ -482,26 +480,24 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     namesystem.setOwner(src, username, groupname);
   }
-
-  @Override // ClientProtocol
-  public LocatedBlock addBlock(String src,
-                               String clientName,
-                               ExtendedBlock previous,
-                               DatanodeInfo[] excludedNodes)
+  
+  @Override
+  public LocatedBlock addBlock(String src, String clientName,
+      ExtendedBlock previous, DatanodeInfo[] excludedNodes, long fileId)
       throws IOException {
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
-          +src+" for "+clientName);
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*BLOCK* NameNode.addBlock: file " + src
+          + " fileId=" + fileId + " for " + clientName);
     }
     HashMap<Node, Node> excludedNodesSet = null;
     if (excludedNodes != null) {
       excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
-      for (Node node:excludedNodes) {
+      for (Node node : excludedNodes) {
         excludedNodesSet.put(node, node);
       }
     }
-    LocatedBlock locatedBlock = 
-      namesystem.getAdditionalBlock(src, clientName, previous, excludedNodesSet);
+    LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, fileId,
+        clientName, previous, excludedNodesSet);
     if (locatedBlock != null)
       metrics.incrAddBlockOps();
     return locatedBlock;

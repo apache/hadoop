@@ -569,12 +569,10 @@ class ClusterJspHelper {
       toXmlItemBlock(doc, "DFS Remaining", StringUtils.byteDesc(free));
     
       // dfsUsedPercent
-      toXmlItemBlock(doc, "DFS Used%", 
-          StringUtils.limitDecimalTo2(dfsUsedPercent)+ "%");
+      toXmlItemBlock(doc, "DFS Used%", DFSUtil.percent2String(dfsUsedPercent));
     
       // dfsRemainingPercent
-      toXmlItemBlock(doc, "DFS Remaining%",
-          StringUtils.limitDecimalTo2(dfsRemainingPercent) + "%");
+      toXmlItemBlock(doc, "DFS Remaining%", DFSUtil.percent2String(dfsRemainingPercent));
     
       doc.endTag(); // storage
     
