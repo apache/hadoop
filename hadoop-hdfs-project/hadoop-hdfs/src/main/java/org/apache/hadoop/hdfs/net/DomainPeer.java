@@ -50,12 +50,12 @@ public class DomainPeer implements Peer {
 
   @Override
   public void setReadTimeout(int timeoutMs) throws IOException {
-    socket.setAttribute(DomainSocket.RCV_TIMEO, timeoutMs);
+    socket.setAttribute(DomainSocket.RECEIVE_TIMEOUT, timeoutMs);
   }
 
   @Override
   public int getReceiveBufferSize() throws IOException {
-    return socket.getAttribute(DomainSocket.RCV_BUF_SIZE);
+    return socket.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
   }
 
   @Override
@@ -66,7 +66,7 @@ public class DomainPeer implements Peer {
 
   @Override
   public void setWriteTimeout(int timeoutMs) throws IOException {
-    socket.setAttribute(DomainSocket.SND_TIMEO, timeoutMs);
+    socket.setAttribute(DomainSocket.SEND_TIMEOUT, timeoutMs);
   }
 
   @Override

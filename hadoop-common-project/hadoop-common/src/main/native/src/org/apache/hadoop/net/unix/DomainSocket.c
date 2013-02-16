@@ -38,13 +38,13 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define SND_BUF_SIZE org_apache_hadoop_net_unix_DomainSocket_SND_BUF_SIZE
-#define RCV_BUF_SIZE org_apache_hadoop_net_unix_DomainSocket_RCV_BUF_SIZE
-#define SND_TIMEO org_apache_hadoop_net_unix_DomainSocket_SND_TIMEO
-#define RCV_TIMEO org_apache_hadoop_net_unix_DomainSocket_RCV_TIMEO
+#define SEND_BUFFER_SIZE org_apache_hadoop_net_unix_DomainSocket_SEND_BUFFER_SIZE
+#define RECEIVE_BUFFER_SIZE org_apache_hadoop_net_unix_DomainSocket_RECEIVE_BUFFER_SIZE
+#define SEND_TIMEOUT org_apache_hadoop_net_unix_DomainSocket_SEND_TIMEOUT
+#define RECEIVE_TIMEOUT org_apache_hadoop_net_unix_DomainSocket_RECEIVE_TIMEOUT
 
-#define DEFAULT_RCV_TIMEO 120000
-#define DEFAULT_SND_TIMEO 120000
+#define DEFAULT_RECEIVE_TIMEOUT 120000
+#define DEFAULT_SEND_TIMEOUT 120000
 #define LISTEN_BACKLOG 128
 
 /**
@@ -391,8 +391,8 @@ JNIEnv *env, jclass clazz, jstring path)
     (*env)->Throw(env, jthr);
     return -1;
   }
-  if (((jthr = setAttribute0(env, fd, SND_TIMEO, DEFAULT_SND_TIMEO))) || 
-      ((jthr = setAttribute0(env, fd, RCV_TIMEO, DEFAULT_RCV_TIMEO)))) {
+  if (((jthr = setAttribute0(env, fd, SEND_TIMEOUT, DEFAULT_SEND_TIMEOUT))) || 
+      ((jthr = setAttribute0(env, fd, RECEIVE_TIMEOUT, DEFAULT_RECEIVE_TIMEOUT)))) {
     RETRY_ON_EINTR(ret, close(fd));
     (*env)->Throw(env, jthr);
     return -1;
@@ -412,7 +412,7 @@ static jthrowable setAttribute0(JNIEnv *env, jint fd, jint type, jint val)
   int ret, buf;
 
   switch (type) {
-  case SND_BUF_SIZE:
+  case SEND_BUFFER_SIZE:
     buf = val;
     if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buf, sizeof(buf))) {
       ret = errno;
@@ -420,7 +420,7 @@ static jthrowable setAttribute0(JNIEnv *env, jint fd, jint type, jint val)
           "setsockopt(SO_SNDBUF) error: %s", terror(ret));
     }
     return NULL;
-  case RCV_BUF_SIZE:
+  case RECEIVE_BUFFER_SIZE:
     buf = val;
     if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &buf, sizeof(buf))) {
       ret = errno;
@@ -428,7 +428,7 @@ static jthrowable setAttribute0(JNIEnv *env, jint fd, jint type, jint val)
           "setsockopt(SO_RCVBUF) error: %s", terror(ret));
     }
     return NULL;
-  case SND_TIMEO:
+  case SEND_TIMEOUT:
     javaMillisToTimeVal(val, &tv);
     if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (struct timeval *)&tv,
                sizeof(tv))) {
@@ -437,7 +437,7 @@ static jthrowable setAttribute0(JNIEnv *env, jint fd, jint type, jint val)
           "setsockopt(SO_SNDTIMEO) error: %s", terror(ret));
     }
     return NULL;
-  case RCV_TIMEO:
+  case RECEIVE_TIMEOUT:
     javaMillisToTimeVal(val, &tv);
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (struct timeval *)&tv,
                sizeof(tv))) {
@@ -487,7 +487,7 @@ JNIEnv *env, jclass clazz, jint fd, jint type)
   int ret, rval = 0;
 
   switch (type) {
-  case SND_BUF_SIZE:
+  case SEND_BUFFER_SIZE:
     len = sizeof(rval);
     if (getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &rval, &len)) {
       ret = errno;
@@ -496,7 +496,7 @@ JNIEnv *env, jclass clazz, jint fd, jint type)
       return -1;
     }
     return getSockOptBufSizeToJavaBufSize(rval);
-  case RCV_BUF_SIZE:
+  case RECEIVE_BUFFER_SIZE:
     len = sizeof(rval);
     if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rval, &len)) {
       ret = errno;
@@ -505,7 +505,7 @@ JNIEnv *env, jclass clazz, jint fd, jint type)
       return -1;
     }
     return getSockOptBufSizeToJavaBufSize(rval);
-  case SND_TIMEO:
+  case SEND_TIMEOUT:
     memset(&tv, 0, sizeof(tv));
     len = sizeof(struct timeval);
     if (getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, &len)) {
@@ -515,7 +515,7 @@ JNIEnv *env, jclass clazz, jint fd, jint type)
       return -1;
     }
     return timeValToJavaMillis(&tv);
-  case RCV_TIMEO:
+  case RECEIVE_TIMEOUT:
     memset(&tv, 0, sizeof(tv));
     len = sizeof(struct timeval);
     if (getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, &len)) {

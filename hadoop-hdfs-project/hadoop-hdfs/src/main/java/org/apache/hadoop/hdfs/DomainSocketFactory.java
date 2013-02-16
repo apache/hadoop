@@ -114,7 +114,7 @@ class DomainSocketFactory {
     DomainSocket sock = null;
     try {
       sock = DomainSocket.connect(escapedPath);
-      sock.setAttribute(DomainSocket.RCV_TIMEO, conf.socketTimeout);
+      sock.setAttribute(DomainSocket.RECEIVE_TIMEOUT, conf.socketTimeout);
       success = true;
     } catch (IOException e) {
       LOG.warn("error creating DomainSocket", e);

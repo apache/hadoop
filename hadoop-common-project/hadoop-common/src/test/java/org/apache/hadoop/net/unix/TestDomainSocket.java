@@ -282,15 +282,15 @@ public class TestDomainSocket {
     DomainSocket serv = DomainSocket.bindAndListen(TEST_PATH);
     try {
       // Let's set a new receive buffer size
-      int bufSize = serv.getAttribute(DomainSocket.RCV_BUF_SIZE);
+      int bufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
       int newBufSize = bufSize / 2;
-      serv.setAttribute(DomainSocket.RCV_BUF_SIZE, newBufSize);
-      int nextBufSize = serv.getAttribute(DomainSocket.RCV_BUF_SIZE);
+      serv.setAttribute(DomainSocket.RECEIVE_BUFFER_SIZE, newBufSize);
+      int nextBufSize = serv.getAttribute(DomainSocket.RECEIVE_BUFFER_SIZE);
       Assert.assertEquals(newBufSize, nextBufSize);
       // Let's set a server timeout
       int newTimeout = 1000;
-      serv.setAttribute(DomainSocket.RCV_TIMEO, newTimeout);
-      int nextTimeout = serv.getAttribute(DomainSocket.RCV_TIMEO);
+      serv.setAttribute(DomainSocket.RECEIVE_TIMEOUT, newTimeout);
+      int nextTimeout = serv.getAttribute(DomainSocket.RECEIVE_TIMEOUT);
       Assert.assertEquals(newTimeout, nextTimeout);
       try {
         serv.accept();
