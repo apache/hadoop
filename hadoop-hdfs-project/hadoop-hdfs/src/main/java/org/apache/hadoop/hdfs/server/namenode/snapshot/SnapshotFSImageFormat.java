@@ -21,7 +21,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -199,22 +198,6 @@ public class SnapshotFSImageFormat {
       // useful, but set the parent here to be consistent with the original 
       // fsdir tree.
       deleted.setParent(parent);
-      if (deleted instanceof INodeFile
-          && ((INodeFile) deleted).getBlocks() == null) {
-        // if deleted is an INodeFile, and its blocks is null, then deleted
-        // must be an INodeFileWithLink, and we need to rebuild its next link
-        int c = Collections.binarySearch(createdList, deleted.getLocalNameBytes());
-        if (c < 0) {
-          throw new IOException(
-              "Cannot find the INode linked with the INode "
-                  + deleted.getLocalName()
-                  + " in deleted list while loading FSImage.");
-        }
-        // deleted must be an FileWithSnapshot (INodeFileSnapshot or 
-        // INodeFileUnderConstructionSnapshot)
-        INodeFile cNode = (INodeFile) createdList.get(c);
-        ((INodeFile) deleted).setBlocks(cNode.getBlocks());
-      }
     }
     return deletedList;
   }
