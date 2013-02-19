@@ -574,6 +574,10 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
     speculative attempts (Robert Parker via jlowe)
 
+    MAPREDUCE-5009. Killing the Task Attempt slated for commit does not clear
+    the value from the Task commitAttempt member (Robert Parker via jeagles)
+
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
