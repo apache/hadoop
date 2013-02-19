@@ -460,6 +460,22 @@ public class TestTaskImpl {
   }
   
   @Test
+  public void testKillDuringTaskAttemptCommit() {
+    TaskId taskId = getNewTaskID();
+    scheduleTaskAttempt(taskId);
+    
+    launchTaskAttempt(getLastAttempt().getAttemptId());
+    updateLastAttemptState(TaskAttemptState.COMMIT_PENDING);
+    commitTaskAttempt(getLastAttempt().getAttemptId());
+
+    TaskAttemptId commitAttempt = getLastAttempt().getAttemptId();
+    updateLastAttemptState(TaskAttemptState.KILLED);
+    killRunningTaskAttempt(commitAttempt);
+
+    assertFalse(mockTask.canCommit(commitAttempt));
+  }
+
+  @Test
   public void testFailureDuringTaskAttemptCommit() {
     TaskId taskId = getNewTaskID();
     scheduleTaskAttempt(taskId);
