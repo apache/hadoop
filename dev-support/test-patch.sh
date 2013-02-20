@@ -323,7 +323,7 @@ checkAuthor () {
 }
 
 ###############################################################################
-### Check for tests in the patch
+### Check for tests and their timeout in the patch
 checkTests () {
   echo ""
   echo ""
@@ -357,6 +357,24 @@ checkTests () {
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 tests included{color}.  The patch appears to include $testReferences new or modified test files."
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking if the tests have timeout assigned in this patch."
+  echo "======================================================================"
+  echo "======================================================================"
+  
+  nontimeoutTests=`cat $PATCH_DIR/patch | $AWK '{ printf "%s ", $0 }'  | $GREP --extended-regex --count '[ ]*\+[ ]*((@Test[\+ ]*[A-Za-z]+)|([\+ ]*@Test[ \+]*\([ \+]*\)[\ ]*\+?[ ]*[A-Za-z]+)|([\+ ]*@Test[\+ ]*\(exception[ \+]*=[ \+]*[A-Z.a-z0-9A-Z ]*\)))'`
+
+  if [[ $nontimeoutTests == 0 ]] ; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 tests included appear to have a timeout.{color}"
+	return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+  {color:red}-1 one of tests included doesn't have a timeout.{color}"
   return 0
 }
 
