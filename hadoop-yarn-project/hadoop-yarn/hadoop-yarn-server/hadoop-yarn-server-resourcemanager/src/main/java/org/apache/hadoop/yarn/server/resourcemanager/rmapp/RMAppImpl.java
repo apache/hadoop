@@ -355,7 +355,8 @@ public class RMAppImpl implements RMApp {
       String host = UNAVAILABLE;
       String origTrackingUrl = UNAVAILABLE;
       int rpcPort = -1;
-      ApplicationResourceUsageReport appUsageReport = null;
+      ApplicationResourceUsageReport appUsageReport =
+          DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       String diags = UNAVAILABLE;
       if (allowAccess) {
@@ -368,8 +369,6 @@ public class RMAppImpl implements RMApp {
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
         }
         diags = this.diagnostics.toString();
-      } else {
-        appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       }
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,

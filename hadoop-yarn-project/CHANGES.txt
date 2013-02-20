@@ -44,6 +44,9 @@ Release 0.23.7 - UNRELEASED
     YARN-362. Unexpected extra results when using webUI table search (Ravi
     Prakash via jlowe)
 
+    YARN-400. RM can return null application resource usage report leading to 
+    NPE in client (Jason Lowe via tgraves)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
