@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.Container;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.UndoInfo;
@@ -550,5 +551,29 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       }
     }
     return n;
+  }
+
+  @Override
+  public Content.CountsMap computeContentSummary(
+      final Content.CountsMap countsMap) {
+    super.computeContentSummary(countsMap);
+    computeContentSummary4Snapshot(countsMap.getCounts(Key.SNAPSHOT));
+    return countsMap;
+  }
+
+  @Override
+  public Content.Counts computeContentSummary(final Content.Counts counts) {
+    super.computeContentSummary(counts);
+    computeContentSummary4Snapshot(counts);
+    return counts;
+  }
+
+  private void computeContentSummary4Snapshot(final Content.Counts counts) {
+    for(DirectoryDiff d : diffs) {
+      for(INode deleted : d.getChildrenDiff().getDeletedList()) {
+        deleted.computeContentSummary(counts);
+      }
+    }
+    counts.add(Content.DIRECTORY, diffs.asList().size());
   }
 }

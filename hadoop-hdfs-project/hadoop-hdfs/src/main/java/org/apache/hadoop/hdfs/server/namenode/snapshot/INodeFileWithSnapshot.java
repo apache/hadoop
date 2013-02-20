@@ -80,19 +80,6 @@ public class INodeFileWithSnapshot extends INodeFile
   }
 
   @Override
-  public short getBlockReplication() {
-    return Util.getBlockReplication(this);
-  }
-
-  @Override
-  public long computeFileSize(boolean includesBlockInfoUnderConstruction,
-      Snapshot snapshot) {
-    final FileDiff diff = diffs.getDiff(snapshot);
-    return diff != null? diff.fileSize
-        : super.computeFileSize(includesBlockInfoUnderConstruction, null);
-  }
-
-  @Override
   public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
       final BlocksMapUpdateInfo collectedBlocks) {
     if (snapshot == null) {

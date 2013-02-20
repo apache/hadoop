@@ -44,7 +44,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** @return this list as a unmodifiable {@link List}. */
-  final List<D> asList() {
+  public final List<D> asList() {
     return Collections.unmodifiableList(diffs);
   }
 
@@ -111,7 +111,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** @return the last diff. */
-  final D getLast() {
+  public final D getLast() {
     final int n = diffs.size();
     return n == 0? null: diffs.get(n - 1);
   }
@@ -127,7 +127,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         When the diff is null, it means that the current state and
    *         the corresponding snapshot state are the same. 
    */
-  final D getDiff(Snapshot snapshot) {
+  public final D getDiff(Snapshot snapshot) {
     if (snapshot == null) {
       // snapshot == null means the current state, therefore, return null.
       return null;
@@ -195,7 +195,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy) {
+  public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy) {
     if (latest != null) {
       checkAndAddLatestSnapshotDiff(latest, currentINode).saveSnapshotCopy(
           snapshotCopy, factory, currentINode);

@@ -31,7 +31,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   /** Name space quota */
   private long nsQuota = Long.MAX_VALUE;
   /** Name space count */
-  private long nsCount = 1L;
+  private long namespace = 1L;
   /** Disk space quota */
   private long dsQuota = HdfsConstants.QUOTA_RESET;
   /** Disk space count */
@@ -46,10 +46,9 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   public INodeDirectoryWithQuota(INodeDirectory other, boolean adopt,
       long nsQuota, long dsQuota) {
     super(other, adopt);
-    INode.DirCounts counts = new INode.DirCounts();
-    other.spaceConsumedInTree(counts);
-    this.nsCount = counts.getNsCount();
-    this.diskspace = counts.getDsCount();
+    final Quota.Counts counts = other.computeQuotaUsage();
+    this.namespace = counts.get(Quota.NAMESPACE);
+    this.diskspace = counts.get(Quota.DISKSPACE);
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
   }
@@ -95,19 +94,45 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     nodeToUpdate.dsQuota = dsQuota;
   }
   
-  
   @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
-    counts.nsCount += nsCount;
-    counts.dsCount += diskspace;
+  public final Quota.Counts computeQuotaUsage(Quota.Counts counts) {
+    // use cache value
+    counts.add(Quota.NAMESPACE, namespace);
+    counts.add(Quota.DISKSPACE, diskspace);
     return counts;
+  }
+
+  @Override
+  public Content.CountsMap computeContentSummary(
+      final Content.CountsMap countsMap) {
+    final long original = countsMap.sum(Content.DISKSPACE);
+    super.computeContentSummary(countsMap);
+    checkDiskspace(countsMap.sum(Content.DISKSPACE) - original);
+    return countsMap;
+  }
+
+  @Override
+  public Content.Counts computeContentSummary(
+      final Content.Counts counts) {
+    final long original = counts.get(Content.DISKSPACE);
+    super.computeContentSummary(counts);
+    checkDiskspace(counts.get(Content.DISKSPACE) - original);
+    return counts;
+  }
+  
+  private void checkDiskspace(final long computed) {
+    if (-1 != getDsQuota() && diskspaceConsumed() != computed) {
+      NameNode.LOG.error("BUG: Inconsistent diskspace for directory "
+          + getFullPathName() + ". Cached = " + diskspaceConsumed()
+          + " != Computed = " + computed);
+    }
   }
 
   /** Get the number of names in the subtree rooted at this directory
    * @return the size of the subtree rooted at this directory
    */
   long numItemsInTree() {
-    return nsCount;
+    return namespace;
   }
   
   long diskspaceConsumed() {
@@ -120,7 +145,8 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @param dsDelta change to disk space occupied
    */
   void addSpaceConsumed(long nsDelta, long dsDelta) {
-    setSpaceConsumed(nsCount + nsDelta, diskspace + dsDelta);
+    namespace += nsDelta;
+    diskspace += dsDelta;
   }
   
   /** 
@@ -132,7 +158,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @param diskspace disk space take by all the nodes under this directory
    */
   void setSpaceConsumed(long namespace, long diskspace) {
-    this.nsCount = namespace;
+    this.namespace = namespace;
     this.diskspace = diskspace;
   }
   
@@ -140,15 +166,11 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @throws QuotaExceededException if the given quota is less than the count
    */
   void verifyQuota(long nsDelta, long dsDelta) throws QuotaExceededException {
-    long newCount = nsCount + nsDelta;
-    long newDiskspace = diskspace + dsDelta;
-    if (nsDelta>0 || dsDelta>0) {
-      if (nsQuota >= 0 && nsQuota < newCount) {
-        throw new NSQuotaExceededException(nsQuota, newCount);
-      }
-      if (dsQuota >= 0 && dsQuota < newDiskspace) {
-        throw new DSQuotaExceededException(dsQuota, newDiskspace);
-      }
+    if (Quota.isViolated(nsQuota, namespace, nsDelta)) {
+      throw new NSQuotaExceededException(nsQuota, namespace + nsDelta);
+    }
+    if (Quota.isViolated(dsQuota, diskspace, dsDelta)) {
+      throw new DSQuotaExceededException(dsQuota, diskspace + dsDelta);
     }
   }
 }

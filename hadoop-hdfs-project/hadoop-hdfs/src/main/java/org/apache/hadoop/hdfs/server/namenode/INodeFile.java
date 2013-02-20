@@ -25,11 +25,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.Util;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -160,8 +164,10 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  public short getBlockReplication() {
-    return getFileReplication(null);
+  public final short getBlockReplication() {
+    return this instanceof FileWithSnapshot?
+        Util.getBlockReplication((FileWithSnapshot)this)
+        : getFileReplication(null);
   }
 
   public void setFileReplication(short replication, Snapshot latest) {
@@ -177,6 +183,11 @@ public class INodeFile extends INode implements BlockCollection {
   @Override
   public long getPreferredBlockSize() {
     return HeaderFormat.getPreferredBlockSize(header);
+  }
+
+  /** @return the diskspace required for a full block. */
+  final long getBlockDiskspace() {
+    return getPreferredBlockSize() * getBlockReplication();
   }
 
   /** @return the blocks of the file. */
@@ -259,69 +270,125 @@ public class INodeFile extends INode implements BlockCollection {
     return getFullPathName();
   }
 
+  @Override
+  Quota.Counts computeQuotaUsage(Quota.Counts counts) {
+    counts.add(Quota.NAMESPACE, this instanceof FileWithSnapshot?
+        ((FileWithSnapshot)this).getDiffs().asList().size() + 1: 1);
+    counts.add(Quota.DISKSPACE, diskspaceConsumed());
+    return counts;
+  }
 
   @Override
-  long[] computeContentSummary(long[] summary) {
-    summary[0] += computeFileSize(true, null);
-    summary[1]++;
-    summary[3] += diskspaceConsumed();
-    return summary;
+  public final Content.CountsMap computeContentSummary(
+      final Content.CountsMap countsMap) {
+    computeContentSummary4Snapshot(countsMap.getCounts(Key.SNAPSHOT));
+    computeContentSummary4Current(countsMap.getCounts(Key.CURRENT));
+    return countsMap;
   }
 
-  /** The same as computeFileSize(includesBlockInfoUnderConstruction, null). */
-  public long computeFileSize(boolean includesBlockInfoUnderConstruction) {
-    return computeFileSize(includesBlockInfoUnderConstruction, null);
+  @Override
+  public final Content.Counts computeContentSummary(
+      final Content.Counts counts) {
+    computeContentSummary4Snapshot(counts);
+    computeContentSummary4Current(counts);
+    return counts;
   }
 
-  /** Compute file size.
-   * May or may not include BlockInfoUnderConstruction.
+  private void computeContentSummary4Snapshot(final Content.Counts counts) {
+    // file length and diskspace only counted for the latest state of the file
+    // i.e. either the current state or the last snapshot
+    if (this instanceof FileWithSnapshot) {
+      final FileWithSnapshot withSnapshot = (FileWithSnapshot)this;
+      final FileDiffList diffs = withSnapshot.getDiffs();
+      final int n = diffs.asList().size();
+      counts.add(Content.FILE, n);
+      if (n > 0 && withSnapshot.isCurrentFileDeleted()) {
+        counts.add(Content.LENGTH, diffs.getLast().getFileSize());
+      }
+
+      if (withSnapshot.isCurrentFileDeleted()) {
+        final long lastFileSize = diffs.getLast().getFileSize();
+        counts.add(Content.DISKSPACE, lastFileSize * getBlockReplication());
+      }
+    }
+  }
+
+  private void computeContentSummary4Current(final Content.Counts counts) {
+    if (this instanceof FileWithSnapshot
+        && ((FileWithSnapshot)this).isCurrentFileDeleted()) {
+      return;
+    }
+
+    counts.add(Content.LENGTH, computeFileSize());
+    counts.add(Content.FILE, 1);
+    counts.add(Content.DISKSPACE, diskspaceConsumed());
+  }
+
+  /** The same as computeFileSize(null). */
+  public final long computeFileSize() {
+    return computeFileSize(null);
+  }
+
+  /**
+   * Compute file size of the current file if the given snapshot is null;
+   * otherwise, get the file size from the given snapshot.
    */
-  public long computeFileSize(boolean includesBlockInfoUnderConstruction,
-      Snapshot snapshot) {
+  public final long computeFileSize(Snapshot snapshot) {
+    if (snapshot != null && this instanceof FileWithSnapshot) {
+      final FileDiff d = ((FileWithSnapshot)this).getDiffs().getDiff(snapshot);
+      if (d != null) {
+        return d.getFileSize();
+      }
+    }
+
+    return computeFileSize(true, false);
+  }
+
+  /**
+   * Compute file size of the current file size
+   * but not including the last block if it is under construction.
+   */
+  public final long computeFileSizeNotIncludingLastUcBlock() {
+    return computeFileSize(false, false);
+  }
+
+  /**
+   * Compute file size of the current file.
+   * 
+   * @param includesLastUcBlock
+   *          If the last block is under construction, should it be included?
+   * @param usePreferredBlockSize4LastUcBlock
+   *          If the last block is under construction, should we use actual
+   *          block size or preferred block size?
+   *          Note that usePreferredBlockSize4LastUcBlock is ignored
+   *          if includesLastUcBlock == false.
+   * @return file size
+   */
+  private final long computeFileSize(boolean includesLastUcBlock,
+      boolean usePreferredBlockSize4LastUcBlock) {
     if (blocks == null || blocks.length == 0) {
       return 0;
     }
     final int last = blocks.length - 1;
     //check if the last block is BlockInfoUnderConstruction
-    long bytes = blocks[last] instanceof BlockInfoUnderConstruction
-                 && !includesBlockInfoUnderConstruction?
-                     0: blocks[last].getNumBytes();
-    for(int i = 0; i < last; i++) {
-      bytes += blocks[i].getNumBytes();
+    long size = blocks[last].getNumBytes();
+    if (blocks[last] instanceof BlockInfoUnderConstruction) {
+       if (!includesLastUcBlock) {
+         size = 0;
+       } else if (usePreferredBlockSize4LastUcBlock) {
+         size = getPreferredBlockSize();
+       }
     }
-    return bytes;
-  }
-  
-
-  @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
-    counts.nsCount += 1;
-    counts.dsCount += diskspaceConsumed();
-    return counts;
+    //sum other blocks
+    for(int i = 0; i < last; i++) {
+      size += blocks[i].getNumBytes();
+    }
+    return size;
   }
 
   long diskspaceConsumed() {
-    return diskspaceConsumed(blocks);
-  }
-  
-  private long diskspaceConsumed(Block[] blkArr) {
-    long size = 0;
-    if(blkArr == null) 
-      return 0;
-    
-    for (Block blk : blkArr) {
-      if (blk != null) {
-        size += blk.getNumBytes();
-      }
-    }
-    /* If the last block is being written to, use prefferedBlockSize
-     * rather than the actual block size.
-     */
-    if (blkArr.length > 0 && blkArr[blkArr.length-1] != null && 
-        isUnderConstruction()) {
-      size += getPreferredBlockSize() - blkArr[blkArr.length-1].getNumBytes();
-    }
-    return size * getFileReplication();
+    // use preferred block size for the last block if it is under construction
+    return computeFileSize(true, true) * getBlockReplication();
   }
   
   /**
@@ -349,7 +416,7 @@ public class INodeFile extends INode implements BlockCollection {
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final Snapshot snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
-    out.print(", fileSize=" + computeFileSize(true, snapshot));
+    out.print(", fileSize=" + computeFileSize(snapshot));
     // only compare the first block
     out.print(", blocks=");
     out.print(blocks == null || blocks.length == 0? null: blocks[0]);

@@ -161,3 +161,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4487. Fix snapshot diff report for HDFS-4446.  (Jing Zhao via szetszwo)
 
   HDFS-4431. Support snapshot in OfflineImageViewer.  (Jing Zhao via szetszwo)
+
+  HDFS-4503. Update computeContentSummary(..), spaceConsumedInTree(..) and
+  diskspaceConsumed(..) in INode for snapshot.  (szetszwo)

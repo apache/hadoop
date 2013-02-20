@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
@@ -62,12 +63,6 @@ public class INodeSymlink extends INode {
   public byte[] getSymlink() {
     return symlink;
   }
-
-  @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
-    counts.nsCount += 1;
-    return counts;
-  }
   
   @Override
   public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
@@ -76,9 +71,22 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  long[] computeContentSummary(long[] summary) {
-    summary[1]++; // Increment the file count
-    return summary;
+  Quota.Counts computeQuotaUsage(final Quota.Counts counts) {
+    counts.add(Quota.NAMESPACE, 1);
+    return counts;
+  }
+
+  @Override
+  public Content.CountsMap computeContentSummary(
+      final Content.CountsMap countsMap) {
+    computeContentSummary(countsMap.getCounts(Key.CURRENT));
+    return countsMap;
+  }
+
+  @Override
+  public Content.Counts computeContentSummary(final Content.Counts counts) {
+    counts.add(Content.SYMLINK, 1);
+    return counts;
   }
 
   @Override

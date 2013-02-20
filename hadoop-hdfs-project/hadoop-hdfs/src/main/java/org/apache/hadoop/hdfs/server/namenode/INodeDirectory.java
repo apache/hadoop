@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
@@ -511,45 +512,33 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  DirCounts spaceConsumedInTree(DirCounts counts) {
-    counts.nsCount += 1;
+  Quota.Counts computeQuotaUsage(Quota.Counts counts) {
     if (children != null) {
       for (INode child : children) {
-        child.spaceConsumedInTree(counts);
+        child.computeQuotaUsage(counts);
       }
     }
+    counts.add(Quota.NAMESPACE, 1);
     return counts;    
   }
 
   @Override
-  long[] computeContentSummary(long[] summary) {
-    // Walk through the children of this node, using a new summary array
-    // for the (sub)tree rooted at this node
-    assert 4 == summary.length;
-    long[] subtreeSummary = new long[]{0,0,0,0};
-    if (children != null) {
-      for (INode child : children) {
-        child.computeContentSummary(subtreeSummary);
-      }
+  public Content.Counts computeContentSummary(final Content.Counts counts) {
+    for (INode child : getChildrenList(null)) {
+      child.computeContentSummary(counts);
     }
-    if (this instanceof INodeDirectoryWithQuota) {
-      // Warn if the cached and computed diskspace values differ
-      INodeDirectoryWithQuota node = (INodeDirectoryWithQuota)this;
-      long space = node.diskspaceConsumed();
-      assert -1 == node.getDsQuota() || space == subtreeSummary[3];
-      if (-1 != node.getDsQuota() && space != subtreeSummary[3]) {
-        NameNode.LOG.warn("Inconsistent diskspace for directory "
-            +getLocalName()+". Cached: "+space+" Computed: "+subtreeSummary[3]);
-      }
-    }
+    counts.add(Content.DIRECTORY, 1);
+    return counts;
+  }
 
-    // update the passed summary array with the values for this node's subtree
-    for (int i = 0; i < summary.length; i++) {
-      summary[i] += subtreeSummary[i];
+  @Override
+  public Content.CountsMap computeContentSummary(
+      final Content.CountsMap countsMap) {
+    for (INode child : getChildrenList(null)) {
+      child.computeContentSummary(countsMap);
     }
-
-    summary[2]++;
-    return summary;
+    countsMap.getCounts(Key.CURRENT).add(Content.DIRECTORY, 1);
+    return countsMap;
   }
 
   /**

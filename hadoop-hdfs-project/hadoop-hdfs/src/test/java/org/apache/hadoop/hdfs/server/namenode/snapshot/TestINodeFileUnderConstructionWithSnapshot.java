@@ -106,7 +106,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // check corresponding inodes
     fileNode = (INodeFile) fsdir.getINode(file.toString());
     assertEquals(REPLICATION - 1, fileNode.getFileReplication());
-    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(true));
+    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize());
 
     // 3. create snapshot --> append
     hdfs.createSnapshot(dir, "s2");
@@ -115,7 +115,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // check corresponding inodes
     fileNode = (INodeFile) fsdir.getINode(file.toString());
     assertEquals(REPLICATION - 1,  fileNode.getFileReplication());
-    assertEquals(BLOCKSIZE * 4, fileNode.computeFileSize(true));
+    assertEquals(BLOCKSIZE * 4, fileNode.computeFileSize());
   }
   
   private HdfsDataOutputStream appendFileWithoutClosing(Path file, int length)
@@ -146,7 +146,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     // check: an INodeFileUnderConstructionWithSnapshot should be stored into s0's
     // deleted list, with size BLOCKSIZE*2
     INodeFile fileNode = (INodeFile) fsdir.getINode(file.toString());
-    assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize(true));
+    assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize());
     INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
         .getINode(dir.toString());
     DirectoryDiff last = dirNode.getDiffs().getLast();
@@ -158,7 +158,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     
     // re-check nodeInDeleted_S0
     dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
-    assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize(true, s0));
+    assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize(s0));
     
     // 3. take snapshot --> close stream
     hdfs.createSnapshot(dir, "s1");
@@ -171,7 +171,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     last = dirNode.getDiffs().getLast();
     Snapshot s1 = last.snapshot;
     assertTrue(fileNode instanceof INodeFileWithSnapshot);
-    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(true, s1));
+    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(s1));
     
     // 4. modify file --> append without closing stream --> take snapshot -->
     // close stream
@@ -181,6 +181,6 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     out.close();
     
     // re-check the size of nodeInDeleted_S1
-    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(true, s1));
+    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(s1));
   }  
 }

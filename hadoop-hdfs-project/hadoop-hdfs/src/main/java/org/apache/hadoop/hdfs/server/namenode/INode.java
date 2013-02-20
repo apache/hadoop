@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.util.StringUtils;
@@ -48,23 +49,6 @@ import com.google.common.primitives.SignedBytes;
 public abstract class INode implements Diff.Element<byte[]> {
   public static final Log LOG = LogFactory.getLog(INode.class);
 
-  /** Wrapper of two counters for namespace consumed and diskspace consumed. */
-  static class DirCounts {
-    /** namespace count */
-    long nsCount = 0;
-    /** diskspace count */
-    long dsCount = 0;
-    
-    /** returns namespace count */
-    long getNsCount() {
-      return nsCount;
-    }
-    /** returns diskspace count */
-    long getDsCount() {
-      return dsCount;
-    }
-  }
-  
   private static enum PermissionStatusFormat {
     MODE(0, 16),
     GROUP(MODE.OFFSET + MODE.LENGTH, 25),
@@ -310,17 +294,81 @@ public abstract class INode implements Diff.Element<byte[]> {
   public abstract int destroySubtreeAndCollectBlocks(Snapshot snapshot,
       BlocksMapUpdateInfo collectedBlocks);
 
+  /**
+   * The content types such as file, directory and symlink to be computed
+   * in {@link INode#computeContentSummary(CountsMap)}.
+   */
+  public enum Content {
+    /** The number of files. */
+    FILE,
+    /** The number of directories. */
+    DIRECTORY,
+    /** The number of symlinks. */
+    SYMLINK,
+
+    /** The total of file length in bytes. */
+    LENGTH,
+    /** The total of disk space usage in bytes including replication. */
+    DISKSPACE,
+
+    /** The number of snapshots. */
+    SNAPSHOT,
+    /** The number of snapshottable directories. */
+    SNAPSHOTTABLE_DIRECTORY;
+
+    /** Content counts. */
+    public static class Counts extends EnumCounters<Content> {
+      private Counts() {
+        super(Content.values());
+      }
+    }
+
+    private static final EnumCounters.Factory<Content, Counts> FACTORY
+        = new EnumCounters.Factory<Content, Counts>() {
+      @Override
+      public Counts newInstance() {
+        return new Counts();
+      }
+    };
+
+    /** A map of counters for the current state and the snapshots. */
+    public static class CountsMap
+        extends EnumCounters.Map<CountsMap.Key, Content, Counts> {
+      /** The key type of the map. */
+      public static enum Key { CURRENT, SNAPSHOT }
+
+      private CountsMap() {
+        super(FACTORY);
+      }
+    }
+  }
+
   /** Compute {@link ContentSummary}. */
   public final ContentSummary computeContentSummary() {
-    long[] a = computeContentSummary(new long[]{0,0,0,0});
-    return new ContentSummary(a[0], a[1], a[2], getNsQuota(), 
-                              a[3], getDsQuota());
+    final Content.Counts current = computeContentSummary(
+        new Content.CountsMap()).getCounts(Key.CURRENT);
+    return new ContentSummary(current.get(Content.LENGTH),
+        current.get(Content.FILE) + current.get(Content.SYMLINK),
+        current.get(Content.DIRECTORY), getNsQuota(),
+        current.get(Content.DISKSPACE), getDsQuota());
   }
+
   /**
-   * @return an array of three longs. 
-   * 0: length, 1: file count, 2: directory count 3: disk space
+   * Count subtree content summary with a {@link Content.CountsMap}.
+   *
+   * @param countsMap The subtree counts for returning.
+   * @return The same objects as the counts parameter.
    */
-  abstract long[] computeContentSummary(long[] summary);
+  public abstract Content.CountsMap computeContentSummary(
+      Content.CountsMap countsMap);
+
+  /**
+   * Count subtree content summary with a {@link Content.Counts}.
+   *
+   * @param counts The subtree counts for returning.
+   * @return The same objects as the counts parameter.
+   */
+  public abstract Content.Counts computeContentSummary(Content.Counts counts);
   
   /**
    * Get the quota set for this inode
@@ -334,16 +382,24 @@ public abstract class INode implements Diff.Element<byte[]> {
     return -1;
   }
   
-  boolean isQuotaSet() {
+  final boolean isQuotaSet() {
     return getNsQuota() >= 0 || getDsQuota() >= 0;
   }
   
   /**
-   * Adds total number of names and total disk space taken under 
-   * this tree to counts.
-   * Returns updated counts object.
+   * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
    */
-  abstract DirCounts spaceConsumedInTree(DirCounts counts);
+  final Quota.Counts computeQuotaUsage() {
+    return computeQuotaUsage(new Quota.Counts());
+  }
+
+  /**
+   * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
+   * 
+   * @param counts The subtree counts for returning.
+   * @return The same objects as the counts parameter.
+   */
+  abstract Quota.Counts computeQuotaUsage(Quota.Counts counts);
   
   /**
    * @return null if the local name is null; otherwise, return the local name.

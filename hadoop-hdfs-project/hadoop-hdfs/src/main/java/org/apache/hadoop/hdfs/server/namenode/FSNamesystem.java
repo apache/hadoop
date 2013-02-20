@@ -1396,8 +1396,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           dir.setTimes(src, inode, -1, now, false, iip.getLatestSnapshot());
         }
-        return blockManager.createLocatedBlocks(inode.getBlocks(),
-            inode.computeFileSize(false, iip.getPathSnapshot()),
+        final long fileSize = iip.getPathSnapshot() != null?
+            inode.computeFileSize(iip.getPathSnapshot())
+            : inode.computeFileSizeNotIncludingLastUcBlock();
+        return blockManager.createLocatedBlocks(inode.getBlocks(), fileSize,
             inode.isUnderConstruction(), offset, length, needBlockToken);
       } finally {
         if (attempt == 0) {
@@ -2302,7 +2304,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       saveAllocatedBlock(src, inodesInPath, newBlock, targets);
 
       dir.persistBlocks(src, pendingFile);
-      offset = pendingFile.computeFileSize(true);
+      offset = pendingFile.computeFileSize();
     } finally {
       writeUnlock();
     }
@@ -2390,7 +2392,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         NameNode.stateChangeLog.info("BLOCK* allocateBlock: " +
             "caught retry for allocation of a new block in " +
             src + ". Returning previously allocated block " + lastBlockInFile);
-        long offset = pendingFile.computeFileSize(true);
+        long offset = pendingFile.computeFileSize();
         onRetryBlock[0] = makeLocatedBlock(lastBlockInFile,
             ((BlockInfoUnderConstruction)lastBlockInFile).getExpectedLocations(),
             offset);

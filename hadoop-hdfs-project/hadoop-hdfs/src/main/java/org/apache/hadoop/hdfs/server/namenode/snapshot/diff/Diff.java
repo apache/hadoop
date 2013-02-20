@@ -158,7 +158,7 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
 
   /** @return the deleted list, which is never null. */
-  protected List<E> getDeletedList() {
+  public List<E> getDeletedList() {
     return deleted == null? Collections.<E>emptyList(): deleted;
   }
 

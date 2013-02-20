@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -714,11 +715,78 @@ public class FSImage implements Closeable {
     } finally {
       FSEditLog.closeAllStreams(editStreams);
       // update the counts
-      target.dir.updateCountForINodeWithQuota();   
+      updateCountForQuota(target.dir.rootDir);   
     }
     return lastAppliedTxId - prevLastAppliedTxId;
   }
 
+  /** Update the count of each directory with quota in the namespace
+   * A directory's count is defined as the total number inodes in the tree
+   * rooted at the directory.
+   * 
+   * This is an update of existing state of the filesystem and does not
+   * throw QuotaExceededException.
+   */
+  static void updateCountForQuota(INodeDirectoryWithQuota root) {
+    updateCountForINodeWithQuota(root, new Quota.Counts(), new Stack<INode>());
+  }
+  
+  /** 
+   * Update the count of the directory if it has a quota and return the count
+   * 
+   * This does not throw a QuotaExceededException. This is just an update
+   * of of existing state and throwing QuotaExceededException does not help
+   * with fixing the state, if there is a problem.
+   * 
+   * @param dir the root of the tree that represents the directory
+   * @param counters counters for name space and disk space
+   * @param stack INodes for the each of components in the path.
+   */
+  private static void updateCountForINodeWithQuota(INodeDirectory dir,
+      Quota.Counts counts, Stack<INode> stack) {
+    // The stack is not needed since we could use the 'parent' field in INode.
+    // However, using 'parent' is not recommended.
+    stack.push(dir);
+
+    final long parentNamespace = counts.get(Quota.NAMESPACE);
+    final long parentDiskspace = counts.get(Quota.DISKSPACE);
+    
+    counts.add(Quota.NAMESPACE, 1);
+    for (INode child : dir.getChildrenList(null)) {
+      if (child.isDirectory()) {
+        updateCountForINodeWithQuota((INodeDirectory)child, counts, stack);
+      } else {
+        // file or symlink: count here to reduce recursive calls.
+        counts.add(Quota.NAMESPACE, 1);
+        if (child.isFile()) {
+          counts.add(Quota.DISKSPACE, ((INodeFile)child).diskspaceConsumed());
+        }
+      }
+    }
+      
+    if (dir.isQuotaSet()) {
+      // check if quota is violated. It indicates a software bug.
+      final long namespace = counts.get(Quota.NAMESPACE) - parentNamespace;
+      if (Quota.isViolated(dir.getNsQuota(), namespace)) {
+        final INode[] inodes = stack.toArray(new INode[stack.size()]);
+        LOG.error("BUG: Namespace quota violation in image for "
+            + FSDirectory.getFullPathName(inodes, inodes.length)
+            + " quota = " + dir.getNsQuota() + " < consumed = " + namespace);
+      }
+
+      final long diskspace = counts.get(Quota.DISKSPACE) - parentDiskspace;
+      if (Quota.isViolated(dir.getDsQuota(), diskspace)) {
+        final INode[] inodes = stack.toArray(new INode[stack.size()]);
+        LOG.error("BUG: Diskspace quota violation in image for "
+            + FSDirectory.getFullPathName(inodes, inodes.length)
+            + " quota = " + dir.getDsQuota() + " < consumed = " + diskspace);
+      }
+
+      ((INodeDirectoryWithQuota)dir).setSpaceConsumed(namespace, diskspace);
+    }
+      
+    stack.pop();
+  }
 
   /**
    * Load the image namespace from the given image file, verifying

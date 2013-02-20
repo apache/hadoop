@@ -84,7 +84,7 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** @return the snapshot object of this diff. */
-  final Snapshot getSnapshot() {
+  public final Snapshot getSnapshot() {
     return snapshot;
   }
 
