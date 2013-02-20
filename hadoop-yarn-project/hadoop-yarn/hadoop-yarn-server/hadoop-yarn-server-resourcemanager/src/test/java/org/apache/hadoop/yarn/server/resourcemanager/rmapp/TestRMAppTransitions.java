@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
@@ -615,5 +616,13 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
+  }
+
+  @Test
+  public void testGetAppReport() {
+    RMApp app = createNewTestApp(null);
+    assertAppState(RMAppState.NEW, app);
+    ApplicationReport report = app.createAndGetApplicationReport(true);
+    Assert.assertNotNull(report.getApplicationResourceUsageReport());
   }
 }

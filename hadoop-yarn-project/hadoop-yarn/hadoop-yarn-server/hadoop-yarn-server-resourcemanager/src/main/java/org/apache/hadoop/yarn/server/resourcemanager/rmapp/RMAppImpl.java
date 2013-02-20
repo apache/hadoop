@@ -406,7 +406,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       String host = UNAVAILABLE;
       String origTrackingUrl = UNAVAILABLE;
       int rpcPort = -1;
-      ApplicationResourceUsageReport appUsageReport = null;
+      ApplicationResourceUsageReport appUsageReport =
+          DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       String diags = UNAVAILABLE;
       if (allowAccess) {
@@ -418,18 +419,17 @@ public class RMAppImpl implements RMApp, Recoverable {
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
-        } else {
-          currentApplicationAttemptId = 
-              BuilderUtils.newApplicationAttemptId(this.applicationId, 
-                  DUMMY_APPLICATION_ATTEMPT_NUMBER);
         }
+
         diags = this.diagnostics.toString();
-      } else {
-        appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
+      }
+
+      if (currentApplicationAttemptId == null) {
         currentApplicationAttemptId = 
             BuilderUtils.newApplicationAttemptId(this.applicationId, 
                 DUMMY_APPLICATION_ATTEMPT_NUMBER);
       }
+
       return BuilderUtils.newApplicationReport(this.applicationId,
           currentApplicationAttemptId, this.user, this.queue,
           this.name, host, rpcPort, clientToken,

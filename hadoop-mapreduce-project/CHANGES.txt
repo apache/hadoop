@@ -152,6 +152,9 @@ Trunk (Unreleased)
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
+    MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
+    via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -719,6 +722,10 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
     speculative attempts (Robert Parker via jlowe)
+
+    MAPREDUCE-5009. Killing the Task Attempt slated for commit does not clear
+    the value from the Task commitAttempt member (Robert Parker via jeagles)
+
 
 Release 0.23.6 - UNRELEASED
 
