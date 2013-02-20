@@ -316,6 +316,9 @@ Release 0.23.7 - UNRELEASED
     YARN-249. Capacity Scheduler web page should show list of active users per 
     queue like it used to (in 1.x) (Ravi Prakash via tgraves)
 
+    YARN-236. RM should point tracking URL to RM web page when app fails to
+    start (Jason Lowe via jeagles)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
