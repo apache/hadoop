@@ -28,6 +28,9 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-5013. mapred.JobStatus compatibility: MR2 missing constructors
     from MR1. (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-4951. Container preemption interpreted as task failure.
+    (Sandy Ryza via tomwhite)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
