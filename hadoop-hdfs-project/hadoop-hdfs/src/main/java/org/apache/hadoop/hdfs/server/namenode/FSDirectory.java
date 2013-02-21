@@ -764,8 +764,8 @@ public class FSDirectory implements Closeable {
           INode rmdst = removedDst;
           removedDst = null;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-          filesDeleted = rmdst.destroySubtreeAndCollectBlocks(
-              null, collectedBlocks);
+          filesDeleted = rmdst.cleanSubtree(null,
+              dstInodesInPath.getLatestSnapshot(), collectedBlocks);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
         }
 
@@ -1140,8 +1140,8 @@ public class FSDirectory implements Closeable {
     targetNode.getParent().updateModificationTime(mtime, latestSnapshot);
 
     // collect block
-    final int inodesRemoved = targetNode.destroySubtreeAndCollectBlocks(
-        null, collectedBlocks);
+    final int inodesRemoved = targetNode.cleanSubtree(null, latestSnapshot,
+        collectedBlocks);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           + targetNode.getFullPathName() + " is removed");

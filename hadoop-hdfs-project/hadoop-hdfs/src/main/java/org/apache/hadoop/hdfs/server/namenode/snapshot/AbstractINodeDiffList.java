@@ -47,45 +47,58 @@ abstract class AbstractINodeDiffList<N extends INode,
   public final List<D> asList() {
     return Collections.unmodifiableList(diffs);
   }
+  
+  /** clear the diff list */
+  void clear() {
+    diffs.clear();
+  }
 
   /**
-   * Delete the snapshot with the given name. The synchronization of the diff
-   * list will be done outside.
-   * 
-   * If the diff to remove is not the first one in the diff list, we need to 
-   * combine the diff with its previous one:
+   * Delete a snapshot. The synchronization of the diff list will be done 
+   * outside. If the diff to remove is not the first one in the diff list, we 
+   * need to combine the diff with its previous one.
    * 
    * @param snapshot The snapshot to be deleted
+   * @param prior The snapshot taken before the to-be-deleted snapshot
    * @param collectedBlocks Used to collect information for blocksMap update
-   * @return The SnapshotDiff containing the deleted snapshot. 
-   *         Null if the snapshot with the given name does not exist. 
+   * @return delta in namespace. 
    */
-  final D deleteSnapshotDiff(final Snapshot snapshot, final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks) {
+  final int deleteSnapshotDiff(final Snapshot snapshot, Snapshot prior,
+      final N currentINode, final BlocksMapUpdateInfo collectedBlocks) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
-    if (snapshotIndex < 0) {
-      return null;
-    } else {
-      final D removed = diffs.remove(snapshotIndex);
-      if (snapshotIndex == 0) {
-        if (removed.snapshotINode != null) {
-          removed.snapshotINode.clearReferences();
-        }
+    
+    int removedNum = 0;
+    D removed = null;
+    if (snapshotIndex == 0) {
+      if (prior != null) {
+        // set the snapshot to latestBefore
+        diffs.get(snapshotIndex).setSnapshot(prior);
+      } else {
+        removed = diffs.remove(0);
+        removedNum++; // removed a diff
+        removedNum += removed.destroyAndCollectBlocks(currentINode,
+            collectedBlocks);
+      }
+    } else if (snapshotIndex > 0) {
+      final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
+      if (!previous.getSnapshot().equals(prior)) {
+        diffs.get(snapshotIndex).setSnapshot(prior);
       } else {
         // combine the to-be-removed diff with its previous diff
-        final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
+        removed = diffs.remove(snapshotIndex);
+        removedNum++;
         if (previous.snapshotINode == null) {
           previous.snapshotINode = removed.snapshotINode;
         } else if (removed.snapshotINode != null) {
           removed.snapshotINode.clearReferences();
         }
-        previous.combinePosteriorAndCollectBlocks(currentINode, removed,
-            collectedBlocks);
+        removedNum += previous.combinePosteriorAndCollectBlocks(currentINode,
+            removed, collectedBlocks);
         previous.setPosterior(removed.getPosterior());
+        removed.setPosterior(null);
       }
-      removed.setPosterior(null);
-      return removed;
     }
+    return removedNum;
   }
 
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
@@ -120,6 +133,25 @@ abstract class AbstractINodeDiffList<N extends INode,
   final Snapshot getLastSnapshot() {
     final AbstractINodeDiff<N, D> last = getLast();
     return last == null? null: last.getSnapshot();
+  }
+  
+  /**
+   * Find the latest snapshot before a given snapshot.
+   * @param anchor The returned snapshot must be taken before this given 
+   *               snapshot.
+   * @return The latest snapshot before the given snapshot.
+   */
+  final Snapshot getPrior(Snapshot anchor) {
+    if (anchor == null) {
+      return getLastSnapshot();
+    }
+    final int i = Collections.binarySearch(diffs, anchor);
+    if (i == -1 || i == 0) {
+      return null;
+    } else {
+      int priorIndex = i > 0 ? i - 1 : -i - 2;
+      return diffs.get(priorIndex).getSnapshot();
+    }
   }
 
   /**

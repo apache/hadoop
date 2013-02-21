@@ -242,17 +242,18 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks) {
-    if (snapshot != null) {
-      // never delete blocks for snapshot since the current file still exists
+    if (snapshot == null && prior == null) {   
+      // this only happens when deleting the current file
+      return destroyAndCollectBlocks(collectedBlocks);
+    } else {
       return 0;
     }
-
-    return destroySelfAndCollectBlocks(collectedBlocks);
   }
 
-  public int destroySelfAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks) {
+  @Override
+  public int destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks) {
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfo blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);

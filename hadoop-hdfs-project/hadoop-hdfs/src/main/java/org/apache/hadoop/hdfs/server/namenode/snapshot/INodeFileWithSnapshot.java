@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.util.Iterator;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Represent an {@link INodeFile} that is snapshotted.
@@ -80,19 +84,24 @@ public class INodeFileWithSnapshot extends INodeFile
   }
 
   @Override
-  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+  public int cleanSubtree(final Snapshot snapshot, Snapshot prior, 
       final BlocksMapUpdateInfo collectedBlocks) {
-    if (snapshot == null) {
+    if (snapshot == null) { // delete the current file
+      recordModification(prior);
       isCurrentFileDeleted = true;
-    } else {
-      if (diffs.deleteSnapshotDiff(snapshot, this, collectedBlocks) == null) {
-        //snapshot diff not found and nothing is deleted.
-        return 0;
-      }
+      Util.collectBlocksAndClear(this, collectedBlocks);
+    } else { // delete a snapshot
+      return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks);
     }
-
-    Util.collectBlocksAndClear(this, collectedBlocks);
     return 1;
+  }
+  
+  @Override
+  public int destroyAndCollectBlocks(
+      final BlocksMapUpdateInfo collectedBlocks) {
+    Preconditions.checkState(this.isCurrentFileDeleted);
+    diffs.clear();
+    return super.destroyAndCollectBlocks(collectedBlocks);
   }
 
   @Override

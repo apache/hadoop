@@ -50,12 +50,23 @@ public class Snapshot implements Comparable<byte[]> {
     }
   };
 
-  /** @return the latest snapshot taken on the given inode. */
-  public static Snapshot findLatestSnapshot(INode inode) {
+  /**
+   * Find the latest snapshot that 1) covers the given inode (which means the
+   * snapshot was either taken on the inode or taken on an ancestor of the
+   * inode), and 2) was taken before the given snapshot (if the given snapshot 
+   * is not null).
+   * 
+   * @param inode the given inode that the returned snapshot needs to cover
+   * @param anchor the returned snapshot should be taken before this snapshot.
+   * @return the latest snapshot covers the given inode and was taken before the
+   *         the given snapshot (if it is not null).
+   */
+  public static Snapshot findLatestSnapshot(INode inode, Snapshot anchor) {
     Snapshot latest = null;
     for(; inode != null; inode = inode.getParent()) {
-      if (inode instanceof INodeDirectorySnapshottable) {
-        final Snapshot s = ((INodeDirectorySnapshottable)inode).getLastSnapshot();
+      if (inode instanceof INodeDirectoryWithSnapshot) {
+        final Snapshot s = ((INodeDirectoryWithSnapshot) inode).getDiffs()
+            .getPrior(anchor);
         if (latest == null
             || (s != null && ID_COMPARATOR.compare(latest, s) < 0)) {
           latest = s;

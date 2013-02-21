@@ -565,23 +565,45 @@ public class INodeDirectory extends INode {
     setChildren(null);
   }
 
-  public int destroySubtreeAndCollectBlocksRecursively(final Snapshot snapshot,
+  /**
+   * Call {@link INode#cleanSubtree(SnapshotDeletionInfo, BlocksMapUpdateInfo)}
+   * recursively down the subtree.
+   */
+  public int cleanSubtreeRecursively(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks) {
     int total = 0;
-    for (INode child : getChildrenList(snapshot)) {
-      total += child.destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
+    // in case of deletion snapshot, since this call happens after we modify
+    // the diff list, the snapshot to be deleted has been combined or renamed
+    // to its latest previous snapshot.
+    Snapshot s = snapshot != null && prior != null ? prior : snapshot;
+    for (INode child : getChildrenList(s)) {
+      total += child.cleanSubtree(snapshot, prior, collectedBlocks);
     }
     return total;
   }
 
   @Override
-  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+  public int destroyAndCollectBlocks(
       final BlocksMapUpdateInfo collectedBlocks) {
-    int total = destroySubtreeAndCollectBlocksRecursively(
-        snapshot, collectedBlocks);
-    if (snapshot == null) {
-      total++; //count this dir only if this object is destroyed  
-      clearReferences();
+    int total = 0;
+    for (INode child : getChildrenList(null)) {
+      total += child.destroyAndCollectBlocks(collectedBlocks);
+    }
+    clearReferences();
+    total++;
+    return total;
+  }
+  
+  @Override
+  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
+      final BlocksMapUpdateInfo collectedBlocks) {
+    int total = 0;
+    if (prior == null && snapshot == null) {
+      // destroy the whole subtree and collect blocks that should be deleted
+      total += destroyAndCollectBlocks(collectedBlocks);
+    } else {
+      // process recursively down the subtree
+      total += cleanSubtreeRecursively(snapshot, prior, collectedBlocks);
     }
     return total;
   }

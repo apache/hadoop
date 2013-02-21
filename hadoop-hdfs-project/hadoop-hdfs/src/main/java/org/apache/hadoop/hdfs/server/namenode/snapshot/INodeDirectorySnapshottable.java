@@ -309,7 +309,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           + ": the snapshot does not exist.");
     } else {
       final Snapshot snapshot = snapshotsByNames.remove(i);
-      destroySubtreeAndCollectBlocks(snapshot, collectedBlocks);
+      Snapshot prior = Snapshot.findLatestSnapshot(this, snapshot);
+      cleanSubtree(snapshot, prior, collectedBlocks);
       return snapshot;
     }
   }

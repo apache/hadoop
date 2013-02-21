@@ -164,3 +164,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4503. Update computeContentSummary(..), spaceConsumedInTree(..) and
   diskspaceConsumed(..) in INode for snapshot.  (szetszwo)
+
+  HDFS-4499. Fix file/directory/snapshot deletion for file diff.  (Jing Zhao
+  via szetszwo)

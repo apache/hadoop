@@ -3446,7 +3446,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         //remove lease, close file
         finalizeINodeFileUnderConstruction(src, pendingFile,
-            Snapshot.findLatestSnapshot(pendingFile));
+            Snapshot.findLatestSnapshot(pendingFile, null));
       } else {
         // If this commit does not want to close the file, persist blocks
         dir.persistBlocks(src, pendingFile);

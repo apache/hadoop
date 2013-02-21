@@ -280,18 +280,75 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   /**
-   * Destroy the subtree under this inode and collect the blocks from the
-   * descents for further block deletion/update. If snapshot is null, the
-   * subtree resides in the current state; otherwise, the subtree resides in the
-   * given snapshot. The method also clears the references in the deleted inodes
-   * and remove the corresponding snapshot information, if there is any.
+   * Clean the subtree under this inode and collect the blocks from the descents
+   * for further block deletion/update. The current inode can either resides in
+   * the current tree or be stored as a snapshot copy.
    * 
-   * @param snapshot the snapshot to be deleted; null means the current state.
-   * @param collectedBlocks blocks collected from the descents for further block
-   *                        deletion/update will be added to the given map.
+   * <pre>
+   * In general, we have the following rules. 
+   * 1. When deleting a file/directory in the current tree, we have different 
+   * actions according to the type of the node to delete. 
+   * 
+   * 1.1 The current inode (this) is an {@link INodeFile}. 
+   * 1.1.1 If {@code prior} is null, there is no snapshot taken on ancestors 
+   * before. Thus we simply destroy (i.e., to delete completely, no need to save 
+   * snapshot copy) the current INode and collect its blocks for further 
+   * cleansing.
+   * 1.1.2 Else do nothing since the current INode will be stored as a snapshot
+   * copy.
+   * 
+   * 1.2 The current inode is an {@link INodeDirectory}.
+   * 1.2.1 If {@code prior} is null, there is no snapshot taken on ancestors 
+   * before. Similarly, we destroy the whole subtree and collect blocks.
+   * 1.2.2 Else do nothing with the current INode. Recursively clean its 
+   * children.
+   * 
+   * 1.3 The current inode is a {@link FileWithSnapshot}.
+   * Call {@link INode#recordModification(Snapshot)} to capture the 
+   * current states. Mark the INode as deleted.
+   * 
+   * 1.4 The current inode is a {@link INodeDirectoryWithSnapshot}.
+   * Call {@link INode#recordModification(Snapshot)} to capture the 
+   * current states. Destroy files/directories created after the latest snapshot 
+   * (i.e., the inodes stored in the created list of the latest snapshot).
+   * Recursively clean remaining children. 
+   *
+   * 2. When deleting a snapshot.
+   * 2.1 To clean {@link INodeFile}: do nothing.
+   * 2.2 To clean {@link INodeDirectory}: recursively clean its children.
+   * 2.3 To clean {@link FileWithSnapshot}: delete the corresponding snapshot in
+   * its diff list.
+   * 2.4 To clean {@link INodeDirectoryWithSnapshot}: delete the corresponding 
+   * snapshot in its diff list. Recursively clean its children.
+   * </pre>
+   * 
+   * @param snapshot
+   *          The snapshot to delete. Null means to delete the current
+   *          file/directory.
+   * @param prior
+   *          The latest snapshot before the to-be-deleted snapshot. When
+   *          deleting a current inode, this parameter captures the latest
+   *          snapshot.
+   * @param collectedBlocks
+   *          blocks collected from the descents for further block
+   *          deletion/update will be added to the given map.
    * @return the number of deleted inodes in the subtree.
    */
-  public abstract int destroySubtreeAndCollectBlocks(Snapshot snapshot,
+  public abstract int cleanSubtree(final Snapshot snapshot, Snapshot prior,
+      BlocksMapUpdateInfo collectedBlocks);
+  
+  /**
+   * Destroy self and clear everything! If the INode is a file, this method
+   * collects its blocks for further block deletion. If the INode is a 
+   * directory, the method goes down the subtree and collects blocks from the 
+   * descents, and clears its parent/children references as well. The method 
+   * also clears the diff list if the INode contains snapshot diff list.
+   * 
+   * @param collectedBlocks blocks collected from the descents for further block
+   *                        deletion/update will be added to this map.
+   * @return the number of deleted inodes in the subtree.
+   */
+  public abstract int destroyAndCollectBlocks(
       BlocksMapUpdateInfo collectedBlocks);
 
   /**

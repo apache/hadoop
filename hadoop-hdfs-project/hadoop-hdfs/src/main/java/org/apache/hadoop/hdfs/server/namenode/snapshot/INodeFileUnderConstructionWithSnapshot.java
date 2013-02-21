@@ -110,18 +110,15 @@ public class INodeFileUnderConstructionWithSnapshot
   }
 
   @Override
-  public int destroySubtreeAndCollectBlocks(final Snapshot snapshot,
+  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks) {
-    if (snapshot == null) {
+    if (snapshot == null) { // delete the current file
+      recordModification(prior);
       isCurrentFileDeleted = true;
-    } else {
-      if (diffs.deleteSnapshotDiff(snapshot, this, collectedBlocks) == null) {
-        //snapshot diff not found and nothing is deleted.
-        return 0;
-      }
+      Util.collectBlocksAndClear(this, collectedBlocks);
+    } else { // delete a snapshot
+      return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks);
     }
-
-    Util.collectBlocksAndClear(this, collectedBlocks);
     return 1;
   }
 
