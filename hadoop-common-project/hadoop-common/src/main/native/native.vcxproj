@@ -41,6 +41,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NATIVE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\winutils\include;..\..\..\target\native\javah;%JAVA_HOME%\include;%JAVA_HOME%\include\win32;.\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -52,9 +53,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4.c" />
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Compressor.c" />
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Decompressor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\file_descriptor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\NativeIO.c" />
     <ClCompile Include="src\org\apache\hadoop\util\bulk_crc32.c" />
+    <ClCompile Include="src\org\apache\hadoop\util\NativeCodeLoader.c" />
     <ClCompile Include="src\org\apache\hadoop\util\NativeCrc32.c" />
   </ItemGroup>
   <ItemGroup>

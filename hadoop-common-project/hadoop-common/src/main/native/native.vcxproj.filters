@@ -27,6 +27,18 @@
     <ClCompile Include="src\org\apache\hadoop\util\NativeCrc32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\util\NativeCodeLoader.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Compressor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Decompressor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\org\apache\hadoop\util\crc32_zlib_polynomial_tables.h">
