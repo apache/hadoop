@@ -299,6 +299,9 @@ Trunk (Unreleased)
     HDFS-4340. Update addBlock() to inculde inode id as additional argument.
     (Brandon Li via suresh)
 
+    HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
+    exists.  (Brandon Li via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
