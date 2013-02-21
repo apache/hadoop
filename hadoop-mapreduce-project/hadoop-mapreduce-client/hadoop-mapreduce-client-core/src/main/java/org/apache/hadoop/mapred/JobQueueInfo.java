@@ -67,7 +67,8 @@ public class JobQueueInfo extends QueueInfo {
    * 
    * @param queueName Name of the job queue.
    */
-  protected void setQueueName(String queueName) {
+  @InterfaceAudience.Private
+  public void setQueueName(String queueName) {
     super.setQueueName(queueName);
   }
 
@@ -76,7 +77,8 @@ public class JobQueueInfo extends QueueInfo {
    * 
    * @param schedulingInfo
    */
-  protected void setSchedulingInfo(String schedulingInfo) {
+  @InterfaceAudience.Private
+  public void setSchedulingInfo(String schedulingInfo) {
     super.setSchedulingInfo(schedulingInfo);
   }
 
@@ -84,15 +86,21 @@ public class JobQueueInfo extends QueueInfo {
    * Set the state of the queue
    * @param state state of the queue.
    */
-  protected void setQueueState(String state) {
+  @InterfaceAudience.Private
+  public void setQueueState(String state) {
     super.setState(QueueState.getState(state));
   }
   
-  String getQueueState() {
+  /**
+   * Use getState() instead
+   */
+  @Deprecated
+  public String getQueueState() {
     return super.getState().toString();
   }
   
-  protected void setChildren(List<JobQueueInfo> children) {
+  @InterfaceAudience.Private
+  public void setChildren(List<JobQueueInfo> children) {
     List<QueueInfo> list = new ArrayList<QueueInfo>();
     for (JobQueueInfo q : children) {
       list.add(q);
@@ -108,7 +116,8 @@ public class JobQueueInfo extends QueueInfo {
     return list;
   }
 
-  protected void setProperties(Properties props) {
+  @InterfaceAudience.Private
+  public void setProperties(Properties props) {
     super.setProperties(props);
   }
 
@@ -141,7 +150,8 @@ public class JobQueueInfo extends QueueInfo {
     setChildren(children);
   }
 
-  protected void setJobStatuses(org.apache.hadoop.mapreduce.JobStatus[] stats) {
+  @InterfaceAudience.Private
+  public void setJobStatuses(org.apache.hadoop.mapreduce.JobStatus[] stats) {
     super.setJobStatuses(stats);
   }
 
