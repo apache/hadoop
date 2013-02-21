@@ -193,7 +193,6 @@ set JAVA_PLATFORM=%JAVA_PLATFORM: =_%
 @rem setup 'java.library.path' for native hadoop code if necessary
 @rem
 
-mkdir c:\tmp\dir1
 @rem Check if we're running hadoop directly from the build
 set JAVA_LIBRARY_PATH=
 if exist %HADOOP_CORE_HOME%\target\bin (
