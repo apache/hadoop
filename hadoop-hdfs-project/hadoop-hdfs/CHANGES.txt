@@ -309,6 +309,8 @@ Release 2.0.4-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
 
   OPTIMIZATIONS
 
