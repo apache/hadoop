@@ -624,7 +624,9 @@ public class DatanodeManager {
       // Mostly called inside an RPC, update ip and peer hostname
       String hostname = dnAddress.getHostName();
       String ip = dnAddress.getHostAddress();
-      if (hostname.equals(ip)) {
+      if (!isNameResolved(dnAddress)) {
+        // Reject registration of unresolved datanode to prevent performance
+        // impact of repetitive DNS lookups later.
         LOG.warn("Unresolved datanode registration from " + ip);
         throw new DisallowedDatanodeException(nodeReg);
       }
@@ -1039,6 +1041,22 @@ public class DatanodeManager {
       names.add(peerHostName + ":" + xferPort);
     }
     return names;
+  }
+
+  /**
+   * Checks if name resolution was successful for the given address.  If IP
+   * address and host name are the same, then it means name resolution has
+   * failed.  As a special case, the loopback address is also considered
+   * acceptable.  This is particularly important on Windows, where 127.0.0.1 does
+   * not resolve to "localhost".
+   * 
+   * @param address InetAddress to check
+   * @return boolean true if name resolution successful or address is loopback
+   */
+  private static boolean isNameResolved(InetAddress address) {
+    String hostname = address.getHostName();
+    String ip = address.getHostAddress();
+    return !hostname.equals(ip) || address.isLoopbackAddress();
   }
   
   private void setDatanodeDead(DatanodeDescriptor node) {

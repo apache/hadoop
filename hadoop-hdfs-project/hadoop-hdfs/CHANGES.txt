@@ -31,6 +31,10 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
     between delete and replication of same file. (umamahesh)
 
+    HDFS-4269. DatanodeManager#registerDatanode rejects all datanode
+    registrations from localhost in single-node developer setup  (Chris
+    Nauroth)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
