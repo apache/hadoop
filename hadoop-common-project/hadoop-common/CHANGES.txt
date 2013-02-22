@@ -376,6 +376,9 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9304. remove addition of avro genreated-sources dirs to build. (tucu)
 
+    HADOOP-9267. hadoop -help, -h, --help should show usage instructions.
+    (Andrew Wang via atm)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
