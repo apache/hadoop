@@ -854,6 +854,11 @@ public class TestEditLog {
     public boolean isInProgress() {
       return true;
     }
+
+    @Override
+    public void setMaxOpSize(int maxOpSize) {
+      reader.setMaxOpSize(maxOpSize);
+    }
   }
 
   @Test

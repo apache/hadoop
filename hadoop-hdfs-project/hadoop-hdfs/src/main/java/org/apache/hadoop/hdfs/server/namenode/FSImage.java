@@ -606,6 +606,12 @@ public class FSImage implements Closeable {
       editStreams = FSImagePreTransactionalStorageInspector
         .getEditLogStreams(storage);
     }
+    int maxOpSize = conf.getInt(DFSConfigKeys.
+          DFS_NAMENODE_MAX_OP_SIZE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT);
+    for (EditLogInputStream elis : editStreams) {
+      elis.setMaxOpSize(maxOpSize);
+    }
  
     LOG.debug("Planning to load image :\n" + imageFile);
     for (EditLogInputStream l : editStreams) {

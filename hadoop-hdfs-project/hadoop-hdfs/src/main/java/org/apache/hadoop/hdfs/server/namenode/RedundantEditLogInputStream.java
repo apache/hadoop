@@ -267,4 +267,11 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       super(msg);
     }
   }
+
+  @Override
+  public void setMaxOpSize(int maxOpSize) {
+    for (EditLogInputStream elis : streams) {
+      elis.setMaxOpSize(maxOpSize);
+    }
+  }
 }
