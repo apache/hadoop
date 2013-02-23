@@ -21,7 +21,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -33,11 +35,13 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.log4j.Level;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -214,6 +218,10 @@ public class TestFSImageWithSnapshot {
     
     // save the namesystem to a temp file
     File imageFile = saveFSImageToTempFile();
+    
+    long numSdirBefore = fsn.getNumSnapshottableDirs();
+    long numSnapshotBefore = fsn.getNumSnapshots();
+    SnapshottableDirectoryStatus[] dirBefore = hdfs.getSnapshottableDirListing();
 
     // restart the cluster, and format the cluster
     cluster.shutdown();
@@ -231,6 +239,21 @@ public class TestFSImageWithSnapshot {
     
     // compare two dumped tree
     SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);
+    
+    long numSdirAfter = fsn.getNumSnapshottableDirs();
+    long numSnapshotAfter = fsn.getNumSnapshots();
+    SnapshottableDirectoryStatus[] dirAfter = hdfs.getSnapshottableDirListing();
+    
+    Assert.assertEquals(numSdirBefore, numSdirAfter);
+    Assert.assertEquals(numSnapshotBefore, numSnapshotAfter);
+    Assert.assertEquals(dirBefore.length, dirAfter.length);
+    List<String> pathListBefore = new ArrayList<String>();
+    for (SnapshottableDirectoryStatus sBefore : dirBefore) {
+      pathListBefore.add(sBefore.getFullPath().toString());
+    }
+    for (SnapshottableDirectoryStatus sAfter : dirAfter) {
+      Assert.assertTrue(pathListBefore.contains(sAfter.getFullPath().toString()));
+    }
   }
   
   /**

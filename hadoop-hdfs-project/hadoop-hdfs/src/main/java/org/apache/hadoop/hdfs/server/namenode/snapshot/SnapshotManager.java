@@ -80,6 +80,15 @@ public class SnapshotManager implements SnapshotStats {
     snapshottables.add(s);
     numSnapshottableDirs.getAndIncrement();
   }
+  
+  /**
+   * Add a snapshottable dir into {@link #snapshottables}. Called when loading
+   * fsimage.
+   * @param dir The snapshottable dir to be added.
+   */
+  public void addSnapshottable(INodeDirectorySnapshottable dir) {
+    snapshottables.add(dir);
+  }
 
   /**
    * Set the given snapshottable directory to non-snapshottable.

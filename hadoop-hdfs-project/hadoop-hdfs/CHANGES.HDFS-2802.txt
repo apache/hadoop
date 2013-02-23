@@ -167,3 +167,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4499. Fix file/directory/snapshot deletion for file diff.  (Jing Zhao
   via szetszwo)
+
+  HDFS-4524. Update SnapshotManager#snapshottables when loading fsimage.
+  (Jing Zhao via szetszwo)

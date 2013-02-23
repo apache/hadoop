@@ -413,6 +413,10 @@ public class FSImageFormat {
       if (numSnapshots >= 0) {
         final INodeDirectorySnapshottable snapshottableParent
             = INodeDirectorySnapshottable.valueOf(parent, parentPath);
+        if (snapshottableParent.getParent() != null) { // not root
+          this.namesystem.getSnapshotManager().addSnapshottable(
+              snapshottableParent);
+        }
         // load snapshots and snapshotQuota
         SnapshotFSImageFormat.loadSnapshotList(snapshottableParent,
             numSnapshots, in, this);
