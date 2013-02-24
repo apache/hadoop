@@ -496,6 +496,9 @@ Release 1.2.0 - unreleased
     HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
     the map. (Karthik Kambatla via tomwhite)
 
+    HDFS-4479. logSync() with the FSNamesystem lock held in
+    commitBlockSynchronization. (Jing Zhao via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

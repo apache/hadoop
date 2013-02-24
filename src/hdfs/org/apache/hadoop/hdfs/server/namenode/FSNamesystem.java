@@ -2655,87 +2655,92 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           + ", deleteBlock=" + deleteblock
           + ")");
     String src = null;
-    synchronized (this) {
-    if (isInSafeMode()) {
-      throw new SafeModeException("Cannot commitBlockSynchronization " 
-                                  + lastblock, safeMode);
-    }
-    final BlockInfo oldblockinfo = blocksMap.getStoredBlock(lastblock);
-    if (oldblockinfo == null) {
-      throw new IOException("Block (=" + lastblock + ") not found");
-    }
-    INodeFile iFile = oldblockinfo.getINode();
-    if (!iFile.isUnderConstruction()) {
-      throw new IOException("Unexpected block (=" + lastblock
-          + ") since the file (=" + iFile.getLocalName()
-          + ") is not under construction");
-    }
-    INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
-
-
-    // Remove old block from blocks map. This always have to be done
-    // because the generation stamp of this block is changing.
-    blocksMap.removeBlock(oldblockinfo);
-
-    if (deleteblock) {
-      pendingFile.removeBlock(lastblock);
-    } else {
-      // update last block, construct newblockinfo and add it to the blocks map
-      lastblock.set(lastblock.getBlockId(), newlength, newgenerationstamp);
-      final BlockInfo newblockinfo = blocksMap.addINode(lastblock, pendingFile);
-
-      // find the DatanodeDescriptor objects
-      // There should be no locations in the blocksMap till now because the
-      // file is underConstruction
-      DatanodeDescriptor[] descriptors = null;
-      List<DatanodeDescriptor> descriptorsList =
-        new ArrayList<DatanodeDescriptor>(newtargets.length);
-      for(int i = 0; i < newtargets.length; i++) {
-        DatanodeDescriptor node =
-          datanodeMap.get(newtargets[i].getStorageID());
-        if (node != null) {
-          if (closeFile) {
-            // If we aren't closing the file, we shouldn't add it to the
-            // block list for the node, since the block is still under
-            // construction there. (in getAdditionalBlock, for example
-            // we don't add to the block map for the targets)
-            node.addBlock(newblockinfo);
-          }
-          descriptorsList.add(node);
-        } else {
-          LOG.error("commitBlockSynchronization included a target DN " +
-            newtargets[i] + " which is not known to NN. Ignoring");
+    try {
+      synchronized (this) {
+        if (isInSafeMode()) {
+          throw new SafeModeException("Cannot commitBlockSynchronization " 
+                                      + lastblock, safeMode);
         }
-      }
-      if (!descriptorsList.isEmpty()) {
-        descriptors = descriptorsList.toArray(new DatanodeDescriptor[0]);
-      }
-      // add locations into the INodeUnderConstruction
-      pendingFile.setLastBlock(newblockinfo, descriptors);
-    }
-
-    // If this commit does not want to close the file, persist
-    // blocks (if durable sync is enabled) and return
-    src = leaseManager.findPath(pendingFile);
-    if (!closeFile) {
-      if (durableSync) {
-        dir.persistBlocks(src, pendingFile);
+        final BlockInfo oldblockinfo = blocksMap.getStoredBlock(lastblock);
+        if (oldblockinfo == null) {
+          throw new IOException("Block (=" + lastblock + ") not found");
+        }
+        INodeFile iFile = oldblockinfo.getINode();
+        if (!iFile.isUnderConstruction()) {
+          throw new IOException("Unexpected block (=" + lastblock
+              + ") since the file (=" + iFile.getLocalName()
+              + ") is not under construction");
+        }
+        INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
+    
+    
+        // Remove old block from blocks map. This always have to be done
+        // because the generation stamp of this block is changing.
+        blocksMap.removeBlock(oldblockinfo);
+    
+        if (deleteblock) {
+          pendingFile.removeBlock(lastblock);
+        } else {
+          // update last block, construct newblockinfo and add it to the blocks map
+          lastblock.set(lastblock.getBlockId(), newlength, newgenerationstamp);
+          final BlockInfo newblockinfo = blocksMap.addINode(lastblock, pendingFile);
+    
+          // find the DatanodeDescriptor objects
+          // There should be no locations in the blocksMap till now because the
+          // file is underConstruction
+          DatanodeDescriptor[] descriptors = null;
+          List<DatanodeDescriptor> descriptorsList =
+            new ArrayList<DatanodeDescriptor>(newtargets.length);
+          for(int i = 0; i < newtargets.length; i++) {
+            DatanodeDescriptor node =
+              datanodeMap.get(newtargets[i].getStorageID());
+            if (node != null) {
+              if (closeFile) {
+                // If we aren't closing the file, we shouldn't add it to the
+                // block list for the node, since the block is still under
+                // construction there. (in getAdditionalBlock, for example
+                // we don't add to the block map for the targets)
+                node.addBlock(newblockinfo);
+              }
+              descriptorsList.add(node);
+            } else {
+              LOG.error("commitBlockSynchronization included a target DN " +
+                newtargets[i] + " which is not known to NN. Ignoring");
+            }
+          }
+          if (!descriptorsList.isEmpty()) {
+            descriptors = descriptorsList.toArray(new DatanodeDescriptor[0]);
+          }
+          // add locations into the INodeUnderConstruction
+          pendingFile.setLastBlock(newblockinfo, descriptors);
+        }
+    
+        // If this commit does not want to close the file, persist
+        // blocks (if durable sync is enabled) and return
+        src = leaseManager.findPath(pendingFile);
+        if (!closeFile) {
+          if (durableSync) {
+            dir.persistBlocks(src, pendingFile);
+          }
+          LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
+          return;
+        }
+        
+        //remove lease, close file
+        finalizeINodeFileUnderConstruction(src, pendingFile);
+      } // end of synchronized section
+    } finally {
+      if (closeFile || durableSync) {
         getEditLog().logSync();
       }
-      LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
-      return;
     }
-    
-    //remove lease, close file
-    finalizeINodeFileUnderConstruction(src, pendingFile);
-    } // end of synchronized section
-
-    getEditLog().logSync();
-    LOG.info("commitBlockSynchronization(newblock=" + lastblock
+    if (closeFile) {
+      LOG.info("commitBlockSynchronization(newblock=" + lastblock
           + ", file=" + src
           + ", newgenerationstamp=" + newgenerationstamp
           + ", newlength=" + newlength
           + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
+    }
   }
 
 
