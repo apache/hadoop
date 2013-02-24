@@ -98,7 +98,6 @@ class PermissionChecker {
    * @param subAccess If path is a directory,
    * it is the access required of the path and all the sub-directories.
    * If path is not a directory, there is no effect.
-   * @return a PermissionChecker object which caches data for later use.
    * @throws AccessControlException
    */
   void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,

@@ -19,25 +19,33 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
-/** Perform permission checking in {@link FSNamesystem}. */
+/** 
+ * Class that helps in checking file system permission.
+ * The state of this class need not be synchronized as it has data structures that
+ * are read-only.
+ * 
+ * Some of the helper methods are guarded by {@link FSNamesystem} intrinsic lock.
+ */
 class FSPermissionChecker {
   static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
 
-private final UserGroupInformation ugi;
-  public final String user;
-  private final Set<String> groups = new HashSet<String>();
-  public final boolean isSuper;
+  private final UserGroupInformation ugi;
+  private final String user;
+  /** A set with group namess. Not synchronized since it is unmodifiable */
+  private final Set<String> groups;
+  private final boolean isSuper;
   
   FSPermissionChecker(String fsOwner, String supergroup
       ) throws AccessControlException{
@@ -47,9 +55,9 @@ private final UserGroupInformation ugi;
       throw new AccessControlException(e); 
     } 
 
-    groups.addAll(Arrays.asList(ugi.getGroupNames()));
+    HashSet<String> s = new HashSet<String>(Arrays.asList(ugi.getGroupNames()));
+    groups = Collections.unmodifiableSet(s);
     user = ugi.getShortUserName();
-
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
   }
 
@@ -59,20 +67,23 @@ private final UserGroupInformation ugi;
    */
   public boolean containsGroup(String group) {return groups.contains(group);}
 
+  public String getUser() {
+    return user;
+  }
+
+  public boolean isSuperUser() {
+    return isSuper;
+  }
+
   /**
    * Verify if the caller has the required permission. This will result into 
    * an exception if the caller is not allowed to access the resource.
-   * @param owner owner of the system
-   * @param supergroup supergroup of the system
    */
-  public static void checkSuperuserPrivilege(UserGroupInformation owner, 
-                                             String supergroup) 
-                     throws AccessControlException {
-    FSPermissionChecker checker = 
-      new FSPermissionChecker(owner.getShortUserName(), supergroup);
-    if (!checker.isSuper) {
+  public void checkSuperuserPrivilege()
+      throws AccessControlException {
+    if (!isSuper) {
       throw new AccessControlException("Access denied for user " 
-          + checker.user + ". Superuser privilege is required");
+          + user + ". Superuser privilege is required");
     }
   }
 
@@ -102,8 +113,10 @@ private final UserGroupInformation ugi;
    * @param subAccess If path is a directory,
    * it is the access required of the path and all the sub-directories.
    * If path is not a directory, there is no effect.
-   * @return a PermissionChecker object which caches data for later use.
    * @throws AccessControlException
+   * 
+   * Guarded by {@link FSNamesystem} intrinsic lock
+   * Caller of this method must hold that lock.
    */
   void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
@@ -142,6 +155,7 @@ private final UserGroupInformation ugi;
     }
   }
 
+  /** Guarded by {@link FSNamesystem} intrinsic lock */
   private void checkOwner(INode inode) throws AccessControlException {
     if (inode != null && user.equals(inode.getUserName())) {
       return;
@@ -149,6 +163,7 @@ private final UserGroupInformation ugi;
     throw new AccessControlException("Permission denied");
   }
 
+  /** Guarded by {@link FSNamesystem} intrinsic lock */
   private void checkTraverse(INode[] inodes, int last
       ) throws AccessControlException {
     for(int j = 0; j <= last; j++) {
@@ -156,6 +171,7 @@ private final UserGroupInformation ugi;
     }
   }
 
+  /** Guarded by {@link FSNamesystem} intrinsic lock */
   private void checkSubAccess(INode inode, FsAction access
       ) throws AccessControlException {
     if (inode == null || !inode.isDirectory()) {
@@ -175,11 +191,13 @@ private final UserGroupInformation ugi;
     }
   }
 
+  /** Guarded by {@link FSNamesystem} intrinsic lock */
   private void check(INode[] inodes, int i, FsAction access
       ) throws AccessControlException {
     check(i >= 0? inodes[i]: null, access);
   }
 
+  /** Guarded by {@link FSNamesystem} intrinsic lock */
   private void check(INode inode, FsAction access
       ) throws AccessControlException {
     if (inode == null) {
