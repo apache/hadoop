@@ -355,6 +355,9 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9117. replace protoc ant plugin exec with a maven plugin. (tucu)
 
+    HADOOP-9279. Document the need to build hadoop-maven-plugins for
+    eclipse and separate project builds. (Tsuyoshi Ozawa via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -88,6 +88,33 @@ Maven build goals:
   * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
 
 ----------------------------------------------------------------------------------
+Building components separately
+
+If you are building a submodule directory, all the hadoop dependencies this
+submodule has will be resolved as all other 3rd party dependencies. This is,
+from the Maven cache or from a Maven repository (if not available in the cache
+or the SNAPSHOT 'timed out').
+An alternative is to run 'mvn install -DskipTests' from Hadoop source top
+level once; and then work from the submodule. Keep in mind that SNAPSHOTs
+time out after a while, using the Maven '-nsu' will stop Maven from trying
+to update SNAPSHOTs from external repos.
+
+----------------------------------------------------------------------------------
+Importing projects to eclipse
+
+When you import the project to eclipse, install hadoop-maven-plugins at first.
+
+  $ cd hadoop-maven-plugins
+  $ mvn install
+
+Then, generate ecplise project files.
+
+  $ mvn eclipse:eclipse -DskipTests
+
+At last, import to eclipse by specifying the root directory of the project via
+[File] > [Import] > [Existing Projects into Workspace].
+
+----------------------------------------------------------------------------------
 Building distributions:
 
 Create binary distribution without native code and without documentation:
