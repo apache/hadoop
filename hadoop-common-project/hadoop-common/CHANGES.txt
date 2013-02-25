@@ -382,6 +382,9 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9267. hadoop -help, -h, --help should show usage instructions.
     (Andrew Wang via atm)
 
+    HADOOP-8569. CMakeLists.txt: define _GNU_SOURCE and _LARGEFILE_SOURCE.
+    (Colin Patrick McCabe via atm)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
