@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -906,21 +907,12 @@ public class DistributedFileSystem extends FileSystem {
     return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
 
-  /**
-   * Allow snapshot on a directory.
-   * 
-   * @param path the directory to be taken snapshots
-   * @throws IOException
-   */
+  /** @see HdfsAdmin#allowSnapshot(String) */
   public void allowSnapshot(String path) throws IOException {
     dfs.allowSnapshot(path);
   }
   
-  /**
-   * Disallow snapshot on a directory.
-   * @param path the snapshottable directory.
-   * @throws IOException on error
-   */
+  /** @see HdfsAdmin#disallowSnapshot(String) */
   public void disallowSnapshot(String path) throws IOException {
     dfs.disallowSnapshot(path);
   }
@@ -931,13 +923,7 @@ public class DistributedFileSystem extends FileSystem {
     dfs.createSnapshot(getPathName(path), snapshotName);
   }
   
-  /**
-   * Rename a snapshot
-   * @param path The directory path where the snapshot was taken
-   * @param snapshotOldName Old name of the snapshot
-   * @param snapshotNewName New name of the snapshot
-   * @throws IOException
-   */
+  @Override
   public void renameSnapshot(Path path, String snapshotOldName,
       String snapshotNewName) throws IOException {
     dfs.renameSnapshot(getPathName(path), snapshotOldName, snapshotNewName);

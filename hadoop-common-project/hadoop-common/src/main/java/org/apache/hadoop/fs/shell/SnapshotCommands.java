@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Snapshot related operations
  */
@@ -34,10 +36,12 @@ import org.apache.hadoop.fs.PathIsNotDirectoryException;
 class SnapshotCommands extends FsCommand {
   private final static String CREATE_SNAPSHOT = "createSnapshot";
   private final static String DELETE_SNAPSHOT = "deleteSnapshot";
+  private final static String RENAME_SNAPSHOT = "renameSnapshot";
   
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(CreateSnapshot.class, "-" + CREATE_SNAPSHOT);
     factory.addClass(DeleteSnapshot.class, "-" + DELETE_SNAPSHOT);
+    factory.addClass(RenameSnapshot.class, "-" + RENAME_SNAPSHOT);
   }
   
   /**
@@ -45,10 +49,10 @@ class SnapshotCommands extends FsCommand {
    */
   public static class CreateSnapshot extends FsCommand {
     public static final String NAME = CREATE_SNAPSHOT;
-    public static final String USAGE = "<snapshotName> <snapshotRoot>";
+    public static final String USAGE = "<snapshotDir> <snapshotName>";
     public static final String DESCRIPTION = "Create a snapshot on a directory";
 
-    private static String snapshotName;
+    private String snapshotName;
 
     @Override
     protected void processPath(PathData item) throws IOException {
@@ -62,7 +66,7 @@ class SnapshotCommands extends FsCommand {
       if (args.size() != 2) {
         throw new IOException("args number not 2:" + args.size());
       }
-      snapshotName = args.removeFirst();
+      snapshotName = args.removeLast();
       // TODO: name length check  
 
     }
@@ -85,11 +89,11 @@ class SnapshotCommands extends FsCommand {
    */
   public static class DeleteSnapshot extends FsCommand {
     public static final String NAME = DELETE_SNAPSHOT;
-    public static final String USAGE = "<snapshotName> <snapshotDir>";
+    public static final String USAGE = "<snapshotDir> <snapshotName>";
     public static final String DESCRIPTION = 
         "Delete a snapshot from a directory";
 
-    private static String snapshotName;
+    private String snapshotName;
 
     @Override
     protected void processPath(PathData item) throws IOException {
@@ -103,7 +107,7 @@ class SnapshotCommands extends FsCommand {
       if (args.size() != 2) {
         throw new IOException("args number not 2: " + args.size());
       }
-      snapshotName = args.removeFirst();
+      snapshotName = args.removeLast();
       // TODO: name length check
 
     }
@@ -119,6 +123,50 @@ class SnapshotCommands extends FsCommand {
       PathData sroot = items.getFirst();
       sroot.fs.deleteSnapshot(sroot.path, snapshotName);
     }
+  }
+  
+  /**
+   * Rename a snapshot
+   */
+  public static class RenameSnapshot extends FsCommand {
+    public static final String NAME = RENAME_SNAPSHOT;
+    public static final String USAGE = "<snapshotDir> <oldName> <newName>";
+    public static final String DESCRIPTION = 
+        "Rename a snapshot from oldName to newName";
+    
+    private String oldName;
+    private String newName;
+    
+    @Override
+    protected void processPath(PathData item) throws IOException {
+      if (!item.stat.isDirectory()) {
+        throw new PathIsNotDirectoryException(item.toString());
+      }
+    }
+
+    @Override
+    protected void processOptions(LinkedList<String> args) throws IOException {
+      if (args.size() != 3) {
+        throw new IOException("args number not 3: " + args.size());
+      }
+      newName = args.removeLast();
+      oldName = args.removeLast();
+      
+      // TODO: new name length check
+    }
+
+    @Override
+    protected void processArguments(LinkedList<PathData> items)
+        throws IOException {
+      super.processArguments(items);
+      if (exitCode != 0) { // check for error collecting paths
+        return;
+      }
+      Preconditions.checkArgument(items.size() == 1);
+      PathData sroot = items.getFirst();
+      sroot.fs.renameSnapshot(sroot.path, oldName, newName);
+    }
+    
   }
 }
 

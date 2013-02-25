@@ -106,9 +106,9 @@ public class SnapshotDiffReport {
     public String getRelativePathString() {
       String path = DFSUtil.bytes2String(relativePath);
       if (path.isEmpty()) {
-        return ".";
+        return Path.CUR_DIR;
       } else {
-        return "." + Path.SEPARATOR + path;
+        return Path.CUR_DIR + Path.SEPARATOR + path;
       }
     }
 
@@ -183,7 +183,7 @@ public class SnapshotDiffReport {
         "current directory" : "snapshot " + fromSnapshot;
     String to = toSnapshot == null || toSnapshot.isEmpty() ? "current directory"
         : "snapshot " + toSnapshot;
-    str.append("Diffence between snapshot " + from + " and " + to
+    str.append("Difference between " + from + " and " + to
         + " under directory " + snapshotRoot + ":" + LINE_SEPARATOR);
     for (DiffReportEntry entry : diffList) {
       str.append(entry.toString() + LINE_SEPARATOR);

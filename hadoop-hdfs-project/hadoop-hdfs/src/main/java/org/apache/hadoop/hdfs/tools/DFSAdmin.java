@@ -408,7 +408,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Allow snapshot on a directory.
-   * Usage: java DFSAdmin -allowSnapshot <snapshotRoot>
+   * Usage: java DFSAdmin -allowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
    */
@@ -420,7 +420,7 @@ public class DFSAdmin extends FsShell {
   
   /**
    * Allow snapshot on a directory.
-   * Usage: java DFSAdmin -disallowSnapshot <snapshotRoot>
+   * Usage: java DFSAdmin -disallowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
    */
@@ -571,6 +571,8 @@ public class DFSAdmin extends FsShell {
       "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
       "\t[-setBalancerBandwidth <bandwidth>]\n" +
       "\t[-fetchImage <local directory>]\n" +
+      "\t[-allowSnapshot <snapshotDir>]\n" +
+      "\t[-disallowSnapshot <snapshotDir>]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -661,6 +663,12 @@ public class DFSAdmin extends FsShell {
       "\tDownloads the most recent fsimage from the Name Node and saves it in" +
       "\tthe specified local directory.\n";
     
+    String allowSnapshot = "-allowSnapshot <snapshotDir>:\n" +
+        "\tAllow snapshots to be taken on a directory.\n";
+    
+    String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
+        "\tDo not allow snapshots to be taken on a directory any more.\n";
+    
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -704,6 +712,10 @@ public class DFSAdmin extends FsShell {
       System.out.println(setBalancerBandwidth);
     } else if ("fetchImage".equals(cmd)) {
       System.out.println(fetchImage);
+    } else if ("allowSnapshot".equalsIgnoreCase(cmd)) {
+      System.out.println(allowSnapshot);
+    } else if ("disallowSnapshot".equalsIgnoreCase(cmd)) {
+      System.out.println(disallowSnapshot);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -728,6 +740,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(deleteBlockPool);
       System.out.println(setBalancerBandwidth);
       System.out.println(fetchImage);
+      System.out.println(allowSnapshot);
+      System.out.println(disallowSnapshot);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -906,10 +920,10 @@ public class DFSAdmin extends FsShell {
           + " [-safemode enter | leave | get | wait]");
     } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: java DFSAdmin"
-          + " [-allowSnapshot <snapshotRoot>]");
-    } else if ("-disallowsnapshot".equalsIgnoreCase(cmd)) {
+          + " [-allowSnapshot <snapshotDir>]");
+    } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: java DFSAdmin"
-          + " [-disallowSnapshot <snapshotRoot>]");
+          + " [-disallowSnapshot <snapshotDir>]");
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-saveNamespace]");
@@ -969,8 +983,8 @@ public class DFSAdmin extends FsShell {
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
       System.err.println("           [-report]");
       System.err.println("           [-safemode enter | leave | get | wait]"); 
-      System.err.println("           [-allowSnapshot <snapshotRoot>]");
-      System.err.println("           [-disallowSnapshot <snapshotRoot>]");
+      System.err.println("           [-allowSnapshot <snapshotDir>]");
+      System.err.println("           [-disallowSnapshot <snapshotDir>]");
       System.err.println("           [-saveNamespace]");
       System.err.println("           [-rollEdits]");
       System.err.println("           [-restoreFailedStorage true|false|check]");
@@ -1021,7 +1035,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
-      if (argv.length != 3) {
+      if (argv.length != 2) {
         printUsage(cmd);
         return exitCode;
       }

@@ -2242,6 +2242,19 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
   
   /**
+   * Rename a snapshot
+   * @param path The directory path where the snapshot was taken
+   * @param snapshotOldName Old name of the snapshot
+   * @param snapshotNewName New name of the snapshot
+   * @throws IOException
+   */
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support renameSnapshot");
+  }
+  
+  /**
    * Delete a snapshot of a directory
    * @param path  The directory that the to-be-deleted snapshot belongs to
    * @param snapshotName The name of the snapshot

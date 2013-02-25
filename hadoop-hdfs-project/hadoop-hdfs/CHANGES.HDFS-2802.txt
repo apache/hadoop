@@ -173,3 +173,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4520. Support listing snapshots under a snapshottable directory using ls.
   (Jing Zhao via szetszwo)
+
+  HDFS-4514. Add CLI for supporting snapshot rename, diff report, and
+  snapshottable directory listing.  (Jing Zhao via szetszwo)

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.PrintStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -84,5 +88,60 @@ public class SnapshottableDirectoryStatus {
         : DFSUtil.bytes2String(parentFullPath);
     return parentFullPathStr == null ? new Path(dirStatus.getLocalName())
         : new Path(parentFullPathStr, dirStatus.getLocalName());
+  }
+  
+  /**
+   * Print a list of {@link SnapshottableDirectoryStatus} out to a given stream.
+   * @param stats The list of {@link SnapshottableDirectoryStatus}
+   * @param out The given stream for printing.
+   */
+  public static void print(SnapshottableDirectoryStatus[] stats, 
+      PrintStream out) {
+    if (stats == null || stats.length == 0) {
+      out.println();
+      return;
+    }
+    int maxRepl = 0, maxLen = 0, maxOwner = 0, maxGroup = 0;
+    int maxSnapshotNum = 0, maxSnapshotQuota = 0;
+    for (SnapshottableDirectoryStatus status : stats) {
+      maxRepl = maxLength(maxRepl, status.dirStatus.getReplication());
+      maxLen = maxLength(maxLen, status.dirStatus.getLen());
+      maxOwner = maxLength(maxOwner, status.dirStatus.getOwner());
+      maxGroup = maxLength(maxGroup, status.dirStatus.getGroup());
+      maxSnapshotNum = maxLength(maxSnapshotNum, status.snapshotNumber);
+      maxSnapshotQuota = maxLength(maxSnapshotQuota, status.snapshotQuota);
+    }
+    
+    StringBuilder fmt = new StringBuilder();
+    fmt.append("%s%s "); // permission string
+    fmt.append("%"  + maxRepl  + "s ");
+    fmt.append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s");
+    fmt.append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
+    fmt.append("%"  + maxLen   + "s ");
+    fmt.append("%s "); // mod time
+    fmt.append("%"  + maxSnapshotNum  + "s ");
+    fmt.append("%"  + maxSnapshotQuota  + "s ");
+    fmt.append("%s"); // path
+    
+    String lineFormat = fmt.toString();
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+         
+    for (SnapshottableDirectoryStatus status : stats) {
+      String line = String.format(lineFormat, "d", 
+          status.dirStatus.getPermission(),
+          status.dirStatus.getReplication(),
+          status.dirStatus.getOwner(),
+          status.dirStatus.getGroup(),
+          String.valueOf(status.dirStatus.getLen()),
+          dateFormat.format(new Date(status.dirStatus.getModificationTime())),
+          status.snapshotNumber, status.snapshotQuota, 
+          status.getFullPath().toString()
+      );
+      out.println(line);
+    }
+  }
+
+  private static int maxLength(int n, Object value) {
+    return Math.max(n, String.valueOf(value).length());
   }
 }
