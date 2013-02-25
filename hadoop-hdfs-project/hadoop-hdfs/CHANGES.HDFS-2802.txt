@@ -170,3 +170,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4524. Update SnapshotManager#snapshottables when loading fsimage.
   (Jing Zhao via szetszwo)
+
+  HDFS-4520. Support listing snapshots under a snapshottable directory using ls.
+  (Jing Zhao via szetszwo)

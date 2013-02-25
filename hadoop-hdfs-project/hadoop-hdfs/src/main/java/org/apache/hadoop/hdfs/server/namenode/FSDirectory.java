@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -1228,6 +1229,9 @@ public class FSDirectory implements Closeable {
 
     readLock();
     try {
+      if (srcs.endsWith(Path.SEPARATOR + HdfsConstants.DOT_SNAPSHOT_DIR)) {
+        return getSnapshotsListing(srcs, startAfter);
+      }
       final INodesInPath inodesInPath = rootDir.getLastINodeInPath(srcs, true);
       final Snapshot snapshot = inodesInPath.getPathSnapshot();
       final INode targetNode = inodesInPath.getINode(0);
@@ -1257,6 +1261,35 @@ public class FSDirectory implements Closeable {
       readUnlock();
     }
   }
+  
+  /**
+   * Get a listing of all the snapshots of a snapshottable directory
+   */
+  private DirectoryListing getSnapshotsListing(String src, byte[] startAfter)
+      throws UnresolvedLinkException, IOException {
+    assert hasReadLock();
+    final String dotSnapshot = Path.SEPARATOR + HdfsConstants.DOT_SNAPSHOT_DIR;
+    Preconditions.checkArgument(src.endsWith(dotSnapshot), 
+        src + " does not end with " + dotSnapshot);
+    
+    final String dirPath = normalizePath(src.substring(0,
+        src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
+    
+    final INode node = this.getINode(dirPath);
+    final INodeDirectorySnapshottable dirNode = INodeDirectorySnapshottable
+        .valueOf(node, dirPath);
+    final ReadOnlyList<Snapshot> snapshots = dirNode.getSnapshotList();
+    int skipSize = ReadOnlyList.Util.binarySearch(snapshots, startAfter);
+    skipSize = skipSize < 0 ? -skipSize - 1 : skipSize + 1;
+    int numOfListing = Math.min(snapshots.size() - skipSize, this.lsLimit);
+    final HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
+    for (int i = 0; i < numOfListing; i++) {
+      Root sRoot = snapshots.get(i + skipSize).getRoot();
+      listing[i] = createFileStatus(sRoot.getLocalNameBytes(), sRoot, null);
+    }
+    return new DirectoryListing(
+        listing, snapshots.size() - skipSize - numOfListing);
+  }
 
   /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
@@ -1269,6 +1302,9 @@ public class FSDirectory implements Closeable {
     String srcs = normalizePath(src);
     readLock();
     try {
+      if (srcs.endsWith(Path.SEPARATOR + HdfsConstants.DOT_SNAPSHOT_DIR)) {
+        return getFileInfo4DotSnapshot(srcs);
+      }
       final INodesInPath inodesInPath = rootDir.getLastINodeInPath(srcs, resolveLink);
       final INode i = inodesInPath.getINode(0);
       return i == null? null: createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
@@ -1276,6 +1312,23 @@ public class FSDirectory implements Closeable {
     } finally {
       readUnlock();
     }
+  }
+  
+  private HdfsFileStatus getFileInfo4DotSnapshot(String src)
+      throws UnresolvedLinkException {
+    final String dotSnapshot = Path.SEPARATOR + HdfsConstants.DOT_SNAPSHOT_DIR;
+    Preconditions.checkArgument(src.endsWith(dotSnapshot), 
+        src + " does not end with " + dotSnapshot);
+    
+    final String dirPath = normalizePath(src.substring(0,
+        src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
+    
+    final INode node = this.getINode(dirPath);
+    if (node instanceof INodeDirectorySnapshottable) {
+      return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
+          HdfsFileStatus.EMPTY_NAME, -1L);
+    }
+    return null;
   }
 
   /**

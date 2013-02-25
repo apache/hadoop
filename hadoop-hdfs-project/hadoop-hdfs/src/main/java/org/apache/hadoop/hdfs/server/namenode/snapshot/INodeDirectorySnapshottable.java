@@ -197,6 +197,11 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     return i < 0? null: snapshotsByNames.get(i);
   }
   
+  /** @return {@link #snapshotsByNames} as a {@link ReadOnlyList} */
+  public ReadOnlyList<Snapshot> getSnapshotList() {
+    return ReadOnlyList.Util.asReadOnlyList(snapshotsByNames);
+  }
+  
   /**
    * Rename a snapshot
    * @param path
