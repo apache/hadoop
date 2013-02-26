@@ -22,6 +22,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -63,7 +65,7 @@ public class TestRMNodeTransitions {
   private YarnScheduler scheduler;
 
   private SchedulerEventType eventType;
-  private List<ContainerStatus> completedContainers;
+  private List<ContainerStatus> completedContainers = new ArrayList<ContainerStatus>();
   
   private final class TestSchedulerEventDispatcher implements
   EventHandler<SchedulerEvent> {
@@ -89,10 +91,11 @@ public class TestRMNodeTransitions {
             final SchedulerEvent event = (SchedulerEvent)(invocation.getArguments()[0]);
             eventType = event.getType();
             if (eventType == SchedulerEventType.NODE_UPDATE) {
-              completedContainers = 
-                  ((NodeUpdateSchedulerEvent)event).getCompletedContainers();
-            } else {
-              completedContainers = null;
+              List<UpdatedContainerInfo> lastestContainersInfoList = 
+                  ((NodeUpdateSchedulerEvent)event).getRMNode().pullContainerUpdates();
+              for(UpdatedContainerInfo lastestContainersInfo : lastestContainersInfoList) {
+            	  completedContainers.addAll(lastestContainersInfo.getCompletedContainers()); 
+              }
             }
             return null;
           }
@@ -125,16 +128,16 @@ public class TestRMNodeTransitions {
     return event;
   }
   
-  @Test
+  @Test (timeout = 5000)
   public void testExpiredContainer() {
     // Start the node
     node.handle(new RMNodeEvent(null, RMNodeEventType.STARTED));
     verify(scheduler).handle(any(NodeAddedSchedulerEvent.class));
     
     // Expire a container
-		ContainerId completedContainerId = BuilderUtils.newContainerId(
-				BuilderUtils.newApplicationAttemptId(
-						BuilderUtils.newApplicationId(0, 0), 0), 0);
+    ContainerId completedContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(0, 0), 0), 0);
     node.handle(new RMNodeCleanContainerEvent(null, completedContainerId));
     Assert.assertEquals(1, node.getContainersToCleanUp().size());
     
@@ -146,9 +149,110 @@ public class TestRMNodeTransitions {
     doReturn(Collections.singletonList(containerStatus)).
         when(statusEvent).getContainers();
     node.handle(statusEvent);
-    Assert.assertEquals(0, completedContainers.size());
+    /* Expect the scheduler call handle function 2 times
+     * 1. RMNode status from new to Running, handle the add_node event
+     * 2. handle the node update event
+     */
+    verify(scheduler,times(2)).handle(any(NodeUpdateSchedulerEvent.class));     
   }
+  
+  @Test (timeout = 5000)
+  public void testContainerUpdate() throws InterruptedException{
+    //Start the node
+    node.handle(new RMNodeEvent(null,RMNodeEventType.STARTED));
+    
+    NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
+    RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
+    node2.handle(new RMNodeEvent(null,RMNodeEventType.STARTED));
+    
+    ContainerId completedContainerIdFromNode1 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(0, 0), 0), 0);
+    ContainerId completedContainerIdFromNode2_1 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(1, 1), 1), 1);
+    ContainerId completedContainerIdFromNode2_2 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(1, 1), 1), 2);
+ 
+    RMNodeStatusEvent statusEventFromNode1 = getMockRMNodeStatusEvent();
+    RMNodeStatusEvent statusEventFromNode2_1 = getMockRMNodeStatusEvent();
+    RMNodeStatusEvent statusEventFromNode2_2 = getMockRMNodeStatusEvent();
+    
+    ContainerStatus containerStatusFromNode1 = mock(ContainerStatus.class);
+    ContainerStatus containerStatusFromNode2_1 = mock(ContainerStatus.class);
+    ContainerStatus containerStatusFromNode2_2 = mock(ContainerStatus.class);
 
+    doReturn(completedContainerIdFromNode1).when(containerStatusFromNode1)
+        .getContainerId();
+    doReturn(Collections.singletonList(containerStatusFromNode1))
+        .when(statusEventFromNode1).getContainers();
+    node.handle(statusEventFromNode1);
+    Assert.assertEquals(1, completedContainers.size());
+    Assert.assertEquals(completedContainerIdFromNode1,
+        completedContainers.get(0).getContainerId());
+
+    completedContainers.clear();
+
+    doReturn(completedContainerIdFromNode2_1).when(containerStatusFromNode2_1)
+        .getContainerId();
+    doReturn(Collections.singletonList(containerStatusFromNode2_1))
+        .when(statusEventFromNode2_1).getContainers();
+
+    doReturn(completedContainerIdFromNode2_2).when(containerStatusFromNode2_2)
+        .getContainerId();
+    doReturn(Collections.singletonList(containerStatusFromNode2_2))
+        .when(statusEventFromNode2_2).getContainers();
+
+    node2.setNextHeartBeat(false);
+    node2.handle(statusEventFromNode2_1);
+    node2.setNextHeartBeat(true);
+    node2.handle(statusEventFromNode2_2);
+
+    Assert.assertEquals(2, completedContainers.size());
+    Assert.assertEquals(completedContainerIdFromNode2_1,completedContainers.get(0)
+        .getContainerId()); 
+    Assert.assertEquals(completedContainerIdFromNode2_2,completedContainers.get(1)
+        .getContainerId());   
+  }
+  
+  @Test (timeout = 5000)
+  public void testStatusChange(){
+    //Start the node
+    node.handle(new RMNodeEvent(null,RMNodeEventType.STARTED));
+    //Add info to the queue first
+    node.setNextHeartBeat(false);
+
+    ContainerId completedContainerId1 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(0, 0), 0), 0);
+    ContainerId completedContainerId2 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(1, 1), 1), 1);
+        
+    RMNodeStatusEvent statusEvent1 = getMockRMNodeStatusEvent();
+    RMNodeStatusEvent statusEvent2 = getMockRMNodeStatusEvent();
+
+    ContainerStatus containerStatus1 = mock(ContainerStatus.class);
+    ContainerStatus containerStatus2 = mock(ContainerStatus.class);
+
+    doReturn(completedContainerId1).when(containerStatus1).getContainerId();
+    doReturn(Collections.singletonList(containerStatus1))
+        .when(statusEvent1).getContainers();
+     
+    doReturn(completedContainerId2).when(containerStatus2).getContainerId();
+    doReturn(Collections.singletonList(containerStatus2))
+        .when(statusEvent2).getContainers();
+
+    verify(scheduler,times(1)).handle(any(NodeUpdateSchedulerEvent.class)); 
+    node.handle(statusEvent1);
+    node.handle(statusEvent2);
+    verify(scheduler,times(1)).handle(any(NodeUpdateSchedulerEvent.class));
+    Assert.assertEquals(2, node.getQueueSize());
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.EXPIRE));
+    Assert.assertEquals(0, node.getQueueSize());
+  }
+  
   @Test
   public void testRunningExpire() {
     RMNodeImpl node = getRunningNode();

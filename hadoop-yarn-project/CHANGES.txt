@@ -22,6 +22,9 @@ Release 2.0.4-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-365. Change NM heartbeat handling to not generate a scheduler event
+    on each heartbeat. (Xuan Gong via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES

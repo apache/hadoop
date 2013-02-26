@@ -16,20 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import java.util.List;
 
-public class NodeUpdateSchedulerEvent extends SchedulerEvent {
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
-  private final RMNode rmNode;
-
-  public NodeUpdateSchedulerEvent(RMNode rmNode) {
-    super(SchedulerEventType.NODE_UPDATE);
-    this.rmNode = rmNode;
+public class UpdatedContainerInfo {
+  private List<ContainerStatus> newlyLaunchedContainers;
+  private List<ContainerStatus> completedContainers;
+  
+  public UpdatedContainerInfo() {
   }
 
-  public RMNode getRMNode() {
-    return rmNode;
+  public UpdatedContainerInfo(List<ContainerStatus> newlyLaunchedContainers
+      , List<ContainerStatus> completedContainers) {
+    this.newlyLaunchedContainers = newlyLaunchedContainers;
+    this.completedContainers = completedContainers;
+  } 
+
+  public List<ContainerStatus> getNewlyLaunchedContainers() {
+    return this.newlyLaunchedContainers;
+  }
+
+  public List<ContainerStatus> getCompletedContainers() {
+    return this.completedContainers;
   }
 }
