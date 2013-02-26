@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.client.cli;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
@@ -31,7 +33,9 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class NodeCLI extends YarnCLI {
-  private static final String NODES_PATTERN = "%16s\t%10s\t%17s\t%26s\t%18s\n";
+  private static final String NODES_PATTERN = "%16s\t%10s\t%17s\t%26s\t%18s" +
+    System.getProperty("line.separator");
+
   public static void main(String[] args) throws Exception {
     NodeCLI cli = new NodeCLI();
     cli.setSysOutPrintStream(System.out);
@@ -100,48 +104,51 @@ public class NodeCLI extends YarnCLI {
    * @param nodeIdStr
    * @throws YarnRemoteException
    */
-  private void printNodeStatus(String nodeIdStr) throws YarnRemoteException {
+  private void printNodeStatus(String nodeIdStr) throws YarnRemoteException,
+      IOException {
     NodeId nodeId = ConverterUtils.toNodeId(nodeIdStr);
     List<NodeReport> nodesReport = client.getNodeReports();
-    StringBuffer nodeReportStr = new StringBuffer();
+    // Use PrintWriter.println, which uses correct platform line ending.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter nodeReportStr = new PrintWriter(baos);
     NodeReport nodeReport = null;
     for (NodeReport report : nodesReport) {
       if (!report.getNodeId().equals(nodeId)) {
         continue;
       }
       nodeReport = report;
-      nodeReportStr.append("Node Report : ");
-      nodeReportStr.append("\n\tNode-Id : ");
-      nodeReportStr.append(nodeReport.getNodeId());
-      nodeReportStr.append("\n\tRack : ");
-      nodeReportStr.append(nodeReport.getRackName());
-      nodeReportStr.append("\n\tNode-State : ");
-      nodeReportStr.append(nodeReport.getNodeState());
-      nodeReportStr.append("\n\tNode-Http-Address : ");
-      nodeReportStr.append(nodeReport.getHttpAddress());
-      nodeReportStr.append("\n\tHealth-Status(isNodeHealthy) : ");
-      nodeReportStr.append(nodeReport.getNodeHealthStatus()
+      nodeReportStr.println("Node Report : ");
+      nodeReportStr.print("\tNode-Id : ");
+      nodeReportStr.println(nodeReport.getNodeId());
+      nodeReportStr.print("\tRack : ");
+      nodeReportStr.println(nodeReport.getRackName());
+      nodeReportStr.print("\tNode-State : ");
+      nodeReportStr.println(nodeReport.getNodeState());
+      nodeReportStr.print("\tNode-Http-Address : ");
+      nodeReportStr.println(nodeReport.getHttpAddress());
+      nodeReportStr.print("\tHealth-Status(isNodeHealthy) : ");
+      nodeReportStr.println(nodeReport.getNodeHealthStatus()
           .getIsNodeHealthy());
-      nodeReportStr.append("\n\tLast-Last-Health-Update : ");
-      nodeReportStr.append(nodeReport.getNodeHealthStatus()
+      nodeReportStr.print("\tLast-Last-Health-Update : ");
+      nodeReportStr.println(nodeReport.getNodeHealthStatus()
           .getLastHealthReportTime());
-      nodeReportStr.append("\n\tHealth-Report : ");
+      nodeReportStr.print("\tHealth-Report : ");
       nodeReportStr
-          .append(nodeReport.getNodeHealthStatus().getHealthReport());
-      nodeReportStr.append("\n\tContainers : ");
-      nodeReportStr.append(nodeReport.getNumContainers());
-      nodeReportStr.append("\n\tMemory-Used : ");
-      nodeReportStr.append((nodeReport.getUsed() == null) ? "0M"
+          .println(nodeReport.getNodeHealthStatus().getHealthReport());
+      nodeReportStr.print("\tContainers : ");
+      nodeReportStr.println(nodeReport.getNumContainers());
+      nodeReportStr.print("\tMemory-Used : ");
+      nodeReportStr.println((nodeReport.getUsed() == null) ? "0M"
           : (nodeReport.getUsed().getMemory() + "M"));
-      nodeReportStr.append("\n\tMemory-Capacity : ");
-      nodeReportStr.append(nodeReport.getCapability().getMemory());
+      nodeReportStr.print("\tMemory-Capacity : ");
+      nodeReportStr.println(nodeReport.getCapability().getMemory());
     }
 
     if (nodeReport == null) {
-      nodeReportStr.append("Could not find the node report for node id : "
+      nodeReportStr.print("Could not find the node report for node id : "
           + nodeIdStr);
     }
-
-    sysout.println(nodeReportStr.toString());
+    nodeReportStr.close();
+    sysout.println(baos.toString("UTF-8"));
   }
 }
