@@ -26,6 +26,7 @@ import java.util.Stack;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
@@ -176,7 +177,7 @@ class OfflineEditsXmlLoader
   
   @Override
   public void endElement (String uri, String name, String qName) {
-    String str = cbuf.toString().trim();
+    String str = XMLUtils.unmangleXmlString(cbuf.toString()).trim();
     cbuf = new StringBuffer();
     switch (state) {
     case EXPECT_EDITS_TAG:
