@@ -128,7 +128,7 @@ public class Text extends BinaryComparable
   /**
    * Returns the Unicode Scalar Value (32-bit integer value)
    * for the character at <code>position</code>. Note that this
-   * method avoids using the converter or doing String instatiation
+   * method avoids using the converter or doing String instantiation
    * @return the Unicode scalar value at position or -1
    *          if the position is invalid or points to a
    *          trailing byte
@@ -527,7 +527,7 @@ public class Text extends BinaryComparable
     int length = 0;
     int state = LEAD_BYTE;
     while (count < start+len) {
-      int aByte = ((int) utf8[count] & 0xFF);
+      int aByte = utf8[count] & 0xFF;
 
       switch (state) {
       case LEAD_BYTE:
