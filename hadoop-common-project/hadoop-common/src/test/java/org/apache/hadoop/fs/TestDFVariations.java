@@ -17,13 +17,21 @@
 */
 package org.apache.hadoop.fs;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.EnumSet;
+import java.util.Random;
 
-public class TestDFVariations extends TestCase {
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Test;
+
+public class TestDFVariations {
 
   public static class XXDF extends DF {
     private final String osName;
@@ -48,12 +56,81 @@ public class TestDFVariations extends TestCase {
     }
   }
 
+  @Test(timeout=5000)
   public void testOSParsing() throws Exception {
     for (DF.OSType ost : EnumSet.allOf(DF.OSType.class)) {
       XXDF df = new XXDF(ost.getId());
       assertEquals(ost.getId() + " mount", "/foo/bar", df.getMount());
     }
   }
-
+  
+  @Test(timeout=5000)
+  public void testDFInvalidPath() throws Exception {
+    // Generate a path that doesn't exist
+    Random random = new Random(0xDEADBEEFl);
+    File file = null;
+    byte[] bytes = new byte[64];
+    while (file == null) {
+      random.nextBytes(bytes);
+      final String invalid = new String("/" + bytes);
+      final File invalidFile = new File(invalid);
+      if (!invalidFile.exists()) {
+        file = invalidFile;
+      }
+    }
+    DF df = new DF(file, 0l);
+    try {
+      df.getMount();
+    } catch (FileNotFoundException e) {
+      // expected, since path does not exist
+      GenericTestUtils.assertExceptionContains(file.getName(), e);
+    }
+  }
+  
+  @Test(timeout=5000)
+  public void testDFMalformedOutput() throws Exception {
+    DF df = new DF(new File("/"), 0l);
+    BufferedReader reader = new BufferedReader(new StringReader(
+        "Filesystem     1K-blocks     Used Available Use% Mounted on\n" +
+        "/dev/sda5       19222656 10597036   7649060  59% /"));
+    df.parseExecResult(reader);
+    df.parseOutput();
+    
+    reader = new BufferedReader(new StringReader(
+        "Filesystem     1K-blocks     Used Available Use% Mounted on"));
+    df.parseExecResult(reader);
+    try {
+      df.parseOutput();
+      fail("Expected exception with missing line!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Fewer lines of output than expected", e);
+      System.out.println(e.toString());
+    }
+    
+    reader = new BufferedReader(new StringReader(
+        "Filesystem     1K-blocks     Used Available Use% Mounted on\n" +
+        " "));
+    df.parseExecResult(reader);
+    try {
+      df.parseOutput();
+      fail("Expected exception with empty line!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Unexpected empty line", e);
+      System.out.println(e.toString());
+    }
+    
+    reader = new BufferedReader(new StringReader(
+        "Filesystem     1K-blocks     Used Available Use% Mounted on\n" +
+        "       19222656 10597036   7649060  59% /"));
+    df.parseExecResult(reader);
+    try {
+      df.parseOutput();
+      fail("Expected exception with missing field!");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Could not parse line: ", e);
+      System.out.println(e.toString());
+    }
+  }
 }
 
