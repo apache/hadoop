@@ -38,6 +38,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-391. Formatting fixes for LCEResourceHandler classes.
     (Steve Loughran via sseth)
 
+    YARN-390. ApplicationCLI and NodeCLI hard-coded platform-specific line
+    separator causes test failures on Windows. (Chris Nauroth via suresh)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
