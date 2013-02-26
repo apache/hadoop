@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /** 
  * A byte sequence that is usable as a key or value.
- * It is resizable and distinguishes between the size of the seqeunce and
+ * It is resizable and distinguishes between the size of the sequence and
  * the current capacity. The hash function is the front of the md5 of the 
  * buffer. The sort order is the same as memcmp.
  */

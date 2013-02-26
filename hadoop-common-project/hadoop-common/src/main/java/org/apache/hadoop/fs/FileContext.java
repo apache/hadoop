@@ -1336,7 +1336,7 @@ public final class FileContext {
    * 
    * 2. Partially qualified URIs (eg scheme but no host)
    * 
-   * fs:///A/B/file  Resolved according to the target file sytem. Eg resolving
+   * fs:///A/B/file  Resolved according to the target file system. Eg resolving
    *                 a symlink to hdfs:///A results in an exception because
    *                 HDFS URIs must be fully qualified, while a symlink to 
    *                 file:///A will not since Hadoop's local file systems 

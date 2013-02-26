@@ -43,7 +43,7 @@ public interface PositionedReadable {
     throws IOException;
   
   /**
-   * Read number of bytes equalt to the length of the buffer, from a given
+   * Read number of bytes equal to the length of the buffer, from a given
    * position within a file. This does not
    * change the current offset of a file, and is thread-safe.
    */

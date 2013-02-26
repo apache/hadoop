@@ -1865,7 +1865,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * 
    * Some file systems like LocalFileSystem have an initial workingDir
    * that we use as the starting workingDir. For other file systems
-   * like HDFS there is no built in notion of an inital workingDir.
+   * like HDFS there is no built in notion of an initial workingDir.
    * 
    * @return if there is built in notion of workingDir then it
    * is returned; else a null is returned.
