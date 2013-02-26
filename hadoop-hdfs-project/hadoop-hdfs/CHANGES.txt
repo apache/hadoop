@@ -35,6 +35,9 @@ Release 2.0.4-beta - UNRELEASED
     registrations from localhost in single-node developer setup  (Chris
     Nauroth)
 
+    HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
+    containing non-ASCII strings. (Colin Patrick McCabe via atm)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
