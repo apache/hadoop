@@ -335,7 +335,7 @@ public class FSDirectory implements Closeable {
           INodeFileUnderConstruction.valueOf(inodesInPath.getLastINode(), path);
 
       // check quota limits and updated space consumed
-      updateCount(inodesInPath, 0, 0, fileINode.getBlockDiskspace(), true);
+      updateCount(inodesInPath, 0, fileINode.getBlockDiskspace(), true);
 
       // associate new last block for the file
       BlockInfoUnderConstruction blockInfo =
@@ -426,7 +426,7 @@ public class FSDirectory implements Closeable {
 
     // update space consumed
     final INodesInPath iip = rootDir.getINodesInPath4Write(path, true);
-    updateCount(iip, 0, 0, -fileNode.getBlockDiskspace(), true);
+    updateCount(iip, 0, -fileNode.getBlockDiskspace(), true);
   }
 
   /**
@@ -969,15 +969,11 @@ public class FSDirectory implements Closeable {
     INodeDirectory trgParent = (INodeDirectory)trgINodes[trgINodes.length-2];
     final Snapshot trgLatestSnapshot = trgINodesInPath.getLatestSnapshot();
     
-    INodeFile [] allSrcInodes = new INodeFile[srcs.length];
-    int i = 0;
-    int totalBlocks = 0;
-    for(String src : srcs) {
-      INodeFile srcInode = (INodeFile)getINode(src);
-      allSrcInodes[i++] = srcInode;
-      totalBlocks += srcInode.numBlocks();  
+    final INodeFile [] allSrcInodes = new INodeFile[srcs.length];
+    for(int i = 0; i < srcs.length; i++) {
+      allSrcInodes[i] = (INodeFile)getINode4Write(srcs[i]);
     }
-    trgInode.appendBlocks(allSrcInodes, totalBlocks); // copy the blocks
+    trgInode.concatBlocks(allSrcInodes);
     
     // since we are in the same dir - we can use same parent to remove files
     int count = 0;
@@ -1908,17 +1904,16 @@ public class FSDirectory implements Closeable {
   private INode removeLastINode(final INodesInPath inodesInPath) {
     final INode[] inodes = inodesInPath.getINodes();
     final int pos = inodes.length - 1;
-    INode removedNode = ((INodeDirectory)inodes[pos-1]).removeChild(
+    final boolean removed = ((INodeDirectory)inodes[pos-1]).removeChild(
         inodes[pos], inodesInPath.getLatestSnapshot());
-    if (removedNode != null) {
-      Preconditions.checkState(removedNode == inodes[pos]);
-
-      inodesInPath.setINode(pos - 1, removedNode.getParent());
-      final Quota.Counts counts = removedNode.computeQuotaUsage();
+    if (removed) {
+      inodesInPath.setINode(pos - 1, inodes[pos].getParent());
+      final Quota.Counts counts = inodes[pos].computeQuotaUsage();
       updateCountNoQuotaCheck(inodesInPath, pos,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      return inodes[pos];
     }
-    return removedNode;
+    return null;
   }
   
   /**

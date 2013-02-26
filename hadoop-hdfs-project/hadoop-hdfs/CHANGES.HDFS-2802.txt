@@ -176,3 +176,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4514. Add CLI for supporting snapshot rename, diff report, and
   snapshottable directory listing.  (Jing Zhao via szetszwo)
+
+  HDFS-4523. Fix INodeFile replacement, TestQuota and javac errors from trunk
+  merge.  (szetszwo)

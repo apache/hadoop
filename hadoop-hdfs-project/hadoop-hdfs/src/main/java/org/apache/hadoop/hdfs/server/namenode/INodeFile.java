@@ -196,11 +196,23 @@ public class INodeFile extends INode implements BlockCollection {
     return this.blocks;
   }
 
+  void updateBlockCollection() {
+    if (blocks != null) {
+      for(BlockInfo b : blocks) {
+        b.setBlockCollection(this);
+      }
+    }
+  }
+
   /**
    * append array of blocks to this.blocks
    */
-  void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
+  void concatBlocks(INodeFile[] inodes) {
     int size = this.blocks.length;
+    int totalAddedBlocks = 0;
+    for(INodeFile f : inodes) {
+      totalAddedBlocks += f.blocks.length;
+    }
     
     BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
     System.arraycopy(this.blocks, 0, newlist, 0, size);
@@ -209,11 +221,9 @@ public class INodeFile extends INode implements BlockCollection {
       System.arraycopy(in.blocks, 0, newlist, size, in.blocks.length);
       size += in.blocks.length;
     }
-    
-    for(BlockInfo bi: newlist) {
-      bi.setBlockCollection(this);
-    }
+
     setBlocks(newlist);
+    updateBlockCollection();
   }
   
   /**

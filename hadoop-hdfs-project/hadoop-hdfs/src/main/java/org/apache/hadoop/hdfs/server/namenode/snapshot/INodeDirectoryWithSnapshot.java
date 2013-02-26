@@ -29,9 +29,9 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
-import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.Container;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.UndoInfo;
@@ -58,6 +58,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
     private final INode setCreatedChild(final int c, final INode newChild) {
       return getCreatedList().set(c, newChild);
+    }
+
+    private final boolean removeCreatedChild(final int c, final INode child) {
+      final List<INode> created = getCreatedList();
+      if (created.get(c) == child) {
+        final INode removed = created.remove(c);
+        Preconditions.checkState(removed == child);
+        return true;
+      }
+      return false;
     }
 
     /** clear the created list */
@@ -499,28 +509,49 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public INode removeChild(INode child, Snapshot latest) {
+  public boolean removeChild(INode child, Snapshot latest) {
     ChildrenDiff diff = null;
     UndoInfo<INode> undoInfo = null;
     if (latest != null) {
       diff = diffs.checkAndAddLatestSnapshotDiff(latest, this).diff;
       undoInfo = diff.delete(child);
     }
-    final INode removed = super.removeChild(child, null);
+    final boolean removed = removeChild(child);
     if (undoInfo != null) {
-      if (removed == null) {
+      if (!removed) {
         //remove failed, undo
         diff.undoDelete(child, undoInfo);
       }
     }
     return removed;
   }
+
+  @Override
+  public boolean removeChildAndAllSnapshotCopies(INode child) {
+    if (!removeChild(child)) {
+      return false;
+    }
+
+    // remove same child from the created list, if there is any.
+    final byte[] name = child.getLocalNameBytes();
+    final List<DirectoryDiff> diffList = diffs.asList();
+    for(int i = diffList.size() - 1; i >= 0; i--) {
+      final ChildrenDiff diff = diffList.get(i).diff;
+      final int c = diff.searchCreatedIndex(name);
+      if (c >= 0) {
+        if (diff.removeCreatedChild(c, child)) {
+          return true;
+        }
+      }
+    }
+    return true;
+  }
   
   @Override
   public void replaceChild(final INode oldChild, final INode newChild) {
     super.replaceChild(oldChild, newChild);
 
-    // replace the created child, if there is any.
+    // replace same child in the created list, if there is any.
     final byte[] name = oldChild.getLocalNameBytes();
     final List<DirectoryDiff> diffList = diffs.asList();
     for(int i = diffList.size() - 1; i >= 0; i--) {

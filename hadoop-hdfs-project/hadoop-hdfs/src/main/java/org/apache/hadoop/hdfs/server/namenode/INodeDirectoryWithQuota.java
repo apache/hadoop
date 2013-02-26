@@ -173,4 +173,14 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
       throw new DSQuotaExceededException(dsQuota, diskspace + dsDelta);
     }
   }
+
+  String namespaceString() {
+    return "namespace: " + (nsQuota < 0? "-": namespace + "/" + nsQuota);
+  }
+  String diskspaceString() {
+    return "diskspace: " + (dsQuota < 0? "-": diskspace + "/" + dsQuota);
+  }
+  String quotaString() {
+    return ", Quota[" + namespaceString() + ", " + diskspaceString() + "]";
+  }
 }

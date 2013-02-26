@@ -1556,7 +1556,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       // check replication and blocks size
-      if(repl != srcInode.getFileReplication()) {
+      if(repl != srcInode.getBlockReplication()) {
         throw new HadoopIllegalArgumentException("concat: the soruce file "
             + src + " and the target file " + target
             + " should have the same replication: source replication is "
@@ -5722,6 +5722,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** Allow snapshot on a directroy. */
   public void allowSnapshot(String path) throws SafeModeException, IOException {
+    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5729,7 +5730,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot allow snapshot for " + path,
             safeMode);
       }
-      checkOwner(path);
+      checkOwner(pc, path);
 
       snapshotManager.setSnapshottable(path);
       getEditLog().logAllowSnapshot(path);
@@ -5749,6 +5750,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /** Disallow snapshot on a directory. */
   public void disallowSnapshot(String path)
       throws SafeModeException, IOException {
+    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5756,7 +5758,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot disallow snapshot for " + path,
             safeMode);
       }
-      checkOwner(path);
+      checkOwner(pc, path);
 
       snapshotManager.resetSnapshottable(path);
       getEditLog().logDisallowSnapshot(path);
@@ -5780,6 +5782,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   public void createSnapshot(String snapshotRoot, String snapshotName)
       throws SafeModeException, IOException {
+    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5787,7 +5790,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot create snapshot for "
             + snapshotRoot, safeMode);
       }
-      checkOwner(snapshotRoot);
+      checkOwner(pc, snapshotRoot);
 
       dir.writeLock();
       try {
@@ -5819,6 +5822,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   public void renameSnapshot(String path, String snapshotOldName,
       String snapshotNewName) throws SafeModeException, IOException {
+    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5826,7 +5830,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot rename snapshot for " + path,
             safeMode);
       }
-      checkOwner(path);
+      checkOwner(pc, path);
       // TODO: check if the new name is valid. May also need this for
       // creationSnapshot
       
@@ -5863,8 +5867,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.READ);
       FSPermissionChecker checker = new FSPermissionChecker(
           fsOwner.getShortUserName(), supergroup);
-      status = snapshotManager
-          .getSnapshottableDirListing(checker.isSuper ? null : checker.user);
+      final String user = checker.isSuperUser()? null : checker.getUser();
+      status = snapshotManager.getSnapshottableDirListing(user);
     } finally {
       readUnlock();
     }
@@ -5919,6 +5923,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws SafeModeException, IOException {
+    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5926,7 +5931,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot delete snapshot for " + snapshotRoot, safeMode);
       }
-      checkOwner(snapshotRoot);
+      checkOwner(pc, snapshotRoot);
 
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
       dir.writeLock();
