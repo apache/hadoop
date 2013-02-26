@@ -358,6 +358,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9279. Document the need to build hadoop-maven-plugins for
     eclipse and separate project builds. (Tsuyoshi Ozawa via suresh)
 
+    HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
