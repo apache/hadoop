@@ -83,6 +83,7 @@ public class TestNameNodeRecovery {
       elfos.close();
       elfos = null;
       elfis = new EditLogFileInputStream(TEST_LOG_NAME);
+      elfis.setMaxOpSize(elts.getMaxOpSize());
       
       // reading through normally will get you an exception
       Set<Long> validTxIds = elts.getValidTxIds();
@@ -143,7 +144,7 @@ public class TestNameNodeRecovery {
   /**
    * A test scenario for the edit log
    */
-  private interface EditLogTestSetup {
+  private static abstract class EditLogTestSetup {
     /** 
      * Set up the edit log.
      */
@@ -162,6 +163,13 @@ public class TestNameNodeRecovery {
      * edit log.
      **/
     abstract public Set<Long> getValidTxIds();
+    
+    /**
+     * Return the maximum opcode size we will use for input.
+     */
+    public int getMaxOpSize() {
+      return DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT;
+    }
   }
   
   static void padEditLog(EditLogOutputStream elos, int paddingLength)
@@ -182,10 +190,10 @@ public class TestNameNodeRecovery {
   }
 
   static void addDeleteOpcode(EditLogOutputStream elos,
-        OpInstanceCache cache) throws IOException {
+        OpInstanceCache cache, long txId, String path) throws IOException {
     DeleteOp op = DeleteOp.getInstance(cache);
-    op.setTransactionId(0x0);
-    op.setPath("/foo");
+    op.setTransactionId(txId);
+    op.setPath(path);
     op.setTimestamp(0);
     elos.write(op);
   }
@@ -198,7 +206,7 @@ public class TestNameNodeRecovery {
    * able to handle any amount of padding (including no padding) without
    * throwing an exception.
    */
-  private static class EltsTestEmptyLog implements EditLogTestSetup {
+  private static class EltsTestEmptyLog extends EditLogTestSetup {
     private int paddingLength;
 
     public EltsTestEmptyLog(int paddingLength) {
@@ -243,13 +251,49 @@ public class TestNameNodeRecovery {
   }
 
   /**
+   * Test using a non-default maximum opcode length.
+   */
+  private static class EltsTestNonDefaultMaxOpSize extends EditLogTestSetup {
+    public EltsTestNonDefaultMaxOpSize() {
+    }
+
+    @Override
+    public void addTransactionsToLog(EditLogOutputStream elos,
+        OpInstanceCache cache) throws IOException {
+      addDeleteOpcode(elos, cache, 0, "/foo");
+      addDeleteOpcode(elos, cache, 1,
+       "/supercalifragalisticexpialadocius.supercalifragalisticexpialadocius");
+    }
+
+    @Override
+    public long getLastValidTxId() {
+      return 0;
+    }
+
+    @Override
+    public Set<Long> getValidTxIds() {
+      return Sets.newHashSet(0L);
+    } 
+    
+    public int getMaxOpSize() {
+      return 30;
+    }
+  }
+
+  /** Test an empty edit log with extra-long padding */
+  @Test(timeout=180000)
+  public void testNonDefaultMaxOpSize() throws IOException {
+    runEditLogTest(new EltsTestNonDefaultMaxOpSize());
+  }
+
+  /**
    * Test the scenario where an edit log contains some padding (0xff) bytes
    * followed by valid opcode data.
    *
    * These edit logs are corrupt, but all the opcodes should be recoverable
    * with recovery mode.
    */
-  private static class EltsTestOpcodesAfterPadding implements EditLogTestSetup {
+  private static class EltsTestOpcodesAfterPadding extends EditLogTestSetup {
     private int paddingLength;
 
     public EltsTestOpcodesAfterPadding(int paddingLength) {
@@ -260,7 +304,7 @@ public class TestNameNodeRecovery {
     public void addTransactionsToLog(EditLogOutputStream elos,
         OpInstanceCache cache) throws IOException {
       padEditLog(elos, paddingLength);
-      addDeleteOpcode(elos, cache);
+      addDeleteOpcode(elos, cache, 0, "/foo");
     }
 
     @Override
@@ -286,7 +330,7 @@ public class TestNameNodeRecovery {
         3 * EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH));
   }
 
-  private static class EltsTestGarbageInEditLog implements EditLogTestSetup {
+  private static class EltsTestGarbageInEditLog extends EditLogTestSetup {
     final private long BAD_TXID = 4;
     final private long MAX_TXID = 10;
     

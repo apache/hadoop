@@ -310,6 +310,12 @@ Release 2.0.4-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
+
+    HDFS-4304. Make FSEditLogOp.MAX_OP_SIZE configurable. (Colin Patrick
+    McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -323,6 +329,9 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4342. Directories configured in dfs.namenode.edits.dir.required
     but not in dfs.namenode.edits.dir are silently ignored.  (Arpit Agarwal
     via szetszwo)
+
+    HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
+    between delete and replication of same file. (umamahesh)
 
 Release 2.0.3-alpha - 2013-02-06
 
