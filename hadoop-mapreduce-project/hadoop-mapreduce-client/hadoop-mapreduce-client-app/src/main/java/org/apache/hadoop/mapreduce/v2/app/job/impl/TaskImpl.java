@@ -730,7 +730,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         TypeConverter.fromYarn(task.getType()),
         errorSb.toString(),
         taskState.toString(),
-        taId == null ? null : TypeConverter.fromYarn(taId));
+        taId == null ? null : TypeConverter.fromYarn(taId),
+        task.getCounters());
     return taskFailedEvent;
   }
   

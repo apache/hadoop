@@ -1183,7 +1183,8 @@ public abstract class TaskAttemptImpl implements
             taskAttempt.nodeRackName == null ? "UNKNOWN" 
                 : taskAttempt.nodeRackName,
             StringUtils.join(
-                LINE_SEPARATOR, taskAttempt.getDiagnostics()), taskAttempt
+                LINE_SEPARATOR, taskAttempt.getDiagnostics()),
+                taskAttempt.getCounters(), taskAttempt
                 .getProgressSplitBlock().burst());
     return tauce;
   }
