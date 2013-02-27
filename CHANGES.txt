@@ -500,7 +500,7 @@ Release 1.2.0 - unreleased
     commitBlockSynchronization. (Jing Zhao via suresh)
 
     HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
-    (Arpit Agarwal via suresh)
+    (Arpit Gupta via suresh)
 
 Release 1.1.2 - Unreleased
 
