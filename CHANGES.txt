@@ -499,6 +499,9 @@ Release 1.2.0 - unreleased
     HDFS-4479. logSync() with the FSNamesystem lock held in
     commitBlockSynchronization. (Jing Zhao via suresh)
 
+    HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
+    (Arpit Agarwal via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
