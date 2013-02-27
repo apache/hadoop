@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -167,4 +168,17 @@ public class JobClientUnitTest {
     verify(mockCluster, never()).getJob(jobID);
     verify(mockJob, never()).getTaskReports(isA(TaskType.class));
   }
+
+  @Test
+  public void testGetJobWithUnknownJob() throws Exception {
+    TestJobClient client = new TestJobClient(new JobConf());
+    Cluster mockCluster = mock(Cluster.class);
+    client.setCluster(mockCluster);
+    JobID id = new JobID("unknown",0);
+
+    when(mockCluster.getJob(id)).thenReturn(null);
+
+    assertNull(client.getJob(id));
+  }
+
 }

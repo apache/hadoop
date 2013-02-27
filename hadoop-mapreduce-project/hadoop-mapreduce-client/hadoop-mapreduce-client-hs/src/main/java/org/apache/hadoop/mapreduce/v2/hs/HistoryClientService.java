@@ -204,11 +204,10 @@ public class HistoryClientService extends AbstractService {
       } catch (InterruptedException e) {
         throw RPCUtil.getRemoteException(e);
       }
-      if (job == null) {
-        throw RPCUtil.getRemoteException("Unknown job " + jobID);
+      if (job != null) {
+        JobACL operation = JobACL.VIEW_JOB;
+        checkAccess(job, operation);
       }
-      JobACL operation = JobACL.VIEW_JOB;
-      checkAccess(job, operation);
       return job;
     }
 
@@ -226,7 +225,12 @@ public class HistoryClientService extends AbstractService {
       JobId jobId = request.getJobId();
       Job job = verifyAndGetJob(jobId);
       GetJobReportResponse response = recordFactory.newRecordInstance(GetJobReportResponse.class);
-      response.setJobReport(job.getReport());
+      if (job != null) {
+        response.setJobReport(job.getReport());
+      }
+      else {
+        response.setJobReport(null);
+      }
       return response;
     }
 

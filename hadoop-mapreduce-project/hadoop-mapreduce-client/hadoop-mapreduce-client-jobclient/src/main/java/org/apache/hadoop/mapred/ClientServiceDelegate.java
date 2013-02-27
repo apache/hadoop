@@ -382,17 +382,21 @@ public class ClientServiceDelegate {
     request.setJobId(jobId);
     JobReport report = ((GetJobReportResponse) invoke("getJobReport",
         GetJobReportRequest.class, request)).getJobReport();
-    if (StringUtils.isEmpty(report.getJobFile())) {
-      String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID);
-      report.setJobFile(jobFile);
+    JobStatus jobStatus = null;
+    if (report != null) {
+      if (StringUtils.isEmpty(report.getJobFile())) {
+        String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID);
+        report.setJobFile(jobFile);
+      }
+      String historyTrackingUrl = report.getTrackingUrl();
+      String url = StringUtils.isNotEmpty(historyTrackingUrl)
+          ? historyTrackingUrl : trackingUrl;
+      if (!UNAVAILABLE.equals(url)) {
+        url = "http://" + url;
+      }
+      jobStatus = TypeConverter.fromYarn(report, url);
     }
-    String historyTrackingUrl = report.getTrackingUrl();
-    String url = StringUtils.isNotEmpty(historyTrackingUrl)
-        ? historyTrackingUrl : trackingUrl;
-    if (!UNAVAILABLE.equals(url)) {
-      url = "http://" + url;
-    }
-    return TypeConverter.fromYarn(report, url);
+    return jobStatus;
   }
 
   public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
