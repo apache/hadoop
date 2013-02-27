@@ -56,7 +56,7 @@ Release 2.0.4-beta - UNRELEASED
     be determined. (Andrew Wang via atm)
 
     HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
-    (Arpit Agarwal via suresh)
+    (Arpit Gupta via suresh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
