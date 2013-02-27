@@ -11,6 +11,9 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-5033. mapred shell script should respect usage flags
     (--help -help -h). (Andrew Wang via atm)
 
+    MAPREDUCE-4892. Modify CombineFileInputFormat to not skew input slits'
+    allocation on small clusters. (Bikas Saha via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
