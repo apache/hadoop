@@ -50,6 +50,9 @@ Release 0.23.7 - UNRELEASED
     YARN-400. RM can return null application resource usage report leading to 
     NPE in client (Jason Lowe via tgraves)
 
+    YARN-426. Failure to download a public resource prevents further downloads
+    (Jason Lowe via bobby)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
