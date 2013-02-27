@@ -8,6 +8,9 @@ Release 2.0.4-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5033. mapred shell script should respect usage flags
+    (--help -help -h). (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
