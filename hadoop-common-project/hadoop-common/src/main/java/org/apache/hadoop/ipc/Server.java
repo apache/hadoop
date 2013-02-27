@@ -1553,9 +1553,6 @@ public abstract class Server {
       UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
       if (saslServer == null) {
         user = protocolUser;
-        if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE);
-        }
       } else {
         // user is authenticated
         user.setAuthenticationMethod(authMethod);
