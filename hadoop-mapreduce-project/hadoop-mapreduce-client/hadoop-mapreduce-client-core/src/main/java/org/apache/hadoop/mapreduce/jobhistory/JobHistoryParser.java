@@ -295,6 +295,7 @@ public class JobHistoryParser implements HistoryEventHandler {
     attemptInfo.shuffleFinishTime = event.getFinishTime();
     attemptInfo.sortFinishTime = event.getFinishTime();
     attemptInfo.mapFinishTime = event.getFinishTime();
+    attemptInfo.counters = event.getCounters();
     if(TaskStatus.State.SUCCEEDED.toString().equals(taskInfo.status))
     {
       //this is a successful task
@@ -347,6 +348,7 @@ public class JobHistoryParser implements HistoryEventHandler {
     taskInfo.finishTime = event.getFinishTime();
     taskInfo.error = StringInterner.weakIntern(event.getError());
     taskInfo.failedDueToAttemptId = event.getFailedAttemptID();
+    taskInfo.counters = event.getCounters();
     info.errorInfo = "Task " + taskInfo.taskId +" failed " +
     taskInfo.attemptsMap.size() + " times ";
   }
