@@ -34,6 +34,9 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-4951. Container preemption interpreted as task failure.
     (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-5008. Merger progress miscounts with respect to EOF_MARKER.
+    (Sandy Ryza via tomwhite)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

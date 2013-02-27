@@ -475,9 +475,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
           combineCollector.setWriter(writer);
           combineAndSpill(rIter, reduceCombineInputCounter);
         }
+        writer.close();
         compressAwarePath = new CompressAwarePath(outputPath,
             writer.getRawLength());
-        writer.close();
 
         LOG.info(reduceId +  
             " Merge of the " + noInMemorySegments +
@@ -552,9 +552,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                             mergedMapOutputsCounter, null);
 
         Merger.writeFile(iter, writer, reporter, jobConf);
+        writer.close();
         compressAwarePath = new CompressAwarePath(outputPath,
             writer.getRawLength());
-        writer.close();
       } catch (IOException e) {
         localFS.delete(outputPath, true);
         throw e;
@@ -713,13 +713,15 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
             keyClass, valueClass, memDiskSegments, numMemDiskSegments,
             tmpDir, comparator, reporter, spilledRecordsCounter, null, 
             mergePhase);
-        final Writer<K,V> writer = new Writer<K,V>(job, fs, outputPath,
+        Writer<K,V> writer = new Writer<K,V>(job, fs, outputPath,
             keyClass, valueClass, codec, null);
         try {
           Merger.writeFile(rIter, writer, reporter, job);
-          // add to list of final disk outputs.
+          writer.close();
           onDiskMapOutputs.add(new CompressAwarePath(outputPath,
               writer.getRawLength()));
+          writer = null;
+          // add to list of final disk outputs.
         } catch (IOException e) {
           if (null != outputPath) {
             try {
