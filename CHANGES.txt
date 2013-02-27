@@ -502,6 +502,9 @@ Release 1.2.0 - unreleased
     HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
     (Arpit Gupta via suresh)
 
+    MAPREDUCE-5008. Merger progress miscounts with respect to EOF_MARKER.
+    (Sandy Ryza via tomwhite)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

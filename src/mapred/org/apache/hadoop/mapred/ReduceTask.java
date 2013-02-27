@@ -2473,8 +2473,8 @@ class ReduceTask extends Task {
               keyClass, valueClass, codec, null);
           try {
             Merger.writeFile(rIter, writer, reporter, job);
-            long decompressedBytesWritten = writer.decompressedBytesWritten;
             writer.close();
+            long decompressedBytesWritten = writer.decompressedBytesWritten;
             writer = null;
             FileStatus fileStatus = fs.getFileStatus(outputPath);
             CompressAwareFileStatus compressedFileStatus = new CompressAwareFileStatus(
@@ -2708,8 +2708,8 @@ class ReduceTask extends Task {
                                   spilledRecordsCounter, null);
               
               Merger.writeFile(iter, writer, reporter, conf);
-              decompressedBytesWritten = writer.decompressedBytesWritten;
               writer.close();
+              decompressedBytesWritten = writer.decompressedBytesWritten;
             } catch (Exception e) {
               localFileSys.delete(outputPath, true);
               throw new IOException (StringUtils.stringifyException(e));
@@ -2822,8 +2822,8 @@ class ReduceTask extends Task {
             combineCollector.setWriter(writer);
             combinerRunner.combine(rIter, combineCollector);
           }
-          decompressedBytesWritten = writer.decompressedBytesWritten;
           writer.close();
+          decompressedBytesWritten = writer.decompressedBytesWritten;
 
           LOG.info(reduceTask.getTaskID() + 
               " Merge of the " + noInMemorySegments +
