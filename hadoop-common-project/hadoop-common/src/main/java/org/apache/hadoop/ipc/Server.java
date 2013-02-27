@@ -1334,9 +1334,6 @@ public abstract class Server {
       UserGroupInformation protocolUser = header.getUgi();
       if (!useSasl) {
         user = protocolUser;
-        if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
-        }
       } else {
         // user is authenticated
         user.setAuthenticationMethod(authMethod.authenticationMethod);
@@ -1357,8 +1354,6 @@ public abstract class Server {
             UserGroupInformation realUser = user;
             user = UserGroupInformation.createProxyUser(protocolUser
                 .getUserName(), realUser);
-            // Now the user is a proxy user, set Authentication method Proxy.
-            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
       }

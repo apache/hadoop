@@ -88,6 +88,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9154. SortedMapWritable#putAll() doesn't add key/value classes to
     the map. (Karthik Kambatla via tgraves)
 
+    HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via
+    kihwal)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
