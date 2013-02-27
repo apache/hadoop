@@ -505,6 +505,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5008. Merger progress miscounts with respect to EOF_MARKER.
     (Sandy Ryza via tomwhite)
 
+    MAPREDUCE-5035. Update MR1 memory configuration docs. (tomwhite)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
