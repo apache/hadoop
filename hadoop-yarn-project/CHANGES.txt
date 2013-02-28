@@ -30,6 +30,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-390. ApplicationCLI and NodeCLI hard-coded platform-specific line
     separator causes test failures on Windows. (Chris Nauroth via suresh)
 
+    YARN-406. Fix TestRackResolver to function in networks where "host1"
+    resolves to a valid host. (Hitesh Shah via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
