@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -30,9 +34,12 @@ import org.junit.Test;
 
 public class TestRackResolver {
 
+  private static Log LOG = LogFactory.getLog(TestRackResolver.class);
+
   public static final class MyResolver implements DNSToSwitchMapping {
 
     int numHost1 = 0;
+    public static String resolvedHost1 = "host1";
 
     @Override
     public List<String> resolve(List<String> hostList) {
@@ -43,7 +50,10 @@ public class TestRackResolver {
       if (hostList.isEmpty()) {
         return returnList;
       }
-      if (hostList.get(0).equals("host1")) {
+      LOG.info("Received resolve request for "
+          + hostList.get(0));
+      if (hostList.get(0).equals("host1")
+          || hostList.get(0).equals(resolvedHost1)) {
         numHost1++;
         returnList.add("/rack1");
       }
@@ -62,6 +72,12 @@ public class TestRackResolver {
       CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
       MyResolver.class, DNSToSwitchMapping.class);
     RackResolver.init(conf);
+    try {
+      InetAddress iaddr = InetAddress.getByName("host1");
+      MyResolver.resolvedHost1 = iaddr.getHostAddress();
+    } catch (UnknownHostException e) {
+      // Ignore if not found
+    }
     Node node = RackResolver.resolve("host1");
     Assert.assertEquals("/rack1", node.getNetworkLocation());
     node = RackResolver.resolve("host1");
