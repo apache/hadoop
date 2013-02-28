@@ -19,6 +19,9 @@ Release 0.23.7 - UNRELEASED
     YARN-236. RM should point tracking URL to RM web page when app fails to
     start (Jason Lowe via jeagles)
 
+    YARN-269. Resource Manager not logging the health_check_script result when
+    taking it out (Jason Lowe via kihwal)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
