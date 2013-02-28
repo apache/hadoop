@@ -21,6 +21,9 @@ package org.apache.hadoop.test;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import static org.mockito.Mockito.*;
+
+import org.junit.Assert;
+import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 import org.mockito.invocation.InvocationOnMock;
 import static org.mockito.AdditionalMatchers.*;
@@ -171,6 +174,29 @@ public class MetricsAsserts {
   public static void assertCounterGt(String name, long greater,
                                      MetricsSource source) {
     assertCounterGt(name, greater, getMetrics(source));
+  }
+
+  /**
+   * Check that this metric was captured exactly once.
+   */
+  private static void checkCaptured(ArgumentCaptor<?> captor, String name) {
+    Assert.assertEquals("Expected exactly one metric for name " + name,
+        1, captor.getAllValues().size());
+  }
+
+  /**
+   * Lookup the value of a long metric by name. Throws exception if the
+   * metric could not be found.
+   *
+   * @param name of the metric.
+   * @param rb  the record builder mock used to getMetrics
+   * @return the long value of the metric if found.
+   */
+  public static long getLongGauge(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+    verify(rb, atLeast(0)).addGauge(eq(name), anyString(), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
   }
 
   /**

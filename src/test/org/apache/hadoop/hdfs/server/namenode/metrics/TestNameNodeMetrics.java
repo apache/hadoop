@@ -101,6 +101,23 @@ public class TestNameNodeMetrics extends TestCase {
     stm.close();
   }
 
+  /**
+   * Test that capacity metrics are exported and pass
+   * basic sanity tests.
+   */
+  public void testCapacityMetrics() throws Exception {
+    MetricsRecordBuilder rb = getMetrics(fsnMetrics);
+    long capacityTotal = getLongGauge("CapacityTotal", rb);
+    assert(capacityTotal != 0);
+    long capacityUsed = getLongGauge("CapacityUsed", rb);
+    long capacityRemaining =
+        getLongGauge("CapacityRemaining", rb);
+    long capacityUsedNonDFS =
+        getLongGauge("CapacityUsedNonDFS", rb);
+    assert(capacityUsed + capacityRemaining + capacityUsedNonDFS ==
+        capacityTotal);
+  }  
+
   /** Test metrics associated with addition of a file */
   public void testFileAdd() throws Exception {
     // Add files with 32 blocks
