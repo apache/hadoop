@@ -123,7 +123,25 @@ public class TestNameNodeMetrics {
     stm.read(buffer,0,4);
     stm.close();
   }
-  
+
+  /**
+   * Test that capacity metrics are exported and pass
+   * basic sanity tests.
+   */
+  @Test (timeout = 1800)
+  public void testCapacityMetrics() throws Exception {
+    MetricsRecordBuilder rb = getMetrics(NS_METRICS);
+    long capacityTotal = MetricsAsserts.getLongGauge("CapacityTotal", rb);
+    assert(capacityTotal != 0);
+    long capacityUsed = MetricsAsserts.getLongGauge("CapacityUsed", rb);
+    long capacityRemaining =
+        MetricsAsserts.getLongGauge("CapacityRemaining", rb);
+    long capacityUsedNonDFS =
+        MetricsAsserts.getLongGauge("CapacityUsedNonDFS", rb);
+    assert(capacityUsed + capacityRemaining + capacityUsedNonDFS ==
+        capacityTotal);
+  }
+
   /** Test metrics indicating the number of stale DataNodes */
   @Test
   public void testStaleNodes() throws Exception {
