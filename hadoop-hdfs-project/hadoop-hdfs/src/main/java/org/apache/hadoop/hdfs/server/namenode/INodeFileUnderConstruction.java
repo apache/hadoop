@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -131,7 +132,8 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   }
   
   @Override
-  public INodeFileUnderConstruction recordModification(final Snapshot latest) {
+  public INodeFileUnderConstruction recordModification(final Snapshot latest)
+      throws NSQuotaExceededException {
     return isInLatestSnapshot(latest)?
         parent.replaceChild4INodeFileUcWithSnapshot(this)
             .recordModification(latest)

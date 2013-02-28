@@ -31,8 +31,11 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -163,6 +166,65 @@ public class TestNestedSnapshots {
         Assert.assertEquals(s > f, hdfs.exists(p));
       }
     }
+  }
+
+  @Test
+  public void testSnapshotWithQuota() throws Exception {
+    final String dirStr = "/testSnapshotWithQuota/dir";
+    final Path dir = new Path(dirStr);
+    hdfs.mkdirs(dir, new FsPermission((short)0777));
+    hdfs.allowSnapshot(dirStr);
+
+    // set namespace quota
+    final int NS_QUOTA = 6;
+    hdfs.setQuota(dir, NS_QUOTA, HdfsConstants.QUOTA_DONT_SET);
+
+    // create object to use up the quota.
+    final Path foo = new Path(dir, "foo");
+    final Path f1 = new Path(foo, "f1");
+    DFSTestUtil.createFile(hdfs, f1, BLOCKSIZE, REPLICATION, SEED);
+    hdfs.createSnapshot(dir, "s0");
+    final Path f2 = new Path(foo, "f2");
+    DFSTestUtil.createFile(hdfs, f2, BLOCKSIZE, REPLICATION, SEED);
+    
+    try {
+      // normal create file should fail with quota
+      final Path f3 = new Path(foo, "f3");
+      DFSTestUtil.createFile(hdfs, f3, BLOCKSIZE, REPLICATION, SEED);
+      Assert.fail();
+    } catch(NSQuotaExceededException e) {
+      SnapshotTestHelper.LOG.info("The exception is expected.", e);
+    }
+
+    try {
+      // createSnapshot should fail with quota
+      hdfs.createSnapshot(dir, "s1");
+      Assert.fail();
+    } catch(RemoteException re) {
+      final IOException ioe = re.unwrapRemoteException();
+      if (ioe instanceof NSQuotaExceededException) {
+        SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
+      }
+    }
+
+    try {
+      // setPermission f1 should fail with quote since it cannot add diff.
+      hdfs.setPermission(f1, new FsPermission((short)0));
+      Assert.fail();
+    } catch(RemoteException re) {
+      final IOException ioe = re.unwrapRemoteException();
+      if (ioe instanceof NSQuotaExceededException) {
+        SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
+      }
+    }
+
+    // setPermission f2 since it was created after the snapshot
+    hdfs.setPermission(f2, new FsPermission((short)0));
+
+    // increase quota and retry the commands.
+    hdfs.setQuota(dir, NS_QUOTA + 2, HdfsConstants.QUOTA_DONT_SET);
+    hdfs.createSnapshot(dir, "s1");
+    hdfs.setPermission(foo, new FsPermission((short)0444));
   }
 
   /**

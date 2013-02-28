@@ -301,7 +301,7 @@ public class TestDiff {
     Assert.assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);
     final INodeDirectory newinode = new INodeDirectory(oldinode, false);
-    newinode.updateModificationTime(oldinode.getModificationTime() + 1, null);
+    newinode.setModificationTime(oldinode.getModificationTime() + 1);
 
     current.set(i, newinode);
     if (diff != null) {

@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -171,7 +169,7 @@ public class TestSnapshot {
   private File getDumpTreeFile(String dir, String suffix) {
     return new File(dir, String.format("dumptree_%s", suffix));
   }
-  
+
   /**
    * Restart the cluster to check edit log applying and fsimage saving/loading
    */
@@ -180,10 +178,7 @@ public class TestSnapshot {
     File fsnMiddle = getDumpTreeFile(testDir, "middle");
     File fsnAfter = getDumpTreeFile(testDir, "after");
     
-    String rootDir = "/";
-    PrintWriter out = new PrintWriter(new FileWriter(fsnBefore, false), true);
-    fsdir.getINode(rootDir).dumpTreeRecursively(out, new StringBuilder(), null);
-    out.close();
+    SnapshotTestHelper.dumpTree2File(fsdir, fsnBefore);
     
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
@@ -191,11 +186,8 @@ public class TestSnapshot {
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
-    // later check fsnMiddle to see if the edit log is recorded and applied
-    // correctly 
-    out = new PrintWriter(new FileWriter(fsnMiddle, false), true);
-    fsdir.getINode(rootDir).dumpTreeRecursively(out, new StringBuilder(), null);
-    out.close();
+    // later check fsnMiddle to see if the edit log is applied correctly 
+    SnapshotTestHelper.dumpTree2File(fsdir, fsnMiddle);
    
     // save namespace and restart cluster
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
@@ -208,9 +200,7 @@ public class TestSnapshot {
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
     // dump the namespace loaded from fsimage
-    out = new PrintWriter(new FileWriter(fsnAfter, false), true);
-    fsdir.getINode(rootDir).dumpTreeRecursively(out, new StringBuilder(), null);
-    out.close();
+    SnapshotTestHelper.dumpTree2File(fsdir, fsnAfter);
     
     SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnMiddle);
     SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);

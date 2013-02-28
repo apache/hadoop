@@ -32,12 +32,14 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.SignedBytes;
 
 /**
@@ -158,11 +160,8 @@ public abstract class INode implements Diff.Element<byte[]> {
   public final PermissionStatus getPermissionStatus() {
     return getPermissionStatus(null);
   }
-  private INode updatePermissionStatus(PermissionStatusFormat f, long n,
-      Snapshot latest) {
-    final INode nodeToUpdate = recordModification(latest);
-    nodeToUpdate.permission = f.combine(n, permission);
-    return nodeToUpdate;
+  private void updatePermissionStatus(PermissionStatusFormat f, long n) {
+    this.permission = f.combine(n, permission);
   }
   /**
    * @param snapshot
@@ -183,9 +182,16 @@ public abstract class INode implements Diff.Element<byte[]> {
     return getUserName(null);
   }
   /** Set user */
-  protected INode setUser(String user, Snapshot latest) {
+  final void setUser(String user) {
     int n = SerialNumberManager.INSTANCE.getUserSerialNumber(user);
-    return updatePermissionStatus(PermissionStatusFormat.USER, n, latest);
+    updatePermissionStatus(PermissionStatusFormat.USER, n);
+  }
+  /** Set user */
+  final INode setUser(String user, Snapshot latest)
+      throws NSQuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest);
+    nodeToUpdate.setUser(user);
+    return nodeToUpdate;
   }
   /**
    * @param snapshot
@@ -206,9 +212,16 @@ public abstract class INode implements Diff.Element<byte[]> {
     return getGroupName(null);
   }
   /** Set group */
-  protected INode setGroup(String group, Snapshot latest) {
+  final void setGroup(String group) {
     int n = SerialNumberManager.INSTANCE.getGroupSerialNumber(group);
-    return updatePermissionStatus(PermissionStatusFormat.GROUP, n, latest);
+    updatePermissionStatus(PermissionStatusFormat.GROUP, n);
+  }
+  /** Set group */
+  final INode setGroup(String group, Snapshot latest)
+      throws NSQuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest);
+    nodeToUpdate.setGroup(group);
+    return nodeToUpdate;
   }
   /**
    * @param snapshot
@@ -232,9 +245,16 @@ public abstract class INode implements Diff.Element<byte[]> {
     return (short)PermissionStatusFormat.MODE.retrieve(permission);
   }
   /** Set the {@link FsPermission} of this {@link INode} */
-  INode setPermission(FsPermission permission, Snapshot latest) {
+  void setPermission(FsPermission permission) {
     final short mode = permission.toShort();
-    return updatePermissionStatus(PermissionStatusFormat.MODE, mode, latest);
+    updatePermissionStatus(PermissionStatusFormat.MODE, mode);
+  }
+  /** Set the {@link FsPermission} of this {@link INode} */
+  INode setPermission(FsPermission permission, Snapshot latest)
+      throws NSQuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest);
+    nodeToUpdate.setPermission(permission);
+    return nodeToUpdate;
   }
 
   /**
@@ -263,7 +283,8 @@ public abstract class INode implements Diff.Element<byte[]> {
    *         However, in some cases, this inode may be replaced with a new inode
    *         for maintaining snapshots. The current inode is then the new inode.
    */
-  abstract INode recordModification(final Snapshot latest);
+  abstract INode recordModification(final Snapshot latest)
+      throws NSQuotaExceededException;
 
   /**
    * Check whether it's a file.
@@ -335,7 +356,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    * @return the number of deleted inodes in the subtree.
    */
   public abstract int cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      BlocksMapUpdateInfo collectedBlocks);
+      BlocksMapUpdateInfo collectedBlocks) throws NSQuotaExceededException;
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
@@ -428,6 +449,16 @@ public abstract class INode implements Diff.Element<byte[]> {
   public abstract Content.Counts computeContentSummary(Content.Counts counts);
   
   /**
+   * Check and add namespace consumed to itself and the ancestors.
+   * @throws NSQuotaExceededException if quote is violated.
+   */
+  public void addNamespaceConsumed(int delta) throws NSQuotaExceededException {
+    if (parent != null) {
+      parent.addNamespaceConsumed(delta);
+    }
+  }
+
+  /**
    * Get the quota set for this inode
    * @return the quota if it is set; -1 otherwise
    */
@@ -447,7 +478,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
    */
   final Quota.Counts computeQuotaUsage() {
-    return computeQuotaUsage(new Quota.Counts());
+    return computeQuotaUsage(new Quota.Counts(), true);
   }
 
   /**
@@ -456,7 +487,8 @@ public abstract class INode implements Diff.Element<byte[]> {
    * @param counts The subtree counts for returning.
    * @return The same objects as the counts parameter.
    */
-  abstract Quota.Counts computeQuotaUsage(Quota.Counts counts);
+  public abstract Quota.Counts computeQuotaUsage(Quota.Counts counts,
+      boolean useCache);
   
   /**
    * @return null if the local name is null; otherwise, return the local name.
@@ -574,8 +606,9 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   /** Update modification time if it is larger than the current value. */
-  public final INode updateModificationTime(long mtime, Snapshot latest) {
-    assert isDirectory();
+  public final INode updateModificationTime(long mtime, Snapshot latest)
+      throws NSQuotaExceededException {
+    Preconditions.checkState(isDirectory());
     if (mtime <= modificationTime) {
       return this;
     }
@@ -586,12 +619,15 @@ public abstract class INode implements Diff.Element<byte[]> {
     this.modificationTime = that.modificationTime;
   }
 
-  /**
-   * Always set the last modification time of inode.
-   */
-  public final INode setModificationTime(long modtime, Snapshot latest) {
+  /** Set the last modification time of inode. */
+  public final void setModificationTime(long modificationTime) {
+    this.modificationTime = modificationTime;
+  }
+  /** Set the last modification time of inode. */
+  public final INode setModificationTime(long modificationTime, Snapshot latest)
+      throws NSQuotaExceededException {
     final INode nodeToUpdate = recordModification(latest);
-    nodeToUpdate.modificationTime = modtime;
+    nodeToUpdate.setModificationTime(modificationTime);
     return nodeToUpdate;
   }
 
@@ -617,9 +653,16 @@ public abstract class INode implements Diff.Element<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public INode setAccessTime(long atime, Snapshot latest) {
+  public void setAccessTime(long accessTime) {
+    this.accessTime = accessTime;
+  }
+  /**
+   * Set last access time of inode.
+   */
+  public INode setAccessTime(long accessTime, Snapshot latest)
+      throws NSQuotaExceededException {
     final INode nodeToUpdate = recordModification(latest);
-    nodeToUpdate.accessTime = atime;
+    nodeToUpdate.setAccessTime(accessTime);
     return nodeToUpdate;
   }
 

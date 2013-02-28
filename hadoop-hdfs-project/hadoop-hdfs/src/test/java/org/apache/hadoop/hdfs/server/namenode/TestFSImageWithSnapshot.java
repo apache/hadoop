@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -59,7 +57,6 @@ public class TestFSImageWithSnapshot {
   static final int BLOCKSIZE = 1024;
   static final long txid = 1;
 
-  private final Path rootDir = new Path("/");
   private final Path dir = new Path("/TestSnapshot");
   private static String testDir =
       System.getProperty("test.build.data", "build/test/data");
@@ -114,10 +111,7 @@ public class TestFSImageWithSnapshot {
    */
   private File dumpTree2File(String fileSuffix) throws IOException {
     File file = getDumpTreeFile(testDir, fileSuffix);
-    PrintWriter out = new PrintWriter(new FileWriter(file, false), true);
-    fsn.getFSDirectory().getINode(rootDir.toString())
-        .dumpTreeRecursively(out, new StringBuilder(), null);
-    out.close();
+    SnapshotTestHelper.dumpTree2File(fsn.getFSDirectory(), file);
     return file;
   }
   
@@ -155,6 +149,8 @@ public class TestFSImageWithSnapshot {
     fsn.getFSDirectory().writeLock();
     try {
       loader.load(imageFile);
+      FSImage.updateCountForQuota(
+          (INodeDirectoryWithQuota)fsn.getFSDirectory().getINode("/"));
     } finally {
       fsn.getFSDirectory().writeUnlock();
       fsn.writeUnlock();

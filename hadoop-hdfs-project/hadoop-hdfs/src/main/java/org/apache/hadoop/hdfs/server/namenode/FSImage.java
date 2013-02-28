@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.now;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -28,28 +30,26 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.common.Util;
-import static org.apache.hadoop.util.Time.now;
-
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
@@ -62,9 +62,6 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.IdGenerator;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HAUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -726,7 +723,8 @@ public class FSImage implements Closeable {
     return lastAppliedTxId - prevLastAppliedTxId;
   }
 
-  /** Update the count of each directory with quota in the namespace
+  /**
+   * Update the count of each directory with quota in the namespace.
    * A directory's count is defined as the total number inodes in the tree
    * rooted at the directory.
    * 
@@ -734,39 +732,22 @@ public class FSImage implements Closeable {
    * throw QuotaExceededException.
    */
   static void updateCountForQuota(INodeDirectoryWithQuota root) {
-    updateCountForINodeWithQuota(root, new Quota.Counts(), new Stack<INode>());
+    updateCountForQuotaRecursively(root, new Quota.Counts());
   }
   
-  /** 
-   * Update the count of the directory if it has a quota and return the count
-   * 
-   * This does not throw a QuotaExceededException. This is just an update
-   * of of existing state and throwing QuotaExceededException does not help
-   * with fixing the state, if there is a problem.
-   * 
-   * @param dir the root of the tree that represents the directory
-   * @param counters counters for name space and disk space
-   * @param stack INodes for the each of components in the path.
-   */
-  private static void updateCountForINodeWithQuota(INodeDirectory dir,
-      Quota.Counts counts, Stack<INode> stack) {
-    // The stack is not needed since we could use the 'parent' field in INode.
-    // However, using 'parent' is not recommended.
-    stack.push(dir);
-
+  private static void updateCountForQuotaRecursively(INodeDirectory dir,
+      Quota.Counts counts) {
     final long parentNamespace = counts.get(Quota.NAMESPACE);
     final long parentDiskspace = counts.get(Quota.DISKSPACE);
     
-    counts.add(Quota.NAMESPACE, 1);
+    dir.computeQuotaUsage4CurrentDirectory(counts);
+
     for (INode child : dir.getChildrenList(null)) {
       if (child.isDirectory()) {
-        updateCountForINodeWithQuota((INodeDirectory)child, counts, stack);
+        updateCountForQuotaRecursively((INodeDirectory)child, counts);
       } else {
         // file or symlink: count here to reduce recursive calls.
-        counts.add(Quota.NAMESPACE, 1);
-        if (child.isFile()) {
-          counts.add(Quota.DISKSPACE, ((INodeFile)child).diskspaceConsumed());
-        }
+        child.computeQuotaUsage(counts, false);
       }
     }
       
@@ -774,24 +755,20 @@ public class FSImage implements Closeable {
       // check if quota is violated. It indicates a software bug.
       final long namespace = counts.get(Quota.NAMESPACE) - parentNamespace;
       if (Quota.isViolated(dir.getNsQuota(), namespace)) {
-        final INode[] inodes = stack.toArray(new INode[stack.size()]);
         LOG.error("BUG: Namespace quota violation in image for "
-            + FSDirectory.getFullPathName(inodes, inodes.length)
+            + dir.getFullPathName()
             + " quota = " + dir.getNsQuota() + " < consumed = " + namespace);
       }
 
       final long diskspace = counts.get(Quota.DISKSPACE) - parentDiskspace;
       if (Quota.isViolated(dir.getDsQuota(), diskspace)) {
-        final INode[] inodes = stack.toArray(new INode[stack.size()]);
         LOG.error("BUG: Diskspace quota violation in image for "
-            + FSDirectory.getFullPathName(inodes, inodes.length)
+            + dir.getFullPathName()
             + " quota = " + dir.getDsQuota() + " < consumed = " + diskspace);
       }
 
       ((INodeDirectoryWithQuota)dir).setSpaceConsumed(namespace, diskspace);
     }
-      
-    stack.pop();
   }
 
   /**

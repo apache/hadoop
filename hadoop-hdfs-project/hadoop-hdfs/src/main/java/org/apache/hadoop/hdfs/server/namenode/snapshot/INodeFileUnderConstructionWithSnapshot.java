@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
@@ -75,8 +76,8 @@ public class INodeFileUnderConstructionWithSnapshot
     assertAllBlocksComplete();
     final long atime = getModificationTime();
     final INodeFileWithSnapshot f = new INodeFileWithSnapshot(this, getDiffs());
-    f.setModificationTime(mtime, null);
-    f.setAccessTime(atime, null);
+    f.setModificationTime(mtime);
+    f.setAccessTime(atime);
     return f;
   }
 
@@ -92,7 +93,7 @@ public class INodeFileUnderConstructionWithSnapshot
 
   @Override
   public INodeFileUnderConstructionWithSnapshot recordModification(
-      final Snapshot latest) {
+      final Snapshot latest) throws NSQuotaExceededException {
     if (isInLatestSnapshot(latest)) {
       diffs.saveSelf2Snapshot(latest, this, null);
     }
@@ -111,7 +112,8 @@ public class INodeFileUnderConstructionWithSnapshot
 
   @Override
   public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks) {
+      final BlocksMapUpdateInfo collectedBlocks)
+          throws NSQuotaExceededException {
     if (snapshot == null) { // delete the current file
       recordModification(prior);
       isCurrentFileDeleted = true;

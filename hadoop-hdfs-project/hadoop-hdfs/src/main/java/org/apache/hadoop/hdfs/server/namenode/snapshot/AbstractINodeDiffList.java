@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
@@ -48,9 +49,11 @@ abstract class AbstractINodeDiffList<N extends INode,
     return Collections.unmodifiableList(diffs);
   }
   
-  /** clear the diff list */
-  void clear() {
+  /** clear the diff list,  */
+  int clear() {
+    final int n = diffs.size();
     diffs.clear();
+    return n;
   }
 
   /**
@@ -102,7 +105,9 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
-  final D addDiff(Snapshot latest, N currentINode) {
+  final D addDiff(Snapshot latest, N currentINode)
+      throws NSQuotaExceededException {
+    currentINode.addNamespaceConsumed(1);
     return addLast(factory.createDiff(latest, currentINode));
   }
 
@@ -220,14 +225,25 @@ abstract class AbstractINodeDiffList<N extends INode,
    * Check if the latest snapshot diff exists.  If not, add it.
    * @return the latest snapshot diff, which is never null.
    */
-  final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode) {
+  final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode)
+      throws NSQuotaExceededException {
     final D last = getLast();
-    return last != null && last.snapshot.equals(latest)? last
-        : addDiff(latest, currentINode);
+    if (last != null
+        && Snapshot.ID_COMPARATOR.compare(last.getSnapshot(), latest) >= 0) {
+      return last;
+    } else {
+      try {
+        return addDiff(latest, currentINode);
+      } catch(NSQuotaExceededException e) {
+        e.setMessagePrefix("Failed to record modification for snapshot");
+        throw e;
+      }
+    }
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy) {
+  public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy)
+      throws NSQuotaExceededException {
     if (latest != null) {
       checkAndAddLatestSnapshotDiff(latest, currentINode).saveSnapshotCopy(
           snapshotCopy, factory, currentINode);

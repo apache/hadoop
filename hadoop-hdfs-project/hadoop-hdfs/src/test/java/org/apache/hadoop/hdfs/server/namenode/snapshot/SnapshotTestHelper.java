@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -128,6 +130,8 @@ public class SnapshotTestHelper {
     assertTrue(hdfs.exists(snapshotRoot));
     hdfs.allowSnapshot(snapshotRoot.toString());
     hdfs.createSnapshot(snapshotRoot, snapshotName);
+    // set quota to a large value for testing counts
+    hdfs.setQuota(snapshotRoot, Long.MAX_VALUE-1, Long.MAX_VALUE-1);
     return SnapshotTestHelper.getSnapshotRoot(snapshotRoot, snapshotName);
   }
 
@@ -192,6 +196,11 @@ public class SnapshotTestHelper {
   }
   private static void compareDumpedTreeInFile(File file1, File file2,
       boolean print) throws IOException {
+    if (print) {
+      printFile(file1);
+      printFile(file2);
+    }
+
     BufferedReader reader1 = new BufferedReader(new FileReader(file1));
     BufferedReader reader2 = new BufferedReader(new FileReader(file2));
     try {
@@ -236,6 +245,25 @@ public class SnapshotTestHelper {
       reader1.close();
       reader2.close();
     }
+  }
+
+  static void printFile(File f) throws IOException {
+    System.out.println();
+    System.out.println("File: " + f);
+    BufferedReader in = new BufferedReader(new FileReader(f));
+    try {
+      for(String line; (line = in.readLine()) != null; ) {
+        System.out.println(line);
+      }
+    } finally {
+      in.close();
+    }
+  }
+
+  public static void dumpTree2File(FSDirectory fsdir, File f) throws IOException{
+    final PrintWriter out = new PrintWriter(new FileWriter(f, false), true);
+    fsdir.getINode("/").dumpTreeRecursively(out, new StringBuilder(), null);
+    out.close();
   }
 
   /**

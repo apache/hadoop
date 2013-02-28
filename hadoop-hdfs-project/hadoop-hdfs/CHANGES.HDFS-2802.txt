@@ -179,3 +179,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4523. Fix INodeFile replacement, TestQuota and javac errors from trunk
   merge.  (szetszwo)
+
+  HDFS-4507. Update quota verification for snapshots.  (szetszwo)
