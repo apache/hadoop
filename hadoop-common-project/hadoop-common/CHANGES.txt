@@ -23,6 +23,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8075. Lower native-hadoop library log from info to debug.
     (Hızır Sefa İrken via eli)
 
+    HADOOP-9336. Allow UGI of current connection to be queried. (Daryn Sharp
+    via kihwal)
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
