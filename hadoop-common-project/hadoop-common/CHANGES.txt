@@ -395,6 +395,8 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
     (Arpit Gupta via suresh)
 
+    HADOOP-9342. Remove jline from distribution. (thw via tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
