@@ -3667,40 +3667,47 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return stats;
   }
 
-  /**
-   * Total raw bytes including non-dfs used space.
-   */
   @Override // FSNamesystemMBean
+  @Metric({"CapacityTotal",
+      "Total raw capacity of data nodes in bytes"})
   public long getCapacityTotal() {
     return datanodeStatistics.getCapacityTotal();
   }
 
-  @Metric
+  @Metric({"CapacityTotalGB",
+      "Total raw capacity of data nodes in GB"})
   public float getCapacityTotalGB() {
     return DFSUtil.roundBytesToGB(getCapacityTotal());
   }
 
-  /**
-   * Total used space by data nodes
-   */
   @Override // FSNamesystemMBean
+  @Metric({"CapacityUsed",
+      "Total used capacity across all data nodes in bytes"})
   public long getCapacityUsed() {
     return datanodeStatistics.getCapacityUsed();
   }
 
-  @Metric
+  @Metric({"CapacityUsedGB",
+      "Total used capacity across all data nodes in GB"})
   public float getCapacityUsedGB() {
     return DFSUtil.roundBytesToGB(getCapacityUsed());
   }
 
-  @Override
+  @Override // FSNamesystemMBean
+  @Metric({"CapacityRemaining", "Remaining capacity in bytes"})
   public long getCapacityRemaining() {
     return datanodeStatistics.getCapacityRemaining();
   }
 
-  @Metric
+  @Metric({"CapacityRemainingGB", "Remaining capacity in GB"})
   public float getCapacityRemainingGB() {
     return DFSUtil.roundBytesToGB(getCapacityRemaining());
+  }
+
+  @Metric({"CapacityUsedNonDFS",
+      "Total space used by data nodes for non DFS purposes in bytes"})
+  public long getCapacityUsedNonDFS() {
+    return datanodeStatistics.getCapacityUsedNonDFS();
   }
 
   /**
