@@ -74,6 +74,10 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4007. JobClient getJob(JobID) should return NULL if the job 
     does not exist (for backwards compatibility) (tucu via jlowe)
 
+    MAPREDUCE-4871. AM uses mapreduce.jobtracker.split.metainfo.maxsize but
+    mapred-default has mapreduce.job.split.metainfo.maxsize (Jason Lowe via
+    jeagles)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES

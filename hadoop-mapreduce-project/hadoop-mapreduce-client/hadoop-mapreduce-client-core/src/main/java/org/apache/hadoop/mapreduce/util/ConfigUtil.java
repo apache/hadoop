@@ -521,6 +521,8 @@ public class ConfigUtil {
     });
     Configuration.addDeprecation("mapreduce.user.classpath.first",
       MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST);
+    Configuration.addDeprecation(JTConfig.JT_MAX_JOB_SPLIT_METAINFO_SIZE,
+        MRJobConfig.SPLIT_METAINFO_MAXSIZE);
   }
 }
 
