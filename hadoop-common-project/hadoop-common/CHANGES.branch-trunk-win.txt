@@ -89,6 +89,9 @@ branch-trunk-win changes - unreleased
   HADOOP-9347. Add instructions to BUILDING.txt describing how to
   build on Windows. (Chris Nauroth via suresh)
 
+  HADOOP-9348. Address TODO in winutils to add more command line usage
+  and examples. (Chris Nauroth via suresh)
+
 Patch equivalent to trunk committed to branch-trunk-win
 
   HADOOP-8924. Add maven plugin alternative to shell script to save
