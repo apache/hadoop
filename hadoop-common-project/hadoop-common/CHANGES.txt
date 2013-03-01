@@ -400,6 +400,9 @@ Release 2.0.4-beta - UNRELEASED
     HADOOP-9230. TestUniformSizeInputFormat fails intermittently. 
     (kkambatl via tucu)
 
+    HADOOP-9349. Confusing output when running hadoop version from one hadoop 
+    installation when HADOOP_HOME points to another. (sandyr via tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
