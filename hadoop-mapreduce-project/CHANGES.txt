@@ -198,6 +198,9 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-4693. History server should include counters for failed tasks.
     (Xuan Gong via sseth)
 
+    MAPREDUCE-4896. mapred queue -info spits out ugly exception when queue does 
+    not exist. (sandyr via tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

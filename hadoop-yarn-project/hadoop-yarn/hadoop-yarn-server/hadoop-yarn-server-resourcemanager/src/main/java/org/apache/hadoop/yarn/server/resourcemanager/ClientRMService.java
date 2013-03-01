@@ -436,7 +436,6 @@ public class ClientRMService extends AbstractService implements
       response.setQueueInfo(queueInfo);
     } catch (IOException ioe) {
       LOG.info("Failed to getQueueInfo for " + request.getQueueName(), ioe);
-      throw RPCUtil.getRemoteException(ioe);
     }
     
     return response;
