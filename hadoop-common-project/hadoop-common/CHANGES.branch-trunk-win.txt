@@ -86,6 +86,9 @@ branch-trunk-win changes - unreleased
   HADOOP-9309. Test failures on Windows due to UnsatisfiedLinkError
   in NativeCodeLoader#buildSupportsSnappy. (Arpit Agarwal via suresh)
 
+  HADOOP-9347. Add instructions to BUILDING.txt describing how to
+  build on Windows. (Chris Nauroth via suresh)
+
 Patch equivalent to trunk committed to branch-trunk-win
 
   HADOOP-8924. Add maven plugin alternative to shell script to save
