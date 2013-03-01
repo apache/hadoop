@@ -47,6 +47,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-406. Fix TestRackResolver to function in networks where "host1"
     resolves to a valid host. (Hitesh Shah via sseth)
 
+    YARN-376. Fixes a bug which would prevent the NM knowing about completed
+    containers and applications. (Jason Lowe via sseth)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

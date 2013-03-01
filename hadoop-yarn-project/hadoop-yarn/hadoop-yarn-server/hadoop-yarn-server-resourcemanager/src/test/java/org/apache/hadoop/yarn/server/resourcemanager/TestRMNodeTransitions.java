@@ -30,6 +30,7 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -51,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -297,6 +300,39 @@ public class TestRMNodeTransitions {
     node.handle(new RMNodeEvent(node.getNodeID(),
         RMNodeEventType.REBOOTING));
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
+  }
+
+  @Test(timeout=20000)
+  public void testUpdateHeartbeatResponseForCleanup() {
+    RMNodeImpl node = getRunningNode();
+    NodeId nodeId = node.getNodeID();
+
+    // Expire a container
+		ContainerId completedContainerId = BuilderUtils.newContainerId(
+				BuilderUtils.newApplicationAttemptId(
+						BuilderUtils.newApplicationId(0, 0), 0), 0);
+    node.handle(new RMNodeCleanContainerEvent(nodeId, completedContainerId));
+    Assert.assertEquals(1, node.getContainersToCleanUp().size());
+
+    // Finish an application
+    ApplicationId finishedAppId = BuilderUtils.newApplicationId(0, 1);
+    node.handle(new RMNodeCleanAppEvent(nodeId, finishedAppId));
+    Assert.assertEquals(1, node.getAppsToCleanup().size());
+
+    // Verify status update does not clear containers/apps to cleanup
+    // but updating heartbeat response for cleanup does
+    RMNodeStatusEvent statusEvent = getMockRMNodeStatusEvent();
+    node.handle(statusEvent);
+    Assert.assertEquals(1, node.getContainersToCleanUp().size());
+    Assert.assertEquals(1, node.getAppsToCleanup().size());
+    HeartbeatResponse hbrsp = Records.newRecord(HeartbeatResponse.class);
+    node.updateHeartbeatResponseForCleanup(hbrsp);
+    Assert.assertEquals(0, node.getContainersToCleanUp().size());
+    Assert.assertEquals(0, node.getAppsToCleanup().size());
+    Assert.assertEquals(1, hbrsp.getContainersToCleanupCount());
+    Assert.assertEquals(completedContainerId, hbrsp.getContainerToCleanup(0));
+    Assert.assertEquals(1, hbrsp.getApplicationsToCleanupCount());
+    Assert.assertEquals(finishedAppId, hbrsp.getApplicationsToCleanup(0));
   }
 
   private RMNodeImpl getRunningNode() {
