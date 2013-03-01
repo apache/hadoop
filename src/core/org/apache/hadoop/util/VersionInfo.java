@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.util;
 
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.Enumeration;
+
 import org.apache.hadoop.HadoopVersionAnnotation;
 
 /**
@@ -104,6 +109,7 @@ public class VersionInfo {
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
     System.out.println("From source with checksum " + getSrcChecksum());
-
+    System.out.println("This command was run using " + 
+        ClassUtil.findContainingJar(VersionInfo.class));
   }
 }

@@ -507,6 +507,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-5035. Update MR1 memory configuration docs. (tomwhite)
 
+    HADOOP-9349. Confusing output when running hadoop version from one hadoop 
+    installation when HADOOP_HOME points to another. (sandyr via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
