@@ -56,6 +56,9 @@ Release 0.23.7 - UNRELEASED
     YARN-426. Failure to download a public resource prevents further downloads
     (Jason Lowe via bobby)
 
+    YARN-376. Fixes a bug which would prevent the NM knowing about completed
+    containers and applications. (Jason Lowe via sseth)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES

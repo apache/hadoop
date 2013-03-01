@@ -184,6 +184,10 @@ public class MockNodes {
     }
 
     @Override
+    public void updateHeartbeatResponseForCleanup(HeartbeatResponse response) {
+    }
+
+    @Override
     public HeartbeatResponse getLastHeartBeatResponse() {
       return null;
     }

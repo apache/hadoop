@@ -105,5 +105,12 @@ public interface RMNode {
 
   public List<ApplicationId> getAppsToCleanup();
 
+  /**
+   * Update a {@link HeartbeatResponse} with the list of containers and
+   * applications to clean up for this node.
+   * @param response the {@link HeartbeatResponse} to update
+   */
+  public void updateHeartbeatResponseForCleanup(HeartbeatResponse response);
+
   public HeartbeatResponse getLastHeartBeatResponse();
 }

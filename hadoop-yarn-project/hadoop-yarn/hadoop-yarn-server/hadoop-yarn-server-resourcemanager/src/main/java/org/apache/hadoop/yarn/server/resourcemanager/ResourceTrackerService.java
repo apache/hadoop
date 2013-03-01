@@ -262,8 +262,7 @@ public class ResourceTrackerService extends AbstractService implements
     HeartbeatResponse latestResponse = recordFactory
         .newRecordInstance(HeartbeatResponse.class);
     latestResponse.setResponseId(lastHeartbeatResponse.getResponseId() + 1);
-    latestResponse.addAllContainersToCleanup(rmNode.getContainersToCleanUp());
-    latestResponse.addAllApplicationsToCleanup(rmNode.getAppsToCleanup());
+    rmNode.updateHeartbeatResponseForCleanup(latestResponse);
     latestResponse.setNodeAction(NodeAction.NORMAL);
 
     // Check if node's masterKey needs to be updated and if the currentKey has
