@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -60,6 +61,8 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BuilderUtils.ContainerIdComparator;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class is used to keep track of all the applications/containers
  * running on a node.
@@ -77,6 +80,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   private final ReadLock readLock;
   private final WriteLock writeLock;
+
+  private final ConcurrentLinkedQueue<UpdatedContainerInfo> nodeUpdateQueue;
+  private volatile boolean nextHeartBeat = true;
 
   private final NodeId nodeId;
   private final RMContext context;
@@ -186,6 +192,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     this.stateMachine = stateMachineFactory.make(this);
     
+    this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();  
   }
 
   @Override
@@ -297,6 +304,21 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   };
 
   @Override
+  public void updateHeartbeatResponseForCleanup(HeartbeatResponse response) {
+    this.writeLock.lock();
+
+    try {
+      response.addAllContainersToCleanup(
+          new ArrayList<ContainerId>(this.containersToClean));
+      response.addAllApplicationsToCleanup(this.finishedApplications);
+      this.containersToClean.clear();
+      this.finishedApplications.clear();
+    } finally {
+      this.writeLock.unlock();
+    }
+  };
+
+  @Override
   public HeartbeatResponse getLastHeartBeatResponse() {
 
     this.readLock.lock();
@@ -400,6 +422,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Kill containers since node is rejoining.
+      rmNode.nodeUpdateQueue.clear();
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeRemovedSchedulerEvent(rmNode));
 
@@ -458,6 +481,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Inform the scheduler
+      rmNode.nodeUpdateQueue.clear();
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeRemovedSchedulerEvent(rmNode));
       rmNode.context.getDispatcher().getEventHandler().handle(
@@ -489,6 +513,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           statusEvent.getNodeHealthStatus();
       rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
+        LOG.info("Node " + rmNode.nodeId + " reported UNHEALTHY with details: "
+            + remoteNodeHealthStatus.getHealthReport());
+        rmNode.nodeUpdateQueue.clear();
         // Inform the scheduler
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeRemovedSchedulerEvent(rmNode));
@@ -538,19 +565,19 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           completedContainers.add(remoteContainer);
         }
       }
-
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodeUpdateSchedulerEvent(rmNode, newlyLaunchedContainers, 
-              completedContainers));
+      if(newlyLaunchedContainers.size() != 0 
+          || completedContainers.size() != 0) {
+        rmNode.nodeUpdateQueue.add(new UpdatedContainerInfo
+            (newlyLaunchedContainers, completedContainers));
+      }
+      if(rmNode.nextHeartBeat) {
+        rmNode.nextHeartBeat = false;
+        rmNode.context.getDispatcher().getEventHandler().handle(
+            new NodeUpdateSchedulerEvent(rmNode));
+      }
       
       rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
           statusEvent.getKeepAliveAppIds());
-
-      // HeartBeat processing from our end is done, as node pulls the following
-      // lists before sending status-updates. Clear data-structures
-      // TODO: These lists could go to the NM multiple times, or never.
-      rmNode.containersToClean.clear();
-      rmNode.finishedApplications.clear();
 
       return NodeState.RUNNING;
     }
@@ -583,5 +610,26 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       return NodeState.UNHEALTHY;
     }
+  }
+
+  @Override
+  public List<UpdatedContainerInfo> pullContainerUpdates() {
+    List<UpdatedContainerInfo> latestContainerInfoList = 
+        new ArrayList<UpdatedContainerInfo>();
+    while(nodeUpdateQueue.peek() != null){
+      latestContainerInfoList.add(nodeUpdateQueue.poll());
+    }
+    this.nextHeartBeat = true;
+    return latestContainerInfoList;
+  }
+
+  @VisibleForTesting
+  public void setNextHeartBeat(boolean nextHeartBeat) {
+    this.nextHeartBeat = nextHeartBeat;
+  }
+  
+  @VisibleForTesting
+  public int getQueueSize() {
+    return nodeUpdateQueue.size();
   }
  }

@@ -220,6 +220,10 @@
       <version>3.4.2</version>
       <exclusions>
         <exclusion>
+          <groupId>jline</groupId>
+          <artifactId>jline</artifactId>
+        </exclusion>
+        <exclusion>
           <!-- otherwise seems to drag in junit 3.8.1 via jline -->
           <groupId>junit</groupId>
           <artifactId>junit</artifactId>

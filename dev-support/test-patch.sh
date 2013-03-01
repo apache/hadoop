@@ -370,12 +370,12 @@ checkTests () {
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 tests included appear to have a timeout.{color}"
-	return 1
+	return 0
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
   {color:red}-1 one of tests included doesn't have a timeout.{color}"
-  return 0
+  return 1
 }
 
 cleanUpXml () {

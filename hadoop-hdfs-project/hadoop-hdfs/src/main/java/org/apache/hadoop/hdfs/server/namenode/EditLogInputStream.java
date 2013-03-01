@@ -165,4 +165,9 @@ public abstract class EditLogInputStream implements Closeable {
    * Return true if this stream is in progress, false if it is finalized.
    */
   public abstract boolean isInProgress();
+  
+  /**
+   * Set the maximum opcode size in bytes.
+   */
+  public abstract void setMaxOpSize(int maxOpSize);
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.util;
 
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import java.io.File;
 
-public class NodeUpdateSchedulerEvent extends SchedulerEvent {
+import junit.framework.Assert;
 
-  private final RMNode rmNode;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 
-  public NodeUpdateSchedulerEvent(RMNode rmNode) {
-    super(SchedulerEventType.NODE_UPDATE);
-    this.rmNode = rmNode;
-  }
-
-  public RMNode getRMNode() {
-    return rmNode;
+public class TestClassUtil {
+  @Test(timeout=1000)
+  public void testFindContainingJar() {
+    String containingJar = ClassUtil.findContainingJar(Logger.class);
+    Assert.assertNotNull("Containing jar not found for Logger", 
+        containingJar);
+    File jarFile = new File(containingJar);
+    Assert.assertTrue("Containing jar does not exist on file system", 
+        jarFile.exists());
+    Assert.assertTrue("Incorrect jar file" + containingJar,  
+        jarFile.getName().matches("log4j.+[.]jar"));
   }
 }

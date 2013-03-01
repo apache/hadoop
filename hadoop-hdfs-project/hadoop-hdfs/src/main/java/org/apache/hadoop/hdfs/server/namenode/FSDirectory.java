@@ -1343,6 +1343,11 @@ public class FSDirectory implements Closeable {
 
     // fill up the inodes in the path from this inode to root
     for (int i = 0; i < depth; i++) {
+      if (inode == null) {
+        NameNode.stateChangeLog.warn("Could not get full path."
+            + " Corresponding file might have deleted already.");
+        return null;
+      }
       inodes[depth-i-1] = inode;
       inode = inode.parent;
     }

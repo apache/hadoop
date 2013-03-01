@@ -79,19 +79,17 @@ public abstract class TrashPolicy extends Configured {
 
   /**
    * Get an instance of the configured TrashPolicy based on the value 
-   * of the configuration paramater fs.trash.classname.
+   * of the configuration parameter fs.trash.classname.
    *
    * @param conf the configuration to be used
    * @param fs the file system to be used
    * @param home the home directory
    * @return an instance of TrashPolicy
    */
-  public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home)
-      throws IOException {
-    Class<? extends TrashPolicy> trashClass = conf.getClass("fs.trash.classname",
-                                                      TrashPolicyDefault.class,
-                                                      TrashPolicy.class);
-    TrashPolicy trash = (TrashPolicy) ReflectionUtils.newInstance(trashClass, conf);
+  public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home) {
+    Class<? extends TrashPolicy> trashClass = conf.getClass(
+        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
+    TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
     trash.initialize(conf, fs, home); // initialize TrashPolicy
     return trash;
   }

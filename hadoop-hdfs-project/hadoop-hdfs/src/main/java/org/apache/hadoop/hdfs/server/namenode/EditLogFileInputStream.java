@@ -32,6 +32,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
@@ -53,6 +54,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
   private final long firstTxId;
   private final long lastTxId;
   private final boolean isInProgress;
+  private int maxOpSize;
   static private enum State {
     UNINIT,
     OPEN,
@@ -118,6 +120,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
     this.isInProgress = isInProgress;
+    this.maxOpSize = DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT;
   }
 
   private void init() throws LogHeaderCorruptException, IOException {
@@ -134,6 +137,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
         throw new LogHeaderCorruptException("No header found in log");
       }
       reader = new FSEditLogOp.Reader(dataIn, tracker, logVersion);
+      reader.setMaxOpSize(maxOpSize);
       state = State.OPEN;
     } finally {
       if (reader == null) {
@@ -412,5 +416,12 @@ public class EditLogFileInputStream extends EditLogInputStream {
       return url.toString();
     }
   }
-  
+
+  @Override
+  public void setMaxOpSize(int maxOpSize) {
+    this.maxOpSize = maxOpSize;
+    if (reader != null) {
+      reader.setMaxOpSize(maxOpSize);
+    }
+  }
 }

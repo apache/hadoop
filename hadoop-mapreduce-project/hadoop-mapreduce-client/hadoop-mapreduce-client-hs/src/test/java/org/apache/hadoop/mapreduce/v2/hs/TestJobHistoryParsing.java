@@ -404,7 +404,7 @@ public class TestJobHistoryParsing {
     }
   }
   
-  @Test
+  @Test (timeout=5000)
   public void testCountersForFailedTask() throws Exception {
     LOG.info("STARTING testCountersForFailedTask");
     try {
@@ -455,6 +455,9 @@ public class TestJobHistoryParsing {
       CompletedTask ct = new CompletedTask(yarnTaskID, entry.getValue());
       Assert.assertNotNull("completed task report has null counters",
           ct.getReport().getCounters());
+      //Make sure all the completedTask has counters, and the counters are not empty
+      Assert.assertTrue(ct.getReport().getCounters()
+          .getAllCounterGroups().size() > 0);
     }
     } finally {
       LOG.info("FINISHED testCountersForFailedTask");

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -31,6 +33,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 
 import com.google.common.collect.Lists;
 
@@ -184,8 +187,17 @@ public class MockNodes {
     }
 
     @Override
+    public void updateHeartbeatResponseForCleanup(HeartbeatResponse response) {
+    }
+
+    @Override
     public HeartbeatResponse getLastHeartBeatResponse() {
       return null;
+    }
+
+    @Override
+    public List<UpdatedContainerInfo> pullContainerUpdates() {
+      return new ArrayList<UpdatedContainerInfo>();
     }
   };
 

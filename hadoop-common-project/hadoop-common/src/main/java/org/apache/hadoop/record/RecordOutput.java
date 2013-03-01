@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Interface that alll the serializers have to implement.
+ * Interface that all the serializers have to implement.
  * 
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */

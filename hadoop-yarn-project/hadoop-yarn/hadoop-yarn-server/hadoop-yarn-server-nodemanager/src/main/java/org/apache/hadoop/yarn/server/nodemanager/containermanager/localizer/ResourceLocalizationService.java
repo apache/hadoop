@@ -659,25 +659,23 @@ public class ResourceLocalizationService extends CompositeService
                   new ContainerResourceFailedEvent(
                     assoc.getContext().getContainerId(),
                     assoc.getResource().getRequest(), e.getCause()));
+              List<LocalizerResourceRequestEvent> reqs;
               synchronized (attempts) {
                 LocalResourceRequest req = assoc.getResource().getRequest();
-                List<LocalizerResourceRequestEvent> reqs = attempts.get(req);
+                reqs = attempts.get(req);
                 if (null == reqs) {
                   LOG.error("Missing pending list for " + req);
                   return;
                 }
-                if (reqs.isEmpty()) {
-                  attempts.remove(req);
-                }
-                /* 
-                 * Do not retry for now. Once failed is failed!
-                 *  LocalizerResourceRequestEvent request = reqs.remove(0);
-
-                pending.put(queue.submit(new FSDownload(
-                    lfs, null, conf, publicDirs,
-                    request.getResource().getRequest(), new Random())),
-                    request);
-                 */              }
+                attempts.remove(req);
+              }
+              // let the other containers know about the localization failure
+              for (LocalizerResourceRequestEvent reqEvent : reqs) {
+                dispatcher.getEventHandler().handle(
+                    new ContainerResourceFailedEvent(
+                        reqEvent.getContext().getContainerId(),
+                        reqEvent.getResource().getRequest(), e.getCause()));
+              }
             } catch (CancellationException e) {
               // ignore; shutting down
             }
