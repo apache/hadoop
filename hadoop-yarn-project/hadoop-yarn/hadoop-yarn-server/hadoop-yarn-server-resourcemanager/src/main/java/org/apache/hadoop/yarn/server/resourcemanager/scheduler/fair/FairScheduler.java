@@ -965,7 +965,7 @@ public class FairScheduler implements ResourceScheduler {
   public QueueInfo getQueueInfo(String queueName, boolean includeChildQueues,
       boolean recursive) throws IOException {
     if (!queueMgr.exists(queueName)) {
-      return null;
+      throw new IOException("queue " + queueName + " does not exist");
     }
     return queueMgr.getQueue(queueName).getQueueInfo(includeChildQueues,
         recursive);
