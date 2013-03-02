@@ -78,6 +78,9 @@ Release 0.23.7 - UNRELEASED
     mapred-default has mapreduce.job.split.metainfo.maxsize (Jason Lowe via
     jeagles)
 
+    MAPREDUCE-4794. DefaultSpeculator generates error messages on normal
+    shutdown (Jason Lowe via jeagles)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
