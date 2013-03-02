@@ -28,6 +28,10 @@ Release 2.0.4-beta - UNRELEASED
     YARN-380. Fix yarn node -status output to be better readable. (Omkar Vinit
     Joshi via vinodkv)
 
+    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
+    the per-application page are translated to html line breaks. (Omkar Vinit
+    Joshi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

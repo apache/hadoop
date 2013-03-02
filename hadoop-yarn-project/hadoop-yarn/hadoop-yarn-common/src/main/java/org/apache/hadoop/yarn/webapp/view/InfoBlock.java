@@ -20,7 +20,11 @@ package org.apache.hadoop.yarn.webapp.view;
 
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+
 
 import com.google.inject.Inject;
 
@@ -47,7 +51,19 @@ public class InfoBlock extends HtmlBlock {
       String value = String.valueOf(item.value);
       if (item.url == null) {
         if (!item.isRaw) {
-          tr.td(value);
+          TD<TR<TABLE<DIV<Hamlet>>>> td = tr.td();
+          if ( value.lastIndexOf('\n') > 0) {
+            String []lines = value.split("\n");
+        	DIV<TD<TR<TABLE<DIV<Hamlet>>>>> singleLineDiv;
+            for ( String line :lines) {
+              singleLineDiv = td.div();
+              singleLineDiv._r(line);
+              singleLineDiv._();
+            }
+          } else {
+            td._r(value);
+          }
+          td._();
         } else {
           tr.td()._r(value)._();
         }
