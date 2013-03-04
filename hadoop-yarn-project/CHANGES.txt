@@ -362,6 +362,9 @@ Release 0.23.7 - UNRELEASED
     YARN-426. Failure to download a public resource prevents further downloads
     (Jason Lowe via bobby)
 
+    YARN-448. Remove unnecessary hflush from log aggregation (Kihwal Lee via
+    bobby)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
