@@ -33,6 +33,7 @@ class CheckpointFaultInjector {
   
   public void beforeGetImageSetsHeaders() throws IOException {}
   public void afterSecondaryCallsRollEditLog() throws IOException {}
+  public void duringMerge() throws IOException {}
   public void afterSecondaryUploadsNewImage() throws IOException {}
   public void aboutToSendFile(File localfile) throws IOException {}
 
