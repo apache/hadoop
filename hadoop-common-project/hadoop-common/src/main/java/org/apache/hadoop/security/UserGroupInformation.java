@@ -65,6 +65,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * User and group information for Hadoop.
  * This class wraps around a JAAS Subject and provides methods to determine the
@@ -702,7 +704,8 @@ public class UserGroupInformation {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  synchronized static void setLoginUser(UserGroupInformation ugi) {
+  @VisibleForTesting
+  public synchronized static void setLoginUser(UserGroupInformation ugi) {
     // if this is to become stable, should probably logout the currently
     // logged in ugi if it's different
     loginUser = ugi;

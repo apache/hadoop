@@ -608,4 +608,11 @@ public class TestUserGroupInformation {
         }
       });
   }
+  
+  @Test(timeout=1000)
+  public void testSetLoginUser() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+    assertEquals(ugi, UserGroupInformation.getLoginUser());
+  }
 }
