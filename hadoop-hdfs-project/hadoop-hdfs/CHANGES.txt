@@ -23,6 +23,8 @@ Release 0.23.7 - UNRELEASED
                over-replicated, and invalidated blocks.
                (Tomasz Nykiel via todd)
 
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
+
   BUG FIXES
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
