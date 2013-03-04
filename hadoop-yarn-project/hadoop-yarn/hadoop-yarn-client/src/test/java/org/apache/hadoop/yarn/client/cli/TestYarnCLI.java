@@ -31,10 +31,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -185,7 +187,8 @@ public class TestYarnCLI {
     pw.println("\tNode-State : RUNNING");
     pw.println("\tNode-Http-Address : host1:8888");
     pw.println("\tHealth-Status(isNodeHealthy) : false");
-    pw.println("\tLast-Last-Health-Update : 0");
+    pw.println("\tLast-Health-Update : "
+      + DateFormatUtils.format(new Date(0), "E dd/MMM/yy hh:mm:ss:SSzz"));
     pw.println("\tHealth-Report : null");
     pw.println("\tContainers : 0");
     pw.println("\tMemory-Used : 0M");

@@ -20,12 +20,14 @@ package org.apache.hadoop.yarn.client.cli;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -129,9 +131,10 @@ public class NodeCLI extends YarnCLI {
       nodeReportStr.print("\tHealth-Status(isNodeHealthy) : ");
       nodeReportStr.println(nodeReport.getNodeHealthStatus()
           .getIsNodeHealthy());
-      nodeReportStr.print("\tLast-Last-Health-Update : ");
-      nodeReportStr.println(nodeReport.getNodeHealthStatus()
-          .getLastHealthReportTime());
+      nodeReportStr.print("\tLast-Health-Update : ");
+      nodeReportStr.println(DateFormatUtils.format(
+          new Date(nodeReport.getNodeHealthStatus().
+            getLastHealthReportTime()),"E dd/MMM/yy hh:mm:ss:SSzz"));
       nodeReportStr.print("\tHealth-Report : ");
       nodeReportStr
           .println(nodeReport.getNodeHealthStatus().getHealthReport());

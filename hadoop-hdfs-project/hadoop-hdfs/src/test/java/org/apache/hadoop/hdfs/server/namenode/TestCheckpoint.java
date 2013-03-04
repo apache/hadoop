@@ -74,6 +74,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -224,6 +226,111 @@ public class TestCheckpoint {
     assertTrue("Removed directory wasn't what was expected",
                listRsd.size() > 0 && listRsd.get(listRsd.size() - 1).getRoot().
                toString().indexOf("storageDirToCheck") != -1);
+  }
+
+  /*
+   * Simulate exception during edit replay.
+   */
+  @Test(timeout=5000)
+  public void testReloadOnEditReplayFailure () throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    FSDataOutputStream fos = null;
+    SecondaryNameNode secondary = null;
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .build();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      secondary = startSecondaryNameNode(conf);
+      fos = fs.create(new Path("tmpfile0"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      secondary.doCheckpoint();
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hsync();
+
+      // Cause merge to fail in next checkpoint.
+      Mockito.doThrow(new IOException(
+          "Injecting failure during merge"))
+          .when(faultInjector).duringMerge();
+
+      try {
+        secondary.doCheckpoint();
+        fail("Fault injection failed.");
+      } catch (IOException ioe) {
+        // This is expected.
+      } 
+      Mockito.reset(faultInjector);
+ 
+      // The error must be recorded, so next checkpoint will reload image.
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hsync();
+      
+      assertTrue("Another checkpoint should have reloaded image",
+          secondary.doCheckpoint());
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      Mockito.reset(faultInjector);
+    }
+  }
+
+  /*
+   * Simulate 2NN exit due to too many merge failures.
+   */
+  @Test(timeout=10000)
+  public void testTooManyEditReplayFailures() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, "1");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, "1");
+
+    FSDataOutputStream fos = null;
+    SecondaryNameNode secondary = null;
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .checkExitOnShutdown(false).build();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      fos = fs.create(new Path("tmpfile0"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+
+      // Cause merge to fail in next checkpoint.
+      Mockito.doThrow(new IOException(
+          "Injecting failure during merge"))
+          .when(faultInjector).duringMerge();
+
+      secondary = startSecondaryNameNode(conf);
+      secondary.doWork();
+      // Fail if we get here.
+      fail("2NN did not exit.");
+    } catch (ExitException ee) {
+      // ignore
+      ExitUtil.resetFirstExitException();
+      assertEquals("Max retries", 1, secondary.getMergeErrorCount() - 1);
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      Mockito.reset(faultInjector);
+    }
   }
 
   /*

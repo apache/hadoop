@@ -994,6 +994,16 @@ public abstract class TaskAttemptImpl implements
   }
 
   @Override
+  public Phase getPhase() {
+    readLock.lock();
+    try {
+      return reportedStatus.phase;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
   public TaskAttemptState getState() {
     readLock.lock();
     try {

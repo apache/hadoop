@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -104,6 +105,11 @@ public class CompletedTaskAttempt implements TaskAttempt {
       constructTaskAttemptReport();
     }
     return report;
+  }
+
+  @Override
+  public Phase getPhase() {
+    return Phase.CLEANUP;
   }
 
   @Override
