@@ -64,6 +64,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * User and group information for Hadoop.
  * This class wraps around a JAAS Subject and provides methods to determine the
@@ -544,7 +546,7 @@ public class UserGroupInformation {
         if (proxyUser == null) {
           proxyUser = System.getProperty(HADOOP_PROXY_USER);
         }
-        loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
+        setLoginUser(proxyUser == null ? realUser : createProxyUser(proxyUser, realUser));
 
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null) {
@@ -564,6 +566,15 @@ public class UserGroupInformation {
       }
     }
     return loginUser;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  @VisibleForTesting
+  public synchronized static void setLoginUser(UserGroupInformation ugi) {
+    // if this is to become stable, should probably logout the currently
+    // logged in ugi if it's different
+    loginUser = ugi;
   }
 
   /**
@@ -679,7 +690,7 @@ public class UserGroupInformation {
       start = System.currentTimeMillis();
       login.login();
       metrics.loginSuccess.add(System.currentTimeMillis() - start);
-      loginUser = new UserGroupInformation(subject);
+      setLoginUser(new UserGroupInformation(subject));
       loginUser.setLogin(login);
       loginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (LoginException le) {

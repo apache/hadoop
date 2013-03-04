@@ -26,6 +26,8 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9336. Allow UGI of current connection to be queried. (Daryn Sharp
     via kihwal)
 
+    HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
