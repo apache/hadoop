@@ -73,9 +73,11 @@ if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_
   
     if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
       HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+      HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
     fi
    
     HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
+    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
     starting_secure_dn="true"
   else
     echo "It looks like you're trying to start a secure DN, but \$JSVC_HOME"\
