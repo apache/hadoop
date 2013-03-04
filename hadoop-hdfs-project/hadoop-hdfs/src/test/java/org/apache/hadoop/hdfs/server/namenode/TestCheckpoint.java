@@ -58,6 +58,8 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.mockito.Mockito;
@@ -94,7 +96,7 @@ public class TestCheckpoint extends TestCase {
   @Override
   public void setUp() throws IOException {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
-    ErrorSimulator.initializeErrorSimulationEvent(5);
+    ErrorSimulator.initializeErrorSimulationEvent(6);
   }
 
   static void writeFile(FileSystem fileSys, Path name, int repl)
@@ -199,6 +201,106 @@ public class TestCheckpoint extends TestCase {
                listRsd.size() > 0 && listRsd.get(listRsd.size() - 1).getRoot().
                toString().indexOf("storageDirToCheck") != -1);
   }
+
+  /*
+   * Simulate exception during edit replay.
+   */
+  public void testReloadOnEditReplayFailure () throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    FSDataOutputStream fos = null;
+    SecondaryNameNode secondary = null;
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .build();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      secondary = startSecondaryNameNode(conf);
+      fos = fs.create(new Path("tmpfile0"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      secondary.doCheckpoint();
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hsync();
+
+      // Cause merge to fail in next checkpoint.
+      ErrorSimulator.setErrorSimulation(5);
+
+      try {
+        secondary.doCheckpoint();
+        fail("Fault injection failed.");
+      } catch (IOException ioe) {
+        // This is expected.
+      }
+      ErrorSimulator.clearErrorSimulation(5);
+ 
+      // The error must be recorded, so next checkpoint will reload image.
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hsync();
+      
+      assertTrue("Another checkpoint should have reloaded image",
+          secondary.doCheckpoint());
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      ErrorSimulator.clearErrorSimulation(5);
+    }
+  }
+
+  /*
+   * Simulate 2NN exit due to too many merge failures.
+   */
+  public void testTooManyEditReplayFailures() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, "1");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, "1");
+
+    FSDataOutputStream fos = null;
+    SecondaryNameNode secondary = null;
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .build();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      fos = fs.create(new Path("tmpfile0"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+
+      // Cause merge to fail in next checkpoint.
+      secondary = startSecondaryNameNode(conf);
+      ErrorSimulator.setErrorSimulation(5);
+      secondary.doWork();
+      // Fail if we get here.
+      fail("2NN did not exit.");
+    } catch (ExitException ee) {
+      // ignore
+      ExitUtil.resetFirstExitException();
+      ExitUtil.clearTerminateCalled();
+      assertEquals("Max retries", 1, secondary.getMergeErrorCount() - 1);
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      ErrorSimulator.clearErrorSimulation(5);
+    }
+  }
+
 
   /*
    * Simulate namenode crashing after rolling edit log.

@@ -42,6 +42,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
     (kihwal)
 
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES

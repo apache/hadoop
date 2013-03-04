@@ -614,6 +614,16 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.checkpoint.max-retries</name>
+  <value>3</value>
+  <description>The SecondaryNameNode retries failed checkpointing. If the
+  failure occurs while loading fsimage or replaying edits, the number of
+  retries is limited by this variable.
+  </description>
+</property>
+
+
+<property>
   <name>dfs.namenode.num.checkpoints.retained</name>
   <value>2</value>
   <description>The number of image checkpoint files that will be retained by

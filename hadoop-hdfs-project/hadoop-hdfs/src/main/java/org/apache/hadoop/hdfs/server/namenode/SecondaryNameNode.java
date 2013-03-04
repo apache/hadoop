@@ -126,6 +126,9 @@ public class SecondaryNameNode implements Runnable {
   /** checkpoint once every this many transactions, regardless of time */
   private long checkpointTxnCount;
 
+  /** maxium number of retries when merge errors occur */
+  private int maxRetries;
+
 
   /** {@inheritDoc} */
   public String toString() {
@@ -143,6 +146,11 @@ public class SecondaryNameNode implements Runnable {
   @VisibleForTesting
   FSImage getFSImage() {
     return checkpointImage;
+  }
+
+  @VisibleForTesting
+  int getMergeErrorCount() {
+    return checkpointImage.getMergeErrorCount();
   }
   
   @VisibleForTesting
@@ -239,6 +247,9 @@ public class SecondaryNameNode implements Runnable {
                                     DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
     checkpointTxnCount = conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
                                   DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+
+    maxRetries = conf.getInt(DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY,
+                                  DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_DEFAULT);
     warnForDeprecatedConfigs(conf);
 
     // initialize the webserver for uploading files.
@@ -398,6 +409,13 @@ public class SecondaryNameNode implements Runnable {
       } catch (IOException e) {
         LOG.error("Exception in doCheckpoint", e);
         e.printStackTrace();
+        // Prevent a huge number of edits from being created due to
+        // unrecoverable conditions and endless retries.
+        if (checkpointImage.getMergeErrorCount() > maxRetries) {
+          LOG.fatal("Merging failed " + 
+              checkpointImage.getMergeErrorCount() + " times.");
+          terminate(1);
+        }
       } catch (Throwable e) {
         LOG.fatal("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
@@ -544,9 +562,20 @@ public class SecondaryNameNode implements Runnable {
     RemoteEditLogManifest manifest =
       namenode.getEditLogManifest(sig.mostRecentCheckpointTxId + 1);
 
+    // Fetch fsimage and edits. Reload the image if previous merge failed.
     loadImage |= downloadCheckpointFiles(
-        fsName, checkpointImage, sig, manifest);   // Fetch fsimage and edits
-    doMerge(sig, manifest, loadImage, checkpointImage);
+        fsName, checkpointImage, sig, manifest) |
+        checkpointImage.hasMergeError();
+    try {
+      doMerge(sig, manifest, loadImage, checkpointImage);
+    } catch (IOException ioe) {
+      // A merge error occurred. The in-memory file system state may be
+      // inconsistent, so the image and edits need to be reloaded.
+      checkpointImage.setMergeError();
+      throw ioe;
+    }
+    // Clear any error since merge was successful.
+    checkpointImage.clearMergeError();
     
     //
     // Upload the new image into the NameNode. Then tell the Namenode
@@ -568,7 +597,7 @@ public class SecondaryNameNode implements Runnable {
     // Since we've successfully checkpointed, we can remove some old
     // image files
     checkpointImage.purgeOldStorage();
-    
+
     return loadImage;
   }
   
@@ -770,6 +799,7 @@ public class SecondaryNameNode implements Runnable {
   }
   
   static class CheckpointStorage extends FSImage {
+    private int mergeErrorCount;
     /**
      * Construct a checkpoint image.
      * @param conf Node configuration.
@@ -787,6 +817,7 @@ public class SecondaryNameNode implements Runnable {
       // we shouldn't have any editLog instance. Setting to null
       // makes sure we don't accidentally depend on it.
       editLog = null;
+      mergeErrorCount = 0;
     }
 
     /**
@@ -848,7 +879,24 @@ public class SecondaryNameNode implements Runnable {
         }
       }
     }
-    
+
+
+    boolean hasMergeError() {
+      return (mergeErrorCount > 0);
+    }
+
+    int getMergeErrorCount() {
+      return mergeErrorCount;
+    }
+
+    void setMergeError() {
+      mergeErrorCount++;
+    }
+
+    void clearMergeError() {
+      mergeErrorCount = 0;
+    }
+ 
     /**
      * Ensure that the current/ directory exists in all storage
      * directories
@@ -881,8 +929,14 @@ public class SecondaryNameNode implements Runnable {
       dstImage.reloadFromImageFile(file);
       dstImage.getFSNamesystem().dir.imageLoadComplete();
     }
-    
     Checkpointer.rollForwardByApplyingLogs(manifest, dstImage);
+
+    // error simulation for junit tests
+    if (ErrorSimulator.getErrorSimulation(5)) {
+      throw new IOException("Simulating error5 " +
+                            "after uploading new image to NameNode");
+    }
+
     dstImage.saveFSImageInAllDirs(dstImage.getLastAppliedTxId());
     dstStorage.writeAll();
   }
