@@ -277,6 +277,11 @@ public class MockJobs extends MockApps {
       }
 
       @Override
+      public Phase getPhase() {
+        return report.getPhase();
+      }
+
+      @Override
       public TaskAttemptState getState() {
         return report.getTaskAttemptState();
       }

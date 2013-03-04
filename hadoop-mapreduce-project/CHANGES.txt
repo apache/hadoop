@@ -608,6 +608,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4794. DefaultSpeculator generates error messages on normal
     shutdown (Jason Lowe via jeagles)
 
+    MAPREDUCE-5043. Fetch failure processing can cause AM event queue to
+    backup and eventually OOM (Jason Lowe via bobby)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
