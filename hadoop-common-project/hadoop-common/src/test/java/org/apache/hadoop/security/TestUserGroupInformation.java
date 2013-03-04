@@ -644,4 +644,11 @@ public class TestUserGroupInformation {
     // Restore hasSufficientTimElapsed back to private
     method.setAccessible(false);
   }
+  
+  @Test(timeout=1000)
+  public void testSetLoginUser() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+    assertEquals(ugi, UserGroupInformation.getLoginUser());
+  }
 }
