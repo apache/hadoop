@@ -92,6 +92,9 @@ branch-trunk-win changes - unreleased
   HADOOP-9348. Address TODO in winutils to add more command line usage
   and examples. (Chris Nauroth via suresh)
 
+  HADOOP-9354. Windows native project files missing license headers.
+  (Chris Nauroth via suresh)
+
 Patch equivalent to trunk committed to branch-trunk-win
 
   HADOOP-8924. Add maven plugin alternative to shell script to save
