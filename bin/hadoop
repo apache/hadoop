@@ -46,6 +46,13 @@
 #
 #   HADOOP_ROOT_LOGGER The root appender. Default is INFO,console
 #
+#   JSVC_HOME  home directory of jsvc binary.  Defaults to jsvc binary packaged
+#              within the Hadoop distro.
+#
+#   JSVC_OUTFILE  path to jsvc output file.  Defaults to
+#                 $HADOOP_LOG_DIR/jsvc.out.
+#
+#   JSVC_ERRFILE  path to jsvc error file.  Defaults to $HADOOP_LOG_DIR/jsvc.err.
 
 bin=`dirname "$0"`
 bin=`cd "$bin" > /dev/null; pwd`
@@ -320,12 +327,6 @@ fi
 #Determine the JAVA_PLATFORM
 JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
   
-if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
-  JSVC_ARCH="amd64"
-else
-  JSVC_ARCH="i386"
-fi
-
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" -o -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
@@ -379,14 +380,33 @@ if [ "$starting_secure_dn" = "true" ]; then
     HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_HOME/libexec/jsvc.${JSVC_ARCH}" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-                                                -errfile "$HADOOP_LOG_DIR/jsvc.err" \
-                                                -pidfile "$HADOOP_SECURE_DN_PID" \
-                                                -nodetach \
-                                                -user "$HADOOP_SECURE_DN_USER" \
-                                                -cp "$CLASSPATH" \
-                                                $JAVA_HEAP_MAX $HADOOP_OPTS \
-                                                org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+  if [[ $JSVC_HOME ]]; then
+    JSVC="$JSVC_HOME/jsvc"
+  else
+    if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
+      JSVC_ARCH="amd64"
+    else
+      JSVC_ARCH="i386"
+    fi
+    JSVC="$HADOOP_HOME/libexec/jsvc.${JSVC_ARCH}"
+  fi
+
+  if [[ ! $JSVC_OUTFILE ]]; then
+    JSVC_OUTFILE="$HADOOP_LOG_DIR/jsvc.out"
+  fi
+
+  if [[ ! $JSVC_ERRFILE ]]; then
+    JSVC_ERRFILE="$HADOOP_LOG_DIR/jsvc.err"
+  fi
+
+  exec "$JSVC" -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
+               -errfile "$JSVC_ERRFILE" \
+               -pidfile "$HADOOP_SECURE_DN_PID" \
+               -nodetach \
+               -user "$HADOOP_SECURE_DN_USER" \
+               -cp "$CLASSPATH" \
+               $JAVA_HEAP_MAX $HADOOP_OPTS \
+               org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
 else
   # run it
   exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
