@@ -335,13 +335,7 @@
                   <target>
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/dist-copynativelibs.sh">
-
-                      which cygpath 2&gt; /dev/null
-                      if [ $? != 0 ]; then
-                        BUILD_DIR="${project.build.directory}"
-                      else
-                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
+                      BUILD_DIR="${project.build.directory}"
                       TAR='tar cf -'
                       UNTAR='tar xfBp -'
                       LIB_DIR="${BUILD_DIR}/native/target/usr/local/lib"
@@ -379,14 +373,7 @@
                   <target if="tar">
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/dist-maketar.sh">
-
-                      which cygpath 2&gt; /dev/null
-                      if [ $? != 0 ]; then
-                        BUILD_DIR="${project.build.directory}"
-                      else
-                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
-                      cd ${BUILD_DIR}
+                      cd "${project.build.directory}"
                       tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">

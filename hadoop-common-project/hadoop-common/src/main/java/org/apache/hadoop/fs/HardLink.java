@@ -254,11 +254,6 @@ public class HardLink {
   
   /**
    * Implementation of HardLinkCommandGetter class for Windows
-   * 
-   * Note that the linkCount shell command for Windows is actually
-   * a Cygwin shell command, and depends on ${cygwin}/bin
-   * being in the Windows PATH environment variable, so
-   * stat.exe can be found.
    */
   static class HardLinkCGWin extends HardLinkCommandGetter {
     //The Windows command getter impl class and its member fields are

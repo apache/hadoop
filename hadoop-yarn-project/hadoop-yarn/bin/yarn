@@ -72,11 +72,6 @@ function print_usage(){
   echo "Most commands print help when invoked w/o parameters."
 }
 
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
 # if no args specified, show usage
 if [ $# = 0 ]; then
   print_usage
@@ -177,9 +172,6 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "classpath" ] ; then
-  if $cygwin; then
-    CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  fi
   echo $CLASSPATH
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
@@ -225,19 +217,6 @@ elif [ "$COMMAND" = "daemonlog" ] ; then
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 else
   CLASS=$COMMAND
-fi
-
-# cygwin path translation
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HADOOP_YARN_HOME=`cygpath -w "$HADOOP_YARN_HOME"`
-  YARN_LOG_DIR=`cygpath -w "$YARN_LOG_DIR"`
-  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
-fi
-
-# cygwin path translation
-if $cygwin; then
-  JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
 fi
 
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.dir=$YARN_LOG_DIR"

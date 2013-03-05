@@ -717,7 +717,7 @@ public class FileUtil {
   
   /**
    * Class for creating hardlinks.
-   * Supports Unix, Cygwin, WindXP.
+   * Supports Unix, WindXP.
    * @deprecated Use {@link org.apache.hadoop.fs.HardLink}
    */
   @Deprecated

@@ -72,7 +72,7 @@ public class ExternalMapReduce extends Configured implements Tool {
       }
       //fork off ls to see if the file exists.
       // java file.exists() will not work on 
-      // cygwin since it is a symlink
+      // Windows since it is a symlink
       String[] argv = new String[7];
       argv[0] = "ls";
       argv[1] = "files_tmp";

@@ -112,12 +112,6 @@ if [[ ( "$HADOOP_SLAVES" != '' ) && ( "$HADOOP_SLAVE_NAMES" != '' ) ]] ; then
   exit 1
 fi
 
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-
 # check if net.ipv6.bindv6only is set to 1
 bindv6only=$(/sbin/sysctl -n net.ipv6.bindv6only 2> /dev/null)
 if [ -n "$bindv6only" ] && [ "$bindv6only" -eq "1" ] && [ "$HADOOP_ALLOW_IPV6" != "yes" ]
@@ -209,13 +203,6 @@ fi
 # restore ordinary behaviour
 unset IFS
 
-# cygwin path translation
-if $cygwin; then
-  HADOOP_PREFIX=`cygpath -w "$HADOOP_PREFIX"`
-  HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
-  JAVA_LIBRARY_PATH=`cygpath -w "$JAVA_LIBRARY_PATH"`
-fi
-
 # setup 'java.library.path' for native-hadoop code if necessary
 
 if [ -d "${HADOOP_PREFIX}/build/native" -o -d "${HADOOP_PREFIX}/$HADOOP_COMMON_LIB_NATIVE_DIR" ]; then
@@ -231,11 +218,6 @@ fi
 
 # setup a default TOOL_PATH
 TOOL_PATH="${TOOL_PATH:-$HADOOP_PREFIX/share/hadoop/tools/lib/*}"
-
-# cygwin path translation
-if $cygwin; then
-  JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
-fi
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
@@ -303,15 +285,3 @@ if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$HADOOP_YARN_HOME/$YARN_DIR" ] ; then
 
   CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR'/*'
 fi
-
-# cygwin path translation
-if $cygwin; then
-  HADOOP_HDFS_HOME=`cygpath -w "$HADOOP_HDFS_HOME"`
-fi
-
-# cygwin path translation
-if $cygwin; then
-  TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
-fi
-
-

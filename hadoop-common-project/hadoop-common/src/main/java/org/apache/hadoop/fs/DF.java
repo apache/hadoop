@@ -35,7 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /** Filesystem disk space usage statistics.
  * Uses the unix 'df' program to get mount points, and java.io.File for
- * space utilization. Tested on Linux, FreeBSD, Cygwin. */
+ * space utilization. Tested on Linux, FreeBSD, Windows. */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class DF extends Shell {
