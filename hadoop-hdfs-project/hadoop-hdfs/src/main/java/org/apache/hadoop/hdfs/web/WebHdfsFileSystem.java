@@ -62,33 +62,8 @@ import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
-import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
-import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
-import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
-import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
-import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
-import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.DestinationParam;
-import org.apache.hadoop.hdfs.web.resources.GetOpParam;
-import org.apache.hadoop.hdfs.web.resources.GroupParam;
-import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
-import org.apache.hadoop.hdfs.web.resources.LengthParam;
-import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
-import org.apache.hadoop.hdfs.web.resources.OffsetParam;
-import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
-import org.apache.hadoop.hdfs.web.resources.OwnerParam;
-import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.hdfs.web.resources.PermissionParam;
-import org.apache.hadoop.hdfs.web.resources.PostOpParam;
-import org.apache.hadoop.hdfs.web.resources.PutOpParam;
-import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
-import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
-import org.apache.hadoop.hdfs.web.resources.RenewerParam;
-import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
@@ -110,6 +85,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
@@ -148,21 +124,13 @@ public class WebHdfsFileSystem extends FileSystem
     return b;
   }
 
-  private final UserGroupInformation ugi;
+  private UserGroupInformation ugi;
   private InetSocketAddress nnAddr;
   private URI uri;
   private Token<?> delegationToken;
   private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private RetryPolicy retryPolicy = null;
   private Path workingDir;
-
-  {
-    try {
-      ugi = UserGroupInformation.getCurrentUser();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -180,6 +148,7 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    ugi = UserGroupInformation.getCurrentUser();
     try {
       this.uri = new URI(uri.getScheme(), uri.getAuthority(), null, null, null);
     } catch (URISyntaxException e) {
@@ -365,16 +334,32 @@ public class WebHdfsFileSystem extends FileSystem
     return url;
   }
   
-  private String addDt2Query(String query) throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
+  Param<?,?>[] getAuthParameters(final HttpOpParam.Op op) throws IOException {
+    List<Param<?,?>> authParams = Lists.newArrayList();    
+    // Skip adding delegation token for token operations because these
+    // operations require authentication.
+    boolean hasToken = false;
+    if (UserGroupInformation.isSecurityEnabled() &&
+        op != GetOpParam.Op.GETDELEGATIONTOKEN &&
+        op != PutOpParam.Op.RENEWDELEGATIONTOKEN) {
       synchronized (this) {
-        if (delegationToken != null) {
+        hasToken = (delegationToken != null);
+        if (hasToken) {
           final String encoded = delegationToken.encodeToUrlString();
-          return query + JspHelper.getDelegationTokenUrlParam(encoded);
+          authParams.add(new DelegationParam(encoded));
         } // else we are talking to an insecure cluster
       }
     }
-    return query;
+    UserGroupInformation userUgi = ugi;
+    if (!hasToken) {
+      UserGroupInformation realUgi = userUgi.getRealUser();
+      if (realUgi != null) { // proxy user
+        authParams.add(new DoAsParam(userUgi.getShortUserName()));
+        userUgi = realUgi;
+      }
+    }
+    authParams.add(new UserParam(userUgi.getShortUserName()));
+    return authParams.toArray(new Param<?,?>[0]);
   }
 
   URL toUrl(final HttpOpParam.Op op, final Path fspath,
@@ -383,17 +368,9 @@ public class WebHdfsFileSystem extends FileSystem
     final String path = PATH_PREFIX
         + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
     final String query = op.toQueryString()
-        + '&' + new UserParam(ugi)
+        + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
-    final URL url;
-    if (op == PutOpParam.Op.RENEWDELEGATIONTOKEN
-        || op == GetOpParam.Op.GETDELEGATIONTOKEN) {
-      // Skip adding delegation token for getting or renewing delegation token,
-      // because these operations require kerberos authentication.
-      url = getNamenodeURL(path, query);
-    } else {
-      url = getNamenodeURL(path, addDt2Query(query));
-    }
+    final URL url = getNamenodeURL(path, query);
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
     }
