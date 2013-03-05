@@ -15,6 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Environment Variables
+#
+#   JSVC_HOME  home directory of jsvc binary.  Required for starting secure
+#              datanode.
+#
+#   JSVC_OUTFILE  path to jsvc output file.  Defaults to
+#                 $HADOOP_LOG_DIR/jsvc.out.
+#
+#   JSVC_ERRFILE  path to jsvc error file.  Defaults to $HADOOP_LOG_DIR/jsvc.err.
+
 bin=`which $0`
 bin=`dirname ${bin}`
 bin=`cd "$bin" > /dev/null; pwd`
@@ -158,9 +168,18 @@ if [ "$starting_secure_dn" = "true" ]; then
       "and set JSVC_HOME to the directory containing the jsvc binary."
     exit
   fi
+
+  if [[ ! $JSVC_OUTFILE ]]; then
+    JSVC_OUTFILE="$HADOOP_LOG_DIR/jsvc.out"
+  fi
+
+  if [[ ! $JSVC_ERRFILE ]]; then
+    JSVC_ERRFILE="$HADOOP_LOG_DIR/jsvc.err"
+  fi
+
   exec "$JSVC" \
-           -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-           -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+           -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
+           -errfile "$JSVC_ERRFILE" \
            -pidfile "$HADOOP_SECURE_DN_PID" \
            -nodetach \
            -user "$HADOOP_SECURE_DN_USER" \
