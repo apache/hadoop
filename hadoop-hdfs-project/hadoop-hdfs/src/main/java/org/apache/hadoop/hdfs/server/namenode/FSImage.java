@@ -744,7 +744,7 @@ public class FSImage implements Closeable {
 
     for (INode child : dir.getChildrenList(null)) {
       if (child.isDirectory()) {
-        updateCountForQuotaRecursively((INodeDirectory)child, counts);
+        updateCountForQuotaRecursively(child.asDirectory(), counts);
       } else {
         // file or symlink: count here to reduce recursive calls.
         child.computeQuotaUsage(counts, false);

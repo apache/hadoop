@@ -49,7 +49,7 @@ abstract class AbstractINodeDiffList<N extends INode,
     return Collections.unmodifiableList(diffs);
   }
   
-  /** clear the diff list,  */
+  /** Get the size of the list and then clear it. */
   int clear() {
     final int n = diffs.size();
     diffs.clear();

@@ -293,11 +293,23 @@ public abstract class INode implements Diff.Element<byte[]> {
     return false;
   }
 
+  /** Cast this inode to an {@link INodeFile}.  */
+  public INodeFile asFile() {
+    throw new IllegalStateException("Current inode is not a file: "
+        + this.toDetailString());
+  }
+
   /**
    * Check whether it's a directory
    */
   public boolean isDirectory() {
     return false;
+  }
+
+  /** Cast this inode to an {@link INodeDirectory}.  */
+  public INodeDirectory asDirectory() {
+    throw new IllegalStateException("Current inode is not a directory: "
+        + this.toDetailString());
   }
 
   /**
@@ -470,7 +482,7 @@ public abstract class INode implements Diff.Element<byte[]> {
     return -1;
   }
   
-  final boolean isQuotaSet() {
+  public final boolean isQuotaSet() {
     return getNsQuota() >= 0 || getDsQuota() >= 0;
   }
   
@@ -667,17 +679,16 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   /**
-   * Is this inode being constructed?
-   */
-  public boolean isUnderConstruction() {
-    return false;
-  }
-
-  /**
    * Check whether it's a symlink
    */
   public boolean isSymlink() {
     return false;
+  }
+
+  /** Cast this inode to an {@link INodeSymlink}.  */
+  public INodeSymlink asSymlink() {
+    throw new IllegalStateException("Current inode is not a symlink: "
+        + this.toDetailString());
   }
 
   /**

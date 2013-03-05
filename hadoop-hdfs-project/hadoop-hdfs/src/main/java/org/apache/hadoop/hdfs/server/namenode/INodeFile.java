@@ -43,16 +43,26 @@ import com.google.common.base.Preconditions;
 /** I-node for closed file. */
 @InterfaceAudience.Private
 public class INodeFile extends INode implements BlockCollection {
-  /** Cast INode to INodeFile. */
+  /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
       ) throws FileNotFoundException {
+    return valueOf(inode, path, false);
+  }
+
+  /** Cast INode to INodeFile. */
+  public static INodeFile valueOf(INode inode, String path, boolean acceptNull)
+      throws FileNotFoundException {
     if (inode == null) {
-      throw new FileNotFoundException("File does not exist: " + path);
+      if (acceptNull) {
+        return null;
+      } else {
+        throw new FileNotFoundException("File does not exist: " + path);
+      }
     }
-    if (!(inode instanceof INodeFile)) {
+    if (!inode.isFile()) {
       throw new FileNotFoundException("Path is not a file: " + path);
     }
-    return (INodeFile)inode;
+    return inode.asFile();
   }
 
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
@@ -116,12 +126,23 @@ public class INodeFile extends INode implements BlockCollection {
     return true;
   }
 
+  /** @return this object. */
+  @Override
+  public final INodeFile asFile() {
+    return this;
+  }
+
+  /** Is this file under construction? */
+  public boolean isUnderConstruction() {
+    return false;
+  }
+
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
   public INodeFileUnderConstruction toUnderConstruction(
       String clientName,
       String clientMachine,
       DatanodeDescriptor clientNode) {
-    Preconditions.checkArgument(!(this instanceof INodeFileUnderConstruction),
+    Preconditions.checkState(!isUnderConstruction(),
         "file is already an INodeFileUnderConstruction");
     return new INodeFileUnderConstruction(this,
         clientName, clientMachine, clientNode); 

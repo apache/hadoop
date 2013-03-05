@@ -64,12 +64,15 @@ public class Snapshot implements Comparable<byte[]> {
   public static Snapshot findLatestSnapshot(INode inode, Snapshot anchor) {
     Snapshot latest = null;
     for(; inode != null; inode = inode.getParent()) {
-      if (inode instanceof INodeDirectoryWithSnapshot) {
-        final Snapshot s = ((INodeDirectoryWithSnapshot) inode).getDiffs()
-            .getPrior(anchor);
-        if (latest == null
-            || (s != null && ID_COMPARATOR.compare(latest, s) < 0)) {
-          latest = s;
+      if (inode.isDirectory()) {
+        final INodeDirectory dir = inode.asDirectory();
+        if (dir instanceof INodeDirectoryWithSnapshot) {
+          final Snapshot s = ((INodeDirectoryWithSnapshot)dir).getDiffs()
+              .getPrior(anchor);
+          if (latest == null
+              || (s != null && ID_COMPARATOR.compare(latest, s) < 0)) {
+            latest = s;
+          }
         }
       }
     }

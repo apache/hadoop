@@ -176,7 +176,7 @@ public class FSImageSerialization {
     SnapshotFSImageFormat.saveFileDiffList(file, out);
 
     if (writeUnderConstruction) {
-      if (file instanceof INodeFileUnderConstruction) {
+      if (file.isUnderConstruction()) {
         out.writeBoolean(true);
         final INodeFileUnderConstruction uc = (INodeFileUnderConstruction)file;
         writeString(uc.getClientName(), out);
@@ -240,11 +240,11 @@ public class FSImageSerialization {
       boolean writeUnderConstruction)
       throws IOException {
     if (node.isDirectory()) {
-      writeINodeDirectory((INodeDirectory) node, out);
+      writeINodeDirectory(node.asDirectory(), out);
     } else if (node.isSymlink()) {
-      writeINodeSymlink((INodeSymlink) node, out);      
+      writeINodeSymlink(node.asSymlink(), out);      
     } else {
-      writeINodeFile((INodeFile) node, out, writeUnderConstruction);
+      writeINodeFile(node.asFile(), out, writeUnderConstruction);
     }
   }
 

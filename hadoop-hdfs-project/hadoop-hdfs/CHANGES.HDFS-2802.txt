@@ -181,3 +181,7 @@ Branch-2802 Snapshot (Unreleased)
   merge.  (szetszwo)
 
   HDFS-4507. Update quota verification for snapshots.  (szetszwo)
+
+  HDFS-4545. With snapshots, FSDirectory.unprotectedSetReplication(..) always
+  changes file replication but it may or may not changes block replication.
+  (szetszwo)

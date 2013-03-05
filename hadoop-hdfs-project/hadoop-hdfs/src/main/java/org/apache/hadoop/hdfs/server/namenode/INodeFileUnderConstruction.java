@@ -108,11 +108,9 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     return clientNode;
   }
 
-  /**
-   * Is this inode being constructed?
-   */
+  /** @return true unconditionally. */
   @Override
-  public boolean isUnderConstruction() {
+  public final boolean isUnderConstruction() {
     return true;
   }
 

@@ -125,7 +125,7 @@ public class SnapshotFSImageFormat {
     
     // 3. Load snapshotINode 
     final INodeFile snapshotINode = in.readBoolean()?
-        (INodeFile) loader.loadINodeWithLocalName(true, in): null;
+        loader.loadINodeWithLocalName(true, in).asFile(): null;
     
     return new FileDiff(snapshot, snapshotINode, posterior, fileSize);
   }
@@ -233,9 +233,8 @@ public class SnapshotFSImageFormat {
   private static Snapshot loadSnapshot(INodeDirectorySnapshottable parent,
       DataInputStream in, FSImageFormat.Loader loader) throws IOException {
     int snapshotId = in.readInt();
-    INodeDirectory rootNode = (INodeDirectory)loader.loadINodeWithLocalName(
-        false, in);
-    return new Snapshot(snapshotId, rootNode, parent);
+    final INode root = loader.loadINodeWithLocalName(false, in);
+    return new Snapshot(snapshotId, root.asDirectory(), parent);
   }
   
   /**
@@ -292,7 +291,7 @@ public class SnapshotFSImageFormat {
     } else {
       // another boolean is used to indicate whether snapshotINode is non-null
       return in.readBoolean()?
-          (INodeDirectory) loader.loadINodeWithLocalName(true, in): null;
+          loader.loadINodeWithLocalName(true, in).asDirectory(): null;
     }
   }
    

@@ -254,7 +254,8 @@ public class FSEditLogLoader {
 
       // See if the file already exists (persistBlocks call)
       final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
-      final INodeFile oldFile = toINodeFile(iip.getINode(0), addCloseOp.path);
+      final INodeFile oldFile = INodeFile.valueOf(
+          iip.getINode(0), addCloseOp.path, true);
       INodeFile newFile = oldFile;
       if (oldFile == null) { // this is OP_ADD on a new file (case 1)
         // versions > 0 support per file replication
@@ -265,7 +266,7 @@ public class FSEditLogLoader {
 
         // add to the file tree
         inodeId = fsNamesys.allocateNewInodeId();
-        newFile = (INodeFile) fsDir.unprotectedAddFile(inodeId,
+        newFile = fsDir.unprotectedAddFile(inodeId,
             addCloseOp.path, addCloseOp.permissions, replication,
             addCloseOp.mtime, addCloseOp.atime, addCloseOp.blockSize, true,
             addCloseOp.clientName, addCloseOp.clientMachine);
@@ -281,7 +282,8 @@ public class FSEditLogLoader {
           fsNamesys.prepareFileForWrite(addCloseOp.path, oldFile,
               addCloseOp.clientName, addCloseOp.clientMachine, null,
               false, iip.getLatestSnapshot());
-          newFile = getINodeFile(fsDir, addCloseOp.path);
+          newFile = INodeFile.valueOf(fsDir.getINode(addCloseOp.path),
+              addCloseOp.path, true);
         }
       }
       // Fall-through for case 2.
@@ -305,12 +307,8 @@ public class FSEditLogLoader {
       }
 
       final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
-      final INodeFile oldFile = toINodeFile(iip.getINode(0), addCloseOp.path);
-      if (oldFile == null) {
-        throw new IOException("Operation trying to close non-existent file " +
-            addCloseOp.path);
-      }
-      
+      final INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
+
       // Update the salient file attributes.
       oldFile.setAccessTime(addCloseOp.atime, null);
       oldFile.setModificationTime(addCloseOp.mtime, null);
@@ -341,13 +339,8 @@ public class FSEditLogLoader {
         FSNamesystem.LOG.debug(op.opCode + ": " + updateOp.path +
             " numblocks : " + updateOp.blocks.length);
       }
-      INodeFile oldFile = getINodeFile(fsDir, updateOp.path);
-      if (oldFile == null) {
-        throw new IOException(
-            "Operation trying to update blocks in non-existent file " +
-            updateOp.path);
-      }
-      
+      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(updateOp.path),
+          updateOp.path);
       // Update in-memory data structures
       updateBlocks(fsDir, updateOp, oldFile);
       break;
@@ -551,22 +544,7 @@ public class FSEditLogLoader {
     }
     return sb.toString();
   }
-  
-  private static INodeFile getINodeFile(FSDirectory fsDir, String path)
-      throws IOException {
-    return toINodeFile(fsDir.getINode(path), path);
-  }
 
-  private static INodeFile toINodeFile(INode inode, String path)
-      throws IOException {
-    if (inode != null) {
-      if (!(inode instanceof INodeFile)) {
-        throw new IOException("Operation trying to get non-file " + path);
-      }
-    }
-    return (INodeFile)inode;
-  }
-  
   /**
    * Update in-memory data structures with new block information.
    * @throws IOException
