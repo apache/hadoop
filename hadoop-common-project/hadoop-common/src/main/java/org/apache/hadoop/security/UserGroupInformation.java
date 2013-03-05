@@ -1501,7 +1501,7 @@ public class UserGroupInformation {
       } else if (cause instanceof InterruptedException) {
         throw (InterruptedException) cause;
       } else {
-        throw new UndeclaredThrowableException(pae,"Unknown exception in doAs");
+        throw new UndeclaredThrowableException(cause);
       }
     }
   }
