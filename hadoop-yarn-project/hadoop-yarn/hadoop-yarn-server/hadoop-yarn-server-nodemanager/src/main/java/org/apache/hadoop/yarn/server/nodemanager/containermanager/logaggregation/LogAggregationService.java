@@ -300,8 +300,9 @@ public class LogAggregationService extends AbstractService implements
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_INITED);
     } catch (YarnException e) {
-      eventResponse = new ApplicationFinishEvent(appId,
-          "Application failed to init aggregation: " + e.getMessage());
+      LOG.warn("Application failed to init aggregation: " + e.getMessage());
+      eventResponse = new ApplicationEvent(appId,
+          ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED);
     }
     this.dispatcher.getEventHandler().handle(eventResponse);
   }

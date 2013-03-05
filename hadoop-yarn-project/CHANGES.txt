@@ -362,6 +362,12 @@ Release 0.23.7 - UNRELEASED
     YARN-426. Failure to download a public resource prevents further downloads
     (Jason Lowe via bobby)
 
+    YARN-448. Remove unnecessary hflush from log aggregation (Kihwal Lee via
+    bobby)
+
+    YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
+    in Node Manager (Robert Parker via jlowe)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -153,6 +153,9 @@ Trunk (Unreleased)
     HADOOP-9112. test-patch should -1 for @Tests without a timeout 
     (Surenkumar Nihalani via bobby)
 
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
@@ -402,6 +405,9 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9349. Confusing output when running hadoop version from one hadoop 
     installation when HADOOP_HOME points to another. (sandyr via tucu)
+
+    HADOOP-9337. org.apache.hadoop.fs.DF.getMount() does not work on Mac OS.
+    (Ivan A. Veselovsky via atm)
 
 Release 2.0.3-alpha - 2013-02-06 
 

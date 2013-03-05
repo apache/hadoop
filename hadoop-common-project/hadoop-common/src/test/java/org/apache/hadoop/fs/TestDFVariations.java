@@ -31,6 +31,7 @@ import java.util.Random;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class TestDFVariations {
 
@@ -46,14 +47,8 @@ public class TestDFVariations {
     }
     @Override
     protected String[] getExecString() {
-      switch(getOSType()) {
-        case OS_TYPE_AIX:
-          return new String[] { "echo", "IGNORE\n", "/dev/sda3",
-            "453115160", "400077240", "11%", "18", "skip%", "/foo/bar", "\n" };
-        default:
-          return new String[] { "echo", "IGNORE\n", "/dev/sda3",
-            "453115160", "53037920", "400077240", "11%", "/foo/bar", "\n" };
-      }
+      return new String[] { "echo", "IGNORE\n", 
+        "/dev/sda3", "453115160", "53037920", "400077240", "11%", "/foo/bar\n"};
     }
   }
 
@@ -134,6 +129,21 @@ public class TestDFVariations {
       GenericTestUtils.assertExceptionContains("Could not parse line: ", e);
       System.out.println(e.toString());
     }
+  }
+
+  @Test(timeout=5000)
+  public void testGetMountCurrentDirectory() throws Exception {
+    File currentDirectory = new File(".");
+    String workingDir = currentDirectory.getAbsoluteFile().getCanonicalPath();
+    DF df = new DF(new File(workingDir), 0L);
+    String mountPath = df.getMount();
+    File mountDir = new File(mountPath);
+    assertTrue("Mount dir ["+mountDir.getAbsolutePath()+"] should exist.", 
+        mountDir.exists());
+    assertTrue("Mount dir ["+mountDir.getAbsolutePath()+"] should be directory.", 
+        mountDir.isDirectory());
+    assertTrue("Working dir ["+workingDir+"] should start with ["+mountPath+"].",
+        workingDir.startsWith(mountPath));
   }
 }
 

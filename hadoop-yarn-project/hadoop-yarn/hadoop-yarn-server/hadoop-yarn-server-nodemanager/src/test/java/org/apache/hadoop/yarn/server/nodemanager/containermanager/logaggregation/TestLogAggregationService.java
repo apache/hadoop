@@ -421,8 +421,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     dispatcher.await();
     ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
-        new ApplicationFinishEvent(appId,
-            "Application failed to init aggregation: KABOOM!")
+        new ApplicationEvent(appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
@@ -471,8 +471,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     dispatcher.await();
     ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
-        new ApplicationFinishEvent(appId,
-            "Application failed to init aggregation: "+e)
+        new ApplicationEvent(appId, 
+        		ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
