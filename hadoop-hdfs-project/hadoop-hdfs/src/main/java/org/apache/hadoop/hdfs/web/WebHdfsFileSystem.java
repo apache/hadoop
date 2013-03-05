@@ -249,7 +249,11 @@ public class WebHdfsFileSystem extends FileSystem
             + ", message=" + conn.getResponseMessage(), e);
       }
 
-      if (m.get(RemoteException.class.getSimpleName()) == null) {
+      if (m == null) {
+        throw new IOException("Unexpected HTTP response: code=" + code + " != "
+            + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
+            + ", message=" + conn.getResponseMessage());
+      } else if (m.get(RemoteException.class.getSimpleName()) == null) {
         return m;
       }
 

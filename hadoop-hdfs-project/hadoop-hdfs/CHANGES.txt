@@ -50,6 +50,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
     kihwal)
 
+    HDFS-4553. Webhdfs will NPE on some unexpected response codes (Daryn Sharp
+    via kihwal)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
