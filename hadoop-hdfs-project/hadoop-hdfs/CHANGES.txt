@@ -17,6 +17,9 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4518. Finer grained metrics for HDFS capacity.
     (Arpit Agarwal via suresh)
 
+    HDFS-4519. Support overriding jsvc binary and log file locations
+    when launching secure datanode. (Chris Nauroth via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
