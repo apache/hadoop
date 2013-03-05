@@ -166,7 +166,7 @@ public class DF extends Shell {
   @Override
   protected String[] getExecString() {
     // ignoring the error since the exit code it enough
-    return new String[] {"bash","-c","exec 'df' '-k' '" + dirPath 
+    return new String[] {"bash","-c","exec 'df' '-k' '-P' '" + dirPath 
                          + "' 2>/dev/null"};
   }
 
@@ -210,28 +210,11 @@ public class DF extends Shell {
     }
 
     try {
-      switch(getOSType()) {
-        case OS_TYPE_AIX:
-          Long.parseLong(tokens.nextToken()); // capacity
-          Long.parseLong(tokens.nextToken()); // available
-          Integer.parseInt(tokens.nextToken()); // pct used
-          tokens.nextToken();
-          tokens.nextToken();
-          this.mount = tokens.nextToken();
-          break;
-
-        case OS_TYPE_WIN:
-        case OS_TYPE_SOLARIS:
-        case OS_TYPE_MAC:
-        case OS_TYPE_UNIX:
-        default:
-          Long.parseLong(tokens.nextToken()); // capacity
-          Long.parseLong(tokens.nextToken()); // used
-          Long.parseLong(tokens.nextToken()); // available
-          Integer.parseInt(tokens.nextToken()); // pct used
-          this.mount = tokens.nextToken();
-          break;
-     }
+      Long.parseLong(tokens.nextToken()); // capacity
+      Long.parseLong(tokens.nextToken()); // used
+      Long.parseLong(tokens.nextToken()); // available
+      Integer.parseInt(tokens.nextToken()); // pct used
+      this.mount = tokens.nextToken();
     } catch (NoSuchElementException e) {
       throw new IOException("Could not parse line: " + line);
     } catch (NumberFormatException e) {
