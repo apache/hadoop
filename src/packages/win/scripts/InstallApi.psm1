@@ -278,16 +278,19 @@ function CreateAndConfigureHadoopService(
     $service,
     [String]
     [Parameter( Position=1, Mandatory=$true )]
+    $hdpResourcesDir,
+    [String]
+    [Parameter( Position=2, Mandatory=$true )]
     $serviceBinDir,
     [System.Management.Automation.PSCredential]
-    [Parameter( Position=2, Mandatory=$true )]
+    [Parameter( Position=3, Mandatory=$true )]
     $serviceCredential
 )
 {
     if ( -not ( Get-Service "$service" -ErrorAction SilentlyContinue ) )
     {
         Write-Log "Creating service `"$service`" as $serviceBinDir\$service.exe"
-        $xcopyServiceHost_cmd = "copy /Y `"$ENV:HADOOP_HOME\bin\HadoopServiceHost.exe`" `"$serviceBinDir\$service.exe`""
+        $xcopyServiceHost_cmd = "copy /Y `"$hdpResourcesDir\serviceHost.exe`" `"$serviceBinDir\$service.exe`""
         Invoke-CmdChk $xcopyServiceHost_cmd
 
         #HadoopServiceHost.exe will write to this log but does not create it
@@ -307,7 +310,7 @@ function CreateAndConfigureHadoopService(
         $cmd="$ENV:WINDIR\system32\sc.exe failure $service reset= 30 actions= restart/5000"
         Invoke-CmdChk $cmd
 
-        $cmd="$ENV:WINDIR\system32\sc.exe config $service start= auto"
+        $cmd="$ENV:WINDIR\system32\sc.exe config $service start= demand"
         Invoke-CmdChk $cmd
 
         Set-ServiceAcl $service
@@ -406,7 +409,7 @@ function InstallHdfs(
 
     foreach( $service in empty-null $allServices.Split(' '))
     {
-        CreateAndConfigureHadoopService $service $hadoopInstallToBin $serviceCredential
+        CreateAndConfigureHadoopService $service $HDP_RESOURCES_DIR $hadoopInstallToBin $serviceCredential
     }
 
     ###
@@ -545,7 +548,7 @@ function InstallMapRed(
 
     foreach( $service in empty-null $allServices.Split(' '))
     {
-        CreateAndConfigureHadoopService $service $hadoopInstallToBin $serviceCredential
+        CreateAndConfigureHadoopService $service $HDP_RESOURCES_DIR $hadoopInstallToBin $serviceCredential
     }
 
     ###
@@ -920,6 +923,38 @@ function ConfigureHdfs(
     }
 }
 
+### Helper method that extracts all capacity-scheduler configs from the "config"
+### hashmap and applies them to capacity-scheduler.xml.
+### The function returns the list of configs that are not specific to capacity
+### scheduler.
+function ConfigureCapacityScheduler(
+    [string]
+    [parameter( Position=0, Mandatory=$true )]
+    $fileName, 
+    [hashtable]
+    [parameter( Position=1 )]
+    $config = @{} )
+{
+    [hashtable]$newConfig = @{}
+    [hashtable]$newCapSchedulerConfig = @{}
+    foreach( $key in empty-null $config.Keys )
+    {
+        [string]$keyString = $key
+        $value = $config[$key]
+        if ( $keyString.StartsWith("mapred.capacity-scheduler", "CurrentCultureIgnoreCase") )
+        {
+            $newCapSchedulerConfig.Add($key, $value) > $null
+        }
+        else
+        {
+            $newConfig.Add($key, $value) > $null
+        }
+    }
+
+    UpdateXmlConfig $fileName $newCapSchedulerConfig > $null
+    $newConfig
+}
+
 ###############################################################################
 ###
 ### Alters the configuration of the Hadoop MapRed component.
@@ -951,7 +986,15 @@ function ConfigureMapRed(
     {
         throw "ConfigureMapRed: InstallCore and InstallMapRed must be called before ConfigureMapRed"
     }
-    
+
+    ###
+    ### Apply capacity-scheduler.xml configuration changes. All such configuration properties
+    ### have "mapred.capacity-scheduler" prefix, so it is easy to properly separate them out
+    ### from other Hadoop configs.
+    ###
+    $capacitySchedulerXmlFile = Join-Path $hadoopInstallToDir "conf\capacity-scheduler.xml"
+    [hashtable]$configs = ConfigureCapacityScheduler $capacitySchedulerXmlFile $configs
+
     ###
     ### Apply configuration changes to mapred-site.xml
     ###

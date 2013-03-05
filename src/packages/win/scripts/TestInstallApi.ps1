@@ -490,6 +490,40 @@ function CoreConfigureWithAliasesTest()
     Uninstall "Core" $NodeInstallRoot
 }
 
+function CoreConfigureCapacitySchedulerTest()
+{
+    Install "core" $NodeInstallRoot $ServiceCredential ""
+
+    $mapRedSiteXml = Join-Path $NodeInstallRoot "hadoop-$HadoopCoreVersion\conf\mapred-site.xml"
+    $capSchedulerSiteXml = Join-Path $NodeInstallRoot "hadoop-$HadoopCoreVersion\conf\capacity-scheduler.xml"
+
+    Install "mapreduce" $NodeInstallRoot $ServiceCredential "jobtracker tasktracker historyserver"
+    Configure "mapreduce" $NodeInstallRoot $ServiceCredential @{
+        "mapred.job.tracker" = "host:port";
+        "mapred.local.dir" = "$NodeInstallRoot\hdfs\mapred\local2";
+        "mapred.capacity-scheduler.prop" = "testcapacity";
+        "mapred.capacity-scheduler.init-worker-threads" = "10"}
+
+    ### Verify that the update took place
+    ValidateXmlConfigValue $mapRedSiteXml "mapred.job.tracker" "host:port"
+    ValidateXmlConfigValue $mapRedSiteXml "mapred.local.dir" "$NodeInstallRoot\hdfs\mapred\local2"
+    ValidateXmlConfigValue $capSchedulerSiteXml "mapred.capacity-scheduler.prop" "testcapacity"
+    ValidateXmlConfigValue $capSchedulerSiteXml "mapred.capacity-scheduler.init-worker-threads" "10"
+
+    ### Scenario where we only have capacity-scheduler configs
+    Configure "mapreduce" $NodeInstallRoot $ServiceCredential @{
+        "mapred.capacity-scheduler.prop" = "testcapacity2";
+        "mapred.capacity-scheduler.init-worker-threads" = "20"}
+
+    ValidateXmlConfigValue $mapRedSiteXml "mapred.job.tracker" "host:port"
+    ValidateXmlConfigValue $mapRedSiteXml "mapred.local.dir" "$NodeInstallRoot\hdfs\mapred\local2"
+    ValidateXmlConfigValue $capSchedulerSiteXml "mapred.capacity-scheduler.prop" "testcapacity2"
+    ValidateXmlConfigValue $capSchedulerSiteXml "mapred.capacity-scheduler.init-worker-threads" "20"
+
+    # Cleanup
+    Uninstall "mapreduce" $NodeInstallRoot
+    Uninstall "core" $NodeInstallRoot
+}
 
 try
 {
@@ -521,6 +555,7 @@ try
     TestStartStopServiceRoleNoSupported
     TestProcessAliasConfigOptions
     CoreConfigureWithAliasesTest
+    CoreConfigureCapacitySchedulerTest
 
     # Start/StopService should be tested E2E as it requires all Hadoop binaries
     # to be installed (this test only installs a small subset so that it runs

@@ -193,6 +193,35 @@ function Set-ServiceAcl ($service)
     Invoke-Cmd $cmd
 }
 
+# Convenience method for processing command-line credential objects
+# Assumes $credentialsHash is a hash with one of the following being true:
+#  - keys "username" and "password" are set to strings
+#  - key "credentialFilePath" is set to the path of a serialized PSCredential object
+function Get-HadoopUserCredentials($credentialsHash)
+{
+	if($credentialsHash["username"])
+	{
+		Write-Log "Using provided credentials for username $($credentialsHash["username"])" | Out-Null
+		$username = $credentialsHash["username"]
+		if($username -notlike "*\*")
+		{
+			$username = "$ENV:COMPUTERNAME\$username"
+		}
+		$securePassword = $credentialsHash["password"] | ConvertTo-SecureString -AsPlainText -Force
+	}
+	else
+	{
+		Write-Log "Reading credentials from $($credentialsHash['credentialFilePath'])" | Out-Null
+		$import = Import-Clixml -Path $credentialsHash["credentialFilePath"]
+		$username = $import.Username
+		$securePassword = $import.Password | ConvertTo-SecureString
+	}
+	
+	$creds = New-Object System.Management.Automation.PSCredential $username, $securePassword
+	return $creds
+}
+
+Export-ModuleMember -Function Get-HadoopUserCredentials
 Export-ModuleMember -Function Initialize-InstallationEnv
 Export-ModuleMember -Function Invoke-Cmd
 Export-ModuleMember -Function Invoke-CmdChk

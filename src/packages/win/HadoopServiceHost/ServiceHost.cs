@@ -101,6 +101,9 @@ namespace HadoopServiceHost
 
       process.StartInfo.FileName = this.serviceExe;
       process.StartInfo.Arguments = this.serviceArgs;
+      process.StartInfo.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
+      process.StartInfo.CreateNoWindow = false;
+      process.StartInfo.UseShellExecute = false;
 
       if (!process.Start())
       {
