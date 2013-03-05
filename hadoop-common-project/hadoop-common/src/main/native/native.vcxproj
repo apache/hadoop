@@ -76,6 +76,7 @@
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Decompressor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\file_descriptor.c" />
     <ClCompile Include="src\org\apache\hadoop\io\nativeio\NativeIO.c" />
+    <ClCompile Include="src\org\apache\hadoop\security\JniBasedUnixGroupsMappingWin.c" />
     <ClCompile Include="src\org\apache\hadoop\util\bulk_crc32.c" />
     <ClCompile Include="src\org\apache\hadoop\util\NativeCodeLoader.c" />
     <ClCompile Include="src\org\apache\hadoop\util\NativeCrc32.c" />

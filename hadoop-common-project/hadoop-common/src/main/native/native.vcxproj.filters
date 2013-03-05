@@ -57,6 +57,9 @@
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Decompressor.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\security\JniBasedUnixGroupsMappingWin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\org\apache\hadoop\util\crc32_zlib_polynomial_tables.h">
