@@ -23,6 +23,8 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
 
+    HADOOP-9343. Allow additional exceptions through the RPC layer. (sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
