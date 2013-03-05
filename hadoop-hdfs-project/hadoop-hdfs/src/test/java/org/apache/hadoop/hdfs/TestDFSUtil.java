@@ -638,4 +638,24 @@ public class TestDFSUtil {
     assertTrue(DFSUtil.isValidName("/"));
     assertTrue(DFSUtil.isValidName("/bar/"));
   }
+  
+  @Test(timeout=5000)
+  public void testGetSpnegoKeytabKey() {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    String defaultKey = "default.spengo.key";
+    conf.unset(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+    assertEquals("Test spnego key in config is null", defaultKey,
+        DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+
+    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY, "");
+    assertEquals("Test spnego key is empty", defaultKey,
+        DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+
+    String spengoKey = "spengo.key";
+    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+        spengoKey);
+    assertEquals("Test spnego key is NOT null",
+        DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+        DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+  }
 }
