@@ -323,6 +323,9 @@ Release 0.23.7 - UNRELEASED
     YARN-269. Resource Manager not logging the health_check_script result when
     taking it out (Jason Lowe via kihwal)
 
+    YARN-227. Application expiration difficult to debug for end-users
+    (Jason Lowe via jeagles)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
