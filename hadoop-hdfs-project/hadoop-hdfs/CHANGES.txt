@@ -2104,6 +2104,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
     in the middle (kihwal via daryn)
 
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
