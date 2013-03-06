@@ -487,6 +487,22 @@
     </test>
 
     <test> <!-- TESTED -->
+      <description>help: help for checksum</description>
+      <test-commands>
+        <command>-help checksum</command>
+      </test-commands>
+      <cleanup-commands>
+        <!-- No cleanup -->
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-checksum &lt;src&gt; \.\.\.:( |\t)*Dump checksum information for files.*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
       <description>help: help for copyToLocal</description>
       <test-commands>
         <command>-help copyToLocal</command>

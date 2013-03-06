@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
@@ -38,9 +39,10 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
- * Display contents of files 
+ * Display contents or checksums of files 
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -49,6 +51,7 @@ class Display extends FsCommand {
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(Cat.class, "-cat");
     factory.addClass(Text.class, "-text");
+    factory.addClass(Checksum.class, "-checksum");
   }
 
   /**
@@ -132,6 +135,36 @@ class Display extends FsCommand {
       i.seek(0);
       return i;
     }    
+  }
+  
+  public static class Checksum extends Display {
+    public static final String NAME = "checksum";
+    public static final String USAGE = "<src> ...";
+    public static final String DESCRIPTION =
+      "Dump checksum information for files that match the file\n" +
+      "pattern <src> to stdout. Note that this requires a round-trip\n" +
+      "to a datanode storing each block of the file, and thus is not\n" +
+      "efficient to run on a large number of files. The checksum of a\n" +
+      "file depends on its content, block size and the checksum\n" +
+      "algorithm and parameters used for creating the file.";
+
+    @Override
+    protected void processPath(PathData item) throws IOException {
+      if (item.stat.isDirectory()) {
+        throw new PathIsDirectoryException(item.toString());
+      }
+
+      FileChecksum checksum = item.fs.getFileChecksum(item.path);
+      if (checksum == null) {
+        out.printf("%s\tNONE\t\n", item.toString());
+      } else {
+        String checksumString = StringUtils.byteToHexString(
+            checksum.getBytes(), 0, checksum.getLength());
+        out.printf("%s\t%s\t%s\n",
+            item.toString(), checksum.getAlgorithmName(),
+            checksumString);
+      }
+    }
   }
 
   protected class TextRecordInputStream extends InputStream {
