@@ -23,108 +23,156 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.compress.bzip2.BZip2Constants;
-import org.apache.hadoop.io.compress.bzip2.BZip2DummyCompressor;
-import org.apache.hadoop.io.compress.bzip2.BZip2DummyDecompressor;
 import org.apache.hadoop.io.compress.bzip2.CBZip2InputStream;
 import org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream;
+import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
 
 /**
- * This class provides CompressionOutputStream and CompressionInputStream for
- * compression and decompression. Currently we dont have an implementation of
- * the Compressor and Decompressor interfaces, so those methods of
- * CompressionCodec which have a Compressor or Decompressor type argument, throw
- * UnsupportedOperationException.
+ * This class provides output and input streams for bzip2 compression
+ * and decompression.  It uses the native bzip2 library on the system
+ * if possible, else it uses a pure-Java implementation of the bzip2
+ * algorithm.  The configuration parameter
+ * io.compression.codec.bzip2.library can be used to control this
+ * behavior.
+ *
+ * In the pure-Java mode, the Compressor and Decompressor interfaces
+ * are not implemented.  Therefore, in that mode, those methods of
+ * CompressionCodec which have a Compressor or Decompressor type
+ * argument, throw UnsupportedOperationException.
+ *
+ * Currently, support for splittability is available only in the
+ * pure-Java mode; therefore, if a SplitCompressionInputStream is
+ * requested, the pure-Java implementation is used, regardless of the
+ * setting of the configuration parameter mentioned above.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class BZip2Codec implements SplittableCompressionCodec {
+public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
   private static final String HEADER = "BZ";
   private static final int HEADER_LEN = HEADER.length();
   private static final String SUB_HEADER = "h9";
   private static final int SUB_HEADER_LEN = SUB_HEADER.length();
 
+  private Configuration conf;
+  
   /**
-  * Creates a new instance of BZip2Codec
+   * Set the configuration to be used by this object.
+   *
+   * @param conf the configuration object.
+   */
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+  
+  /**
+   * Return the configuration used by this object.
+   *
+   * @return the configuration object used by this objec.
+   */
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+  
+  /**
+  * Creates a new instance of BZip2Codec.
   */
   public BZip2Codec() { }
 
   /**
-  * Creates CompressionOutputStream for BZip2
-  *
-  * @param out
-  *            The output Stream
-  * @return The BZip2 CompressionOutputStream
-  * @throws java.io.IOException
-  *             Throws IO exception
-  */
+   * Create a {@link CompressionOutputStream} that will write to the given
+   * {@link OutputStream}.
+   *
+   * @param out        the location for the final output stream
+   * @return a stream the user can write uncompressed data to, to have it 
+   *         compressed
+   * @throws IOException
+   */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
       throws IOException {
-    return new BZip2CompressionOutputStream(out);
+    return createOutputStream(out, createCompressor());
   }
 
   /**
-  * Creates a compressor using given OutputStream.
+   * Create a {@link CompressionOutputStream} that will write to the given
+   * {@link OutputStream} with the given {@link Compressor}.
    *
-  * @return CompressionOutputStream
-    @throws java.io.IOException
+   * @param out        the location for the final output stream
+   * @param compressor compressor to use
+   * @return a stream the user can write uncompressed data to, to have it 
+   *         compressed
+   * @throws IOException
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
       Compressor compressor) throws IOException {
-    return createOutputStream(out);
+    return Bzip2Factory.isNativeBzip2Loaded(conf) ?
+      new CompressorStream(out, compressor, 
+                           conf.getInt("io.file.buffer.size", 4*1024)) :
+      new BZip2CompressionOutputStream(out);
   }
 
   /**
-  * This functionality is currently not supported.
-  *
-  * @return BZip2DummyCompressor.class
-  */
+   * Get the type of {@link Compressor} needed by this {@link CompressionCodec}.
+   *
+   * @return the type of compressor needed by this codec.
+   */
   @Override
-  public Class<? extends org.apache.hadoop.io.compress.Compressor> getCompressorType() {
-    return BZip2DummyCompressor.class;
+  public Class<? extends Compressor> getCompressorType() {
+    return Bzip2Factory.getBzip2CompressorType(conf);
   }
 
   /**
-  * This functionality is currently not supported.
-  *
-  * @return Compressor
-  */
+   * Create a new {@link Compressor} for use by this {@link CompressionCodec}.
+   *
+   * @return a new compressor for use by this codec
+   */
   @Override
   public Compressor createCompressor() {
-    return new BZip2DummyCompressor();
+    return Bzip2Factory.getBzip2Compressor(conf);
   }
 
   /**
-  * Creates CompressionInputStream to be used to read off uncompressed data.
-  *
-  * @param in
-  *            The InputStream
-  * @return Returns CompressionInputStream for BZip2
-  * @throws java.io.IOException
-  *             Throws IOException
-  */
+   * Create a {@link CompressionInputStream} that will read from the given
+   * input stream and return a stream for uncompressed data.
+   *
+   * @param in the stream to read compressed bytes from
+   * @return a stream to read uncompressed bytes from
+   * @throws IOException
+   */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
       throws IOException {
-    return new BZip2CompressionInputStream(in);
+    return createInputStream(in, createDecompressor());
   }
 
   /**
-  * This functionality is currently not supported.
-  *
-  * @return CompressionInputStream
-  */
+   * Create a {@link CompressionInputStream} that will read from the given
+   * {@link InputStream} with the given {@link Decompressor}, and return a 
+   * stream for uncompressed data.
+   *
+   * @param in           the stream to read compressed bytes from
+   * @param decompressor decompressor to use
+   * @return a stream to read uncompressed bytes from
+   * @throws IOException
+   */
   @Override
   public CompressionInputStream createInputStream(InputStream in,
       Decompressor decompressor) throws IOException {
-    return createInputStream(in);
+    return Bzip2Factory.isNativeBzip2Loaded(conf) ? 
+      new DecompressorStream(in, decompressor,
+                             conf.getInt("io.file.buffer.size", 4*1024)) :
+      new BZip2CompressionInputStream(in);
   }
 
   /**
@@ -139,7 +187,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
    *
    * @return CompressionInputStream for BZip2 aligned at block boundaries
    */
-  @Override
   public SplitCompressionInputStream createInputStream(InputStream seekableIn,
       Decompressor decompressor, long start, long end, READ_MODE readMode)
       throws IOException {
@@ -184,23 +231,23 @@ public class BZip2Codec implements SplittableCompressionCodec {
   }
 
   /**
-  * This functionality is currently not supported.
-  *
-  * @return BZip2DummyDecompressor.class
-  */
+   * Get the type of {@link Decompressor} needed by this {@link CompressionCodec}.
+   *
+   * @return the type of decompressor needed by this codec.
+   */
   @Override
-  public Class<? extends org.apache.hadoop.io.compress.Decompressor> getDecompressorType() {
-    return BZip2DummyDecompressor.class;
+  public Class<? extends Decompressor> getDecompressorType() {
+    return Bzip2Factory.getBzip2DecompressorType(conf);
   }
 
   /**
-  * This functionality is currently not supported.
-  *
-  * @return Decompressor
-  */
+   * Create a new {@link Decompressor} for use by this {@link CompressionCodec}.
+   *
+   * @return a new decompressor for use by this codec
+   */
   @Override
   public Decompressor createDecompressor() {
-    return new BZip2DummyDecompressor();
+    return Bzip2Factory.getBzip2Decompressor(conf);
   }
 
   /**
@@ -236,7 +283,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
       }
     }
 
-    @Override
     public void finish() throws IOException {
       if (needsReset) {
         // In the case that nothing is written to this stream, we still need to
@@ -256,14 +302,12 @@ public class BZip2Codec implements SplittableCompressionCodec {
       }
     }    
     
-    @Override
     public void resetState() throws IOException {
       // Cannot write to out at this point because out might not be ready
       // yet, as in SequenceFile.Writer implementation.
       needsReset = true;
     }
 
-    @Override
     public void write(int b) throws IOException {
       if (needsReset) {
         internalReset();
@@ -271,7 +315,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
       this.output.write(b);
     }
 
-    @Override
     public void write(byte[] b, int off, int len) throws IOException {
       if (needsReset) {
         internalReset();
@@ -279,7 +322,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
       this.output.write(b, off, len);
     }
 
-    @Override
     public void close() throws IOException {
       if (needsReset) {
         // In the case that nothing is written to this stream, we still need to
@@ -397,7 +439,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
 
     }// end of method
 
-    @Override
     public void close() throws IOException {
       if (!needsReset) {
         input.close();
@@ -433,7 +474,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
     *
     */
 
-    @Override
     public int read(byte[] b, int off, int len) throws IOException {
       if (needsReset) {
         internalReset();
@@ -457,7 +497,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
 
     }
 
-    @Override
     public int read() throws IOException {
       byte b[] = new byte[1];
       int result = this.read(b, 0, 1);
@@ -472,7 +511,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
       }
     }    
     
-    @Override
     public void resetState() throws IOException {
       // Cannot read from bufferedIn at this point because bufferedIn
       // might not be ready
@@ -480,7 +518,6 @@ public class BZip2Codec implements SplittableCompressionCodec {
       needsReset = true;
     }
 
-    @Override
     public long getPos() {
       return this.compressedStreamPosition;
       }
