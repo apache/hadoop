@@ -5457,6 +5457,39 @@
         </comparator>
      </comparators>
     </test>
+
+    <test> <!-- TESTED-->
+      <description>checksum: checksum of files(relative path) using globbing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data15bytes dir0/data15bytes</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data30bytes dir0/data30bytes</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data60bytes dir0/data60bytes</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data120bytes dir0/data120bytes</command>
+        <command>-fs NAMENODE -checksum dir0/data*</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^dir0/data120bytes\tMD5-of-0MD5-of-512CRC32C\t000002000000000000000000a58cdc3c0967fc8cddb7fed5960d06f2</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^dir0/data15bytes\tMD5-of-0MD5-of-512CRC32C\t0000020000000000000000007267e9528002723a30939aefc238d665</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^dir0/data30bytes\tMD5-of-0MD5-of-512CRC32C\t000002000000000000000000fc09371298117c4943cf089b4bd79c96</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^dir0/data60bytes\tMD5-of-0MD5-of-512CRC32C\t000002000000000000000000009476431d851dd7b0a8d057a404d7b9</expected-output>
+        </comparator>
+      </comparators>
+    </test>
     
     <!-- Tests for moveToLocal -->
     <!-- Not yet implemented -->

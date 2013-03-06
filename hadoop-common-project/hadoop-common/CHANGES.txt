@@ -1072,6 +1072,9 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
 
+    HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
+    jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
