@@ -82,7 +82,7 @@ unset IFS
 findlibjvm () {
 javabasedir=$JAVA_HOME
 case $OS_NAME in
-    cygwin* | mingw* | pw23* )
+    mingw* | pw23* )
     lib_jvm_dir=`find $javabasedir -follow \( \
         \( -name client -type d -prune \) -o \
         \( -name "jvm.dll" -exec dirname {} \; \) \) 2> /dev/null | tr "\n" " "`

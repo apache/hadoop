@@ -87,7 +87,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <zlib      href="http://www.zlib.net/" />
     <gzip      href="http://www.gzip.org/" />
     <bzip      href="http://www.bzip.org/" />
-    <cygwin    href="http://www.cygwin.com/" />
     <osx       href="http://www.apple.com/macosx" />
     
     <relnotes href="releasenotes.html" />

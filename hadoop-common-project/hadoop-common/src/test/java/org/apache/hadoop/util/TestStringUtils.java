@@ -25,7 +25,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -43,7 +46,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   final private static String ESCAPED_STR_WITH_BOTH2 = 
     "\\,A\\\\\\,\\,B\\\\\\\\\\,";
   
-  @Test
+  @Test (timeout = 30000)
   public void testEscapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.escapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.escapeString(EMPTY_STR));
@@ -57,7 +60,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         StringUtils.escapeString(STR_WITH_BOTH2));
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testSplit() throws Exception {
     assertEquals(NULL_STR, StringUtils.split(NULL_STR));
     String[] splits = StringUtils.split(EMPTY_STR);
@@ -87,7 +90,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals(ESCAPED_STR_WITH_BOTH2, splits[0]);    
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testSimpleSplit() throws Exception {
     final String[] TO_TEST = {
         "a/b/c",
@@ -103,7 +106,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testUnescapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.unEscapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.unEscapeString(EMPTY_STR));
@@ -135,7 +138,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         StringUtils.unEscapeString(ESCAPED_STR_WITH_BOTH2));
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testTraditionalBinaryPrefix() throws Exception {
     //test string2long(..)
     String[] symbol = {"k", "m", "g", "t", "p", "e"};
@@ -261,7 +264,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("0.5430%", StringUtils.formatPercent(0.00543, 4));
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testJoin() {
     List<String> s = new ArrayList<String>();
     s.add("a");
@@ -273,7 +276,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testGetTrimmedStrings() throws Exception {
     String compactDirList = "/spindle1/hdfs,/spindle2/hdfs,/spindle3/hdfs";
     String spacedDirList = "/spindle1/hdfs, /spindle2/hdfs, /spindle3/hdfs";
@@ -295,7 +298,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertArrayEquals(emptyArray, estring);
   } 
 
-  @Test
+  @Test (timeout = 30000)
   public void testCamelize() {
     // common use cases
     assertEquals("Map", StringUtils.camelize("MAP"));
@@ -331,7 +334,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("Zz", StringUtils.camelize("zZ"));
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testStringToURI() {
     String[] str = new String[] { "file://" };
     try {
@@ -342,7 +345,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testSimpleHostName() {
     assertEquals("Should return hostname when FQDN is specified",
             "hadoop01",
@@ -353,6 +356,49 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("Should not truncate when IP address is passed",
             "10.10.5.68",
             StringUtils.simpleHostname("10.10.5.68"));
+  }
+
+  @Test (timeout = 5000)
+  public void testReplaceTokensShellEnvVars() {
+    Pattern pattern = StringUtils.SHELL_ENV_VAR_PATTERN;
+    Map<String, String> replacements = new HashMap<String, String>();
+    replacements.put("FOO", "one");
+    replacements.put("BAZ", "two");
+    replacements.put("NUMBERS123", "one-two-three");
+    replacements.put("UNDER_SCORES", "___");
+
+    assertEquals("one", StringUtils.replaceTokens("$FOO", pattern,
+      replacements));
+    assertEquals("two", StringUtils.replaceTokens("$BAZ", pattern,
+      replacements));
+    assertEquals("", StringUtils.replaceTokens("$BAR", pattern, replacements));
+    assertEquals("", StringUtils.replaceTokens("", pattern, replacements));
+    assertEquals("one-two-three", StringUtils.replaceTokens("$NUMBERS123",
+      pattern, replacements));
+    assertEquals("___", StringUtils.replaceTokens("$UNDER_SCORES", pattern,
+      replacements));
+    assertEquals("//one//two//", StringUtils.replaceTokens("//$FOO/$BAR/$BAZ//",
+      pattern, replacements));
+  }
+
+  @Test (timeout = 5000)
+  public void testReplaceTokensWinEnvVars() {
+    Pattern pattern = StringUtils.WIN_ENV_VAR_PATTERN;
+    Map<String, String> replacements = new HashMap<String, String>();
+    replacements.put("foo", "zoo");
+    replacements.put("baz", "zaz");
+
+    assertEquals("zoo", StringUtils.replaceTokens("%foo%", pattern,
+      replacements));
+    assertEquals("zaz", StringUtils.replaceTokens("%baz%", pattern,
+      replacements));
+    assertEquals("", StringUtils.replaceTokens("%bar%", pattern,
+      replacements));
+    assertEquals("", StringUtils.replaceTokens("", pattern, replacements));
+    assertEquals("zoo__zaz", StringUtils.replaceTokens("%foo%_%bar%_%baz%",
+      pattern, replacements));
+    assertEquals("begin zoo__zaz end", StringUtils.replaceTokens(
+      "begin %foo%_%bar%_%baz% end", pattern, replacements));
   }
 
   // Benchmark for StringUtils split

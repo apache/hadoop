@@ -26,6 +26,9 @@
       <outputDirectory>/bin</outputDirectory>
       <excludes>
         <exclude>*.sh</exclude>
+        <exclude>*-config.cmd</exclude>
+        <exclude>start-*.cmd</exclude>
+        <exclude>stop-*.cmd</exclude>
       </excludes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -38,6 +41,7 @@
       <outputDirectory>/libexec</outputDirectory>
       <includes>
         <include>*-config.sh</include>
+        <include>*-config.cmd</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -46,9 +50,13 @@
       <outputDirectory>/sbin</outputDirectory>
       <includes>
         <include>*.sh</include>
+        <include>*.cmd</include>
       </includes>
       <excludes>
         <exclude>hadoop-config.sh</exclude>
+        <exclude>hadoop.cmd</exclude>
+        <exclude>hdfs.cmd</exclude>
+        <exclude>hadoop-config.cmd</exclude>
       </excludes>
       <fileMode>0755</fileMode>
     </fileSet>

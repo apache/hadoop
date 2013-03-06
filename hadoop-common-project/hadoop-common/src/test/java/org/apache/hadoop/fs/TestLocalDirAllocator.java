@@ -129,7 +129,7 @@ public class TestLocalDirAllocator {
    * The second dir exists & is RW
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void test0() throws Exception {
     if (isWindows) return;
     String dir0 = buildBufferDir(ROOT, 0);
@@ -141,7 +141,8 @@ public class TestLocalDirAllocator {
       validateTempDirCreation(dir1);
       validateTempDirCreation(dir1);
     } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -150,7 +151,7 @@ public class TestLocalDirAllocator {
    * The second dir exists & is RW
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testROBufferDirAndRWBufferDir() throws Exception {
     if (isWindows) return;
     String dir1 = buildBufferDir(ROOT, 1);
@@ -162,14 +163,15 @@ public class TestLocalDirAllocator {
       validateTempDirCreation(dir2);
       validateTempDirCreation(dir2);
     } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
   /** Two buffer dirs. Both do not exist but on a RW disk.
    * Check if tmp dirs are allocated in a round-robin
    */
-  @Test
+  @Test (timeout = 30000)
   public void testDirsNotExist() throws Exception {
     if (isWindows) return;
     String dir2 = buildBufferDir(ROOT, 2);
@@ -195,7 +197,7 @@ public class TestLocalDirAllocator {
    * Later disk1 becomes read-only.
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testRWBufferDirBecomesRO() throws Exception {
     if (isWindows) return;
     String dir3 = buildBufferDir(ROOT, 3);
@@ -233,7 +235,7 @@ public class TestLocalDirAllocator {
    * @throws Exception
    */
   static final int TRIALS = 100;
-  @Test
+  @Test (timeout = 30000)
   public void testCreateManyFiles() throws Exception {
     if (isWindows) return;
     String dir5 = buildBufferDir(ROOT, 5);
@@ -270,7 +272,7 @@ public class TestLocalDirAllocator {
    * directory. With checkAccess true, the directory should not be created.
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testLocalPathForWriteDirCreation() throws IOException {
     String dir0 = buildBufferDir(ROOT, 0);
     String dir1 = buildBufferDir(ROOT, 1);
@@ -291,7 +293,8 @@ public class TestLocalDirAllocator {
         assertEquals(e.getClass(), FileNotFoundException.class);
       }
     } finally {
-      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -300,7 +303,7 @@ public class TestLocalDirAllocator {
    * Test when mapred.local.dir not configured and called
    * getLocalPathForWrite
    */
-  @Test
+  @Test (timeout = 30000)
   public void testShouldNotthrowNPE() throws Exception {
     Configuration conf1 = new Configuration();
     try {
@@ -319,7 +322,7 @@ public class TestLocalDirAllocator {
    * are mistakenly created from fully qualified path strings.
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testNoSideEffects() throws IOException {
     assumeTrue(!isWindows);
     String dir = buildBufferDir(ROOT, 0);
@@ -330,7 +333,8 @@ public class TestLocalDirAllocator {
       assertTrue(result.getParentFile().delete());
       assertFalse(new File(dir).exists());
     } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -340,7 +344,7 @@ public class TestLocalDirAllocator {
    *
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testGetLocalPathToRead() throws IOException {
     assumeTrue(!isWindows);
     String dir = buildBufferDir(ROOT, 0);
@@ -353,7 +357,8 @@ public class TestLocalDirAllocator {
       assertEquals(f1.getName(), p1.getName());
       assertEquals("file", p1.getFileSystem(conf).getUri().getScheme());
     } finally {
-      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      Shell.execCommand(Shell.getSetPermissionCommand("u+w", false,
+                                                      BUFFER_DIR_ROOT));
       rmBufferDirs();
     }
   }
@@ -364,7 +369,7 @@ public class TestLocalDirAllocator {
    *
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testGetAllLocalPathsToRead() throws IOException {
     assumeTrue(!isWindows);
     
@@ -412,7 +417,7 @@ public class TestLocalDirAllocator {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testRemoveContext() throws IOException {
     String dir = buildBufferDir(ROOT, 0);
     try {

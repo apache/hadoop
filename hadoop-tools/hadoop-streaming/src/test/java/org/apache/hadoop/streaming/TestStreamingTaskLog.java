@@ -83,7 +83,7 @@ public class TestStreamingTaskLog {
    *  (b) hadoop.tasklog.totalLogFileSize
    * for the children of java tasks in streaming jobs.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testStreamingTaskLogWithHadoopCmd() {
     try {
       final int numSlaves = 1;
@@ -124,8 +124,8 @@ public class TestStreamingTaskLog {
               "echo $HADOOP_ROOT_LOGGER $HADOOP_CLIENT_OPTS").getBytes());
     in.close();
     
-    Shell.execCommand(new String[]{"chmod", "+x",
-                                   scriptFile.getAbsolutePath()});
+    Shell.execCommand(Shell.getSetPermissionCommand("+x", false,
+        scriptFile.getAbsolutePath()));
     return scriptFile;
   }
   

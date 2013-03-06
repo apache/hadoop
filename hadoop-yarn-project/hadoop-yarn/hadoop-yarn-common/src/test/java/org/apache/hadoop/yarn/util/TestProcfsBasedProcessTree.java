@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
@@ -104,17 +105,21 @@ public class TestProcfsBasedProcessTree {
         new Path(TEST_ROOT_DIR.getAbsolutePath()), true);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testProcessTree() throws Exception {
 
+    if (!Shell.LINUX) {
+      System.out
+          .println("ProcfsBasedProcessTree is not available on this system. Not testing");
+      return;
+
+    }
     try {
-      if (!ProcfsBasedProcessTree.isAvailable()) {
-        System.out
-            .println("ProcfsBasedProcessTree is not available on this system. Not testing");
-        return;
-      }
+      Assert.assertTrue(ProcfsBasedProcessTree.isAvailable());
     } catch (Exception e) {
       LOG.info(StringUtils.stringifyException(e));
+      Assert.assertTrue("ProcfsBaseProcessTree should be available on Linux",
+        false);
       return;
     }
     // create shell script
@@ -328,7 +333,7 @@ public class TestProcfsBasedProcessTree {
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testCpuAndMemoryForProcessTree() throws IOException {
 
     // test processes
@@ -402,7 +407,7 @@ public class TestProcfsBasedProcessTree {
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testMemForOlderProcesses() throws IOException {
     // initial list of processes
     String[] pids = { "100", "200", "300", "400" };
@@ -509,7 +514,7 @@ public class TestProcfsBasedProcessTree {
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testDestroyProcessTree() throws IOException {
     // test process
     String pid = "100";
@@ -535,7 +540,7 @@ public class TestProcfsBasedProcessTree {
    *
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testProcessTreeDump()
       throws IOException {
 

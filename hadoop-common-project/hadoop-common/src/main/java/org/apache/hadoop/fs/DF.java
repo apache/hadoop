@@ -35,7 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /** Filesystem disk space usage statistics.
  * Uses the unix 'df' program to get mount points, and java.io.File for
- * space utilization. Tested on Linux, FreeBSD, Cygwin. */
+ * space utilization. Tested on Linux, FreeBSD, Windows. */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class DF extends Shell {
@@ -164,10 +164,23 @@ public class DF extends Shell {
   }
 
   @Override
+  protected void run() throws IOException {
+    if (WINDOWS) {
+      try {
+        this.mount = dirFile.getCanonicalPath().substring(0,2);
+      } catch (IOException e) {
+      }
+      return;
+    }
+    super.run();
+  }
+
+  @Override
   protected String[] getExecString() {
     // ignoring the error since the exit code it enough
-    return new String[] {"bash","-c","exec 'df' '-k' '-P' '" + dirPath 
-                         + "' 2>/dev/null"};
+    return (WINDOWS)? new String[]{"cmd", "/c", "df -k " + dirPath + " 2>nul"}:
+        new String[] {"bash","-c","exec 'df' '-k' '-P' '" + dirPath 
+                      + "' 2>/dev/null"};
   }
 
   @Override

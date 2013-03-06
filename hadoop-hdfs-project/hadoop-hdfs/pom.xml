@@ -515,6 +515,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <excludes>
             <exclude>CHANGES.txt</exclude>
             <exclude>CHANGES.HDFS-1623.txt</exclude>
+            <exclude>CHANGES.branch-trunk-win.txt</exclude>
             <exclude>.idea/**</exclude>
             <exclude>src/main/conf/*</exclude>
             <exclude>src/main/docs/**</exclude>

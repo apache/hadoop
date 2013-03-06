@@ -92,7 +92,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   }
   
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
-    return new Path(basePath + rmFilePath.toUri().getPath());
+    return Path.mergePaths(basePath, rmFilePath);
   }
 
   @Override

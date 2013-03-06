@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 
 /**
  * This is the API for the applications comprising of constants that YARN sets
@@ -192,7 +193,11 @@ public interface ApplicationConstants {
     }
     
     public String $() {
-      return "$" + variable;
+      if (Shell.WINDOWS) {
+        return "%" + variable + "%";
+      } else {
+        return "$" + variable;
+      }
     }
   }
 }

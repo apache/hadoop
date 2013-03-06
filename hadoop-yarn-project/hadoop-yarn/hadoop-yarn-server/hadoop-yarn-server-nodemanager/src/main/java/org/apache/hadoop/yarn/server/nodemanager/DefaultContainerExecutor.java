@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -53,10 +55,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   private static final Log LOG = LogFactory
       .getLog(DefaultContainerExecutor.class);
 
-  private final FileContext lfs;
+  private static final int WIN_MAX_PATH = 260;
 
-  private static final String WRAPPER_LAUNCH_SCRIPT = 
-      "default_container_executor.sh";
+  private final FileContext lfs;
 
   public DefaultContainerExecutor() {
     try {
@@ -145,15 +146,24 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     lfs.util().copy(nmPrivateTokensPath, tokenDst);
 
     // Create new local launch wrapper script
-    Path wrapperScriptDst = new Path(containerWorkDir, WRAPPER_LAUNCH_SCRIPT);
-    DataOutputStream wrapperScriptOutStream =
-        lfs.create(wrapperScriptDst,
-            EnumSet.of(CREATE, OVERWRITE));
+    LocalWrapperScriptBuilder sb = Shell.WINDOWS ?
+      new WindowsLocalWrapperScriptBuilder(containerIdStr, containerWorkDir) :
+      new UnixLocalWrapperScriptBuilder(containerWorkDir);
+
+    // Fail fast if attempting to launch the wrapper script would fail due to
+    // Windows path length limitation.
+    if (Shell.WINDOWS &&
+        sb.getWrapperScriptPath().toString().length() > WIN_MAX_PATH) {
+      throw new IOException(String.format(
+        "Cannot launch container using script at path %s, because it exceeds " +
+        "the maximum supported path length of %d characters.  Consider " +
+        "configuring shorter directories in %s.", sb.getWrapperScriptPath(),
+        WIN_MAX_PATH, YarnConfiguration.NM_LOCAL_DIRS));
+    }
 
     Path pidFile = getPidFilePath(containerId);
     if (pidFile != null) {
-      writeLocalWrapperScript(wrapperScriptOutStream, launchDst.toUri()
-          .getPath().toString(), pidFile.toString());
+      sb.writeLocalWrapperScript(launchDst, pidFile);
     } else {
       LOG.info("Container " + containerIdStr
           + " was marked as inactive. Returning terminated error");
@@ -166,12 +176,13 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     try {
       lfs.setPermission(launchDst,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
-      lfs.setPermission(wrapperScriptDst,
+      lfs.setPermission(sb.getWrapperScriptPath(),
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
       // Setup command to run
-      String[] command = {"bash",
-          wrapperScriptDst.toUri().getPath().toString()};
+      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
+        containerIdStr);
+
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
           command,
@@ -202,27 +213,84 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     return 0;
   }
 
-  private void writeLocalWrapperScript(DataOutputStream out,
-      String launchScriptDst, String pidFilePath) throws IOException {
-    // We need to do a move as writing to a file is not atomic
-    // Process reading a file being written to may get garbled data
-    // hence write pid to tmp file first followed by a mv
-    StringBuilder sb = new StringBuilder("#!/bin/bash\n\n");
-    sb.append("echo $$ > " + pidFilePath + ".tmp\n");
-    sb.append("/bin/mv -f " + pidFilePath + ".tmp " + pidFilePath + "\n");
-    sb.append(ContainerExecutor.isSetsidAvailable? "exec setsid" : "exec");
-    sb.append(" /bin/bash ");
-    sb.append("\"");
-    sb.append(launchScriptDst);
-    sb.append("\"\n");
-    PrintStream pout = null;
-    try {
-      pout = new PrintStream(out);
-      pout.append(sb);
-    } finally {
-      if (out != null) {
-        out.close();
+  private abstract class LocalWrapperScriptBuilder {
+
+    private final Path wrapperScriptPath;
+
+    public Path getWrapperScriptPath() {
+      return wrapperScriptPath;
+    }
+
+    public void writeLocalWrapperScript(Path launchDst, Path pidFile) throws IOException {
+      DataOutputStream out = null;
+      PrintStream pout = null;
+
+      try {
+        out = lfs.create(wrapperScriptPath, EnumSet.of(CREATE, OVERWRITE));
+        pout = new PrintStream(out);
+        writeLocalWrapperScript(launchDst, pidFile, pout);
+      } finally {
+        IOUtils.cleanup(LOG, pout, out);
       }
+    }
+
+    protected abstract void writeLocalWrapperScript(Path launchDst, Path pidFile,
+        PrintStream pout);
+
+    protected LocalWrapperScriptBuilder(Path wrapperScriptPath) {
+      this.wrapperScriptPath = wrapperScriptPath;
+    }
+  }
+
+  private final class UnixLocalWrapperScriptBuilder
+      extends LocalWrapperScriptBuilder {
+
+    public UnixLocalWrapperScriptBuilder(Path containerWorkDir) {
+      super(new Path(containerWorkDir, "default_container_executor.sh"));
+    }
+
+    @Override
+    public void writeLocalWrapperScript(Path launchDst, Path pidFile,
+        PrintStream pout) {
+
+      // We need to do a move as writing to a file is not atomic
+      // Process reading a file being written to may get garbled data
+      // hence write pid to tmp file first followed by a mv
+      pout.println("#!/bin/bash");
+      pout.println();
+      pout.println("echo $$ > " + pidFile.toString() + ".tmp");
+      pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
+      String exec = ContainerExecutor.isSetsidAvailable? "exec setsid" : "exec";
+      pout.println(exec + " /bin/bash -c \"" +
+        launchDst.toUri().getPath().toString() + "\"");
+    }
+  }
+
+  private final class WindowsLocalWrapperScriptBuilder
+      extends LocalWrapperScriptBuilder {
+
+    private final String containerIdStr;
+
+    public WindowsLocalWrapperScriptBuilder(String containerIdStr,
+        Path containerWorkDir) {
+
+      super(new Path(containerWorkDir, "default_container_executor.cmd"));
+      this.containerIdStr = containerIdStr;
+    }
+
+    @Override
+    public void writeLocalWrapperScript(Path launchDst, Path pidFile,
+        PrintStream pout) {
+
+      // On Windows, the pid is the container ID, so that it can also serve as
+      // the name of the job object created by winutils for task management.
+      // Write to temp file followed by atomic move.
+      String normalizedPidFile = new File(pidFile.toString()).getPath();
+      pout.println("@echo " + containerIdStr + " > " + normalizedPidFile +
+        ".tmp");
+      pout.println("@move /Y " + normalizedPidFile + ".tmp " +
+        normalizedPidFile);
+      pout.println("@call " + launchDst.toString());
     }
   }
 
@@ -234,22 +302,36 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         : pid;
     LOG.debug("Sending signal " + signal.getValue() + " to pid " + sigpid
         + " as user " + user);
-    try {
-      sendSignal(sigpid, Signal.NULL);
-    } catch (ExitCodeException e) {
+    if (!containerIsAlive(sigpid)) {
       return false;
     }
     try {
-      sendSignal(sigpid, signal);
+      killContainer(sigpid, signal);
     } catch (IOException e) {
-      try {
-        sendSignal(sigpid, Signal.NULL);
-      } catch (IOException ignore) {
+      if (!containerIsAlive(sigpid)) {
         return false;
       }
       throw e;
     }
     return true;
+  }
+
+  /**
+   * Returns true if the process with the specified pid is alive.
+   * 
+   * @param pid String pid
+   * @return boolean true if the process is alive
+   */
+  private boolean containerIsAlive(String pid) throws IOException {
+    try {
+      new ShellCommandExecutor(getCheckProcessIsAliveCommand(pid)).execute();
+      // successful execution means process is alive
+      return true;
+    }
+    catch (ExitCodeException e) {
+      // failure (non-zero exit code) means process is not alive
+      return false;
+    }
   }
 
   /**
@@ -259,11 +341,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * @param signal signal to send
    * (for logging).
    */
-  protected void sendSignal(String pid, Signal signal) throws IOException {
-    ShellCommandExecutor shexec = null;
-    String[] arg = { "kill", "-" + signal.getValue(), pid };
-    shexec = new ShellCommandExecutor(arg);
-    shexec.execute();
+  private void killContainer(String pid, Signal signal) throws IOException {
+    new ShellCommandExecutor(getSignalKillCommand(signal.getValue(), pid))
+      .execute();
   }
 
   @Override

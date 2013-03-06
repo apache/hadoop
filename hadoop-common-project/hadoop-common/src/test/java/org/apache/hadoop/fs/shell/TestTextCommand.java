@@ -26,9 +26,11 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.net.URI;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
 /**
@@ -38,12 +40,13 @@ import org.junit.Test;
 public class TestTextCommand {
   private static final String TEST_ROOT_DIR =
     System.getProperty("test.build.data", "build/test/data/") + "/testText";
-  private static final String AVRO_FILENAME = TEST_ROOT_DIR + "/weather.avro";
+  private static final String AVRO_FILENAME =
+    new Path(TEST_ROOT_DIR, "weather.avro").toUri().getPath();
 
   /**
    * Tests whether binary Avro data files are displayed correctly.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testDisplayForAvroFiles() throws Exception {
     // Create a small Avro data file on the local file system.
     createAvroFile(generateWeatherAvroBinaryData());
@@ -51,7 +54,7 @@ public class TestTextCommand {
     // Prepare and call the Text command's protected getInputStream method
     // using reflection.
     Configuration conf = new Configuration();
-    File localPath = new File(AVRO_FILENAME);
+    URI localPath = new URI(AVRO_FILENAME);
     PathData pathData = new PathData(localPath, conf);
     Display.Text text = new Display.Text();
     text.setConf(conf);

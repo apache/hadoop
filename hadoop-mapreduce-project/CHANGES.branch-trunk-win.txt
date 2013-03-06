@@ -1,0 +1,17 @@
+branch-trunk-win changes - unreleased
+
+  MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
+  (Chris Nauroth via suresh)
+
+  MAPREDUCE-4780. MapReduce distribution build fails on Windows.
+  (Chris Nauroth via suresh)
+
+  MAPREDUCE-4790. MapReduce build script would be more readable using abspath.
+  (Chris Nauroth via suresh)
+
+  MAPREDUCE-4869. Fix TestMapReduceChildJVM. (Chris Nauroth via acmurthy)
+
+  MAPREDUCE-4870. Fix TestMRJobsWithHistoryService. (Chris Nauroth via acmurthy)
+
+  MAPREDUCE-4983. Fixed various platform specific assumptions in various tests,
+  so that they can pass on Windows too. (Chris Nauroth via vinodkv)

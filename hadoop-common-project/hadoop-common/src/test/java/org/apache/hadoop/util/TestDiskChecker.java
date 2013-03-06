@@ -30,24 +30,29 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Shell;
 
 public class TestDiskChecker {
   final FsPermission defaultPerm = new FsPermission("755");
   final FsPermission invalidPerm = new FsPermission("000");
 
-  @Test public void testMkdirs_dirExists() throws Throwable {
+  @Test (timeout = 30000)
+  public void testMkdirs_dirExists() throws Throwable {
     _mkdirs(true, defaultPerm, defaultPerm);
   }
 
-  @Test public void testMkdirs_noDir() throws Throwable {
+  @Test (timeout = 30000)
+  public void testMkdirs_noDir() throws Throwable {
     _mkdirs(false, defaultPerm, defaultPerm);
   }
 
-  @Test public void testMkdirs_dirExists_badUmask() throws Throwable {
+  @Test (timeout = 30000)
+  public void testMkdirs_dirExists_badUmask() throws Throwable {
     _mkdirs(true, defaultPerm, invalidPerm);
   }
 
-  @Test public void testMkdirs_noDir_badUmask() throws Throwable {
+  @Test (timeout = 30000)
+  public void testMkdirs_noDir_badUmask() throws Throwable {
     _mkdirs(false, defaultPerm, invalidPerm);
   }
 
@@ -78,23 +83,28 @@ public class TestDiskChecker {
     }
   }
 
-  @Test public void testCheckDir_normal() throws Throwable {
+  @Test (timeout = 30000)
+  public void testCheckDir_normal() throws Throwable {
     _checkDirs(true, new FsPermission("755"), true);
   }
 
-  @Test public void testCheckDir_notDir() throws Throwable {
+  @Test (timeout = 30000)
+  public void testCheckDir_notDir() throws Throwable {
     _checkDirs(false, new FsPermission("000"), false);
   }
 
-  @Test public void testCheckDir_notReadable() throws Throwable {
+  @Test (timeout = 30000)
+  public void testCheckDir_notReadable() throws Throwable {
     _checkDirs(true, new FsPermission("000"), false);
   }
 
-  @Test public void testCheckDir_notWritable() throws Throwable {
+  @Test (timeout = 30000)
+  public void testCheckDir_notWritable() throws Throwable {
     _checkDirs(true, new FsPermission("444"), false);
   }
 
-  @Test public void testCheckDir_notListable() throws Throwable {
+  @Test (timeout = 30000)
+  public void testCheckDir_notListable() throws Throwable {
     _checkDirs(true, new FsPermission("666"), false);   // not listable
   }
 
@@ -130,27 +140,27 @@ public class TestDiskChecker {
    * permission for result of mapper.
    */
 
-  @Test
+  @Test (timeout = 30000)
   public void testCheckDir_normal_local() throws Throwable {
     _checkDirs(true, "755", true);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCheckDir_notDir_local() throws Throwable {
     _checkDirs(false, "000", false);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCheckDir_notReadable_local() throws Throwable {
     _checkDirs(true, "000", false);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCheckDir_notWritable_local() throws Throwable {
     _checkDirs(true, "444", false);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCheckDir_notListable_local() throws Throwable {
     _checkDirs(true, "666", false);
   }
@@ -160,8 +170,8 @@ public class TestDiskChecker {
     File localDir = File.createTempFile("test", "tmp");
     localDir.delete();
     localDir.mkdir();
-    Runtime.getRuntime().exec(
-	"chmod " + perm + "  " + localDir.getAbsolutePath()).waitFor();
+    Shell.execCommand(Shell.getSetPermissionCommand(perm, false,
+                                                    localDir.getAbsolutePath()));
     try {
       DiskChecker.checkDir(localDir);
       assertTrue("checkDir success", success);

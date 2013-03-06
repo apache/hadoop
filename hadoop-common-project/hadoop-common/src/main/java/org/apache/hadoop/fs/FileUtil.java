@@ -19,18 +19,29 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
@@ -45,6 +56,13 @@ import org.apache.commons.logging.LogFactory;
 public class FileUtil {
 
   private static final Log LOG = LogFactory.getLog(FileUtil.class);
+
+  /* The error code is defined in winutils to indicate insufficient
+   * privilege to create symbolic links. This value need to keep in
+   * sync with the constant of the same name in:
+   * "src\winutils\common.h"
+   * */
+  public static final int SYMLINK_NO_PRIVILEGE = 2;
 
   /**
    * convert an array of FileStatus to an array of Path
@@ -470,45 +488,13 @@ public class FileUtil {
   }
 
   /**
-   * This class is only used on windows to invoke the cygpath command.
-   */
-  private static class CygPathCommand extends Shell {
-    String[] command;
-    String result;
-    CygPathCommand(String path) throws IOException {
-      command = new String[]{"cygpath", "-u", path};
-      run();
-    }
-    String getResult() throws IOException {
-      return result;
-    }
-    @Override
-    protected String[] getExecString() {
-      return command;
-    }
-    @Override
-    protected void parseExecResult(BufferedReader lines) throws IOException {
-      String line = lines.readLine();
-      if (line == null) {
-        throw new IOException("Can't convert '" + command[2] + 
-                              " to a cygwin path");
-      }
-      result = line;
-    }
-  }
-
-  /**
    * Convert a os-native filename to a path that works for the shell.
    * @param filename The filename to convert
    * @return The unix pathname
    * @throws IOException on windows, there can be problems with the subprocess
    */
   public static String makeShellPath(String filename) throws IOException {
-    if (Path.WINDOWS) {
-      return new CygPathCommand(filename).getResult();
-    } else {
-      return filename;
-    }    
+    return filename;
   }
   
   /**
@@ -658,7 +644,7 @@ public class FileUtil {
     untarCommand.append(FileUtil.makeShellPath(untarDir)); 
     untarCommand.append("' ; ");
     untarCommand.append("tar -xf ");
-    
+
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
@@ -731,7 +717,7 @@ public class FileUtil {
   
   /**
    * Class for creating hardlinks.
-   * Supports Unix, Cygwin, WindXP.
+   * Supports Unix, WindXP.
    * @deprecated Use {@link org.apache.hadoop.fs.HardLink}
    */
   @Deprecated
@@ -743,21 +729,67 @@ public class FileUtil {
 
   /**
    * Create a soft link between a src and destination
-   * only on a local disk. HDFS does not support this
+   * only on a local disk. HDFS does not support this.
+   * On Windows, when symlink creation fails due to security
+   * setting, we will log a warning. The return code in this
+   * case is 2.
    * @param target the target for symlink 
    * @param linkname the symlink
    * @return value returned by the command
    */
   public static int symLink(String target, String linkname) throws IOException{
-    String cmd = "ln -s " + target + " " + linkname;
-    Process p = Runtime.getRuntime().exec(cmd, null);
-    int returnVal = -1;
-    try{
-      returnVal = p.waitFor();
-    } catch(InterruptedException e){
-      //do nothing as of yet
+    // Run the input paths through Java's File so that they are converted to the
+    // native OS form
+    File targetFile = new File(target);
+    File linkFile = new File(linkname);
+
+    // If not on Java7+, copy a file instead of creating a symlink since
+    // Java6 has close to no support for symlinks on Windows. Specifically
+    // File#length and File#renameTo do not work as expected.
+    // (see HADOOP-9061 for additional details)
+    // We still create symlinks for directories, since the scenario in this
+    // case is different. The directory content could change in which
+    // case the symlink loses its purpose (for example task attempt log folder
+    // is symlinked under userlogs and userlogs are generated afterwards).
+    if (Shell.WINDOWS && !Shell.isJava7OrAbove() && targetFile.isFile()) {
+      try {
+        LOG.info("FileUtil#symlink: On Java6, copying file instead "
+            + linkname + " -> " + target);
+        org.apache.commons.io.FileUtils.copyFile(targetFile, linkFile);
+      } catch (IOException ex) {
+        LOG.warn("FileUtil#symlink failed to copy the file with error: "
+            + ex.getMessage());
+        // Exit with non-zero exit code
+        return 1;
+      }
+      return 0;
     }
-    return returnVal;
+
+    String[] cmd = Shell.getSymlinkCommand(targetFile.getPath(),
+        linkFile.getPath());
+    ShellCommandExecutor shExec = new ShellCommandExecutor(cmd);
+    try {
+      shExec.execute();
+    } catch (Shell.ExitCodeException ec) {
+      int returnVal = ec.getExitCode();
+      if (Shell.WINDOWS && returnVal == SYMLINK_NO_PRIVILEGE) {
+        LOG.warn("Fail to create symbolic links on Windows. "
+            + "The default security settings in Windows disallow non-elevated "
+            + "administrators and all non-administrators from creating symbolic links. "
+            + "This behavior can be changed in the Local Security Policy management console");
+      } else if (returnVal != 0) {
+        LOG.warn("Command '" + StringUtils.join(" ", cmd) + "' failed "
+            + returnVal + " with: " + ec.getMessage());
+      }
+      return returnVal;
+    } catch (IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Error while create symlink " + linkname + " to " + target
+            + "." + " Exception: " + StringUtils.stringifyException(e));
+      }
+      throw e;
+    }
+    return shExec.getExitCode();
   }
   
   /**
@@ -781,30 +813,120 @@ public class FileUtil {
    * @param recursive true, if permissions should be changed recursively
    * @return the exit code from the command.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static int chmod(String filename, String perm, boolean recursive)
-                            throws IOException, InterruptedException {
-    StringBuilder cmdBuf = new StringBuilder();
-    cmdBuf.append("chmod ");
-    if (recursive) {
-      cmdBuf.append("-R ");
-    }
-    cmdBuf.append(perm).append(" ");
-    cmdBuf.append(filename);
-    String[] shellCmd = {"bash", "-c" ,cmdBuf.toString()};
-    ShellCommandExecutor shExec = new ShellCommandExecutor(shellCmd);
+                            throws IOException {
+    String [] cmd = Shell.getSetPermissionCommand(perm, recursive);
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = new File(filename).getPath();
+    ShellCommandExecutor shExec = new ShellCommandExecutor(args);
     try {
       shExec.execute();
-    }catch(Exception e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error while changing permission : " + filename
-            + " Exception: ", e);
+    }catch(IOException e) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Error while changing permission : " + filename 
+                  +" Exception: " + StringUtils.stringifyException(e));
       }
     }
     return shExec.getExitCode();
   }
+
+  /**
+   * Set the ownership on a file / directory. User name and group name
+   * cannot both be null.
+   * @param file the file to change
+   * @param username the new user owner name
+   * @param groupname the new group owner name
+   * @throws IOException
+   */
+  public static void setOwner(File file, String username,
+      String groupname) throws IOException {
+    if (username == null && groupname == null) {
+      throw new IOException("username == null && groupname == null");
+    }
+    String arg = (username == null ? "" : username)
+        + (groupname == null ? "" : ":" + groupname);
+    String [] cmd = Shell.getSetOwnerCommand(arg);
+    execCommand(file, cmd);
+  }
+
+  /**
+   * Set permissions to the required value. Uses the java primitives instead
+   * of forking if group == other.
+   * @param f the file to change
+   * @param permission the new permissions
+   * @throws IOException
+   */
+  public static void setPermission(File f, FsPermission permission
+                                   ) throws IOException {
+    FsAction user = permission.getUserAction();
+    FsAction group = permission.getGroupAction();
+    FsAction other = permission.getOtherAction();
+
+    // use the native/fork if the group/other permissions are different
+    // or if the native is available or on Windows
+    if (group != other || NativeIO.isAvailable() || Shell.WINDOWS) {
+      execSetPermission(f, permission);
+      return;
+    }
+    
+    boolean rv = true;
+    
+    // read perms
+    rv = f.setReadable(group.implies(FsAction.READ), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.READ) != user.implies(FsAction.READ)) {
+      rv = f.setReadable(user.implies(FsAction.READ), true);
+      checkReturnValue(rv, f, permission);
+    }
+
+    // write perms
+    rv = f.setWritable(group.implies(FsAction.WRITE), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.WRITE) != user.implies(FsAction.WRITE)) {
+      rv = f.setWritable(user.implies(FsAction.WRITE), true);
+      checkReturnValue(rv, f, permission);
+    }
+
+    // exec perms
+    rv = f.setExecutable(group.implies(FsAction.EXECUTE), false);
+    checkReturnValue(rv, f, permission);
+    if (group.implies(FsAction.EXECUTE) != user.implies(FsAction.EXECUTE)) {
+      rv = f.setExecutable(user.implies(FsAction.EXECUTE), true);
+      checkReturnValue(rv, f, permission);
+    }
+  }
+
+  private static void checkReturnValue(boolean rv, File p, 
+                                       FsPermission permission
+                                       ) throws IOException {
+    if (!rv) {
+      throw new IOException("Failed to set permissions of path: " + p + 
+                            " to " + 
+                            String.format("%04o", permission.toShort()));
+    }
+  }
   
+  private static void execSetPermission(File f, 
+                                        FsPermission permission
+                                       )  throws IOException {
+    if (NativeIO.isAvailable()) {
+      NativeIO.POSIX.chmod(f.getCanonicalPath(), permission.toShort());
+    } else {
+      execCommand(f, Shell.getSetPermissionCommand(
+                  String.format("%04o", permission.toShort()), false));
+    }
+  }
+  
+  static String execCommand(File f, String... cmd) throws IOException {
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = f.getCanonicalPath();
+    String output = Shell.execCommand(args);
+    return output;
+  }
+
   /**
    * Create a tmp file for a base file.
    * @param basefile the base file of the tmp
@@ -892,4 +1014,97 @@ public class FileUtil {
     }
     return fileNames;
   }  
+  
+  /**
+   * Create a jar file at the given path, containing a manifest with a classpath
+   * that references all specified entries.
+   * 
+   * Some platforms may have an upper limit on command line length.  For example,
+   * the maximum command line length on Windows is 8191 characters, but the
+   * length of the classpath may exceed this.  To work around this limitation,
+   * use this method to create a small intermediate jar with a manifest that
+   * contains the full classpath.  It returns the absolute path to the new jar,
+   * which the caller may set as the classpath for a new process.
+   * 
+   * Environment variable evaluation is not supported within a jar manifest, so
+   * this method expands environment variables before inserting classpath entries
+   * to the manifest.  The method parses environment variables according to
+   * platform-specific syntax (%VAR% on Windows, or $VAR otherwise).  On Windows,
+   * environment variables are case-insensitive.  For example, %VAR% and %var%
+   * evaluate to the same value.
+   * 
+   * Specifying the classpath in a jar manifest does not support wildcards, so
+   * this method expands wildcards internally.  Any classpath entry that ends
+   * with * is translated to all files at that path with extension .jar or .JAR.
+   * 
+   * @param inputClassPath String input classpath to bundle into the jar manifest
+   * @param pwd Path to working directory to save jar
+   * @return String absolute path to new jar
+   * @throws IOException if there is an I/O error while writing the jar file
+   */
+  public static String createJarWithClassPath(String inputClassPath, Path pwd)
+      throws IOException {
+    // Replace environment variables, case-insensitive on Windows
+    @SuppressWarnings("unchecked")
+    Map<String, String> env = Shell.WINDOWS ?
+      new CaseInsensitiveMap(System.getenv()) : System.getenv();
+    String[] classPathEntries = inputClassPath.split(File.pathSeparator);
+    for (int i = 0; i < classPathEntries.length; ++i) {
+      classPathEntries[i] = StringUtils.replaceTokens(classPathEntries[i],
+        StringUtils.ENV_VAR_PATTERN, env);
+    }
+    File workingDir = new File(pwd.toString());
+    if (!workingDir.mkdirs()) {
+      // If mkdirs returns false because the working directory already exists,
+      // then this is acceptable.  If it returns false due to some other I/O
+      // error, then this method will fail later with an IOException while saving
+      // the jar.
+      LOG.debug("mkdirs false for " + workingDir + ", execution will continue");
+    }
+
+    // Append all entries
+    List<String> classPathEntryList = new ArrayList<String>(
+      classPathEntries.length);
+    for (String classPathEntry: classPathEntries) {
+      if (classPathEntry.endsWith("*")) {
+        // Append all jars that match the wildcard
+        Path globPath = new Path(classPathEntry).suffix("{.jar,.JAR}");
+        FileStatus[] wildcardJars = FileContext.getLocalFSFileContext().util()
+          .globStatus(globPath);
+        if (wildcardJars != null) {
+          for (FileStatus wildcardJar: wildcardJars) {
+            classPathEntryList.add(wildcardJar.getPath().toUri().toURL()
+              .toExternalForm());
+          }
+        }
+      } else {
+        // Append just this jar
+        classPathEntryList.add(new File(classPathEntry).toURI().toURL()
+          .toExternalForm());
+      }
+    }
+    String jarClassPath = StringUtils.join(" ", classPathEntryList);
+
+    // Create the manifest
+    Manifest jarManifest = new Manifest();
+    jarManifest.getMainAttributes().putValue(
+        Attributes.Name.MANIFEST_VERSION.toString(), "1.0");
+    jarManifest.getMainAttributes().putValue(
+        Attributes.Name.CLASS_PATH.toString(), jarClassPath);
+
+    // Write the manifest to output JAR file
+    File classPathJar = File.createTempFile("classpath-", ".jar", workingDir);
+    FileOutputStream fos = null;
+    BufferedOutputStream bos = null;
+    JarOutputStream jos = null;
+    try {
+      fos = new FileOutputStream(classPathJar);
+      bos = new BufferedOutputStream(fos);
+      jos = new JarOutputStream(bos, jarManifest);
+    } finally {
+      IOUtils.cleanup(LOG, jos, bos, fos);
+    }
+
+    return classPathJar.getCanonicalPath();
+  }
 }

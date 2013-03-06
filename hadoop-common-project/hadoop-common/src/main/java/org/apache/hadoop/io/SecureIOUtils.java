@@ -22,6 +22,7 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,7 +31,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.Errno;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
-import org.apache.hadoop.io.nativeio.NativeIO.Stat;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -120,7 +121,7 @@ public class SecureIOUtils {
     FileInputStream fis = new FileInputStream(f);
     boolean success = false;
     try {
-      Stat stat = NativeIO.getFstat(fis.getFD());
+      Stat stat = NativeIO.POSIX.getFstat(fis.getFD());
       checkStat(f, stat.getOwner(), stat.getGroup(), expectedOwner,
           expectedGroup);
       success = true;
@@ -166,35 +167,30 @@ public class SecureIOUtils {
     if (skipSecurity) {
       return insecureCreateForWrite(f, permissions);
     } else {
-      // Use the native wrapper around open(2)
-      try {
-        FileDescriptor fd = NativeIO.open(f.getAbsolutePath(),
-          NativeIO.O_WRONLY | NativeIO.O_CREAT | NativeIO.O_EXCL,
-          permissions);
-        return new FileOutputStream(fd);
-      } catch (NativeIOException nioe) {
-        if (nioe.getErrno() == Errno.EEXIST) {
-          throw new AlreadyExistsException(nioe);
-        }
-        throw nioe;
-      }
+      return NativeIO.getCreateForWriteFileOutputStream(f, permissions);
     }
   }
 
   private static void checkStat(File f, String owner, String group, 
       String expectedOwner, 
       String expectedGroup) throws IOException {
+    boolean success = true;
     if (expectedOwner != null &&
         !expectedOwner.equals(owner)) {
-      throw new IOException(
-        "Owner '" + owner + "' for path " + f + " did not match " +
-        "expected owner '" + expectedOwner + "'");
+      if (Path.WINDOWS) {
+        UserGroupInformation ugi =
+            UserGroupInformation.createRemoteUser(expectedOwner);
+        final String adminsGroupString = "Administrators";
+        success = owner.equals(adminsGroupString)
+            && Arrays.asList(ugi.getGroupNames()).contains(adminsGroupString);
+      } else {
+        success = false;
+      }
     }
-    if (expectedGroup != null &&
-        !expectedGroup.equals(group)) {
+    if (!success) {
       throw new IOException(
-        "Group '" + group + "' for path " + f + " did not match " +
-        "expected group '" + expectedGroup + "'");
+          "Owner '" + owner + "' for path " + f + " did not match " +
+              "expected owner '" + expectedOwner + "'");
     }
   }
 

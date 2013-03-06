@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -305,7 +304,7 @@ public class LocalDirsHandlerService extends AbstractService {
     ArrayList<String> validPaths = new ArrayList<String>();
     for (int i = 0; i < paths.length; ++i) {
       try {
-        URI uriPath = new URI(paths[i]);
+        URI uriPath = (new Path(paths[i])).toUri();
         if (uriPath.getScheme() == null
             || uriPath.getScheme().equals(FILE_SCHEME)) {
           validPaths.add(uriPath.getPath());
@@ -316,7 +315,7 @@ public class LocalDirsHandlerService extends AbstractService {
               + " is not a valid path. Path should be with " + FILE_SCHEME
               + " scheme or without scheme");
         }
-      } catch (URISyntaxException e) {
+      } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage());
         throw new YarnException(paths[i]
             + " is not a valid path. Path should be with " + FILE_SCHEME
