@@ -86,7 +86,23 @@ class MapOutput<K,V> {
     
     this.primaryMapOutput = primaryMapOutput;
   }
-  
+
+  MapOutput(Path outputPath, long size){
+    this.id = ID.incrementAndGet();
+    this.mapId = null;
+    this.merger = null;
+    type = Type.DISK;
+    memory = null;
+    byteStream = null;
+    this.localFS = null;
+    tmpOutputPath = null;
+    this.primaryMapOutput = false;
+    this.disk = null;
+
+    this.size = size;
+    this.outputPath = outputPath;
+  }
+
   MapOutput(TaskAttemptID mapId, MergeManager<K,V> merger, int size, 
             boolean primaryMapOutput) {
     this.id = ID.incrementAndGet();
@@ -176,7 +192,7 @@ class MapOutput<K,V> {
       merger.closeInMemoryFile(this);
     } else if (type == Type.DISK) {
       localFS.rename(tmpOutputPath, outputPath);
-      merger.closeOnDiskFile(outputPath);
+      merger.closeOnDiskFile(this);
     } else {
       throw new IOException("Cannot commit MapOutput of type WAIT!");
     }

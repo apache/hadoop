@@ -17,24 +17,33 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BoundedByteArrayOutputStream;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MROutputFiles;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestMergeManager {
 
@@ -192,5 +201,60 @@ public class TestMergeManager {
     public int getNumExceptions() {
       return exceptions.size();
     }
+  }
+
+  @SuppressWarnings({ "unchecked", "deprecation" })
+  @Test(timeout=10000)
+  public void testOnDiskMerger() throws IOException, URISyntaxException,
+    InterruptedException {
+    JobConf jobConf = new JobConf();
+    final int SORT_FACTOR = 5;
+    jobConf.setInt(MRJobConfig.IO_SORT_FACTOR, SORT_FACTOR);
+
+    MapOutputFile mapOutputFile = new MROutputFiles();
+    FileSystem fs = FileSystem.getLocal(jobConf);
+    MergeManager<IntWritable, IntWritable> manager =
+      new MergeManager<IntWritable, IntWritable>(null, jobConf, fs, null
+        , null, null, null, null, null, null, null, null, null, mapOutputFile);
+
+    MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
+      onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
+        IntWritable, IntWritable>) Whitebox.getInternalState(manager,
+          "onDiskMerger");
+    int mergeFactor = (Integer) Whitebox.getInternalState(onDiskMerger,
+      "mergeFactor");
+
+    // make sure the io.sort.factor is set properly
+    assertEquals(mergeFactor, SORT_FACTOR);
+
+    // Stop the onDiskMerger thread so that we can intercept the list of files
+    // waiting to be merged.
+    onDiskMerger.suspend();
+
+    //Send the list of fake files waiting to be merged
+    Random rand = new Random();
+    for(int i = 0; i < 2*SORT_FACTOR; ++i) {
+      Path path = new Path("somePath");
+      MapOutput<IntWritable, IntWritable> mapOutput =
+        new MapOutput<IntWritable, IntWritable>(path, rand.nextInt());
+      manager.closeOnDiskFile(mapOutput);
+    }
+
+    //Check that the files pending to be merged are in sorted order.
+    LinkedList<List<MapOutput<IntWritable, IntWritable>>> pendingToBeMerged =
+      (LinkedList<List<MapOutput<IntWritable, IntWritable>>>)
+      Whitebox.getInternalState(onDiskMerger, "pendingToBeMerged");
+    assertTrue("No inputs were added to list pending to merge",
+      pendingToBeMerged.size() > 0);
+    for(int i = 0; i < pendingToBeMerged.size(); ++i) {
+      List<MapOutput<IntWritable, IntWritable>> inputs = pendingToBeMerged.get(i);
+      for(int j = 1; j < inputs.size(); ++j) {
+        assertTrue("Not enough / too many inputs were going to be merged",
+          inputs.size() > 0 && inputs.size() <= SORT_FACTOR);
+        assertTrue("Inputs to be merged were not sorted according to size: ",
+          inputs.get(j).getSize() >= inputs.get(j-1).getSize());
+      }
+    }
+
   }
 }
