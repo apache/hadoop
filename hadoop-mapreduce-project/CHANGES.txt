@@ -582,6 +582,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4989. JSONify DataTables input data for Attempts page (Ravi
     Prakash via jlowe)
 
+    MAPREDUCE-5027. Shuffle does not limit number of outstanding connections
+    (Robert Parker via jeagles)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
