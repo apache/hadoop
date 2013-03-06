@@ -349,6 +349,9 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4540. Namenode http server should use the web authentication 
     keytab for spnego principal. (Arpit Gupta via suresh)
 
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
