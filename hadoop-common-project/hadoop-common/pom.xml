@@ -439,7 +439,6 @@
         <configuration>
           <excludes>
             <exclude>CHANGES.txt</exclude>
-            <exclude>CHANGES.branch-trunk-win.txt</exclude>
             <exclude>.idea/**</exclude>
             <exclude>src/main/conf/*</exclude>
             <exclude>src/main/docs/**</exclude>

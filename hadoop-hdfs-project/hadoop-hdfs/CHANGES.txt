@@ -22,6 +22,11 @@ Trunk (Unreleased)
 
     HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+    
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -301,6 +306,20 @@ Trunk (Unreleased)
 
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
+    Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
+    HDFS-4163. HDFS distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    HDFS-4316. branch-trunk-win contains test code accidentally added during 
+    work on fixing tests on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4297. Fix issues related to datanode concurrent reading and writing on
+    Windows. (Arpit Agarwal, Chuan Liu via suresh)
 
 Release 2.0.4-beta - UNRELEASED
 
