@@ -85,6 +85,7 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -122,6 +123,7 @@ public class ShuffleHandler extends AbstractService
   private int port;
   private ChannelFactory selector;
   private final ChannelGroup accepted = new DefaultChannelGroup();
+  private int maxShuffleConnections;
 
   public static final String MAPREDUCE_SHUFFLE_SERVICEID =
       "mapreduce.shuffle";
@@ -133,6 +135,11 @@ public class ShuffleHandler extends AbstractService
 
   public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
   public static final int DEFAULT_SHUFFLE_PORT = 8080;
+
+  public static final String MAX_SHUFFLE_CONNECTIONS = 
+      "mapreduce.shuffle.max.connections";
+  // Default is no limit
+  public static final int DEFAULT_MAX_SHUFFLE_CONNECTIONS = 0;
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -239,6 +246,8 @@ public class ShuffleHandler extends AbstractService
 
   @Override
   public synchronized void init(Configuration conf) {
+    maxShuffleConnections = conf.getInt(MAX_SHUFFLE_CONNECTIONS,
+                                        DEFAULT_MAX_SHUFFLE_CONNECTIONS);
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
       .setNameFormat("ShuffleHandler Netty Boss #%d")
       .build();
@@ -344,6 +353,20 @@ public class ShuffleHandler extends AbstractService
       return ret;
     }
 
+    @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) 
+        throws Exception {
+      if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
+        LOG.info(String.format("Current number of shuffle connections (%d) is " + 
+            "greater than or equal to the max allowed shuffle connections (%d)", 
+            accepted.size(), maxShuffleConnections));
+        evt.getChannel().close();
+        return;
+      }
+      accepted.add(evt.getChannel());
+      super.channelOpen(ctx, evt);
+    }
+    
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
         throws Exception {
@@ -553,6 +576,5 @@ public class ShuffleHandler extends AbstractService
         sendError(ctx, INTERNAL_SERVER_ERROR);
       }
     }
-
   }
 }

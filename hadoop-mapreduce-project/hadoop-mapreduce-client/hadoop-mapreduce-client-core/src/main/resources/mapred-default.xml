@@ -322,6 +322,14 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.max.connections</name>
+  <value>0</value>
+  <description>Max allowed connections for the shuffle.  Set to 0 (zero)
+               to indicate no limit on the number of connections.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.shuffle.retry-delay.max.ms</name>
   <value>60000</value>
   <description>The maximum number of ms the reducer will delay before retrying
