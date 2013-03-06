@@ -1508,6 +1508,9 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
+
   BUG FIXES
 
     HADOOP-9302. HDFS docs not linked from top level (Andy Isaacson via
