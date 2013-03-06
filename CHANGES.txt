@@ -517,6 +517,9 @@ Release 1.2.0 - unreleased
     HADOOP-9349. Confusing output when running hadoop version from one hadoop 
     installation when HADOOP_HOME points to another. (sandyr via tucu)
 
+    MAPREDUCE-5028. Maps fail when io.sort.mb is set to high value.
+    (kkambatl via tucu)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES

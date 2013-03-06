@@ -112,7 +112,8 @@ public class ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     buffer.reset(currentRawKey.getBytes(), 0, currentRawKey.getLength());
     key = keyDeserializer.deserialize(key);
     next = input.getValue();
-    buffer.reset(next.getData(), next.getPosition(), next.getLength());
+    buffer.reset(next.getData(), next.getPosition(),
+        next.getLength() - next.getPosition());
     value = valueDeserializer.deserialize(value);
     hasMore = input.next();
     if (hasMore) {
