@@ -43,7 +43,7 @@ public class TestFileContextResolveAfs {
     fc = FileContext.getFileContext();
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testFileContextResolveAfs() throws IOException {
     Configuration conf = new Configuration();
     localFs = FileSystem.get(conf);

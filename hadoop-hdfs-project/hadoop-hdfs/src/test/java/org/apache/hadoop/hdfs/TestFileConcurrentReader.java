@@ -151,7 +151,7 @@ public class TestFileConcurrentReader {
   /**
    * Test that that writes to an incomplete block are available to a reader
    */
-  @Test
+  @Test (timeout = 30000)
   public void testUnfinishedBlockRead()
     throws IOException {
     // create a new file in the root, write data, do no close
@@ -174,7 +174,7 @@ public class TestFileConcurrentReader {
    * would result in too small a buffer to do the buffer-copy needed
    * for partial chunks.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testUnfinishedBlockPacketBufferOverrun() throws IOException {
     // check that / exists
     Path path = new Path("/");
@@ -200,7 +200,7 @@ public class TestFileConcurrentReader {
   // use a small block size and a large write so that DN is busy creating
   // new blocks.  This makes it almost 100% sure we can reproduce
   // case of client getting a DN that hasn't yet created the blocks
-  @Test
+  @Test (timeout = 30000)
   public void testImmediateReadOfNewFile()
     throws IOException {
     final int blockSize = 64 * 1024;
@@ -277,12 +277,12 @@ public class TestFileConcurrentReader {
 
   // for some reason, using tranferTo evokes the race condition more often
   // so test separately
-  @Test
+  @Test (timeout = 30000)
   public void testUnfinishedBlockCRCErrorTransferTo() throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, DEFAULT_WRITE_SIZE);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testUnfinishedBlockCRCErrorTransferToVerySmallWrite()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, SMALL_WRITE_SIZE);
@@ -290,18 +290,17 @@ public class TestFileConcurrentReader {
 
   // fails due to issue w/append, disable 
   @Ignore
-  @Test
   public void _testUnfinishedBlockCRCErrorTransferToAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testUnfinishedBlockCRCErrorNormalTransfer() throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, DEFAULT_WRITE_SIZE);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testUnfinishedBlockCRCErrorNormalTransferVerySmallWrite()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, SMALL_WRITE_SIZE);
@@ -309,7 +308,6 @@ public class TestFileConcurrentReader {
 
   // fails due to issue w/append, disable 
   @Ignore
-  @Test
   public void _testUnfinishedBlockCRCErrorNormalTransferAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.APPEND, DEFAULT_WRITE_SIZE);

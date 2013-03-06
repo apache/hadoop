@@ -103,7 +103,7 @@ public class TestDFSShell {
     System.out.println(Thread.currentThread().getStackTrace()[2] + " " + s);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testZeroSizeFile() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -146,7 +146,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testRecrusiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -172,7 +172,7 @@ public class TestDFSShell {
     }
   }
     
-  @Test
+  @Test (timeout = 30000)
   public void testDu() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -222,7 +222,8 @@ public class TestDFSShell {
     }
                                   
   }
-  @Test
+
+  @Test (timeout = 30000)
   public void testPut() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -321,7 +322,7 @@ public class TestDFSShell {
 
 
   /** check command error outputs and exit statuses. */
-  @Test
+  @Test (timeout = 30000)
   public void testErrOutPut() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -471,7 +472,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testURIPaths() throws Exception {
     Configuration srcConf = new HdfsConfiguration();
     Configuration dstConf = new HdfsConfiguration();
@@ -564,7 +565,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testText() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -680,7 +681,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCopyToLocal() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -778,7 +779,7 @@ public class TestDFSShell {
     return path;
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -945,7 +946,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
     
@@ -1011,7 +1012,7 @@ public class TestDFSShell {
   /**
    * Tests various options of DFSShell.
    */
-  @Test
+  @Test (timeout = 120000)
   public void testDFSShell() throws IOException {
     Configuration conf = new HdfsConfiguration();
     /* This tests some properties of ChecksumFileSystem as well.
@@ -1391,7 +1392,7 @@ public class TestDFSShell {
     String run(int exitcode, String... options) throws IOException;
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testRemoteException() throws Exception {
     UserGroupInformation tmpUGI = 
       UserGroupInformation.createUserForTesting("tmpname", new String[] {"mygroup"});
@@ -1435,7 +1436,7 @@ public class TestDFSShell {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
 
@@ -1524,7 +1525,7 @@ public class TestDFSShell {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testLsr() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -1582,7 +1583,7 @@ public class TestDFSShell {
    * and return -1 exit code.
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testInvalidShell() throws Exception {
     Configuration conf = new Configuration(); // default FS (non-DFS)
     DFSAdmin admin = new DFSAdmin();
@@ -1592,7 +1593,7 @@ public class TestDFSShell {
   }
 
   // force Copy Option is -f
-  @Test
+  @Test (timeout = 30000)
   public void testCopyCommandsWithForceOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -1719,7 +1720,7 @@ public class TestDFSShell {
    * Test that the server trash configuration is respected when
    * the client configuration is not set.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testServerConfigRespected() throws Exception {
     deleteFileUsingTrash(true, false);
   }
@@ -1728,7 +1729,7 @@ public class TestDFSShell {
    * Test that server trash configuration is respected even when the
    * client configuration is set.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testServerConfigRespectedWithClient() throws Exception {
     deleteFileUsingTrash(true, true);
   }
@@ -1737,7 +1738,7 @@ public class TestDFSShell {
    * Test that the client trash configuration is respected when
    * the server configuration is not set.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testClientConfigRespected() throws Exception {
     deleteFileUsingTrash(false, true);
   }
@@ -1745,7 +1746,7 @@ public class TestDFSShell {
   /**
    * Test that trash is disabled by default.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testNoTrashConfig() throws Exception {
     deleteFileUsingTrash(false, false);
   }

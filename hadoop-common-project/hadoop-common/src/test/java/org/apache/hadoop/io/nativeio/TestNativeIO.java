@@ -62,7 +62,7 @@ public class TestNativeIO {
     TEST_DIR.mkdirs();
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFstat() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -88,7 +88,7 @@ public class TestNativeIO {
    * NOTE: this test is likely to fail on RHEL 6.0 which has a non-threadsafe
    * implementation of getpwuid_r.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testMultiThreadedFstat() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -134,7 +134,7 @@ public class TestNativeIO {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFstatClosedFd() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -151,7 +151,7 @@ public class TestNativeIO {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testSetFilePointer() throws Exception {
     if (!Path.WINDOWS) {
       return;
@@ -198,7 +198,7 @@ public class TestNativeIO {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCreateFile() throws Exception {
     if (!Path.WINDOWS) {
       return;
@@ -240,7 +240,7 @@ public class TestNativeIO {
 
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testOpenMissingWithoutCreate() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -258,7 +258,7 @@ public class TestNativeIO {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testOpenWithCreate() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -292,7 +292,7 @@ public class TestNativeIO {
    * Test that opens and closes a file 10000 times - this would crash with
    * "Too many open files" if we leaked fds using this access pattern.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testFDDoesntLeak() throws IOException {
     if (Path.WINDOWS) {
       return;
@@ -313,7 +313,7 @@ public class TestNativeIO {
   /**
    * Test basic chmod operation
    */
-  @Test
+  @Test (timeout = 30000)
   public void testChmod() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -338,7 +338,7 @@ public class TestNativeIO {
   }
 
 
-  @Test
+  @Test (timeout = 30000)
   public void testPosixFadvise() throws Exception {
     if (Path.WINDOWS) {
       return;
@@ -381,7 +381,7 @@ public class TestNativeIO {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testSyncFileRange() throws Exception {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testSyncFileRange"));
@@ -416,7 +416,7 @@ public class TestNativeIO {
     assertEquals(expected, perms.toShort());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testGetUserName() throws IOException {
     if (Path.WINDOWS) {
       return;
@@ -425,7 +425,7 @@ public class TestNativeIO {
     assertFalse(NativeIO.POSIX.getUserName(0).isEmpty());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testGetGroupName() throws IOException {
     if (Path.WINDOWS) {
       return;
@@ -434,7 +434,7 @@ public class TestNativeIO {
     assertFalse(NativeIO.POSIX.getGroupName(0).isEmpty());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testRenameTo() throws Exception {
     final File TEST_DIR = new File(new File(
         System.getProperty("test.build.data","build/test/data")), "renameTest");

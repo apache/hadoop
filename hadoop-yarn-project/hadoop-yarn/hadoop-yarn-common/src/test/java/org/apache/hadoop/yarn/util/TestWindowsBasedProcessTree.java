@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Shell;
 
 import junit.framework.TestCase;
+import org.junit.Test;
 
 public class TestWindowsBasedProcessTree extends TestCase {
   private static final Log LOG = LogFactory
@@ -38,7 +39,8 @@ public class TestWindowsBasedProcessTree extends TestCase {
       return infoStr;
     }
   }
-  
+
+  @Test (timeout = 30000)
   public void testTree() {
     if( !Shell.WINDOWS) {
       LOG.info("Platform not Windows. Not testing");

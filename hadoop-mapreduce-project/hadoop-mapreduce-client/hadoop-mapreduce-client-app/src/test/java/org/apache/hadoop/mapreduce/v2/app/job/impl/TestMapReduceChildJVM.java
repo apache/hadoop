@@ -38,7 +38,7 @@ public class TestMapReduceChildJVM {
 
   private static final Log LOG = LogFactory.getLog(TestMapReduceChildJVM.class);
 
-  @Test
+  @Test (timeout = 30000)
   public void testCommandLine() throws Exception {
 
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);

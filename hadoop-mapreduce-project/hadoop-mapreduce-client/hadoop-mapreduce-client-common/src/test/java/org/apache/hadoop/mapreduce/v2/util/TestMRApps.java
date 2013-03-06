@@ -78,25 +78,29 @@ public class TestMRApps {
     fs.delete(p, true);
   }
 
-  @Test public void testJobIDtoString() {
+  @Test (timeout = 120000)
+  public void testJobIDtoString() {
     JobId jid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
     jid.setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
     assertEquals("job_0_0000", MRApps.toString(jid));
   }
 
-  @Test public void testToJobID() {
+  @Test (timeout = 120000)
+  public void testToJobID() {
     JobId jid = MRApps.toJobID("job_1_1");
     assertEquals(1, jid.getAppId().getClusterTimestamp());
     assertEquals(1, jid.getAppId().getId());
     assertEquals(1, jid.getId()); // tests against some proto.id and not a job.id field
   }
 
-  @Test(expected=IllegalArgumentException.class) public void testJobIDShort() {
+  @Test (timeout = 120000, expected=IllegalArgumentException.class)
+  public void testJobIDShort() {
     MRApps.toJobID("job_0_0_0");
   }
 
   //TODO_get.set
-  @Test public void testTaskIDtoString() {
+  @Test (timeout = 120000)
+  public void testTaskIDtoString() {
     TaskId tid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class);
     tid.setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
     tid.getJobId().setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
@@ -111,7 +115,8 @@ public class TestMRApps {
     assertEquals("task_0_0000_r_000000", MRApps.toString(tid));
   }
 
-  @Test public void testToTaskID() {
+  @Test (timeout = 120000)
+  public void testToTaskID() {
     TaskId tid = MRApps.toTaskID("task_1_2_r_3");
     assertEquals(1, tid.getJobId().getAppId().getClusterTimestamp());
     assertEquals(2, tid.getJobId().getAppId().getId());
@@ -123,16 +128,19 @@ public class TestMRApps {
     assertEquals(TaskType.MAP, tid.getTaskType());
   }
 
-  @Test(expected=IllegalArgumentException.class) public void testTaskIDShort() {
+  @Test(timeout = 120000, expected=IllegalArgumentException.class) 
+  public void testTaskIDShort() {
     MRApps.toTaskID("task_0_0000_m");
   }
 
-  @Test(expected=IllegalArgumentException.class) public void testTaskIDBadType() {
+  @Test(timeout = 120000, expected=IllegalArgumentException.class) 
+  public void testTaskIDBadType() {
     MRApps.toTaskID("task_0_0000_x_000000");
   }
 
   //TODO_get.set
-  @Test public void testTaskAttemptIDtoString() {
+  @Test (timeout = 120000)
+  public void testTaskAttemptIDtoString() {
     TaskAttemptId taid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
     taid.setTaskId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class));
     taid.getTaskId().setTaskType(TaskType.MAP);
@@ -141,7 +149,8 @@ public class TestMRApps {
     assertEquals("attempt_0_0000_m_000000_0", MRApps.toString(taid));
   }
 
-  @Test public void testToTaskAttemptID() {
+  @Test (timeout = 120000)
+  public void testToTaskAttemptID() {
     TaskAttemptId taid = MRApps.toTaskAttemptID("attempt_0_1_m_2_3");
     assertEquals(0, taid.getTaskId().getJobId().getAppId().getClusterTimestamp());
     assertEquals(1, taid.getTaskId().getJobId().getAppId().getId());
@@ -150,11 +159,13 @@ public class TestMRApps {
     assertEquals(3, taid.getId());
   }
 
-  @Test(expected=IllegalArgumentException.class) public void testTaskAttemptIDShort() {
+  @Test(timeout = 120000, expected=IllegalArgumentException.class) 
+  public void testTaskAttemptIDShort() {
     MRApps.toTaskAttemptID("attempt_0_0_0_m_0");
   }
 
-  @Test public void testGetJobFileWithUser() {
+  @Test (timeout = 120000)
+  public void testGetJobFileWithUser() {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/my/path/to/staging");
     String jobFile = MRApps.getJobFile(conf, "dummy-user", 
@@ -164,7 +175,8 @@ public class TestMRApps {
         "/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile);
   }
 
-  @Test public void testSetClasspath() throws IOException {
+  @Test (timeout = 120000)
+  public void testSetClasspath() throws IOException {
     Job job = Job.getInstance();
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
@@ -187,7 +199,8 @@ public class TestMRApps {
     assertTrue(environment.get("CLASSPATH").contains(mrAppClasspath));
   }
   
-  @Test public void testSetClasspathWithArchives () throws IOException {
+  @Test (timeout = 120000)
+  public void testSetClasspathWithArchives () throws IOException {
     File testTGZ = new File(testWorkDir, "test.tgz");
     FileOutputStream out = new FileOutputStream(testTGZ);
     out.write(0);
@@ -211,7 +224,8 @@ public class TestMRApps {
     assertTrue(environment.get("CLASSPATH").contains("testTGZ"));
   }
 
- @Test public void testSetClasspathWithUserPrecendence() {
+ @Test (timeout = 120000)
+ public void testSetClasspathWithUserPrecendence() {
     Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
     Map<String, String> env = new HashMap<String, String>();
@@ -229,7 +243,8 @@ public class TestMRApps {
       env_str.startsWith(expectedClasspath));
   }
 
-  @Test public void testSetClasspathWithNoUserPrecendence() {
+  @Test (timeout = 120000)
+  public void testSetClasspathWithNoUserPrecendence() {
     Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
     Map<String, String> env = new HashMap<String, String>();
@@ -248,7 +263,8 @@ public class TestMRApps {
       env_str.startsWith(expectedClasspath));
   }
   
-  @Test public void testSetClasspathWithJobClassloader() throws IOException {
+  @Test (timeout = 120000)
+  public void testSetClasspathWithJobClassloader() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, true);
     Map<String, String> env = new HashMap<String, String>();
@@ -267,7 +283,7 @@ public class TestMRApps {
       + " classpath!", expectedAppClasspath, appCp);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testSetupDistributedCacheEmpty() throws IOException {
     Configuration conf = new Configuration();
     Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
@@ -277,7 +293,7 @@ public class TestMRApps {
   }
   
   @SuppressWarnings("deprecation")
-  @Test(expected = InvalidJobConfException.class)
+  @Test(timeout = 120000, expected = InvalidJobConfException.class)
   public void testSetupDistributedCacheConflicts() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
@@ -308,7 +324,7 @@ public class TestMRApps {
   }
   
   @SuppressWarnings("deprecation")
-  @Test(expected = InvalidJobConfException.class)
+  @Test(timeout = 120000, expected = InvalidJobConfException.class)
   public void testSetupDistributedCacheConflictsFiles() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
@@ -336,7 +352,7 @@ public class TestMRApps {
   }
   
   @SuppressWarnings("deprecation")
-  @Test
+  @Test (timeout = 30000)
   public void testSetupDistributedCache() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);

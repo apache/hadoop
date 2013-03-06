@@ -61,7 +61,7 @@ public class TestPathData {
     fs.close();
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testWithDirStringAndConf() throws Exception {
     String dirString = "d1";
     PathData item = new PathData(dirString, conf);
@@ -74,7 +74,7 @@ public class TestPathData {
     checkPathData(dirString, item);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testUnqualifiedUriContents() throws Exception {
     String dirString = "d1";
     PathData item = new PathData(dirString, conf);
@@ -85,7 +85,7 @@ public class TestPathData {
     );
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testQualifiedUriContents() throws Exception {
     String dirString = fs.makeQualified(new Path("d1")).toString();
     PathData item = new PathData(dirString, conf);
@@ -96,7 +96,7 @@ public class TestPathData {
     );
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCwdContents() throws Exception {
     String dirString = Path.CUR_DIR;
     PathData item = new PathData(dirString, conf);
@@ -107,7 +107,7 @@ public class TestPathData {
     );
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testToFile() throws Exception {
     PathData item = new PathData(".", conf);
     assertEquals(new File(testDir.toString()), item.toFile());
@@ -117,7 +117,7 @@ public class TestPathData {
     assertEquals(new File(testDir + "/d1/f1"), item.toFile());
   }
 
-  @Test
+  @Test (timeout = 5000)
   public void testToFileRawWindowsPaths() throws Exception {
     if (!Path.WINDOWS) {
       return;
@@ -146,7 +146,7 @@ public class TestPathData {
     assertEquals(new File(testDir + "\\foo\\bar"), item.toFile());
   }
 
-  @Test
+  @Test (timeout = 5000)
   public void testInvalidWindowsPath() throws Exception {
     if (!Path.WINDOWS) {
       return;
@@ -166,7 +166,7 @@ public class TestPathData {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testAbsoluteGlob() throws Exception {
     PathData[] items = PathData.expandAsGlob(testDir+"/d1/f1*", conf);
     assertEquals(
@@ -175,7 +175,7 @@ public class TestPathData {
     );
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testRelativeGlob() throws Exception {
     PathData[] items = PathData.expandAsGlob("d1/f1*", conf);
     assertEquals(
@@ -184,7 +184,7 @@ public class TestPathData {
     );
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testRelativeGlobBack() throws Exception {
     fs.setWorkingDirectory(new Path("d1"));
     PathData[] items = PathData.expandAsGlob("../d2/*", conf);
@@ -194,7 +194,7 @@ public class TestPathData {
     );
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testWithStringAndConfForBuggyPath() throws Exception {
     String dirString = "file:///tmp";
     Path tmpDir = new Path(dirString);

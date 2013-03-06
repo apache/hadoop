@@ -46,7 +46,7 @@ public class TestTextCommand {
   /**
    * Tests whether binary Avro data files are displayed correctly.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testDisplayForAvroFiles() throws Exception {
     // Create a small Avro data file on the local file system.
     createAvroFile(generateWeatherAvroBinaryData());

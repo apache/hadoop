@@ -17,6 +17,7 @@
  */
 
 package org.apache.hadoop.fs;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -32,6 +33,7 @@ import junit.framework.TestCase;
 import static org.junit.Assert.fail;
 
 public class TestPath extends TestCase {
+  @Test (timeout = 30000)
   public void testToString() {
     toStringTest("/");
     toStringTest("/foo");
@@ -64,6 +66,7 @@ public class TestPath extends TestCase {
     assertEquals(pathString, new Path(pathString).toString());
   }
 
+  @Test (timeout = 30000)
   public void testNormalize() throws URISyntaxException {
     assertEquals("", new Path(".").toString());
     assertEquals("..", new Path("..").toString());
@@ -85,6 +88,7 @@ public class TestPath extends TestCase {
     }
   }
 
+  @Test (timeout = 30000)
   public void testIsAbsolute() {
     assertTrue(new Path("/").isAbsolute());
     assertTrue(new Path("/foo").isAbsolute());
@@ -97,6 +101,7 @@ public class TestPath extends TestCase {
     }
   }
 
+  @Test (timeout = 30000)
   public void testParent() {
     assertEquals(new Path("/foo"), new Path("/foo/bar").getParent());
     assertEquals(new Path("foo"), new Path("foo/bar").getParent());
@@ -107,6 +112,7 @@ public class TestPath extends TestCase {
     }
   }
 
+  @Test (timeout = 30000)
   public void testChild() {
     assertEquals(new Path("."), new Path(".", "."));
     assertEquals(new Path("/"), new Path("/", "."));
@@ -126,10 +132,12 @@ public class TestPath extends TestCase {
     }
   }
   
+  @Test (timeout = 30000)
   public void testEquals() {
     assertFalse(new Path("/").equals(new Path("/foo")));
   }
 
+  @Test (timeout = 30000)
   public void testDots() {
     // Test Path(String) 
     assertEquals(new Path("/foo/bar/baz").toString(), "/foo/bar/baz");
@@ -168,6 +176,7 @@ public class TestPath extends TestCase {
   }
 
   /** Test that Windows paths are correctly handled */
+  @Test (timeout = 5000)
   public void testWindowsPaths() throws URISyntaxException, IOException {
     if (!Path.WINDOWS) {
       return;
@@ -180,6 +189,7 @@ public class TestPath extends TestCase {
   }
 
   /** Test invalid paths on Windows are correctly rejected */
+  @Test (timeout = 5000)
   public void testInvalidWindowsPaths() throws URISyntaxException, IOException {
     if (!Path.WINDOWS) {
       return;
@@ -199,17 +209,20 @@ public class TestPath extends TestCase {
   }
 
   /** Test Path objects created from other Path objects */
+  @Test (timeout = 30000)
   public void testChildParentResolution() throws URISyntaxException, IOException {
     Path parent = new Path("foo1://bar1/baz1");
     Path child  = new Path("foo2://bar2/baz2");
     assertEquals(child, new Path(parent, child));
   }
   
+  @Test (timeout = 30000)
   public void testScheme() throws java.io.IOException {
     assertEquals("foo:/bar", new Path("foo:/","/bar").toString()); 
     assertEquals("foo://bar/baz", new Path("foo://bar/","/baz").toString()); 
   }
 
+  @Test (timeout = 30000)
   public void testURI() throws URISyntaxException, IOException {
     URI uri = new URI("file:///bar#baz");
     Path path = new Path(uri);
@@ -232,6 +245,7 @@ public class TestPath extends TestCase {
   }
 
   /** Test URIs created from Path objects */
+  @Test (timeout = 30000)
   public void testPathToUriConversion() throws URISyntaxException, IOException {
     // Path differs from URI in that it ignores the query part..
     assertEquals(new URI(null, null, "/foo?bar", null, null),  new Path("/foo?bar").toUri());
@@ -252,6 +266,7 @@ public class TestPath extends TestCase {
   }
 
   /** Test reserved characters in URIs (and therefore Paths) */
+  @Test (timeout = 30000)
   public void testReservedCharacters() throws URISyntaxException, IOException {
     // URI encodes the path
     assertEquals("/foo%20bar", new URI(null, null, "/foo bar", null, null).getRawPath());
@@ -273,6 +288,7 @@ public class TestPath extends TestCase {
     assertEquals("/foo%3Fbar", new URI("http", "localhost", "/foo?bar", null, null).toURL().getPath());
   }
   
+  @Test (timeout = 30000)
   public void testMakeQualified() throws URISyntaxException {
     URI defaultUri = new URI("hdfs://host1/dir1");
     URI wd         = new URI("hdfs://host2/dir2");
@@ -286,6 +302,7 @@ public class TestPath extends TestCase {
                  new Path("file").makeQualified(defaultUri, new Path(wd)));
  }
 
+  @Test (timeout = 30000)
   public void testGetName() {
     assertEquals("", new Path("/").getName());
     assertEquals("foo", new Path("foo").getName());
@@ -295,12 +312,14 @@ public class TestPath extends TestCase {
     assertEquals("bar", new Path("hdfs://host/foo/bar").getName());
   }
   
+  @Test (timeout = 30000)
   public void testAvroReflect() throws Exception {
     AvroTestUtil.testReflect
       (new Path("foo"),
        "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.fs.Path\"}");
   }
 
+  @Test (timeout = 30000)
   public void testGlobEscapeStatus() throws Exception {
     // This test is not meaningful on Windows where * is disallowed in file name.
     if (Shell.WINDOWS) return;
@@ -361,6 +380,7 @@ public class TestPath extends TestCase {
     assertEquals(new Path(testRoot, "*/f"), stats[0].getPath());
   }
 
+  @Test (timeout = 30000)
   public void testMergePaths() {
     assertEquals(new Path("/foo/bar"),
       Path.mergePaths(new Path("/foo"),

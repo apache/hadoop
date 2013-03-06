@@ -33,7 +33,7 @@ import org.junit.Test;
 public class TestProcessIdFileReader {
 
   
-  @Test
+  @Test (timeout = 30000)
   public void testNullPath() {
     String pid = null;
     try {
@@ -45,7 +45,7 @@ public class TestProcessIdFileReader {
     assert(pid == null);
   }
   
-  @Test 
+  @Test (timeout = 30000)
   public void testSimpleGet() throws IOException {
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();
@@ -74,7 +74,7 @@ public class TestProcessIdFileReader {
   }
 
     
-  @Test
+  @Test (timeout = 30000)
   public void testComplexGet() throws IOException {
     String rootDir = new File(System.getProperty(
         "test.build.data", "/tmp")).getAbsolutePath();

@@ -68,7 +68,7 @@ public class TestWinUtils {
     return b.toString();
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testLs() throws IOException {
     if (!Shell.WINDOWS) {
       // Not supported on non-Windows platforms
@@ -102,7 +102,7 @@ public class TestWinUtils {
     assertFalse(testFile.exists());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testGroups() throws IOException {
     if (!Shell.WINDOWS) {
       // Not supported on non-Windows platforms
@@ -152,6 +152,7 @@ public class TestWinUtils {
     assertEquals(expected, output);
   }
 
+  @Test (timeout = 30000)
   private void testChmodInternal(String mode, String expectedPerm)
       throws IOException {
     File a = new File(TEST_DIR, "file1");
@@ -170,6 +171,7 @@ public class TestWinUtils {
     assertFalse(a.exists());
   }
 
+  @Test (timeout = 30000)
   private void testNewFileChmodInternal(String expectedPerm) throws IOException {
     // Create a new directory
     File dir = new File(TEST_DIR, "dir1");
@@ -191,6 +193,7 @@ public class TestWinUtils {
     assertFalse(dir.exists());
   }
 
+  @Test (timeout = 30000)
   private void testChmodInternalR(String mode, String expectedPerm,
       String expectedPermx) throws IOException {
     // Setup test folder hierarchy
@@ -227,7 +230,7 @@ public class TestWinUtils {
     assertTrue(FileUtil.fullyDelete(a));
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testBasicChmod() throws IOException {
     if (!Shell.WINDOWS) {
       // Not supported on non-Windows platforms
@@ -283,7 +286,7 @@ public class TestWinUtils {
     assertTrue(aExe.delete());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testChmod() throws IOException {
     if (!Shell.WINDOWS) {
       // Not supported on non-Windows platforms
@@ -320,7 +323,7 @@ public class TestWinUtils {
     assertEquals(expectedGroup.toLowerCase(), args[3].toLowerCase());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testChown() throws IOException {
     if (!Shell.WINDOWS) {
       // Not supported on non-Windows platforms

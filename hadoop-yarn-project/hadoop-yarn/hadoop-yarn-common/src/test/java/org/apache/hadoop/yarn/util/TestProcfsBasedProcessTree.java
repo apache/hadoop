@@ -105,7 +105,7 @@ public class TestProcfsBasedProcessTree {
         new Path(TEST_ROOT_DIR.getAbsolutePath()), true);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testProcessTree() throws Exception {
 
     if (!Shell.LINUX) {
@@ -333,7 +333,7 @@ public class TestProcfsBasedProcessTree {
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testCpuAndMemoryForProcessTree() throws IOException {
 
     // test processes
@@ -407,7 +407,7 @@ public class TestProcfsBasedProcessTree {
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testMemForOlderProcesses() throws IOException {
     // initial list of processes
     String[] pids = { "100", "200", "300", "400" };
@@ -514,7 +514,7 @@ public class TestProcfsBasedProcessTree {
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testDestroyProcessTree() throws IOException {
     // test process
     String pid = "100";
@@ -540,7 +540,7 @@ public class TestProcfsBasedProcessTree {
    *
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testProcessTreeDump()
       throws IOException {
 

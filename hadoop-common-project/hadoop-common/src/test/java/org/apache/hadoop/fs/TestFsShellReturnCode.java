@@ -121,7 +121,7 @@ public class TestFsShellReturnCode {
    * 
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testChmod() throws Exception {
     Path p1 = new Path(TEST_ROOT_DIR, "testChmod/fileExists");
 
@@ -177,7 +177,7 @@ public class TestFsShellReturnCode {
    * 
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testChown() throws Exception {
     Path p1 = new Path(TEST_ROOT_DIR, "testChown/fileExists");
 
@@ -233,7 +233,7 @@ public class TestFsShellReturnCode {
    * 
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 30000)
   public void testChgrp() throws Exception {
     Path p1 = new Path(TEST_ROOT_DIR, "testChgrp/fileExists");
 
@@ -278,7 +278,7 @@ public class TestFsShellReturnCode {
     change(1, null, "admin", f2, f7);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testGetWithInvalidSourcePathShouldNotDisplayNullInConsole()
       throws Exception {
     Configuration conf = new Configuration();
@@ -310,7 +310,7 @@ public class TestFsShellReturnCode {
     }
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testRmWithNonexistentGlob() throws Exception {
     Configuration conf = new Configuration();
     FsShell shell = new FsShell();
@@ -331,7 +331,7 @@ public class TestFsShellReturnCode {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testRmForceWithNonexistentGlob() throws Exception {
     Configuration conf = new Configuration();
     FsShell shell = new FsShell();
@@ -350,7 +350,7 @@ public class TestFsShellReturnCode {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testInvalidDefaultFS() throws Exception {
     // if default fs doesn't exist or is invalid, but the path provided in 
     // arguments is valid - fsshell should work
@@ -381,7 +381,7 @@ public class TestFsShellReturnCode {
     
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testInterrupt() throws Exception {
     MyFsShell shell = new MyFsShell();
     shell.setConf(new Configuration());

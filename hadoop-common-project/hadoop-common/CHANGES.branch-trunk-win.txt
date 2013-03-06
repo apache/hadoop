@@ -101,6 +101,9 @@ branch-trunk-win changes - unreleased
   HADOOP-9232. JniBasedUnixGroupsMappingWithFallback fails on Windows
   with UnsatisfiedLinkError. (Ivan Mitic via suresh)
 
+  HADOOP-9368. Add timeouts to new tests in branch-trunk-win.
+  (Arpit Agarwal via suresh)
+
 Patch equivalent to trunk committed to branch-trunk-win
 
   HADOOP-8924. Add maven plugin alternative to shell script to save

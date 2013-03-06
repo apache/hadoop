@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.util;
 
 import junit.framework.TestCase;
+import org.junit.Test;
 
 public class TestWindowsResourceCalculatorPlugin extends TestCase {
   
@@ -30,7 +31,8 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
       return infoStr;
     }    
   }
-  
+
+  @Test (timeout = 30000)
   public void testParseSystemInfoString() {
     WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
     // info str derived from windows shell command has \r\n termination
@@ -47,7 +49,8 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
     assertTrue(tester.cumulativeCpuTimeMs == 6261812L);
     assertTrue(tester.cpuUsage == -1);
   }
-  
+
+  @Test (timeout = 20000)
   public void testRefreshAndCpuUsage() throws InterruptedException {
     WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
     // info str derived from windows shell command has \r\n termination
@@ -70,7 +73,8 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
     assertTrue(tester.memAvailable == 5400417792L);
     assertTrue(tester.cpuUsage >= 0.1);
   }
-  
+
+  @Test (timeout = 20000)
   public void testErrorInGetSystemInfo() {
     WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
     // info str derived from windows shell command has \r\n termination

@@ -129,7 +129,7 @@ public class TestFileUtil {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testListFiles() throws IOException {
     setupDirs();
     //Test existing files case 
@@ -156,7 +156,7 @@ public class TestFileUtil {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testListAPI() throws IOException {
     setupDirs();
     //Test existing files case 
@@ -204,7 +204,7 @@ public class TestFileUtil {
     Assert.assertTrue(!partitioned.exists());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDelete() throws IOException {
     setupDirs();
     boolean ret = FileUtil.fullyDelete(del);
@@ -219,7 +219,7 @@ public class TestFileUtil {
    * (b) symlink to dir only and not the dir pointed to by symlink.
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDeleteSymlinks() throws IOException {
     setupDirs();
     
@@ -249,7 +249,7 @@ public class TestFileUtil {
    * (b) dangling symlink to directory properly
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDeleteDanglingSymlinks() throws IOException {
     setupDirs();
     // delete the directory tmp to make tmpDir a dangling link to dir tmp and
@@ -276,7 +276,7 @@ public class TestFileUtil {
     Assert.assertEquals(3, del.list().length);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFullyDeleteContents() throws IOException {
     setupDirs();
     boolean ret = FileUtil.fullyDeleteContents(del);
@@ -392,7 +392,7 @@ public class TestFileUtil {
         zlink.exists());
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDelete() throws IOException {
     if(Shell.WINDOWS) {
       // windows Dir.setWritable(false) does not work for directories
@@ -404,7 +404,7 @@ public class TestFileUtil {
     validateAndSetWritablePermissions(true, ret);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDeleteGrantPermissions() throws IOException {
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDelete(new MyFile(del), true);
@@ -473,7 +473,7 @@ public class TestFileUtil {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDeleteContents() throws IOException {
     if(Shell.WINDOWS) {
       // windows Dir.setWritable(false) does not work for directories
@@ -485,7 +485,7 @@ public class TestFileUtil {
     validateAndSetWritablePermissions(true, ret);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testFailFullyDeleteContentsGrantPermissions() throws IOException {
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del), true);
@@ -493,7 +493,7 @@ public class TestFileUtil {
     validateAndSetWritablePermissions(false, ret);
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testCopyMergeSingleDirectory() throws IOException {
     setupDirs();
     boolean copyMergeResult = copyMerge("partitioned", "tmp/merged");
@@ -552,7 +552,7 @@ public class TestFileUtil {
    * and that directory sizes are not added to the final calculated size
    * @throws IOException
    */
-  @Test
+  @Test (timeout = 30000)
   public void testGetDU() throws IOException {
     setupDirs();
 
@@ -563,7 +563,7 @@ public class TestFileUtil {
     Assert.assertEquals(expected, du);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testSymlink() throws Exception {
     Assert.assertFalse(del.exists());
     del.mkdirs();
@@ -598,7 +598,7 @@ public class TestFileUtil {
   /**
    * Test that rename on a symlink works as expected.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testSymlinkRenameTo() throws Exception {
     Assert.assertFalse(del.exists());
     del.mkdirs();
@@ -630,7 +630,7 @@ public class TestFileUtil {
   /**
    * Test that deletion of a symlink works as expected.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testSymlinkDelete() throws Exception {
     Assert.assertFalse(del.exists());
     del.mkdirs();
@@ -654,7 +654,7 @@ public class TestFileUtil {
   /**
    * Test that length on a symlink works as expected.
    */
-  @Test
+  @Test (timeout = 30000)
   public void testSymlinkLength() throws Exception {
     Assert.assertFalse(del.exists());
     del.mkdirs();
@@ -720,7 +720,7 @@ public class TestFileUtil {
     Assert.assertTrue(testFile.length() == 8);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testUntar() throws IOException {
     String tarGzFileName = System.getProperty("test.cache.data",
         "build/test/cache") + "/test-untar.tgz";
@@ -733,7 +733,7 @@ public class TestFileUtil {
     doUntarAndVerify(new File(tarFileName), untarDir);
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testCreateJarWithClassPath() throws Exception {
     // setup test directory for files
     Assert.assertFalse(tmp.exists());
