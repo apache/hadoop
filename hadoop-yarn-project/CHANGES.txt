@@ -57,6 +57,9 @@ Release 2.0.4-beta - UNRELEASED
     YARN-376. Fixes a bug which would prevent the NM knowing about completed
     containers and applications. (Jason Lowe via sseth)
 
+    YARN-429. capacity-scheduler config missing from yarn-test artifact.
+    (sseth via hitesh)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
