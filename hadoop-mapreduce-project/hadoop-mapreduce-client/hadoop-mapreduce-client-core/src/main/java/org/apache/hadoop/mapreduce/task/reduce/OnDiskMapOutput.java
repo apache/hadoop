@@ -48,6 +48,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   private final Path outputPath;
   private final MergeManagerImpl<K, V> merger;
   private final OutputStream disk; 
+  private long compressedSize;
 
   public OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
                          MergeManagerImpl<K, V> merger, long size,
@@ -108,13 +109,14 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
                             bytesLeft + " bytes missing of " + 
                             compressedLength + ")");
     }
+    this.compressedSize = compressedLength;
   }
 
   @Override
   public void commit() throws IOException {
     localFS.rename(tmpOutputPath, outputPath);
     CompressAwarePath compressAwarePath = new CompressAwarePath(outputPath,
-        getSize());
+        getSize(), this.compressedSize);
     merger.closeOnDiskFile(compressAwarePath);
   }
   

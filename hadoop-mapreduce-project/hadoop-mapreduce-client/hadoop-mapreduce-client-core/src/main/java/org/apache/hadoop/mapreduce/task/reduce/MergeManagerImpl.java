@@ -477,7 +477,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         }
         writer.close();
         compressAwarePath = new CompressAwarePath(outputPath,
-            writer.getRawLength());
+            writer.getRawLength(), writer.getCompressedLength());
 
         LOG.info(reduceId +  
             " Merge of the " + noInMemorySegments +
@@ -500,7 +500,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   private class OnDiskMerger extends MergeThread<CompressAwarePath,K,V> {
     
     public OnDiskMerger(MergeManagerImpl<K, V> manager) {
-      super(manager, Integer.MAX_VALUE, exceptionReporter);
+      super(manager, ioSortFactor, exceptionReporter);
       setName("OnDiskMerger - Thread to merge on-disk map-outputs");
       setDaemon(true);
     }
@@ -554,7 +554,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         Merger.writeFile(iter, writer, reporter, jobConf);
         writer.close();
         compressAwarePath = new CompressAwarePath(outputPath,
-            writer.getRawLength());
+            writer.getRawLength(), writer.getCompressedLength());
       } catch (IOException e) {
         localFS.delete(outputPath, true);
         throw e;
@@ -719,7 +719,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
           Merger.writeFile(rIter, writer, reporter, job);
           writer.close();
           onDiskMapOutputs.add(new CompressAwarePath(outputPath,
-              writer.getRawLength()));
+              writer.getRawLength(), writer.getCompressedLength()));
           writer = null;
           // add to list of final disk outputs.
         } catch (IOException e) {
@@ -791,7 +791,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       // merges. See comment where mergePhaseFinished is being set
       Progress thisPhase = (mergePhaseFinished) ? null : mergePhase; 
       RawKeyValueIterator diskMerge = Merger.merge(
-          job, fs, keyClass, valueClass, diskSegments,
+          job, fs, keyClass, valueClass, codec, diskSegments,
           ioSortFactor, numInMemSegments, tmpDir, comparator,
           reporter, false, spilledRecordsCounter, null, thisPhase);
       diskSegments.clear();
@@ -810,24 +810,45 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
 
   static class CompressAwarePath extends Path {
     private long rawDataLength;
+    private long compressedSize;
 
-    public CompressAwarePath(Path path, long rawDataLength) {
+    public CompressAwarePath(Path path, long rawDataLength, long compressSize) {
       super(path.toUri());
       this.rawDataLength = rawDataLength;
+      this.compressedSize = compressSize;
     }
 
     public long getRawDataLength() {
       return rawDataLength;
     }
-    
+
+    public long getCompressedSize() {
+      return compressedSize;
+    }
+
     @Override
     public boolean equals(Object other) {
       return super.equals(other);
     }
-    
+
     @Override
     public int hashCode() {
       return super.hashCode();
+    }
+
+    @Override
+    public int compareTo(Object obj) {
+      if(obj instanceof CompressAwarePath) {
+        CompressAwarePath compPath = (CompressAwarePath) obj;
+        if(this.compressedSize < compPath.getCompressedSize()) {
+          return -1;
+        } else if (this.getCompressedSize() > compPath.getCompressedSize()) {
+          return 1;
+        }
+        // Not returning 0 here so that objects with the same size (but
+        // different paths) are still added to the TreeSet.
+      }
+      return super.compareTo(obj);
     }
   }
 }
