@@ -539,7 +539,7 @@ class BPOfferService {
         // using global fsdataset
         dn.getFSDataset().invalidate(bcmd.getBlockPoolId(), toDelete);
       } catch(IOException e) {
-        dn.checkDiskError();
+        // Exceptions caught here are not expected to be disk-related.
         throw e;
       }
       dn.metrics.incrBlocksRemoved(toDelete.length);
