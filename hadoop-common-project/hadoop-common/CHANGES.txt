@@ -33,6 +33,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9147. Add missing fields to FIleStatus.toString.
     (Jonathan Allen via suresh)
 
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
+
   BUG FIXES
 
     HADOOP-8157. Fix race condition in Configuration that could cause spurious

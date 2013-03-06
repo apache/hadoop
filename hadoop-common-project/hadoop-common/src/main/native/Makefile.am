@@ -44,6 +44,8 @@ endif
 lib_LTLIBRARIES = libhadoop.la
 libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
+                       src/org/apache/hadoop/io/compress/bzip2/Bzip2Compressor.c \
+                       src/org/apache/hadoop/io/compress/bzip2/Bzip2Decompressor.c \
                        src/org/apache/hadoop/io/compress/snappy/SnappyCompressor.c \
                        src/org/apache/hadoop/io/compress/snappy/SnappyDecompressor.c \
                        src/org/apache/hadoop/io/compress/lz4/lz4.c \

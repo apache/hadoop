@@ -92,6 +92,14 @@ AC_CHECK_HEADERS([zlib.h zconf.h],
     HADOOP_ZLIB_LIBRARY),
   AC_MSG_ERROR(Zlib headers were not found... native-hadoop library needs zlib to build. Please install the requisite zlib development package.))
 
+dnl Check for bzip2 headers
+AC_CHECK_HEADERS([bzlib.h],
+  AC_COMPUTE_NEEDED_DSO(bz2,
+    [#include "bzlib.h"
+    int main(int argc, char **argv){BZ2_bzlibVersion();return 0;}],
+    HADOOP_BZIP2_LIBRARY),
+  AC_MSG_WARN(bzip2 headers were not found... building without bzip2.))
+
 dnl Check for snappy headers
 AC_CHECK_HEADERS([snappy-c.h],
   AC_COMPUTE_NEEDED_DSO(snappy,
