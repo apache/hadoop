@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -1788,6 +1789,9 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
+            if (e instanceof UndeclaredThrowableException) {
+              e = e.getCause();
+            }
             String logMsg = getName() + ", call " + call + ": error: " + e;
             if (e instanceof RuntimeException || e instanceof Error) {
               // These exception types indicate something is probably wrong
