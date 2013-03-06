@@ -56,6 +56,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
 
+    HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
+    (Madhukara Phatak via atm)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
