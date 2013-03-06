@@ -121,7 +121,7 @@
       </includes>
       <binaries>
         <attachmentClassifier>tests</attachmentClassifier>
-        <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
+        <outputDirectory>share/hadoop/${hadoop.component}/test</outputDirectory>
         <includeDependencies>false</includeDependencies>
         <unpack>false</unpack>
       </binaries>
