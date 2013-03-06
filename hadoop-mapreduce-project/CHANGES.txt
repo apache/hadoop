@@ -46,6 +46,10 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-4896. mapred queue -info spits out ugly exception when queue does 
     not exist. (sandyr via tucu)
 
+    MAPREDUCE-3685. Fix bugs in MergeManager to ensure compression codec is
+    appropriately used and that on-disk segments are correctly sorted on
+    file-size. (Anty Rao and Ravi Prakash via acmurthy) 
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
