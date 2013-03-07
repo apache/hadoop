@@ -65,6 +65,8 @@ Release 0.23.7 - UNRELEASED
     HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
     (Jing Zhao via suresh)
 
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
