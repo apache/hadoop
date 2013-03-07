@@ -341,7 +341,8 @@ public class WebHdfsFileSystem extends FileSystem
     boolean hasToken = false;
     if (UserGroupInformation.isSecurityEnabled() &&
         op != GetOpParam.Op.GETDELEGATIONTOKEN &&
-        op != PutOpParam.Op.RENEWDELEGATIONTOKEN) {
+        op != PutOpParam.Op.RENEWDELEGATIONTOKEN &&
+        op != PutOpParam.Op.CANCELDELEGATIONTOKEN) {
       synchronized (this) {
         hasToken = (delegationToken != null);
         if (hasToken) {
