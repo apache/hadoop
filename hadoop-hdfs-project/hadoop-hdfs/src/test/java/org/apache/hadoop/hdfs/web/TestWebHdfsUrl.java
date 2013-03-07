@@ -140,8 +140,8 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
+            new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
-            new DelegationParam(tokenString).toString()
         },
         cancelTokenUrl);
     
@@ -223,8 +223,9 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
+            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
+            new DoAsParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
-            new DelegationParam(tokenString).toString()
         },
         cancelTokenUrl);
     
