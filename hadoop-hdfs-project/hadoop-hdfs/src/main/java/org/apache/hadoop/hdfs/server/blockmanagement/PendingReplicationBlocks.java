@@ -72,7 +72,7 @@ class PendingReplicationBlocks {
   /**
    * Add a block to the list of pending Replications
    */
-  void add(Block block, int numReplicas) {
+  void increment(Block block, int numReplicas) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found == null) {
@@ -89,7 +89,7 @@ class PendingReplicationBlocks {
    * Decrement the number of pending replication requests
    * for this block.
    */
-  void remove(Block block) {
+  void decrement(Block block) {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
@@ -103,6 +103,19 @@ class PendingReplicationBlocks {
       }
     }
   }
+
+  /**
+   * Remove the record about the given block from pendingReplications.
+   * @param block The given block whose pending replication requests need to be
+   *              removed
+   */
+  void remove(Block block) {
+    synchronized (pendingReplications) {
+      pendingReplications.remove(block);
+    }
+  }
+
+
 
   /**
    * The total number of blocks that are undergoing replication

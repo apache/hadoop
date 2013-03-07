@@ -23,7 +23,9 @@ import java.lang.System;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 /**
- * This class tests the internals of PendingReplicationBlocks.java
+ * This class tests the internals of PendingReplicationBlocks.java,
+ * as well as how PendingReplicationBlocks acts in BlockManager
+ *
  */
 public class TestPendingReplication extends TestCase {
   final static int TIMEOUT = 3;     // 3 seconds
@@ -38,7 +40,7 @@ public class TestPendingReplication extends TestCase {
     //
     for (int i = 0; i < 10; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.add(block, i);
+      pendingReplications.increment(block, i);
     }
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
@@ -48,15 +50,15 @@ public class TestPendingReplication extends TestCase {
     // remove one item and reinsert it
     //
     Block blk = new Block(8, 8, 0);
-    pendingReplications.remove(blk);             // removes one replica
+    pendingReplications.decrement(blk);             // removes one replica
     assertEquals("pendingReplications.getNumReplicas ",
                  7, pendingReplications.getNumReplicas(blk));
 
     for (int i = 0; i < 7; i++) {
-      pendingReplications.remove(blk);           // removes all replicas
+      pendingReplications.decrement(blk);           // removes all replicas
     }
     assertTrue(pendingReplications.size() == 9);
-    pendingReplications.add(blk, 8);
+    pendingReplications.increment(blk, 8);
     assertTrue(pendingReplications.size() == 10);
 
     //
@@ -84,7 +86,7 @@ public class TestPendingReplication extends TestCase {
 
     for (int i = 10; i < 15; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.add(block, i);
+      pendingReplications.increment(block, i);
     }
     assertTrue(pendingReplications.size() == 15);
 
