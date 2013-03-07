@@ -144,7 +144,7 @@ public class TestMRJobs {
     }
   }
 
-  @Test (timeout = 30000)
+  @Test (timeout = 300000)
   public void testSleepJob() throws IOException, InterruptedException,
       ClassNotFoundException { 
     LOG.info("\n\n\nStarting testSleepJob().");
@@ -542,7 +542,7 @@ public class TestMRJobs {
           trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"));
   }
   
-  @Test (timeout = 30000)
+  @Test (timeout = 300000)
   public void testDistributedCache() throws Exception {
     // Test with a local (file:///) Job Jar
     Path localJobJarPath = makeJobJarWithLib(TEST_ROOT_DIR.toUri().toString());

@@ -152,7 +152,6 @@ public class TestWinUtils {
     assertEquals(expected, output);
   }
 
-  @Test (timeout = 30000)
   private void testChmodInternal(String mode, String expectedPerm)
       throws IOException {
     File a = new File(TEST_DIR, "file1");
@@ -171,7 +170,6 @@ public class TestWinUtils {
     assertFalse(a.exists());
   }
 
-  @Test (timeout = 30000)
   private void testNewFileChmodInternal(String expectedPerm) throws IOException {
     // Create a new directory
     File dir = new File(TEST_DIR, "dir1");
@@ -193,7 +191,6 @@ public class TestWinUtils {
     assertFalse(dir.exists());
   }
 
-  @Test (timeout = 30000)
   private void testChmodInternalR(String mode, String expectedPerm,
       String expectedPermx) throws IOException {
     // Setup test folder hierarchy

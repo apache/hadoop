@@ -177,6 +177,9 @@ Trunk (Unreleased)
     MAPREDUCE-4983. Fixed various platform specific assumptions in various tests,
     so that they can pass on Windows too. (Chris Nauroth via vinodkv)
 
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

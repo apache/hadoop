@@ -453,6 +453,9 @@ Trunk (Unreleased)
     HADOOP-9373. Merge CHANGES.branch-trunk-win.txt to CHANGES.txt.
     (suresh)
 
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
