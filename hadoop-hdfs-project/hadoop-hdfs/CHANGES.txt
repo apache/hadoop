@@ -62,6 +62,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4072. On file deletion remove corresponding blocks pending
     replications. (Jing Zhao via suresh)
 
+    HDFS-2434. TestNameNodeMetrics.testCorruptBlock fails intermittently.
+    (Jing Zhao via suresh)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES

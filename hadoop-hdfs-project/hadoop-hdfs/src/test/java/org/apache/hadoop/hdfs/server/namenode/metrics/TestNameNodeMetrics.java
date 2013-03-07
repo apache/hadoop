@@ -40,6 +40,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -168,6 +171,12 @@ public class TestNameNodeMetrics {
     // Create a file with single block with two replicas
     final Path file = getTestPath("testCorruptBlock");
     createFile(file, 100, (short)2);
+    
+    // Disable the heartbeats, so that no corrupted replica
+    // can be fixed
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeAdapter.setHeartbeatsDisabledForTests(dn, true);
+    }
     
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
