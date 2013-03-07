@@ -547,6 +547,9 @@ Release 2.0.4-alpha - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
+    end. (Karthik Kambatla via atm)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

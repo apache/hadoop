@@ -89,7 +89,12 @@ public class DNS {
       ictx.close();
     }
 
-    return attribute.get("PTR").get().toString();
+    String hostname = attribute.get("PTR").get().toString();
+    int hostnameLength = hostname.length();
+    if (hostname.charAt(hostnameLength - 1) == '.') {
+      hostname = hostname.substring(0, hostnameLength - 1);
+    }
+    return hostname;
   }
 
   /**
