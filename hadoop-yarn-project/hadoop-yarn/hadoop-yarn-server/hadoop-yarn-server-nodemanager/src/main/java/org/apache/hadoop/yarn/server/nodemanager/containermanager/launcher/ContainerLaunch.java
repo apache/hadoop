@@ -23,6 +23,7 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -69,7 +71,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
 
-  public static final String CONTAINER_SCRIPT = "launch_container.sh";
+  public static final String CONTAINER_SCRIPT = Shell.WINDOWS ?
+    "launch_container.cmd" : "launch_container.sh";
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
 
   private static final String PID_FILE_NAME_FMT = "%s.pid";
@@ -130,7 +133,7 @@ public class ContainerLaunch implements Callable<Integer> {
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
-            containerLogDir.toUri().getPath()));
+            containerLogDir.toString()));
       }
       launchContext.setCommands(newCmds);
 
@@ -141,7 +144,7 @@ public class ContainerLaunch implements Callable<Integer> {
         entry.setValue(
             value.replace(
                 ApplicationConstants.LOG_DIR_EXPANSION_VAR,
-                containerLogDir.toUri().getPath())
+                containerLogDir.toString())
             );
       }
       // /////////////////////////// End of variable expansion
@@ -411,28 +414,17 @@ public class ContainerLaunch implements Callable<Integer> {
         + appIdStr;
   }
 
-  private static class ShellScriptBuilder {
-    
-    private final StringBuilder sb;
-  
-    public ShellScriptBuilder() {
-      this(new StringBuilder("#!/bin/bash\n\n"));
-    }
-  
-    protected ShellScriptBuilder(StringBuilder sb) {
-      this.sb = sb;
-    }
-  
-    public ShellScriptBuilder env(String key, String value) {
-      line("export ", key, "=\"", value, "\"");
-      return this;
-    }
-  
-    public ShellScriptBuilder symlink(Path src, String dst) throws IOException {
-      return symlink(src, new Path(dst));
-    }
-  
-    public ShellScriptBuilder symlink(Path src, Path dst) throws IOException {
+  private static abstract class ShellScriptBuilder {
+
+    private static final String LINE_SEPARATOR =
+        System.getProperty("line.separator");
+    private final StringBuilder sb = new StringBuilder();
+
+    public abstract void command(List<String> command);
+
+    public abstract void env(String key, String value);
+
+    public final void symlink(Path src, Path dst) throws IOException {
       if (!src.isAbsolute()) {
         throw new IOException("Source must be absolute");
       }
@@ -440,28 +432,89 @@ public class ContainerLaunch implements Callable<Integer> {
         throw new IOException("Destination must be relative");
       }
       if (dst.toUri().getPath().indexOf('/') != -1) {
-        line("mkdir -p ", dst.getParent().toString());
+        mkdir(dst.getParent());
       }
-      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
-      return this;
+      link(src, dst);
     }
-  
-    public void write(PrintStream out) throws IOException {
-      out.append(sb);
-    }
-  
-    public void line(String... command) {
-      for (String s : command) {
-        sb.append(s);
-      }
-      sb.append("\n");
-    }
-  
+
     @Override
     public String toString() {
       return sb.toString();
     }
 
+    public final void write(PrintStream out) throws IOException {
+      out.append(sb);
+    }
+
+    protected final void line(String... command) {
+      for (String s : command) {
+        sb.append(s);
+      }
+      sb.append(LINE_SEPARATOR);
+    }
+
+    protected abstract void link(Path src, Path dst) throws IOException;
+
+    protected abstract void mkdir(Path path);
+  }
+
+  private static final class UnixShellScriptBuilder extends ShellScriptBuilder {
+
+    public UnixShellScriptBuilder(){
+      line("#!/bin/bash");
+      line();
+    }
+
+    @Override
+    public void command(List<String> command) {
+      line("exec /bin/bash -c \"", StringUtils.join(" ", command), "\"");
+    }
+
+    @Override
+    public void env(String key, String value) {
+      line("export ", key, "=\"", value, "\"");
+    }
+
+    @Override
+    protected void link(Path src, Path dst) throws IOException {
+      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
+    }
+
+    @Override
+    protected void mkdir(Path path) {
+      line("mkdir -p ", path.toString());
+    }
+  }
+
+  private static final class WindowsShellScriptBuilder
+      extends ShellScriptBuilder {
+
+    public WindowsShellScriptBuilder() {
+      line("@setlocal");
+      line();
+    }
+
+    @Override
+    public void command(List<String> command) {
+      line("@call ", StringUtils.join(" ", command));
+    }
+
+    @Override
+    public void env(String key, String value) {
+      line("@set ", key, "=", value);
+    }
+
+    @Override
+    protected void link(Path src, Path dst) throws IOException {
+      line(String.format("@%s symlink \"%s\" \"%s\"", Shell.WINUTILS,
+        new File(dst.toString()).getPath(),
+        new File(src.toUri().getPath()).getPath()));
+    }
+
+    @Override
+    protected void mkdir(Path path) {
+      line("@if not exist ", path.toString(), " mkdir ", path.toString());
+    }
   }
 
   private static void putEnvIfNotNull(
@@ -479,7 +532,7 @@ public class ContainerLaunch implements Callable<Integer> {
   }
   
   public void sanitizeEnv(Map<String, String> environment, 
-      Path pwd, List<Path> appDirs) {
+      Path pwd, List<Path> appDirs) throws IOException {
     /**
      * Non-modifiable environment variables
      */
@@ -513,6 +566,14 @@ public class ContainerLaunch implements Callable<Integer> {
       environment.put("JVM_PID", "$$");
     }
 
+    // TODO: Remove Windows check and use this approach on all platforms after
+    // additional testing.  See YARN-358.
+    if (Shell.WINDOWS) {
+      String inputClassPath = environment.get(Environment.CLASSPATH.name());
+      environment.put(Environment.CLASSPATH.name(),
+          FileUtil.createJarWithClassPath(inputClassPath, pwd));
+    }
+
     /**
      * Modifiable environment variables
      */
@@ -537,7 +598,8 @@ public class ContainerLaunch implements Callable<Integer> {
       Map<String,String> environment, Map<Path,List<String>> resources,
       List<String> command)
       throws IOException {
-    ShellScriptBuilder sb = new ShellScriptBuilder();
+    ShellScriptBuilder sb = Shell.WINDOWS ? new WindowsShellScriptBuilder() :
+      new UnixShellScriptBuilder();
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
         sb.env(env.getKey().toString(), env.getValue().toString());
@@ -546,21 +608,13 @@ public class ContainerLaunch implements Callable<Integer> {
     if (resources != null) {
       for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
         for (String linkName : entry.getValue()) {
-          sb.symlink(entry.getKey(), linkName);
+          sb.symlink(entry.getKey(), new Path(linkName));
         }
       }
     }
 
-    ArrayList<String> cmd = new ArrayList<String>(2 * command.size() + 5);
-    cmd.add("exec /bin/bash ");
-    cmd.add("-c ");
-    cmd.add("\"");
-    for (String cs : command) {
-      cmd.add(cs.toString());
-      cmd.add(" ");
-    }
-    cmd.add("\"");
-    sb.line(cmd.toArray(new String[cmd.size()]));
+    sb.command(command);
+
     PrintStream pout = null;
     try {
       pout = new PrintStream(out);

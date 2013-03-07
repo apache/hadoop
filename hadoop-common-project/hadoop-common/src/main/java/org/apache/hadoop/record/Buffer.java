@@ -192,7 +192,7 @@ public class Buffer implements Comparable, Cloneable {
     int hash = 1;
     byte[] b = this.get();
     for (int i = 0; i < count; i++)
-      hash = (31 * hash) + (int)b[i];
+      hash = (31 * hash) + b[i];
     return hash;
   }
   

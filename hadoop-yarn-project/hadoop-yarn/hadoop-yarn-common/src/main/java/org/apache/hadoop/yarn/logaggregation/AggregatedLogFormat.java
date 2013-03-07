@@ -231,7 +231,6 @@ public class AggregatedLogFormat {
       out = this.writer.prepareAppendValue(-1);
       out.writeInt(VERSION);
       out.close();
-      this.fsDataOStream.hflush();
     }
 
     public void writeApplicationOwner(String user) throws IOException {

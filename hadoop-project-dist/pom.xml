@@ -335,13 +335,7 @@
                   <target>
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/dist-copynativelibs.sh">
-
-                      which cygpath 2&gt; /dev/null
-                      if [ $? = 1 ]; then
-                        BUILD_DIR="${project.build.directory}"
-                      else
-                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
+                      BUILD_DIR="${project.build.directory}"
                       TAR='tar cf -'
                       UNTAR='tar xfBp -'
                       LIB_DIR="${BUILD_DIR}/native/target/usr/local/lib"
@@ -354,6 +348,13 @@
                           cd ${snappy.lib}
                           $$TAR *snappy* | (cd $${TARGET_DIR}/; $$UNTAR)
                         fi
+                      fi
+                      BIN_DIR="${BUILD_DIR}/bin"
+                      if [ -d $${BIN_DIR} ] ; then
+                        TARGET_BIN_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}/bin"
+                        mkdir -p $${TARGET_BIN_DIR}
+                        cd $${BIN_DIR}
+                        $$TAR * | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
                       fi
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
@@ -372,15 +373,8 @@
                   <target if="tar">
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/dist-maketar.sh">
-
-                      which cygpath 2&gt; /dev/null
-                      if [ $? = 1 ]; then
-                        BUILD_DIR="${project.build.directory}"
-                      else
-                        BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
-                      cd ${BUILD_DIR}
-                      tar czf ${project.artifactId}-${project.version}.tar.gz ${project.artifactId}-${project.version}
+                      cd "${project.build.directory}"
+                      tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-maketar.sh"/>

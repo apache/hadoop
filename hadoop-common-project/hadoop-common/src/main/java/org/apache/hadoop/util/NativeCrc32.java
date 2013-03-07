@@ -60,7 +60,7 @@ class NativeCrc32 {
         fileName, basePos);
   }
   
-  private static native void nativeVerifyChunkedSums(
+    private static native void nativeVerifyChunkedSums(
       int bytesPerSum, int checksumType,
       ByteBuffer sums, int sumsOffset,
       ByteBuffer data, int dataOffset, int dataLength,

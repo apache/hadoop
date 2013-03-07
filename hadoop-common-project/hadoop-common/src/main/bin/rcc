@@ -57,10 +57,5 @@ unset IFS
 
 CLASS='org.apache.hadoop.record.compiler.generated.Rcc'
 
-# cygwin path translation
-if expr `uname` : 'CYGWIN*' > /dev/null; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-fi
-
 # run it
 exec "$JAVA" $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"

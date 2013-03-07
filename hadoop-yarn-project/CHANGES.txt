@@ -6,6 +6,10 @@ Trunk - Unreleased
 
   NEW FEATURES
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+
   IMPROVEMENTS
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
@@ -14,6 +18,36 @@ Trunk - Unreleased
 
   BUG FIXES
 
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    YARN-158. Yarn creating package-info.java must not depend on sh.
+    (Chris Nauroth via suresh)
+
+    YARN-176. Some YARN tests fail to find winutils. (Chris Nauroth via suresh)
+    
+    YARN-207. YARN distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    YARN-199. Yarn cmd line scripts for windows. (Ivan Mitic via suresh)
+
+    YARN-213. YARN build script would be more readable using abspath.
+    (Chris Nauroth via suresh)
+
+    YARN-233. Added support for running containers in MS Windows to YARN. (Chris
+    Nauroth via acmurthy)
+
+    YARN-234. Added support for process tree and resource calculator in MS Windows 
+    to YARN. (Chris Nauroth via acmurthy)
+
+    YARN-259. Fix LocalDirsHandlerService to use Path rather than URIs. (Xuan
+    Gong via acmurthy) 
+
+    YARN-316. YARN container launch may exceed maximum Windows command line 
+    length due to long classpath. (Chris Nauroth via suresh)
+
+    YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
+    via vinodkv)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -21,6 +55,16 @@ Release 2.0.4-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    YARN-365. Change NM heartbeat handling to not generate a scheduler event
+    on each heartbeat. (Xuan Gong via sseth)
+
+    YARN-380. Fix yarn node -status output to be better readable. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
+    the per-application page are translated to html line breaks. (Omkar Vinit
+    Joshi via vinodkv)
 
   OPTIMIZATIONS
 
@@ -37,6 +81,18 @@ Release 2.0.4-beta - UNRELEASED
 
     YARN-391. Formatting fixes for LCEResourceHandler classes.
     (Steve Loughran via sseth)
+
+    YARN-390. ApplicationCLI and NodeCLI hard-coded platform-specific line
+    separator causes test failures on Windows. (Chris Nauroth via suresh)
+
+    YARN-406. Fix TestRackResolver to function in networks where "host1"
+    resolves to a valid host. (Hitesh Shah via sseth)
+
+    YARN-376. Fixes a bug which would prevent the NM knowing about completed
+    containers and applications. (Jason Lowe via sseth)
+
+    YARN-429. capacity-scheduler config missing from yarn-test artifact.
+    (sseth via hitesh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -319,6 +375,12 @@ Release 0.23.7 - UNRELEASED
     YARN-236. RM should point tracking URL to RM web page when app fails to
     start (Jason Lowe via jeagles)
 
+    YARN-269. Resource Manager not logging the health_check_script result when
+    taking it out (Jason Lowe via kihwal)
+
+    YARN-227. Application expiration difficult to debug for end-users
+    (Jason Lowe via jeagles)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
@@ -336,6 +398,15 @@ Release 0.23.7 - UNRELEASED
 
     YARN-400. RM can return null application resource usage report leading to 
     NPE in client (Jason Lowe via tgraves)
+
+    YARN-426. Failure to download a public resource prevents further downloads
+    (Jason Lowe via bobby)
+
+    YARN-448. Remove unnecessary hflush from log aggregation (Kihwal Lee via
+    bobby)
+
+    YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
+    in Node Manager (Robert Parker via jlowe)
 
 Release 0.23.6 - UNRELEASED
 

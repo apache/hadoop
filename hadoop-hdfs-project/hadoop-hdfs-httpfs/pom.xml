@@ -539,15 +539,8 @@
 
                     <!-- Using Unix script to preserve file permissions -->
                     <echo file="${project.build.directory}/tomcat-untar.sh">
-
-                      which cygpath 2&gt; /dev/null
-                      if [ $? = 1 ]; then
-                      BUILD_DIR="${project.build.directory}"
-                      else
-                      BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
-                      cd $BUILD_DIR/tomcat.exp
-                      tar xzf ${basedir}/downloads/apache-tomcat-${tomcat.version}.tar.gz
+                      cd "${project.build.directory}/tomcat.exp"
+                      gzip -cd ../../downloads/apache-tomcat-${tomcat.version}.tar.gz | tar xf -
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
                       <arg line="./tomcat-untar.sh"/>
@@ -582,15 +575,8 @@
                   <target if="tar">
                     <!-- Using Unix script to preserve symlinks -->
                     <echo file="${project.build.directory}/dist-maketar.sh">
-
-                      which cygpath 2&gt; /dev/null
-                      if [ $? = 1 ]; then
-                      BUILD_DIR="${project.build.directory}"
-                      else
-                      BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
-                      cd $BUILD_DIR
-                      tar czf ${project.artifactId}-${project.version}.tar.gz ${project.artifactId}-${project.version}
+                      cd "${project.build.directory}"
+                      tar cf - ${project.artifactId}-${project.version} | gzip > ${project.artifactId}-${project.version}.tar.gz
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
                       <arg line="./dist-maketar.sh"/>

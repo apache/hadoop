@@ -97,6 +97,23 @@ set(T main/native/src/test/org/apache/hadoop)
 
 GET_FILENAME_COMPONENT(HADOOP_ZLIB_LIBRARY ${ZLIB_LIBRARIES} NAME)
 
+SET(STORED_CMAKE_FIND_LIBRARY_SUFFIXES CMAKE_FIND_LIBRARY_SUFFIXES)
+set_find_shared_library_version("1")
+find_package(BZip2 QUIET)
+if (BZIP2_INCLUDE_DIR AND BZIP2_LIBRARIES)
+    GET_FILENAME_COMPONENT(HADOOP_BZIP2_LIBRARY ${BZIP2_LIBRARIES} NAME)
+    set(BZIP2_SOURCE_FILES
+          "${D}/io/compress/bzip2/Bzip2Compressor.c"
+          "${D}/io/compress/bzip2/Bzip2Decompressor.c")
+else (BZIP2_INCLUDE_DIR AND BZIP2_LIBRARIES)
+    set(BZIP2_SOURCE_FILES "")
+    set(BZIP2_INCLUDE_DIR "")
+    IF(REQUIRE_BZIP2)
+        MESSAGE(FATAL_ERROR "Required bzip2 library and/or header files could not be found.")
+    ENDIF(REQUIRE_BZIP2)
+endif (BZIP2_INCLUDE_DIR AND BZIP2_LIBRARIES)
+SET(CMAKE_FIND_LIBRARY_SUFFIXES STORED_CMAKE_FIND_LIBRARY_SUFFIXES)
+
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckLibraryExists)
@@ -136,6 +153,7 @@ include_directories(
     ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
+    ${BZIP2_INCLUDE_DIR}
     ${SNAPPY_INCLUDE_DIR}
     ${D}/util
 )
@@ -155,6 +173,7 @@ add_dual_library(hadoop
     ${SNAPPY_SOURCE_FILES}
     ${D}/io/compress/zlib/ZlibCompressor.c
     ${D}/io/compress/zlib/ZlibDecompressor.c
+    ${BZIP2_SOURCE_FILES}
     ${D}/io/nativeio/NativeIO.c
     ${D}/io/nativeio/errno_enum.c
     ${D}/io/nativeio/file_descriptor.c

@@ -30,12 +30,16 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.Shell;
 
 import com.google.common.net.InetAddresses;
 
@@ -50,6 +54,27 @@ public class StringUtils {
    * Priority of the StringUtils shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 0;
+
+  /**
+   * Shell environment variables: $ followed by one letter or _ followed by
+   * multiple letters, numbers, or underscores.  The group captures the
+   * environment variable name without the leading $.
+   */
+  public static final Pattern SHELL_ENV_VAR_PATTERN =
+    Pattern.compile("\\$([A-Za-z_]{1}[A-Za-z0-9_]*)");
+
+  /**
+   * Windows environment variables: surrounded by %.  The group captures the
+   * environment variable name without the leading and trailing %.
+   */
+  public static final Pattern WIN_ENV_VAR_PATTERN = Pattern.compile("%(.*?)%");
+
+  /**
+   * Regular expression that matches and captures environment variable names
+   * according to platform-specific rules.
+   */
+  public static final Pattern ENV_VAR_PATTERN = Shell.WINDOWS ?
+    WIN_ENV_VAR_PATTERN : SHELL_ENV_VAR_PATTERN;
 
   /**
    * Make a string representation of the exception.
@@ -792,6 +817,28 @@ public class StringUtils {
   }
 
   /**
+   * Concatenates strings, using a separator.
+   *
+   * @param separator to join with
+   * @param strings to join
+   * @return  the joined string
+   */
+  public static String join(CharSequence separator, String[] strings) {
+    // Ideally we don't have to duplicate the code here if array is iterable.
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (String s : strings) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(separator);
+      }
+      sb.append(s);
+    }
+    return sb.toString();
+  }
+
+  /**
    * Convert SOME_STUFF to SomeStuff
    *
    * @param s input string
@@ -804,6 +851,39 @@ public class StringUtils {
     for (String word : words)
       sb.append(org.apache.commons.lang.StringUtils.capitalize(word));
 
+    return sb.toString();
+  }
+
+  /**
+   * Matches a template string against a pattern, replaces matched tokens with
+   * the supplied replacements, and returns the result.  The regular expression
+   * must use a capturing group.  The value of the first capturing group is used
+   * to look up the replacement.  If no replacement is found for the token, then
+   * it is replaced with the empty string.
+   * 
+   * For example, assume template is "%foo%_%bar%_%baz%", pattern is "%(.*?)%",
+   * and replacements contains 2 entries, mapping "foo" to "zoo" and "baz" to
+   * "zaz".  The result returned would be "zoo__zaz".
+   * 
+   * @param template String template to receive replacements
+   * @param pattern Pattern to match for identifying tokens, must use a capturing
+   *   group
+   * @param replacements Map<String, String> mapping tokens identified by the
+   *   capturing group to their replacement values
+   * @return String template with replacements
+   */
+  public static String replaceTokens(String template, Pattern pattern,
+      Map<String, String> replacements) {
+    StringBuffer sb = new StringBuffer();
+    Matcher matcher = pattern.matcher(template);
+    while (matcher.find()) {
+      String replacement = replacements.get(matcher.group(1));
+      if (replacement == null) {
+        replacement = "";
+      }
+      matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+    }
+    matcher.appendTail(sb);
     return sb.toString();
   }
 }

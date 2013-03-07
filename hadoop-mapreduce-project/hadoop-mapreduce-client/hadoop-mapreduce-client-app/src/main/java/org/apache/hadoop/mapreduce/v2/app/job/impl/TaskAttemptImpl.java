@@ -994,6 +994,16 @@ public abstract class TaskAttemptImpl implements
   }
 
   @Override
+  public Phase getPhase() {
+    readLock.lock();
+    try {
+      return reportedStatus.phase;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
   public TaskAttemptState getState() {
     readLock.lock();
     try {
@@ -1183,7 +1193,8 @@ public abstract class TaskAttemptImpl implements
             taskAttempt.nodeRackName == null ? "UNKNOWN" 
                 : taskAttempt.nodeRackName,
             StringUtils.join(
-                LINE_SEPARATOR, taskAttempt.getDiagnostics()), taskAttempt
+                LINE_SEPARATOR, taskAttempt.getDiagnostics()),
+                taskAttempt.getCounters(), taskAttempt
                 .getProgressSplitBlock().burst());
     return tauce;
   }

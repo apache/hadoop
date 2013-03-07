@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.ClassUtil;
 
 
 import static org.junit.Assert.*;
@@ -79,7 +80,7 @@ public class TestJobConf {
     Class clazz = Class.forName(CLASSNAME, true, cl);
     assertNotNull(clazz);
 
-    String containingJar = JobConf.findContainingJar(clazz);
+    String containingJar = ClassUtil.findContainingJar(clazz);
     assertEquals(jar.getAbsolutePath(), containingJar);
   }
 }

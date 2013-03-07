@@ -89,11 +89,9 @@ public class RawLocalFs extends DelegateToFileSystem {
     }
     // NB: Use createSymbolicLink in java.nio.file.Path once available
     try {
-      Shell.execCommand(Shell.LINK_COMMAND, "-s",
-                        new URI(target.toString()).getPath(),
-                        new URI(link.toString()).getPath());
-    } catch (URISyntaxException x) {
-      throw new IOException("Invalid symlink path: "+x.getMessage());
+      Shell.execCommand(Shell.getSymlinkCommand(
+        getPathWithoutSchemeAndAuthority(target),
+        getPathWithoutSchemeAndAuthority(link)));
     } catch (IOException x) {
       throw new IOException("Unable to create symlink: "+x.getMessage());
     }
@@ -175,5 +173,14 @@ public class RawLocalFs extends DelegateToFileSystem {
      * should never call this function.
      */
     throw new AssertionError();
+  }
+
+  private static String getPathWithoutSchemeAndAuthority(Path path) {
+    // This code depends on Path.toString() to remove the leading slash before
+    // the drive specification on Windows.
+    Path newPath = path.isUriPathAbsolute() ?
+      new Path(null, null, path.toUri().getPath()) :
+      path;
+    return newPath.toString();
   }
 }

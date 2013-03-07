@@ -88,6 +88,7 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -121,7 +122,7 @@ public class ShuffleHandler extends AbstractService
 
   public static final String SHUFFLE_READAHEAD_BYTES = "mapreduce.shuffle.readahead.bytes";
   public static final int DEFAULT_SHUFFLE_READAHEAD_BYTES = 4 * 1024 * 1024;
-
+  
   // pattern to identify errors related to the client closing the socket early
   // idea borrowed from Netty SslHandler
   private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
@@ -133,15 +134,15 @@ public class ShuffleHandler extends AbstractService
   private final ChannelGroup accepted = new DefaultChannelGroup();
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
-
+  
   /**
    * Should the shuffle use posix_fadvise calls to manage the OS cache during
    * sendfile
    */
   private boolean manageOsCache;
   private int readaheadLength;
+  private int maxShuffleConnections;
   private ReadaheadPool readaheadPool = ReadaheadPool.getInstance();
-   
 
   public static final String MAPREDUCE_SHUFFLE_SERVICEID =
       "mapreduce.shuffle";
@@ -158,6 +159,9 @@ public class ShuffleHandler extends AbstractService
     "mapreduce.shuffle.ssl.file.buffer.size";
 
   public static final int DEFAULT_SUFFLE_SSL_FILE_BUFFER_SIZE = 60 * 1024;
+
+  public static final String MAX_SHUFFLE_CONNECTIONS = "mapreduce.shuffle.max.connections";
+  public static final int DEFAULT_MAX_SHUFFLE_CONNECTIONS = 0; // 0 implies no limit
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -270,6 +274,9 @@ public class ShuffleHandler extends AbstractService
     readaheadLength = conf.getInt(SHUFFLE_READAHEAD_BYTES,
         DEFAULT_SHUFFLE_READAHEAD_BYTES);
     
+    maxShuffleConnections = conf.getInt(MAX_SHUFFLE_CONNECTIONS, 
+                                        DEFAULT_MAX_SHUFFLE_CONNECTIONS);
+
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
       .setNameFormat("ShuffleHandler Netty Boss #%d")
       .build();
@@ -397,6 +404,21 @@ public class ShuffleHandler extends AbstractService
         Collections.addAll(ret, s.split(","));
       }
       return ret;
+    }
+
+    @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) 
+        throws Exception {
+      if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
+        LOG.info(String.format("Current number of shuffle connections (%d) is " + 
+            "greater than or equal to the max allowed shuffle connections (%d)", 
+            accepted.size(), maxShuffleConnections));
+        evt.getChannel().close();
+        return;
+      }
+      accepted.add(evt.getChannel());
+      super.channelOpen(ctx, evt);
+     
     }
 
     @Override
@@ -620,6 +642,5 @@ public class ShuffleHandler extends AbstractService
         sendError(ctx, INTERNAL_SERVER_ERROR);
       }
     }
-
   }
 }

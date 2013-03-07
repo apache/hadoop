@@ -61,6 +61,7 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
+import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -94,10 +95,31 @@ public class TestCodec {
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
 
-  @Test
+  @Test(timeout=20000)
   public void testBZip2Codec() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codec.bzip2.library", "java-builtin");
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");
+  }
+  
+  @Test(timeout=20000)
+  public void testBZip2NativeCodec() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codec.bzip2.library", "system-native");
+    if (NativeCodeLoader.isNativeCodeLoaded()) {
+      if (Bzip2Factory.isNativeBzip2Loaded(conf)) {
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
+        codecTest(conf, seed, count, 
+                  "org.apache.hadoop.io.compress.BZip2Codec");
+        conf.set("io.compression.codec.bzip2.library", "java-builtin");
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
+        codecTest(conf, seed, count, 
+                  "org.apache.hadoop.io.compress.BZip2Codec");
+      } else {
+        LOG.warn("Native hadoop library available but native bzip2 is not");
+      }
+    }
   }
   
   @Test
@@ -457,12 +479,35 @@ public class TestCodec {
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.DefaultCodec", 1000000);
   }
 
-  @Test
+  @Test(timeout=20000)
   public void testSequenceFileBZip2Codec() throws IOException, ClassNotFoundException,
       InstantiationException, IllegalAccessException {
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codec.bzip2.library", "java-builtin");
     sequenceFileCodecTest(conf, 0, "org.apache.hadoop.io.compress.BZip2Codec", 100);
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.BZip2Codec", 100);
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.BZip2Codec", 1000000);
+  }
+
+  @Test(timeout=20000)
+  public void testSequenceFileBZip2NativeCodec() throws IOException, 
+                        ClassNotFoundException, InstantiationException, 
+                        IllegalAccessException {
+    Configuration conf = new Configuration();
+    conf.set("io.compression.codec.bzip2.library", "system-native");
+    if (NativeCodeLoader.isNativeCodeLoaded()) {
+      if (Bzip2Factory.isNativeBzip2Loaded(conf)) {
+        sequenceFileCodecTest(conf, 0, 
+                              "org.apache.hadoop.io.compress.BZip2Codec", 100);
+        sequenceFileCodecTest(conf, 100, 
+                              "org.apache.hadoop.io.compress.BZip2Codec", 100);
+        sequenceFileCodecTest(conf, 200000, 
+                              "org.apache.hadoop.io.compress.BZip2Codec", 
+                              1000000);
+      } else {
+        LOG.warn("Native hadoop library available but native bzip2 is not");
+      }
+    }
   }
 
   @Test

@@ -149,6 +149,9 @@ public class ApplicationImpl implements Application {
            .addTransition(ApplicationState.INITING, ApplicationState.INITING,
                ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
                new AppLogInitDoneTransition())
+           .addTransition(ApplicationState.INITING, ApplicationState.INITING,
+               ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED,
+               new AppLogInitFailTransition())
            .addTransition(ApplicationState.INITING, ApplicationState.RUNNING,
                ApplicationEventType.APPLICATION_INITED,
                new AppInitDoneTransition())
@@ -237,6 +240,26 @@ public class ApplicationImpl implements Application {
     }
   }
 
+  /**
+   * Handles the APPLICATION_LOG_HANDLING_FAILED event that occurs after
+   * {@link LogAggregationService} has failed to initialize the log 
+   * aggregation service
+   * 
+   * In particular, this requests that the {@link ResourceLocalizationService}
+   * localize the application-scoped resources.
+   */
+  @SuppressWarnings("unchecked")
+  static class AppLogInitFailTransition implements
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
+    @Override
+    public void transition(ApplicationImpl app, ApplicationEvent event) {
+      LOG.warn("Log Aggregation service failed to initialize, there will " + 
+               "be no logs for this application");
+      app.dispatcher.getEventHandler().handle(
+          new ApplicationLocalizationEvent(
+              LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
+    }
+  }
   /**
    * Handles INIT_CONTAINER events which request that we launch a new
    * container. When we're still in the INITTING state, we simply

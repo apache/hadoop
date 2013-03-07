@@ -22,6 +22,11 @@ Trunk (Unreleased)
 
     HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+    
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -302,6 +307,20 @@ Trunk (Unreleased)
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
 
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
+    Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
+    HDFS-4163. HDFS distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    HDFS-4316. branch-trunk-win contains test code accidentally added during 
+    work on fixing tests on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4297. Fix issues related to datanode concurrent reading and writing on
+    Windows. (Arpit Agarwal, Chuan Liu via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -315,6 +334,12 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4304. Make FSEditLogOp.MAX_OP_SIZE configurable. (Colin Patrick
     McCabe via atm)
+
+    HDFS-4518. Finer grained metrics for HDFS capacity.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4519. Support overriding jsvc binary and log file locations
+    when launching secure datanode. (Chris Nauroth via suresh)
 
   OPTIMIZATIONS
 
@@ -332,6 +357,19 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
     between delete and replication of same file. (umamahesh)
+
+    HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
+    containing non-ASCII strings. (Colin Patrick McCabe via atm)
+
+    HDFS-4541. Set hadoop.log.dir and hadoop.id.str when starting secure
+    datanode to write the logs to right dir by default. (Arpit Gupta via
+    suresh)
+
+    HDFS-4540. Namenode http server should use the web authentication 
+    keytab for spnego principal. (Arpit Gupta via suresh)
+
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
 
 Release 2.0.3-alpha - 2013-02-06
 
@@ -2304,12 +2342,20 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
+
   BUG FIXES
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
     HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
     (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
 
 Release 0.23.6 - UNRELEASED
 

@@ -508,9 +508,10 @@ public class RawLocalFileSystem extends FileSystem {
       return !super.getOwner().isEmpty(); 
     }
     
-    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
+    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) { 
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-            f.lastModified(), fs.makeQualified(new Path(f.getPath())));
+          f.lastModified(), new Path(f.getPath()).makeQualified(fs.getUri(),
+            fs.getWorkingDirectory()));
     }
     
     @Override
@@ -541,9 +542,10 @@ public class RawLocalFileSystem extends FileSystem {
     private void loadPermissionInfo() {
       IOException e = null;
       try {
-        StringTokenizer t = new StringTokenizer(
-            execCommand(new File(getPath().toUri()), 
-                        Shell.getGET_PERMISSION_COMMAND()));
+        String output = FileUtil.execCommand(new File(getPath().toUri()), 
+            Shell.getGetPermissionCommand());
+        StringTokenizer t =
+            new StringTokenizer(output, Shell.TOKEN_SEPARATOR_REGEX);
         //expected format
         //-rw-------    1 username groupname ...
         String permission = t.nextToken();
@@ -552,7 +554,17 @@ public class RawLocalFileSystem extends FileSystem {
         }
         setPermission(FsPermission.valueOf(permission));
         t.nextToken();
-        setOwner(t.nextToken());
+
+        String owner = t.nextToken();
+        // If on windows domain, token format is DOMAIN\\user and we want to
+        // extract only the user name
+        if (Shell.WINDOWS) {
+          int i = owner.indexOf('\\');
+          if (i != -1)
+            owner = owner.substring(i + 1);
+        }
+        setOwner(owner);
+
         setGroup(t.nextToken());
       } catch (Shell.ExitCodeException ioe) {
         if (ioe.getExitCode() != 1) {
@@ -588,17 +600,7 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public void setOwner(Path p, String username, String groupname)
     throws IOException {
-    if (username == null && groupname == null) {
-      throw new IOException("username == null && groupname == null");
-    }
-
-    if (username == null) {
-      execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
-    } else {
-      //OWNER[:[GROUP]]
-      String s = username + (groupname == null? "": ":" + groupname);
-      execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
-    }
+    FileUtil.setOwner(pathToFile(p), username, groupname);
   }
 
   /**
@@ -608,20 +610,12 @@ public class RawLocalFileSystem extends FileSystem {
   public void setPermission(Path p, FsPermission permission)
     throws IOException {
     if (NativeIO.isAvailable()) {
-      NativeIO.chmod(pathToFile(p).getCanonicalPath(),
+      NativeIO.POSIX.chmod(pathToFile(p).getCanonicalPath(),
                      permission.toShort());
     } else {
-      execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
-          String.format("%05o", permission.toShort()));
+      String perm = String.format("%04o", permission.toShort());
+      Shell.execCommand(Shell.getSetPermissionCommand(perm, false,
+        FileUtil.makeShellPath(pathToFile(p), true)));
     }
   }
-
-  private static String execCommand(File f, String... cmd) throws IOException {
-    String[] args = new String[cmd.length + 1];
-    System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = FileUtil.makeShellPath(f, true);
-    String output = Shell.execCommand(args);
-    return output;
-  }
-
 }

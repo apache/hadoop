@@ -22,6 +22,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
@@ -82,6 +83,13 @@ public class TestProtoBufRpc {
     public EmptyResponseProto error(RpcController unused,
         EmptyRequestProto request) throws ServiceException {
       throw new ServiceException("error", new RpcServerException("error"));
+    }
+    
+    @Override
+    public EmptyResponseProto error2(RpcController unused,
+        EmptyRequestProto request) throws ServiceException {
+      throw new ServiceException("error", new URISyntaxException("",
+          "testException"));
     }
   }
   
@@ -149,7 +157,7 @@ public class TestProtoBufRpc {
         conf);
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testProtoBufRpc() throws Exception {
     TestRpcService client = getClient();
     testProtoBufRpc(client);
@@ -178,7 +186,7 @@ public class TestProtoBufRpc {
     }
   }
   
-  @Test
+  @Test (timeout=5000)
   public void testProtoBufRpc2() throws Exception {
     TestRpcService2 client = getClient2();
     
@@ -200,5 +208,21 @@ public class TestProtoBufRpc {
     MetricsRecordBuilder rpcDetailedMetrics = 
         getMetrics(server.getRpcDetailedMetrics().name());
     assertCounterGt("Echo2NumOps", 0L, rpcDetailedMetrics);
+  }
+
+  @Test (timeout=5000)
+  public void testProtoBufRandomException() throws Exception {
+    TestRpcService client = getClient();
+    EmptyRequestProto emptyRequest = EmptyRequestProto.newBuilder().build();
+
+    try {
+      client.error2(null, emptyRequest);
+    } catch (ServiceException se) {
+      Assert.assertTrue(se.getCause() instanceof RemoteException);
+      RemoteException re = (RemoteException) se.getCause();
+      Assert.assertTrue(re.getClassName().equals(
+          URISyntaxException.class.getName()));
+      Assert.assertTrue(re.getMessage().contains("testException"));
+    }
   }
 }

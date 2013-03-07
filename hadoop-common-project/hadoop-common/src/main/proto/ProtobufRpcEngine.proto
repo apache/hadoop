@@ -1,4 +1,4 @@
-/**
+/**DER
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,20 +28,17 @@ option java_generate_equals_and_hash = true;
 package hadoop.common;
 
 /**
- * This message is used for Protobuf Rpc Engine.
- * The message is used to marshal a Rpc-request
- * from RPC client to the RPC server.
+ * This message is the header for the Protobuf Rpc Engine
+ * when sending a RPC request from  RPC client to the RPC server.
+ * The actual request (serialized as protobuf) follows this request.
  *
  * No special header is needed for the Rpc Response for Protobuf Rpc Engine.
  * The normal RPC response header (see RpcHeader.proto) are sufficient. 
  */
-message RequestProto {
+message RequestHeaderProto {
   /** Name of the RPC method */
   required string methodName = 1;
 
-  /** Bytes corresponding to the client protobuf request */
-  optional bytes request = 2;
-  
   /** 
    * RPCs for a particular interface (ie protocol) are done using a
    * IPC connection that is setup using rpcProxy.

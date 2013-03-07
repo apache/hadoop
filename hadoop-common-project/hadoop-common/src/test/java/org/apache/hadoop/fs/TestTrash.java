@@ -55,7 +55,7 @@ public class TestTrash extends TestCase {
   // check that the specified file is in Trash
   protected static void checkTrash(FileSystem trashFs, Path trashRoot,
       Path path) throws IOException {
-    Path p = new Path(trashRoot+"/"+ path.toUri().getPath());
+    Path p = Path.mergePaths(trashRoot, path);
     assertTrue("Could not find file in trash: "+ p , trashFs.exists(p));
   }
   
@@ -399,7 +399,8 @@ public class TestTrash extends TestCase {
         assertTrue(val==0);
       }
       // current trash directory
-      Path trashDir = new Path(trashRoot.toUri().getPath() + myFile.getParent().toUri().getPath());
+      Path trashDir = Path.mergePaths(new Path(trashRoot.toUri().getPath()),
+        new Path(myFile.getParent().toUri().getPath()));
       
       System.out.println("Deleting same myFile: myFile.parent=" + myFile.getParent().toUri().getPath() + 
           "; trashroot="+trashRoot.toUri().getPath() + 
