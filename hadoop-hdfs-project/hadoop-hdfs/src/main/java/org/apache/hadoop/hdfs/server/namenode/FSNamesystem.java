@@ -5664,8 +5664,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     //TODO: need to update metrics in corresponding SnapshotManager method 
 
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "allowSnapshot", path, null, null);
+      logAuditEvent(true, "allowSnapshot", path, null, null);
     }
   }
   
@@ -5692,8 +5691,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     //TODO: need to update metrics in corresponding SnapshotManager method 
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "disallowSnapshot", path, null, null);
+      logAuditEvent(true, "disallowSnapshot", path, null, null);
     }
   }
   
@@ -5729,8 +5727,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       Path rootPath = new Path(snapshotRoot, HdfsConstants.DOT_SNAPSHOT_DIR
           + Path.SEPARATOR + snapshotName);
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "createSnapshot", snapshotRoot, rootPath.toString(), null);
+      logAuditEvent(true, "createSnapshot", snapshotRoot, rootPath.toString(),
+          null);
     }
   }
   
@@ -5768,8 +5766,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + "/" + snapshotOldName);
       Path newSnapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR
           + "/" + snapshotNewName);
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "renameSnapshot", oldSnapshotRoot.toString(),
+      logAuditEvent(true, "renameSnapshot", oldSnapshotRoot.toString(),
           newSnapshotRoot.toString(), null);
     }
   }
@@ -5795,8 +5792,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       readUnlock();
     }
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-            "listSnapshottableDirectory", null, null, null);
+      logAuditEvent(true, "listSnapshottableDirectory", null, null, null);
     }
     return status;
   }
@@ -5828,8 +5824,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-            "computeSnapshotDiff", null, null, null);
+      logAuditEvent(true, "computeSnapshotDiff", null, null, null);
     }
     return diffs != null ? diffs.generateReport() : new SnapshotDiffReport(
         path, fromSnapshot, toSnapshot,
@@ -5874,8 +5869,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       Path rootPath = new Path(snapshotRoot, HdfsConstants.DOT_SNAPSHOT_DIR
           + Path.SEPARATOR + snapshotName);
-      logAuditEvent(UserGroupInformation.getCurrentUser(), getRemoteIp(),
-          "deleteSnapshot", rootPath.toString(), null, null);
+      logAuditEvent(true, "deleteSnapshot", rootPath.toString(), null, null);
     }
   }
 

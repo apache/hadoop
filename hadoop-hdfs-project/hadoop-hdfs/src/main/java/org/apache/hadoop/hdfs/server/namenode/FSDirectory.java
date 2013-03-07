@@ -757,7 +757,7 @@ public class FSDirectory implements Closeable {
         getFSNamesystem().unprotectedChangeLease(src, dst);
 
         // Collect the blocks and remove the lease for previous dst
-        int filesDeleted = 0;
+        int filesDeleted = -1;
         if (removedDst != null) {
           INode rmdst = removedDst;
           removedDst = null;
@@ -772,7 +772,7 @@ public class FSDirectory implements Closeable {
           // deleted. Need to update the SnapshotManager.
           namesystem.removeSnapshottableDirs(snapshottableDirs);
         }
-        return filesDeleted >0;
+        return filesDeleted >= 0;
       }
     } finally {
       if (removedSrc != null) {
@@ -1017,7 +1017,7 @@ public class FSDirectory implements Closeable {
       final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
           normalizePath(src), false);
       if (!deleteAllowed(inodesInPath, src) ) {
-        filesRemoved = 0;
+        filesRemoved = -1;
       } else {
         // Before removing the node, first check if the targetNode is for a
         // snapshottable dir with snapshots, or its descendants have
@@ -1041,10 +1041,10 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-    fsImage.getEditLog().logDelete(src, now);
-    if (filesRemoved <= 0) {
+    if (filesRemoved < 0) {
       return false;
     }
+    fsImage.getEditLog().logDelete(src, now);
     incrDeletedFileCount(filesRemoved);
     // Blocks will be deleted later by the caller of this method
     getFSNamesystem().removePathAndBlocks(src, null);
@@ -1107,8 +1107,8 @@ public class FSDirectory implements Closeable {
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
         normalizePath(src), false);
     final int filesRemoved = deleteAllowed(inodesInPath, src)?
-        unprotectedDelete(inodesInPath, collectedBlocks, mtime): 0;
-    if (filesRemoved > 0) {
+        unprotectedDelete(inodesInPath, collectedBlocks, mtime): -1;
+    if (filesRemoved >= 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
     }
   }
@@ -1128,7 +1128,7 @@ public class FSDirectory implements Closeable {
     // check if target node exists
     INode targetNode = iip.getLastINode();
     if (targetNode == null) {
-      return 0;
+      return -1;
     }
 
     // record modification

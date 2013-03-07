@@ -50,7 +50,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
   
   /** Get the size of the list and then clear it. */
-  int clear() {
+  public int clear() {
     final int n = diffs.size();
     diffs.clear();
     return n;

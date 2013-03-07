@@ -121,7 +121,7 @@ public class INodeFileUnderConstructionWithSnapshot
     } else { // delete a snapshot
       return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks);
     }
-    return 1;
+    return prior == null ? 1 : 0;
   }
 
   @Override

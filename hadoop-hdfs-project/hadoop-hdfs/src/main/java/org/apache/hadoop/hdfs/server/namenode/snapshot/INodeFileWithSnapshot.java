@@ -22,8 +22,6 @@ import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 
-import com.google.common.base.Preconditions;
-
 /**
  * Represent an {@link INodeFile} that is snapshotted.
  * Note that snapshot files are represented by {@link INodeFileSnapshot}.
@@ -94,15 +92,7 @@ public class INodeFileWithSnapshot extends INodeFile
     } else { // delete a snapshot
       return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks);
     }
-    return 1;
-  }
-  
-  @Override
-  public int destroyAndCollectBlocks(
-      final BlocksMapUpdateInfo collectedBlocks) {
-    Preconditions.checkState(this.isCurrentFileDeleted);
-    final int n = diffs.clear();
-    return n + super.destroyAndCollectBlocks(collectedBlocks);
+    return prior == null ? 1 : 0;
   }
 
   @Override

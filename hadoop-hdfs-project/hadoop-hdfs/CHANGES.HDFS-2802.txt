@@ -185,3 +185,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4545. With snapshots, FSDirectory.unprotectedSetReplication(..) always
   changes file replication but it may or may not changes block replication.
   (szetszwo)
+
+  HDFS-4557. Fix FSDirectory#delete when INode#cleanSubtree returns 0.
+  (Jing Zhao via szetszwo)
