@@ -371,8 +371,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
 
-    HDFS-4546. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
-    in secondary namenode and namenode http server. (Arpit Agarwal via suresh)
+    HDFS-4565. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
+    in secondary namenode and namenode http server. (Arpit Gupta via suresh)
 
 Release 2.0.4-alpha - UNRELEASED
 
