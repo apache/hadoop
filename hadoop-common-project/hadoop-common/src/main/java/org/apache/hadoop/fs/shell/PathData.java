@@ -338,7 +338,8 @@ public class PathData implements Comparable<PathData> {
       URI globUri = globPath.toUri();
       if (globUri.getScheme() != null) {
         globType = PathType.HAS_SCHEME;
-      } else if (new File(globUri.getPath()).isAbsolute()) {
+      } else if (!globUri.getPath().isEmpty() &&
+                 new Path(globUri.getPath()).isAbsolute()) {
         globType = PathType.SCHEMELESS_ABSOLUTE;
       } else {
         globType = PathType.RELATIVE;

@@ -23,11 +23,13 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -171,6 +173,25 @@ public class TestPathData {
     PathData[] items = PathData.expandAsGlob(testDir+"/d1/f1*", conf);
     assertEquals(
         sortedString(testDir+"/d1/f1", testDir+"/d1/f1.1"),
+        sortedString(items)
+    );
+    
+    String absolutePathNoDriveLetter = testDir+"/d1/f1";
+    if (Shell.WINDOWS) {
+      // testDir is an absolute path with a drive letter on Windows, i.e.
+      // c:/some/path
+      // and for the test we want something like the following
+      // /some/path
+      absolutePathNoDriveLetter = absolutePathNoDriveLetter.substring(2);
+    }
+    items = PathData.expandAsGlob(absolutePathNoDriveLetter, conf);
+    assertEquals(
+        sortedString(absolutePathNoDriveLetter),
+        sortedString(items)
+    );
+    items = PathData.expandAsGlob(".", conf);
+    assertEquals(
+        sortedString("."),
         sortedString(items)
     );
   }

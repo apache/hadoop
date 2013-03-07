@@ -461,6 +461,9 @@ Trunk (Unreleased)
 
     HADOOP-9365. TestHAZKUtil fails on Windows. (Ivan Mitic via suresh)
 
+    HADOOP-9364. PathData#expandAsGlob does not return correct results for
+    absolute paths on Windows. (Ivan Mitic via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
