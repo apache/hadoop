@@ -540,6 +540,9 @@ Release 1.1.2 - Unreleased
     HDFS-4252. Improve confusing log message that prints exception when editlog 
     read is completed. (Jing Zhao via suresh)
 
+    HDFS-4551. When copying bytes in DatanodeWebHdfsMethods OPEN, use 4096 buffer size
+    to improve performance.  (Mark Wagner via szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
