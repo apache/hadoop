@@ -67,6 +67,8 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
 
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
