@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -70,6 +70,18 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9337. org.apache.hadoop.fs.DF.getMount() does not work on Mac OS.
     (Ivan A. Veselovsky via atm)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06 
 

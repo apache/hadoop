@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -53,6 +53,18 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06
 

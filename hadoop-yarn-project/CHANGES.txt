@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -42,6 +42,18 @@ Release 2.0.4-beta - UNRELEASED
 
     YARN-376. Fixes a bug which would prevent the NM knowing about completed
     containers and applications. (Jason Lowe via sseth)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
     YARN-429. capacity-scheduler config missing from yarn-test artifact.
     (sseth via hitesh)
