@@ -25,6 +25,10 @@ Release 0.23.7 - UNRELEASED
     YARN-227. Application expiration difficult to debug for end-users
     (Jason Lowe via jeagles)
 
+    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
+    the per-application page are translated to html line breaks. (Omkar Vinit
+    Joshi via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
