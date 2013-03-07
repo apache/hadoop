@@ -350,9 +350,9 @@ public class DatanodeWebHdfsMethods {
           DFSClient client = dfsclient;
           try {
             if (n == null) {
-              IOUtils.copyBytes(dfsin, out, b);
+              IOUtils.copyBytes(dfsin, out, 4096);
             } else {
-              IOUtils.copyBytes(dfsin, out, n, b, false);
+              IOUtils.copyBytes(dfsin, out, n, 4096, false);
             }
             dfsin.close();
             dfsin = null;

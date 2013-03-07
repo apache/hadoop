@@ -20,6 +20,9 @@ Release 1.1.2 - 2013.01.30
     HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
     (Jing Zhao via suresh)
 
+    HDFS-4551. When copying bytes in DatanodeWebHdfsMethods OPEN, use 4096 buffer size
+    to improve performance.  (Mark Wagner via szetszwo)
+
   BUG FIXES
 
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
