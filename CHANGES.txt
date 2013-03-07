@@ -534,6 +534,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5049. CombineFileInputFormat counts all compressed files 
     non-splitable. (sandyr via tucu)
 
+    HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
+    end. (Karthik Kambatla via atm)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
