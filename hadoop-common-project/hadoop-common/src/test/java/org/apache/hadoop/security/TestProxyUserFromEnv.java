@@ -42,6 +42,15 @@ public class TestProxyUserFromEnv {
     BufferedReader br = new BufferedReader
                           (new InputStreamReader(pp.getInputStream()));
     String realUser = br.readLine().trim();
+
+    // On Windows domain joined machine, whoami returns the username
+    // in the DOMAIN\\username format, so we trim the domain part before
+    // the comparison. We don't have to special case for Windows
+    // given that Unix systems do not allow slashes in usernames.
+    int backslashIndex = realUser.indexOf('\\');
+    if (backslashIndex != -1) {
+      realUser = realUser.substring(backslashIndex + 1);
+    }
     assertEquals(realUser, realUgi.getUserName());
   }
 }
