@@ -523,6 +523,9 @@ Release 1.2.0 - unreleased
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
 
+    HADOOP-9375. Port HADOOP-7290 to branch-1 to fix TestUserGroupInformation
+    failure. (Xiaobo Peng via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
