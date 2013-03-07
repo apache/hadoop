@@ -531,6 +531,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5038. old API CombineFileInputFormat missing fixes that are in 
     new API. (sandyr via tucu)
 
+    MAPREDUCE-5049. CombineFileInputFormat counts all compressed files 
+    non-splitable. (sandyr via tucu)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
