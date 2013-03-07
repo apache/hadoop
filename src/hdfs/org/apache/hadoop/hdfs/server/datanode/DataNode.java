@@ -1227,7 +1227,7 @@ public class DataNode extends Configured
         }
         data.invalidate(toDelete);
       } catch(IOException e) {
-        checkDiskError();
+        // Exceptions caught here are not expected to be disk-related.
         throw e;
       }
       myMetrics.incrBlocksRemoved(toDelete.length);

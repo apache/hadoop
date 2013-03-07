@@ -520,6 +520,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5028. Maps fail when io.sort.mb is set to high value.
     (kkambatl via tucu)
 
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
 Release 1.1.2 - Unreleased
 
   INCOMPATIBLE CHANGES
