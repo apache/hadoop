@@ -31,6 +31,8 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
     jeagles)
 
+    HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.

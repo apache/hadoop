@@ -27,6 +27,11 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
@@ -162,13 +167,25 @@ public class TestGenericOptionsParser extends TestCase {
         th instanceof FileNotFoundException);
     
     // create file
-    Path tmpPath = new Path(tmpFile.toString());
-    localFs.create(tmpPath);
+    Path tmpPath = localFs.makeQualified(new Path(tmpFile.toString()));
+    Token<?> token = new Token<AbstractDelegationTokenIdentifier>(
+        "identifier".getBytes(), "password".getBytes(),
+        new Text("token-kind"), new Text("token-service"));
+    Credentials creds = new Credentials();
+    creds.addToken(new Text("token-alias"), token);
+    creds.writeTokenStorageFile(tmpPath, conf);
+
     new GenericOptionsParser(conf, args);
     String fileName = conf.get("mapreduce.job.credentials.json");
     assertNotNull("files is null", fileName);
-    assertEquals("files option does not match",
-      localFs.makeQualified(tmpPath).toString(), fileName);
+    assertEquals("files option does not match", tmpPath.toString(), fileName);
+    
+    Credentials ugiCreds =
+        UserGroupInformation.getCurrentUser().getCredentials();
+    assertEquals(1, ugiCreds.numberOfTokens());
+    Token<?> ugiToken = ugiCreds.getToken(new Text("token-alias"));
+    assertNotNull(ugiToken);
+    assertEquals(token, ugiToken);
     
     localFs.delete(new Path(testDir.getAbsolutePath()), true);
   }
