@@ -350,15 +350,15 @@ public class WebHdfsFileSystem extends FileSystem
         } // else we are talking to an insecure cluster
       }
     }
-    UserGroupInformation userUgi = ugi;
     if (!hasToken) {
+      UserGroupInformation userUgi = ugi;
       UserGroupInformation realUgi = userUgi.getRealUser();
       if (realUgi != null) { // proxy user
         authParams.add(new DoAsParam(userUgi.getShortUserName()));
         userUgi = realUgi;
       }
+      authParams.add(new UserParam(userUgi.getShortUserName()));
     }
-    authParams.add(new UserParam(userUgi.getShortUserName()));
     return authParams.toArray(new Param<?,?>[0]);
   }
 

@@ -134,24 +134,22 @@ public class TestWebHdfsUrl {
         },
         renewTokenUrl);
 
-    // send user+token
+    // send token
     URL cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
             new DelegationParam(tokenString).toString()
         },
         cancelTokenUrl);
     
-    // send user+token
+    // send token
     URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new DelegationParam(tokenString).toString()
         },
         fileStatusUrl);
@@ -219,24 +217,22 @@ public class TestWebHdfsUrl {
         },
         renewTokenUrl);
 
-    // send effective+token
+    // send token
     URL cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
             new DelegationParam(tokenString).toString()
         },
         cancelTokenUrl);
     
-    // send effective+token
+    // send token
     URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new DelegationParam(tokenString).toString()
         },
         fileStatusUrl);

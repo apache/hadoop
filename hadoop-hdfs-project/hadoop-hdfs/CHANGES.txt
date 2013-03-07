@@ -2128,6 +2128,8 @@ Release 0.23.7 - UNRELEASED
     HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
     kihwal)
 
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
