@@ -459,6 +459,8 @@ Trunk (Unreleased)
     HADOOP-9376. TestProxyUserFromEnv fails on a Windows domain joined machine.
     (Ivan Mitic via suresh)
 
+    HADOOP-9365. TestHAZKUtil fails on Windows. (Ivan Mitic via suresh)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
