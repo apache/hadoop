@@ -803,11 +803,6 @@ public class Balancer implements Tool {
     }
   }
 
-  /** Default constructor */
-  Balancer() throws UnsupportedActionException {
-    checkReplicationPolicyCompatibility(getConf());
-  }
-
   /** Construct a balancer from the given configuration */
   Balancer(Configuration conf) throws UnsupportedActionException {
     checkReplicationPolicyCompatibility(conf);
@@ -828,7 +823,8 @@ public class Balancer implements Tool {
    */
   public static void main(String[] args) {
     try {
-      System.exit( ToolRunner.run(null, new Balancer(), args) );
+      Configuration conf = new Configuration();
+      System.exit( ToolRunner.run(conf, new Balancer(conf), args) );
     } catch (Throwable e) {
       LOG.error(StringUtils.stringifyException(e));
       System.exit(-1);

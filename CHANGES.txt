@@ -537,6 +537,8 @@ Release 1.2.0 - unreleased
     HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
     end. (Karthik Kambatla via atm)
 
+    HDFS-4558. Fix the NPE thrown when starting balancer.  (Junping Du via szetszwo)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
