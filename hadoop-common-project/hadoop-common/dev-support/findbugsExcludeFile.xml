@@ -308,4 +308,11 @@
        <Method name="removeRenewAction" />
        <Bug pattern="BC_UNCONFIRMED_CAST" />
      </Match>
+     
+     <!-- Inconsistent synchronization flagged by findbugs is not valid. -->
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="in" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
  </FindBugsFilter>

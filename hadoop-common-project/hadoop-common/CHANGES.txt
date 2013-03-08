@@ -8,6 +8,12 @@ Trunk (Unreleased)
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
     HADOOP-8886. Remove KFS support. (eli)
+    
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
+    HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
+    it separately (sanjay Radia)
 
   NEW FEATURES
     
@@ -157,8 +163,6 @@ Trunk (Unreleased)
     HADOOP-9112. test-patch should -1 for @Tests without a timeout 
     (Surenkumar Nihalani via bobby)
 
-    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
-    avoid an extra copy (Sanjay Radia)
 
   BUG FIXES
 
