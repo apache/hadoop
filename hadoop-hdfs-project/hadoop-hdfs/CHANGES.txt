@@ -60,6 +60,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4565. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
     in secondary namenode and namenode http server. (Arpit Gupta via suresh)
 
+    HDFS-4571. WebHDFS should not set the service hostname on the server side. 
+    (tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
