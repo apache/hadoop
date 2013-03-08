@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -114,5 +115,16 @@ public class TestServer {
     } finally {
       socket.close();
     }
+  }
+  
+  @Test
+  public void testExceptionsHandler() throws IOException {
+    Server.ExceptionsHandler handler = new Server.ExceptionsHandler();
+    handler.addTerseExceptions(IOException.class);
+    handler.addTerseExceptions(RpcServerException.class);
+
+    assertTrue(handler.isTerse(IOException.class));
+    assertTrue(handler.isTerse(RpcServerException.class));
+    assertFalse(handler.isTerse(RpcClientException.class));
   }
 }
