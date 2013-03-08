@@ -344,10 +344,7 @@ public class WebHdfsFileSystem extends FileSystem
     // Skip adding delegation token for token operations because these
     // operations require authentication.
     Token<?> token = null;
-    if (UserGroupInformation.isSecurityEnabled() &&
-        op != GetOpParam.Op.GETDELEGATIONTOKEN &&
-        op != PutOpParam.Op.RENEWDELEGATIONTOKEN &&
-        op != PutOpParam.Op.CANCELDELEGATIONTOKEN) {
+    if (UserGroupInformation.isSecurityEnabled() && !op.getRequireAuth()) {
       token = getDelegationToken();
     }
     if (token != null) {
