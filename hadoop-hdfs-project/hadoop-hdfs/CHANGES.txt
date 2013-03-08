@@ -306,7 +306,7 @@ Trunk (Unreleased)
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
     Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
@@ -319,6 +319,8 @@ Trunk (Unreleased)
 
     HDFS-4297. Fix issues related to datanode concurrent reading and writing on
     Windows. (Arpit Agarwal, Chuan Liu via suresh)
+
+    HDFS-4573. Fix TestINodeFile on Windows. (Arpit Agarwal via suresh)
 
 Release 2.0.5-beta - UNRELEASED
 
