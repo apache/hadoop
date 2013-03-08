@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -35,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 
@@ -182,6 +185,23 @@ public abstract class ContainerExecutor implements Configurable {
       readLock.unlock();
     }
   }
+
+
+  /** 
+   * Return a command to execute the given command in OS shell.
+   */
+  protected static String[] getRunCommand(String command, Configuration conf) {
+    List<String> retCommand = new ArrayList<String>();
+    if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) !=
+        null) {
+      int containerSchedPriorityAdjustment = conf
+          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 0);
+      retCommand.addAll(Arrays.asList("nice", "-n",
+          Integer.toString(containerSchedPriorityAdjustment)));
+    }
+    retCommand.addAll(Arrays.asList("bash", "-c", command));
+    return retCommand.toArray(new String[retCommand.size()]);
+  }   
 
   /**
    * Is the container still active?

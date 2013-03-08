@@ -341,6 +341,9 @@ Release 0.23.7 - UNRELEASED
     YARN-227. Application expiration difficult to debug for end-users
     (Jason Lowe via jeagles)
 
+    YARN-443. allow OS scheduling priority of NM to be different than the 
+    containers it launches (tgraves)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
