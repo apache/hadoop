@@ -734,11 +734,28 @@
 </property>
 
 <property>
+  <name>dfs.image.transfer.timeout</name>
+  <value>600000</value>
+  <description>
+        Timeout for image transfer in milliseconds. This timeout and the related
+        dfs.image.transfer.bandwidthPerSec parameter should be configured such
+        that normal image transfer can complete within the timeout.
+        This timeout prevents client hangs when the sender fails during
+        image transfer, which is particularly important during checkpointing.
+        Note that this timeout applies to the entirety of image transfer, and
+        is not a socket timeout.
+  </description>
+</property>
+
+<property>
   <name>dfs.image.transfer.bandwidthPerSec</name>
   <value>0</value>
   <description>
-        Specifies the maximum amount of bandwidth that can be utilized for image
-        transfer in term of the number of bytes per second.
+        Maximum bandwidth used for image transfer in bytes per second.
+        This can help keep normal namenode operations responsive during
+        checkpointing. The maximum bandwidth and timeout in
+        dfs.image.transfer.timeout should be set such that normal image
+        transfers can complete successfully.
         A default value of 0 indicates that throttling is disabled. 
   </description>
 </property>

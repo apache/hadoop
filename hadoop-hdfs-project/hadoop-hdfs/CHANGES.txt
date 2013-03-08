@@ -25,7 +25,6 @@ Trunk (Unreleased)
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
-    
 
   IMPROVEMENTS
 
@@ -340,6 +339,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4519. Support overriding jsvc binary and log file locations
     when launching secure datanode. (Chris Nauroth via suresh)
+
+    HDFS-4569. Small image transfer related cleanups.
+    (Andrew Wang via suresh)
 
   OPTIMIZATIONS
 
