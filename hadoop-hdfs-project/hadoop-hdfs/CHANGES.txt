@@ -25,7 +25,6 @@ Trunk (Unreleased)
     HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
-    
 
   IMPROVEMENTS
 
@@ -321,7 +320,7 @@ Trunk (Unreleased)
     HDFS-4297. Fix issues related to datanode concurrent reading and writing on
     Windows. (Arpit Agarwal, Chuan Liu via suresh)
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -340,6 +339,9 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4519. Support overriding jsvc binary and log file locations
     when launching secure datanode. (Chris Nauroth via suresh)
+
+    HDFS-4569. Small image transfer related cleanups.
+    (Andrew Wang via suresh)
 
   OPTIMIZATIONS
 
@@ -370,6 +372,21 @@ Release 2.0.4-beta - UNRELEASED
 
     HDFS-4544. Error in deleting blocks should not do check disk, for
     all types of errors. (Arpit Agarwal via suresh)
+
+    HDFS-4565. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
+    in secondary namenode and namenode http server. (Arpit Gupta via suresh)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06
 
@@ -2356,6 +2373,10 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
     kihwal)
+
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
 
 Release 0.23.6 - UNRELEASED
 
