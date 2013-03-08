@@ -1543,6 +1543,20 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       SingleArcTransition<JobImpl, JobEvent> {
     @Override
     public void transition(JobImpl job, JobEvent event) {
+      //get number of shuffling reduces
+      int shufflingReduceTasks = 0;
+      for (TaskId taskId : job.reduceTasks) {
+        Task task = job.tasks.get(taskId);
+        if (TaskState.RUNNING.equals(task.getState())) {
+          for(TaskAttempt attempt : task.getAttempts().values()) {
+            if(attempt.getPhase() == Phase.SHUFFLE) {
+              shufflingReduceTasks++;
+              break;
+            }
+          }
+        }
+      }
+
       JobTaskAttemptFetchFailureEvent fetchfailureEvent = 
         (JobTaskAttemptFetchFailureEvent) event;
       for (org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId mapId : 
@@ -1550,20 +1564,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         Integer fetchFailures = job.fetchFailuresMapping.get(mapId);
         fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures+1);
         job.fetchFailuresMapping.put(mapId, fetchFailures);
-        
-        //get number of shuffling reduces
-        int shufflingReduceTasks = 0;
-        for (TaskId taskId : job.reduceTasks) {
-          Task task = job.tasks.get(taskId);
-          if (TaskState.RUNNING.equals(task.getState())) {
-            for(TaskAttempt attempt : task.getAttempts().values()) {
-              if(attempt.getReport().getPhase() == Phase.SHUFFLE) {
-                shufflingReduceTasks++;
-                break;
-              }
-            }
-          }
-        }
         
         float failureRate = shufflingReduceTasks == 0 ? 1.0f : 
           (float) fetchFailures / shufflingReduceTasks;

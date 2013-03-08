@@ -88,6 +88,9 @@ Release 0.23.7 - UNRELEASED
     appropriately used and that on-disk segments are correctly sorted on
     file-size. (Anty Rao and Ravi Prakash via acmurthy) 
 
+    MAPREDUCE-5043. Fetch failure processing can cause AM event queue to
+    backup and eventually OOM (Jason Lowe via bobby)
+
     MAPREDUCE-5023. History Server Web Services missing Job Counters (Ravi
     Prakash via tgraves)
 
