@@ -162,6 +162,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     nn.setRpcServerAddress(conf, rpcAddress);
+
+    // Set terse exception whose stack trace won't be logged
+    this.server.addTerseExceptions(SafeModeException.class);
   }
   
   /**
