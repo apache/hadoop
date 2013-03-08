@@ -28,8 +28,10 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
+import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -165,5 +167,36 @@ public class TestWebHdfsTokens {
     verify(fs, never()).getDelegationToken(null);
     verify(fs, never()).setDelegationToken(any(Token.class));
     verify(fs, never()).addRenewAction(fs);
+  }
+  
+  @Test(timeout=1000)
+  public void testGetOpRequireAuth() {
+    for (HttpOpParam.Op op : GetOpParam.Op.values()) {
+      boolean expect = (op == GetOpParam.Op.GETDELEGATIONTOKEN);
+      assertEquals(expect, op.getRequireAuth()); 
+    }
+  }
+
+  @Test(timeout=1000)
+  public void testPutOpRequireAuth() {
+    for (HttpOpParam.Op op : PutOpParam.Op.values()) {
+      boolean expect = (op == PutOpParam.Op.RENEWDELEGATIONTOKEN ||
+                        op == PutOpParam.Op.CANCELDELEGATIONTOKEN);
+      assertEquals(expect, op.getRequireAuth()); 
+    }
+  }
+  
+  @Test(timeout=1000)
+  public void testPostOpRequireAuth() {    
+    for (HttpOpParam.Op op : PostOpParam.Op.values()) {
+      assertFalse(op.getRequireAuth());
+    }
+  }
+  
+  @Test(timeout=1000)
+  public void testDeleteOpRequireAuth() {    
+    for (HttpOpParam.Op op : DeleteOpParam.Op.values()) {
+      assertFalse(op.getRequireAuth());
+    }
   }
 }

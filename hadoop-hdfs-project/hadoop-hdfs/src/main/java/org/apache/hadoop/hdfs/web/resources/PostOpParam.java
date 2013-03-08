@@ -41,6 +41,11 @@ public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
     public Type getType() {
       return Type.POST;
     }
+    
+    @Override
+    public boolean getRequireAuth() {
+      return false;
+    }
 
     @Override
     public boolean getDoOutput() {

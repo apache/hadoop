@@ -2144,6 +2144,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4567. Webhdfs does not need a token for token operations (daryn via
     kihwal)
 
+    HDFS-4577. Webhdfs operations should declare if authentication is required
+    (daryn via kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
