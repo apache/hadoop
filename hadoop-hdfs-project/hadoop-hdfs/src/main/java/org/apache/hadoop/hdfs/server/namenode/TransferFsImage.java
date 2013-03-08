@@ -230,7 +230,6 @@ public class TransferFsImage {
       SecurityUtil.openSecureHttpConnection(url);
 
     if (timeout <= 0) {
-      // Set the ping interval as timeout
       Configuration conf = new HdfsConfiguration();
       timeout = conf.getInt(DFSConfigKeys.DFS_IMAGE_TRANSFER_TIMEOUT_KEY,
           DFSConfigKeys.DFS_IMAGE_TRANSFER_TIMEOUT_DEFAULT);
