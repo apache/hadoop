@@ -169,9 +169,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       lfs.setPermission(wrapperScriptDst,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
+     // Setup command to run
+      String[] command = getRunCommand(wrapperScriptDst.toUri().getPath().toString(),
+          this.getConf());
+
       // Setup command to run
-      String[] command = {"bash",
-          wrapperScriptDst.toUri().getPath().toString()};
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
           command,

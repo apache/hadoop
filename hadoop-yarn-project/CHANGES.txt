@@ -29,6 +29,9 @@ Release 0.23.7 - UNRELEASED
     the per-application page are translated to html line breaks. (Omkar Vinit
     Joshi via vinodkv)
 
+    YARN-443. allow OS scheduling priority of NM to be different than the 
+    containers it launches (tgraves)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)

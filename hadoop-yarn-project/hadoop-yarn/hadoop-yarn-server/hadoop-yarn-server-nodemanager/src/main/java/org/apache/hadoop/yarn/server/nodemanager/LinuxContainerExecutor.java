@@ -45,11 +45,19 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       .getLog(LinuxContainerExecutor.class);
 
   private String containerExecutorExe;
+  private boolean containerSchedPriorityIsSet = false;
+  private int containerSchedPriorityAdjustment = 0;
   
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
     containerExecutorExe = getContainerExecutorExecutablePath(conf);
+    if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) != null) {
+      containerSchedPriorityIsSet = true;
+      containerSchedPriorityAdjustment = conf
+          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 
+          YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
+    }
   }
 
   /**
@@ -100,6 +108,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       : conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
   }
 
+  protected void addSchedPriorityCommand(List<String> command) {
+    if (containerSchedPriorityIsSet) {
+      command.addAll(Arrays.asList("nice", "-n",
+          Integer.toString(containerSchedPriorityAdjustment)));
+    } 
+  }
+
   @Override 
   public void init() throws IOException {        
     // Send command to executor which will just start up, 
@@ -129,14 +144,15 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       List<String> localDirs, List<String> logDirs)
       throws IOException, InterruptedException {
 
-    List<String> command = new ArrayList<String>(
-      Arrays.asList(containerExecutorExe, 
-                    user, 
-                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
-                    appId,
-                    nmPrivateContainerTokensPath.toUri().getPath().toString(),
-                    StringUtils.join(",", localDirs),
-                    StringUtils.join(",", logDirs)));
+    List<String> command = new ArrayList<String>();
+    addSchedPriorityCommand(command);
+    command.addAll(Arrays.asList(containerExecutorExe, 
+                   user, 
+                   Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
+                   appId,
+                   nmPrivateContainerTokensPath.toUri().getPath().toString(),
+                   StringUtils.join(",", localDirs),
+                   StringUtils.join(",", logDirs)));
 
     File jvm =                                  // use same jvm as parent
       new File(new File(System.getProperty("java.home"), "bin"), "java");
@@ -191,7 +207,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     try {
       Path pidFilePath = getPidFilePath(containerId);
       if (pidFilePath != null) {
-        List<String> command = new ArrayList<String>(Arrays.asList(
+        List<String> command = new ArrayList<String>();
+        addSchedPriorityCommand(command);
+        command.addAll(Arrays.asList(
             containerExecutorExe, user, Integer
                 .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
             containerIdStr, containerWorkDir.toString(),
