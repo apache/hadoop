@@ -2378,6 +2378,9 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
 
+    HDFS-4567. Webhdfs does not need a token for token operations (daryn via
+    kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -84,6 +84,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
@@ -108,7 +109,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   private DelegationTokenRenewer dtRenewer = null;
 
-  private synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
+  @VisibleForTesting
+  protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
     if (dtRenewer == null) {
       dtRenewer = DelegationTokenRenewer.getInstance();
     }
@@ -127,6 +129,7 @@ public class WebHdfsFileSystem extends FileSystem
   private UserGroupInformation ugi;
   private InetSocketAddress nnAddr;
   private URI uri;
+  private boolean hasInitedToken;
   private Token<?> delegationToken;
   private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private RetryPolicy retryPolicy = null;
@@ -173,24 +176,26 @@ public class WebHdfsFileSystem extends FileSystem
   protected void initDelegationToken() throws IOException {
     // look for webhdfs token, then try hdfs
     Token<?> token = selectDelegationToken(ugi);
-
-    //since we don't already have a token, go get one
-    boolean createdToken = false;
-    if (token == null) {
-      token = getDelegationToken(null);
-      createdToken = (token != null);
-    }
-
-    // security might be disabled
     if (token != null) {
+      LOG.debug("Found existing DT for " + token.getService());        
       setDelegationToken(token);
-      if (createdToken) {
+      hasInitedToken = true;
+    }
+  }
+
+  protected synchronized Token<?> getDelegationToken() throws IOException {
+    if (!hasInitedToken) {
+      //since we don't already have a token, go get one
+      Token<?> token = getDelegationToken(null);
+      // security might be disabled
+      if (token != null) {
+        setDelegationToken(token);
         addRenewAction(this);
         LOG.debug("Created new DT for " + token.getService());
-      } else {
-        LOG.debug("Found existing DT for " + token.getService());        
       }
+      hasInitedToken = true;
     }
+    return delegationToken;
   }
 
   protected Token<DelegationTokenIdentifier> selectDelegationToken(
@@ -338,20 +343,16 @@ public class WebHdfsFileSystem extends FileSystem
     List<Param<?,?>> authParams = Lists.newArrayList();    
     // Skip adding delegation token for token operations because these
     // operations require authentication.
-    boolean hasToken = false;
+    Token<?> token = null;
     if (UserGroupInformation.isSecurityEnabled() &&
         op != GetOpParam.Op.GETDELEGATIONTOKEN &&
         op != PutOpParam.Op.RENEWDELEGATIONTOKEN &&
         op != PutOpParam.Op.CANCELDELEGATIONTOKEN) {
-      synchronized (this) {
-        hasToken = (delegationToken != null);
-        if (hasToken) {
-          final String encoded = delegationToken.encodeToUrlString();
-          authParams.add(new DelegationParam(encoded));
-        } // else we are talking to an insecure cluster
-      }
+      token = getDelegationToken();
     }
-    if (!hasToken) {
+    if (token != null) {
+      authParams.add(new DelegationParam(token.encodeToUrlString()));
+    } else {
       UserGroupInformation userUgi = ugi;
       UserGroupInformation realUgi = userUgi.getRealUser();
       if (realUgi != null) { // proxy user

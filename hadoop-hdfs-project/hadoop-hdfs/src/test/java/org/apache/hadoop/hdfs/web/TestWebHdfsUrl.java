@@ -112,7 +112,7 @@ public class TestWebHdfsUrl {
 
     WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
     Path fsPath = new Path("/");
-    String tokenString = webhdfs.getRenewToken().encodeToUrlString();
+    String tokenString = webhdfs.getDelegationToken().encodeToUrlString();
 
     // send user
     URL getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN, fsPath);
@@ -193,7 +193,7 @@ public class TestWebHdfsUrl {
 
     WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
     Path fsPath = new Path("/");
-    String tokenString = webhdfs.getRenewToken().encodeToUrlString();
+    String tokenString = webhdfs.getDelegationToken().encodeToUrlString();
 
     // send real+effective
     URL getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN, fsPath);
@@ -379,8 +379,5 @@ public class TestWebHdfsUrl {
     public int getDefaultPort() {
       return super.getDefaultPort();
     }
-    // don't automatically get a token
-    @Override
-    protected void initDelegationToken() throws IOException {}
   }
 }
