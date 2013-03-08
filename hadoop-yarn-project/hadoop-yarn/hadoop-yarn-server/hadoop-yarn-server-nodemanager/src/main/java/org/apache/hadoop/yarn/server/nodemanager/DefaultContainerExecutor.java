@@ -181,7 +181,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
       // Setup command to run
       String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
-        containerIdStr);
+        containerIdStr, this.getConf());
 
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
