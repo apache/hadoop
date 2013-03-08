@@ -39,6 +39,9 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     /** @return the Http operation type. */
     public Type getType();
 
+    /** @return true if the operation cannot use a token */
+    public boolean getRequireAuth();
+    
     /** @return true if the operation will do output. */
     public boolean getDoOutput();
 
@@ -73,6 +76,11 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     @Override
     public Type getType() {
       return op.getType();
+    }
+
+    @Override
+    public boolean getRequireAuth() {
+      return op.getRequireAuth();
     }
 
     @Override

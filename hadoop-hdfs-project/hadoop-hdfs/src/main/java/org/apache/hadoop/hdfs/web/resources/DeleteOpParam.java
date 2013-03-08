@@ -39,6 +39,11 @@ public class DeleteOpParam extends HttpOpParam<DeleteOpParam.Op> {
     }
 
     @Override
+    public boolean getRequireAuth() {
+      return false;
+    }
+
+    @Override
     public boolean getDoOutput() {
       return false;
     }

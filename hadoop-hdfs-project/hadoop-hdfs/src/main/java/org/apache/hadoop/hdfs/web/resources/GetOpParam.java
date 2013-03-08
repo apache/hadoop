@@ -31,7 +31,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETFILECHECKSUM(HttpURLConnection.HTTP_OK),
 
     GETHOMEDIRECTORY(HttpURLConnection.HTTP_OK),
-    GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK),
+    GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK, true),
 
     /** GET_BLOCK_LOCATIONS is a private unstable op. */
     GET_BLOCK_LOCATIONS(HttpURLConnection.HTTP_OK),
@@ -39,14 +39,25 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     NULL(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
     final int expectedHttpResponseCode;
+    final boolean requireAuth;
 
     Op(final int expectedHttpResponseCode) {
+      this(expectedHttpResponseCode, false);
+    }
+
+    Op(final int expectedHttpResponseCode, boolean requireAuth) {
       this.expectedHttpResponseCode = expectedHttpResponseCode;
+      this.requireAuth = requireAuth;
     }
 
     @Override
     public HttpOpParam.Type getType() {
       return HttpOpParam.Type.GET;
+    }
+    
+    @Override
+    public boolean getRequireAuth() {
+      return requireAuth;
     }
 
     @Override
