@@ -188,3 +188,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4557. Fix FSDirectory#delete when INode#cleanSubtree returns 0.
   (Jing Zhao via szetszwo)
+
+  HDFS-4579. Annotate snapshot tests. (Arpit Agarwal via suresh)

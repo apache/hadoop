@@ -214,7 +214,7 @@ public class TestSnapshot {
    * -> Check previous snapshots -----------------+
    * </pre>
    */
-  @Test
+  @Test (timeout=300000)
   public void testSnapshot() throws Throwable {
     try {
       runTestSnapshot();
@@ -266,7 +266,7 @@ public class TestSnapshot {
    * A simple test that updates a sub-directory of a snapshottable directory
    * with snapshots
    */
-  @Test
+  @Test (timeout=300000)
   public void testUpdateDirectory() throws Exception {
     Path dir = new Path("/dir");
     Path sub = new Path(dir, "sub");
@@ -292,7 +292,7 @@ public class TestSnapshot {
    * TODO: Listing/Deleting snapshots for a directory that is not snapshottable
    * should also fail.
    */
-  @Test
+  @Test (timeout=300000)
   public void testSnapshottableDirectory() throws Exception {
     Path dir = new Path("/TestSnapshot/sub");
     Path file0 = new Path(dir, "file0");

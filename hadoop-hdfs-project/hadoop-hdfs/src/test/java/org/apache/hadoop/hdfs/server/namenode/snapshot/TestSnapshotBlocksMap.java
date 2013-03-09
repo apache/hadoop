@@ -120,7 +120,7 @@ public class TestSnapshotBlocksMap {
    * Test deleting a file with snapshots. Need to check the blocksMap to make
    * sure the corresponding record is updated correctly.
    */
-  @Test
+  @Test (timeout=60000)
   public void testDeletionWithSnapshots() throws Exception {
     Path file0 = new Path(sub1, "file0");
     Path file1 = new Path(sub1, "file1");

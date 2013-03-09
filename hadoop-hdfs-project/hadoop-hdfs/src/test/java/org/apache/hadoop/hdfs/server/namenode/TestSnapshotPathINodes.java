@@ -80,7 +80,7 @@ public class TestSnapshotPathINodes {
   }
 
   /** Test allow-snapshot operation. */
-  @Test
+  @Test (timeout=15000)
   public void testAllowSnapshot() throws Exception {
     final String path = sub1.toString();
     final INode before = fsdir.getINode(path);
@@ -134,7 +134,7 @@ public class TestSnapshotPathINodes {
    * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for normal (non-snapshot) file.
    */
-  @Test
+  @Test (timeout=15000)
   public void testNonSnapshotPathINodes() throws Exception {
     // Get the inodes by resolving the path of a normal file
     String[] names = INode.getPathNames(file1.toString());
@@ -179,7 +179,7 @@ public class TestSnapshotPathINodes {
    * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file.
    */
-  @Test
+  @Test (timeout=15000)
   public void testSnapshotPathINodes() throws Exception {
     // Create a snapshot for the dir, and check the inodes for the path
     // pointing to a snapshot file
@@ -247,7 +247,7 @@ public class TestSnapshotPathINodes {
    * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file after deleting the original file.
    */
-  @Test
+  @Test (timeout=15000)
   public void testSnapshotPathINodesAfterDeletion() throws Exception {
     // Create a snapshot for the dir, and check the inodes for the path
     // pointing to a snapshot file
@@ -308,7 +308,7 @@ public class TestSnapshotPathINodes {
    * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file while adding a new file after snapshot.
    */
-  @Test
+  @Test (timeout=15000)
   public void testSnapshotPathINodesWithAddedFile() throws Exception {
     // Create a snapshot for the dir, and check the inodes for the path
     // pointing to a snapshot file
@@ -367,7 +367,7 @@ public class TestSnapshotPathINodes {
    * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file while modifying file after snapshot.
    */
-  @Test
+  @Test (timeout=15000)
   public void testSnapshotPathINodesAfterModification() throws Exception {
     //file1 was deleted, create it again.
     DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);

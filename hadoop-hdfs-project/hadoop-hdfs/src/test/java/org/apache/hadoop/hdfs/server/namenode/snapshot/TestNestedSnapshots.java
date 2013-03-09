@@ -81,7 +81,7 @@ public class TestNestedSnapshots {
    * snapshots and the files created after the snapshots should not appear in
    * any of the snapshots.  
    */
-  @Test
+  @Test (timeout=300000)
   public void testNestedSnapshots() throws Exception {
     final Path foo = new Path("/testNestedSnapshots/foo");
     final Path bar = new Path(foo, "bar");
@@ -130,7 +130,7 @@ public class TestNestedSnapshots {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSnapshotLimit() throws Exception {
     final int step = 1000;
     final String dirStr = "/testSnapshotLimit/dir";
@@ -168,7 +168,7 @@ public class TestNestedSnapshots {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSnapshotWithQuota() throws Exception {
     final String dirStr = "/testSnapshotWithQuota/dir";
     final Path dir = new Path(dirStr);
@@ -230,7 +230,7 @@ public class TestNestedSnapshots {
   /**
    * Test {@link Snapshot#ID_COMPARATOR}.
    */
-  @Test
+  @Test (timeout=300000)
   public void testIdCmp() {
     final PermissionStatus perm = PermissionStatus.createImmutable(
         "user", "group", FsPermission.createImmutable((short)0));

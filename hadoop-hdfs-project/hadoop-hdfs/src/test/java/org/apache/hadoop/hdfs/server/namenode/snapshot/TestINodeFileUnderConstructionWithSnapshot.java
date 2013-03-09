@@ -88,7 +88,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
   /**
    * Test snapshot after file appending
    */
-  @Test
+  @Test (timeout=60000)
   public void testSnapshotAfterAppending() throws Exception {
     Path file = new Path(dir, "file");
     // 1. create snapshot --> create file --> append
@@ -132,7 +132,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
    * Test snapshot during file appending, before the corresponding
    * {@link FSDataOutputStream} instance closes.
    */
-  @Test
+  @Test (timeout=60000)
   public void testSnapshotWhileAppending() throws Exception {
     Path file = new Path(dir, "file");
     DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, seed);

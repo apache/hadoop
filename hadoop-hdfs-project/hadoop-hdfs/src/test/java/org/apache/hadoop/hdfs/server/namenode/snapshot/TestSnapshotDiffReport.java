@@ -169,7 +169,7 @@ public class TestSnapshotDiffReport {
   }
   
   /** Test the computation and representation of diff between snapshots */
-  @Test
+  @Test (timeout=60000)
   public void testDiffReport() throws Exception {
     Path subsub1 = new Path(sub1, "subsub1");
     Path subsubsub1 = new Path(subsub1, "subsubsub1");
@@ -261,7 +261,7 @@ public class TestSnapshotDiffReport {
    * sure the diff report computation correctly retrieve the diff from the
    * deleted sub-directory.
    */
-  @Test
+  @Test (timeout=60000)
   public void testDiffReport2() throws Exception {
     Path subsub1 = new Path(sub1, "subsub1");
     Path subsubsub1 = new Path(subsub1, "subsubsub1");

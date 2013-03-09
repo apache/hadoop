@@ -102,7 +102,7 @@ public class TestSnapshotRename {
    * Rename snapshot(s), and check the correctness of the snapshot list within
    * {@link INodeDirectorySnapshottable}
    */
-  @Test
+  @Test (timeout=60000)
   public void testSnapshotList() throws Exception {
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
     // Create three snapshots for sub1
@@ -132,7 +132,7 @@ public class TestSnapshotRename {
   /**
    * Test FileStatus of snapshot file before/after rename
    */
-  @Test
+  @Test (timeout=60000)
   public void testSnapshotRename() throws Exception {
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
     // Create snapshot for sub1
@@ -161,7 +161,7 @@ public class TestSnapshotRename {
   /**
    * Test rename a non-existing snapshot
    */
-  @Test
+  @Test (timeout=60000)
   public void testRenameNonExistingSnapshot() throws Exception {
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
     // Create snapshot for sub1
@@ -177,7 +177,7 @@ public class TestSnapshotRename {
   /**
    * Test rename a snapshot to another existing snapshot 
    */
-  @Test
+  @Test (timeout=60000)
   public void testRenameToExistingSnapshot() throws Exception {
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
     // Create snapshots for sub1

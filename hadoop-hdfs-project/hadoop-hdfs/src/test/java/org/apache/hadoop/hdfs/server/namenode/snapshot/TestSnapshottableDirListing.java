@@ -73,7 +73,7 @@ public class TestSnapshottableDirListing {
   /**
    * Test listing all the snapshottable directories
    */
-  @Test
+  @Test (timeout=60000)
   public void testListSnapshottableDir() throws Exception {
     // Initially there is no snapshottable directories in the system
     SnapshottableDirectoryStatus[] dirs = hdfs.getSnapshottableDirListing();
@@ -156,7 +156,7 @@ public class TestSnapshottableDirListing {
    * Test the listing with different user names to make sure only directories
    * that are owned by the user are listed.
    */
-  @Test
+  @Test (timeout=60000)
   public void testListWithDifferentUser() throws Exception {
     // first make dir1 and dir2 snapshottable
     hdfs.allowSnapshot(dir1.toString());

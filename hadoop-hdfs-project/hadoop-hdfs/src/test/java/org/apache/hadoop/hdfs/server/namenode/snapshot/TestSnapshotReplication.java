@@ -104,7 +104,7 @@ public class TestSnapshotReplication {
   /**
    * Test replication number calculation for a normal file without snapshots.
    */
-  @Test
+  @Test (timeout=60000)
   public void testReplicationWithoutSnapshot() throws Exception {
     // Create file1, set its replication to REPLICATION
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
@@ -157,7 +157,7 @@ public class TestSnapshotReplication {
   /**
    * Test replication number calculation for a file with snapshots.
    */
-  @Test
+  @Test (timeout=60000)
   public void testReplicationWithSnapshot() throws Exception {
     short fileRep = 1;
     // Create file1, set its replication to 1
@@ -198,7 +198,7 @@ public class TestSnapshotReplication {
    * Test replication for a file with snapshots, also including the scenario
    * where the original file is deleted
    */
-  @Test
+  @Test (timeout=60000)
   public void testReplicationAfterDeletion() throws Exception {
     // Create file1, set its replication to 3
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);

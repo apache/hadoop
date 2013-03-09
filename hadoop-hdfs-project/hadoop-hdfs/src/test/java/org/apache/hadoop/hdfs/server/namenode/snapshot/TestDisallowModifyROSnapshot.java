@@ -79,22 +79,22 @@ public class TestDisallowModifyROSnapshot {
     }
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testSetReplication() throws Exception {
     fs.setReplication(objInSnapshot, (short) 1);
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testSetPermission() throws Exception {
     fs.setPermission(objInSnapshot, new FsPermission("777"));
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testSetOwner() throws Exception {
     fs.setOwner(objInSnapshot, "username", "groupname");
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testRename() throws Exception {
     try {
       fs.rename(objInSnapshot, new Path("/invalid/path"));
@@ -112,39 +112,39 @@ public class TestDisallowModifyROSnapshot {
     } catch (SnapshotAccessControlException e) { /* Ignored */ }
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testDelete() throws Exception {
     fs.delete(objInSnapshot, true);
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testQuota() throws Exception {
     fs.setQuota(objInSnapshot, 100, 100);
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testSetTime() throws Exception {
     fs.setTimes(objInSnapshot, 100, 100);
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testCreate() throws Exception {
     @SuppressWarnings("deprecation")
     DFSClient dfsclient = new DFSClient(conf);
     dfsclient.create(objInSnapshot.toString(), true);
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testAppend() throws Exception {
     fs.append(objInSnapshot, 65535, null);
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testMkdir() throws Exception {
     fs.mkdirs(objInSnapshot, new FsPermission("777"));
   }
 
-  @Test(expected = SnapshotAccessControlException.class)
+  @Test(timeout=60000, expected = SnapshotAccessControlException.class)
   public void testCreateSymlink() throws Exception {
     @SuppressWarnings("deprecation")
     DFSClient dfsclient = new DFSClient(conf);

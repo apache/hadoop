@@ -93,7 +93,7 @@ public class TestSnapshotDeletion {
   /**
    * Deleting snapshottable directory with snapshots must fail.
    */
-  @Test
+  @Test (timeout=300000)
   public void testDeleteDirectoryWithSnapshot() throws Exception {
     Path file0 = new Path(sub, "file0");
     Path file1 = new Path(sub, "file1");
@@ -116,7 +116,7 @@ public class TestSnapshotDeletion {
   /**
    * Deleting directory with snapshottable descendant with snapshots must fail.
    */
-  @Test
+  @Test (timeout=300000)
   public void testDeleteDirectoryWithSnapshot2() throws Exception {
     Path file0 = new Path(sub, "file0");
     Path file1 = new Path(sub, "file1");
@@ -153,7 +153,7 @@ public class TestSnapshotDeletion {
    * 4. Delete current INodeDirectoryWithSnapshot.
    * </pre>
    */
-  @Test
+  @Test (timeout=300000)
   public void testDeleteCurrentFileDirectory() throws Exception {
     // create a folder which will be deleted before taking snapshots
     Path deleteDir = new Path(subsub, "deleteDir");
@@ -276,7 +276,7 @@ public class TestSnapshotDeletion {
    * snapshots are taken on the same directory, and we do not need to combine
    * snapshot diffs.
    */
-  @Test
+  @Test (timeout=300000)
   public void testDeleteEarliestSnapshot1() throws Exception {
     // create files under sub
     Path file0 = new Path(sub, "file0");
@@ -343,7 +343,7 @@ public class TestSnapshotDeletion {
    * Also, the recursive cleanTree process should cover both INodeFile and 
    * INodeDirectory.
    */
-  @Test
+  @Test (timeout=300000)
   public void testDeleteEarliestSnapshot2() throws Exception {
     Path noChangeDir = new Path(sub, "noChangeDir");
     Path noChangeFile = new Path(noChangeDir, "noChangeFile");
@@ -421,7 +421,7 @@ public class TestSnapshotDeletion {
    * Test deleting snapshots in a more complicated scenario: need to combine
    * snapshot diffs, but no need to handle diffs distributed in a dir tree
    */
-  @Test
+  @Test (timeout=300000)
   public void testCombineSnapshotDiff1() throws Exception {
     testCombineSnapshotDiffImpl(sub, "");
   }
@@ -430,7 +430,7 @@ public class TestSnapshotDeletion {
    * Test deleting snapshots in more complicated scenarios (snapshot diffs are
    * distributed in the directory sub-tree)
    */
-  @Test
+  @Test (timeout=300000)
   public void testCombineSnapshotDiff2() throws Exception {
     testCombineSnapshotDiffImpl(sub, "subsub1/subsubsub1/");
   }
@@ -536,7 +536,7 @@ public class TestSnapshotDeletion {
   }
   
   /** Test deleting snapshots with modification on the metadata of directory */ 
-  @Test
+  @Test (timeout=300000)
   public void testDeleteSnapshotWithDirModification() throws Exception {
     Path file = new Path(sub, "file");
     DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, seed);
@@ -574,7 +574,7 @@ public class TestSnapshotDeletion {
    * A test covering the case where the snapshot diff to be deleted is renamed 
    * to its previous snapshot. 
    */
-  @Test
+  @Test (timeout=300000)
   public void testRenameSnapshotDiff() throws Exception {
     final Path subFile0 = new Path(sub, "file0");
     final Path subsubFile0 = new Path(subsub, "file0");
