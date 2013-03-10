@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -199,6 +200,22 @@ abstract public class Shell {
       return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
                        : new String[] { "chmod", perm };
     }
+  }
+
+  /**
+   * Return a command to set permission for specific file.
+   * 
+   * @param perm String permission to set
+   * @param recursive boolean true to apply to all sub-directories recursively
+   * @param file String file to set
+   * @return String[] containing command and arguments
+   */
+  public static String[] getSetPermissionCommand(String perm, boolean recursive,
+                                                 String file) {
+    String[] baseCmd = getSetPermissionCommand(perm, recursive);
+    String[] cmdWithFile = Arrays.copyOf(baseCmd, baseCmd.length + 1);
+    cmdWithFile[cmdWithFile.length - 1] = file;
+    return cmdWithFile;
   }
 
   /** Return a regular expression string that match environment variables */
