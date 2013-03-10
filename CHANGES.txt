@@ -12,9 +12,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4660. Update task placement policy for network topology
     with node group. (Junping Du via llu)
 
-    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
-    hadoop client processes. (Yu Gao via llu)
-
     HADOOP-8023. Add unset() method to Configuration (tucu)
 
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
@@ -137,9 +134,6 @@ Release 1.2.0 - unreleased
     HDFS-3062. Print logs outside the namesystem lock invalidateWorkForOneNode
     and computeReplicationWorkForBlock. (Jing Zhao via suresh)
 
-    HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
-    (Jing Zhao via suresh)
-
     HADOOP-8968. Add a flag to completely disable the worker version check.
     (tucu via eli)
 
@@ -183,8 +177,6 @@ Release 1.2.0 - unreleased
     HDFS-4551. When copying bytes in DatanodeWebHdfsMethods OPEN, use 4096
     buffer size to improve performance.  (Mark Wagner via szetszwo)
 
-  OPTIMIZATIONS
-
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
     methods.  (Brandon Li via szetszwo)
 
@@ -193,24 +185,11 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
-    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
-
     MAPREDUCE-4904. OTHER_LOCAL_MAPS counter is not correct.
     (Junping Du via llu)
 
-    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
-    (Yu Gao via llu)
-
-    HADOOP-9051 Fix ant clean/test with circular symlinks in build dir. (llu)
-
-    MAPREDUCE-4396. Port support private distributed cache to 
-    LocalJobRunner from branch-1-win. (Yu Gao via eyang)
-
     MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
     race conditions.  (Sam Liu via eyang)
-
-    HADOOP-8418. Update UGI Principal classes name for running with
-    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
     HADOOP_SECURE_DN_PID_DIR (bobby)
@@ -545,15 +524,34 @@ Release 1.1.2 - 2013.01.30
 
   NEW FEATURES
 
-  IMPROVEMENTS
-
     MAPREDUCE-4397. Introduce HADOOP_SECURITY_CONF_DIR for task-controller.
     (Yu Gao via llu)
+
+    HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
+    hadoop client processes. (Yu Gao via llu)
+
+  IMPROVEMENTS
 
     HDFS-4252. Improve confusing log message that prints exception when editlog 
     read is completed. (Jing Zhao via suresh)
 
+    HADOOP-8567. Port conf servlet to dump running configuration to branch 1.x.
+    (Jing Zhao via suresh)
+
   BUG FIXES
+
+    HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
+
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
+
+    HADOOP-9051 Fix ant clean/test with circular symlinks in build dir. (llu)
+
+    MAPREDUCE-4396. Port support private distributed cache to
+    LocalJobRunner from branch-1-win. (Yu Gao via eyang)
+
+    HADOOP-8418. Update UGI Principal classes name for running with
+    IBM JDK on 64 bits Windows.  (Yu Gao via eyang)
 
     MAPREDUCE-4798. Updated TestJobHistoryServer test case for startup
     race conditions.  (Sam Liu via eyang)
