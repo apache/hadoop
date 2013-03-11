@@ -325,6 +325,8 @@ Trunk (Unreleased)
 
     HDFS-4573. Fix TestINodeFile on Windows. (Arpit Agarwal via suresh)
 
+    HDFS-4572. Fix TestJournal failures on Windows. (Arpit Agarwal via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
