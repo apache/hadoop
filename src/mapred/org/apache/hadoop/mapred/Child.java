@@ -335,6 +335,11 @@ class Child {
     // Do the task-type specific localization
     task.localizeConfiguration(jobConf);
     
+    // Write files required to re-run the task with IsolationRunner
+    if (task.supportIsolationRunner(jobConf)) {
+      task.writeFilesRequiredForRerun(jobConf);
+    }
+    
     //write the localized task jobconf
     LocalDirAllocator lDirAlloc = 
       new LocalDirAllocator(JobConf.MAPRED_LOCAL_DIR_PROPERTY);

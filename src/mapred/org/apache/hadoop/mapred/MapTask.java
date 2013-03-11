@@ -109,15 +109,14 @@ class MapTask extends Task {
   }
 
   @Override
-  public void localizeConfiguration(JobConf conf)
+  public void writeFilesRequiredForRerun(JobConf conf)
       throws IOException {
-    super.localizeConfiguration(conf);
     // split.info file is used only by IsolationRunner.
     // Write the split file to the local disk if it is a normal map task (not a
     // job-setup or a job-cleanup task) and if the user wishes to run
     // IsolationRunner either by setting keep.failed.tasks.files to true or by
     // using keep.tasks.files.pattern
-    if (supportIsolationRunner(conf) && isMapOrReduce()) {
+    if (isMapOrReduce()) {
       // localize the split meta-information
       Path localSplitMeta =
         new LocalDirAllocator("mapred.local.dir").getLocalPathForWrite(

@@ -467,6 +467,13 @@ abstract public class Task implements Writable, Configurable {
     conf.set("mapred.job.id", taskId.getJobID().toString());
   }
   
+  /**
+   * Write files that the IsolationRunner will need to rerun the task.
+   */
+  public void writeFilesRequiredForRerun(JobConf conf) throws IOException {
+    // Do nothing in the general case
+  }
+  
   /** Run this task as a part of the named job.  This method is executed in the
    * child process and is what invokes user-supplied map, reduce, etc. methods.
    * @param umbilical for progress reports
