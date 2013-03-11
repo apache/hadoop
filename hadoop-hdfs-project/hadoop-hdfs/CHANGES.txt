@@ -306,6 +306,9 @@ Trunk (Unreleased)
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
 
+    HDFS-4391. TestDataTransferKeepalive fails when tests are executed in a
+    certain order. (Andrew Wang via atm)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,

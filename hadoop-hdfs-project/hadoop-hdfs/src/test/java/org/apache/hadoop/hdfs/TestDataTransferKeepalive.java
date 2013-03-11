@@ -70,6 +70,7 @@ public class TestDataTransferKeepalive {
       .numDataNodes(1).build();
     fs = cluster.getFileSystem();
     dfsClient = ((DistributedFileSystem)fs).dfs;
+    dfsClient.socketCache.clear();
 
     String poolId = cluster.getNamesystem().getBlockPoolId();
     dn = cluster.getDataNodes().get(0);
