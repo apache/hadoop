@@ -542,6 +542,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
     end. (Karthik Kambatla via atm)
 
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
