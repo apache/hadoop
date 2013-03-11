@@ -82,7 +82,7 @@ public class INodeDirectory extends INode {
     this.children = other.children;
     if (adopt && this.children != null) {
       for (INode child : children) {
-        child.parent = this;
+        child.setParent(this);
       }
     }
   }
@@ -529,7 +529,7 @@ public class INodeDirectory extends INode {
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
-    node.parent = this;
+    node.setParent(this);
     children.add(-insertionPoint - 1, node);
 
     if (node.getGroupName() == null) {

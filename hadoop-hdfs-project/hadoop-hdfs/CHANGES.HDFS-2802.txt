@@ -190,3 +190,5 @@ Branch-2802 Snapshot (Unreleased)
   (Jing Zhao via szetszwo)
 
   HDFS-4579. Annotate snapshot tests. (Arpit Agarwal via suresh)
+
+  HDFS-4574. Move Diff to the util package.  (szetszwo)

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.snapshot.diff;
+package org.apache.hadoop.hdfs.util;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -30,13 +30,13 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.Container;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.UndoInfo;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.util.Diff;
+import org.apache.hadoop.hdfs.util.Diff.Container;
+import org.apache.hadoop.hdfs.util.Diff.UndoInfo;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;

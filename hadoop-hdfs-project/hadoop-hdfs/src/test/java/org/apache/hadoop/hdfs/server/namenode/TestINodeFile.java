@@ -139,7 +139,7 @@ public class TestINodeFile {
     replication = 3;
     preferredBlockSize = 128*1024*1024;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
-    inf.setLocalName("f");
+    inf.setLocalName(DFSUtil.string2Bytes("f"));
 
     INodeDirectory root = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID,
         INodeDirectory.ROOT_NAME, perm, 0L);
@@ -147,19 +147,15 @@ public class TestINodeFile {
         DFSUtil.string2Bytes("d"), perm, 0L);
 
     assertEquals("f", inf.getFullPathName());
-    assertEquals("", inf.getLocalParentDir());
 
     dir.addChild(inf);
     assertEquals("d"+Path.SEPARATOR+"f", inf.getFullPathName());
-    assertEquals("d", inf.getLocalParentDir());
     
     root.addChild(dir);
     assertEquals(Path.SEPARATOR+"d"+Path.SEPARATOR+"f", inf.getFullPathName());
     assertEquals(Path.SEPARATOR+"d", dir.getFullPathName());
 
     assertEquals(Path.SEPARATOR, root.getFullPathName());
-    assertEquals(Path.SEPARATOR, root.getLocalParentDir());
-    
   }
   
   /**
@@ -229,7 +225,7 @@ public class TestINodeFile {
     for (int i = 0; i < nCount; i++) {
       iNodes[i] = new INodeFile(i, null, perm, 0L, 0L, null, replication,
           preferredBlockSize);
-      iNodes[i].setLocalName(fileNamePrefix +  Integer.toString(i));
+      iNodes[i].setLocalName(DFSUtil.string2Bytes(fileNamePrefix + i));
       BlockInfo newblock = new BlockInfo(replication);
       iNodes[i].addBlock(newblock);
     }

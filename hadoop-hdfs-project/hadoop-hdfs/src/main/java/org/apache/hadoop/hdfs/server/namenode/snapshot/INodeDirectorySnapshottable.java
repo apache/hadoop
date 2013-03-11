@@ -227,7 +227,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       throw new SnapshotException("The snapshot " + oldName
           + " does not exist for directory " + path);
     } else {
-      int indexOfNew = searchSnapshot(DFSUtil.string2Bytes(newName));
+      final byte[] newNameBytes = DFSUtil.string2Bytes(newName);
+      int indexOfNew = searchSnapshot(newNameBytes);
       if (indexOfNew > 0) {
         throw new SnapshotException("The snapshot " + newName
             + " already exists for directory " + path);
@@ -235,7 +236,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       // remove the one with old name from snapshotsByNames
       Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
       final INodeDirectory ssRoot = snapshot.getRoot();
-      ssRoot.setLocalName(newName);
+      ssRoot.setLocalName(newNameBytes);
       indexOfNew = -indexOfNew - 1;
       if (indexOfNew <= indexOfOld) {
         snapshotsByNames.add(indexOfNew, snapshot);

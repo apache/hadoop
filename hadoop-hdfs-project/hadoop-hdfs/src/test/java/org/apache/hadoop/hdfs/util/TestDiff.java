@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.snapshot.diff;
+package org.apache.hadoop.hdfs.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +26,9 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.Container;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff.UndoInfo;
+import org.apache.hadoop.hdfs.util.Diff;
+import org.apache.hadoop.hdfs.util.Diff.Container;
+import org.apache.hadoop.hdfs.util.Diff.UndoInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,7 +46,7 @@ public class TestDiff {
   }
 
   /** Test directory diff. */
-  @Test
+  @Test(timeout=60000)
   public void testDiff() throws Exception {
     for(int startSize = 0; startSize <= 1000; startSize = nextStep(startSize)) {
       for(int m = 0; m <= 10000; m = nextStep(m)) {

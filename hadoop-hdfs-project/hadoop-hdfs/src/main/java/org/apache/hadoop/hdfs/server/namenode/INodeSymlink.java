@@ -47,7 +47,7 @@ public class INodeSymlink extends INode {
   @Override
   INode recordModification(Snapshot latest) throws NSQuotaExceededException {
     return isInLatestSnapshot(latest)?
-        parent.saveChild2Snapshot(this, latest, new INodeSymlink(this))
+        getParent().saveChild2Snapshot(this, latest, new INodeSymlink(this))
         : this;
   }
 

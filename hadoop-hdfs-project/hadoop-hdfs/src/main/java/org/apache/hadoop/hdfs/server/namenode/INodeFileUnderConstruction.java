@@ -133,7 +133,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   public INodeFileUnderConstruction recordModification(final Snapshot latest)
       throws NSQuotaExceededException {
     return isInLatestSnapshot(latest)?
-        parent.replaceChild4INodeFileUcWithSnapshot(this)
+        getParent().replaceChild4INodeFileUcWithSnapshot(this)
             .recordModification(latest)
         : this;
   }

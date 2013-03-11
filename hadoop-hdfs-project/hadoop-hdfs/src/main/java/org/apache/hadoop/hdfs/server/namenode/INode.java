@@ -34,8 +34,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.diff.Diff;
+import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -109,7 +111,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    * should not modify it.
    */
   private long permission = 0L;
-  INodeDirectory parent = null;
+  private INodeDirectory parent = null;
   private long modificationTime = 0L;
   private long accessTime = 0L;
 
@@ -509,16 +511,6 @@ public abstract class INode implements Diff.Element<byte[]> {
     return name == null? null: DFSUtil.bytes2String(name);
   }
 
-
-  String getLocalParentDir() {
-    INode inode = isRoot() ? this : getParent();
-    String parentDir = "";
-    if (inode != null) {
-      parentDir = inode.getFullPathName();
-    }
-    return (parentDir != null) ? parentDir : "";
-  }
-
   /**
    * @return null if the local name is null;
    *         otherwise, return the local name byte array.
@@ -530,13 +522,6 @@ public abstract class INode implements Diff.Element<byte[]> {
   @Override
   public byte[] getKey() {
     return getLocalNameBytes();
-  }
-
-  /**
-   * Set local file name
-   */
-  public void setLocalName(String name) {
-    setLocalName(DFSUtil.string2Bytes(name));
   }
 
   /**
