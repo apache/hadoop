@@ -211,7 +211,6 @@ class Fetcher<K,V> extends Thread {
     
     // Construct the url and connect
     DataInputStream input;
-    boolean connectSucceeded = false;
     
     try {
       URL url = getMapOutputURL(host, maps);
@@ -227,7 +226,6 @@ class Fetcher<K,V> extends Thread {
       // set the read timeout
       connection.setReadTimeout(readTimeout);
       connect(connection, connectionTimeout);
-      connectSucceeded = true;
       input = new DataInputStream(connection.getInputStream());
 
       // Validate response code
@@ -255,18 +253,10 @@ class Fetcher<K,V> extends Thread {
 
       // If connect did not succeed, just mark all the maps as failed,
       // indirectly penalizing the host
-      if (!connectSucceeded) {
-        for(TaskAttemptID left: remaining) {
-          scheduler.copyFailed(left, host, connectSucceeded, connectExcpt);
-        }
-      } else {
-        // If we got a read error at this stage, it implies there was a problem
-        // with the first map, typically lost map. So, penalize only that map
-        // and add the rest
-        TaskAttemptID firstMap = maps.get(0);
-        scheduler.copyFailed(firstMap, host, connectSucceeded, connectExcpt);
+      for(TaskAttemptID left: remaining) {
+        scheduler.copyFailed(left, host, false, connectExcpt);
       }
-      
+     
       // Add back all the remaining maps, WITHOUT marking them as failed
       for(TaskAttemptID left: remaining) {
         scheduler.putBackKnownMapOutput(host, left);
