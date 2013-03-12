@@ -807,6 +807,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5023. History Server Web Services missing Job Counters (Ravi
     Prakash via tgraves)
 
+    MAPREDUCE-5060. Fetch failures that time out only count against the first
+    map task (Robert Joseph Evans via jlowe)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
