@@ -82,7 +82,8 @@ public class TestHdfsHelper extends TestDirHelper {
 
     private Path resetHdfsTestDir(Configuration conf) {
 
-      Path testDir = new Path("./" + TEST_DIR_ROOT, testName + "-" + counter.getAndIncrement());
+      Path testDir = new Path("/tmp/" + testName + "-" +
+        counter.getAndIncrement());
       try {
         // currentUser
         FileSystem fs = FileSystem.get(conf);

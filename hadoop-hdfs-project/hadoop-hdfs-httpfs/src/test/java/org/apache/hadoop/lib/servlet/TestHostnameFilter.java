@@ -50,7 +50,10 @@ public class TestHostnameFilter extends HTestCase {
       @Override
       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse)
         throws IOException, ServletException {
-        assertTrue(HostnameFilter.get().contains("localhost"));
+        // Hostname was set to "localhost", but may get resolved automatically to
+        // "127.0.0.1" depending on OS.
+        assertTrue(HostnameFilter.get().contains("localhost") ||
+          HostnameFilter.get().contains("127.0.0.1"));
         invoked.set(true);
       }
     };

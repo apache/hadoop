@@ -327,6 +327,8 @@ Trunk (Unreleased)
 
     HDFS-4572. Fix TestJournal failures on Windows. (Arpit Agarwal via suresh)
 
+    HDFS-4287. HTTPFS tests fail on Windows. (Chris Nauroth via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
