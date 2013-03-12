@@ -63,6 +63,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4571. WebHDFS should not set the service hostname on the server side. 
     (tucu)
 
+    HDFS-4013. TestHftpURLTimeouts throws NPE. (Chao Shi via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
