@@ -27,33 +27,26 @@ import java.util.List;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static org.apache.hadoop.test.MockitoMaker.*;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.datanode.DataNode.DataNodeDiskChecker;
 
 public class TestDataDirs {
 
-  @Test public void testGetDataDirsFromURIs() throws Throwable {
-    File localDir = make(stub(File.class).returning(true).from.exists());
-    when(localDir.mkdir()).thenReturn(true);
-    FsPermission normalPerm = new FsPermission("700");
-    FsPermission badPerm = new FsPermission("000");
-    FileStatus stat = make(stub(FileStatus.class)
-        .returning(normalPerm, normalPerm, badPerm).from.getPermission());
-    when(stat.isDirectory()).thenReturn(true);
-    LocalFileSystem fs = make(stub(LocalFileSystem.class)
-        .returning(stat).from.getFileStatus(any(Path.class)));
-    when(fs.pathToFile(any(Path.class))).thenReturn(localDir);
+  @Test (timeout = 10000)
+  public void testGetDataDirsFromURIs() throws Throwable {
+    
+    DataNodeDiskChecker diskChecker = mock(DataNodeDiskChecker.class);
+    doThrow(new IOException()).doThrow(new IOException()).doNothing()
+      .when(diskChecker).checkDir(any(LocalFileSystem.class), any(Path.class));
+    LocalFileSystem fs = mock(LocalFileSystem.class);
     Collection<URI> uris = Arrays.asList(new URI("file:/p1/"),
         new URI("file:/p2/"), new URI("file:/p3/"));
 
-    List<File> dirs = DataNode.getDataDirsFromURIs(uris, fs, normalPerm);
-
-    verify(fs, times(2)).setPermission(any(Path.class), eq(normalPerm));
-    verify(fs, times(6)).getFileStatus(any(Path.class));
-    assertEquals("number of valid data dirs", dirs.size(), 1);
+    List<File> dirs = DataNode.getDataDirsFromURIs(uris, fs, diskChecker);
+    assertEquals("number of valid data dirs", 1, dirs.size());
+    String validDir = dirs.iterator().next().getPath();
+    assertEquals("p3 should be valid", new File("/p3").getPath(), validDir);
   }
 }
