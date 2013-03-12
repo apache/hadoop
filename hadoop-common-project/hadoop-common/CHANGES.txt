@@ -345,6 +345,9 @@ Trunk (Unreleased)
     HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
     via atm)
 
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -473,6 +476,9 @@ Trunk (Unreleased)
     HADOOP-9364. PathData#expandAsGlob does not return correct results for
     absolute paths on Windows. (Ivan Mitic via suresh)
 
+    HADOOP-8973. DiskChecker cannot reliably detect an inaccessible disk on
+    Windows with NTFS ACLs. (Chris Nauroth via suresh)
+    
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
