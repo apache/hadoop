@@ -123,10 +123,10 @@ case $startStop in
     nohup nice -n $YARN_NICENESS "$YARN_HOME"/bin/yarn --config $YARN_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1
+    head "$log"
     # capture the ulimit output
     echo "ulimit -a" >> $log
     ulimit -a >> $log 2>&1
-    head -30 "$log"
     ;;
           
   (stop)

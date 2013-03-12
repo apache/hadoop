@@ -40,6 +40,9 @@ Release 0.23.7 - UNRELEASED
     the message is printed and the stack trace is not printed to avoid chatter.
     (Brandon Li via Suresh)
 
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9147. Add missing fields to FIleStatus.toString.
