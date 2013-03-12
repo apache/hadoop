@@ -25,10 +25,13 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import static org.apache.hadoop.test.MockitoMaker.*;
-import org.apache.hadoop.fs.permission.FsPermission;
+import static org.apache.hadoop.fs.permission.FsAction.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 
@@ -110,29 +113,21 @@ public class TestDiskChecker {
 
   private void _checkDirs(boolean isDir, FsPermission perm, boolean success)
       throws Throwable {
-    File localDir = make(stub(File.class).returning(true).from.exists());
-    when(localDir.mkdir()).thenReturn(true);
-    Path dir = mock(Path.class);
-    LocalFileSystem fs = make(stub(LocalFileSystem.class)
-        .returning(localDir).from.pathToFile(dir));
-    FileStatus stat = make(stub(FileStatus.class)
-        .returning(perm).from.getPermission());
-    when(stat.isDirectory()).thenReturn(isDir);
-    when(fs.getFileStatus(dir)).thenReturn(stat);
-
+    File localDir = File.createTempFile("test", "tmp");
+    if (isDir) {
+      localDir.delete();
+      localDir.mkdir();
+    }
+    Shell.execCommand(Shell.getSetPermissionCommand(String.format("%04o",
+      perm.toShort()), false, localDir.getAbsolutePath()));
     try {
-      DiskChecker.checkDir(fs, dir, perm);
-
-      verify(stat).isDirectory();
-      verify(fs, times(2)).getFileStatus(dir);
-      verify(stat, times(2)).getPermission();
+      DiskChecker.checkDir(FileSystem.getLocal(new Configuration()),
+        new Path(localDir.getAbsolutePath()), perm);
       assertTrue("checkDir success", success);
-    }
-    catch (DiskErrorException e) {
+    } catch (DiskErrorException e) {
       assertFalse("checkDir success", success);
-      e.printStackTrace();
     }
-    System.out.println("checkDir success: "+ success);
+    localDir.delete();
   }
 
   /**
@@ -168,8 +163,10 @@ public class TestDiskChecker {
   private void _checkDirs(boolean isDir, String perm, boolean success)
       throws Throwable {
     File localDir = File.createTempFile("test", "tmp");
-    localDir.delete();
-    localDir.mkdir();
+    if (isDir) {
+      localDir.delete();
+      localDir.mkdir();
+    }
     Shell.execCommand(Shell.getSetPermissionCommand(perm, false,
                                                     localDir.getAbsolutePath()));
     try {

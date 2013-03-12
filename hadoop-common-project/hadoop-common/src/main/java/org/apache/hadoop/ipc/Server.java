@@ -2001,6 +2001,7 @@ public abstract class Server {
         RpcResponseHeaderProto.newBuilder();
     response.setCallId(call.callId);
     response.setStatus(status);
+    response.setServerIpcVersionNum(Server.CURRENT_VERSION);
 
 
     if (status == RpcStatusProto.SUCCESS) {
@@ -2017,13 +2018,10 @@ public abstract class Server {
             StringUtils.stringifyException(t));
         return;
       }
-    } else {
-      if (status == RpcStatusProto.FATAL) {
-        response.setServerIpcVersionNum(Server.CURRENT_VERSION);
-      }
+    } else { // Rpc Failure
+      response.setExceptionClassName(errorClass);
+      response.setErrorMsg(error);
       response.build().writeDelimitedTo(out);
-      WritableUtils.writeString(out, errorClass);
-      WritableUtils.writeString(out, error);
     }
     if (call.connection.useWrap) {
       wrapWithSasl(responseBuf, call);

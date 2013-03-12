@@ -8,6 +8,12 @@ Trunk (Unreleased)
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
     HADOOP-8886. Remove KFS support. (eli)
+    
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
+    HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
+    it separately (sanjay Radia)
 
   NEW FEATURES
     
@@ -157,8 +163,6 @@ Trunk (Unreleased)
     HADOOP-9112. test-patch should -1 for @Tests without a timeout 
     (Surenkumar Nihalani via bobby)
 
-    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
-    avoid an extra copy (Sanjay Radia)
 
   BUG FIXES
 
@@ -537,6 +541,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
     end. (Karthik Kambatla via atm)
+
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
 
 Release 2.0.4-alpha - UNRELEASED
 

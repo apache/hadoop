@@ -215,8 +215,8 @@ class Journal implements Closeable {
   @Override // Closeable
   public void close() throws IOException {
     storage.close();
-    
     IOUtils.closeStream(committedTxnId);
+    IOUtils.closeStream(curSegment);
   }
   
   JNStorage getStorage() {

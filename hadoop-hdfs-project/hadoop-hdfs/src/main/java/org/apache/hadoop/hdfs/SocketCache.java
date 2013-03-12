@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import java.io.IOException;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 import org.apache.commons.logging.Log;
@@ -253,7 +254,8 @@ class SocketCache {
   /**
    * Empty the cache, and close all sockets.
    */
-  private synchronized void clear() {
+  @VisibleForTesting
+  protected synchronized void clear() {
     for (SocketAndStreams sockAndStream : multimap.values()) {
       sockAndStream.close();
     }
