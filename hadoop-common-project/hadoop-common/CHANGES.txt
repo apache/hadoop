@@ -342,6 +342,9 @@ Trunk (Unreleased)
 
     HADOOP-9393. TestRPC fails with JDK7. (Andrew Wang via atm)
 
+    HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
+    via atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
