@@ -478,6 +478,8 @@ Trunk (Unreleased)
 
     HADOOP-8973. DiskChecker cannot reliably detect an inaccessible disk on
     Windows with NTFS ACLs. (Chris Nauroth via suresh)
+
+    HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 
