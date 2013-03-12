@@ -340,6 +340,8 @@ Trunk (Unreleased)
     HADOOP-9264. Port change to use Java untar API on Windows from 
     branch-1-win to trunk. (Chris Nauroth via suresh)
 
+    HADOOP-9393. TestRPC fails with JDK7. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
