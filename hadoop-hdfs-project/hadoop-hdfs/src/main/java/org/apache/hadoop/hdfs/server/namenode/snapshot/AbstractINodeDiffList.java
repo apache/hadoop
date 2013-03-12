@@ -23,8 +23,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
  * A list of snapshot diffs for storing snapshot data.
@@ -50,10 +52,8 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
   
   /** Get the size of the list and then clear it. */
-  public int clear() {
-    final int n = diffs.size();
+  public void clear() {
     diffs.clear();
-    return n;
   }
 
   /**
@@ -66,11 +66,12 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @param collectedBlocks Used to collect information for blocksMap update
    * @return delta in namespace. 
    */
-  final int deleteSnapshotDiff(final Snapshot snapshot, Snapshot prior,
-      final N currentINode, final BlocksMapUpdateInfo collectedBlocks) {
+  final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
+      Snapshot prior, final N currentINode,
+      final BlocksMapUpdateInfo collectedBlocks) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     
-    int removedNum = 0;
+    Quota.Counts counts = Quota.Counts.newInstance();
     D removed = null;
     if (snapshotIndex == 0) {
       if (prior != null) {
@@ -78,9 +79,9 @@ abstract class AbstractINodeDiffList<N extends INode,
         diffs.get(snapshotIndex).setSnapshot(prior);
       } else {
         removed = diffs.remove(0);
-        removedNum++; // removed a diff
-        removedNum += removed.destroyAndCollectBlocks(currentINode,
-            collectedBlocks);
+        counts.add(Quota.NAMESPACE, 1);
+        counts.add(removed.destroyDiffAndCollectBlocks(currentINode,
+            collectedBlocks));
       }
     } else if (snapshotIndex > 0) {
       final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
@@ -89,25 +90,25 @@ abstract class AbstractINodeDiffList<N extends INode,
       } else {
         // combine the to-be-removed diff with its previous diff
         removed = diffs.remove(snapshotIndex);
-        removedNum++;
+        counts.add(Quota.NAMESPACE, 1);
         if (previous.snapshotINode == null) {
           previous.snapshotINode = removed.snapshotINode;
         } else if (removed.snapshotINode != null) {
           removed.snapshotINode.clearReferences();
         }
-        removedNum += previous.combinePosteriorAndCollectBlocks(currentINode,
-            removed, collectedBlocks);
+        counts.add(previous.combinePosteriorAndCollectBlocks(
+            currentINode, removed, collectedBlocks));
         previous.setPosterior(removed.getPosterior());
         removed.setPosterior(null);
       }
     }
-    return removedNum;
+    return counts;
   }
 
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
   final D addDiff(Snapshot latest, N currentINode)
-      throws NSQuotaExceededException {
-    currentINode.addNamespaceConsumed(1);
+      throws QuotaExceededException {
+    currentINode.addSpaceConsumed(1, 0);
     return addLast(factory.createDiff(latest, currentINode));
   }
 
@@ -226,7 +227,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @return the latest snapshot diff, which is never null.
    */
   final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     final D last = getLast();
     if (last != null
         && Snapshot.ID_COMPARATOR.compare(last.getSnapshot(), latest) >= 0) {
@@ -243,7 +244,7 @@ abstract class AbstractINodeDiffList<N extends INode,
 
   /** Save the snapshot copy to the latest snapshot. */
   public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     if (latest != null) {
       checkAndAddLatestSnapshotDiff(latest, currentINode).saveSnapshotCopy(
           snapshotCopy, factory, currentINode);

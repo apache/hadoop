@@ -145,7 +145,7 @@ public class NameNodeMetrics {
     filesRenamed.incr();
   }
 
-  public void incrFilesDeleted(int delta) {
+  public void incrFilesDeleted(long delta) {
     filesDeleted.incr(delta);
   }
 

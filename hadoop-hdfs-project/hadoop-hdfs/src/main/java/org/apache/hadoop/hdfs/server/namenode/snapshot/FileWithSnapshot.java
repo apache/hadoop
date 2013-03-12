@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
  * {@link INodeFile} with a link to the next element.
@@ -57,12 +58,30 @@ public interface FileWithSnapshot {
       return fileSize;
     }
 
+    private static Quota.Counts updateQuotaAndCollectBlocks(
+        INodeFile currentINode, FileDiff removed,
+        BlocksMapUpdateInfo collectedBlocks) {
+      FileWithSnapshot sFile = (FileWithSnapshot) currentINode;
+      long oldDiskspace = currentINode.diskspaceConsumed();
+      if (removed.snapshotINode != null) {
+        short replication = removed.snapshotINode.getFileReplication();
+        if (replication > currentINode.getBlockReplication()) {
+          oldDiskspace = oldDiskspace / currentINode.getBlockReplication()
+              * replication;
+        }
+      }
+      
+      Util.collectBlocksAndClear(sFile, collectedBlocks);
+      
+      long dsDelta = oldDiskspace - currentINode.diskspaceConsumed();
+      return Quota.Counts.newInstance(0, dsDelta);
+    }
+    
     @Override
-    int combinePosteriorAndCollectBlocks(INodeFile currentINode,
+    Quota.Counts combinePosteriorAndCollectBlocks(INodeFile currentINode,
         FileDiff posterior, BlocksMapUpdateInfo collectedBlocks) {
-      Util.collectBlocksAndClear((FileWithSnapshot) currentINode,
+      return updateQuotaAndCollectBlocks(currentINode, posterior,
           collectedBlocks);
-      return 0;
     }
     
     @Override
@@ -86,11 +105,10 @@ public interface FileWithSnapshot {
     }
 
     @Override
-    int destroyAndCollectBlocks(INodeFile currentINode,
+    Quota.Counts destroyDiffAndCollectBlocks(INodeFile currentINode,
         BlocksMapUpdateInfo collectedBlocks) {
-      Util.collectBlocksAndClear((FileWithSnapshot) currentINode,
+      return updateQuotaAndCollectBlocks(currentINode, this,
           collectedBlocks);
-      return 0;
     }
   }
 

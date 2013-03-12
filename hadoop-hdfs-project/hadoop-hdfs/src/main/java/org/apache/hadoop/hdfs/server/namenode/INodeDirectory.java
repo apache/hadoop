@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
+import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
@@ -126,7 +126,7 @@ public class INodeDirectory extends INode {
    * @param latest See {@link INode#recordModification(Snapshot)}.
    */
   public boolean removeChild(INode child, Snapshot latest)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     if (isInLatestSnapshot(latest)) {
       return replaceSelf4INodeDirectoryWithSnapshot()
           .removeChild(child, latest);
@@ -167,7 +167,7 @@ public class INodeDirectory extends INode {
    * {@link INodeDirectoryWithSnapshot} depending on the latest snapshot.
    */
   INodeDirectoryWithQuota replaceSelf4Quota(final Snapshot latest,
-      final long nsQuota, final long dsQuota) throws NSQuotaExceededException {
+      final long nsQuota, final long dsQuota) throws QuotaExceededException {
     Preconditions.checkState(!(this instanceof INodeDirectoryWithQuota),
         "this is already an INodeDirectoryWithQuota, this=%s", this);
 
@@ -184,7 +184,7 @@ public class INodeDirectory extends INode {
   }
   /** Replace itself with an {@link INodeDirectorySnapshottable}. */
   public INodeDirectorySnapshottable replaceSelf4INodeDirectorySnapshottable(
-      Snapshot latest) throws NSQuotaExceededException {
+      Snapshot latest) throws QuotaExceededException {
     Preconditions.checkState(!(this instanceof INodeDirectorySnapshottable),
         "this is already an INodeDirectorySnapshottable, this=%s", this);
     final INodeDirectorySnapshottable s = new INodeDirectorySnapshottable(this);
@@ -250,7 +250,7 @@ public class INodeDirectory extends INode {
 
   @Override
   public INodeDirectory recordModification(Snapshot latest)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     return isInLatestSnapshot(latest)?
         replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest)
         : this;
@@ -262,7 +262,7 @@ public class INodeDirectory extends INode {
    * @return the child inode, which may be replaced.
    */
   public INode saveChild2Snapshot(final INode child, final Snapshot latest,
-      final INode snapshotCopy) throws NSQuotaExceededException {
+      final INode snapshotCopy) throws QuotaExceededException {
     if (latest == null) {
       return child;
     }
@@ -492,7 +492,7 @@ public class INodeDirectory extends INode {
    *         otherwise, return true;
    */
   public boolean addChild(INode node, final boolean setModTime,
-      final Snapshot latest) throws NSQuotaExceededException {
+      final Snapshot latest) throws QuotaExceededException {
     final int low = searchChildren(node.getLocalNameBytes());
     if (low >= 0) {
       return false;
@@ -601,45 +601,51 @@ public class INodeDirectory extends INode {
    * Call {@link INode#cleanSubtree(SnapshotDeletionInfo, BlocksMapUpdateInfo)}
    * recursively down the subtree.
    */
-  public int cleanSubtreeRecursively(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks)
-          throws NSQuotaExceededException {
-    int total = 0;
+  public Quota.Counts cleanSubtreeRecursively(final Snapshot snapshot,
+      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks)
+      throws QuotaExceededException {
+    Quota.Counts counts = Quota.Counts.newInstance();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
-    // to its latest previous snapshot.
+    // to its latest previous snapshot. (besides, we also need to consider nodes
+    // created after prior but before snapshot. this will be done in 
+    // INodeDirectoryWithSnapshot#cleanSubtree
     Snapshot s = snapshot != null && prior != null ? prior : snapshot;
     for (INode child : getChildrenList(s)) {
-      total += child.cleanSubtree(snapshot, prior, collectedBlocks);
+      Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
+          collectedBlocks);
+      counts.add(childCounts);
     }
-    return total;
+    return counts;
   }
 
   @Override
-  public int destroyAndCollectBlocks(
+  public void destroyAndCollectBlocks(
       final BlocksMapUpdateInfo collectedBlocks) {
-    int total = 0;
     for (INode child : getChildrenList(null)) {
-      total += child.destroyAndCollectBlocks(collectedBlocks);
+      child.destroyAndCollectBlocks(collectedBlocks);
     }
     clearReferences();
-    total++;
-    return total;
   }
   
   @Override
-  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks)
-          throws NSQuotaExceededException {
-    int total = 0;
+      throws QuotaExceededException {
     if (prior == null && snapshot == null) {
       // destroy the whole subtree and collect blocks that should be deleted
-      total += destroyAndCollectBlocks(collectedBlocks);
+      destroyAndCollectBlocks(collectedBlocks);
+      return Quota.Counts.newInstance();
     } else {
       // process recursively down the subtree
-      total += cleanSubtreeRecursively(snapshot, prior, collectedBlocks);
+      Quota.Counts counts = cleanSubtreeRecursively(snapshot, prior,
+          collectedBlocks);
+      if (isQuotaSet()) {
+        ((INodeDirectoryWithQuota) this).addSpaceConsumed2Cache(
+            -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      }
+      return counts;
     }
-    return total;
   }
   
   /**

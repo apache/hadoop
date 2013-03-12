@@ -30,14 +30,16 @@ import java.util.Map;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.server.namenode.Content;
+import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
 
@@ -273,7 +275,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
 
   /** Add a snapshot. */
   Snapshot addSnapshot(int id, String name)
-      throws SnapshotException, NSQuotaExceededException {
+      throws SnapshotException, QuotaExceededException {
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
@@ -319,8 +321,13 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       final Snapshot snapshot = snapshotsByNames.remove(i);
       Snapshot prior = Snapshot.findLatestSnapshot(this, snapshot);
       try {
-        cleanSubtree(snapshot, prior, collectedBlocks);
-      } catch(NSQuotaExceededException e) {
+        Quota.Counts counts = cleanSubtree(snapshot, prior, collectedBlocks);
+        INodeDirectory parent = getParent();
+        if (parent != null) {
+          parent.addSpaceConsumed(counts.get(Quota.NAMESPACE),
+              counts.get(Quota.DISKSPACE));
+        }
+      } catch(QuotaExceededException e) {
         LOG.error("BUG: removeSnapshot increases namespace usage.", e);
       }
       return snapshot;
@@ -434,7 +441,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    * Replace itself with {@link INodeDirectoryWithSnapshot} or
    * {@link INodeDirectory} depending on the latest snapshot.
    */
-  void replaceSelf(final Snapshot latest) throws NSQuotaExceededException {
+  void replaceSelf(final Snapshot latest) throws QuotaExceededException {
     if (latest == null) {
       Preconditions.checkState(getLastSnapshot() == null,
           "latest == null but getLastSnapshot() != null, this=%s", this);

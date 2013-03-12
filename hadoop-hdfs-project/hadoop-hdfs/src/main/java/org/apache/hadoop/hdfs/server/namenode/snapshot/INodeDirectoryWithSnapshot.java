@@ -25,12 +25,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.server.namenode.Content;
+import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -73,29 +74,29 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     /** clear the created list */
-    private int destroyCreatedList(
+    private void destroyCreatedList(
         final INodeDirectoryWithSnapshot currentINode,
         final BlocksMapUpdateInfo collectedBlocks) {
-      int removedNum = 0;
       List<INode> createdList = getCreatedList();
       for (INode c : createdList) {
-        removedNum += c.destroyAndCollectBlocks(collectedBlocks);
-        // if c is also contained in the children list, remove it
+        c.destroyAndCollectBlocks(collectedBlocks);
+        // c should be contained in the children list, remove it
         currentINode.removeChild(c);
       }
       createdList.clear();
-      return removedNum;
     }
     
     /** clear the deleted list */
-    private int destroyDeletedList(final BlocksMapUpdateInfo collectedBlocks) {
-      int removedNum  = 0;
+    private Quota.Counts destroyDeletedList(
+        final BlocksMapUpdateInfo collectedBlocks) {
+      Quota.Counts counts = Quota.Counts.newInstance();
       List<INode> deletedList = getDeletedList();
       for (INode d : deletedList) {
-        removedNum += d.destroyAndCollectBlocks(collectedBlocks);
+        d.computeQuotaUsage(counts, false);
+        d.destroyAndCollectBlocks(collectedBlocks);
       }
       deletedList.clear();
-      return removedNum;
+      return counts;
     }
     
     /** Serialize {@link #created} */
@@ -233,18 +234,21 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     @Override
-    int combinePosteriorAndCollectBlocks(final INodeDirectory currentDir,
-        final DirectoryDiff posterior, final BlocksMapUpdateInfo collectedBlocks) {
-      return diff.combinePosterior(posterior.diff, new Diff.Processor<INode>() {
+    Quota.Counts combinePosteriorAndCollectBlocks(
+        final INodeDirectory currentDir, final DirectoryDiff posterior,
+        final BlocksMapUpdateInfo collectedBlocks) {
+      final Quota.Counts counts = Quota.Counts.newInstance();
+      diff.combinePosterior(posterior.diff, new Diff.Processor<INode>() {
         /** Collect blocks for deleted files. */
         @Override
-        public int process(INode inode) {
+        public void process(INode inode) {
           if (inode != null) {
-            return inode.destroyAndCollectBlocks(collectedBlocks);
+            inode.computeQuotaUsage(counts, false);
+            inode.destroyAndCollectBlocks(collectedBlocks);
           }
-          return 0;
         }
       });
+      return counts;
     }
 
     /**
@@ -334,9 +338,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     @Override
-    int destroyAndCollectBlocks(INodeDirectory currentINode,
+    Quota.Counts destroyDiffAndCollectBlocks(INodeDirectory currentINode,
         BlocksMapUpdateInfo collectedBlocks) {
-      return diff.destroyDeletedList(collectedBlocks);      
+      // this diff has been deleted
+      Quota.Counts counts = Quota.Counts.newInstance();
+      counts.add(diff.destroyDeletedList(collectedBlocks));
+      return counts;
     }
   }
 
@@ -465,7 +472,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   @Override
   public INodeDirectoryWithSnapshot recordModification(final Snapshot latest)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     return isInLatestSnapshot(latest)?
         saveSelf2Snapshot(latest, null): this;
   }
@@ -473,14 +480,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   /** Save the snapshot copy to the latest snapshot. */
   public INodeDirectoryWithSnapshot saveSelf2Snapshot(
       final Snapshot latest, final INodeDirectory snapshotCopy)
-          throws NSQuotaExceededException {
+          throws QuotaExceededException {
     diffs.saveSelf2Snapshot(latest, this, snapshotCopy);
     return this;
   }
 
   @Override
   public INode saveChild2Snapshot(final INode child, final Snapshot latest,
-      final INode snapshotCopy) throws NSQuotaExceededException {
+      final INode snapshotCopy) throws QuotaExceededException {
     Preconditions.checkArgument(!child.isDirectory(),
         "child is a directory, child=%s", child);
     if (latest == null) {
@@ -499,7 +506,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   @Override
   public boolean addChild(INode inode, boolean setModTime, Snapshot latest)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     ChildrenDiff diff = null;
     Integer undoInfo = null;
     if (latest != null) {
@@ -515,7 +522,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   @Override
   public boolean removeChild(INode child, Snapshot latest)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     ChildrenDiff diff = null;
     UndoInfo<INode> undoInfo = null;
     if (latest != null) {
@@ -610,16 +617,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks)
-          throws NSQuotaExceededException {
-    int n = 0;
+      throws QuotaExceededException {
+    Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == null) { // delete the current directory
       recordModification(prior);
       // delete everything in created list
       DirectoryDiff lastDiff = diffs.getLast();
       if (lastDiff != null) {
-        n += lastDiff.diff.destroyCreatedList(this, collectedBlocks);
+        lastDiff.diff.destroyCreatedList(this, collectedBlocks);
       }
     } else {
       // update prior
@@ -628,25 +635,35 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           (prior == null || Snapshot.ID_COMPARATOR.compare(s, prior) > 0)) {
         prior = s;
       }
-      n += getDiffs().deleteSnapshotDiff(snapshot, prior, this, 
-          collectedBlocks);
+      counts.add(getDiffs().deleteSnapshotDiff(snapshot, prior, this, 
+          collectedBlocks));
+      if (prior != null) {
+        DirectoryDiff priorDiff = this.getDiffs().getDiff(prior);
+        if (priorDiff != null) {
+          for (INode cNode : priorDiff.getChildrenDiff().getCreatedList()) {
+            counts.add(cNode.cleanSubtree(snapshot, null, collectedBlocks));
+          }
+        }
+      }
     }
+    counts.add(cleanSubtreeRecursively(snapshot, prior, collectedBlocks));
     
-    n += cleanSubtreeRecursively(snapshot, prior, collectedBlocks);
-    return n;
+    if (isQuotaSet()) {
+      this.addSpaceConsumed2Cache(-counts.get(Quota.NAMESPACE),
+          -counts.get(Quota.DISKSPACE));
+    }
+    return counts;
   }
 
   @Override
-  public int destroyAndCollectBlocks(
+  public void destroyAndCollectBlocks(
       final BlocksMapUpdateInfo collectedBlocks) {
-    int total = 0;
     // destroy its diff list
     for (DirectoryDiff diff : diffs) {
-      total += diff.destroyAndCollectBlocks(this, collectedBlocks);
+      diff.destroyDiffAndCollectBlocks(this, collectedBlocks);
     }
-    total += diffs.clear();
-    total += super.destroyAndCollectBlocks(collectedBlocks);
-    return total;
+    diffs.clear();
+    super.destroyAndCollectBlocks(collectedBlocks);
   }
 
   @Override

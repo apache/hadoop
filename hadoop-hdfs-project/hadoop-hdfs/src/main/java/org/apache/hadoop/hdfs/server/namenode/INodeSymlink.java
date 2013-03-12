@@ -22,8 +22,8 @@ import java.io.PrintWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.INode.Content.CountsMap.Key;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
@@ -45,7 +45,7 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  INode recordModification(Snapshot latest) throws NSQuotaExceededException {
+  INode recordModification(Snapshot latest) throws QuotaExceededException {
     return isInLatestSnapshot(latest)?
         getParent().saveChild2Snapshot(this, latest, new INodeSymlink(this))
         : this;
@@ -72,15 +72,15 @@ public class INodeSymlink extends INode {
   }
   
   @Override
-  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks) {
-    return 1;
+    return Quota.Counts.newInstance();
   }
   
   @Override
-  public int destroyAndCollectBlocks(
+  public void destroyAndCollectBlocks(
       final BlocksMapUpdateInfo collectedBlocks) {
-    return 1;
+    // do nothing
   }
 
   @Override

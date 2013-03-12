@@ -173,9 +173,7 @@ public class TestFSImageWithSnapshot {
     int s = 0;
     // make changes to the namesystem
     hdfs.mkdirs(dir);
-    hdfs.allowSnapshot(dir.toString());
-
-    hdfs.createSnapshot(dir, "s" + ++s);
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s" + ++s);
     Path sub1 = new Path(dir, "sub1");
     hdfs.mkdirs(sub1);
     hdfs.setPermission(sub1, new FsPermission((short)0777));

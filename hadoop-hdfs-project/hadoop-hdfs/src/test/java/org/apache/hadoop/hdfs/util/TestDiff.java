@@ -86,7 +86,8 @@ public class TestDiff {
     // make modifications to current and record the diff
     final List<INode> current = new ArrayList<INode>(previous);
     
-    final List<Diff<byte[], INode>> diffs = new ArrayList<Diff<byte[], INode>>();
+    final List<Diff<byte[], INode>> diffs = 
+        new ArrayList<Diff<byte[], INode>>();
     for(int j = 0; j < 5; j++) {
       diffs.add(new Diff<byte[], INode>());
     }
@@ -246,7 +247,8 @@ public class TestDiff {
     return new INodeDirectory(n, name, PERM, 0L);
   }
 
-  static void create(INode inode, final List<INode> current, Diff<byte[], INode> diff) {
+  static void create(INode inode, final List<INode> current,
+      Diff<byte[], INode> diff) {
     final int i = Diff.search(current, inode.getKey());
     Assert.assertTrue(i < 0);
     current.add(-i - 1, inode);
@@ -272,7 +274,8 @@ public class TestDiff {
     }
   }
 
-  static void delete(INode inode, final List<INode> current, Diff<byte[], INode> diff) {
+  static void delete(INode inode, final List<INode> current,
+      Diff<byte[], INode> diff) {
     final int i = Diff.search(current, inode.getKey());
     current.remove(i);
     if (diff != null) {
@@ -297,7 +300,8 @@ public class TestDiff {
     }
   }
 
-  static void modify(INode inode, final List<INode> current, Diff<byte[], INode> diff) {
+  static void modify(INode inode, final List<INode> current,
+      Diff<byte[], INode> diff) {
     final int i = Diff.search(current, inode.getKey());
     Assert.assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);

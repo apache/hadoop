@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
 import com.google.common.base.Preconditions;
@@ -126,15 +127,15 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Combine the posterior diff and collect blocks for deletion. */
-  abstract int combinePosteriorAndCollectBlocks(final N currentINode,
+  abstract Quota.Counts combinePosteriorAndCollectBlocks(final N currentINode,
       final D posterior, final BlocksMapUpdateInfo collectedBlocks);
   
   /**
    * Delete and clear self.
    * @param collectedBlocks Used to collect blocks for deletion.
-   * @return number of inodes/diff destroyed.
+   * @return quota usage delta
    */
-  abstract int destroyAndCollectBlocks(final N currentINode,
+  abstract Quota.Counts destroyDiffAndCollectBlocks(final N currentINode,
       final BlocksMapUpdateInfo collectedBlocks);
 
   @Override

@@ -18,10 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
  * Represent an {@link INodeFileUnderConstruction} that is snapshotted.
@@ -93,7 +94,7 @@ public class INodeFileUnderConstructionWithSnapshot
 
   @Override
   public INodeFileUnderConstructionWithSnapshot recordModification(
-      final Snapshot latest) throws NSQuotaExceededException {
+      final Snapshot latest) throws QuotaExceededException {
     if (isInLatestSnapshot(latest)) {
       diffs.saveSelf2Snapshot(latest, this, null);
     }
@@ -111,17 +112,17 @@ public class INodeFileUnderConstructionWithSnapshot
   }
 
   @Override
-  public int cleanSubtree(final Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks)
-          throws NSQuotaExceededException {
+      throws QuotaExceededException {
     if (snapshot == null) { // delete the current file
       recordModification(prior);
       isCurrentFileDeleted = true;
       Util.collectBlocksAndClear(this, collectedBlocks);
+      return Quota.Counts.newInstance();
     } else { // delete a snapshot
       return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks);
     }
-    return prior == null ? 1 : 0;
   }
 
   @Override

@@ -192,3 +192,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4579. Annotate snapshot tests. (Arpit Agarwal via suresh)
 
   HDFS-4574. Move Diff to the util package.  (szetszwo)
+
+  HDFS-4563. Update namespace/diskspace usage after deleting snapshots.
+  (Jing Zhao via szetszwo)

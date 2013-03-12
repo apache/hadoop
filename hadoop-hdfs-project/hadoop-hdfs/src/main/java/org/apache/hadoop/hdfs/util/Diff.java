@@ -82,7 +82,7 @@ public class Diff<K, E extends Diff.Element<K>> {
   /** An interface for passing a method in order to process elements. */
   public static interface Processor<E> {
     /** Process the given element. */
-    public int process(E element);
+    public void process(E element);
   }
 
   /** Containing exactly one element. */
@@ -153,7 +153,7 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
 
   /** @return the created list, which is never null. */
-  protected List<E> getCreatedList() {
+  public List<E> getCreatedList() {
     return created == null? Collections.<E>emptyList(): created;
   }
 
@@ -420,7 +420,7 @@ public class Diff<K, E extends Diff.Element<K>> {
    * @param deletedProcesser
    *     process the deleted/overwritten elements in case 2.1, 2.3, 3.1 and 3.3.
    */
-  public int combinePosterior(final Diff<K, E> posterior,
+  public void combinePosterior(final Diff<K, E> posterior,
       final Processor<E> deletedProcesser) {
     final Iterator<E> createdIterator = posterior.getCreatedList().iterator();
     final Iterator<E> deletedIterator = posterior.getDeletedList().iterator();
@@ -428,7 +428,6 @@ public class Diff<K, E extends Diff.Element<K>> {
     E c = createdIterator.hasNext()? createdIterator.next(): null;
     E d = deletedIterator.hasNext()? deletedIterator.next(): null;
 
-    int deletedNum = 0;
     for(; c != null || d != null; ) {
       final int cmp = c == null? 1
           : d == null? -1
@@ -441,20 +440,19 @@ public class Diff<K, E extends Diff.Element<K>> {
         // case 2: only in d-list
         final UndoInfo<E> ui = delete(d);
         if (deletedProcesser != null) {
-          deletedNum += deletedProcesser.process(ui.trashed);
+          deletedProcesser.process(ui.trashed);
         }
         d = deletedIterator.hasNext()? deletedIterator.next(): null;
       } else {
         // case 3: in both c-list and d-list 
         final UndoInfo<E> ui = modify(d, c);
         if (deletedProcesser != null) {
-          deletedNum += deletedProcesser.process(ui.trashed);
+          deletedProcesser.process(ui.trashed);
         }
         c = createdIterator.hasNext()? createdIterator.next(): null;
         d = deletedIterator.hasNext()? deletedIterator.next(): null;
       }
     }
-    return deletedNum;
   }
 
   @Override

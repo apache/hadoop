@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.util.EnumCounters;
+
 /** Quota types. */
 public enum Quota {
   /** The namespace usage, i.e. the number of name objects. */
@@ -27,13 +29,17 @@ public enum Quota {
   /** Counters for quota counts. */
   public static class Counts extends EnumCounters<Quota> {
     /** @return a new counter with the given namespace and diskspace usages. */
-    static Counts newInstance(long namespace, long diskspace) {
+    public static Counts newInstance(long namespace, long diskspace) {
       final Counts c = new Counts();
       c.set(NAMESPACE, namespace);
       c.set(DISKSPACE, diskspace);
       return c;
     }
 
+    public static Counts newInstance() {
+      return newInstance(0, 0);
+    }
+    
     Counts() {
       super(Quota.values());
     }

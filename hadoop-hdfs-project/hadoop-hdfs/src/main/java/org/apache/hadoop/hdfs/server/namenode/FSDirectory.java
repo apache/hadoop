@@ -201,7 +201,7 @@ public class FSDirectory implements Closeable {
     ready = flag;
   }
 
-  private void incrDeletedFileCount(int count) {
+  private void incrDeletedFileCount(long count) {
     if (getFSNamesystem() != null)
       NameNode.getNameNodeMetrics().incrFilesDeleted(count);
   }
@@ -757,13 +757,13 @@ public class FSDirectory implements Closeable {
         getFSNamesystem().unprotectedChangeLease(src, dst);
 
         // Collect the blocks and remove the lease for previous dst
-        int filesDeleted = -1;
+        long filesDeleted = -1;
         if (removedDst != null) {
           INode rmdst = removedDst;
           removedDst = null;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-          filesDeleted = rmdst.cleanSubtree(null,
-              dstIIP.getLatestSnapshot(), collectedBlocks);
+          filesDeleted = rmdst.cleanSubtree(null, dstIIP.getLatestSnapshot(),
+              collectedBlocks).get(Quota.NAMESPACE);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
         }
 
@@ -885,7 +885,7 @@ public class FSDirectory implements Closeable {
   
   void setPermission(String src, FsPermission permission)
       throws FileNotFoundException, UnresolvedLinkException,
-      NSQuotaExceededException, SnapshotAccessControlException {
+      QuotaExceededException, SnapshotAccessControlException {
     writeLock();
     try {
       unprotectedSetPermission(src, permission);
@@ -897,7 +897,7 @@ public class FSDirectory implements Closeable {
   
   void unprotectedSetPermission(String src, FsPermission permissions)
       throws FileNotFoundException, UnresolvedLinkException,
-      NSQuotaExceededException, SnapshotAccessControlException {
+      QuotaExceededException, SnapshotAccessControlException {
     assert hasWriteLock();
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(src, true);
     final INode inode = inodesInPath.getLastINode();
@@ -909,7 +909,7 @@ public class FSDirectory implements Closeable {
 
   void setOwner(String src, String username, String groupname)
       throws FileNotFoundException, UnresolvedLinkException,
-      NSQuotaExceededException, SnapshotAccessControlException {
+      QuotaExceededException, SnapshotAccessControlException {
     writeLock();
     try {
       unprotectedSetOwner(src, username, groupname);
@@ -921,7 +921,7 @@ public class FSDirectory implements Closeable {
 
   void unprotectedSetOwner(String src, String username, String groupname)
       throws FileNotFoundException, UnresolvedLinkException,
-      NSQuotaExceededException, SnapshotAccessControlException {
+      QuotaExceededException, SnapshotAccessControlException {
     assert hasWriteLock();
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(src, true);
     INode inode = inodesInPath.getLastINode();
@@ -940,7 +940,7 @@ public class FSDirectory implements Closeable {
    * Concat all the blocks from srcs to trg and delete the srcs files
    */
   public void concat(String target, String [] srcs) 
-      throws UnresolvedLinkException, NSQuotaExceededException,
+      throws UnresolvedLinkException, QuotaExceededException,
       SnapshotAccessControlException {
     writeLock();
     try {
@@ -961,7 +961,7 @@ public class FSDirectory implements Closeable {
    * @param srcs list of file to move the blocks from
    */
   void unprotectedConcat(String target, String [] srcs, long timestamp) 
-      throws UnresolvedLinkException, NSQuotaExceededException,
+      throws UnresolvedLinkException, QuotaExceededException,
       SnapshotAccessControlException {
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1011,7 +1011,7 @@ public class FSDirectory implements Closeable {
     }
     waitForReady();
     long now = now();
-    final int filesRemoved;
+    final long filesRemoved;
     writeLock();
     try {
       final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
@@ -1100,13 +1100,13 @@ public class FSDirectory implements Closeable {
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */ 
   void unprotectedDelete(String src, long mtime) throws UnresolvedLinkException,
-      NSQuotaExceededException, SnapshotAccessControlException {
+      QuotaExceededException, SnapshotAccessControlException {
     assert hasWriteLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
 
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
         normalizePath(src), false);
-    final int filesRemoved = deleteAllowed(inodesInPath, src)?
+    final long filesRemoved = deleteAllowed(inodesInPath, src)?
         unprotectedDelete(inodesInPath, collectedBlocks, mtime): -1;
     if (filesRemoved >= 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
@@ -1121,8 +1121,8 @@ public class FSDirectory implements Closeable {
    * @param mtime the time the inode is removed
    * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
-  int unprotectedDelete(INodesInPath iip, BlocksMapUpdateInfo collectedBlocks,
-      long mtime) throws NSQuotaExceededException {
+  long unprotectedDelete(INodesInPath iip, BlocksMapUpdateInfo collectedBlocks,
+      long mtime) throws QuotaExceededException {
     assert hasWriteLock();
 
     // check if target node exists
@@ -1143,8 +1143,8 @@ public class FSDirectory implements Closeable {
     targetNode.getParent().updateModificationTime(mtime, latestSnapshot);
 
     // collect block
-    final int inodesRemoved = targetNode.cleanSubtree(null, latestSnapshot,
-        collectedBlocks);
+    final long inodesRemoved = targetNode.cleanSubtree(null, latestSnapshot,
+        collectedBlocks).get(Quota.NAMESPACE);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           + targetNode.getFullPathName() + " is removed");
@@ -1531,7 +1531,7 @@ public class FSDirectory implements Closeable {
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
         INodeDirectoryWithQuota node =(INodeDirectoryWithQuota)inodes[i]; 
-        node.addSpaceConsumed(nsDelta, dsDelta);
+        node.addSpaceConsumed2Cache(nsDelta, dsDelta);
       }
     }
   }
@@ -1937,7 +1937,7 @@ public class FSDirectory implements Closeable {
    * @throws NSQuotaExceededException 
    */
   private INode removeLastINode(final INodesInPath inodesInPath)
-      throws NSQuotaExceededException {
+      throws QuotaExceededException {
     final Snapshot latestSnapshot = inodesInPath.getLatestSnapshot();
     final INode[] inodes = inodesInPath.getINodes();
     final int pos = inodes.length - 1;
@@ -2020,12 +2020,22 @@ public class FSDirectory implements Closeable {
       }        
 
       final Snapshot latest = iip.getLatestSnapshot();
-      if (dirNode instanceof INodeDirectoryWithQuota) { 
+      if (dirNode instanceof INodeDirectoryWithQuota) {
+        INodeDirectoryWithQuota quotaNode = (INodeDirectoryWithQuota) dirNode;
+        Quota.Counts counts = null;
+        if (!quotaNode.isQuotaSet()) {
+          // dirNode must be an INodeDirectoryWithSnapshot whose quota has not
+          // been set yet
+          counts = quotaNode.computeQuotaUsage();
+        }
         // a directory with quota; so set the quota to the new value
-        ((INodeDirectoryWithQuota)dirNode).setQuota(nsQuota, dsQuota);
-        if (!dirNode.isQuotaSet() && latest == null) {
+        quotaNode.setQuota(nsQuota, dsQuota);
+        if (quotaNode.isQuotaSet() && counts != null) {
+          quotaNode.setSpaceConsumed(counts.get(Quota.NAMESPACE),
+              counts.get(Quota.DISKSPACE));
+        } else if (!quotaNode.isQuotaSet() && latest == null) {
           // will not come here for root because root's nsQuota is always set
-          return dirNode.replaceSelf4INodeDirectory();
+          return quotaNode.replaceSelf4INodeDirectory();
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota
@@ -2069,7 +2079,7 @@ public class FSDirectory implements Closeable {
    * Sets the access time on the file/directory. Logs it in the transaction log.
    */
   void setTimes(String src, INode inode, long mtime, long atime, boolean force,
-      Snapshot latest) throws NSQuotaExceededException {
+      Snapshot latest) throws QuotaExceededException {
     boolean status = false;
     writeLock();
     try {
@@ -2083,7 +2093,7 @@ public class FSDirectory implements Closeable {
   }
 
   boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
-      throws UnresolvedLinkException, NSQuotaExceededException {
+      throws UnresolvedLinkException, QuotaExceededException {
     assert hasWriteLock();
     final INodesInPath i = getLastINodeInPath(src); 
     return unprotectedSetTimes(src, i.getLastINode(), mtime, atime, force,
@@ -2091,8 +2101,7 @@ public class FSDirectory implements Closeable {
   }
 
   private boolean unprotectedSetTimes(String src, INode inode, long mtime,
-      long atime, boolean force, Snapshot latest)
-          throws NSQuotaExceededException {
+      long atime, boolean force, Snapshot latest) throws QuotaExceededException {
     assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
