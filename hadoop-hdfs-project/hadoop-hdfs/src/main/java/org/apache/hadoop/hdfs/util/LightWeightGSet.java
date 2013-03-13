@@ -72,7 +72,7 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
   /** Modification version for fail-fast.
    * @see ConcurrentModificationException
    */
-  private volatile int modification = 0;
+  private int modification = 0;
 
   /**
    * @param recommended_length Recommended size of the internal array.
