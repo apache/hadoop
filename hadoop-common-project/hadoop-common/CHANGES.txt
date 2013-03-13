@@ -114,6 +114,9 @@ Release 0.23.7 - UNRELEASED
     HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via
     kihwal)
 
+    HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication
+    (daryn)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
