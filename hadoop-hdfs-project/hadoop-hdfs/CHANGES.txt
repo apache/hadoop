@@ -334,6 +334,8 @@ Trunk (Unreleased)
 
     HDFS-4593. TestSaveNamespace fails on Windows. (Arpit Agarwal via suresh)
 
+    HDFS-4582. TestHostsFiles fails on Windows. (Ivan Mitic via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

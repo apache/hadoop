@@ -120,12 +120,13 @@ public class TestHostsFiles {
       
       InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
       LOG.info("nnaddr = '" + nnHttpAddress + "'");
-      URL nnjsp = new URL("http://" + nnHttpAddress.getHostName() + ":" + nnHttpAddress.getPort() + "/dfshealth.jsp");
+      String nnHostName = nnHttpAddress.getHostName();
+      URL nnjsp = new URL("http://" + nnHostName + ":" + nnHttpAddress.getPort() + "/dfshealth.jsp");
       LOG.info("fetching " + nnjsp);
       String dfshealthPage = StringEscapeUtils.unescapeHtml(DFSTestUtil.urlGet(nnjsp));
       LOG.info("got " + dfshealthPage);
-      assertTrue("dfshealth should contain localhost, got:" + dfshealthPage,
-          dfshealthPage.contains("localhost"));
+      assertTrue("dfshealth should contain " + nnHostName + ", got:" + dfshealthPage,
+          dfshealthPage.contains(nnHostName));
 
     } finally {
       cluster.shutdown();
