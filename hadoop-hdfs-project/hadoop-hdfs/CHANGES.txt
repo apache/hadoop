@@ -78,6 +78,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4577. Webhdfs operations should declare if authentication is required
     (daryn via kihwal)
 
+    HDFS-3256. HDFS considers blocks under-replicated if topology script is
+    configured with only 1 rack. (atm)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES

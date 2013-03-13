@@ -96,6 +96,7 @@ public class TestBlockManager {
       dn.updateHeartbeat(
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+      bm.getDatanodeManager().checkIfClusterIsNowMultiRack(dn);
     }
   }
 
@@ -312,6 +313,32 @@ public class TestBlockManager {
     assertTrue("Destination of replication should be on the other rack. " +
         "Was: " + pipeline[1],
         rackB.contains(pipeline[1]));
+  }
+  
+  @Test
+  public void testBlocksAreNotUnderreplicatedInSingleRack() throws Exception {
+    List<DatanodeDescriptor> nodes = ImmutableList.of( 
+        new DatanodeDescriptor(new DatanodeID("h1:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h2:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h3:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h4:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h5:5020"), "/rackA"),
+        new DatanodeDescriptor(new DatanodeID("h6:5020"), "/rackA")
+      );
+    addNodes(nodes);
+    List<DatanodeDescriptor> origNodes = nodes.subList(0, 3);;
+    for (int i = 0; i < NUM_TEST_ITERS; i++) {
+      doTestSingleRackClusterIsSufficientlyReplicated(i, origNodes);
+    }
+  }
+  
+  private void doTestSingleRackClusterIsSufficientlyReplicated(int testIndex,
+      List<DatanodeDescriptor> origNodes)
+      throws Exception {
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    addBlockOnNodes((long)testIndex, origNodes);
+    bm.processMisReplicatedBlocks();
+    assertEquals(0, bm.numOfUnderReplicatedBlocks());
   }
   
   
