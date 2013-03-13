@@ -348,6 +348,8 @@ Trunk (Unreleased)
     HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
     UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
 
+    HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
