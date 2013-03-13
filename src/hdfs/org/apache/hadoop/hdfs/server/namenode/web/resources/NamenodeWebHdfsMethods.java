@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
+import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
@@ -401,10 +402,12 @@ public class NamenodeWebHdfsMethods {
           final DoAsParam doAsUser,
       @QueryParam(PostOpParam.NAME) @DefaultValue(PostOpParam.DEFAULT)
           final PostOpParam op,
+      @QueryParam(ConcatSourcesParam.NAME) @DefaultValue(ConcatSourcesParam.DEFAULT)
+          final ConcatSourcesParam concatSrcs,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
       ) throws IOException, InterruptedException {
-    return post(ugi, delegation, username, doAsUser, ROOT, op, bufferSize);
+    return post(ugi, delegation, username, doAsUser, ROOT, op, concatSrcs, bufferSize);
   }
 
   /** Handle HTTP POST request. */
@@ -423,11 +426,13 @@ public class NamenodeWebHdfsMethods {
       @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(PostOpParam.NAME) @DefaultValue(PostOpParam.DEFAULT)
           final PostOpParam op,
+      @QueryParam(ConcatSourcesParam.NAME) @DefaultValue(ConcatSourcesParam.DEFAULT)
+          final ConcatSourcesParam concatSrcs,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
       ) throws IOException, InterruptedException {
 
-    init(ugi, delegation, username, doAsUser, path, op, bufferSize);
+    init(ugi, delegation, username, doAsUser, path, op, concatSrcs, bufferSize);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -444,6 +449,11 @@ public class NamenodeWebHdfsMethods {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
           fullpath, op.getValue(), -1L, -1L, bufferSize);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case CONCAT:
+    {
+      namenode.concat(fullpath, concatSrcs.getAbsolutePaths());
+      return Response.ok().build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");

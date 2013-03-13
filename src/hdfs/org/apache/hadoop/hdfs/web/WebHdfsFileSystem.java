@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
+import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -670,6 +671,15 @@ public class WebHdfsFileSystem extends FileSystem
         }
       }
     };
+  }
+
+  @Override
+  public void concat(final Path trg, final Path [] srcs) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PostOpParam.Op.CONCAT;
+
+    ConcatSourcesParam param = new ConcatSourcesParam(srcs);
+    run(op, trg, param);
   }
 
   @Override
