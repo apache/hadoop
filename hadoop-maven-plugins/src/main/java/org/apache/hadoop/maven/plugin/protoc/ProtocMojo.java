@@ -37,7 +37,7 @@ public class ProtocMojo extends AbstractMojo {
   private MavenProject project;
 
   @Parameter
-  private List<File> imports;
+  private File[] imports;
 
   @Parameter(defaultValue="${project.build.directory}/generated-sources/java")
   private File output;
