@@ -68,6 +68,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4592. Default values for access time precision are out of sync between
     hdfs-default.xml and the code. (atm)
 
+    HDFS-4522. LightWeightGSet expects incrementing a volatile to be atomic.
+    (Colin Patrick McCabe via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
