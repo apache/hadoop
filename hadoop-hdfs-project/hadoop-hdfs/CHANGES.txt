@@ -2422,6 +2422,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-4577. Webhdfs operations should declare if authentication is required
     (daryn via kihwal)
 
+    HDFS-3344. Unreliable corrupt blocks counting in TestProcessCorruptBlocks
+    (kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
