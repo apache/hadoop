@@ -158,7 +158,7 @@ public class TestProcessCorruptBlocks {
    *     (corrupt replica should  be removed since number of good
    *      replicas (1) is equal to replication factor (1))
    */
-  @Test
+  @Test(timeout=20000)
   public void testWithReplicationFactorAsOne() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
@@ -183,9 +183,14 @@ public class TestProcessCorruptBlocks {
       namesystem.setReplication(fileName.toString(), (short) 1);
 
       // wait for 3 seconds so that all block reports are processed.
-      try {
-        Thread.sleep(3000);
-      } catch (InterruptedException ignored) {
+      for (int i = 0; i < 10; i++) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ignored) {
+        }
+        if (countReplicas(namesystem, block).corruptReplicas() == 0) {
+          break;
+        }
       }
 
       assertEquals(1, countReplicas(namesystem, block).liveReplicas());
