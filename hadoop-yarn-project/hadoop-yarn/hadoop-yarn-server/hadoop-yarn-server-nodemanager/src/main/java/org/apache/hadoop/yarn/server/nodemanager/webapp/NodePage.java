@@ -42,7 +42,7 @@ public class NodePage extends NMView {
   protected void commonPreHead(HTML<_> html) {
     super.commonPreHead(html);
 
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
   }
 
   @Override

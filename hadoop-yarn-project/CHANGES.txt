@@ -66,6 +66,9 @@ Release 2.0.5-beta - UNRELEASED
     the per-application page are translated to html line breaks. (Omkar Vinit
     Joshi via vinodkv)
 
+    YARN-198. Added a link to RM pages from the NodeManager web app. (Jian He
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
