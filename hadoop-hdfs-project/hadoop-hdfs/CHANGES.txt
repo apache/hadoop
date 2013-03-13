@@ -393,6 +393,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4013. TestHftpURLTimeouts throws NPE. (Chao Shi via suresh)
 
+    HDFS-4592. Default values for access time precision are out of sync between
+    hdfs-default.xml and the code. (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
