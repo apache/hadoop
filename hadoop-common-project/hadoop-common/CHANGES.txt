@@ -77,6 +77,8 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9379. capture the ulimit info after printing the log to the 
     console. (Arpit Gupta via suresh)
 
+    HADOOP-9399. protoc maven plugin doesn't work on mvn 3.0.2 (todd)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
