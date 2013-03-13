@@ -414,6 +414,7 @@ public class DFSClient implements java.io.Closeable {
           "null URI");
       NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo =
         NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class);
+      
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }
@@ -782,12 +783,13 @@ public class DFSClient implements java.io.Closeable {
   /**
    * Get {@link BlockReader} for short circuited local reads.
    */
-  static BlockReader getLocalBlockReader(Configuration conf,
-      String src, ExtendedBlock blk, Token<BlockTokenIdentifier> accessToken,
-      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock,
-      boolean connectToDnViaHostname) throws InvalidToken, IOException {
+  static BlockReader getLocalBlockReader(UserGroupInformation ugi,
+      Configuration conf, String src, ExtendedBlock blk,
+      Token<BlockTokenIdentifier> accessToken, DatanodeInfo chosenNode,
+      int socketTimeout, long offsetIntoBlock, boolean connectToDnViaHostname)
+      throws InvalidToken, IOException {
     try {
-      return BlockReaderLocal.newBlockReader(conf, src, blk, accessToken,
+      return BlockReaderLocal.newBlockReader(ugi, conf, src, blk, accessToken,
           chosenNode, socketTimeout, offsetIntoBlock, blk.getNumBytes()
               - offsetIntoBlock, connectToDnViaHostname);
     } catch (RemoteException re) {
@@ -1638,7 +1640,7 @@ public class DFSClient implements java.io.Closeable {
    * @param socketFactory to create sockets to connect to DNs
    * @param socketTimeout timeout to use when connecting and waiting for a response
    * @param encryptionKey the key needed to communicate with DNs in this cluster
-   * @param connectToDnViaHostname {@see #connectToDnViaHostname()}
+   * @param connectToDnViaHostname {@link #connectToDnViaHostname()}
    * @return The checksum 
    */
   static MD5MD5CRC32FileChecksum getFileChecksum(String src,
@@ -2250,6 +2252,12 @@ public class DFSClient implements java.io.Closeable {
   }
 
   void disableShortCircuit() {
+    LOG.info("Short circuit is disabled");
     shortCircuitLocalReads = false;
+  }
+  
+  @VisibleForTesting
+  boolean getShortCircuitLocalReads() {
+    return shortCircuitLocalReads;
   }
 }

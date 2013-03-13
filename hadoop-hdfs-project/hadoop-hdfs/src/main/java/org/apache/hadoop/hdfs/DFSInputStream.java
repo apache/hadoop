@@ -460,6 +460,10 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                              " for " + blk);
         }
         return chosenNode;
+      } catch (AccessControlException ex) {
+        DFSClient.LOG.warn("Short circuit access failed " + ex);
+        dfsClient.disableShortCircuit();
+        continue;
       } catch (IOException ex) {
         if (ex instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
           DFSClient.LOG.info("Will fetch a new encryption key and retry, " 
@@ -806,7 +810,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         // we want to remember what we have tried
         addIntoCorruptedBlockMap(block.getBlock(), chosenNode, corruptedBlockMap);
       } catch (AccessControlException ex) {
-        DFSClient.LOG.warn("Short circuit access failed ", ex);
+        DFSClient.LOG.warn("Short circuit access failed " + ex);
         dfsClient.disableShortCircuit();
         continue;
       } catch (IOException e) {
@@ -885,9 +889,9 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     // Can't local read a block under construction, see HDFS-2757
     if (dfsClient.shouldTryShortCircuitRead(dnAddr) &&
         !blockUnderConstruction()) {
-      return DFSClient.getLocalBlockReader(dfsClient.conf, src, block,
-          blockToken, chosenNode, dfsClient.hdfsTimeout, startOffset,
-          dfsClient.connectToDnViaHostname());
+      return DFSClient.getLocalBlockReader(dfsClient.ugi, dfsClient.conf,
+          src, block, blockToken, chosenNode, dfsClient.hdfsTimeout,
+          startOffset, dfsClient.connectToDnViaHostname());
     }
     
     IOException err = null;
@@ -1027,8 +1031,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
    * only report if the total number of replica is 1. We do not
    * report otherwise since this maybe due to the client is a handicapped client
    * (who can not read).
-   * @param corruptedBlockMap, map of corrupted blocks
-   * @param dataNodeCount, number of data nodes who contains the block replicas
+   * @param corruptedBlockMap map of corrupted blocks
+   * @param dataNodeCount number of data nodes who contains the block replicas
    */
   private void reportCheckSumFailure(
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap, 
