@@ -104,7 +104,7 @@ public class TestNodeCount {
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();
         Collection<Block> blocks = bm.excessReplicateMap.get(dn.getStorageID());
-        if (blocks == null || !blocks.contains(block) ) {
+        if (blocks == null || !blocks.contains(block.getLocalBlock()) ) {
           nonExcessDN = dn;
           break;
         }

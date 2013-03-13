@@ -407,6 +407,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4595. When short circuit read is fails, DFSClient does not fallback
     to regular reads. (suresh)
 
+    HDFS-4583. TestNodeCount fails. (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
