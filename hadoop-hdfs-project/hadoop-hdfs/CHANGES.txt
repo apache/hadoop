@@ -411,6 +411,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4583. TestNodeCount fails. (Ivan Mitic via suresh)
 
+    HDFS-4591. HA clients can fail to fail over while Standby NN is performing
+    long checkpoint. (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

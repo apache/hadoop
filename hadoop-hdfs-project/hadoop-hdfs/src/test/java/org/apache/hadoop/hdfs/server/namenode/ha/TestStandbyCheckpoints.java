@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,8 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,7 +46,10 @@ import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.util.ThreadUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,6 +65,8 @@ public class TestStandbyCheckpoints {
   protected MiniDFSCluster cluster;
   protected NameNode nn0, nn1;
   protected FileSystem fs;
+  
+  private static final Log LOG = LogFactory.getLog(TestStandbyCheckpoints.class);
 
   @SuppressWarnings("rawtypes")
   @Before
@@ -230,6 +238,49 @@ public class TestStandbyCheckpoints {
     }
     
     assertTrue(canceledOne);
+  }
+  
+  /**
+   * Make sure that clients will receive StandbyExceptions even when a
+   * checkpoint is in progress on the SBN, and therefore the StandbyCheckpointer
+   * thread will have FSNS lock. Regression test for HDFS-4591.
+   */
+  @Test(timeout=120000)
+  public void testStandbyExceptionThrownDuringCheckpoint() throws Exception {
+    
+    // Set it up so that we know when the SBN checkpoint starts and ends.
+    FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nn1);
+    DelayAnswer answerer = new DelayAnswer(LOG);
+    Mockito.doAnswer(answerer).when(spyImage1)
+        .saveNamespace(Mockito.any(FSNamesystem.class),
+            Mockito.any(Canceler.class));
+    
+    // Perform some edits and wait for a checkpoint to start on the SBN.
+    doEdits(0, 2000);
+    nn0.getRpcServer().rollEditLog();
+    answerer.waitForCall();
+    answerer.proceed();
+    assertTrue("SBN is not performing checkpoint but it should be.",
+        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    
+    // Make sure that the lock has actually been taken by the checkpointing
+    // thread.
+    ThreadUtil.sleepAtLeastIgnoreInterrupts(1000);
+    try {
+      // Perform an RPC to the SBN and make sure it throws a StandbyException.
+      nn1.getRpcServer().getFileInfo("/");
+      fail("Should have thrown StandbyException, but instead succeeded.");
+    } catch (StandbyException se) {
+      GenericTestUtils.assertExceptionContains("is not supported", se);
+    }
+    
+    // Make sure that the checkpoint is still going on, implying that the client
+    // RPC to the SBN happened during the checkpoint.
+    assertTrue("SBN should have still been checkpointing.",
+        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    answerer.waitForResult();
+    assertTrue("SBN should have finished checkpointing.",
+        answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
   }
 
   private void doEdits(int start, int stop) throws IOException {
