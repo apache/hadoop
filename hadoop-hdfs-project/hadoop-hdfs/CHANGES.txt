@@ -399,6 +399,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4522. LightWeightGSet expects incrementing a volatile to be atomic.
     (Colin Patrick McCabe via atm)
 
+    HDFS-4484. libwebhdfs compilation broken with gcc 4.6.2. (Colin Patrick
+    McCabe via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
