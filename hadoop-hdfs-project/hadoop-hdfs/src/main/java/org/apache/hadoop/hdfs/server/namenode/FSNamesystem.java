@@ -1081,8 +1081,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void metaSave(String filename) throws IOException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.UNCHECKED);
     writeLock();
     try {
+      checkOperation(OperationCategory.UNCHECKED);
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
       PrintWriter out = new PrintWriter(new BufferedWriter(
           new OutputStreamWriter(new FileOutputStream(file, true), Charsets.UTF_8)));
@@ -1155,6 +1157,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException, IOException {
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1192,6 +1195,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException, IOException {
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1302,13 +1306,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws FileNotFoundException, UnresolvedLinkException, IOException {
 
     for (int attempt = 0; attempt < 2; attempt++) {
-      if (attempt == 0) { // first attempt is with readlock
+      boolean isReadOp = (attempt == 0);
+      if (isReadOp) { // first attempt is with readlock
+        checkOperation(OperationCategory.READ);
         readLock();
       }  else { // second attempt is with  write lock
+        checkOperation(OperationCategory.WRITE);
         writeLock(); // writelock is needed to set accesstime
       }
       try {
-        checkOperation(OperationCategory.READ);
+        if (isReadOp) {
+          checkOperation(OperationCategory.READ);
+        } else {
+          checkOperation(OperationCategory.WRITE);
+        }
 
         // if the namenode is in safemode, then do not update access time
         if (isInSafeMode()) {
@@ -1321,7 +1332,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if (now <= inode.getAccessTime() + getAccessTimePrecision()) {
             // if we have to set access time but we only have the readlock, then
             // restart this entire operation with the writeLock.
-            if (attempt == 0) {
+            if (isReadOp) {
               continue;
             }
           }
@@ -1331,7 +1342,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             inode.computeFileSize(false), inode.isUnderConstruction(),
             offset, length, needBlockToken);
       } finally {
-        if (attempt == 0) {
+        if (isReadOp) {
           readUnlock();
         } else {
           writeUnlock();
@@ -1387,6 +1398,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1529,6 +1541,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1569,6 +1582,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1644,6 +1658,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     blockManager.verifyReplication(src, replication, null);
     final boolean isFile;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1674,6 +1689,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   long getPreferredBlockSize(String filename) 
       throws IOException, UnresolvedLinkException {
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -1733,6 +1749,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       FileNotFoundException, ParentNotDirectoryException, IOException {
     boolean skipSync = false;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -1927,6 +1944,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
     boolean skipSync = false;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2064,6 +2082,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     LocatedBlock lb = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2133,8 +2152,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // Part I. Analyze the state of the file with respect to the input data.
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
+      checkOperation(OperationCategory.READ);
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       final INode[] inodes = analyzeFileState(
           src, clientName, previous, onRetryBlock);
@@ -2161,8 +2182,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // Allocate a new block, add it to the INode and the BlocksMap. 
     Block newBlock = null;
     long offset;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
+      checkOperation(OperationCategory.WRITE);
       // Run the full analysis again, since things could have changed
       // while chooseTarget() was executing.
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
@@ -2312,9 +2335,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final DatanodeDescriptor clientnode;
     final long preferredblocksize;
     final List<DatanodeDescriptor> chosen;
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
-      checkOperation(OperationCategory.WRITE);
+      checkOperation(OperationCategory.READ);
       //check safe mode
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot add datanode; src=" + src
@@ -2354,6 +2378,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   boolean abandonBlock(ExtendedBlock b, String src, String holder)
       throws LeaseExpiredException, FileNotFoundException,
       UnresolvedLinkException, IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2427,6 +2452,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     throws SafeModeException, UnresolvedLinkException, IOException {
     checkBlock(last);
     boolean success = false;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2594,6 +2620,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           " to " + dst);
     }
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2650,6 +2677,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + src + " to " + dst);
     }
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2736,6 +2764,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
              IOException {
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2854,6 +2883,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
            StandbyException, IOException {
     HdfsFileStatus stat = null;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2896,6 +2926,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     }
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2956,6 +2987,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       FileNotFoundException, UnresolvedLinkException, StandbyException {
     FSPermissionChecker pc = new FSPermissionChecker(fsOwnerShortUserName,
         supergroup);
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2976,6 +3008,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void setQuota(String path, long nsQuota, long dsQuota) 
       throws IOException, UnresolvedLinkException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2999,6 +3032,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void fsync(String src, String clientName, long lastBlockLength) 
       throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3203,6 +3237,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String[] newtargetstorages)
       throws IOException, UnresolvedLinkException {
     String src = "";
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3306,6 +3341,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Renew the lease(s) held by the given client
    */
   void renewLease(String holder) throws IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3347,6 +3383,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     throws AccessControlException, UnresolvedLinkException, IOException {
     DirectoryListing dl;
     FSPermissionChecker pc = getPermissionChecker();
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -3633,10 +3670,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   DatanodeInfo[] datanodeReport(final DatanodeReportType type
-      ) throws AccessControlException {
+      ) throws AccessControlException, StandbyException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.UNCHECKED);
     readLock();
     try {
+      checkOperation(OperationCategory.UNCHECKED);
       final DatanodeManager dm = getBlockManager().getDatanodeManager();      
       final List<DatanodeDescriptor> results = dm.getDatanodeListForReport(type);
 
@@ -3660,8 +3699,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void saveNamespace() throws AccessControlException, IOException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.UNCHECKED);
     readLock();
     try {
+      checkOperation(OperationCategory.UNCHECKED);
       if (!isInSafeMode()) {
         throw new IOException("Safe mode should be turned ON " +
                               "in order to create namespace image.");
@@ -3679,10 +3720,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * 
    * @throws AccessControlException if superuser privilege is violated.
    */
-  boolean restoreFailedStorage(String arg) throws AccessControlException {
+  boolean restoreFailedStorage(String arg) throws AccessControlException,
+      StandbyException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.UNCHECKED);
     writeLock();
     try {
+      checkOperation(OperationCategory.UNCHECKED);
       
       // if it is disabled - enable it and vice versa.
       if(arg.equals("check"))
@@ -3703,6 +3747,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
   void finalizeUpgrade() throws IOException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -4442,6 +4487,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   CheckpointSignature rollEditLog() throws IOException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.JOURNAL);
     writeLock();
     try {
       checkOperation(OperationCategory.JOURNAL);
@@ -4459,6 +4505,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                 NamenodeRegistration bnReg, // backup node
                                 NamenodeRegistration nnReg) // active name-node
   throws IOException {
+    checkOperation(OperationCategory.CHECKPOINT);
     writeLock();
     try {
       checkOperation(OperationCategory.CHECKPOINT);
@@ -4477,6 +4524,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
+    checkOperation(OperationCategory.CHECKPOINT);
     readLock();
     try {
       checkOperation(OperationCategory.CHECKPOINT);
@@ -4765,6 +4813,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Client is reporting some bad block locations.
    */
   void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -4799,6 +4848,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock updateBlockForPipeline(ExtendedBlock block, 
       String clientName) throws IOException {
     LocatedBlock locatedBlock;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -4830,6 +4880,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void updatePipeline(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -4957,8 +5008,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void releaseBackupNode(NamenodeRegistration registration)
     throws IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
+      checkOperation(OperationCategory.WRITE);
       if(getFSImage().getStorage().getNamespaceID()
          != registration.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
@@ -4997,6 +5050,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(String path,
 	String[] cookieTab) throws IOException {
     checkSuperuserPrivilege();
+    checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -5089,6 +5143,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     Token<DelegationTokenIdentifier> token;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5135,6 +5190,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     long expiryTime;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5167,6 +5223,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);

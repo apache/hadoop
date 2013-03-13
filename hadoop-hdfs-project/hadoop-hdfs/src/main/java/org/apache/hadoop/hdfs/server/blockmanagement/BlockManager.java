@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -874,9 +875,10 @@ public class BlockManager {
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size
       ) throws IOException {
+    namesystem.checkOperation(OperationCategory.READ);
     namesystem.readLock();
     try {
-      namesystem.checkSuperuserPrivilege();
+      namesystem.checkOperation(OperationCategory.READ);
       return getBlocksWithLocations(datanode, size);  
     } finally {
       namesystem.readUnlock();
