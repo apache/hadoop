@@ -253,6 +253,8 @@ public class SnapshotManager implements SnapshotStats {
       List<INodeDirectorySnapshottable> toRemoveList) {
     if (toRemoveList != null) {
       this.snapshottables.removeAll(toRemoveList);
+      // modify the numSnapshottableDirs metrics
+      numSnapshottableDirs.addAndGet(-toRemoveList.size());
     }
   }
   

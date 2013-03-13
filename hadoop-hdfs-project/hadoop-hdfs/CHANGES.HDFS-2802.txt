@@ -195,3 +195,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4563. Update namespace/diskspace usage after deleting snapshots.
   (Jing Zhao via szetszwo)
+
+  HDFS-4144. Create test for all snapshot-related metrics.
+  (Jing Zhao via suresh)

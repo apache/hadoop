@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -45,7 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
-import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -266,7 +268,7 @@ public class TestSnapshot {
    * A simple test that updates a sub-directory of a snapshottable directory
    * with snapshots
    */
-  @Test (timeout=300000)
+  @Test (timeout=60000)
   public void testUpdateDirectory() throws Exception {
     Path dir = new Path("/dir");
     Path sub = new Path(dir, "sub");
@@ -288,11 +290,8 @@ public class TestSnapshot {
   
   /**
    * Creating snapshots for a directory that is not snapshottable must fail.
-   * 
-   * TODO: Listing/Deleting snapshots for a directory that is not snapshottable
-   * should also fail.
    */
-  @Test (timeout=300000)
+  @Test (timeout=60000)
   public void testSnapshottableDirectory() throws Exception {
     Path dir = new Path("/TestSnapshot/sub");
     Path file0 = new Path(dir, "file0");
@@ -300,10 +299,29 @@ public class TestSnapshot {
     DFSTestUtil.createFile(hdfs, file0, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
 
-    exception.expect(RemoteException.class);
-    exception.expectMessage("Directory is not a snapshottable directory: "
-        + dir.toString());
-    hdfs.createSnapshot(dir, "s1");
+    try {
+      hdfs.createSnapshot(dir, "s1");
+      fail("Exception expected: " + dir + " is not snapshottable");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Directory is not a snapshottable directory: " + dir, e);
+    }
+
+    try {
+      hdfs.deleteSnapshot(dir, "s1");
+      fail("Exception expected: " + dir + " is not a snapshottale dir");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          "Directory is not a snapshottable directory: " + dir, e);
+    }
+
+    try {
+      hdfs.renameSnapshot(dir, "s1", "s2");
+      fail("Exception expected: " + dir + " is not a snapshottale dir");
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(
+          "Directory is not a snapshottable directory: " + dir, e);
+    }
   }
 
   /**

@@ -697,6 +697,7 @@ public class TestSnapshotDeletion {
     
     // make changes on sub
     hdfs.delete(subFile1, true);
+    checkQuotaUsageComputation(new Path("/"), 16, BLOCKSIZE * 11);
     checkQuotaUsageComputation(dir, 15, BLOCKSIZE * 11);
     checkQuotaUsageComputation(sub, 13, BLOCKSIZE * 11);
     
@@ -717,6 +718,7 @@ public class TestSnapshotDeletion {
     
     // delete snapshot s2
     hdfs.deleteSnapshot(dir, "s2");
+    checkQuotaUsageComputation(new Path("/"), 14, BLOCKSIZE * 11);
     checkQuotaUsageComputation(dir, 13, BLOCKSIZE * 11);
     checkQuotaUsageComputation(sub, 12, BLOCKSIZE * 11);
     
