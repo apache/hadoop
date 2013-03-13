@@ -523,6 +523,9 @@ Release 1.2.0 - unreleased
     HADOOP-9379. capture the ulimit info after printing the log to the console.
     (Arpit Gupta via suresh)
 
+    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
+    non-Hadoop JAAS context. (todd, backported by suresh)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
