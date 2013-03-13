@@ -104,6 +104,9 @@
     <li><a href="#APPEND"><code>APPEND</code></a>
         (see <a href="ext:api/org/apache/hadoop/fs/filesystem/append">FileSystem.append</a>)
     </li>
+    <li><a href="#CONCAT"><code>CONCAT</code></a>
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/concat">FileSystem.concat</a>)
+    </li>
   </ul></li>
   <li>HTTP DELETE
   <ul>
@@ -310,6 +313,28 @@ Content-Length: 0
   <a href="ext:api/org/apache/hadoop/fs/filesystem/append">FileSystem.append</a>
 </p>
       </section>
+<!-- ***************************************************************************** -->
+      <section id="CONCAT">
+        <title>Concatenate Files</title>
+<ul>
+  <li>Submit a HTTP POST request.
+    <source>
+        curl -i -X POST "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=CONCAT&amp;sources=&lt;PATHS&gt;"
+    </source>
+The client receives a response with zero content length:
+    <source>
+HTTP/1.1 200 OK
+Content-Length: 0
+    </source>
+  </li>
+</ul>
+<p>
+  See also:
+  <a href="#sources"><code>sources</code></a>,
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/concat">FileSystem.concat</a>
+</p>
+      </section>
+
 <!-- ***************************************************************************** -->
       <section id="OPEN">
         <title>Open and Read a File</title>
@@ -1532,6 +1557,22 @@ var fileStatusProperties =
   See also:
   <a href="#CREATE"><code>CREATE</code></a>,
   <a href="#SETREPLICATION"><code>SETREPLICATION</code></a>
+</p>
+      </section>
+<!-- ***************************************************************************** -->
+      <section id="sources">
+        <title>Sources</title>
+<table>
+  <tr><td>Name</td><td><code>sources</code></td></tr>
+  <tr><td>Description</td><td>A list of source paths.</td></tr>
+  <tr><td>Type</td><td>String</td></tr>
+  <tr><td>Default Value</td><td>&lt;empty&gt;</td></tr>
+  <tr><td>Valid Values</td><td>A list of comma seperated absolute FileSystem paths without scheme and authority.</td></tr>
+  <tr><td>Syntax</td><td>Any string.</td></tr>
+</table>
+<p>
+  See also:
+  <a href="#CONCAT"><code>CONCAT</code></a>,
 </p>
       </section>
 <!-- ***************************************************************************** -->

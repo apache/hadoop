@@ -166,6 +166,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setTimes href="#setTimes(org.apache.hadoop.fs.Path,%20long,%20long)" />
 
                 <append href="#append(org.apache.hadoop.fs.Path,%20int,%20org.apache.hadoop.util.Progressable)" />
+                <concat href="#concat(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.Path[])" />
                 <delete href="#delete(org.apache.hadoop.fs.Path,%20boolean)" />
               </filesystem>
             </fs>
