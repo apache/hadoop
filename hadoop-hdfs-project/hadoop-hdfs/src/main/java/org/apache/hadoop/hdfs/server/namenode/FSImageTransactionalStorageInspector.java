@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,23 +118,30 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
   }
   
   /**
-   * @return the image that has the most recent associated transaction ID.
-   * If there are multiple storage directories which contain equal images 
-   * the storage directory that was inspected first will be preferred.
+   * @return the image files that have the most recent associated 
+   * transaction IDs.  If there are multiple storage directories which 
+   * contain equal images, we'll return them all.
    * 
    * @throws FileNotFoundException if not images are found.
    */
   @Override
-  FSImageFile getLatestImage() throws IOException {
-    if (foundImages.isEmpty()) {
-      throw new FileNotFoundException("No valid image files found");
-    }
-
-    FSImageFile ret = null;
+  List<FSImageFile> getLatestImages() throws IOException {
+    LinkedList<FSImageFile> ret = new LinkedList<FSImageFile>();
     for (FSImageFile img : foundImages) {
-      if (ret == null || img.txId > ret.txId) {
-        ret = img;
+      if (ret.isEmpty()) {
+        ret.add(img);
+      } else {
+        FSImageFile cur = ret.getFirst();
+        if (cur.txId == img.txId) {
+          ret.add(img);
+        } else if (cur.txId < img.txId) {
+          ret.clear();
+          ret.add(img);
+        }
       }
+    }
+    if (ret.isEmpty()) {
+      throw new FileNotFoundException("No valid image files found");
     }
     return ret;
   }

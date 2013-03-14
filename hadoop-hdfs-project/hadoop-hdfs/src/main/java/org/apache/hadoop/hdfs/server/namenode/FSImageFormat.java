@@ -230,8 +230,8 @@ class FSImageFormat {
         loadSecretManagerState(in);
 
         // make sure to read to the end of file
-        int eof = in.read();
-        assert eof == -1 : "Should have reached the end of image file " + curFile;
+        boolean eof = (in.read() == -1);
+        assert eof : "Should have reached the end of image file " + curFile;
       } finally {
         in.close();
       }

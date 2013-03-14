@@ -47,7 +47,7 @@ abstract class FSImageStorageInspector {
    * Get the image files which should be loaded into the filesystem.
    * @throws IOException if not enough files are available (eg no image found in any directory)
    */
-  abstract FSImageFile getLatestImage() throws IOException;
+  abstract List<FSImageFile> getLatestImages() throws IOException;
 
   /** 
    * Get the minimum tx id which should be loaded with this set of images.

@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
@@ -418,7 +418,7 @@ public class TestReplicationPolicy {
           (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
     }
     
-    final TestAppender appender = new TestAppender();
+    final LogVerificationAppender appender = new LogVerificationAppender();
     final Logger logger = Logger.getRootLogger();
     logger.addAppender(appender);
     
@@ -443,28 +443,6 @@ public class TestReplicationPolicy {
       dataNodes[i].updateHeartbeat(
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
-    }
-  }
-  
-  class TestAppender extends AppenderSkeleton {
-    private final List<LoggingEvent> log = new ArrayList<LoggingEvent>();
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    @Override
-    protected void append(final LoggingEvent loggingEvent) {
-      log.add(loggingEvent);
-    }
-
-    @Override
-    public void close() {
-    }
-
-    public List<LoggingEvent> getLog() {
-      return new ArrayList<LoggingEvent>(log);
     }
   }
 
