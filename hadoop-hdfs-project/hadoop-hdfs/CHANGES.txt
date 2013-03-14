@@ -414,6 +414,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4591. HA clients can fail to fail over while Standby NN is performing
     long checkpoint. (atm)
 
+    HDFS-3277. fail over to loading a different FSImage if the first one we
+    try to load is corrupt. (Colin Patrick McCabe and Andrew Wang via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

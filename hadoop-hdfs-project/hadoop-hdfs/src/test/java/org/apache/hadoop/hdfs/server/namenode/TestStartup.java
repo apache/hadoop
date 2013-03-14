@@ -31,12 +31,10 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -46,17 +44,21 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -111,11 +113,12 @@ public class TestStartup {
     }	
   }
 
-   /**
-   * start MiniDFScluster, create a file (to create edits) and do a checkpoint  
+  /**
+   * Create a number of fsimage checkpoints
+   * @param count number of checkpoints to create
    * @throws IOException
    */
-  public void createCheckPoint() throws IOException {
+  public void createCheckPoint(int count) throws IOException {
     LOG.info("--starting mini cluster");
     // manage dirs parameter set to false 
     MiniDFSCluster cluster = null;
@@ -133,15 +136,18 @@ public class TestStartup {
       sn = new SecondaryNameNode(config);
       assertNotNull(sn);
 
-      // create a file
-      FileSystem fileSys = cluster.getFileSystem();
-      Path file1 = new Path("t1");
-      DFSTestUtil.createFile(fileSys, file1, fileSize, fileSize, blockSize, 
-          (short) 1, seed);
-
-      LOG.info("--doing checkpoint");
-      sn.doCheckpoint();  // this shouldn't fail
-      LOG.info("--done checkpoint");
+      // Create count new files and checkpoints
+      for (int i=0; i<count; i++) {
+        // create a file
+        FileSystem fileSys = cluster.getFileSystem();
+        Path p = new Path("t" + i);
+        DFSTestUtil.createFile(fileSys, p, fileSize, fileSize,
+            blockSize, (short) 1, seed);
+        LOG.info("--file " + p.toString() + " created");
+        LOG.info("--doing checkpoint");
+        sn.doCheckpoint();  // this shouldn't fail
+        LOG.info("--done checkpoint");
+      }
     } catch (IOException e) {
       fail(StringUtils.stringifyException(e));
       System.err.println("checkpoint failed");
@@ -151,7 +157,36 @@ public class TestStartup {
         sn.shutdown();
       if(cluster!=null) 
         cluster.shutdown();
-      LOG.info("--file t1 created, cluster shutdown");
+      LOG.info("--cluster shutdown");
+    }
+  }
+
+  /**
+   * Corrupts the MD5 sum of the fsimage.
+   * 
+   * @param corruptAll
+   *          whether to corrupt one or all of the MD5 sums in the configured
+   *          namedirs
+   * @throws IOException
+   */
+  private void corruptFSImageMD5(boolean corruptAll) throws IOException {
+    List<URI> nameDirs = (List<URI>)FSNamesystem.getNamespaceDirs(config);
+    // Corrupt the md5 files in all the namedirs
+    for (URI uri: nameDirs) {
+      // Directory layout looks like:
+      // test/data/dfs/nameN/current/{fsimage,edits,...}
+      File nameDir = new File(uri.getPath());
+      File dfsDir = nameDir.getParentFile();
+      assertEquals(dfsDir.getName(), "dfs"); // make sure we got right dir
+      // Set the md5 file to all zeros
+      File imageFile = new File(nameDir,
+          Storage.STORAGE_DIR_CURRENT + "/"
+          + NNStorage.getImageFileName(0));
+      MD5FileUtils.saveMD5File(imageFile, new MD5Hash(new byte[16]));
+      // Only need to corrupt one if !corruptAll
+      if (!corruptAll) {
+        break;
+      }
     }
   }
 
@@ -165,7 +200,7 @@ public class TestStartup {
 
     // get name dir and its length, then delete and recreate the directory
     File dir = new File(nameDirs.get(0).getPath()); // has only one
-    this.fsimageLength = new File(new File(dir, "current"), 
+    this.fsimageLength = new File(new File(dir, Storage.STORAGE_DIR_CURRENT), 
         NameNodeFile.IMAGE.getName()).length();
 
     if(dir.exists() && !(FileUtil.fullyDelete(dir)))
@@ -178,7 +213,7 @@ public class TestStartup {
 
     dir = new File( nameEditsDirs.get(0).getPath()); //has only one
 
-    this.editsLength = new File(new File(dir, "current"), 
+    this.editsLength = new File(new File(dir, Storage.STORAGE_DIR_CURRENT), 
         NameNodeFile.EDITS.getName()).length();
 
     if(dir.exists() && !(FileUtil.fullyDelete(dir)))
@@ -262,7 +297,7 @@ public class TestStartup {
     config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
         fileAsURI(new File(hdfsDir, "chkpt")).toString());
 
-    createCheckPoint();
+    createCheckPoint(1);
 
     corruptNameNodeFiles();
     checkNameNodeFiles();
@@ -289,7 +324,7 @@ public class TestStartup {
     config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
         fileAsURI(new File(hdfsDir, "chkpt")).toString());
 
-    createCheckPoint();
+    createCheckPoint(1);
     corruptNameNodeFiles();
     checkNameNodeFiles();
   }
@@ -447,20 +482,18 @@ public class TestStartup {
         FileSystem fs = cluster.getFileSystem();
         fs.mkdirs(new Path("/test"));
         
-        // Directory layout looks like:
-        // test/data/dfs/nameN/current/{fsimage,edits,...}
-        File nameDir = new File(cluster.getNameDirs(0).iterator().next().getPath());
-        File dfsDir = nameDir.getParentFile();
-        assertEquals(dfsDir.getName(), "dfs"); // make sure we got right dir
-        
         LOG.info("Shutting down cluster #1");
         cluster.shutdown();
         cluster = null;
 
-        // Corrupt the md5 file to all 0s
-        File imageFile = new File(nameDir, "current/" + NNStorage.getImageFileName(0));
-        MD5FileUtils.saveMD5File(imageFile, new MD5Hash(new byte[16]));
-        
+        // Corrupt the md5 files in all the namedirs
+        corruptFSImageMD5(true);
+
+        // Attach our own log appender so we can verify output
+        final LogVerificationAppender appender = new LogVerificationAppender();
+        final Logger logger = Logger.getRootLogger();
+        logger.addAppender(appender);
+
         // Try to start a new cluster
         LOG.info("\n===========================================\n" +
         "Starting same cluster after simulated crash");
@@ -471,9 +504,12 @@ public class TestStartup {
             .build();
           fail("Should not have successfully started with corrupt image");
         } catch (IOException ioe) {
-          if (!ioe.getCause().getMessage().contains("is corrupt with MD5")) {
-            throw ioe;
-          }
+          GenericTestUtils.assertExceptionContains(
+              "Failed to load an FSImage file!", ioe);
+          int md5failures = appender.countExceptionsWithMessage(
+              " is corrupt with MD5 checksum of ");
+          // Two namedirs, so should have seen two failures
+          assertEquals(2, md5failures);
         }
     } finally {
       if (cluster != null) {
@@ -482,6 +518,21 @@ public class TestStartup {
     }
   }
   
+  @Test(timeout=30000)
+  public void testCorruptImageFallback() throws IOException {
+    // Create two checkpoints
+    createCheckPoint(2);
+    // Delete a single md5sum
+    corruptFSImageMD5(false);
+    // Should still be able to start
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .format(false)
+        .manageDataDfsDirs(false)
+        .manageNameDfsDirs(false)
+        .build();
+    cluster.waitActive();
+}
+
   /**
    * This test tests hosts include list contains host names.  After namenode
    * restarts, the still alive datanodes should not have any trouble in getting

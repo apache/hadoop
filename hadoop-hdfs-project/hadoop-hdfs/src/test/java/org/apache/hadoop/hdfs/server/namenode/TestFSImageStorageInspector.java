@@ -57,7 +57,7 @@ public class TestFSImageStorageInspector {
     inspector.inspectDirectory(mockDir);
     assertEquals(2, inspector.foundImages.size());
 
-    FSImageFile latestImage = inspector.getLatestImage();
+    FSImageFile latestImage = inspector.getLatestImages().get(0);
     assertEquals(456, latestImage.txId);
     assertSame(mockDir, latestImage.sd);
     assertTrue(inspector.isUpgradeFinalized());
