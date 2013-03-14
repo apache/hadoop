@@ -350,6 +350,9 @@ Trunk (Unreleased)
 
     HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
 
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
+    Wang via atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
