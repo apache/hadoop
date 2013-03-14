@@ -111,7 +111,7 @@ public class CountersBlock extends HtmlBlock {
           th().$title(g.getName()).$class("ui-state-default").
             _(fixGroupDisplayName(g.getDisplayName()))._().
           td().$class(C_TABLE).
-            table(".dt-counters").
+            table(".dt-counters").$id(job.getID()+"."+g.getName()).
               thead().
                 tr().th(".name", "Name");
 
