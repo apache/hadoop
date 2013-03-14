@@ -32,6 +32,9 @@ Release 0.23.7 - UNRELEASED
     YARN-443. allow OS scheduling priority of NM to be different than the 
     containers it launches (tgraves)
 
+    YARN-468. coverage fix for org.apache.hadoop.yarn.server.webproxy.amfilter
+    (Aleksey Gorshkov via bobby)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
