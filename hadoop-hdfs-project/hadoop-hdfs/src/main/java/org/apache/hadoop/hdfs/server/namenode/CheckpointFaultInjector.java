@@ -44,4 +44,5 @@ class CheckpointFaultInjector {
     return false;
   }
   
+  public void afterMD5Rename() throws IOException {}
 }

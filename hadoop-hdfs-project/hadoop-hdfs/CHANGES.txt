@@ -417,6 +417,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-3277. fail over to loading a different FSImage if the first one we
     try to load is corrupt. (Colin Patrick McCabe and Andrew Wang via atm)
 
+    HDFS-4596. Shutting down namenode during checkpointing can lead to md5sum
+    error. (Andrew Wang via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
