@@ -245,7 +245,7 @@ public class TestCheckpoint {
   /*
    * Simulate exception during edit replay.
    */
-  @Test(timeout=5000)
+  @Test(timeout=30000)
   public void testReloadOnEditReplayFailure () throws IOException {
     Configuration conf = new HdfsConfiguration();
     FSDataOutputStream fos = null;
@@ -1418,6 +1418,60 @@ public class TestCheckpoint {
     }
   }
   
+  /**
+   * Test NN restart if a failure happens in between creating the fsimage
+   * MD5 file and renaming the fsimage.
+   */
+  @Test(timeout=30000)
+  public void testFailureBeforeRename () throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    FSDataOutputStream fos = null;
+    SecondaryNameNode secondary = null;
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    NameNode namenode = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .build();
+      cluster.waitActive();
+      namenode = cluster.getNameNode();
+      fs = cluster.getFileSystem();
+      secondary = startSecondaryNameNode(conf);
+      fos = fs.create(new Path("tmpfile0"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      secondary.doCheckpoint();
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hsync();
+
+      // Cause merge to fail in next checkpoint.
+      Mockito.doThrow(new IOException(
+          "Injecting failure after MD5Rename"))
+          .when(faultInjector).afterMD5Rename();
+
+      try {
+        secondary.doCheckpoint();
+        fail("Fault injection failed.");
+      } catch (IOException ioe) {
+        // This is expected.
+      }
+      Mockito.reset(faultInjector);
+      // Namenode should still restart successfully
+      cluster.restartNameNode();
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      Mockito.reset(faultInjector);
+    }
+  }
+
   /**
    * Test case where two secondary namenodes are checkpointing the same
    * NameNode. This differs from {@link #testMultipleSecondaryNamenodes()}

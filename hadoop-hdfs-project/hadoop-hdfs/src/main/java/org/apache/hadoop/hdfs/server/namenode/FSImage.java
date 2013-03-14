@@ -1102,7 +1102,7 @@ public class FSImage implements Closeable {
    */
   public synchronized void saveDigestAndRenameCheckpointImage(
       long txid, MD5Hash digest) throws IOException {
-    renameCheckpoint(txid);
+    // Write and rename MD5 file
     List<StorageDirectory> badSds = Lists.newArrayList();
     
     for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.IMAGE)) {
@@ -1115,6 +1115,10 @@ public class FSImage implements Closeable {
     }
     storage.reportErrorsOnDirectories(badSds);
     
+    CheckpointFaultInjector.getInstance().afterMD5Rename();
+    
+    // Rename image from tmp file
+    renameCheckpoint(txid);
     // So long as this is the newest image available,
     // advertise it as such to other checkpointers
     // from now on
