@@ -29,6 +29,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -376,17 +377,6 @@ public class WebHdfsFileSystem extends FileSystem
     return url;
   }
 
-  private HttpURLConnection getHttpUrlConnection(URL url)
-      throws IOException, AuthenticationException {
-    final HttpURLConnection conn;
-    if (ugi.hasKerberosCredentials()) { 
-      conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
-    } else {
-      conn = (HttpURLConnection)url.openConnection();
-    }
-    return conn;
-  }
-
   /**
    * Run a http operation.
    * Connect to the http server, validate response, and obtain the JSON output.
@@ -431,6 +421,48 @@ public class WebHdfsFileSystem extends FileSystem
       this.conn = conn;
     }
 
+    private HttpURLConnection getHttpUrlConnection(final URL url)
+        throws IOException, AuthenticationException {
+      UserGroupInformation connectUgi = ugi.getRealUser();
+      if (connectUgi == null) {
+        connectUgi = ugi;
+      }
+      try {
+        return connectUgi.doAs(
+            new PrivilegedExceptionAction<HttpURLConnection>() {
+              @Override
+              public HttpURLConnection run() throws IOException {
+                return openHttpUrlConnection(url);
+              }
+            });
+      } catch (IOException ioe) {
+        Throwable cause = ioe.getCause();
+        if (cause != null && cause instanceof AuthenticationException) {
+          throw (AuthenticationException)cause;
+        }
+        throw ioe;
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+    }
+    
+    private HttpURLConnection openHttpUrlConnection(final URL url)
+        throws IOException {
+      final HttpURLConnection conn;
+      try {
+        if (op.getRequireAuth()) {
+          LOG.debug("open AuthenticatedURL connection");
+          conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
+        } else {
+          LOG.debug("open URL connection");
+          conn = (HttpURLConnection)url.openConnection();
+        }
+      } catch (AuthenticationException e) {
+        throw new IOException(e);
+      }
+      return conn;
+    }
+  
     private void init() throws IOException {
       checkRetry = !redirected;
       try {
