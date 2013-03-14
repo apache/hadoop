@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import java.security.PrivilegedExceptionAction;
+
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -332,17 +334,39 @@ public class WebHdfsFileSystem extends FileSystem
     return url;
   }
 
-  private HttpURLConnection getHttpUrlConnection(URL url)
+  private HttpURLConnection getHttpUrlConnection(final URL url,
+                                                 final boolean requireAuth)
+      throws IOException {
+    UserGroupInformation connectUgi = ugi.getRealUser();
+    if (connectUgi == null) {
+      connectUgi = ugi;
+    }
+    try {
+      return connectUgi.doAs(
+          new PrivilegedExceptionAction<HttpURLConnection>() {
+            @Override
+            public HttpURLConnection run() throws IOException {
+              return openHttpUrlConnection(url, requireAuth);
+            }
+          });
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private HttpURLConnection openHttpUrlConnection(URL url, boolean requireAuth)
       throws IOException {
     final HttpURLConnection conn;
     try {
-      if (ugi.hasKerberosCredentials()) { 
+      if (requireAuth) {
+        LOG.debug("open AuthenticatedURL connection");
         conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
       } else {
+        LOG.debug("open URL connection");
         conn = (HttpURLConnection)url.openConnection();
       }
     } catch (AuthenticationException e) {
-      throw new IOException("Authentication failed, url=" + url, e);
+      throw new IOException(e);
     }
     return conn;
   }
@@ -352,7 +376,7 @@ public class WebHdfsFileSystem extends FileSystem
     final URL url = toUrl(op, fspath, parameters);
 
     //connect and get response
-    HttpURLConnection conn = getHttpUrlConnection(url);
+    HttpURLConnection conn = getHttpUrlConnection(url, op.getRequireAuth());
     try {
       conn.setRequestMethod(op.getType().toString());
       if (op.getDoOutput()) {
@@ -619,7 +643,7 @@ public class WebHdfsFileSystem extends FileSystem
     /** Open connection with offset url. */
     @Override
     protected HttpURLConnection openConnection() throws IOException {
-      return getHttpUrlConnection(offsetUrl);
+      return getHttpUrlConnection(offsetUrl, false);
     }
 
     /** Setup offset url before open connection. */

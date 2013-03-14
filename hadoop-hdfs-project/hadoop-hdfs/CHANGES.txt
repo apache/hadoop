@@ -84,6 +84,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-3344. Unreliable corrupt blocks counting in TestProcessCorruptBlocks
     (kihwal)
 
+    HDFS-3367. WebHDFS doesn't use the logged in user when opening
+    connections (daryn)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
