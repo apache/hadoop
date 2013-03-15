@@ -117,6 +117,8 @@ Release 0.23.7 - UNRELEASED
     HADOOP-8816. HTTP Error 413 full HEAD if using kerberos authentication
     (daryn)
 
+    HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
