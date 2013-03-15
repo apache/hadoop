@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import org.apache.commons.lang.SystemUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -588,6 +589,13 @@ public class StringUtils {
         )
       );
 
+    if (SystemUtils.IS_OS_UNIX) {
+      try {
+        SignalLogger.INSTANCE.register(LOG);
+      } catch (Throwable t) {
+        LOG.warn("failed to register any UNIX signal loggers: ", t);
+      }
+    }
     ShutdownHookManager.get().addShutdownHook(
       new Runnable() {
         @Override
