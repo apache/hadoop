@@ -117,6 +117,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       fullJobs = jobs.full;
     }
 
+
     TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
       this(appid, numJobs, numTasks, numAttempts, false);
     }
@@ -411,7 +412,8 @@ public class TestHsWebServicesJobs extends JerseyTest {
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("job");
-      VerifyJobsUtils.verifyHsJob(info, jobsMap.get(id));
+
+      VerifyJobsUtils.verifyHsJob(info, appContext.getJob(id));
     }
   }
 
@@ -613,7 +615,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
-      verifyHsJobCounters(info, jobsMap.get(id));
+      verifyHsJobCounters(info, appContext.getJob(id));
     }
   }
 
@@ -631,7 +633,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
-      verifyHsJobCounters(info, jobsMap.get(id));
+      verifyHsJobCounters(info, appContext.getJob(id));
     }
   }
   
@@ -689,7 +691,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
-      verifyHsJobCounters(info, jobsMap.get(id));
+      verifyHsJobCounters(info, appContext.getJob(id));
     }
   }
 
@@ -711,7 +713,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       is.setCharacterStream(new StringReader(xml));
       Document dom = db.parse(is);
       NodeList info = dom.getElementsByTagName("jobCounters");
-      verifyHsJobCountersXML(info, jobsMap.get(id));
+      verifyHsJobCountersXML(info, appContext.getJob(id));
     }
   }
 
