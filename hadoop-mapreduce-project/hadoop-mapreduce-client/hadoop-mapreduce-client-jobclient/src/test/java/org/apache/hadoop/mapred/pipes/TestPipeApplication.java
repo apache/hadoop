@@ -47,6 +47,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
@@ -106,7 +107,7 @@ public class TestPipeApplication {
       Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
-      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      TokenCache.setJobToken(token,  conf.getCredentials());
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       TestTaskReporter reporter = new TestTaskReporter();
       PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text> runner = new PipesMapRunner<FloatWritable, NullWritable, IntWritable, Text>();
@@ -171,7 +172,7 @@ public class TestPipeApplication {
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
 
-      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      TokenCache.setJobToken(token, conf.getCredentials());
       FakeCollector output = new FakeCollector(new Counters.Counter(),
               new Progress());
       FileSystem fs = new RawLocalFileSystem();
@@ -391,7 +392,7 @@ public class TestPipeApplication {
       Token<ApplicationTokenIdentifier> token = new Token<ApplicationTokenIdentifier>(
               "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
-      conf.getCredentials().addToken(new Text("ShuffleAndJobToken"), token);
+      TokenCache.setJobToken(token, conf.getCredentials());
 
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeReducerStub");
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());

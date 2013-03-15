@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -144,6 +145,9 @@ public class MRApp extends MRAppMaster {
   
   @Override
   protected void downloadTokensAndSetupUGI(Configuration conf) {
+    // Fake a shuffle secret that normally is provided by the job client.
+    String shuffleSecret = "fake-shuffle-secret";
+    TokenCache.setShuffleSecretKey(shuffleSecret.getBytes(), getCredentials());
   }
 
   private static ApplicationAttemptId getApplicationAttemptId(
