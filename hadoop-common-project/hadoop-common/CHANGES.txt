@@ -96,6 +96,8 @@ Release 2.0.4-alpha - UNRELEASED
 
     HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 
+    HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating conflicts in Oozie & HttpFS. (tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
