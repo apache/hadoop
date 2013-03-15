@@ -19,6 +19,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5072. TestDelegationTokenRenewal.testDTRenewal fails in MR1 
     on jdk7. (sandyr via tucu)
 
+    MAPREDUCE-5073. TestJobStatusPersistency.testPersistency fails on 
+    JDK7. (sandyr via tucu)
+
 Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES
