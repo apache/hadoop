@@ -699,7 +699,7 @@
   <name>net.topology.table.file.name</name>
   <value></value>
   <description> The file name for a topology file, which is used when the
-    net.topology.script.file.name property is set to
+    net.topology.node.switch.mapping.impl property is set to
     org.apache.hadoop.net.TableMapping. The file format is a two column text
     file, with columns separated by whitespace. The first column is a DNS or
     IP address and the second column specifies the rack where the address maps.
