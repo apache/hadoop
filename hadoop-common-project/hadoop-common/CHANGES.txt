@@ -94,6 +94,8 @@ Release 2.0.4-alpha - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
