@@ -267,6 +267,36 @@ public class TestNodeStatusUpdater {
     }
   }
 
+  private class MyNodeStatusUpdater4 extends NodeStatusUpdaterImpl {
+    public ResourceTracker resourceTracker =
+        new MyResourceTracker(this.context);
+    private Context context;
+    private final long waitStartTime;
+    private final long rmStartIntervalMS;
+    private final boolean rmNeverStart;
+
+    public MyNodeStatusUpdater4(Context context, Dispatcher dispatcher,
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
+        long rmStartIntervalMS, boolean rmNeverStart) {
+      super(context, dispatcher, healthChecker, metrics);
+      this.context = context;
+      this.waitStartTime = System.currentTimeMillis();
+      this.rmStartIntervalMS = rmStartIntervalMS;
+      this.rmNeverStart = rmNeverStart;
+    }
+
+    @Override
+    protected ResourceTracker getRMClient() {
+      if(System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
+          || rmNeverStart) {
+        throw new YarnException("Faking RM start failure as start " +
+            "delay timer has not expired.");
+      } else {
+        return resourceTracker;
+      }
+    }
+  }
+
   private class MyNodeManager extends NodeManager {
     
     private MyNodeStatusUpdater3 nodeStatusUpdater;
@@ -578,6 +608,73 @@ public class TestNodeStatusUpdater {
     };
     verifyNodeStartFailure("org.apache.hadoop.yarn.YarnException: "
         + "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed");
+  }
+
+  @Test (timeout = 15000)
+  public void testNMConnectionToRM() {
+    final long delta = 1500;
+    final long connectionWaitSecs = 5;
+    final long connectionRetryIntervalSecs = 1;
+    //Waiting for rmStartIntervalMS, RM will be started
+    final long rmStartIntervalMS = 2*1000;
+    YarnConfiguration conf = createNMConfig();
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS,
+        connectionWaitSecs);
+    conf.setLong(YarnConfiguration
+        .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
+        connectionRetryIntervalSecs);
+
+    //Test NM try to connect to RM Several times, but finally fail
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
+            context, dispatcher, healthChecker, metrics,
+            rmStartIntervalMS, true);
+        return nodeStatusUpdater;
+      }
+    };
+    nm.init(conf);
+    long waitStartTime = System.currentTimeMillis();
+    try {
+      nm.start();
+      Assert.fail("NM should have failed to start due to RM connect failure");
+    } catch(Exception e) {
+      Assert.assertTrue("NM should have tried re-connecting to RM during " +
+          "period of at least " + connectionWaitSecs + " seconds, but " +
+          "stopped retrying within " + (connectionWaitSecs + delta/1000) +
+          " seconds", (System.currentTimeMillis() - waitStartTime
+              >= connectionWaitSecs*1000) && (System.currentTimeMillis()
+              - waitStartTime < (connectionWaitSecs*1000+delta)));
+    }
+
+    //Test NM connect to RM, fail at first several attempts,
+    //but finally success.
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
+            context, dispatcher, healthChecker, metrics, rmStartIntervalMS,
+            false);
+        return nodeStatusUpdater;
+      }
+    };
+
+    nm.init(conf);
+    waitStartTime = System.currentTimeMillis();
+    try {
+      nm.start();
+    } catch (Exception ex){
+      Assert.fail("NM should have started successfully " +
+          "after connecting to RM.");
+    }
+    Assert.assertTrue("NM should have connected to RM within " + delta/1000
+        +" seconds of RM starting up.",
+        (System.currentTimeMillis() - waitStartTime >= rmStartIntervalMS)
+        && (System.currentTimeMillis() - waitStartTime
+        < (rmStartIntervalMS+delta)));
   }
 
   /**

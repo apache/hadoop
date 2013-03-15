@@ -597,6 +597,20 @@
     <value>2000</value>
   </property>
 
+  <property>
+    <description>Max time, in seconds, to wait to establish a connection to RM when NM starts.
+    The NM will shutdown if it cannot connect to RM within the specified max time period.
+    If the value is set as -1, then NM will retry forever.</description>
+    <name>yarn.nodemanager.resourcemanager.connect.wait.secs</name>
+    <value>900</value>
+  </property>
+
+  <property>
+    <description>Time interval, in seconds, between each NM attempt to connect to RM.</description>
+    <name>yarn.nodemanager.resourcemanager.connect.retry_interval.secs</name>
+    <value>30</value>
+  </property>
+
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>

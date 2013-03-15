@@ -97,6 +97,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-376. Fixes a bug which would prevent the NM knowing about completed
     containers and applications. (Jason Lowe via sseth)
 
+    YARN-196. Nodemanager should be more robust in handling connection failure
+    to ResourceManager when a cluster is started (Xuan Gong via hitesh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
