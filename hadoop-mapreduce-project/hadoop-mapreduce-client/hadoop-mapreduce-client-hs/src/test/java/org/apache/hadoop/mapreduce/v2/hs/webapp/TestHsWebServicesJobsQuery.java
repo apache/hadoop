@@ -284,9 +284,9 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     String type = exception.getString("exception");
     String classname = exception.getString("javaClassName");
     WebServicesTestUtils
-        .checkStringMatch(
+        .checkStringContains(
             "exception message",
-            "No enum const class org.apache.hadoop.mapreduce.v2.api.records.JobState.InvalidState",
+            "org.apache.hadoop.mapreduce.v2.api.records.JobState.InvalidState",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "IllegalArgumentException", type);
