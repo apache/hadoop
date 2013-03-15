@@ -491,7 +491,7 @@ public class TestJobImpl {
     MRAppMetrics mrAppMetrics = MRAppMetrics.create();
     JobImpl job = new JobImpl(jobId, Records
         .newRecord(ApplicationAttemptId.class), conf, mock(EventHandler.class),
-        null, mock(JobTokenSecretManager.class), null, null, null,
+        null, new JobTokenSecretManager(), new Credentials(), null, null,
         mrAppMetrics, true, null, 0, null, null, null, null);
     InitTransition initTransition = getInitTransition(2);
     JobEvent mockJobEvent = mock(JobEvent.class);

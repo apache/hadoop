@@ -269,9 +269,17 @@ class YarnChild {
     job.setBoolean("ipc.client.tcpnodelay", true);
     job.setClass(MRConfig.TASK_LOCAL_OUTPUT_CLASS,
         YarnOutputFiles.class, MapOutputFile.class);
-    // set the jobTokenFile into task
+    // set the jobToken and shuffle secrets into task
     task.setJobTokenSecret(
         JobTokenSecretManager.createSecretKey(jt.getPassword()));
+    byte[] shuffleSecret = TokenCache.getShuffleSecretKey(credentials);
+    if (shuffleSecret == null) {
+      LOG.warn("Shuffle secret missing from task credentials."
+          + " Using job token secret as shuffle secret.");
+      shuffleSecret = jt.getPassword();
+    }
+    task.setShuffleSecret(
+        JobTokenSecretManager.createSecretKey(shuffleSecret));
 
     // setup the child's MRConfig.LOCAL_DIR.
     configureLocalDirs(task, job);
