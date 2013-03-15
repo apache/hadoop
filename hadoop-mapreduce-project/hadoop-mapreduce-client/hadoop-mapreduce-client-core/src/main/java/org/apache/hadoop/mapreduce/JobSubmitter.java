@@ -23,10 +23,14 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,6 +66,8 @@ import com.google.common.base.Charsets;
 @InterfaceStability.Unstable
 class JobSubmitter {
   protected static final Log LOG = LogFactory.getLog(JobSubmitter.class);
+  private static final String SHUFFLE_KEYGEN_ALGORITHM = "HmacSHA1";
+  private static final int SHUFFLE_KEY_LENGTH = 64;
   private FileSystem jtFs;
   private ClientProtocol submitClient;
   private String submitHostName;
@@ -358,6 +364,20 @@ class JobSubmitter {
           new Path[] { submitJobDir }, conf);
       
       populateTokenCache(conf, job.getCredentials());
+
+      // generate a secret to authenticate shuffle transfers
+      if (TokenCache.getShuffleSecretKey(job.getCredentials()) == null) {
+        KeyGenerator keyGen;
+        try {
+          keyGen = KeyGenerator.getInstance(SHUFFLE_KEYGEN_ALGORITHM);
+          keyGen.init(SHUFFLE_KEY_LENGTH);
+        } catch (NoSuchAlgorithmException e) {
+          throw new IOException("Error generating shuffle secret key", e);
+        }
+        SecretKey shuffleKey = keyGen.generateKey();
+        TokenCache.setShuffleSecretKey(shuffleKey.getEncoded(),
+            job.getCredentials());
+      }
 
       copyAndConfigureFiles(job, submitJobDir);
       Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);

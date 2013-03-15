@@ -55,6 +55,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryCopyService;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
@@ -339,8 +340,15 @@ public class MRAppMaster extends CompositeService {
       boolean recoveryEnabled = conf.getBoolean(
           MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
       boolean recoverySupportedByCommitter = committer.isRecoverySupported();
+
+      // If a shuffle secret was not provided by the job client then this app
+      // attempt will generate one.  However that disables recovery if there
+      // are reducers as the shuffle secret would be app attempt specific.
+      boolean shuffleKeyValidForRecovery = (numReduceTasks > 0 &&
+          TokenCache.getShuffleSecretKey(fsTokens) != null);
+
       if (recoveryEnabled && recoverySupportedByCommitter
-          && appAttemptID.getAttemptId() > 1) {
+          && shuffleKeyValidForRecovery && appAttemptID.getAttemptId() > 1) {
         LOG.info("Recovery is enabled. "
             + "Will try to recover from previous life on best effort basis.");
         recoveryServ = createRecoveryService(context);
@@ -351,7 +359,8 @@ public class MRAppMaster extends CompositeService {
       } else {
         LOG.info("Not starting RecoveryService: recoveryEnabled: "
             + recoveryEnabled + " recoverySupportedByCommitter: "
-            + recoverySupportedByCommitter + " ApplicationAttemptID: "
+            + recoverySupportedByCommitter + " shuffleKeyValidForRecovery: "
+            + shuffleKeyValidForRecovery + " ApplicationAttemptID: "
             + appAttemptID.getAttemptId());
         dispatcher = createDispatcher();
         addIfService(dispatcher);
@@ -471,7 +480,11 @@ public class MRAppMaster extends CompositeService {
   protected FileSystem getFileSystem(Configuration conf) throws IOException {
     return FileSystem.get(conf);
   }
-  
+
+  protected Credentials getCredentials() {
+    return fsTokens;
+  }
+
   /**
    * clean up staging directories for the job.
    * @throws IOException
