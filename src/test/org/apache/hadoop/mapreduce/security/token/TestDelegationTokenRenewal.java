@@ -65,6 +65,12 @@ public class TestDelegationTokenRenewal {
     private static Token<?> lastRenewed = null;
     private static Token<?> tokenToRenewIn2Sec = null;
 
+    private static void reset() {
+      counter = 0;
+      lastRenewed = null;
+      tokenToRenewIn2Sec = null;
+    }
+    
     @Override
     public boolean handleKind(Text kind) {
       return KIND.equals(kind);
@@ -109,6 +115,7 @@ public class TestDelegationTokenRenewal {
  
   @BeforeClass
   public static void setUp() throws Exception {
+    Renewer.reset();
     conf = new Configuration();
     conf.set("mapred.job.tracker", trackerService);
     
