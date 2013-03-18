@@ -85,9 +85,6 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
     build issues. (Sangjin Lee via suresh)
 
-    HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
-    is not configured (daryn)
-
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -103,6 +100,9 @@ Release 2.0.4-alpha - UNRELEASED
     HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 
     HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating conflicts in Oozie & HttpFS. (tucu)
+
+    HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
+    is not configured (daryn)
 
 Release 2.0.3-alpha - 2013-02-06 
 
