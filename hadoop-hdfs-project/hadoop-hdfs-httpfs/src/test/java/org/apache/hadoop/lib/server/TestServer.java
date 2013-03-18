@@ -42,6 +42,7 @@ import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestException;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 
@@ -50,21 +51,24 @@ public class TestServer extends HTestCase {
   @Test
   @TestDir
   public void constructorsGetters() throws Exception {
-    Server server = new Server("server", "/a", "/b", "/c", "/d", new Configuration(false));
-    assertEquals(server.getHomeDir(), "/a");
-    assertEquals(server.getConfigDir(), "/b");
-    assertEquals(server.getLogDir(), "/c");
-    assertEquals(server.getTempDir(), "/d");
+    Server server = new Server("server", getAbsolutePath("/a"),
+      getAbsolutePath("/b"), getAbsolutePath("/c"), getAbsolutePath("/d"),
+      new Configuration(false));
+    assertEquals(server.getHomeDir(), getAbsolutePath("/a"));
+    assertEquals(server.getConfigDir(), getAbsolutePath("/b"));
+    assertEquals(server.getLogDir(), getAbsolutePath("/c"));
+    assertEquals(server.getTempDir(), getAbsolutePath("/d"));
     assertEquals(server.getName(), "server");
     assertEquals(server.getPrefix(), "server");
     assertEquals(server.getPrefixedName("name"), "server.name");
     assertNotNull(server.getConfig());
 
-    server = new Server("server", "/a", "/b", "/c", "/d");
-    assertEquals(server.getHomeDir(), "/a");
-    assertEquals(server.getConfigDir(), "/b");
-    assertEquals(server.getLogDir(), "/c");
-    assertEquals(server.getTempDir(), "/d");
+    server = new Server("server", getAbsolutePath("/a"), getAbsolutePath("/b"),
+      getAbsolutePath("/c"), getAbsolutePath("/d"));
+    assertEquals(server.getHomeDir(), getAbsolutePath("/a"));
+    assertEquals(server.getConfigDir(), getAbsolutePath("/b"));
+    assertEquals(server.getLogDir(), getAbsolutePath("/c"));
+    assertEquals(server.getTempDir(), getAbsolutePath("/d"));
     assertEquals(server.getName(), "server");
     assertEquals(server.getPrefix(), "server");
     assertEquals(server.getPrefixedName("name"), "server.name");
@@ -793,4 +797,14 @@ public class TestServer extends HTestCase {
     server.destroy();
   }
 
+  /**
+   * Creates an absolute path by appending the given relative path to the test
+   * root.
+   * 
+   * @param relativePath String relative path
+   * @return String absolute path formed by appending relative path to test root
+   */
+  private static String getAbsolutePath(String relativePath) {
+    return new File(TestDirHelper.getTestDir(), relativePath).getAbsolutePath();
+  }
 }

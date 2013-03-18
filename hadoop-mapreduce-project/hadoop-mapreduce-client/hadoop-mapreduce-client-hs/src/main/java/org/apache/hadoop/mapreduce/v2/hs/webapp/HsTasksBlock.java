@@ -65,8 +65,12 @@ public class HsTasksBlock extends HtmlBlock {
     if (!symbol.isEmpty()) {
       type = MRApps.taskType(symbol);
     }
-
-    THEAD<TABLE<Hamlet>> thead = html.table("#tasks").thead();
+    THEAD<TABLE<Hamlet>> thead;
+    if(type != null)
+      thead = html.table("#"+app.getJob().getID() 
+        + type).$class("dt-tasks").thead();
+    else
+      thead = html.table("#tasks").thead();
     //Create the spanning row
     int attemptColSpan = type == TaskType.REDUCE ? 8 : 3;
     thead.tr().

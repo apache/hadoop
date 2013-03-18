@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 
 /**
@@ -293,6 +294,11 @@ public class TestDFSUpgradeFromImage {
         new File(baseDir, "name2/current/VERSION"),
         "imageMD5Digest", "22222222222222222222222222222222");
     
+    // Attach our own log appender so we can verify output
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
     // Upgrade should now fail
     try {
       upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf).
@@ -300,9 +306,12 @@ public class TestDFSUpgradeFromImage {
       fail("Upgrade did not fail with bad MD5");
     } catch (IOException ioe) {
       String msg = StringUtils.stringifyException(ioe);
-      if (!msg.contains("is corrupt with MD5 checksum")) {
+      if (!msg.contains("Failed to load an FSImage file")) {
         throw ioe;
       }
+      int md5failures = appender.countExceptionsWithMessage(
+          " is corrupt with MD5 checksum of ");
+      assertEquals("Upgrade did not fail with bad MD5", 1, md5failures);
     }
   }
     

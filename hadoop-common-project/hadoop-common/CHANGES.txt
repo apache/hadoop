@@ -340,6 +340,19 @@ Trunk (Unreleased)
     HADOOP-9264. Port change to use Java untar API on Windows from 
     branch-1-win to trunk. (Chris Nauroth via suresh)
 
+    HADOOP-9393. TestRPC fails with JDK7. (Andrew Wang via atm)
+
+    HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
+    via atm)
+
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
+
+    HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
+
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
+    Wang via atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -468,6 +481,11 @@ Trunk (Unreleased)
     HADOOP-9364. PathData#expandAsGlob does not return correct results for
     absolute paths on Windows. (Ivan Mitic via suresh)
 
+    HADOOP-8973. DiskChecker cannot reliably detect an inaccessible disk on
+    Windows with NTFS ACLs. (Chris Nauroth via suresh)
+
+    HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
+    
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -492,6 +510,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
 
     HADOOP-9343. Allow additional exceptions through the RPC layer. (sseth)
+
+    HADOOP-9318. When exiting on a signal, print the signal name first. (Colin
+    Patrick McCabe via atm)
 
   OPTIMIZATIONS
 
@@ -545,6 +566,11 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9379. capture the ulimit info after printing the log to the 
     console. (Arpit Gupta via suresh)
 
+    HADOOP-9399. protoc maven plugin doesn't work on mvn 3.0.2 (todd)
+
+    HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
+    build issues. (Sangjin Lee via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -556,6 +582,14 @@ Release 2.0.4-alpha - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
+
+    HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating
+    conflicts in Oozie & HttpFS. (tucu)
+
+    HADOOP-9408. misleading description for net.topology.table.file.name
+    property in core-default.xml. (rajeshbabu via suresh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -2798,6 +2832,9 @@ Release 0.23.0 - 2011-11-01
     HADOOP-7797. Fix top-level pom.xml to refer to correct staging maven
     repository. (omalley via acmurthy) 
 
+    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
+    non-Hadoop JAAS context. (todd)
+
 Release 0.22.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -3254,9 +3291,6 @@ Release 0.22.0 - 2011-11-29
     todd)
 
     HADOOP-7093. Servlets should default to text/plain (todd)
-
-    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
-    non-Hadoop JAAS context. (todd)
 
     HADOOP-7089. Fix link resolution logic in hadoop-config.sh. (eli)
 

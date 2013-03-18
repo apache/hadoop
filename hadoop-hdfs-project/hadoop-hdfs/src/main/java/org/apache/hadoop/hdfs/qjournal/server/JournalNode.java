@@ -35,6 +35,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -82,7 +83,6 @@ public class JournalNode implements Tool, Configurable {
     return journal;
   }
 
-
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
@@ -97,20 +97,8 @@ public class JournalNode implements Tool, Configurable {
           "Journal dir '" + dir + "' should be an absolute path");
     }
 
-    if (!dir.exists() && !dir.mkdirs()) {
-      throw new IOException("Could not create journal dir '" +
-          dir + "'");
-    } else if (!dir.isDirectory()) {
-      throw new IOException("Journal directory '" + dir + "' is not " +
-          "a directory");
-    }
-    
-    if (!dir.canWrite()) {
-      throw new IOException("Unable to write to journal dir '" +
-          dir + "'");
-    }
+    DiskChecker.checkDir(dir);
   }
-
 
   @Override
   public Configuration getConf() {

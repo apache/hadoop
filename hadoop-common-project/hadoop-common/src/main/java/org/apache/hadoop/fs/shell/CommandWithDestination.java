@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.shell;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -224,7 +223,13 @@ abstract class CommandWithDestination extends FsCommand {
    */ 
   protected void copyFileToTarget(PathData src, PathData target) throws IOException {
     src.fs.setVerifyChecksum(verifyChecksum);
-    copyStreamToTarget(src.fs.open(src.path), target);
+    InputStream in = null;
+    try {
+      in = src.fs.open(src.path);
+      copyStreamToTarget(in, target);
+    } finally {
+      IOUtils.closeStream(in);
+    }
   }
   
   /**

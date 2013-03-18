@@ -46,6 +46,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,6 +66,8 @@ public class TestJournalNode {
   private Configuration conf = new Configuration();
   private IPCLoggerChannel ch;
   private String journalId;
+  private File TEST_BUILD_DATA =
+      new File(System.getProperty("test.build.data", "build/test/data"));
 
   static {
     // Avoid an error when we double-initialize JvmMetrics
@@ -96,7 +99,7 @@ public class TestJournalNode {
     jn.stop(0);
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testJournal() throws Exception {
     MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(
         journal.getMetricsForTests().getName());
@@ -129,7 +132,7 @@ public class TestJournalNode {
   }
   
   
-  @Test
+  @Test(timeout=100000)
   public void testReturnsSegmentInfoAtEpochTransition() throws Exception {
     ch.newEpoch(1).get();
     ch.setEpoch(1);
@@ -157,7 +160,7 @@ public class TestJournalNode {
     assertEquals(1, response.getLastSegmentTxId());
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testHttpServer() throws Exception {
     InetSocketAddress addr = jn.getBoundHttpAddress();
     assertTrue(addr.getPort() > 0);
@@ -210,7 +213,7 @@ public class TestJournalNode {
    * Test that the JournalNode performs correctly as a Paxos
    * <em>Acceptor</em> process.
    */
-  @Test
+  @Test(timeout=100000)
   public void testAcceptRecoveryBehavior() throws Exception {
     // We need to run newEpoch() first, or else we have no way to distinguish
     // different proposals for the same decision.
@@ -270,20 +273,27 @@ public class TestJournalNode {
     }
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testFailToStartWithBadConfig() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "non-absolute-path");
     assertJNFailsToStart(conf, "should be an absolute path");
     
     // Existing file which is not a directory 
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "/dev/null");
-    assertJNFailsToStart(conf, "is not a directory");
+    File existingFile = new File(TEST_BUILD_DATA, "testjournalnodefile");
+    assertTrue(existingFile.createNewFile());
+    try {
+      conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
+          existingFile.getAbsolutePath());
+      assertJNFailsToStart(conf, "Not a directory");
+    } finally {
+      existingFile.delete();
+    }
     
     // Directory which cannot be created
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "/proc/does-not-exist");
-    assertJNFailsToStart(conf, "Could not create");
-
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
+        Shell.WINDOWS ? "\\\\cannotBeCreated" : "/proc/does-not-exist");
+    assertJNFailsToStart(conf, "Can not create directory");
   }
 
   private static void assertJNFailsToStart(Configuration conf,

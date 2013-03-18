@@ -350,7 +350,7 @@ public class NodeManager extends CompositeService
   ContainerManagerImpl getContainerManager() {
     return containerManager;
   }
-
+  
   public static void main(String[] args) {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);

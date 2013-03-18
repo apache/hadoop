@@ -70,6 +70,8 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -567,9 +569,8 @@ public class DistributedFileSystem extends FileSystem {
     return "DFS[" + dfs + "]";
   }
 
-  /** @deprecated DFSClient should not be accessed directly. */
   @InterfaceAudience.Private
-  @Deprecated
+  @VisibleForTesting
   public DFSClient getClient() {
     return dfs;
   }        

@@ -185,6 +185,7 @@ abstract public class Task implements Writable, Configurable {
   private int numSlotsRequired;
   protected TaskUmbilicalProtocol umbilical;
   protected SecretKey tokenSecret;
+  protected SecretKey shuffleSecret;
   protected GcTimeUpdater gcUpdater;
 
   ////////////////////////////////////////////
@@ -261,7 +262,22 @@ abstract public class Task implements Writable, Configurable {
     return this.tokenSecret;
   }
 
-  
+  /**
+   * Set the secret key used to authenticate the shuffle
+   * @param shuffleSecret the secret
+   */
+  public void setShuffleSecret(SecretKey shuffleSecret) {
+    this.shuffleSecret = shuffleSecret;
+  }
+
+  /**
+   * Get the secret key used to authenticate the shuffle
+   * @return the shuffle secret
+   */
+  public SecretKey getShuffleSecret() {
+    return this.shuffleSecret;
+  }
+
   /**
    * Get the index of this task within the job.
    * @return the integer part of the task id

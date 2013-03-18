@@ -339,7 +339,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IllegalArgumentException(
         "Unexpected not positive size: "+size);
     }
-    namesystem.checkOperation(OperationCategory.READ);
     namesystem.checkSuperuserPrivilege();
     return namesystem.getBlockManager().getBlocks(datanode, size); 
   }
@@ -709,7 +708,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
   throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
       throw new IOException("Cannot find datanode report");
@@ -734,19 +732,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public boolean restoreFailedStorage(String arg) throws IOException { 
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     return namesystem.restoreFailedStorage(arg);
   }
 
   @Override // ClientProtocol
   public void saveNamespace() throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.saveNamespace();
   }
   
   @Override // ClientProtocol
   public long rollEdits() throws AccessControlException, IOException {
-    namesystem.checkOperation(OperationCategory.JOURNAL);
     CheckpointSignature sig = namesystem.rollEditLog();
     return sig.getCurSegmentTxId();
   }
@@ -791,7 +786,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public void metaSave(String filename) throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.metaSave(filename);
   }
 

@@ -702,10 +702,21 @@ public abstract class TaskAttemptImpl implements
           ByteBuffer.wrap(containerTokens_dob.getData(), 0,
               containerTokens_dob.getLength());
 
-      // Add shuffle token
+      // Add shuffle secret key
+      // The secret key is converted to a JobToken to preserve backwards
+      // compatibility with an older ShuffleHandler running on an NM.
       LOG.info("Putting shuffle token in serviceData");
+      byte[] shuffleSecret = TokenCache.getShuffleSecretKey(credentials);
+      if (shuffleSecret == null) {
+        LOG.warn("Cannot locate shuffle secret in credentials."
+            + " Using job token as shuffle secret.");
+        shuffleSecret = jobToken.getPassword();
+      }
+      Token<JobTokenIdentifier> shuffleToken = new Token<JobTokenIdentifier>(
+          jobToken.getIdentifier(), shuffleSecret, jobToken.getKind(),
+          jobToken.getService());
       serviceData.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
-          ShuffleHandler.serializeServiceData(jobToken));
+          ShuffleHandler.serializeServiceData(shuffleToken));
 
       Apps.addToEnvironment(
           environment,  

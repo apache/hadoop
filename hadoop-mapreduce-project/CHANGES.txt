@@ -230,6 +230,11 @@ Release 2.0.5-beta - UNRELEASED
     appropriately used and that on-disk segments are correctly sorted on
     file-size. (Anty Rao and Ravi Prakash via acmurthy) 
 
+    MAPREDUCE-4571. TestHsWebServicesJobs fails on jdk7. (tgraves via tucu)
+
+    MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
+    fails with jdk7. (tgraves via tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -806,6 +811,12 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-5023. History Server Web Services missing Job Counters (Ravi
     Prakash via tgraves)
+
+    MAPREDUCE-5060. Fetch failures that time out only count against the first
+    map task (Robert Joseph Evans via jlowe)
+
+    MAPREDUCE-5042. Reducer unable to fetch for a map task that was recovered
+    (Jason Lowe via bobby)
 
 Release 0.23.6 - UNRELEASED
 

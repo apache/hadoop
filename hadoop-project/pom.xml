@@ -46,7 +46,7 @@
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
 
-    <commons-daemon.version>1.0.3</commons-daemon.version>
+    <commons-daemon.version>1.0.13</commons-daemon.version>
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
@@ -864,15 +864,6 @@
       <properties>
         <build.platform>${os.name}-${os.arch}-${sun.arch.data.model}</build.platform>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>jdk.tools</groupId>
-          <artifactId>jdk.tools</artifactId>
-          <version>1.6</version>
-          <scope>system</scope>
-          <systemPath>${java.home}/../lib/tools.jar</systemPath>
-        </dependency>
-      </dependencies>
     </profile>
     <profile>
       <id>os.mac</id>

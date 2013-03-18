@@ -162,6 +162,9 @@ public abstract class GenericTestUtils {
     private final CountDownLatch waitLatch = new CountDownLatch(1);
     private final CountDownLatch resultLatch = new CountDownLatch(1);
     
+    private final AtomicInteger fireCounter = new AtomicInteger(0);
+    private final AtomicInteger resultCounter = new AtomicInteger(0);
+    
     // Result fields set after proceed() is called.
     private volatile Throwable thrown;
     private volatile Object returnValue;
@@ -188,6 +191,7 @@ public abstract class GenericTestUtils {
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
+      fireCounter.getAndIncrement();
       fireLatch.countDown();
       try {
         LOG.info("DelayAnswer waiting on waitLatch");
@@ -208,6 +212,7 @@ public abstract class GenericTestUtils {
         thrown = t;
         throw t;
       } finally {
+        resultCounter.incrementAndGet();
         resultLatch.countDown();
       }
     }
@@ -234,6 +239,14 @@ public abstract class GenericTestUtils {
      */
     public Object getReturnValue() {
       return returnValue;
+    }
+    
+    public int getFireCount() {
+      return fireCounter.get();
+    }
+    
+    public int getResultCount() {
+      return resultCounter.get();
     }
   }
   

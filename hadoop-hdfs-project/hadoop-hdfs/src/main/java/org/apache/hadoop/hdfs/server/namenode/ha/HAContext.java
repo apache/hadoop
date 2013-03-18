@@ -64,9 +64,17 @@ public interface HAContext {
   void writeUnlock();
 
   /**
-   * Verify that the given operation category is allowed in the
-   * current state. This is to allow NN implementations (eg BackupNode)
-   * to override it with node-specific handling.
+   * Verify that the given operation category is allowed in the current state.
+   * This is to allow NN implementations (eg BackupNode) to override it with
+   * node-specific handling.
+   * 
+   * If the operation which is being checked will be taking the FSNS lock, it's
+   * advisable to check the operation category both immediately before and after
+   * taking the lock. This is because clients rely on the StandbyException
+   * thrown by this method in order to trigger client failover, and if a client
+   * first tries to contact the Standby NN, it could block for a long time if
+   * the Standby is holding the lock for a while, e.g. when performing a
+   * checkpoint. See HDFS-4591 for more details.
    */
   void checkOperation(OperationCategory op) throws StandbyException;
 

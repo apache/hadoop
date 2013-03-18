@@ -63,7 +63,7 @@ public class TestDirHelper implements MethodRule {
   static {
     try {
       TEST_DIR_ROOT = System.getProperty(TEST_DIR_PROP, new File("target").getAbsolutePath());
-      if (!TEST_DIR_ROOT.startsWith("/")) {
+      if (!new File(TEST_DIR_ROOT).isAbsolute()) {
         System.err.println(MessageFormat.format("System property [{0}]=[{1}] must be set to an absolute path",
                                                 TEST_DIR_PROP, TEST_DIR_ROOT));
         System.exit(-1);

@@ -41,6 +41,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -219,7 +220,7 @@ public class TestSaveNamespace {
    * Verify that a saveNamespace command brings faulty directories
    * in fs.name.dir and fs.edit.dir back online.
    */
-  @Test
+  @Test (timeout=30000)
   public void testReinsertnamedirsInSavenamespace() throws Exception {
     // create a configuration with the key to restore error
     // directories in fs.name.dir
@@ -237,10 +238,13 @@ public class TestSaveNamespace {
     FSImage spyImage = spy(originalImage);
     fsn.dir.fsImage = spyImage;
     
+    FileSystem fs = FileSystem.getLocal(conf);
     File rootDir = storage.getStorageDir(0).getRoot();
-    rootDir.setExecutable(false);
-    rootDir.setWritable(false);
-    rootDir.setReadable(false);
+    Path rootPath = new Path(rootDir.getPath(), "current");
+    final FsPermission permissionNone = new FsPermission((short) 0);
+    final FsPermission permissionAll = new FsPermission(
+        FsAction.ALL, FsAction.READ_EXECUTE, FsAction.READ_EXECUTE);
+    fs.setPermission(rootPath, permissionNone);
 
     try {
       doAnEdit(fsn, 1);
@@ -257,9 +261,7 @@ public class TestSaveNamespace {
                  " bad directories.", 
                    storage.getRemovedStorageDirs().size() == 1);
 
-      rootDir.setExecutable(true);
-      rootDir.setWritable(true);
-      rootDir.setReadable(true);
+      fs.setPermission(rootPath, permissionAll);
 
       // The next call to savenamespace should try inserting the
       // erroneous directory back to fs.name.dir. This command should
@@ -290,9 +292,7 @@ public class TestSaveNamespace {
       LOG.info("Reloaded image is good.");
     } finally {
       if (rootDir.exists()) {
-        rootDir.setExecutable(true);
-        rootDir.setWritable(true);
-        rootDir.setReadable(true);
+        fs.setPermission(rootPath, permissionAll);
       }
 
       if (fsn != null) {
@@ -305,27 +305,27 @@ public class TestSaveNamespace {
     }
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testRTEWhileSavingSecondImage() throws Exception {
     saveNamespaceWithInjectedFault(Fault.SAVE_SECOND_FSIMAGE_RTE);
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testIOEWhileSavingSecondImage() throws Exception {
     saveNamespaceWithInjectedFault(Fault.SAVE_SECOND_FSIMAGE_IOE);
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testCrashInAllImageDirs() throws Exception {
     saveNamespaceWithInjectedFault(Fault.SAVE_ALL_FSIMAGES);
   }
   
-  @Test
+  @Test (timeout=30000)
   public void testCrashWhenWritingVersionFiles() throws Exception {
     saveNamespaceWithInjectedFault(Fault.WRITE_STORAGE_ALL);
   }
   
-  @Test
+  @Test (timeout=30000)
   public void testCrashWhenWritingVersionFileInOneDir() throws Exception {
     saveNamespaceWithInjectedFault(Fault.WRITE_STORAGE_ONE);
   }
@@ -337,7 +337,7 @@ public class TestSaveNamespace {
    * failed checkpoint since it only affected ".ckpt" files, not
    * valid image files
    */
-  @Test
+  @Test (timeout=30000)
   public void testFailedSaveNamespace() throws Exception {
     doTestFailedSaveNamespace(false);
   }
@@ -347,7 +347,7 @@ public class TestSaveNamespace {
    * the operator restores the directories and calls it again.
    * This should leave the NN in a clean state for next start.
    */
-  @Test
+  @Test (timeout=30000)
   public void testFailedSaveNamespaceWithRecovery() throws Exception {
     doTestFailedSaveNamespace(true);
   }
@@ -421,7 +421,7 @@ public class TestSaveNamespace {
     }
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testSaveWhileEditsRolled() throws Exception {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
@@ -457,7 +457,7 @@ public class TestSaveNamespace {
     }
   }
   
-  @Test
+  @Test (timeout=30000)
   public void testTxIdPersistence() throws Exception {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
@@ -580,7 +580,7 @@ public class TestSaveNamespace {
    * open lease and destination directory exist. 
    * This test is a regression for HDFS-2827
    */
-  @Test
+  @Test (timeout=30000)
   public void testSaveNamespaceWithRenamedLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
         .numDataNodes(1).build();
@@ -603,7 +603,7 @@ public class TestSaveNamespace {
     }
   }
   
-  @Test
+  @Test (timeout=30000)
   public void testSaveNamespaceWithDanglingLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
         .numDataNodes(1).build();

@@ -232,7 +232,7 @@ public class Server {
    * path.
    */
   private String checkAbsolutePath(String value, String name) {
-    if (!value.startsWith("/")) {
+    if (!new File(value).isAbsolute()) {
       throw new IllegalArgumentException(
         MessageFormat.format("[{0}] must be an absolute path [{1}]", name, value));
     }
