@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
+
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -25,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 /**
  * This class implements parsing and handling of Kerberos principal names. In 
  * particular, it splits them apart and translates them down into local
@@ -35,15 +36,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class HadoopKerberosName extends KerberosName {
-
-  static {
-    try {
-      KerberosUtil.getDefaultRealm();
-    } catch (Exception ke) {
-      if(UserGroupInformation.isSecurityEnabled())
-        throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
-    }
-  }
 
   /**
    * Create a name from the full Kerberos principal name.
@@ -63,7 +55,23 @@ public class HadoopKerberosName extends KerberosName {
    * @throws IOException
    */
   public static void setConfiguration(Configuration conf) throws IOException {
-    String ruleString = conf.get(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL, "DEFAULT");
+    final String defaultRule;
+    switch (SecurityUtil.getAuthenticationMethod(conf)) {
+      case KERBEROS:
+      case KERBEROS_SSL:
+        try {
+          KerberosUtil.getDefaultRealm();
+        } catch (Exception ke) {
+          throw new IllegalArgumentException("Can't get Kerberos realm", ke);
+        }
+        defaultRule = "DEFAULT";
+        break;
+      default:
+        // just extract the simple user name
+        defaultRule = "RULE:[1:$1] RULE:[2:$1]";
+        break; 
+    }
+    String ruleString = conf.get(HADOOP_SECURITY_AUTH_TO_LOCAL, defaultRule);
     setRules(ruleString);
   }
 

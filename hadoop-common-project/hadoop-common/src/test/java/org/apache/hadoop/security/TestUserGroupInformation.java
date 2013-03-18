@@ -37,10 +37,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
 
 public class TestUserGroupInformation {
   final private static String USER_NAME = "user1@HADOOP.APACHE.ORG";
@@ -71,17 +73,18 @@ public class TestUserGroupInformation {
   public static void setup() {
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
+    // doesn't matter what it is, but getGroups needs it set...
+    System.setProperty("hadoop.home.dir", "/tmp");
+    // fake the realm is kerberos is enabled
+    System.setProperty("java.security.krb5.kdc", "");
+    System.setProperty("java.security.krb5.realm", "DEFAULT.REALM");
   }
   
   @Before
   public void setupUgi() {
     conf = new Configuration();
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
-        "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
-        "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
-        + "DEFAULT");
+    UserGroupInformation.reset();
     UserGroupInformation.setConfiguration(conf);
-    UserGroupInformation.setLoginUser(null);
   }
   
   @After
@@ -209,31 +212,141 @@ public class TestUserGroupInformation {
   /** test constructor */
   @Test
   public void testConstructor() throws Exception {
-    UserGroupInformation ugi = 
-      UserGroupInformation.createUserForTesting("user2/cron@HADOOP.APACHE.ORG", 
-                                                GROUP_NAMES);
-    // make sure the short and full user names are correct
-    assertEquals("user2/cron@HADOOP.APACHE.ORG", ugi.getUserName());
-    assertEquals("user2", ugi.getShortUserName());
-    ugi = UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
-    assertEquals("user1", ugi.getShortUserName());
+    // security off, so default should just return simple name
+    testConstructorSuccess("user1", "user1");
+    testConstructorSuccess("user2@DEFAULT.REALM", "user2");
+    testConstructorSuccess("user3/cron@DEFAULT.REALM", "user3");    
+    testConstructorSuccess("user4@OTHER.REALM", "user4");
+    testConstructorSuccess("user5/cron@OTHER.REALM", "user5");
+    // failure test
+    testConstructorFailures(null);
+    testConstructorFailures("");
+  }
+  
+  /** test constructor */
+  @Test (timeout = 30000)
+  public void testConstructorWithRules() throws Exception {
+    // security off, but use rules if explicitly set
+    conf.set(HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[1:$1@$0](.*@OTHER.REALM)s/(.*)@.*/other-$1/");
+    UserGroupInformation.setConfiguration(conf);
+    testConstructorSuccess("user1", "user1");
+    testConstructorSuccess("user4@OTHER.REALM", "other-user4");
+    // failure test
+    testConstructorFailures("user2@DEFAULT.REALM");
+    testConstructorFailures("user3/cron@DEFAULT.REALM");
+    testConstructorFailures("user5/cron@OTHER.REALM");
+    testConstructorFailures(null);
+    testConstructorFailures("");
+  }
+  
+  /** test constructor */
+  @Test (timeout = 30000)
+  public void testConstructorWithKerberos() throws Exception {
+    // security on, default is remove default realm
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+    UserGroupInformation.setConfiguration(conf);
+
+    testConstructorSuccess("user1", "user1");
+    testConstructorSuccess("user2@DEFAULT.REALM", "user2");
+    testConstructorSuccess("user3/cron@DEFAULT.REALM", "user3");    
+    // failure test
+    testConstructorFailures("user4@OTHER.REALM");
+    testConstructorFailures("user5/cron@OTHER.REALM");
+    testConstructorFailures(null);
+    testConstructorFailures("");
+  }
+
+  /** test constructor */
+  @Test (timeout = 30000)
+  public void testConstructorWithKerberosRules() throws Exception {
+    // security on, explicit rules
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+    conf.set(HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[2:$1@$0](.*@OTHER.REALM)s/(.*)@.*/other-$1/" +
+        "RULE:[1:$1@$0](.*@OTHER.REALM)s/(.*)@.*/other-$1/" +
+        "DEFAULT");
+    UserGroupInformation.setConfiguration(conf);
     
+    testConstructorSuccess("user1", "user1");
+    testConstructorSuccess("user2@DEFAULT.REALM", "user2");
+    testConstructorSuccess("user3/cron@DEFAULT.REALM", "user3");    
+    testConstructorSuccess("user4@OTHER.REALM", "other-user4");
+    testConstructorSuccess("user5/cron@OTHER.REALM", "other-user5");
     // failure test
     testConstructorFailures(null);
     testConstructorFailures("");
   }
 
+  private void testConstructorSuccess(String principal, String shortName) {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createUserForTesting(principal, GROUP_NAMES);
+    // make sure the short and full user names are correct
+    assertEquals(principal, ugi.getUserName());
+    assertEquals(shortName, ugi.getShortUserName());
+  }
+  
   private void testConstructorFailures(String userName) {
-    boolean gotException = false;
     try {
       UserGroupInformation.createRemoteUser(userName);
-    } catch (Exception e) {
-      gotException = true;
+      fail("user:"+userName+" wasn't invalid");
+    } catch (IllegalArgumentException e) {
+      String expect = (userName == null || userName.isEmpty())
+          ? "Null user" : "Illegal principal name "+userName;
+      assertEquals(expect, e.getMessage());
     }
-    assertTrue(gotException);
   }
 
   @Test
+  public void testSetConfigWithRules() {
+    String[] rules = { "RULE:[1:TEST1]", "RULE:[1:TEST2]", "RULE:[1:TEST3]" };
+
+    // explicitly set a rule
+    UserGroupInformation.reset();
+    assertFalse(KerberosName.hasRulesBeenSet());
+    KerberosName.setRules(rules[0]);
+    assertTrue(KerberosName.hasRulesBeenSet());
+    assertEquals(rules[0], KerberosName.getRules());
+
+    // implicit init should honor rules already being set
+    UserGroupInformation.createUserForTesting("someone", new String[0]);
+    assertEquals(rules[0], KerberosName.getRules());
+
+    // set conf, should override
+    conf.set(HADOOP_SECURITY_AUTH_TO_LOCAL, rules[1]);
+    UserGroupInformation.setConfiguration(conf);
+    assertEquals(rules[1], KerberosName.getRules());
+
+    // set conf, should again override
+    conf.set(HADOOP_SECURITY_AUTH_TO_LOCAL, rules[2]);
+    UserGroupInformation.setConfiguration(conf);
+    assertEquals(rules[2], KerberosName.getRules());
+    
+    // implicit init should honor rules already being set
+    UserGroupInformation.createUserForTesting("someone", new String[0]);
+    assertEquals(rules[2], KerberosName.getRules());
+  }
+
+  @Test (timeout = 30000)
+  public void testEnsureInitWithRules() throws IOException {
+    String rules = "RULE:[1:RULE1]";
+
+    // trigger implicit init, rules should init
+    UserGroupInformation.reset();
+    assertFalse(KerberosName.hasRulesBeenSet());
+    UserGroupInformation.createUserForTesting("someone", new String[0]);
+    assertTrue(KerberosName.hasRulesBeenSet());
+    
+    // set a rule, trigger implicit init, rule should not change 
+    UserGroupInformation.reset();
+    KerberosName.setRules(rules);
+    assertTrue(KerberosName.hasRulesBeenSet());
+    assertEquals(rules, KerberosName.getRules());
+    UserGroupInformation.createUserForTesting("someone", new String[0]);
+    assertEquals(rules, KerberosName.getRules());
+  }
+
+  @Test (timeout = 30000)
   public void testEquals() throws Exception {
     UserGroupInformation uugi = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
