@@ -194,6 +194,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4892. Modify CombineFileInputFormat to not skew input slits'
     allocation on small clusters. (Bikas Saha via vinodkv)
 
+    MAPREDUCE-4990. Construct debug strings conditionally in 
+    ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
