@@ -51,14 +51,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -190,8 +188,6 @@ public class UserGroupInformation {
 
   /** Metrics to track UGI activity */
   static UgiMetrics metrics = UgiMetrics.create();
-  /** Are the static variables that depend on configuration initialized? */
-  private static boolean isInitialized = false;
   /** The auth method to use */
   private static AuthenticationMethod authenticationMethod;
   /** Server-side groups fetching service */
@@ -212,8 +208,8 @@ public class UserGroupInformation {
    * Must be called before useKerberos or groups is used.
    */
   private static synchronized void ensureInitialized() {
-    if (!isInitialized) {
-        initialize(new Configuration(), KerberosName.hasRulesBeenSet());
+    if (conf == null) {
+      initialize(new Configuration(), false);
     }
   }
 
@@ -221,30 +217,21 @@ public class UserGroupInformation {
    * Initialize UGI and related classes.
    * @param conf the configuration to use
    */
-  private static synchronized void initialize(Configuration conf, boolean skipRulesSetting) {
-    initUGI(conf);
-    // give the configuration on how to translate Kerberos names
-    try {
-      if (!skipRulesSetting) {
-        HadoopKerberosName.setConfiguration(conf);
-      }
-    } catch (IOException ioe) {
-      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
-          "configuration", ioe);
-    }
-  }
-  
-  /**
-   * Set the configuration values for UGI.
-   * @param conf the configuration to use
-   */
-  private static synchronized void initUGI(Configuration conf) {
+  private static synchronized void initialize(Configuration conf,
+                                              boolean overrideNameRules) {
     authenticationMethod = SecurityUtil.getAuthenticationMethod(conf);
+    if (overrideNameRules || !HadoopKerberosName.hasRulesBeenSet()) {
+      try {
+        HadoopKerberosName.setConfiguration(conf);
+      } catch (IOException ioe) {
+        throw new RuntimeException(
+            "Problem with Kerberos auth_to_local name configuration", ioe);
+      }
+    }
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
     }
-    isInitialized = true;
     UserGroupInformation.conf = conf;
   }
 
@@ -257,7 +244,18 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static void setConfiguration(Configuration conf) {
-    initialize(conf, false);
+    initialize(conf, true);
+  }
+  
+  @InterfaceAudience.Private
+  
+  static void reset() {
+    authenticationMethod = null;
+    conf = null;
+    groups = null;
+    
+    setLoginUser(null);
+    HadoopKerberosName.setRules(null);
   }
   
   /**
