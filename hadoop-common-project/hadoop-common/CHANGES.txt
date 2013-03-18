@@ -571,6 +571,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
     build issues. (Sangjin Lee via suresh)
 
+    HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
+    is not configured (daryn)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
