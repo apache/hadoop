@@ -83,6 +83,10 @@ public class TestJobHistoryParsing {
     public List<String> resolve(List<String> names) {
       return Arrays.asList(new String[]{RACK_NAME});
     }
+
+    @Override
+    public void reloadCachedMappings() {
+    }
   }
 
   @Test
