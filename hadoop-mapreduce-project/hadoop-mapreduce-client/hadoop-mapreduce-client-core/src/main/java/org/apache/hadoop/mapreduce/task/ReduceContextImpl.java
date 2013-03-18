@@ -205,7 +205,8 @@ public class ReduceContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
           if (backupStore.hasNext()) {
             backupStore.next();
             DataInputBuffer next = backupStore.nextValue();
-            buffer.reset(next.getData(), next.getPosition(), next.getLength());
+            buffer.reset(next.getData(), next.getPosition(), next.getLength()
+                - next.getPosition());
             value = valueDeserializer.deserialize(value);
             return value;
           } else {
