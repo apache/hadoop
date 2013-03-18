@@ -363,6 +363,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4569. Small image transfer related cleanups.
     (Andrew Wang via suresh)
 
+    HDFS-4521. Invalid network toploogies should not be cached. (Colin Patrick
+    McCabe via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
