@@ -198,3 +198,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4144. Create test for all snapshot-related metrics.
   (Jing Zhao via suresh)
+
+  HDFS-4556. Add snapshotdiff and LsSnapshottableDir tools to hdfs script.
+  (Arpit Agarwal via szetszwo)
