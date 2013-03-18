@@ -72,6 +72,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-237. Refreshing the RM page forgets how many rows I had in my
     Datatables (jian he via bobby)
 
+    YARN-481. Add AM Host and RPC Port to ApplicationCLI Status Output 
+    (Chris Riccomini via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
