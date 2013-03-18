@@ -509,9 +509,6 @@ Release 1.2.0 - unreleased
     HADOOP-9375. Port HADOOP-7290 to branch-1 to fix TestUserGroupInformation
     failure. (Xiaobo Peng via suresh)
 
-    MAPREDUCE-5038. old API CombineFileInputFormat missing fixes that are in 
-    new API. (sandyr via tucu)
-
     MAPREDUCE-5049. CombineFileInputFormat counts all compressed files 
     non-splitable. (sandyr via tucu)
 
