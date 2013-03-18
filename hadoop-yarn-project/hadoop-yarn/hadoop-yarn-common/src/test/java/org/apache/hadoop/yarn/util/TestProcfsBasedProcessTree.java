@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.util;
 
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -183,11 +185,20 @@ public class TestProcfsBasedProcessTree {
     // destroy the process and all its subprocesses
     destroyProcessTree(pid);
 
-    if (isSetsidAvailable()) { // whole processtree should be gone
-      Assert.assertFalse("Proceesses in process group live",
-          isAnyProcessInTreeAlive(p));
-    } else {// process should be gone
-      Assert.assertFalse("ProcessTree must have been gone", isAlive(pid));
+    boolean isAlive = true;
+    for (int tries = 100; tries > 0; tries--) {
+      if (isSetsidAvailable()) {// whole processtree
+        isAlive = isAnyProcessInTreeAlive(p);
+      } else {// process
+        isAlive = isAlive(pid);
+      }
+      if (!isAlive) {
+        break;
+      }
+      Thread.sleep(100);
+    }
+    if (isAlive) {
+      fail("ProcessTree shouldn't be alive");
     }
 
     LOG.info("Process-tree dump follows: \n" + processTreeDump);
