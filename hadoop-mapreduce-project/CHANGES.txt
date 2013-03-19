@@ -28,6 +28,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5027. Shuffle does not limit number of outstanding connections
     (Robert Parker via jeagles)
 
+    MAPREDUCE-4990. Construct debug strings conditionally in 
+    ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tgraves)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
