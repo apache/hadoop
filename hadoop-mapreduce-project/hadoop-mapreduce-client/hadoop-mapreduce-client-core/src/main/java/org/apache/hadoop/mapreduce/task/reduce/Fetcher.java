@@ -347,18 +347,23 @@ class Fetcher<K,V> extends Thread {
         return EMPTY_ATTEMPT_ID_ARRAY;
       } 
       
-      // Go!
-      LOG.info("fetcher#" + id + " about to shuffle output of map " + 
-               mapOutput.getMapId() + " decomp: " +
-               decompressedLength + " len: " + compressedLength + " to " +
-               mapOutput.getType());
-      if (mapOutput.getType() == Type.MEMORY) {
-        shuffleToMemory(host, mapOutput, input, 
-                        (int) decompressedLength, (int) compressedLength);
-      } else {
-        shuffleToDisk(host, mapOutput, input, compressedLength);
+      // lz*, snappy, etc. throw java.lang.InternalError when there is a decompression
+      // error, catching and throwing IOException to trigger fetch failure logic
+      try {
+        // Go!
+        LOG.info("fetcher#" + id + " about to shuffle output of map "
+            + mapOutput.getMapId() + " decomp: " + decompressedLength
+            + " len: " + compressedLength + " to " + mapOutput.getType());
+        if (mapOutput.getType() == Type.MEMORY) {
+          shuffleToMemory(host, mapOutput, input, (int) decompressedLength,
+              (int) compressedLength);
+        } else {
+          shuffleToDisk(host, mapOutput, input, compressedLength);
+        }
+      } catch (java.lang.InternalError e) {
+        LOG.warn("Failed to shuffle for fetcher#"+id, e);
+        throw new IOException(e);
       }
-      
       // Inform the shuffle scheduler
       long endTime = System.currentTimeMillis();
       scheduler.copySucceeded(mapId, host, compressedLength, 
