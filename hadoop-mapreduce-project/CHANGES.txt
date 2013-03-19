@@ -238,9 +238,6 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
     fails with jdk7. (tgraves via tucu)
 
-    MAPREDUCE-5028. Maps fail when io.sort.mb is set to high value. 
-    (kkambatl via tucu)
-
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
