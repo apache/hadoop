@@ -35,6 +35,9 @@ Release 0.23.7 - UNRELEASED
     YARN-468. coverage fix for org.apache.hadoop.yarn.server.webproxy.amfilter
     (Aleksey Gorshkov via bobby)
 
+    YARN-200. yarn log does not output all needed information, and is in a
+    binary format (Ravi Prakash via jlowe)
+
   OPTIMIZATIONS
 
     YARN-357. App submission should not be synchronized (daryn)
