@@ -19,10 +19,10 @@
 package org.apache.hadoop.yarn.logaggregation;
 
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -30,6 +30,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileContext;
@@ -57,10 +58,13 @@ public class LogDumper extends Configured implements Tool {
   public int run(String[] args) throws Exception {
 
     Options opts = new Options();
-    opts.addOption(APPLICATION_ID_OPTION, true, "ApplicationId");
-    opts.addOption(CONTAINER_ID_OPTION, true, "ContainerId");
-    opts.addOption(NODE_ADDRESS_OPTION, true, "NodeAddress");
-    opts.addOption(APP_OWNER_OPTION, true, "AppOwner");
+    opts.addOption(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
+    opts.addOption(CONTAINER_ID_OPTION, true,
+      "ContainerId (must be specified if node address is specified)");
+    opts.addOption(NODE_ADDRESS_OPTION, true, "NodeAddress in the format "
+      + "nodename:port (must be specified if container id is specified)");
+    opts.addOption(APP_OWNER_OPTION, true,
+      "AppOwner (assumed to be current user if not specified)");
 
     if (args.length < 1) {
       HelpFormatter formatter = new HelpFormatter();
@@ -99,14 +103,12 @@ public class LogDumper extends Configured implements Tool {
     ApplicationId appId =
         ConverterUtils.toApplicationId(recordFactory, appIdStr);
 
-    DataOutputStream out = new DataOutputStream(System.out);
-
     if (appOwner == null || appOwner.isEmpty()) {
       appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
     }
     int resultCode = 0;
     if (containerIdStr == null && nodeAddress == null) {
-      resultCode = dumpAllContainersLogs(appId, appOwner, out);
+      resultCode = dumpAllContainersLogs(appId, appOwner, System.out);
     } else if ((containerIdStr == null && nodeAddress != null)
         || (containerIdStr != null && nodeAddress == null)) {
       System.out.println("ContainerId or NodeAddress cannot be null!");
@@ -125,7 +127,7 @@ public class LogDumper extends Configured implements Tool {
                   appOwner,
                   ConverterUtils.toNodeId(nodeAddress),
                   LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf())));
-      resultCode = dumpAContainerLogs(containerIdStr, reader, out);
+      resultCode = dumpAContainerLogs(containerIdStr, reader, System.out);
     }
 
     return resultCode;
@@ -149,12 +151,11 @@ public class LogDumper extends Configured implements Tool {
           "Log aggregation has not completed or is not enabled.");
       return -1;
     }
-    DataOutputStream out = new DataOutputStream(System.out);
-    return dumpAContainerLogs(containerId, reader, out);
+    return dumpAContainerLogs(containerId, reader, System.out);
   }
 
   private int dumpAContainerLogs(String containerIdStr,
-      AggregatedLogFormat.LogReader reader, DataOutputStream out)
+      AggregatedLogFormat.LogReader reader, PrintStream out)
       throws IOException {
     DataInputStream valueStream;
     LogKey key = new LogKey();
@@ -183,7 +184,7 @@ public class LogDumper extends Configured implements Tool {
   }
 
   private int dumpAllContainersLogs(ApplicationId appId, String appOwner,
-      DataOutputStream out) throws IOException {
+      PrintStream out) throws IOException {
     Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
@@ -216,6 +217,9 @@ public class LogDumper extends Configured implements Tool {
         valueStream = reader.next(key);
 
         while (valueStream != null) {
+          String containerString = "\n\nContainer: " + key + " on " + thisNodeFile.getPath().getName();
+          out.println(containerString);
+          out.println(StringUtils.repeat("=", containerString.length()));
           while (true) {
             try {
               LogReader.readAContainerLogsForALogType(valueStream, out);
