@@ -49,14 +49,14 @@ public class InMemoryReader<K, V> extends Reader<K, V> {
 
     buffer = data;
     bufferSize = (int)fileLength;
-    memDataIn.reset(buffer, start, length - start);
+    memDataIn.reset(buffer, start, length);
     this.start = start;
     this.length = length;
   }
 
   @Override
   public void reset(int offset) {
-    memDataIn.reset(buffer, start + offset, length - start - offset);
+    memDataIn.reset(buffer, start + offset, length);
     bytesRead = offset;
     eof = false;
   }
