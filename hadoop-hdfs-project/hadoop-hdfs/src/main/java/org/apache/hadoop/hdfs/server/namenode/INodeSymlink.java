@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
  * An {@link INode} representing a symbolic link.
  */
 @InterfaceAudience.Private
-public class INodeSymlink extends INode {
+public class INodeSymlink extends INodeWithAdditionalFields {
   private final byte[] symlink; // The target URI
 
   INodeSymlink(long id, byte[] name, PermissionStatus permissions,

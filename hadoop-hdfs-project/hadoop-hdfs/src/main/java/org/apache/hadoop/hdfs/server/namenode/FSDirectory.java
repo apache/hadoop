@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
@@ -558,24 +559,22 @@ public class FSDirectory implements Closeable {
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
     
     boolean added = false;
-    INode srcChild = null;
-    byte[] srcChildName = null;
+    final INode srcChild = srcIIP.getLastINode();
+    final byte[] srcChildName = srcChild.getLocalNameBytes();
     try {
       // remove src
-      srcChild = removeLastINode(srcIIP);
-      if (srcChild == null) {
+      final int removedSrc = removeLastINode(srcIIP);
+      if (removedSrc == -1) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             + "failed to rename " + src + " to " + dst
             + " because the source can not be removed");
         return false;
       }
-      srcChildName = srcChild.getLocalNameBytes();
       srcChild.setLocalName(dstComponents[dstComponents.length - 1]);
       
       // add src to the destination
       added = addLastINodeNoQuotaCheck(dstIIP, srcChild);
       if (added) {
-        srcChild = null;
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: " 
               + src + " is renamed to " + dst);
@@ -586,10 +585,16 @@ public class FSDirectory implements Closeable {
         dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshot());
         // update moved leases with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);        
+
+        if (srcIIP.getLatestSnapshot() != null) {
+          createReferences4Rename(srcChild, srcChildName,
+              (INodeDirectoryWithSnapshot)srcParent.asDirectory(),
+              dstParent.asDirectory());
+        }
         return true;
       }
     } finally {
-      if (!added && srcChild != null) {
+      if (!added) {
         // put it back
         srcChild.setLocalName(srcChildName);
         addLastINodeNoQuotaCheck(srcIIP, srcChild);
@@ -707,7 +712,7 @@ public class FSDirectory implements Closeable {
       }
     }
 
-    final INode dstParent = dstIIP.getINode(-2);
+    INode dstParent = dstIIP.getINode(-2);
     if (dstParent == null) {
       error = "rename destination parent " + dst + " not found.";
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
@@ -723,27 +728,33 @@ public class FSDirectory implements Closeable {
 
     // Ensure dst has quota to accommodate rename
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
-    INode removedSrc = removeLastINode(srcIIP);
-    if (removedSrc == null) {
+
+    boolean undoRemoveSrc = true;
+    final int removedSrc = removeLastINode(srcIIP);
+    if (removedSrc == -1) {
       error = "Failed to rename " + src + " to " + dst
           + " because the source can not be removed";
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new IOException(error);
     }
-    final byte[] srcChildName = removedSrc.getLocalNameBytes();
-    byte[] dstChildName = null;
+    final INode srcChild = srcIIP.getLastINode();
+    final byte[] srcChildName = srcChild.getLocalNameBytes();
+
+    boolean undoRemoveDst = false;
     INode removedDst = null;
     try {
       if (dstInode != null) { // dst exists remove it
-        removedDst = removeLastINode(dstIIP);
-        dstChildName = removedDst.getLocalNameBytes();
+        if (removeLastINode(dstIIP) != -1) {
+          removedDst = dstIIP.getLastINode();
+          undoRemoveDst = true;
+        }
       }
+      srcChild.setLocalName(dstIIP.getLastLocalName());
 
-      removedSrc.setLocalName(dstIIP.getLastLocalName());
       // add src as dst to complete rename
-      if (addLastINodeNoQuotaCheck(dstIIP, removedSrc)) {
-        removedSrc = null;
+      if (addLastINodeNoQuotaCheck(dstIIP, srcChild)) {
+        undoRemoveSrc = false;
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug(
               "DIR* FSDirectory.unprotectedRenameTo: " + src
@@ -752,6 +763,7 @@ public class FSDirectory implements Closeable {
 
         final INode srcParent = srcIIP.getINode(-2);
         srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshot());
+        dstParent = dstIIP.getINode(-2);
         dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshot());
         // update moved lease with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);
@@ -759,12 +771,17 @@ public class FSDirectory implements Closeable {
         // Collect the blocks and remove the lease for previous dst
         long filesDeleted = -1;
         if (removedDst != null) {
-          INode rmdst = removedDst;
-          removedDst = null;
+          undoRemoveDst = false;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-          filesDeleted = rmdst.cleanSubtree(null, dstIIP.getLatestSnapshot(),
-              collectedBlocks).get(Quota.NAMESPACE);
+          filesDeleted = removedDst.cleanSubtree(null,
+              dstIIP.getLatestSnapshot(), collectedBlocks).get(Quota.NAMESPACE);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+        }
+
+        if (srcIIP.getLatestSnapshot() != null) {
+          createReferences4Rename(srcChild, srcChildName,
+              (INodeDirectoryWithSnapshot)srcParent.asDirectory(),
+              dstParent.asDirectory());
         }
 
         if (snapshottableDirs.size() > 0) {
@@ -775,14 +792,13 @@ public class FSDirectory implements Closeable {
         return filesDeleted >= 0;
       }
     } finally {
-      if (removedSrc != null) {
+      if (undoRemoveSrc) {
         // Rename failed - restore src
-        removedSrc.setLocalName(srcChildName);
-        addLastINodeNoQuotaCheck(srcIIP, removedSrc);
+        srcChild.setLocalName(srcChildName);
+        addLastINodeNoQuotaCheck(srcIIP, srcChild);
       }
-      if (removedDst != null) {
+      if (undoRemoveDst) {
         // Rename failed - restore dst
-        removedDst.setLocalName(dstChildName);
         addLastINodeNoQuotaCheck(dstIIP, removedDst);
       }
     }
@@ -791,6 +807,18 @@ public class FSDirectory implements Closeable {
     throw new IOException("rename from " + src + " to " + dst + " failed.");
   }
 
+  /** The renamed inode is also in a snapshot, create references */
+  private static void createReferences4Rename(final INode srcChild,
+      final byte[] srcChildName, final INodeDirectoryWithSnapshot srcParent,
+      final INodeDirectory dstParent) {
+    final INodeReference.WithCount ref;
+    if (srcChild.isReference()) {
+      ref = (INodeReference.WithCount)srcChild.asReference().getReferredINode();
+    } else {
+      ref = dstParent.asDirectory().replaceChild4Reference(srcChild);
+    }
+    srcParent.replaceRemovedChild4Reference(srcChild, ref, srcChildName);
+  }
   /**
    * Set file replication
    * 
@@ -1137,10 +1165,16 @@ public class FSDirectory implements Closeable {
     iip.setLastINode(targetNode);
 
     // Remove the node from the namespace
-    removeLastINode(iip);
+    final int removed = removeLastINode(iip);
+    if (removed == -1) {
+      return -1;
+    }
 
     // set the parent's modification time
     targetNode.getParent().updateModificationTime(mtime, latestSnapshot);
+    if (removed == 0) {
+      return 0;
+    }
 
     // collect block
     final long inodesRemoved = targetNode.cleanSubtree(null, latestSnapshot,
@@ -1205,6 +1239,7 @@ public class FSDirectory implements Closeable {
     Preconditions.checkState(hasWriteLock());
 
     oldnode.getParent().replaceChild(oldnode, newnode);
+    oldnode.clear();
 
     /* Currently oldnode and newnode are assumed to contain the same
      * blocks. Otherwise, blocks need to be removed from the blocksMap.
@@ -1917,6 +1952,9 @@ public class FSDirectory implements Closeable {
     if (!added) {
       updateCountNoQuotaCheck(iip, pos,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+    } else {
+      // update parent node
+      iip.setINode(pos - 1, child.getParent());
     }
     return added;
   }
@@ -1933,23 +1971,35 @@ public class FSDirectory implements Closeable {
   /**
    * Remove the last inode in the path from the namespace.
    * Count of each ancestor with quota is also updated.
-   * @return the removed node; null if the removal fails.
+   * @return -1 for failing to remove;
+   *          0 for removing a reference;
+   *          1 for removing a non-reference inode. 
    * @throws NSQuotaExceededException 
    */
-  private INode removeLastINode(final INodesInPath inodesInPath)
+  private int removeLastINode(final INodesInPath iip)
       throws QuotaExceededException {
-    final Snapshot latestSnapshot = inodesInPath.getLatestSnapshot();
-    final INode[] inodes = inodesInPath.getINodes();
-    final int pos = inodes.length - 1;
-    final INodeDirectory parent = inodes[pos-1].asDirectory();
-    final boolean removed = parent.removeChild(inodes[pos], latestSnapshot);
-    if (removed && latestSnapshot == null) {
-      inodesInPath.setINode(pos - 1, inodes[pos].getParent());
-      final Quota.Counts counts = inodes[pos].computeQuotaUsage();
-      updateCountNoQuotaCheck(inodesInPath, pos,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+    final Snapshot latestSnapshot = iip.getLatestSnapshot();
+    final INode last = iip.getLastINode();
+    final INodeDirectory parent = iip.getINode(-2).asDirectory();
+    if (!parent.removeChild(last, latestSnapshot)) {
+      return -1;
     }
-    return removed? inodes[pos]: null;
+
+    if (parent != last.getParent()) {
+      // parent is changed
+      iip.setINode(-2, last.getParent());
+    }
+    
+    if (latestSnapshot == null) {
+      final Quota.Counts counts = last.computeQuotaUsage();
+      updateCountNoQuotaCheck(iip, iip.getINodes().length - 1,
+          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+
+      if (INodeReference.tryRemoveReference(last) > 0) {
+        return 0;
+      }
+    }
+    return 1;
   }
   
   /**

@@ -79,8 +79,8 @@ public class FSImageSerialization {
     final FsPermission FILE_PERM = new FsPermission((short) 0);
   }
 
-  private static void writePermissionStatus(INode inode, DataOutput out
-      ) throws IOException {
+  private static void writePermissionStatus(INodeWithAdditionalFields inode,
+      DataOutput out) throws IOException {
     final FsPermission p = TL_DATA.get().FILE_PERM;
     p.fromShort(inode.getFsPermissionShort());
     PermissionStatus.write(out, inode.getUserName(), inode.getGroupName(), p);

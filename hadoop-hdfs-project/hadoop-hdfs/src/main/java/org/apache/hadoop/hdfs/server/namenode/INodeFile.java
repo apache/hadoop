@@ -42,7 +42,7 @@ import com.google.common.base.Preconditions;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
-public class INodeFile extends INode implements BlockCollection {
+public class INodeFile extends INodeWithAdditionalFields implements BlockCollection {
   /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
       ) throws FileNotFoundException {
@@ -309,7 +309,7 @@ public class INodeFile extends INode implements BlockCollection {
       }
     }
     setBlocks(null);
-    clearReferences();
+    clear();
     
     if (this instanceof FileWithSnapshot) {
       ((FileWithSnapshot) this).getDiffs().clear();

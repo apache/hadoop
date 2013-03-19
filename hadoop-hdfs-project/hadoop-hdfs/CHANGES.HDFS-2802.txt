@@ -201,3 +201,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4556. Add snapshotdiff and LsSnapshottableDir tools to hdfs script.
   (Arpit Agarwal via szetszwo)
+
+  HDFS-4534. Add INodeReference in order to support rename with snapshots.
+  (szetszwo)

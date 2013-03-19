@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
 
@@ -418,8 +419,9 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       ReadOnlyList<INode> children = dir.getChildrenList(diffReport
           .isFromEarlier() ? diffReport.to : diffReport.from);
       for (INode child : children) {
-        if (diff.searchCreated(child.getLocalNameBytes()) == null
-            && diff.searchDeleted(child.getLocalNameBytes()) == null) {
+        final byte[] name = child.getLocalNameBytes();
+        if (diff.searchIndex(ListType.CREATED, name) < 0
+            && diff.searchIndex(ListType.DELETED, name) < 0) {
           computeDiffRecursively(child, diffReport);
         }
       }

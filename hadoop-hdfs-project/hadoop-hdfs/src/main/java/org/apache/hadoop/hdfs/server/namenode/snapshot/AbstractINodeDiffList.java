@@ -94,7 +94,7 @@ abstract class AbstractINodeDiffList<N extends INode,
         if (previous.snapshotINode == null) {
           previous.snapshotINode = removed.snapshotINode;
         } else if (removed.snapshotINode != null) {
-          removed.snapshotINode.clearReferences();
+          removed.snapshotINode.clear();
         }
         counts.add(previous.combinePosteriorAndCollectBlocks(
             currentINode, removed, collectedBlocks));

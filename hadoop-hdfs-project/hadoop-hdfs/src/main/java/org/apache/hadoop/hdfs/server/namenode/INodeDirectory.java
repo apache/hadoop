@@ -46,7 +46,7 @@ import com.google.common.base.Preconditions;
 /**
  * Directory INode class.
  */
-public class INodeDirectory extends INode {
+public class INodeDirectory extends INodeWithAdditionalFields {
   /** Cast INode to INodeDirectory. */
   public static INodeDirectory valueOf(INode inode, Object path
       ) throws FileNotFoundException, PathIsNotDirectoryException {
@@ -108,17 +108,6 @@ public class INodeDirectory extends INode {
     return children == null? -1: Collections.binarySearch(children, name);
   }
 
-  private int searchChildrenForExistingINode(final INode inode) {
-    Preconditions.checkNotNull(children);
-    final byte[] name = inode.getLocalNameBytes();
-    final int i = searchChildren(name);
-    if (i < 0) {
-      throw new AssertionError("Child not found: name="
-          + DFSUtil.bytes2String(name));
-    }
-    return i;
-  }
-
   /**
    * Remove the specified child from this directory.
    * 
@@ -144,7 +133,6 @@ public class INodeDirectory extends INode {
    * @return true if the child is removed; false if the child is not found.
    */
   protected final boolean removeChild(final INode child) {
-    Preconditions.checkNotNull(children);
     final int i = searchChildren(child.getLocalNameBytes());
     if (i < 0) {
       return false;
@@ -208,22 +196,47 @@ public class INodeDirectory extends INode {
 
   /** Replace itself with the given directory. */
   private final <N extends INodeDirectory> N replaceSelf(final N newDir) {
-    final INodeDirectory parent = getParent();
-    Preconditions.checkArgument(parent != null, "parent is null, this=%s", this);
-    parent.replaceChild(this, newDir);
+    final INodeReference ref = getParentReference();
+    if (ref != null) {
+      ref.setReferredINode(newDir);
+    } else {
+      final INodeDirectory parent = getParent();
+      Preconditions.checkArgument(parent != null, "parent is null, this=%s", this);
+      parent.replaceChild(this, newDir);
+    }
+    clear();
     return newDir;
   }
 
+  /** Replace the given child with a new child. */
   public void replaceChild(final INode oldChild, final INode newChild) {
     Preconditions.checkNotNull(children);
-    final int i = searchChildrenForExistingINode(newChild);
-    final INode removed = children.set(i, newChild);
-    Preconditions.checkState(removed == oldChild);
-    oldChild.clearReferences();
+    final int i = searchChildren(newChild.getLocalNameBytes());
+    Preconditions.checkState(i >= 0);
+    Preconditions.checkState(oldChild == children.get(i));
+    
+    if (oldChild.isReference()) {
+      final INode withCount = oldChild.asReference().getReferredINode();
+      withCount.asReference().setReferredINode(newChild);
+    } else {
+      final INode removed = children.set(i, newChild);
+      Preconditions.checkState(removed == oldChild);
+    }
+  }
+
+  INodeReference.WithCount replaceChild4Reference(INode oldChild) {
+    Preconditions.checkArgument(!oldChild.isReference());
+    final INodeReference.WithCount withCount
+        = new INodeReference.WithCount(oldChild);
+    final INodeReference ref = new INodeReference(withCount);
+    withCount.incrementReferenceCount();
+    replaceChild(oldChild, ref);
+    return withCount;
   }
 
   private void replaceChildFile(final INodeFile oldChild, final INodeFile newChild) {
     replaceChild(oldChild, newChild);
+    oldChild.clear();
     newChild.updateBlockCollection();
   }
 
@@ -592,8 +605,8 @@ public class INodeDirectory extends INode {
   }
 
   @Override
-  public void clearReferences() {
-    super.clearReferences();
+  public void clear() {
+    super.clear();
     clearChildren();
   }
 
@@ -625,7 +638,7 @@ public class INodeDirectory extends INode {
     for (INode child : getChildrenList(null)) {
       child.destroyAndCollectBlocks(collectedBlocks);
     }
-    clearReferences();
+    clear();
   }
   
   @Override
@@ -784,7 +797,7 @@ public class INodeDirectory extends INode {
     }
     
     void setINode(int i, INode inode) {
-      inodes[i] = inode;
+      inodes[i >= 0? i: inodes.length + i] = inode;
     }
     
     void setLastINode(INode last) {
