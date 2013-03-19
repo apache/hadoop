@@ -357,13 +357,20 @@ class Fetcher<K,V> extends Thread {
         return EMPTY_ATTEMPT_ID_ARRAY;
       } 
       
-      // Go!
-      LOG.info("fetcher#" + id + " about to shuffle output of map " + 
-               mapOutput.getMapId() + " decomp: " +
-               decompressedLength + " len: " + compressedLength + " to " +
-               mapOutput.getDescription());
-      mapOutput.shuffle(host, input, compressedLength, decompressedLength,
-                        metrics, reporter);
+      // The codec for lz0,lz4,snappy,bz2,etc. throw java.lang.InternalError
+      // on decompression failures. Catching and re-throwing as IOException
+      // to allow fetch failure logic to be processed
+      try {
+        // Go!
+        LOG.info("fetcher#" + id + " about to shuffle output of map "
+            + mapOutput.getMapId() + " decomp: " + decompressedLength
+            + " len: " + compressedLength + " to " + mapOutput.getDescription());
+        mapOutput.shuffle(host, input, compressedLength, decompressedLength,
+            metrics, reporter);
+      } catch (java.lang.InternalError e) {
+        LOG.warn("Failed to shuffle for fetcher#"+id, e);
+        throw new IOException(e);
+      }
       
       // Inform the shuffle scheduler
       long endTime = System.currentTimeMillis();
