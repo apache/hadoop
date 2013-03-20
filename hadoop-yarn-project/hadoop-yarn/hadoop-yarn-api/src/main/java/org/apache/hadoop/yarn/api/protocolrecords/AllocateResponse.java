@@ -18,19 +18,23 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> the  
  * <code>ApplicationMaster</code> during resource negotiation.</p>
  *
- * <p>The response, via {@link AMResponse}, includes:
+ * <p>The response, includes:
  *   <ul>
  *     <li>Response ID to track duplicate responses.</li>
  *     <li>
@@ -42,6 +46,8 @@ import org.apache.hadoop.yarn.api.records.Container;
  *       The available headroom for resources in the cluster for the
  *       application. 
  *     </li>
+ *     <li>A list of nodes whose status has been updated.</li>
+ *     <li>The number of available nodes in a cluster.</li>
  *   </ul>
  * </p>
  * 
@@ -51,18 +57,90 @@ import org.apache.hadoop.yarn.api.records.Container;
 @Stable
 public interface AllocateResponse {
   /**
-   * Get the {@link AMResponse} sent by the <code>ResourceManager</code>.
-   * @return <code>AMResponse</code> sent by the <code>ResourceManager</code>
+   * Should the <code>ApplicationMaster</code> reboot for being horribly
+   * out-of-sync with the <code>ResourceManager</code> as deigned by
+   * {@link #getResponseId()}?
+   *
+   * @return <code>true</code> if the <code>ApplicationMaster</code> should
+   *         reboot, <code>false</code> otherwise
    */
   @Public
   @Stable
-  public abstract AMResponse getAMResponse();
+  public boolean getReboot();
 
   @Private
   @Unstable
-  public abstract void setAMResponse(AMResponse amResponse);
-  
-  
+  public void setReboot(boolean reboot);
+
+  /**
+   * Get the <em>last response id</em>.
+   * @return <em>last response id</em>
+   */
+  @Public
+  @Stable
+  public int getResponseId();
+
+  @Private
+  @Unstable
+  public void setResponseId(int responseId);
+
+  /**
+   * Get the list of <em>newly allocated</em> <code>Container</code> by the
+   * <code>ResourceManager</code>.
+   * @return list of <em>newly allocated</em> <code>Container</code>
+   */
+  @Public
+  @Stable
+  public List<Container> getAllocatedContainers();
+
+  /**
+   * Set the list of <em>newly allocated</em> <code>Container</code> by the
+   * <code>ResourceManager</code>.
+   * @param containers list of <em>newly allocated</em> <code>Container</code>
+   */
+  @Public
+  @Stable
+  public void setAllocatedContainers(List<Container> containers);
+
+  /**
+   * Get the <em>available headroom</em> for resources in the cluster for the
+   * application.
+   * @return limit of available headroom for resources in the cluster for the
+   * application
+   */
+  @Public
+  @Stable
+  public Resource getAvailableResources();
+
+  @Private
+  @Unstable
+  public void setAvailableResources(Resource limit);
+
+  /**
+   * Get the list of <em>completed containers' statuses</em>.
+   * @return the list of <em>completed containers' statuses</em>
+   */
+  @Public
+  @Stable
+  public List<ContainerStatus> getCompletedContainersStatuses();
+
+  @Private
+  @Unstable
+  public void setCompletedContainersStatuses(List<ContainerStatus> containers);
+
+  /**
+   * Get the list of <em>updated <code>NodeReport</code>s</em>. Updates could
+   * be changes in health, availability etc of the nodes.
+   * @return The delta of updated nodes since the last response
+   */
+  @Public
+  @Unstable
+  public List<NodeReport> getUpdatedNodes();
+
+  @Private
+  @Unstable
+  public void setUpdatedNodes(final List<NodeReport> updatedNodes);
+
   /**
    * Get the number of hosts available on the cluster.
    * @return the available host count.

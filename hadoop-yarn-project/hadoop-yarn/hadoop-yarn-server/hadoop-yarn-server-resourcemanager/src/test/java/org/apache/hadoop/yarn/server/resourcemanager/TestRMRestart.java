@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -213,9 +213,10 @@ public class TestRMRestart {
     // verify old AM is not accepted
     // change running AM to talk to new RM
     am1.setAMRMProtocol(rm2.getApplicationMasterService());
-    AMResponse amResponse = am1.allocate(new ArrayList<ResourceRequest>(),
+    AllocateResponse allocResponse = am1.allocate(
+        new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
-    Assert.assertTrue(amResponse.getReboot());
+    Assert.assertTrue(allocResponse.getReboot());
     
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
     HeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);

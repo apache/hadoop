@@ -487,7 +487,7 @@ public class TestContainerManagerSecurity {
         BuilderUtils.newApplicationAttemptId(appID, 1), 0, 0F, ask,
         new ArrayList<ContainerId>());
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
-        .getAMResponse().getAllocatedContainers();
+        .getAllocatedContainers();
 
     // Modify ask to request no more.
     allocateRequest.clearAsks();
@@ -499,7 +499,7 @@ public class TestContainerManagerSecurity {
       Thread.sleep(1000);
       allocateRequest.setResponseId(allocateRequest.getResponseId() + 1);
       allocatedContainers = scheduler.allocate(allocateRequest)
-          .getAMResponse().getAllocatedContainers();
+          .getAllocatedContainers();
     }
 
     Assert.assertNotNull("Container is not allocted!", allocatedContainers);

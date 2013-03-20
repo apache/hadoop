@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -510,10 +509,11 @@ public class ApplicationMaster {
 
         // Send the request to RM
         LOG.info("Asking RM for containers" + ", askCount=" + askCount);
-        AMResponse amResp = sendContainerAskToRM();
+        AllocateResponse allocResp = sendContainerAskToRM();
 
         // Retrieve list of allocated containers from the response
-        List<Container> allocatedContainers = amResp.getAllocatedContainers();
+        List<Container> allocatedContainers =
+            allocResp.getAllocatedContainers();
         LOG.info("Got response from RM for container ask, allocatedCnt="
             + allocatedContainers.size());
         numAllocatedContainers.addAndGet(allocatedContainers.size());
@@ -542,12 +542,12 @@ public class ApplicationMaster {
 
         // Check what the current available resources in the cluster are
         // TODO should we do anything if the available resources are not enough?
-        Resource availableResources = amResp.getAvailableResources();
+        Resource availableResources = allocResp.getAvailableResources();
         LOG.info("Current available resources in the cluster "
             + availableResources);
 
         // Check the completed containers
-        List<ContainerStatus> completedContainers = amResp
+        List<ContainerStatus> completedContainers = allocResp
             .getCompletedContainersStatuses();
         LOG.info("Got response from RM for container ask, completedCnt="
             + completedContainers.size());
@@ -819,14 +819,13 @@ public class ApplicationMaster {
    * @return Response from RM to AM with allocated containers
    * @throws YarnRemoteException
    */
-  private AMResponse sendContainerAskToRM() throws YarnRemoteException {
+  private AllocateResponse sendContainerAskToRM() throws YarnRemoteException {
     float progressIndicator = (float) numCompletedContainers.get()
         / numTotalContainers;
 
     LOG.info("Sending request to RM for containers" + ", progress="
         + progressIndicator);
 
-    AllocateResponse resp = resourceManager.allocate(progressIndicator);
-    return resp.getAMResponse();
+    return resourceManager.allocate(progressIndicator);
   }
 }

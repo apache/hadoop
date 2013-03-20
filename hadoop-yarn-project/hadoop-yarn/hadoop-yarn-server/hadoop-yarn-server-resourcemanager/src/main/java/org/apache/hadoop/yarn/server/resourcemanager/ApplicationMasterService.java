@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -78,10 +77,12 @@ public class ApplicationMasterService extends AbstractService implements
   private YarnScheduler rScheduler;
   private InetSocketAddress bindAddress;
   private Server server;
-  private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  private final ConcurrentMap<ApplicationAttemptId, AMResponse> responseMap =
-      new ConcurrentHashMap<ApplicationAttemptId, AMResponse>();
-  private final AMResponse reboot = recordFactory.newRecordInstance(AMResponse.class);
+  private final RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
+  private final ConcurrentMap<ApplicationAttemptId, AllocateResponse> responseMap =
+      new ConcurrentHashMap<ApplicationAttemptId, AllocateResponse>();
+  private final AllocateResponse reboot =
+      recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
 
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
@@ -166,7 +167,7 @@ public class ApplicationMasterService extends AbstractService implements
     authorizeRequest(applicationAttemptId);
 
     ApplicationId appID = applicationAttemptId.getApplicationId();
-    AMResponse lastResponse = responseMap.get(applicationAttemptId);
+    AllocateResponse lastResponse = responseMap.get(applicationAttemptId);
     if (lastResponse == null) {
       String message = "Application doesn't exist in cache "
           + applicationAttemptId;
@@ -214,7 +215,7 @@ public class ApplicationMasterService extends AbstractService implements
         .getApplicationAttemptId();
     authorizeRequest(applicationAttemptId);
 
-    AMResponse lastResponse = responseMap.get(applicationAttemptId);
+    AllocateResponse lastResponse = responseMap.get(applicationAttemptId);
     if (lastResponse == null) {
       String message = "Application doesn't exist in cache "
           + applicationAttemptId;
@@ -248,25 +249,20 @@ public class ApplicationMasterService extends AbstractService implements
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
     /* check if its in cache */
-    AllocateResponse allocateResponse = recordFactory
-        .newRecordInstance(AllocateResponse.class);
-    AMResponse lastResponse = responseMap.get(appAttemptId);
+    AllocateResponse lastResponse = responseMap.get(appAttemptId);
     if (lastResponse == null) {
       LOG.error("AppAttemptId doesnt exist in cache " + appAttemptId);
-      allocateResponse.setAMResponse(reboot);
-      return allocateResponse;
+      return reboot;
     }
     if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
       /* old heartbeat */
-      allocateResponse.setAMResponse(lastResponse);
-      return allocateResponse;
+      return lastResponse;
     } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
       LOG.error("Invalid responseid from appAttemptId " + appAttemptId);
       // Oh damn! Sending reboot isn't enough. RM state is corrupted. TODO:
       // Reboot is not useful since after AM reboots, it will send register and 
       // get an exception. Might as well throw an exception here.
-      allocateResponse.setAMResponse(reboot);
-      return allocateResponse;
+      return reboot;
     } 
     
     // Allow only one thread in AM to do heartbeat at a time.
@@ -288,7 +284,8 @@ public class ApplicationMasterService extends AbstractService implements
           appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
       
-      AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
+      AllocateResponse allocateResponse =
+          recordFactory.newRecordInstance(AllocateResponse.class);
 
       // update the response with the deltas of node status changes
       List<RMNode> updatedNodes = new ArrayList<RMNode>();
@@ -311,34 +308,34 @@ public class ApplicationMasterService extends AbstractService implements
           
           updatedNodeReports.add(report);
         }
-        response.setUpdatedNodes(updatedNodeReports);
+        allocateResponse.setUpdatedNodes(updatedNodeReports);
       }
 
-      response.setAllocatedContainers(allocation.getContainers());
-      response.setCompletedContainersStatuses(appAttempt
+      allocateResponse.setAllocatedContainers(allocation.getContainers());
+      allocateResponse.setCompletedContainersStatuses(appAttempt
           .pullJustFinishedContainers());
-      response.setResponseId(lastResponse.getResponseId() + 1);
-      response.setAvailableResources(allocation.getResourceLimit());
+      allocateResponse.setResponseId(lastResponse.getResponseId() + 1);
+      allocateResponse.setAvailableResources(allocation.getResourceLimit());
       
-      AMResponse oldResponse = responseMap.put(appAttemptId, response);
+      AllocateResponse oldResponse =
+          responseMap.put(appAttemptId, allocateResponse);
       if (oldResponse == null) {
         // appAttempt got unregistered, remove it back out
         responseMap.remove(appAttemptId);
         String message = "App Attempt removed from the cache during allocate"
             + appAttemptId;
         LOG.error(message);
-        allocateResponse.setAMResponse(reboot);
-        return allocateResponse;
+        return reboot;
       }
       
-      allocateResponse.setAMResponse(response);
       allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
       return allocateResponse;
     }
   }
 
   public void registerAppAttempt(ApplicationAttemptId attemptId) {
-    AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
+    AllocateResponse response =
+        recordFactory.newRecordInstance(AllocateResponse.class);
     response.setResponseId(0);
     LOG.info("Registering " + attemptId);
     responseMap.put(attemptId, response);
