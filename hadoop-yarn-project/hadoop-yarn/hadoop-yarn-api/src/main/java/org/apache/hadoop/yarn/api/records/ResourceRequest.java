@@ -124,8 +124,8 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
 
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
+    final int prime = 2153;
+    int result = 2459;
     Resource capability = getCapability();
     String hostName = getHostName();
     Priority priority = getPriority();

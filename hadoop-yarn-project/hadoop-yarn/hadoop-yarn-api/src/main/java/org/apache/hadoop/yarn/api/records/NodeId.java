@@ -65,8 +65,8 @@ public abstract class NodeId implements Comparable<NodeId> {
 
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
+    final int prime = 493217;
+    int result = 8501;
     result = prime * result + this.getHost().hashCode();
     result = prime * result + this.getPort();
     return result;
