@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +42,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.EventReader;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.HistoryViewer;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
@@ -60,7 +63,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -78,6 +80,8 @@ public class TestJobHistoryParsing {
 
   private static final String RACK_NAME = "/MyRackName";
 
+  private  ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+
   public static class MyResolver implements DNSToSwitchMapping {
     @Override
     public List<String> resolve(List<String> names) {
@@ -85,14 +89,14 @@ public class TestJobHistoryParsing {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testJobInfo() throws Exception {
     JobInfo info = new JobInfo();
     Assert.assertEquals("NORMAL", info.getPriority());
     info.printAll();
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testHistoryParsing() throws Exception {
     LOG.info("STARTING testHistoryParsing()");
     try {
@@ -102,7 +106,7 @@ public class TestJobHistoryParsing {
     }
   }
   
-  @Test
+  @Test (timeout=50000)
   public void testHistoryParsingWithParseErrors() throws Exception {
     LOG.info("STARTING testHistoryParsingWithParseErrors()");
     try {
@@ -317,18 +321,37 @@ public class TestJobHistoryParsing {
         }
       }
     }
+    
+    // test output for HistoryViewer
+    PrintStream stdps=System.out;
+    try {
+      System.setOut(new PrintStream(outContent));
+      HistoryViewer viewer = new HistoryViewer(fc.makeQualified(
+          fileInfo.getHistoryFile()).toString(), conf, true);
+      viewer.print();
+      
+      for (TaskInfo taskInfo : allTasks.values()) { 
+        
+        String test=  (taskInfo.getTaskStatus()==null?"":taskInfo.getTaskStatus())+" "+taskInfo.getTaskType()+" task list for "+taskInfo.getTaskId().getJobID();
+        Assert.assertTrue(outContent.toString().indexOf(test)>0);
+        Assert.assertTrue(outContent.toString().indexOf(taskInfo.getTaskId().toString())>0);
+      }
+    } finally {
+      System.setOut(stdps);
+
+    }
   }
-  
+
   // Computes finished maps similar to RecoveryService...
-  private long computeFinishedMaps(JobInfo jobInfo, 
-      int numMaps, int numSuccessfulMaps) {
+  private long computeFinishedMaps(JobInfo jobInfo, int numMaps,
+      int numSuccessfulMaps) {
     if (numMaps == numSuccessfulMaps) {
       return jobInfo.getFinishedMaps();
     }
-    
+
     long numFinishedMaps = 0;
-    Map<org.apache.hadoop.mapreduce.TaskID, TaskInfo> taskInfos = 
-        jobInfo.getAllTasks();
+    Map<org.apache.hadoop.mapreduce.TaskID, TaskInfo> taskInfos = jobInfo
+        .getAllTasks();
     for (TaskInfo taskInfo : taskInfos.values()) {
       if (TaskState.SUCCEEDED.toString().equals(taskInfo.getTaskStatus())) {
         ++numFinishedMaps;
@@ -337,7 +360,7 @@ public class TestJobHistoryParsing {
     return numFinishedMaps;
   }
   
-  @Test
+  @Test (timeout=50000)
   public void testHistoryParsingForFailedAttempts() throws Exception {
     LOG.info("STARTING testHistoryParsingForFailedAttempts");
     try {
@@ -404,7 +427,7 @@ public class TestJobHistoryParsing {
     }
   }
   
-  @Test
+  @Test (timeout=50000)
   public void testCountersForFailedTask() throws Exception {
     LOG.info("STARTING testCountersForFailedTask");
     try {
@@ -461,7 +484,7 @@ public class TestJobHistoryParsing {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testScanningOldDirs() throws Exception {
     LOG.info("STARTING testScanningOldDirs");
     try {
