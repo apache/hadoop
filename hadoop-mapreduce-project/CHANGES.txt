@@ -250,6 +250,9 @@ Release 2.0.4-alpha - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
+    does not close the wrapped InputStream.  (Chris Nauroth via szetszwo)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

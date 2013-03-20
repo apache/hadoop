@@ -52,6 +52,11 @@ public class ThrottledInputStream extends InputStream {
     this.maxBytesPerSec = maxBytesPerSec;
   }
 
+  @Override
+  public void close() throws IOException {
+    rawStream.close();
+  }
+
   /** @inheritDoc */
   @Override
   public int read() throws IOException {
