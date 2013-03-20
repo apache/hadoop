@@ -4,6 +4,9 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    YARN-396. Rationalize AllocateResponse in RM Scheduler API. (Zhijie Shen
+    via hitesh)
+
   NEW FEATURES
 
   IMPROVEMENTS
