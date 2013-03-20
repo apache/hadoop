@@ -101,7 +101,7 @@ public class TestIntegration {
 
     try {
       addEntries(listFile, "singlefile1/file1");
-      createFiles("singlefile1/file1", target.toString());
+      createFiles("singlefile1/file1", "target");
 
       runTest(listFile, target, sync);
 
