@@ -58,6 +58,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
     fails with jdk7. (tgraves via tucu)
 
+    MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
+    does not close the wrapped InputStream.  (Chris Nauroth via szetszwo)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -69,9 +72,6 @@ Release 2.0.4-alpha - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-    MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
-    does not close the wrapped InputStream.  (Chris Nauroth via szetszwo)
 
 Release 2.0.3-alpha - 2013-02-06 
 
