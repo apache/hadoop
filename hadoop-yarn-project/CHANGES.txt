@@ -78,6 +78,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-481. Add AM Host and RPC Port to ApplicationCLI Status Output 
     (Chris Riccomini via bikas)
 
+    YARN-297. Improve hashCode implementations for PB records. (Xuan Gong via
+    hitesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
