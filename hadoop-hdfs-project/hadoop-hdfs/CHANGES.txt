@@ -427,6 +427,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4596. Shutting down namenode during checkpointing can lead to md5sum
     error. (Andrew Wang via atm)
 
+    HDFS-4614. FSNamesystem#getContentSummary should use getPermissionChecker
+    helper method. (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
