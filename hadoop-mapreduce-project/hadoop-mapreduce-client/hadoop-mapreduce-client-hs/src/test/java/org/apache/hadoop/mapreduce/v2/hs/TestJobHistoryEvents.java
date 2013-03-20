@@ -25,7 +25,6 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
@@ -67,8 +66,17 @@ public class TestJobHistoryEvents {
      * completed maps 
     */
     HistoryContext context = new JobHistory();
+    // test start and stop states
     ((JobHistory)context).init(conf);
-    Job parsedJob = context.getJob(jobId);
+    ((JobHistory)context).start();
+    Assert.assertTrue( context.getStartTime()>0);
+    Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STARTED);
+    
+    
+    ((JobHistory)context).stop();
+    Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STOPPED);
+      Job parsedJob = context.getJob(jobId);
+    
     Assert.assertEquals("CompletedMaps not correct", 2,
         parsedJob.getCompletedMaps());
     Assert.assertEquals(System.getProperty("user.name"), parsedJob.getUserName());
@@ -177,9 +185,8 @@ public class TestJobHistoryEvents {
     @Override
     protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
         AppContext context) {
-      JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(
-          context, getStartCount());
-      return eventHandler;
+      return new JobHistoryEventHandler(
+              context, getStartCount());
     }
   }
 
