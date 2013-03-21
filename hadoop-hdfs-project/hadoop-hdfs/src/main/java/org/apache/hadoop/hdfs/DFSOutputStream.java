@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -82,6 +83,11 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 
 
 /****************************************************************
@@ -289,7 +295,25 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     private DataInputStream blockReplyStream;
     private ResponseProcessor response = null;
     private volatile DatanodeInfo[] nodes = null; // list of targets for current block
-    private ArrayList<DatanodeInfo> excludedNodes = new ArrayList<DatanodeInfo>();
+    private LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes =
+        CacheBuilder.newBuilder()
+        .expireAfterWrite(
+            dfsClient.getConf().excludedNodesCacheExpiry,
+            TimeUnit.MILLISECONDS)
+        .removalListener(new RemovalListener<DatanodeInfo, DatanodeInfo>() {
+          @Override
+          public void onRemoval(
+              RemovalNotification<DatanodeInfo, DatanodeInfo> notification) {
+            DFSClient.LOG.info("Removing node " +
+                notification.getKey() + " from the excluded nodes list");
+          }
+        })
+        .build(new CacheLoader<DatanodeInfo, DatanodeInfo>() {
+          @Override
+          public DatanodeInfo load(DatanodeInfo key) throws Exception {
+            return key;
+          }
+        });
     volatile boolean hasError = false;
     volatile int errorIndex = -1;
     private BlockConstructionStage stage;  // block construction stage
@@ -999,8 +1023,10 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         success = false;
 
         long startTime = Time.now();
-        DatanodeInfo[] excluded = excludedNodes.toArray(
-            new DatanodeInfo[excludedNodes.size()]);
+        DatanodeInfo[] excluded =
+            excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
+            .keySet()
+            .toArray(new DatanodeInfo[0]);
         block = oldBlock;
         lb = locateFollowingBlock(startTime,
             excluded.length > 0 ? excluded : null);
@@ -1019,7 +1045,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           dfsClient.namenode.abandonBlock(block, src, dfsClient.clientName);
           block = null;
           DFSClient.LOG.info("Excluding datanode " + nodes[errorIndex]);
-          excludedNodes.add(nodes[errorIndex]);
+          excludedNodes.put(nodes[errorIndex], nodes[errorIndex]);
         }
       } while (!success && --count >= 0);
 
