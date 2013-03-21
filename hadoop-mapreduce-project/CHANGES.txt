@@ -158,6 +158,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
     via suresh)
+    
+    MAPREDUCE-5078. TestMRAppMaster fails on Windows due to mismatched path
+    separators. (Chris Nauroth via sseth)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
