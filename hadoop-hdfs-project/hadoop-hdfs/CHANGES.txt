@@ -433,6 +433,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4614. FSNamesystem#getContentSummary should use getPermissionChecker
     helper method. (atm)
 
+    HDFS-4620. Documentation for dfs.namenode.rpc-address specifies wrong
+    format. (Sandy Ryza via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
