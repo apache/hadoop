@@ -89,16 +89,19 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     /** clear the created list */
-    private void destroyCreatedList(
+    private Quota.Counts destroyCreatedList(
         final INodeDirectoryWithSnapshot currentINode,
         final BlocksMapUpdateInfo collectedBlocks) {
+      Quota.Counts counts = Quota.Counts.newInstance();
       final List<INode> createdList = getList(ListType.CREATED);
       for (INode c : createdList) {
+        c.computeQuotaUsage(counts, true);
         c.destroyAndCollectBlocks(collectedBlocks);
         // c should be contained in the children list, remove it
         currentINode.removeChild(c);
       }
       createdList.clear();
+      return counts;
     }
     
     /** clear the deleted list */
@@ -659,7 +662,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       // delete everything in created list
       DirectoryDiff lastDiff = diffs.getLast();
       if (lastDiff != null) {
-        lastDiff.diff.destroyCreatedList(this, collectedBlocks);
+        counts.add(lastDiff.diff.destroyCreatedList(this, collectedBlocks));
       }
     } else {
       // update prior

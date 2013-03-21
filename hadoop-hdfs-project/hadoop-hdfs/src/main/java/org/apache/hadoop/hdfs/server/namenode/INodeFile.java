@@ -293,11 +293,13 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks)
       throws QuotaExceededException {
+    Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == null && prior == null) {   
       // this only happens when deleting the current file
+      computeQuotaUsage(counts, false);
       destroyAndCollectBlocks(collectedBlocks);
     }
-    return Quota.Counts.newInstance();
+    return counts;
   }
 
   @Override

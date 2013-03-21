@@ -204,3 +204,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4534. Add INodeReference in order to support rename with snapshots.
   (szetszwo)
+
+  HDFS-4616. Update the FilesDeleted metric while deleting file/dir in the
+  current tree.  (Jing Zhao via szetszwo)

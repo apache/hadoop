@@ -74,7 +74,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
       final BlocksMapUpdateInfo collectedBlocks) {
-    return Quota.Counts.newInstance();
+    return Quota.Counts.newInstance(1, 0);
   }
   
   @Override
