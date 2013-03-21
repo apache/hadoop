@@ -436,8 +436,11 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4620. Documentation for dfs.namenode.rpc-address specifies wrong
     format. (Sandy Ryza via atm)
 
-    HDFS-4607.  In TestGetConf.testGetSpecificKey(), use a platform-specific
+    HDFS-4607. In TestGetConf.testGetSpecificKey(), use a platform-specific
     line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
+
+    HDFS-4609. TestAuditLogs should release log handles between tests. 
+    (Ivan Mitic via szetszwo)
 
 Release 2.0.4-alpha - UNRELEASED
 
