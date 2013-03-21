@@ -25,6 +25,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5038. old API CombineFileInputFormat missing fixes that are
     in new API. (sandyr via tucu)
 
+    HDFS-4622. Remove redundant synchronized from 
+    FSNamesystem#rollEditLog in branch-1. (Jing Zhao via suresh)
+
 Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES

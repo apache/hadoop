@@ -5616,7 +5616,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return getEditLog().getEditLogSize();
   }
 
-  synchronized CheckpointSignature rollEditLog() throws IOException {
+  CheckpointSignature rollEditLog() throws IOException {
     checkSuperuserPrivilege();
     synchronized (this) {
       if (isInSafeMode()) {
