@@ -244,6 +244,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
     does not close the wrapped InputStream.  (Chris Nauroth via szetszwo)
 
+    MAPREDUCE-3872. Fix an event handling races in ContainerLauncherImpl.
+    (Robert Kanter via sseth)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
