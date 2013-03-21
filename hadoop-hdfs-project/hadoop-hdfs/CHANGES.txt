@@ -26,6 +26,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4521. Invalid network toploogies should not be cached. (Colin Patrick
     McCabe via atm)
 
+    HDFS-4246. The exclude node list should be more forgiving, for each output
+    stream. (harsh via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -369,7 +369,7 @@ public class MiniDFSCluster {
   private Configuration conf;
   private NameNodeInfo[] nameNodes;
   private int numDataNodes;
-  private ArrayList<DataNodeProperties> dataNodes = 
+  protected ArrayList<DataNodeProperties> dataNodes = 
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
   private File data_dir;
