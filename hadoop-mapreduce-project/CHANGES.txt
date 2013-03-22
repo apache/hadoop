@@ -75,6 +75,9 @@ Trunk (Unreleased)
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
 
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing. 
+    (Srikanth Sundarrajan via amareshwari)
+
   BUG FIXES
 
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
