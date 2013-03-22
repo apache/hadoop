@@ -487,6 +487,9 @@ Trunk (Unreleased)
     Windows with NTFS ACLs. (Chris Nauroth via suresh)
 
     HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-9387. Fix DF so that it won't execute a shell command on Windows
+    to compute the file system/mount point.  (Ivan Mitic via szetszwo)
     
 Release 2.0.5-beta - UNRELEASED
 
@@ -575,9 +578,6 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
     is not configured (daryn)
-
-    HADOOP-9387. Fix DF so that it won't execute a shell command on Windows
-    to compute the file system/mount point.  (Ivan Mitic via szetszwo)
 
 Release 2.0.4-alpha - UNRELEASED
 
