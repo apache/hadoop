@@ -36,6 +36,8 @@ public class NodeInfo {
   protected String healthReport;
   protected long totalVmemAllocatedContainersMB;
   protected long totalPmemAllocatedContainersMB;
+  protected boolean vmemCheckEnabled;
+  protected boolean pmemCheckEnabled;
   protected long lastNodeUpdateTime;
   protected boolean nodeHealthy;
   protected String nodeManagerVersion;
@@ -56,8 +58,10 @@ public class NodeInfo {
     this.nodeHostName = context.getNodeId().getHost();
     this.totalVmemAllocatedContainersMB = resourceView
         .getVmemAllocatedForContainers() / BYTES_IN_MB;
+    this.vmemCheckEnabled = resourceView.isVmemCheckEnabled();
     this.totalPmemAllocatedContainersMB = resourceView
         .getPmemAllocatedForContainers() / BYTES_IN_MB;
+    this.pmemCheckEnabled = resourceView.isPmemCheckEnabled();
     this.nodeHealthy = context.getNodeHealthStatus().getIsNodeHealthy();
     this.lastNodeUpdateTime = context.getNodeHealthStatus()
         .getLastHealthReportTime();
@@ -120,8 +124,16 @@ public class NodeInfo {
     return this.totalVmemAllocatedContainersMB;
   }
 
+  public boolean isVmemCheckEnabled() {
+    return this.vmemCheckEnabled;
+  }
+
   public long getTotalPmemAllocated() {
     return this.totalPmemAllocatedContainersMB;
+  }
+
+  public boolean isPmemCheckEnabled() {
+    return this.pmemCheckEnabled;
   }
 
 }

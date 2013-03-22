@@ -106,6 +106,16 @@ public class TestNMWebServicesApps extends JerseyTest {
           // 16G in bytes
           return new Long("17179869184");
         }
+
+        @Override
+        public boolean isVmemCheckEnabled() {
+          return true;
+        }
+
+        @Override
+        public boolean isPmemCheckEnabled() {
+          return true;
+        }
       };
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());

@@ -86,6 +86,14 @@ public class TestNMWebServer {
       public long getPmemAllocatedForContainers() {
         return 0;
       }
+      @Override
+      public boolean isVmemCheckEnabled() {
+        return true;
+      }
+      @Override
+      public boolean isPmemCheckEnabled() {
+        return true;
+      }
     };
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
@@ -125,6 +133,14 @@ public class TestNMWebServer {
       @Override
       public long getPmemAllocatedForContainers() {
         return 0;
+      }
+      @Override
+      public boolean isVmemCheckEnabled() {
+        return true;
+      }
+      @Override
+      public boolean isPmemCheckEnabled() {
+        return true;
       }
     };
     Configuration conf = new Configuration();

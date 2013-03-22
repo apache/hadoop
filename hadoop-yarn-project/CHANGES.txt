@@ -121,6 +121,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
     for the process to die. (kkambatl via tucu)
+ 
+    YARN-470. Support a way to disable resource monitoring on the NodeManager.
+    (Siddharth Seth via hitesh)
 
 Release 2.0.4-alpha - UNRELEASED
 
