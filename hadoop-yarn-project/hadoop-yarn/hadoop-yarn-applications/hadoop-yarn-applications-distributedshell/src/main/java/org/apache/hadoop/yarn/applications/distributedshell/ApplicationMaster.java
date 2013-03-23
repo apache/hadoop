@@ -394,6 +394,10 @@ public class ApplicationMaster {
         "container_memory", "10"));
     numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
         "num_containers", "1"));
+    if (numTotalContainers == 0) {
+      throw new IllegalArgumentException(
+          "Cannot run distributed shell with no containers");
+    }
     requestPriority = Integer.parseInt(cliParser
         .getOptionValue("priority", "0"));
 
