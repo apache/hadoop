@@ -91,7 +91,7 @@ public class TestUnmanagedAMLauncher {
     return envClassPath;
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testDSShell() throws Exception {
     String classpath = getTestRuntimeClasspath();
     String javaHome = System.getenv("JAVA_HOME");
@@ -110,7 +110,7 @@ public class TestUnmanagedAMLauncher {
         javaHome
             + "/bin/java -Xmx512m "
             + "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster "
-            + "--container_memory 128 --num_containers 0 --priority 0 --shell_command ls" };
+            + "--container_memory 128 --num_containers 1 --priority 0 --shell_command ls" };
 
     LOG.info("Initializing Launcher");
     UnmanagedAMLauncher launcher = new UnmanagedAMLauncher(new Configuration(
