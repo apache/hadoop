@@ -355,6 +355,9 @@ Trunk (Unreleased)
     HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
     Wang via atm)
 
+    HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
+    contains capital letters  (Chris Nauroth via sanjay)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
