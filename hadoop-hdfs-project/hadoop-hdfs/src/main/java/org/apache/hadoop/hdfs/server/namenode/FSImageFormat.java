@@ -561,7 +561,7 @@ public class FSImageFormat {
       
       // read blocks
       BlockInfo[] blocks = null;
-      if (numBlocks > 0) {
+      if (numBlocks >= 0) {
         blocks = new BlockInfo[numBlocks];
         for (int j = 0; j < numBlocks; j++) {
           blocks[j] = new BlockInfo(replication);
@@ -660,7 +660,7 @@ public class FSImageFormat {
               ((INodeFileWithSnapshot)oldnode).getDiffs());
         }
 
-        fsDir.unprotectedReplaceINodeFile(path, oldnode, cons);
+        fsDir.replaceINodeFile(path, oldnode, cons);
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }
     }

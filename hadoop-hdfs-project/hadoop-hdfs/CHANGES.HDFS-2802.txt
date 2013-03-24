@@ -207,3 +207,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4616. Update the FilesDeleted metric while deleting file/dir in the
   current tree.  (Jing Zhao via szetszwo)
+
+  HDFS-4627. Fix FSImageFormat#Loader NPE and synchronization issues.
+  (Jing Zhao via suresh)
