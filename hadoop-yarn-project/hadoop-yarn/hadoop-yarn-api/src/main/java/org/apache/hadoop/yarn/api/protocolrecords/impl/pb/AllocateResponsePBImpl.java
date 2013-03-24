@@ -19,11 +19,24 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.AMResponsePBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.AMResponseProto;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProtoOrBuilder;
 
@@ -35,7 +48,12 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
   AllocateResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  private AMResponse amResponse;
+  Resource limit;
+
+  private List<Container> allocatedContainers = null;
+  private List<ContainerStatus> completedContainersStatuses = null;
+
+  private List<NodeReport> updatedNodes = null;
   
   
   public AllocateResponsePBImpl() {
@@ -47,20 +65,38 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     viaProto = true;
   }
   
-  public AllocateResponseProto getProto() {
+  public synchronized AllocateResponseProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
-    if (this.amResponse != null) {
-      builder.setAMResponse(convertToProtoFormat(this.amResponse));
+  private synchronized void mergeLocalToBuilder() {
+    if (this.allocatedContainers != null) {
+      builder.clearAllocatedContainers();
+      Iterable<ContainerProto> iterable =
+          getProtoIterable(this.allocatedContainers);
+      builder.addAllAllocatedContainers(iterable);
+    }
+    if (this.completedContainersStatuses != null) {
+      builder.clearCompletedContainerStatuses();
+      Iterable<ContainerStatusProto> iterable =
+          getContainerStatusProtoIterable(this.completedContainersStatuses);
+      builder.addAllCompletedContainerStatuses(iterable);
+    }
+    if (this.updatedNodes != null) {
+      builder.clearUpdatedNodes();
+      Iterable<NodeReportProto> iterable =
+          getNodeReportProtoIterable(this.updatedNodes);
+      builder.addAllUpdatedNodes(iterable);
+    }
+    if (this.limit != null) {
+      builder.setLimit(convertToProtoFormat(this.limit));
     }
   }
 
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -68,53 +104,293 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = AllocateResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
-    
   
   @Override
-  public AMResponse getAMResponse() {
+  public synchronized boolean getReboot() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.amResponse != null) {
-      return this.amResponse;
-    }
-    if (!p.hasAMResponse()) {
-      return null;
-    }
-    this.amResponse= convertFromProtoFormat(p.getAMResponse());
-    return this.amResponse;
+    return (p.getReboot());
   }
 
   @Override
-  public void setAMResponse(AMResponse aMResponse) {
+  public synchronized void setReboot(boolean reboot) {
     maybeInitBuilder();
-    if (aMResponse == null) 
-      builder.clearAMResponse();
-    this.amResponse = aMResponse;
+    builder.setReboot((reboot));
   }
-  
+
   @Override
-  public int getNumClusterNodes() {
+  public synchronized int getResponseId() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getResponseId());
+  }
+
+  @Override
+  public synchronized void setResponseId(int responseId) {
+    maybeInitBuilder();
+    builder.setResponseId((responseId));
+  }
+
+  @Override
+  public synchronized Resource getAvailableResources() {
+    if (this.limit != null) {
+      return this.limit;
+    }
+
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasLimit()) {
+      return null;
+    }
+    this.limit = convertFromProtoFormat(p.getLimit());
+    return this.limit;
+  }
+
+  @Override
+  public synchronized void setAvailableResources(Resource limit) {
+    maybeInitBuilder();
+    if (limit == null)
+      builder.clearLimit();
+    this.limit = limit;
+  }
+
+  @Override
+  public synchronized List<NodeReport> getUpdatedNodes() {
+    initLocalNewNodeReportList();
+    return this.updatedNodes;
+  }
+  @Override
+  public synchronized void setUpdatedNodes(
+      final List<NodeReport> updatedNodes) {
+    if (updatedNodes == null) {
+      this.updatedNodes.clear();
+      return;
+    }
+    this.updatedNodes = new ArrayList<NodeReport>(updatedNodes.size());
+    this.updatedNodes.addAll(updatedNodes);
+  }
+
+  @Override
+  public synchronized List<Container> getAllocatedContainers() {
+    initLocalNewContainerList();
+    return this.allocatedContainers;
+  }
+
+  @Override
+  public synchronized void setAllocatedContainers(
+      final List<Container> containers) {
+    if (containers == null)
+      return;
+    // this looks like a bug because it results in append and not set
+    initLocalNewContainerList();
+    allocatedContainers.addAll(containers);
+  }
+
+  //// Finished containers
+  @Override
+  public synchronized List<ContainerStatus> getCompletedContainersStatuses() {
+    initLocalFinishedContainerList();
+    return this.completedContainersStatuses;
+  }
+
+  @Override
+  public synchronized void setCompletedContainersStatuses(
+      final List<ContainerStatus> containers) {
+    if (containers == null)
+      return;
+    initLocalFinishedContainerList();
+    completedContainersStatuses.addAll(containers);
+  }
+
+  @Override
+  public synchronized int getNumClusterNodes() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
     return p.getNumClusterNodes();
   }
-  
+
   @Override
-  public void setNumClusterNodes(int numNodes) {
+  public synchronized void setNumClusterNodes(int numNodes) {
     maybeInitBuilder();
     builder.setNumClusterNodes(numNodes);
   }
 
-  
-  private AMResponsePBImpl convertFromProtoFormat(AMResponseProto p) {
-    return new AMResponsePBImpl(p);
+  // Once this is called. updatedNodes will never be null - until a getProto is
+  // called.
+  private synchronized void initLocalNewNodeReportList() {
+    if (this.updatedNodes != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<NodeReportProto> list = p.getUpdatedNodesList();
+    updatedNodes = new ArrayList<NodeReport>(list.size());
+
+    for (NodeReportProto n : list) {
+      updatedNodes.add(convertFromProtoFormat(n));
+    }
   }
 
-  private AMResponseProto convertToProtoFormat(AMResponse t) {
-    return ((AMResponsePBImpl)t).getProto();
+  // Once this is called. containerList will never be null - until a getProto
+  // is called.
+  private synchronized void initLocalNewContainerList() {
+    if (this.allocatedContainers != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getAllocatedContainersList();
+    allocatedContainers = new ArrayList<Container>();
+
+    for (ContainerProto c : list) {
+      allocatedContainers.add(convertFromProtoFormat(c));
+    }
   }
+
+  private synchronized Iterable<ContainerProto> getProtoIterable(
+      final List<Container> newContainersList) {
+    maybeInitBuilder();
+    return new Iterable<ContainerProto>() {
+      @Override
+      public synchronized Iterator<ContainerProto> iterator() {
+        return new Iterator<ContainerProto>() {
+
+          Iterator<Container> iter = newContainersList.iterator();
+
+          @Override
+          public synchronized boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public synchronized ContainerProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public synchronized void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+
+      }
+    };
+  }
+
+  private synchronized Iterable<ContainerStatusProto>
+  getContainerStatusProtoIterable(
+      final List<ContainerStatus> newContainersList) {
+    maybeInitBuilder();
+    return new Iterable<ContainerStatusProto>() {
+      @Override
+      public synchronized Iterator<ContainerStatusProto> iterator() {
+        return new Iterator<ContainerStatusProto>() {
+
+          Iterator<ContainerStatus> iter = newContainersList.iterator();
+
+          @Override
+          public synchronized boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public synchronized ContainerStatusProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public synchronized void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+
+      }
+    };
+  }
+  
+  private synchronized Iterable<NodeReportProto>
+  getNodeReportProtoIterable(
+      final List<NodeReport> newNodeReportsList) {
+    maybeInitBuilder();
+    return new Iterable<NodeReportProto>() {
+      @Override
+      public synchronized Iterator<NodeReportProto> iterator() {
+        return new Iterator<NodeReportProto>() {
+
+          Iterator<NodeReport> iter = newNodeReportsList.iterator();
+
+          @Override
+          public synchronized boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public synchronized NodeReportProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public synchronized void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+
+      }
+    };
+  }
+
+  // Once this is called. containerList will never be null - until a getProto
+  // is called.
+  private synchronized void initLocalFinishedContainerList() {
+    if (this.completedContainersStatuses != null) {
+      return;
+    }
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerStatusProto> list = p.getCompletedContainerStatusesList();
+    completedContainersStatuses = new ArrayList<ContainerStatus>();
+
+    for (ContainerStatusProto c : list) {
+      completedContainersStatuses.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private synchronized NodeReportPBImpl convertFromProtoFormat(
+      NodeReportProto p) {
+    return new NodeReportPBImpl(p);
+  }
+
+  private synchronized NodeReportProto convertToProtoFormat(NodeReport t) {
+    return ((NodeReportPBImpl)t).getProto();
+  }
+
+  private synchronized ContainerPBImpl convertFromProtoFormat(
+      ContainerProto p) {
+    return new ContainerPBImpl(p);
+  }
+
+  private synchronized ContainerProto convertToProtoFormat(Container t) {
+    return ((ContainerPBImpl)t).getProto();
+  }
+
+  private synchronized ContainerStatusPBImpl convertFromProtoFormat(
+      ContainerStatusProto p) {
+    return new ContainerStatusPBImpl(p);
+  }
+
+  private synchronized ContainerStatusProto convertToProtoFormat(
+      ContainerStatus t) {
+    return ((ContainerStatusPBImpl)t).getProto();
+  }
+
+  private synchronized ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
+    return new ResourcePBImpl(p);
+  }
+
+  private synchronized ResourceProto convertToProtoFormat(Resource r) {
+    return ((ResourcePBImpl) r).getProto();
+  }
+
 }  

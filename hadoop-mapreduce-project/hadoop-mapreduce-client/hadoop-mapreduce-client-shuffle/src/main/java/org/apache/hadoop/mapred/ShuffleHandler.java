@@ -549,15 +549,19 @@ public class ShuffleHandler extends AbstractService
           ContainerLocalizer.USERCACHE + "/" + user + "/"
               + ContainerLocalizer.APPCACHE + "/"
               + ConverterUtils.toString(appID) + "/output" + "/" + mapId;
-      LOG.debug("DEBUG0 " + base);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("DEBUG0 " + base);
+      }
       // Index file
       Path indexFileName = lDirAlloc.getLocalPathToRead(
           base + "/file.out.index", conf);
       // Map-output file
       Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
           base + "/file.out", conf);
-      LOG.debug("DEBUG1 " + base + " : " + mapOutputFileName + " : " +
-          indexFileName);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("DEBUG1 " + base + " : " + mapOutputFileName + " : "
+            + indexFileName);
+      }
       final IndexRecord info = 
         indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
       final ShuffleHeader header =

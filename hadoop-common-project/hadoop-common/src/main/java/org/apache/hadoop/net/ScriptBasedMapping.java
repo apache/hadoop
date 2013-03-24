@@ -263,5 +263,11 @@ public final class ScriptBasedMapping extends CachedDNSToSwitchMapping {
     public String toString() {
       return scriptName != null ? ("script " + scriptName) : NO_SCRIPT;
     }
+
+    @Override
+    public void reloadCachedMappings() {
+      // Nothing to do here, since RawScriptBasedMapping has no cache, and
+      // does not inherit from CachedDNSToSwitchMapping
+    }
   }
 }

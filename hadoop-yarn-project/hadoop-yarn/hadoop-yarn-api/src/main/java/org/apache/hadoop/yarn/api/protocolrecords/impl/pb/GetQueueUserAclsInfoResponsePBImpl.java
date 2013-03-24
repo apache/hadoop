@@ -94,7 +94,8 @@ implements GetQueueUserAclsInfoResponse {
     viaProto = false;
   }
 
-  //Once this is called. containerList will never be null - untill a getProto is called.
+  // Once this is called. containerList will never be null - until a getProto
+  // is called.
   private void initLocalQueueUserAclsList() {
     if (this.queueUserAclsInfoList != null) {
       return;

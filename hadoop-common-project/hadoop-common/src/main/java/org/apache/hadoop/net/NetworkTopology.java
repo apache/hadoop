@@ -392,8 +392,16 @@ public class NetworkTopology {
       throw new IllegalArgumentException(
         "Not allow to add an inner node: "+NodeBase.getPath(node));
     }
+    int newDepth = NodeBase.locationToDepth(node.getNetworkLocation()) + 1;
     netlock.writeLock().lock();
     try {
+      if ((depthOfAllLeaves != -1) && (depthOfAllLeaves != newDepth)) {
+        LOG.error("Error: can't add leaf node at depth " +
+            newDepth + " to topology:\n" + oldTopoStr);
+        throw new InvalidTopologyException("Invalid network topology. " +
+            "You cannot have a rack and a non-rack node at the same " +
+            "level of the network topology.");
+      }
       Node rack = getNodeForNetworkLocation(node);
       if (rack != null && !(rack instanceof InnerNode)) {
         throw new IllegalArgumentException("Unexpected data node " 
@@ -408,14 +416,6 @@ public class NetworkTopology {
         if (!(node instanceof InnerNode)) {
           if (depthOfAllLeaves == -1) {
             depthOfAllLeaves = node.getLevel();
-          } else {
-            if (depthOfAllLeaves != node.getLevel()) {
-              LOG.error("Error: can't add leaf node at depth " +
-                  node.getLevel() + " to topology:\n" + oldTopoStr);
-              throw new InvalidTopologyException("Invalid network topology. " +
-                  "You cannot have a rack and a non-rack node at the same " +
-                  "level of the network topology.");
-            }
           }
         }
       }

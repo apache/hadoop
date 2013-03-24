@@ -107,7 +107,7 @@ When you import the project to eclipse, install hadoop-maven-plugins at first.
   $ cd hadoop-maven-plugins
   $ mvn install
 
-Then, generate ecplise project files.
+Then, generate eclipse project files.
 
   $ mvn eclipse:eclipse -DskipTests
 
@@ -147,10 +147,10 @@ Requirements:
 * Windows System
 * JDK 1.6
 * Maven 3.0
-* Findbugs 1.3.9 (if running findbugs)
-* ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
-* Unix command-line tools from GnuWin32 or Cygwin: sh, mkdir, rm, cp, tar, gzip
 * Windows SDK or Visual Studio 2010 Professional
+* ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
+* Findbugs 1.3.9 (if running findbugs)
+* Unix command-line tools from GnuWin32 or Cygwin: sh, mkdir, rm, cp, tar, gzip
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 If using Visual Studio, it must be Visual Studio 2010 Professional (not 2012).
@@ -185,23 +185,13 @@ set Platform=Win32 (when building on a 32-bit system)
 Several tests require that the user must have the Create Symbolic Links
 privilege.
 
-All Maven goals are the same as described above, with the addition of profile
--Pnative-win to trigger building Windows native components.  The native
-components are required (not optional) on Windows.  For example:
-
- * Run tests                 : mvn -Pnative-win test
+All Maven goals are the same as described above with the exception that
+native code is built by enabling the 'native-win' Maven profile. -Pnative-win 
+is enabled by default when building on Windows since the native components 
+are required (not optional) on Windows.
 
 ----------------------------------------------------------------------------------
 Building distributions:
 
-Create binary distribution with native code and with documentation:
+ * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
 
-  $ mvn package -Pdist,native-win,docs -DskipTests -Dtar
-
-Create source distribution:
-
-  $ mvn package -Pnative-win,src -DskipTests
-
-Create source and binary distributions with native code and documentation:
-
-  $ mvn package -Pdist,native-win,docs,src -DskipTests -Dtar

@@ -94,6 +94,8 @@ public class TestYarnCLI {
     pw.println("\tState : FINISHED");
     pw.println("\tFinal-State : SUCCEEDED");
     pw.println("\tTracking-URL : N/A");
+    pw.println("\tRPC Port : 124");
+    pw.println("\tAM Host : host");
     pw.println("\tDiagnostics : diagnostics");
     pw.close();
     String appReportStr = baos.toString("UTF-8");

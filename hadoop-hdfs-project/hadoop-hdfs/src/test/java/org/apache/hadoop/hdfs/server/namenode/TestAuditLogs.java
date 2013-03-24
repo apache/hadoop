@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
@@ -233,9 +234,15 @@ public class TestAuditLogs {
 
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
+    // Shutdown the LogManager to release all logger open file handles.
+    // Unfortunately, Apache commons logging library does not provide
+    // means to release underlying loggers. For additional info look up
+    // commons library FAQ.
+    LogManager.shutdown();
+
     File file = new File(auditLogFile);
     if (file.exists()) {
-      file.delete();
+      assertTrue(file.delete());
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     logger.setLevel(Level.INFO);

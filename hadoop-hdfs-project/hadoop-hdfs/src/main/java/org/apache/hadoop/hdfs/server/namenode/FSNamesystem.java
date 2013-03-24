@@ -3072,8 +3072,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   ContentSummary getContentSummary(String src) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, StandbyException {
-    FSPermissionChecker pc = new FSPermissionChecker(fsOwnerShortUserName,
-        supergroup);
+    FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     readLock();
     try {

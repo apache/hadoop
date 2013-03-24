@@ -75,6 +75,9 @@ Trunk (Unreleased)
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
 
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing. 
+    (Srikanth Sundarrajan via amareshwari)
+
   BUG FIXES
 
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
@@ -158,6 +161,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
     via suresh)
+    
+    MAPREDUCE-5078. TestMRAppMaster fails on Windows due to mismatched path
+    separators. (Chris Nauroth via sseth)
 
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
@@ -193,6 +199,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4892. Modify CombineFileInputFormat to not skew input slits'
     allocation on small clusters. (Bikas Saha via vinodkv)
+
+    MAPREDUCE-4990. Construct debug strings conditionally in 
+    ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tucu)
 
   OPTIMIZATIONS
 
@@ -234,6 +243,15 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4716. TestHsWebServicesJobsQuery.testJobsQueryStateInvalid 
     fails with jdk7. (tgraves via tucu)
+
+    MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
+    does not close the wrapped InputStream.  (Chris Nauroth via szetszwo)
+
+    MAPREDUCE-3872. Fix an event handling races in ContainerLauncherImpl.
+    (Robert Kanter via sseth)
+
+    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
+    actual cluster (Siddharth Seth via hitesh)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -780,6 +798,9 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5027. Shuffle does not limit number of outstanding connections
     (Robert Parker via jeagles)
 
+    MAPREDUCE-4972. Coverage fixing for org.apache.hadoop.mapreduce.jobhistory
+    (Aleksey Gorshkov via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
@@ -817,6 +838,9 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-5042. Reducer unable to fetch for a map task that was recovered
     (Jason Lowe via bobby)
+
+    MAPREDUCE-5053. java.lang.InternalError from decompression codec cause
+    reducer to fail (Robert Parker via jeagles)
 
 Release 0.23.6 - UNRELEASED
 

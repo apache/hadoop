@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Writer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -505,7 +506,7 @@ public class AggregatedLogFormat {
      * @throws IOException
      */
     public static void readAContainerLogsForALogType(
-        DataInputStream valueStream, DataOutputStream out)
+        DataInputStream valueStream, PrintStream out)
           throws IOException {
 
       byte[] buf = new byte[65535];
@@ -513,11 +514,11 @@ public class AggregatedLogFormat {
       String fileType = valueStream.readUTF();
       String fileLengthStr = valueStream.readUTF();
       long fileLength = Long.parseLong(fileLengthStr);
-      out.writeUTF("\nLogType:");
-      out.writeUTF(fileType);
-      out.writeUTF("\nLogLength:");
-      out.writeUTF(fileLengthStr);
-      out.writeUTF("\nLog Contents:\n");
+      out.print("LogType: ");
+      out.println(fileType);
+      out.print("LogLength: ");
+      out.println(fileLengthStr);
+      out.println("Log Contents:");
 
       int curRead = 0;
       long pendingRead = fileLength - curRead;
@@ -533,6 +534,7 @@ public class AggregatedLogFormat {
                   pendingRead > buf.length ? buf.length : (int) pendingRead;
         len = valueStream.read(buf, 0, toRead);
       }
+      out.println("");
     }
 
     public void close() throws IOException {

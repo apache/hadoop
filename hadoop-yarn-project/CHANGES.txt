@@ -18,6 +18,13 @@ Trunk - Unreleased
 
   BUG FIXES
 
+    YARN-488. TestContainerManagerSecurity fails on Windows. (Chris Nauroth
+    via hitesh)
+
+    YARN-490. TestDistributedShell fails on Windows. (Chris Nauroth via hitesh)
+
+    YARN-491. TestContainerLogsPage fails on Windows. (Chris Nauroth via hitesh)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
@@ -52,6 +59,9 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    YARN-396. Rationalize AllocateResponse in RM Scheduler API. (Zhijie Shen
+    via hitesh)
+
   NEW FEATURES
 
   IMPROVEMENTS
@@ -71,6 +81,15 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-237. Refreshing the RM page forgets how many rows I had in my
     Datatables (jian he via bobby)
+
+    YARN-481. Add AM Host and RPC Port to ApplicationCLI Status Output 
+    (Chris Riccomini via bikas)
+
+    YARN-297. Improve hashCode implementations for PB records. (Xuan Gong via
+    hitesh)
+
+    YARN-417. Create AMRMClient wrapper that provides asynchronous callbacks.
+    (Sandy Ryza via bikas)
 
   OPTIMIZATIONS
 
@@ -99,6 +118,12 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-196. Nodemanager should be more robust in handling connection failure
     to ResourceManager when a cluster is started (Xuan Gong via hitesh)
+
+    YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
+    for the process to die. (kkambatl via tucu)
+ 
+    YARN-470. Support a way to disable resource monitoring on the NodeManager.
+    (Siddharth Seth via hitesh)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -407,6 +432,9 @@ Release 0.23.7 - UNRELEASED
 
     YARN-468. coverage fix for org.apache.hadoop.yarn.server.webproxy.amfilter
     (Aleksey Gorshkov via bobby)
+
+    YARN-200. yarn log does not output all needed information, and is in a
+    binary format (Ravi Prakash via jlowe)
 
   OPTIMIZATIONS
 

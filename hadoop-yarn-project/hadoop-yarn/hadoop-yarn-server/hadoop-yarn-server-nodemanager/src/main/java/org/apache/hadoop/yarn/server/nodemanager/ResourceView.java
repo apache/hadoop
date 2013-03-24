@@ -22,5 +22,9 @@ public interface ResourceView {
 
   long getVmemAllocatedForContainers();
 
+  boolean isVmemCheckEnabled();
+
   long getPmemAllocatedForContainers();
+
+  boolean isPmemCheckEnabled();
 }

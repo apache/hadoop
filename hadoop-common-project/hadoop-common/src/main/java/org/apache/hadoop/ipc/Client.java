@@ -83,6 +83,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.CodedOutputStream;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -242,7 +243,7 @@ public class Client {
       callComplete();
     }
     
-    public synchronized Writable getRpcResult() {
+    public synchronized Writable getRpcResponse() {
       return rpcResponse;
     }
   }
@@ -944,11 +945,14 @@ public class Client {
       touch();
       
       try {
+        int totalLen = in.readInt();
         RpcResponseHeaderProto header = 
             RpcResponseHeaderProto.parseDelimitedFrom(in);
         if (header == null) {
           throw new IOException("Response is null.");
         }
+        int headerLen = header.getSerializedSize();
+        headerLen += CodedOutputStream.computeRawVarint32Size(headerLen);
 
         int callId = header.getCallId();
         if (LOG.isDebugEnabled())
@@ -961,11 +965,28 @@ public class Client {
           value.readFields(in);                 // read value
           call.setRpcResponse(value);
           calls.remove(callId);
+          
+          // verify that length was correct
+          // only for ProtobufEngine where len can be verified easily
+          if (call.getRpcResponse() instanceof ProtobufRpcEngine.RpcWrapper) {
+            ProtobufRpcEngine.RpcWrapper resWrapper = 
+                (ProtobufRpcEngine.RpcWrapper) call.getRpcResponse();
+            if (totalLen != headerLen + resWrapper.getLength()) { 
+              throw new RpcClientException(
+                  "RPC response length mismatch on rpc success");
+            }
+          }
         } else { // Rpc Request failed
-            final String exceptionClassName = header.hasExceptionClassName() ?
+          // Verify that length was correct
+          if (totalLen != headerLen) {
+            throw new RpcClientException(
+                "RPC response length mismatch on rpc error");
+          }
+          
+          final String exceptionClassName = header.hasExceptionClassName() ?
                 header.getExceptionClassName() : 
                   "ServerDidNotSetExceptionClassName";
-            final String errorMsg = header.hasErrorMsg() ? 
+          final String errorMsg = header.hasErrorMsg() ? 
                 header.getErrorMsg() : "ServerDidNotSetErrorMsg" ;
           RemoteException re = 
               new RemoteException(exceptionClassName, errorMsg);
@@ -1251,7 +1272,7 @@ public class Client {
                   call.error);
         }
       } else {
-        return call.getRpcResult();
+        return call.getRpcResponse();
       }
     }
   }

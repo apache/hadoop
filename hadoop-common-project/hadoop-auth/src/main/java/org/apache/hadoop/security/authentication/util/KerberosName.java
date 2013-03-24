@@ -383,9 +383,25 @@ public class KerberosName {
    * @param ruleString the rules string.
    */
   public static void setRules(String ruleString) {
-    rules = parseRules(ruleString);
+    rules = (ruleString != null) ? parseRules(ruleString) : null;
   }
 
+  /**
+   * Get the rules.
+   * @return String of configured rules, or null if not yet configured
+   */
+  public static String getRules() {
+    String ruleString = null;
+    if (rules != null) {
+      StringBuilder sb = new StringBuilder();
+      for (Rule rule : rules) {
+        sb.append(rule.toString()).append("\n");
+      }
+      ruleString = sb.toString().trim();
+    }
+    return ruleString;
+  }
+  
   /**
    * Indicates if the name rules have been set.
    * 

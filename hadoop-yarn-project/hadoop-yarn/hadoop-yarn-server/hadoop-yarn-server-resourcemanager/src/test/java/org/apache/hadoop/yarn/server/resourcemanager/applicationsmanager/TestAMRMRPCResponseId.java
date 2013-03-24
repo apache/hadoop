@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
@@ -81,22 +81,22 @@ public class TestAMRMRPCResponseId {
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(attempt
         .getAppAttemptId(), 0, 0F, null, null);
 
-    AMResponse response = amService.allocate(allocateRequest).getAMResponse();
+    AllocateResponse response = amService.allocate(allocateRequest);
     Assert.assertEquals(1, response.getResponseId());
     Assert.assertFalse(response.getReboot());
     allocateRequest = BuilderUtils.newAllocateRequest(attempt
         .getAppAttemptId(), response.getResponseId(), 0F, null, null);
     
-    response = amService.allocate(allocateRequest).getAMResponse();
+    response = amService.allocate(allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
     /* try resending */
-    response = amService.allocate(allocateRequest).getAMResponse();
+    response = amService.allocate(allocateRequest);
     Assert.assertEquals(2, response.getResponseId());
     
     /** try sending old request again **/
     allocateRequest = BuilderUtils.newAllocateRequest(attempt
         .getAppAttemptId(), 0, 0F, null, null);
-    response = amService.allocate(allocateRequest).getAMResponse();
+    response = amService.allocate(allocateRequest);
     Assert.assertTrue(response.getReboot());
   }
 }

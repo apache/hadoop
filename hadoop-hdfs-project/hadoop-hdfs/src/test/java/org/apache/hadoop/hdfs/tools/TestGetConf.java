@@ -224,7 +224,7 @@ public class TestGetConf {
   /**
    * Test empty configuration
    */
-  @Test
+  @Test(timeout=10000)
   public void testEmptyConf() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     // Verify getting addresses fails
@@ -247,7 +247,7 @@ public class TestGetConf {
   /**
    * Test invalid argument to the tool
    */
-  @Test
+  @Test(timeout=10000)
   public void testInvalidArgument() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     String[] args = {"-invalidArgument"};
@@ -259,7 +259,7 @@ public class TestGetConf {
    * Tests to make sure the returned addresses are correct in case of default
    * configuration with no federation
    */
-  @Test
+  @Test(timeout=10000)
   public void testNonFederation() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
   
@@ -294,7 +294,7 @@ public class TestGetConf {
    * Tests to make sure the returned addresses are correct in case of federation
    * of setup.
    */
-  @Test
+  @Test(timeout=10000)
   public void testFederation() throws Exception {
     final int nsCount = 10;
     HdfsConfiguration conf = new HdfsConfiguration(false);
@@ -333,15 +333,16 @@ public class TestGetConf {
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, nnAddresses);
   }
   
-  @Test
+  @Test(timeout=10000)
   public void testGetSpecificKey() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set("mykey", " myval ");
     String[] args = {"-confKey", "mykey"};
-    assertTrue(runTool(conf, args, true).equals("myval\n"));
+    String toolResult = runTool(conf, args, true);
+    assertEquals(String.format("myval%n"), toolResult);
   }
   
-  @Test
+  @Test(timeout=10000)
   public void testExtraArgsThrowsError() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set("mykey", "myval");
@@ -354,7 +355,7 @@ public class TestGetConf {
    * Tests commands other than {@link Command#NAMENODE}, {@link Command#BACKUP},
    * {@link Command#SECONDARY} and {@link Command#NNRPCADDRESSES}
    */
-  @Test
+  @Test(timeout=10000)
   public void testTool() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     for (Command cmd : Command.values()) {

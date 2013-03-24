@@ -363,6 +363,12 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4569. Small image transfer related cleanups.
     (Andrew Wang via suresh)
 
+    HDFS-4521. Invalid network toploogies should not be cached. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-4246. The exclude node list should be more forgiving, for each output
+    stream. (harsh via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -423,6 +429,24 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4596. Shutting down namenode during checkpointing can lead to md5sum
     error. (Andrew Wang via atm)
+
+    HDFS-4614. FSNamesystem#getContentSummary should use getPermissionChecker
+    helper method. (atm)
+
+    HDFS-4620. Documentation for dfs.namenode.rpc-address specifies wrong
+    format. (Sandy Ryza via atm)
+
+    HDFS-4607. In TestGetConf.testGetSpecificKey(), use a platform-specific
+    line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
+
+    HDFS-4609. TestAuditLogs should release log handles between tests. 
+    (Ivan Mitic via szetszwo)
+
+    HDFS-4615. Fix TestDFSShell failures on Windows.  (Arpit Agarwal
+    via szetszwo)
+
+    HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
+    (Arpit Agarwal via szetszwo)
 
 Release 2.0.4-alpha - UNRELEASED
 

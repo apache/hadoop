@@ -34,23 +34,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestTableMapping {
-  
-  private File mappingFile;
-  
-  @Before
-  public void setUp() throws IOException {
-    mappingFile = File.createTempFile(getClass().getSimpleName(), ".txt");
-    Files.write("a.b.c /rack1\n" +
-                "1.2.3.4\t/rack2\n", mappingFile, Charsets.UTF_8);
-    mappingFile.deleteOnExit();
-  }
-
   @Test
   public void testResolve() throws IOException {
+    File mapFile = File.createTempFile(getClass().getSimpleName() +
+        ".testResolve", ".txt");
+    Files.write("a.b.c /rack1\n" +
+                "1.2.3.4\t/rack2\n", mapFile, Charsets.UTF_8);
+    mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 
     Configuration conf = new Configuration();
-    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mappingFile.getCanonicalPath());
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
@@ -65,10 +59,15 @@ public class TestTableMapping {
 
   @Test
   public void testTableCaching() throws IOException {
+    File mapFile = File.createTempFile(getClass().getSimpleName() +
+        ".testTableCaching", ".txt");
+    Files.write("a.b.c /rack1\n" +
+                "1.2.3.4\t/rack2\n", mapFile, Charsets.UTF_8);
+    mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 
     Configuration conf = new Configuration();
-    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mappingFile.getCanonicalPath());
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
@@ -123,13 +122,53 @@ public class TestTableMapping {
   }
 
   @Test
-  public void testBadFile() throws IOException {
-    Files.write("bad contents", mappingFile, Charsets.UTF_8);
-    
+  public void testClearingCachedMappings() throws IOException {
+    File mapFile = File.createTempFile(getClass().getSimpleName() +
+        ".testClearingCachedMappings", ".txt");
+    Files.write("a.b.c /rack1\n" +
+                "1.2.3.4\t/rack2\n", mapFile, Charsets.UTF_8);
+    mapFile.deleteOnExit();
+
     TableMapping mapping = new TableMapping();
 
     Configuration conf = new Configuration();
-    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mappingFile.getCanonicalPath());
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
+    mapping.setConf(conf);
+
+    List<String> names = new ArrayList<String>();
+    names.add("a.b.c");
+    names.add("1.2.3.4");
+
+    List<String> result = mapping.resolve(names);
+    assertEquals(names.size(), result.size());
+    assertEquals("/rack1", result.get(0));
+    assertEquals("/rack2", result.get(1));
+
+    Files.write("", mapFile, Charsets.UTF_8);
+
+    mapping.reloadCachedMappings();
+
+    names = new ArrayList<String>();
+    names.add("a.b.c");
+    names.add("1.2.3.4");
+
+    result = mapping.resolve(names);
+    assertEquals(names.size(), result.size());
+    assertEquals(NetworkTopology.DEFAULT_RACK, result.get(0));
+    assertEquals(NetworkTopology.DEFAULT_RACK, result.get(1));
+  }
+
+
+  @Test(timeout=60000)
+  public void testBadFile() throws IOException {
+    File mapFile = File.createTempFile(getClass().getSimpleName() +
+        ".testBadFile", ".txt");
+    Files.write("bad contents", mapFile, Charsets.UTF_8);
+    mapFile.deleteOnExit();
+    TableMapping mapping = new TableMapping();
+
+    Configuration conf = new Configuration();
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
@@ -141,5 +180,4 @@ public class TestTableMapping {
     assertEquals(result.get(0), NetworkTopology.DEFAULT_RACK);
     assertEquals(result.get(1), NetworkTopology.DEFAULT_RACK);
   }
-
 }

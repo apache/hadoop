@@ -15,6 +15,8 @@ Trunk (Unreleased)
     HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
     it separately (sanjay Radia)
 
+    HADOOP-9380 Add totalLength to rpc response  (sanjay Radia)
+
   NEW FEATURES
     
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
@@ -353,6 +355,9 @@ Trunk (Unreleased)
     HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
     Wang via atm)
 
+    HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
+    contains capital letters  (Chris Nauroth via sanjay)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -485,6 +490,12 @@ Trunk (Unreleased)
     Windows with NTFS ACLs. (Chris Nauroth via suresh)
 
     HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-9387. Fix DF so that it won't execute a shell command on Windows
+    to compute the file system/mount point.  (Ivan Mitic via szetszwo)
+
+    HADOOP-9353. Activate native-win maven profile by default on Windows.
+    (Arpit Agarwal via szetszwo)
     
 Release 2.0.5-beta - UNRELEASED
 
@@ -570,6 +581,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
     build issues. (Sangjin Lee via suresh)
+
+    HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
+    is not configured (daryn)
 
 Release 2.0.4-alpha - UNRELEASED
 

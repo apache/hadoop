@@ -26,7 +26,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -99,32 +99,32 @@ public class TestFifoScheduler {
 
     // add request for containers
     am1.addRequests(new String[] { "h1", "h2" }, GB, 1, 1);
-    AMResponse am1Response = am1.schedule(); // send the request
+    AllocateResponse alloc1Response = am1.schedule(); // send the request
     // add request for containers
     am2.addRequests(new String[] { "h1", "h2" }, 3 * GB, 0, 1);
-    AMResponse am2Response = am2.schedule(); // send the request
+    AllocateResponse alloc2Response = am2.schedule(); // send the request
 
     // kick the scheduler, 1 GB and 3 GB given to AM1 and AM2, remaining 0
     nm1.nodeHeartbeat(true);
-    while (am1Response.getAllocatedContainers().size() < 1) {
+    while (alloc1Response.getAllocatedContainers().size() < 1) {
       LOG.info("Waiting for containers to be created for app 1...");
       Thread.sleep(1000);
-      am1Response = am1.schedule();
+      alloc1Response = am1.schedule();
     }
-    while (am2Response.getAllocatedContainers().size() < 1) {
+    while (alloc2Response.getAllocatedContainers().size() < 1) {
       LOG.info("Waiting for containers to be created for app 2...");
       Thread.sleep(1000);
-      am2Response = am2.schedule();
+      alloc2Response = am2.schedule();
     }
     // kick the scheduler, nothing given remaining 2 GB.
     nm2.nodeHeartbeat(true);
 
-    List<Container> allocated1 = am1Response.getAllocatedContainers();
+    List<Container> allocated1 = alloc1Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated1.size());
     Assert.assertEquals(1 * GB, allocated1.get(0).getResource().getMemory());
     Assert.assertEquals(nm1.getNodeId(), allocated1.get(0).getNodeId());
 
-    List<Container> allocated2 = am2Response.getAllocatedContainers();
+    List<Container> allocated2 = alloc2Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated2.size());
     Assert.assertEquals(3 * GB, allocated2.get(0).getResource().getMemory());
     Assert.assertEquals(nm1.getNodeId(), allocated2.get(0).getNodeId());

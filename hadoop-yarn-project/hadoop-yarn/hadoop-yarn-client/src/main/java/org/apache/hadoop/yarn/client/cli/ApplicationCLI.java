@@ -153,6 +153,10 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getFinalApplicationStatus());
       appReportStr.print("\tTracking-URL : ");
       appReportStr.println(appReport.getOriginalTrackingUrl());
+      appReportStr.print("\tRPC Port : ");
+      appReportStr.println(appReport.getRpcPort());
+      appReportStr.print("\tAM Host : ");
+      appReportStr.println(appReport.getHost());
       appReportStr.print("\tDiagnostics : ");
       appReportStr.print(appReport.getDiagnostics());
     } else {

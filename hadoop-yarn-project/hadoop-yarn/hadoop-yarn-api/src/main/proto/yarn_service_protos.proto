@@ -59,8 +59,13 @@ message AllocateRequestProto {
 }
 
 message AllocateResponseProto {
-  optional AMResponseProto AM_response = 1;
-  optional int32 num_cluster_nodes = 2;
+  optional bool reboot = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto allocated_containers = 3;
+  repeated ContainerStatusProto completed_container_statuses = 4;
+  optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
+  optional int32 num_cluster_nodes = 7;
 }
 
 
