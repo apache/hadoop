@@ -663,5 +663,13 @@ public interface MRJobConfig {
   
   public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
       "^mapreduce\\.workflow\\.adjacency\\..+";
+
+  /**
+   * The maximum number of application attempts.
+   * It is a application-specific setting.
+   */
+  public static final String MR_AM_MAX_ATTEMPTS = "mapreduce.am.max-attempts";
+
+  public static final int DEFAULT_MR_AM_MAX_ATTEMPTS = 1;
   
 }
