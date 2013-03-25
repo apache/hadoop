@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.Records;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class NodeManager extends CompositeService 
     implements EventHandler<NodeManagerEvent> {
 
@@ -113,6 +115,10 @@ public class NodeManager extends CompositeService
     return new WebServer(nmContext, resourceView, aclsManager, dirsHandler);
   }
 
+  protected DeletionService createDeletionService(ContainerExecutor exec) {
+    return new DeletionService(exec);
+  }
+
   protected void doSecureLogin() throws IOException {
     SecurityUtil.login(getConfig(), YarnConfiguration.NM_KEYTAB,
         YarnConfiguration.NM_PRINCIPAL);
@@ -143,7 +149,7 @@ public class NodeManager extends CompositeService
     } catch (IOException e) {
       throw new YarnException("Failed to initialize container executor", e);
     }    
-    DeletionService del = new DeletionService(exec);
+    DeletionService del = createDeletionService(exec);
     addService(del);
 
     // NodeManager level dispatcher
@@ -351,6 +357,11 @@ public class NodeManager extends CompositeService
     return containerManager;
   }
   
+  @VisibleForTesting
+  Context getNMContext() {
+    return this.context;
+  }
+
   public static void main(String[] args) {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);

@@ -69,6 +69,9 @@ Release 2.0.5-beta - UNRELEASED
  
     YARN-470. Support a way to disable resource monitoring on the NodeManager.
     (Siddharth Seth via hitesh)
+    
+    YARN-71. Fix the NodeManager to clean up local-dirs on restart.
+    (Xuan Gong via sseth)
 
 Release 2.0.4-alpha - UNRELEASED
 
