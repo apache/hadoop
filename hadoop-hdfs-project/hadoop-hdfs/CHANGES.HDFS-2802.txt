@@ -210,3 +210,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4627. Fix FSImageFormat#Loader NPE and synchronization issues.
   (Jing Zhao via suresh)
+
+  HDFS-4612. Not to use INode.getParent() when generating snapshot diff report.
+  (Jing Zhao via szetszwo)

@@ -159,21 +159,19 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     
     /**
      * Interpret the diff and generate a list of {@link DiffReportEntry}.
-     * @root The snapshot root of the diff report.
+     * @param parentPath The relative path of the parent.
      * @param parent The directory that the diff belongs to.
      * @param fromEarlier True indicates {@code diff=later-earlier}, 
-     *                            False indicates {@code diff=earlier-later}
+     *                    False indicates {@code diff=earlier-later}
      * @return A list of {@link DiffReportEntry} as the diff report.
      */
-    public List<DiffReportEntry> generateReport(
-        INodeDirectorySnapshottable root, INodeDirectoryWithSnapshot parent,
-        boolean fromEarlier) {
+    public List<DiffReportEntry> generateReport(byte[][] parentPath,
+        INodeDirectoryWithSnapshot parent, boolean fromEarlier) {
       List<DiffReportEntry> cList = new ArrayList<DiffReportEntry>();
       List<DiffReportEntry> dList = new ArrayList<DiffReportEntry>();
       int c = 0, d = 0;
       List<INode> created = getList(ListType.CREATED);
       List<INode> deleted = getList(ListType.DELETED);
-      byte[][] parentPath = parent.getRelativePathNameBytes(root);
       byte[][] fullPath = new byte[parentPath.length + 1][];
       System.arraycopy(parentPath, 0, fullPath, 0, parentPath.length);
       for (; c < created.size() && d < deleted.size(); ) {

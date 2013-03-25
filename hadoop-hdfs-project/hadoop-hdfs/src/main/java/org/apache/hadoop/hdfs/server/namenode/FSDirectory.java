@@ -1622,21 +1622,6 @@ public class FSDirectory implements Closeable {
   }
   
   /**
-   * For a given inode, get its relative path from its ancestor.
-   * @param inode The given inode.
-   * @param ancestor An ancestor inode of the given inode.
-   * @return The relative path name represented in an array of byte array.
-   */
-  static byte[][] getRelativePathNameBytes(INode inode, INode ancestor) {
-    INode[] inodes = getRelativePathINodes(inode, ancestor);
-    byte[][] path = new byte[inodes.length][];
-    for (int i = 0; i < inodes.length; i++) {
-      path[i] = inodes[i].getLocalNameBytes();
-    }
-    return path;
-  }
-  
-  /**
    * Create a directory 
    * If ancestor directories do not exist, automatically create them.
 
