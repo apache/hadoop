@@ -356,11 +356,14 @@ Trunk (Unreleased)
     HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
     contains capital letters  (Chris Nauroth via sanjay)
 
-	HADOOP-9261 S3n filesystem can move a directory under itself -and so lose data
-	(fixed in HADOOP-9258) (stevel)
+    HADOOP-9261 S3n filesystem can move a directory under itself -and so lose data
+    (fixed in HADOOP-9258) (stevel)
 
-	HADOOP-9265 S3 blockstore filesystem breaks part of the Filesystem contract
-	(fixed in HADOOP-9258) (stevel)
+    HADOOP-9265 S3 blockstore filesystem breaks part of the Filesystem contract
+    (fixed in HADOOP-9258) (stevel)
+
+    HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
+    (Chris Nauroth via sanjay)
 
   OPTIMIZATIONS
 
