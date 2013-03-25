@@ -377,7 +377,61 @@ public class TestAppManager{
     ((Service)rmContext.getDispatcher()).stop();
   }
 
-  @Test
+  @Test (timeout = 30000)
+  public void testRMAppSubmitMaxAppAttempts() throws Exception {
+    int[] globalMaxAppAttempts = new int[] { 10, 1 };
+    int[][] individualMaxAppAttempts = new int[][]{
+        new int[]{ 9, 10, 11, 0 },
+        new int[]{ 1, 10, 0, -1 }};
+    int[][] expectedNums = new int[][]{
+        new int[]{ 9, 10, 10, 10 },
+        new int[]{ 1, 1, 1, 1 }};
+    for (int i = 0; i < globalMaxAppAttempts.length; ++i) {
+      for (int j = 0; j < individualMaxAppAttempts.length; ++j) {
+        long now = System.currentTimeMillis();
+
+        RMContext rmContext = mockRMContext(0, now - 10);
+        ResourceScheduler scheduler = new CapacityScheduler();
+        Configuration conf = new Configuration();
+        conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, globalMaxAppAttempts[i]);
+        ApplicationMasterService masterService =
+            new ApplicationMasterService(rmContext, scheduler);
+        TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
+            new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
+            new ApplicationACLsManager(conf), conf);
+
+        RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+        ApplicationSubmissionContext context =
+            recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+        ContainerLaunchContext amContainer = recordFactory
+            .newRecordInstance(ContainerLaunchContext.class);
+        amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());
+        context.setAMContainerSpec(amContainer);
+        setupDispatcher(rmContext, conf);
+
+        ApplicationId appID = MockApps.newAppID(1);
+        context.setApplicationId(appID);
+        if (individualMaxAppAttempts[i][j] != 0) {
+          context.setMaxAppAttempts(individualMaxAppAttempts[i][j]);
+        }
+        appMonitor.submitApplication(context);
+        RMApp app = rmContext.getRMApps().get(appID);
+        Assert.assertEquals("max application attempts doesn't match",
+            expectedNums[i][j], app.getMaxAppAttempts());
+
+        // wait for event to be processed
+        int timeoutSecs = 0;
+        while ((getAppEventType() == RMAppEventType.KILL) &&
+            timeoutSecs++ < 20) {
+          Thread.sleep(1000);
+        }
+        setAppEventType(RMAppEventType.KILL);
+        ((Service)rmContext.getDispatcher()).stop();
+      }
+    }
+  }
+
+  @Test (timeout = 3000)
   public void testRMAppSubmitWithQueueAndName() throws Exception {
     long now = System.currentTimeMillis();
 

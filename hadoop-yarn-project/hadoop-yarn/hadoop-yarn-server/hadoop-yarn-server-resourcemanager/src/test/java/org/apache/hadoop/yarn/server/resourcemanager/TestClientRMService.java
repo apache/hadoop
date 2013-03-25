@@ -374,8 +374,10 @@ public class TestClientRMService {
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName) {
+    ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
+    when(asContext.getMaxAppAttempts()).thenReturn(1);
     return new RMAppImpl(applicationId3, rmContext, config, null, null,
-        queueName, null, yarnScheduler, null , System
+        queueName, asContext, yarnScheduler, null , System
             .currentTimeMillis());
   }
 }

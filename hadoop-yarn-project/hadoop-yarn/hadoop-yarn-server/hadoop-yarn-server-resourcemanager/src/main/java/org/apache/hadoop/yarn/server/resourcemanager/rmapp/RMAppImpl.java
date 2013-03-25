@@ -87,7 +87,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
   private final StringBuilder diagnostics = new StringBuilder();
-  private final int maxRetries;
+  private final int maxAppAttempts;
   private final ReadLock readLock;
   private final WriteLock writeLock;
   private final Map<ApplicationAttemptId, RMAppAttempt> attempts
@@ -231,8 +231,19 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.submitTime = submitTime;
     this.startTime = System.currentTimeMillis();
 
-    this.maxRetries = conf.getInt(YarnConfiguration.RM_AM_MAX_RETRIES,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_RETRIES);
+    int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    int individualMaxAppAttempts = submissionContext.getMaxAppAttempts();
+    if (individualMaxAppAttempts <= 0 ||
+        individualMaxAppAttempts > globalMaxAppAttempts) {
+      this.maxAppAttempts = globalMaxAppAttempts;
+      LOG.warn("The specific max attempts: " + individualMaxAppAttempts
+          + " for application: " + applicationId.getId()
+          + " is invalid, because it is out of the range [1, "
+          + globalMaxAppAttempts + "]. Use the global max attempts instead.");
+    } else {
+      this.maxAppAttempts = individualMaxAppAttempts;
+    }
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -494,6 +505,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
+  public int getMaxAppAttempts() {
+    return this.maxAppAttempts;
+  }
+
+  @Override
   public void handle(RMAppEvent event) {
 
     this.writeLock.lock();
@@ -669,10 +685,10 @@ public class RMAppImpl implements RMApp, Recoverable {
         msg = "Unmanaged application " + app.getApplicationId()
             + " failed due to " + failedEvent.getDiagnostics()
             + ". Failing the application.";
-      } else if (app.attempts.size() >= app.maxRetries) {
+      } else if (app.attempts.size() >= app.maxAppAttempts) {
         retryApp = false;
         msg = "Application " + app.getApplicationId() + " failed "
-            + app.maxRetries + " times due to " + failedEvent.getDiagnostics()
+            + app.maxAppAttempts + " times due to " + failedEvent.getDiagnostics()
             + ". Failing the application.";
       }
 

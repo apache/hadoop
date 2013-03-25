@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -60,6 +61,7 @@ public class TestApplicationMasterLauncher {
     int nmPortAtContainerManager;
     int nmHttpPortAtContainerManager;
     long submitTimeAtContainerManager;
+    int maxAppAttempts;
 
     @Override
     public StartContainerResponse
@@ -82,7 +84,8 @@ public class TestApplicationMasterLauncher {
           Integer.parseInt(env.get(ApplicationConstants.NM_HTTP_PORT_ENV));
       submitTimeAtContainerManager =
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
-
+      maxAppAttempts =
+          Integer.parseInt(env.get(ApplicationConstants.MAX_APP_ATTEMPTS_ENV));
       return null;
     }
 
@@ -139,6 +142,8 @@ public class TestApplicationMasterLauncher {
         containerManager.nmPortAtContainerManager);
     Assert.assertEquals(nm1.getHttpPort(),
         containerManager.nmHttpPortAtContainerManager);
+    Assert.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
+        containerManager.maxAppAttempts);
 
     MockAM am = new MockAM(rm.getRMContext(), rm
         .getApplicationMasterService(), appAttemptId);

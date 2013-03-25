@@ -219,6 +219,7 @@ message ApplicationSubmissionContextProto {
   optional ContainerLaunchContextProto am_container_spec = 6;
   optional bool cancel_tokens_when_complete = 7 [default = true];
   optional bool unmanaged_am = 8 [default = false];
+  optional int32 maxAppAttempts = 9 [default = 0];
 }
 
 enum ApplicationAccessTypeProto {
