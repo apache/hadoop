@@ -99,10 +99,14 @@ Release 2.0.4-alpha - UNRELEASED
 
     HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 
-    HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating conflicts in Oozie & HttpFS. (tucu)
+    HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating
+    conflicts in Oozie & HttpFS. (tucu)
 
     HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
     is not configured (daryn)
+
+    HADOOP-9408. misleading description for net.topology.table.file.name
+    property in core-default.xml. (rajeshbabu via suresh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
