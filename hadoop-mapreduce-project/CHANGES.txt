@@ -67,6 +67,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
     actual cluster (Siddharth Seth via hitesh)
 
+    MAPREDUCE-5062. Fix MR AM to read max-retries from the RM. (Zhijie Shen via
+    vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -161,6 +161,7 @@ public class MRAppMaster extends CompositeService {
   private final int nmPort;
   private final int nmHttpPort;
   protected final MRAppMetrics metrics;
+  private final int maxAppAttempts;
   private Map<TaskId, TaskInfo> completedTasksFromPreviousRun;
   private List<AMInfo> amInfos;
   private AppContext context;
@@ -194,14 +195,14 @@ public class MRAppMaster extends CompositeService {
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
-      long appSubmitTime) {
+      long appSubmitTime, int maxAppAttempts) {
     this(applicationAttemptId, containerId, nmHost, nmPort, nmHttpPort,
-        new SystemClock(), appSubmitTime);
+        new SystemClock(), appSubmitTime, maxAppAttempts);
   }
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
-      Clock clock, long appSubmitTime) {
+      Clock clock, long appSubmitTime, int maxAppAttempts) {
     super(MRAppMaster.class.getName());
     this.clock = clock;
     this.startTime = clock.getTime();
@@ -212,6 +213,7 @@ public class MRAppMaster extends CompositeService {
     this.nmPort = nmPort;
     this.nmHttpPort = nmHttpPort;
     this.metrics = MRAppMetrics.create();
+    this.maxAppAttempts = maxAppAttempts;
     LOG.info("Created MRAppMaster for application " + applicationAttemptId);
   }
 
@@ -220,18 +222,13 @@ public class MRAppMaster extends CompositeService {
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
     downloadTokensAndSetupUGI(conf);
-    
-    //TODO this is a hack, we really need the RM to inform us when we
-    // are the last one.  This would allow us to configure retries on
-    // a per application basis.
-    int numAMRetries = conf.getInt(YarnConfiguration.RM_AM_MAX_RETRIES, 
-        YarnConfiguration.DEFAULT_RM_AM_MAX_RETRIES);
-    isLastAMRetry = appAttemptID.getAttemptId() >= numAMRetries;
-    LOG.info("AM Retries: " + numAMRetries + 
-        " attempt num: " + appAttemptID.getAttemptId() +
+
+    isLastAMRetry = appAttemptID.getAttemptId() >= maxAppAttempts;
+    LOG.info("The specific max attempts: " + maxAppAttempts +
+        " for application: " + appAttemptID.getApplicationId().getId() +
+        ". Attempt num: " + appAttemptID.getAttemptId() +
         " is last retry: " + isLastAMRetry);
-    
-    
+
     context = new RunningAppContext(conf);
 
     // Job name is the same as the app name util we support DAG of jobs
@@ -266,6 +263,9 @@ public class MRAppMaster extends CompositeService {
       boolean commitFailure = fs.exists(endCommitFailureFile);
       if(!stagingExists) {
         isLastAMRetry = true;
+        LOG.info("Attempt num: " + appAttemptID.getAttemptId() +
+            " is last retry: " + isLastAMRetry +
+            " because the staging dir doesn't exist.");
         errorHappenedShutDown = true;
         forcedState = JobStateInternal.ERROR;
         shutDownMessage = "Staging dir does not exist " + stagingDir;
@@ -275,6 +275,9 @@ public class MRAppMaster extends CompositeService {
         // what result we will use to notify, and how we will unregister
         errorHappenedShutDown = true;
         isLastAMRetry = true;
+        LOG.info("Attempt num: " + appAttemptID.getAttemptId() +
+            " is last retry: " + isLastAMRetry +
+            " because a commit was started.");
         copyHistory = true;
         if (commitSuccess) {
           shutDownMessage = "We crashed after successfully committing. Recovering.";
@@ -777,6 +780,10 @@ public class MRAppMaster extends CompositeService {
     return taskAttemptListener;
   }
 
+  public Boolean isLastAMRetry() {
+    return isLastAMRetry;
+  }
+
   /**
    * By the time life-cycle of this router starts, job-init would have already
    * happened.
@@ -1206,6 +1213,8 @@ public class MRAppMaster extends CompositeService {
           System.getenv(ApplicationConstants.NM_HTTP_PORT_ENV);
       String appSubmitTimeStr =
           System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
+      String maxAppAttempts =
+          System.getenv(ApplicationConstants.MAX_APP_ATTEMPTS_ENV);
       
       validateInputParam(containerIdStr,
           ApplicationConstants.AM_CONTAINER_ID_ENV);
@@ -1215,6 +1224,8 @@ public class MRAppMaster extends CompositeService {
           ApplicationConstants.NM_HTTP_PORT_ENV);
       validateInputParam(appSubmitTimeStr,
           ApplicationConstants.APP_SUBMIT_TIME_ENV);
+      validateInputParam(maxAppAttempts,
+          ApplicationConstants.MAX_APP_ATTEMPTS_ENV);
 
       ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
       ApplicationAttemptId applicationAttemptId =
@@ -1224,7 +1235,8 @@ public class MRAppMaster extends CompositeService {
       MRAppMaster appMaster =
           new MRAppMaster(applicationAttemptId, containerId, nodeHostString,
               Integer.parseInt(nodePortString),
-              Integer.parseInt(nodeHttpPortString), appSubmitTime);
+              Integer.parseInt(nodeHttpPortString), appSubmitTime,
+              Integer.parseInt(maxAppAttempts));
       ShutdownHookManager.get().addShutdownHook(
         new MRAppMasterShutdownHook(appMaster), SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
