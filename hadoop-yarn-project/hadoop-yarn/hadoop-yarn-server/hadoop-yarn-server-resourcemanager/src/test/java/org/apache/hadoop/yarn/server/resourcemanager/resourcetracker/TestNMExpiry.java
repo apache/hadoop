@@ -109,7 +109,7 @@ public class TestNMExpiry {
               .newRecordInstance(NodeHeartbeatRequest.class);
           request.setNodeStatus(nodeStatus);
           lastResponseID = resourceTrackerService.nodeHeartbeat(request)
-              .getHeartbeatResponse().getResponseId();
+              .getResponseId();
 
           Thread.sleep(1000);
         } catch(Exception e) {

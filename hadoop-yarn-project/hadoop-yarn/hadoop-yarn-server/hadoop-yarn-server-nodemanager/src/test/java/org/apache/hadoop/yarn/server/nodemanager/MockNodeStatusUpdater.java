@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -79,13 +78,9 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
       LOG.info("Got heartbeat number " + heartBeatID);
       nodeStatus.setResponseId(heartBeatID++);
 
-      HeartbeatResponse response = recordFactory
-          .newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
-
       NodeHeartbeatResponse nhResponse = recordFactory
           .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
+      nhResponse.setResponseId(heartBeatID);
       return nhResponse;
     }
   }

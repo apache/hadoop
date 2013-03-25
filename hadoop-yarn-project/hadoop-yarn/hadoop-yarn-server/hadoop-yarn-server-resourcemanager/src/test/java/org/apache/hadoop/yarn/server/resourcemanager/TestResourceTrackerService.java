@@ -36,9 +36,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -75,7 +75,7 @@ public class TestResourceTrackerService {
     assert(metrics != null);
     int metricCount = metrics.getNumDecommisionedNMs();
 
-    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
@@ -124,7 +124,7 @@ public class TestResourceTrackerService {
 
     int metricCount = ClusterMetrics.getMetrics().getNumDecommisionedNMs();
 
-    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
@@ -161,7 +161,7 @@ public class TestResourceTrackerService {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
     assert(metrics != null);
     int initialMetricCount = metrics.getNumDecommisionedNMs();
-    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
@@ -198,7 +198,7 @@ public class TestResourceTrackerService {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
     assert(metrics != null);
     int initialMetricCount = metrics.getNumDecommisionedNMs();
-    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
@@ -254,7 +254,7 @@ public class TestResourceTrackerService {
     MockNM nm2 = rm.registerNode("host2:1234", 2048);
 
     int initialMetricCount = ClusterMetrics.getMetrics().getNumRebootedNMs();
-    HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
 
     nodeHeartbeat = nm2.nodeHeartbeat(
@@ -351,7 +351,7 @@ public class TestResourceTrackerService {
 
     // reconnect of healthy node
     nm1 = rm.registerNode("host1:1234", 5120);
-    HeartbeatResponse response = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse response = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     dispatcher.await();
     Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
