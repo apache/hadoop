@@ -87,6 +87,16 @@
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+           <archive>
+             <manifest>
+               <mainClass>org.apache.hadoop.yarn.applications.unmanagedamlauncher.UnmanagedAMLauncher</mainClass>
+             </manifest>
+           </archive>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>

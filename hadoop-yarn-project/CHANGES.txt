@@ -38,6 +38,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-417. Create AMRMClient wrapper that provides asynchronous callbacks.
     (Sandy Ryza via bikas)
 
+    YARN-497. Yarn unmanaged-am launcher jar does not define a main class in
+    its manifest (Hitesh Shah via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
