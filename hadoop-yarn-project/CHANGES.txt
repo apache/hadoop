@@ -133,6 +133,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-71. Fix the NodeManager to clean up local-dirs on restart.
     (Xuan Gong via sseth)
 
+    YARN-378. Fix RM to make the AM max attempts/retries to be configurable
+    per application by clients. (Zhijie Shen via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

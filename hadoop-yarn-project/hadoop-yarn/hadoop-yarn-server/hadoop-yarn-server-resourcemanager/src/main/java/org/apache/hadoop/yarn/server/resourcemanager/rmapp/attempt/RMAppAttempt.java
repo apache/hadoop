@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 /**
  * Interface to an Application Attempt in the Resource Manager.
  * A {@link RMApp} can have multiple app attempts based on
- * {@link YarnConfiguration#RM_AM_MAX_RETRIES}. For specific
+ * {@link YarnConfiguration#RM_AM_MAX_ATTEMPTS}. For specific
  * implementation take a look at {@link RMAppAttemptImpl}.
  */
 public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {

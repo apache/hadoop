@@ -93,6 +93,12 @@ public interface ApplicationConstants {
   public static final String STDOUT = "stdout";
 
   /**
+   * The environment variable for MAX_APP_ATTEMPTS. Set in AppMaster environment
+   * only
+   */
+  public static final String MAX_APP_ATTEMPTS_ENV = "MAX_APP_ATTEMPTS";
+
+  /**
    * Environment for Applications.
    * 
    * Some of the environment variables for applications are <em>final</em> 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -27,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -180,6 +182,18 @@ public class TestResourceManager {
       org.apache.hadoop.yarn.server.resourcemanager.NodeManager... nodes ) {
     for (org.apache.hadoop.yarn.server.resourcemanager.NodeManager nodeManager : nodes) {
       nodeManager.checkResourceUsage();
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testResourceManagerInitConfigValidation() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    try {
+      resourceManager.init(conf);
+      fail("Exception is expected because the global max attempts is negative.");
+    } catch (YarnException e) {
+      // Exception is expected.
     }
   }
 

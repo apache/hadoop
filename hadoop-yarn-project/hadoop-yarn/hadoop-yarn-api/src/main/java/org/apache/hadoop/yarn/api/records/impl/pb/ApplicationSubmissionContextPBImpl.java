@@ -232,6 +232,18 @@ implements ApplicationSubmissionContext {
     builder.setCancelTokensWhenComplete(cancel);
   }
 
+  @Override
+  public int getMaxAppAttempts() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getMaxAppAttempts();
+  }
+
+  @Override
+  public void setMaxAppAttempts(int maxAppAttempts) {
+    maybeInitBuilder();
+    builder.setMaxAppAttempts(maxAppAttempts);
+  }
+
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
     return new PriorityPBImpl(p);
   }
