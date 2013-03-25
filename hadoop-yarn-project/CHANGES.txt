@@ -404,6 +404,9 @@ Release 0.23.7 - UNRELEASED
     YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
     in Node Manager (Robert Parker via jlowe)
 
+    YARN-109. .tmp file is not deleted for localized archives (Mayank Bansal 
+    via bobby)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
