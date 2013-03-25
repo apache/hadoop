@@ -50,8 +50,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -408,8 +408,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
                 .getContainerTokenSecretManager().getCurrentKey());
             }
-            HeartbeatResponse response =
-              resourceTracker.nodeHeartbeat(request).getHeartbeatResponse();
+            NodeHeartbeatResponse response =
+              resourceTracker.nodeHeartbeat(request);
 
             // See if the master-key has rolled over
             if (isSecurityEnabled()) {
@@ -439,14 +439,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
-                .getContainersToCleanupList();
+                .getContainersToCleanup();
             if (containersToCleanup.size() != 0) {
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedContainersEvent(containersToCleanup, 
                       CMgrCompletedContainersEvent.Reason.BY_RESOURCEMANAGER));
             }
             List<ApplicationId> appsToCleanup =
-                response.getApplicationsToCleanupList();
+                response.getApplicationsToCleanup();
             //Only start tracking for keepAlive on FINISH_APP
             trackAppsForKeepAlive(appsToCleanup);
             if (appsToCleanup.size() != 0) {

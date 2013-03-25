@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -78,15 +77,9 @@ public class ResourceTrackerService extends AbstractService implements
   .newRecordInstance(NodeHeartbeatResponse.class);
   
   static {
-    HeartbeatResponse rebootResp = recordFactory
-        .newRecordInstance(HeartbeatResponse.class);
-    rebootResp.setNodeAction(NodeAction.REBOOT);
-    reboot.setHeartbeatResponse(rebootResp);
-    
-    HeartbeatResponse decommissionedResp = recordFactory
-        .newRecordInstance(HeartbeatResponse.class);
-    decommissionedResp.setNodeAction(NodeAction.SHUTDOWN);
-    shutDown.setHeartbeatResponse(decommissionedResp);
+    reboot.setNodeAction(NodeAction.REBOOT);
+
+    shutDown.setNodeAction(NodeAction.SHUTDOWN);
   }
 
   public ResourceTrackerService(RMContext rmContext,
@@ -240,17 +233,16 @@ public class ResourceTrackerService extends AbstractService implements
         .newRecordInstance(NodeHeartbeatResponse.class);
     
     // 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
-    HeartbeatResponse lastHeartbeatResponse = rmNode.getLastHeartBeatResponse();
-    if (remoteNodeStatus.getResponseId() + 1 == lastHeartbeatResponse
+    NodeHeartbeatResponse lastNodeHeartbeatResponse = rmNode.getLastNodeHeartBeatResponse();
+    if (remoteNodeStatus.getResponseId() + 1 == lastNodeHeartbeatResponse
         .getResponseId()) {
       LOG.info("Received duplicate heartbeat from node "
           + rmNode.getNodeAddress());
-      nodeHeartBeatResponse.setHeartbeatResponse(lastHeartbeatResponse);
-      return nodeHeartBeatResponse;
-    } else if (remoteNodeStatus.getResponseId() + 1 < lastHeartbeatResponse
+      return lastNodeHeartbeatResponse;
+    } else if (remoteNodeStatus.getResponseId() + 1 < lastNodeHeartbeatResponse
         .getResponseId()) {
       LOG.info("Too far behind rm response id:"
-          + lastHeartbeatResponse.getResponseId() + " nm response id:"
+          + lastNodeHeartbeatResponse.getResponseId() + " nm response id:"
           + remoteNodeStatus.getResponseId());
       // TODO: Just sending reboot is not enough. Think more.
       this.rmContext.getDispatcher().getEventHandler().handle(
@@ -259,11 +251,9 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Heartbeat response
-    HeartbeatResponse latestResponse = recordFactory
-        .newRecordInstance(HeartbeatResponse.class);
-    latestResponse.setResponseId(lastHeartbeatResponse.getResponseId() + 1);
-    rmNode.updateHeartbeatResponseForCleanup(latestResponse);
-    latestResponse.setNodeAction(NodeAction.NORMAL);
+    nodeHeartBeatResponse.setResponseId(lastNodeHeartbeatResponse.getResponseId() + 1);
+    rmNode.updateNodeHeartbeatResponseForCleanup(nodeHeartBeatResponse);
+    nodeHeartBeatResponse.setNodeAction(NodeAction.NORMAL);
 
     // Check if node's masterKey needs to be updated and if the currentKey has
     // roller over, send it across
@@ -282,7 +272,7 @@ public class ResourceTrackerService extends AbstractService implements
         }
       }
       if (shouldSendMasterKey) {
-        latestResponse.setMasterKey(nextMasterKeyForNode);
+        nodeHeartBeatResponse.setMasterKey(nextMasterKeyForNode);
       }
     }
 
@@ -290,9 +280,8 @@ public class ResourceTrackerService extends AbstractService implements
     this.rmContext.getDispatcher().getEventHandler().handle(
         new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
             remoteNodeStatus.getContainersStatuses(), 
-            remoteNodeStatus.getKeepAliveApplications(), latestResponse));
+            remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse));
 
-    nodeHeartBeatResponse.setHeartbeatResponse(latestResponse);
     return nodeHeartBeatResponse;
   }
 

@@ -62,6 +62,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-396. Rationalize AllocateResponse in RM Scheduler API. (Zhijie Shen
     via hitesh)
 
+    YARN-439. Flatten NodeHeartbeatResponse. (Xuan Gong via sseth)
+
   NEW FEATURES
 
   IMPROVEMENTS

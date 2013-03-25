@@ -56,7 +56,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
@@ -218,13 +217,10 @@ public class TestNodeStatusUpdater {
             this.context.getContainers();
         Assert.assertEquals(2, activeContainers.size());
       }
-      HeartbeatResponse response = recordFactory
-          .newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
 
       NodeHeartbeatResponse nhResponse = recordFactory
           .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
+      nhResponse.setResponseId(heartBeatID);
       return nhResponse;
     }
   }
@@ -335,14 +331,11 @@ public class TestNodeStatusUpdater {
         throws YarnRemoteException {
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
-      HeartbeatResponse response = recordFactory
-          .newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
-      response.setNodeAction(heartBeatNodeAction);
       
       NodeHeartbeatResponse nhResponse = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
+      nhResponse.setResponseId(heartBeatID);
+      nhResponse.setNodeAction(heartBeatNodeAction);
       return nhResponse;
     }
   }
@@ -378,10 +371,10 @@ public class TestNodeStatusUpdater {
       LOG.info("Got heartBeatId: [" + heartBeatID +"]");
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
-      HeartbeatResponse response =
-          recordFactory.newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
-      response.setNodeAction(heartBeatNodeAction);
+      NodeHeartbeatResponse nhResponse =
+              recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
+      nhResponse.setResponseId(heartBeatID);
+      nhResponse.setNodeAction(heartBeatNodeAction);
 
       if (nodeStatus.getKeepAliveApplications() != null
           && nodeStatus.getKeepAliveApplications().size() > 0) {
@@ -397,11 +390,8 @@ public class TestNodeStatusUpdater {
       if (heartBeatID == 2) {
         LOG.info("Sending FINISH_APP for application: [" + appId + "]");
         this.context.getApplications().put(appId, mock(Application.class));
-        response.addAllApplicationsToCleanup(Collections.singletonList(appId));
+        nhResponse.addAllApplicationsToCleanup(Collections.singletonList(appId));
       }
-      NodeHeartbeatResponse nhResponse =
-          recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
       return nhResponse;
     }
   }

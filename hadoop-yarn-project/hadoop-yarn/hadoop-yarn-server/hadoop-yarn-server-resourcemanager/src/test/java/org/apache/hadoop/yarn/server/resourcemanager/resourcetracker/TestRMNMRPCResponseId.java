@@ -31,8 +31,8 @@ import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
@@ -116,23 +116,20 @@ public class TestRMNMRPCResponseId {
     nodeHeartBeatRequest.setNodeStatus(nodeStatus);
 
     nodeStatus.setResponseId(0);
-    HeartbeatResponse response = resourceTrackerService.nodeHeartbeat(
-        nodeHeartBeatRequest).getHeartbeatResponse();
+    NodeHeartbeatResponse response = resourceTrackerService.nodeHeartbeat(
+        nodeHeartBeatRequest);
     Assert.assertTrue(response.getResponseId() == 1);
 
     nodeStatus.setResponseId(response.getResponseId());
-    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
-        .getHeartbeatResponse();
+    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
     Assert.assertTrue(response.getResponseId() == 2);   
 
     /* try calling with less response id */
-    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
-        .getHeartbeatResponse();
+    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
     Assert.assertTrue(response.getResponseId() == 2);
 
     nodeStatus.setResponseId(0);
-    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
-        .getHeartbeatResponse();
+    response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
     Assert.assertTrue(NodeAction.REBOOT.equals(response.getNodeAction()));
   }
 }

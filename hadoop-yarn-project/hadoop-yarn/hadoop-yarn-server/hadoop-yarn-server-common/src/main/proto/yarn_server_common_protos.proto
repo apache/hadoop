@@ -47,11 +47,4 @@ message RegistrationResponseProto {
   optional NodeActionProto nodeAction = 2;
 }
 
-message HeartbeatResponseProto {
-  optional int32 response_id = 1;
-  optional MasterKeyProto master_key = 2;
-  optional NodeActionProto nodeAction = 3;
-  repeated ContainerIdProto containers_to_cleanup = 4;
-  repeated ApplicationIdProto applications_to_cleanup = 5;
-}
 

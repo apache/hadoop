@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
@@ -118,7 +118,7 @@ public class TestRMNodeTransitions {
   }
   
   private RMNodeStatusEvent getMockRMNodeStatusEvent() {
-    HeartbeatResponse response = mock(HeartbeatResponse.class);
+    NodeHeartbeatResponse response = mock(NodeHeartbeatResponse.class);
 
     NodeHealthStatus healthStatus = mock(NodeHealthStatus.class);
     Boolean yes = new Boolean(true);
@@ -325,14 +325,14 @@ public class TestRMNodeTransitions {
     node.handle(statusEvent);
     Assert.assertEquals(1, node.getContainersToCleanUp().size());
     Assert.assertEquals(1, node.getAppsToCleanup().size());
-    HeartbeatResponse hbrsp = Records.newRecord(HeartbeatResponse.class);
-    node.updateHeartbeatResponseForCleanup(hbrsp);
+    NodeHeartbeatResponse hbrsp = Records.newRecord(NodeHeartbeatResponse.class);
+    node.updateNodeHeartbeatResponseForCleanup(hbrsp);
     Assert.assertEquals(0, node.getContainersToCleanUp().size());
     Assert.assertEquals(0, node.getAppsToCleanup().size());
-    Assert.assertEquals(1, hbrsp.getContainersToCleanupCount());
-    Assert.assertEquals(completedContainerId, hbrsp.getContainerToCleanup(0));
-    Assert.assertEquals(1, hbrsp.getApplicationsToCleanupCount());
-    Assert.assertEquals(finishedAppId, hbrsp.getApplicationsToCleanup(0));
+    Assert.assertEquals(1, hbrsp.getContainersToCleanup().size());
+    Assert.assertEquals(completedContainerId, hbrsp.getContainersToCleanup().get(0));
+    Assert.assertEquals(1, hbrsp.getApplicationsToCleanup().size());
+    Assert.assertEquals(finishedAppId, hbrsp.getApplicationsToCleanup().get(0));
   }
 
   private RMNodeImpl getRunningNode() {
