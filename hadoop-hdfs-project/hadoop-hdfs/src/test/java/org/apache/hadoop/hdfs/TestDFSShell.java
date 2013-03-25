@@ -35,7 +35,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -69,8 +68,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
  */
 public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
-  private static AtomicInteger counter = new AtomicInteger();
-
+  
   static final String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
     .toString().replace(' ', '+');
@@ -513,7 +511,7 @@ public class TestDFSShell {
       createLocalFile(furi);
       argv = new String[3];
       argv[0] = "-put";
-      argv[1] = furi.toURI().toString();
+      argv[1] = furi.toString();
       argv[2] = dstFs.getUri().toString() + "/furi";
       ret = ToolRunner.run(shell, argv);
       assertEquals(" put is working ", 0, ret);
@@ -868,59 +866,52 @@ public class TestDFSShell {
     shell.setConf(conf);
     
     try {
-      //first make dir
-      Path dir = new Path(chmodDir);
-      fs.delete(dir, true);
-      fs.mkdirs(dir);
+     //first make dir
+     Path dir = new Path(chmodDir);
+     fs.delete(dir, true);
+     fs.mkdirs(dir);
 
-      confirmPermissionChange(/* Setting */ "u+rwx,g=rw,o-rwx",
+     confirmPermissionChange(/* Setting */ "u+rwx,g=rw,o-rwx",
                              /* Should give */ "rwxrw----", fs, shell, dir);
+     
+     //create an empty file
+     Path file = new Path(chmodDir, "file");
+     TestDFSShell.writeFile(fs, file);
 
-      //create an empty file
-      Path file = new Path(chmodDir, "file");
-      TestDFSShell.writeFile(fs, file);
+     //test octal mode
+     confirmPermissionChange( "644", "rw-r--r--", fs, shell, file);
 
-      //test octal mode
-      confirmPermissionChange("644", "rw-r--r--", fs, shell, file);
+     //test recursive
+     runCmd(shell, "-chmod", "-R", "a+rwX", chmodDir);
+     assertEquals("rwxrwxrwx",
+                  fs.getFileStatus(dir).getPermission().toString()); 
+     assertEquals("rw-rw-rw-",
+                  fs.getFileStatus(file).getPermission().toString());
 
-      //test recursive
-      runCmd(shell, "-chmod", "-R", "a+rwX", chmodDir);
-      assertEquals("rwxrwxrwx",
-          fs.getFileStatus(dir).getPermission().toString());
-      assertEquals("rw-rw-rw-",
-          fs.getFileStatus(file).getPermission().toString());
+     // test sticky bit on directories
+     Path dir2 = new Path(dir, "stickybit" );
+     fs.mkdirs(dir2 );
+     LOG.info("Testing sticky bit on: " + dir2);
+     LOG.info("Sticky bit directory initial mode: " + 
+                   fs.getFileStatus(dir2).getPermission());
+     
+     confirmPermissionChange("u=rwx,g=rx,o=rx", "rwxr-xr-x", fs, shell, dir2);
+     
+     confirmPermissionChange("+t", "rwxr-xr-t", fs, shell, dir2);
 
-      // Skip "sticky bit" tests on Windows.
-      //
-      if (!Path.WINDOWS) {
-        // test sticky bit on directories
-        Path dir2 = new Path(dir, "stickybit");
-        fs.mkdirs(dir2);
-        LOG.info("Testing sticky bit on: " + dir2);
-        LOG.info("Sticky bit directory initial mode: " +
-            fs.getFileStatus(dir2).getPermission());
+     confirmPermissionChange("-t", "rwxr-xr-x", fs, shell, dir2);
 
-        confirmPermissionChange("u=rwx,g=rx,o=rx", "rwxr-xr-x", fs, shell, dir2);
+     confirmPermissionChange("=t", "--------T", fs, shell, dir2);
 
-        confirmPermissionChange("+t", "rwxr-xr-t", fs, shell, dir2);
+     confirmPermissionChange("0000", "---------", fs, shell, dir2);
 
-        confirmPermissionChange("-t", "rwxr-xr-x", fs, shell, dir2);
+     confirmPermissionChange("1666", "rw-rw-rwT", fs, shell, dir2);
 
-        confirmPermissionChange("=t", "--------T", fs, shell, dir2);
-
-        confirmPermissionChange("0000", "---------", fs, shell, dir2);
-
-        confirmPermissionChange("1666", "rw-rw-rwT", fs, shell, dir2);
-
-        confirmPermissionChange("777", "rwxrwxrwt", fs, shell, dir2);
-
-        fs.delete(dir2, true);
-      } else {
-        LOG.info("Skipped sticky bit tests on Windows");
-      }
-
-      fs.delete(dir, true);
-
+     confirmPermissionChange("777", "rwxrwxrwt", fs, shell, dir2);
+     
+     fs.delete(dir2, true);
+     fs.delete(dir, true);
+     
     } finally {
       try {
         fs.close();
@@ -1580,29 +1571,27 @@ public class TestDFSShell {
   // force Copy Option is -f
   @Test
   public void testCopyCommandsWithForceOption() throws Exception {
-    final int SUCCESS = 0;
-    final int ERROR = 1;
-
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .format(true).build();
     FsShell shell = null;
     FileSystem fs = null;
     final File localFile = new File(TEST_ROOT_DIR, "testFileForPut");
-    final String localfilepath = new Path(localFile.getAbsolutePath()).toUri().toString();
-    final String testdir = "/tmp/TestDFSShell-testCopyCommandsWithForceOption-"
-        + counter.getAndIncrement();
+    final String localfilepath = localFile.getAbsolutePath();
+    final String testdir = TEST_ROOT_DIR + "/ForceTestDir";
     final Path hdfsTestDir = new Path(testdir);
     try {
       fs = cluster.getFileSystem();
       fs.mkdirs(hdfsTestDir);
       localFile.createNewFile();
-      writeFile(fs, new Path(testdir, "testFileForPut"));
+      writeFile(fs, new Path(TEST_ROOT_DIR, "testFileForPut"));
       shell = new FsShell();
 
       // Tests for put
       String[] argv = new String[] { "-put", "-f", localfilepath, testdir };
       int res = ToolRunner.run(shell, argv);
+      int SUCCESS = 0;
+      int ERROR = 1;
       assertEquals("put -f is not working", SUCCESS, res);
 
       argv = new String[] { "-put", localfilepath, testdir };
@@ -1674,13 +1663,8 @@ public class TestDFSShell {
     try {
       // Create and delete a file
       fs = cluster.getFileSystem();
-
-      // Use a separate tmp dir for each invocation.
-      final String testdir = "/tmp/TestDFSShell-deleteFileUsingTrash-" +
-          counter.getAndIncrement();
-
-      writeFile(fs, new Path(testdir, "foo"));
-      final String testFile = testdir + "/foo";
+      writeFile(fs, new Path(TEST_ROOT_DIR, "foo"));
+      final String testFile = TEST_ROOT_DIR + "/foo";
       final String trashFile = shell.getCurrentTrashDir() + "/" + testFile;
       String[] argv = new String[] { "-rm", testFile };
       int res = ToolRunner.run(shell, argv);
