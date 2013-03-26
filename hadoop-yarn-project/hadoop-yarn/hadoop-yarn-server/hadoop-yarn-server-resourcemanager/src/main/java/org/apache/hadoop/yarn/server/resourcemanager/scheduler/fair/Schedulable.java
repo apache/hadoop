@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
  */
 @Private
 @Unstable
-abstract class Schedulable {
+public abstract class Schedulable {
   /** Fair share assigned to this Schedulable */
   private Resource fairShare = Resources.createResource(0);
 

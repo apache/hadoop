@@ -310,7 +310,7 @@ public class QueueManager {
     int queueMaxAppsDefault = Integer.MAX_VALUE;
     long fairSharePreemptionTimeout = Long.MAX_VALUE;
     long defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
-    SchedulingMode defaultSchedulingMode = SchedulingMode.FAIR;
+    SchedulingMode defaultSchedulingMode = SchedulingMode.getDefault();
 
     // Remember all queue names so we can display them on web UI, etc.
     List<String> queueNamesInAllocFile = new ArrayList<String>();
@@ -373,7 +373,8 @@ public class QueueManager {
         queueMaxAppsDefault = val;}
       else if ("defaultQueueSchedulingMode".equals(element.getTagName())) {
         String text = ((Text)element.getFirstChild()).getData().trim();
-        defaultSchedulingMode = parseSchedulingMode(text);
+        SchedulingMode.setDefault(text);
+        defaultSchedulingMode = SchedulingMode.getDefault();
       } else {
         LOG.warn("Bad element in allocations file: " + element.getTagName());
       }
@@ -449,7 +450,7 @@ public class QueueManager {
         minSharePreemptionTimeouts.put(queueName, val);
       } else if ("schedulingMode".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
-        queueModes.put(queueName, parseSchedulingMode(text));
+        queueModes.put(queueName, SchedulingMode.parse(text));
       } else if ("aclSubmitApps".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData().trim();
         acls.put(QueueACL.SUBMIT_APPLICATIONS, new AccessControlList(text));
@@ -473,19 +474,6 @@ public class QueueManager {
             minQueueResources.get(queueName))) {
       LOG.warn(String.format("Queue %s has max resources %d less than min resources %d",
           queueName, maxQueueResources.get(queueName), minQueueResources.get(queueName)));
-    }
-  }
-
-  private SchedulingMode parseSchedulingMode(String text)
-      throws AllocationConfigurationException {
-    text = text.toLowerCase();
-    if (text.equals("fair")) {
-      return SchedulingMode.FAIR;
-    } else if (text.equals("fifo")) {
-      return SchedulingMode.FIFO;
-    } else {
-      throw new AllocationConfigurationException(
-          "Unknown scheduling mode : " + text + "; expected 'fifo' or 'fair'");
     }
   }
 
@@ -663,7 +651,7 @@ public class QueueManager {
       minSharePreemptionTimeouts = new HashMap<String, Long>();
       defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
       fairSharePreemptionTimeout = Long.MAX_VALUE;
-      defaultSchedulingMode = SchedulingMode.FAIR;
+      defaultSchedulingMode = SchedulingMode.getDefault();
     }
   }
 }
