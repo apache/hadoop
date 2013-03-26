@@ -80,8 +80,8 @@ public class ParsedHost {
   public ParsedHost(LoggedLocation loc) {
     List<NodeName> coordinates = loc.getLayers();
 
-    rackName = coordinates.get(0).getRackName();
-    nodeName = coordinates.get(1).getHostName();
+    rackName = process(coordinates.get(0).getRackName());
+    nodeName = process(coordinates.get(1).getHostName());
   }
 
   LoggedLocation makeLoggedLocation() {

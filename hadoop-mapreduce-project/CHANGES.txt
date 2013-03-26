@@ -107,6 +107,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
     strings. (ravigummadi via tgraves) 
 
+    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
+    sortFinished times when needed. (Ravi Gummadi via tgraves)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
