@@ -523,17 +523,5 @@ public abstract class TaskStatus implements Writable, Cloneable {
     return (isMap) ? new MapTaskStatus() : new ReduceTaskStatus();
   }
 
-  static TaskStatus readTaskStatus(DataInput in) throws IOException {
-    boolean isMap = in.readBoolean();
-    TaskStatus taskStatus = createTaskStatus(isMap);
-    taskStatus.readFields(in);
-    return taskStatus;
-  }
-  
-  static void writeTaskStatus(DataOutput out, TaskStatus taskStatus) 
-  throws IOException {
-    out.writeBoolean(taskStatus.getIsMap());
-    taskStatus.write(out);
-  }
 }
 
