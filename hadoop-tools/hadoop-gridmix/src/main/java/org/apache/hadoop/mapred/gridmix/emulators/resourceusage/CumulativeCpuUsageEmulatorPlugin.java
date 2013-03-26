@@ -236,7 +236,9 @@ implements ResourceUsageEmulatorPlugin {
   
   @Override
   public float getProgress() {
-    return Math.min(1f, ((float)getCurrentCPUUsage())/targetCpuUsage);
+    return enabled 
+           ? Math.min(1f, ((float)getCurrentCPUUsage())/targetCpuUsage)
+           : 1.0f;
   }
   
   @Override
@@ -298,6 +300,9 @@ implements ResourceUsageEmulatorPlugin {
   public void initialize(Configuration conf, ResourceUsageMetrics metrics,
                          ResourceCalculatorPlugin monitor,
                          Progressive progress) {
+    this.monitor = monitor;
+    this.progress = progress;
+    
     // get the target CPU usage
     targetCpuUsage = metrics.getCumulativeCpuUsage();
     if (targetCpuUsage <= 0 ) {
@@ -307,8 +312,6 @@ implements ResourceUsageEmulatorPlugin {
       enabled = true;
     }
     
-    this.monitor = monitor;
-    this.progress = progress;
     emulationInterval =  conf.getFloat(CPU_EMULATION_PROGRESS_INTERVAL, 
                                        DEFAULT_EMULATION_FREQUENCY);
     

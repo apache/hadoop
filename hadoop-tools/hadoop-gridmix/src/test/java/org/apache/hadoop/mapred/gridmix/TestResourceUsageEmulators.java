@@ -472,6 +472,11 @@ public class TestResourceUsageEmulators {
     assertEquals("Disabled cumulative CPU usage emulation plugin works!", 
                  cpuUsagePre, cpuUsagePost);
     
+    // test with get progress
+    float progress = cpuPlugin.getProgress();
+    assertEquals("Invalid progress of disabled cumulative CPU usage emulation " 
+                 + "plugin!", 1.0f, progress, 0f);
+    
     // test with valid resource usage value
     ResourceUsageMetrics metrics = createMetrics(targetCpuUsage);
     

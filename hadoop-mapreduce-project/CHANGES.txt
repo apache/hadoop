@@ -96,6 +96,8 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
     tasks in Gridmix. (amarrk via tgraves)
 
+    MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk via tgraves)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -170,6 +170,11 @@ public class TestGridmixMemoryEmulation {
     assertEquals("Disabled heap usage emulation plugin works!", 
                  heapUsagePre, heapUsagePost);
     
+    // test with get progress
+    float progress = heapPlugin.getProgress();
+    assertEquals("Invalid progress of disabled cumulative heap usage emulation "
+                 + "plugin!", 1.0f, progress, 0f);
+    
     // test with wrong/invalid configuration
     Boolean failed = null;
     invalidUsage = 

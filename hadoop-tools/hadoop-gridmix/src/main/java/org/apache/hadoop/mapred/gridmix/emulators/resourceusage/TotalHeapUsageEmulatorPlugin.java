@@ -188,7 +188,9 @@ implements ResourceUsageEmulatorPlugin {
   
   @Override
   public float getProgress() {
-    return Math.min(1f, ((float)getTotalHeapUsageInMB())/targetHeapUsageInMB);
+    return enabled 
+           ? Math.min(1f, ((float)getTotalHeapUsageInMB())/targetHeapUsageInMB)
+           : 1.0f;
   }
   
   @Override
@@ -237,6 +239,8 @@ implements ResourceUsageEmulatorPlugin {
   public void initialize(Configuration conf, ResourceUsageMetrics metrics,
                          ResourceCalculatorPlugin monitor,
                          Progressive progress) {
+    this.progress = progress;
+    
     // get the target heap usage
     targetHeapUsageInMB = metrics.getHeapUsage() / ONE_MB;
     if (targetHeapUsageInMB <= 0 ) {
@@ -248,7 +252,6 @@ implements ResourceUsageEmulatorPlugin {
       enabled = true;
     }
     
-    this.progress = progress;
     emulationInterval = 
       conf.getFloat(HEAP_EMULATION_PROGRESS_INTERVAL, 
                     DEFAULT_EMULATION_PROGRESS_INTERVAL);
