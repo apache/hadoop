@@ -98,6 +98,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk via tgraves)
 
+    MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
+    map only jobs. (amarrk via tgraves)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

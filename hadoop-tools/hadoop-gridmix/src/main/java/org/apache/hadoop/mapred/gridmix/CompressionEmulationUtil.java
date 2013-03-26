@@ -85,10 +85,10 @@ class CompressionEmulationUtil {
     "gridmix.compression-emulation.map-output.compression-ratio";
   
   /**
-   * Configuration property for setting the compression ratio of reduce output.
+   * Configuration property for setting the compression ratio of job output.
    */
-  private static final String GRIDMIX_REDUCE_OUTPUT_COMPRESSION_RATIO = 
-    "gridmix.compression-emulation.reduce-output.compression-ratio";
+  private static final String GRIDMIX_JOB_OUTPUT_COMPRESSION_RATIO = 
+    "gridmix.compression-emulation.job-output.compression-ratio";
   
   /**
    * Default compression ratio.
@@ -434,20 +434,20 @@ class CompressionEmulationUtil {
   }
   
   /**
-   * Set the reduce output data compression ratio in the given configuration.
+   * Set the job output data compression ratio in the given configuration.
    */
-  static void setReduceOutputCompressionEmulationRatio(Configuration conf, 
-                                                       float ratio) {
-    conf.setFloat(GRIDMIX_REDUCE_OUTPUT_COMPRESSION_RATIO, ratio);
+  static void setJobOutputCompressionEmulationRatio(Configuration conf, 
+                                                    float ratio) {
+    conf.setFloat(GRIDMIX_JOB_OUTPUT_COMPRESSION_RATIO, ratio);
   }
   
   /**
-   * Get the reduce output data compression ratio using the given configuration.
+   * Get the job output data compression ratio using the given configuration.
    * If the compression ratio is not set in the configuration then use the 
    * default value i.e {@value #DEFAULT_COMPRESSION_RATIO}.
    */
-  static float getReduceOutputCompressionEmulationRatio(Configuration conf) {
-    return conf.getFloat(GRIDMIX_REDUCE_OUTPUT_COMPRESSION_RATIO, 
+  static float getJobOutputCompressionEmulationRatio(Configuration conf) {
+    return conf.getFloat(GRIDMIX_JOB_OUTPUT_COMPRESSION_RATIO, 
                          DEFAULT_COMPRESSION_RATIO);
   }
   
