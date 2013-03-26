@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -123,12 +122,9 @@ public class TestNodeStatusUpdater {
       Assert.assertEquals(NetUtils.getHostPortString(expected), nodeId.toString());
       Assert.assertEquals(5 * 1024, resource.getMemory());
       registeredNodes.add(nodeId);
-      RegistrationResponse regResponse = recordFactory
-          .newRecordInstance(RegistrationResponse.class);
 
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
-      response.setRegistrationResponse(regResponse);
       return response;
     }
 
@@ -320,10 +316,7 @@ public class TestNodeStatusUpdater {
       
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
-      RegistrationResponse regResponse = recordFactory
-      .newRecordInstance(RegistrationResponse.class);
-      regResponse.setNodeAction(registerNodeAction );
-      response.setRegistrationResponse(regResponse);
+      response.setNodeAction(registerNodeAction );
       return response;
     }
     @Override
@@ -358,10 +351,7 @@ public class TestNodeStatusUpdater {
 
       RegisterNodeManagerResponse response =
           recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
-      RegistrationResponse regResponse =
-          recordFactory.newRecordInstance(RegistrationResponse.class);
-      regResponse.setNodeAction(registerNodeAction);
-      response.setRegistrationResponse(regResponse);
+      response.setNodeAction(registerNodeAction);
       return response;
     }
 

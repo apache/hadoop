@@ -96,8 +96,7 @@ public class NodeManager implements ContainerManager {
     request.setNodeId(this.nodeId);
     request.setResource(capability);
     request.setNodeId(this.nodeId);
-    resourceTrackerService.registerNodeManager(request)
-        .getRegistrationResponse();
+    resourceTrackerService.registerNodeManager(request);
     this.schedulerNode = new FiCaSchedulerNode(rmContext.getRMNodes().get(
         this.nodeId));
    

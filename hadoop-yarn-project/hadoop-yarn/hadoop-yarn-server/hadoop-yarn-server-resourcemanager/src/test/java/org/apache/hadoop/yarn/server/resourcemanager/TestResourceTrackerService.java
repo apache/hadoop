@@ -241,7 +241,7 @@ public class TestResourceTrackerService {
     req.setHttpPort(1234);
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.SHUTDOWN,response.getRegistrationResponse().getNodeAction());
+    Assert.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
   }
 
   @Test

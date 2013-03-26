@@ -9,6 +9,8 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-439. Flatten NodeHeartbeatResponse. (Xuan Gong via sseth)
 
+    YARN-440. Flatten RegisterNodeManagerResponse. (Xuan Gong via sseth)
+
   NEW FEATURES
 
   IMPROVEMENTS
