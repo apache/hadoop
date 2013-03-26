@@ -42,7 +42,7 @@ import org.apache.hadoop.conf.Configuration;
  * For configuring GridMix to load and and use a resource usage emulator, 
  * see {@link ResourceUsageMatcher}. 
  */
-public interface ResourceUsageEmulatorPlugin {
+public interface ResourceUsageEmulatorPlugin extends Progressive {
   /**
    * Initialize the plugin. This might involve
    *   - initializing the variables

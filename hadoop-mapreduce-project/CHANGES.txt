@@ -93,6 +93,8 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5077. Remove mapreduce.util.ResourceCalculatorPlugin and related
     code. (Karthik Kambatla via sseth)
 
+    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
+    tasks in Gridmix. (amarrk via tgraves)
 
 Release 2.0.4-alpha - UNRELEASED
 
