@@ -17,6 +17,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4990. Construct debug strings conditionally in 
     ShuffleHandler.Shuffle#sendMapOutput(). (kkambatl via tucu)
 
+    MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred 
+    (Aleksey Gorshkov via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
