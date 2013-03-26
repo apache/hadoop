@@ -35,9 +35,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -79,7 +79,7 @@ public class MockNM {
     nodeHeartbeat(conts, true);
   }
 
-  public RegistrationResponse registerNode() throws Exception {
+  public RegisterNodeManagerResponse registerNode() throws Exception {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
@@ -87,8 +87,8 @@ public class MockNM {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     req.setResource(resource);
-    RegistrationResponse registrationResponse =
-        resourceTracker.registerNodeManager(req).getRegistrationResponse();
+    RegisterNodeManagerResponse registrationResponse =
+        resourceTracker.registerNodeManager(req);
     this.currentMasterKey = registrationResponse.getMasterKey();
     return registrationResponse;
   }

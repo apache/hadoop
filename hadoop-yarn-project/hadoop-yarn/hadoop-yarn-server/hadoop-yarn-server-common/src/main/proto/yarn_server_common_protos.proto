@@ -42,9 +42,3 @@ message MasterKeyProto {
   optional bytes bytes = 2;
 }
 
-message RegistrationResponseProto {
-  optional MasterKeyProto master_key = 1;
-  optional NodeActionProto nodeAction = 2;
-}
-
-

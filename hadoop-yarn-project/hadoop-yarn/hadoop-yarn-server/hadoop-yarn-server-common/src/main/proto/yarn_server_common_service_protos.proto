@@ -29,8 +29,10 @@ message RegisterNodeManagerRequestProto {
   optional int32 http_port = 3;
   optional ResourceProto resource = 4;
 }
+
 message RegisterNodeManagerResponseProto {
-  optional RegistrationResponseProto registration_response = 1;
+  optional MasterKeyProto master_key = 1;
+  optional NodeActionProto nodeAction = 2;
 }
 
 message NodeHeartbeatRequestProto {

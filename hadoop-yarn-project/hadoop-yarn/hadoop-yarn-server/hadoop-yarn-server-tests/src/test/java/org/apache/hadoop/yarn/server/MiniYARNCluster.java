@@ -377,9 +377,7 @@ public class MiniYARNCluster extends CompositeService {
               RegisterNodeManagerResponse response = recordFactory.
                   newRecordInstance(RegisterNodeManagerResponse.class);
               try {
-                response.setRegistrationResponse(rt
-                    .registerNodeManager(request)
-                    .getRegistrationResponse());
+                response = rt.registerNodeManager(request);
               } catch (IOException ioe) {
                 LOG.info("Exception in node registration from "
                     + request.getNodeId().toString(), ioe);
