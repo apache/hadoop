@@ -85,6 +85,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
     build issues. (Sangjin Lee via suresh)
 
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
+    Wang via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

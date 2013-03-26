@@ -247,7 +247,7 @@ public class TestGridmixSummary {
                  qPath.toString(), es.getInputTraceLocation());
     // test expected data size
     assertEquals("Mismatch in expected data size", 
-                 "1.0k", es.getExpectedDataSize());
+                 "1 K", es.getExpectedDataSize());
     // test input data statistics
     assertEquals("Mismatch in input data statistics", 
                  ExecutionSummarizer.stringifyDataStatistics(dataStats), 
@@ -262,7 +262,7 @@ public class TestGridmixSummary {
     es.finalize(factory, testTraceFile.toString(), 1024*1024*1024*10L, resolver,
                 dataStats, conf);
     assertEquals("Mismatch in expected data size", 
-                 "10.0g", es.getExpectedDataSize());
+                 "10 G", es.getExpectedDataSize());
     
     // test trace signature uniqueness
     //  touch the trace file
