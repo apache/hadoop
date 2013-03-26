@@ -80,6 +80,10 @@ Release 2.0.5-beta - UNRELEASED
     input data directory already exists and -generate opton is
     given.(ravigummadi via tgraves)
 
+    MAPREDUCE-2722. [Gridmix] Gridmix simulated job's map's hdfsBytesRead
+    counter is wrong when compressed input is used.(ravigummadi via tgraves)
+
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

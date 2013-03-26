@@ -536,9 +536,14 @@ class LoadJob extends GridmixJob {
         }
       }
       final TaskInfo info = jobdesc.getTaskInfo(TaskType.MAP, i);
+      long possiblyCompressedInputBytes = info.getInputBytes();
+      Configuration conf = job.getConfiguration();
+      long uncompressedInputBytes =
+          CompressionEmulationUtil.getUncompressedInputBytes(
+          possiblyCompressedInputBytes, conf);
       splits.add(
-        new LoadSplit(striper.splitFor(inputDir, info.getInputBytes(), 3), 
-                      maps, i, info.getInputBytes(), info.getInputRecords(),
+        new LoadSplit(striper.splitFor(inputDir, uncompressedInputBytes, 3), 
+                      maps, i, uncompressedInputBytes, info.getInputRecords(),
                       info.getOutputBytes(), info.getOutputRecords(),
                       reduceByteRatio, reduceRecordRatio, specBytes, 
                       specRecords, info.getResourceUsageMetrics(),
