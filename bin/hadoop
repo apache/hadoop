@@ -68,8 +68,8 @@ case "`uname`" in
 CYGWIN*) cygwin=true;;
 esac
 
-# if no args specified, show usage
-if [ $# = 0 ]; then
+print_usage()
+{
   echo "Usage: hadoop [--config confdir] COMMAND"
   echo "where COMMAND is one of:"
   echo "  namenode -format     format the DFS filesystem"
@@ -98,12 +98,26 @@ if [ $# = 0 ]; then
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
+}
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  print_usage
   exit 1
 fi
 
 # get arguments
 COMMAND=$1
 shift
+
+# support help commands
+case $COMMAND in
+  # usage flags
+  --help|-help|-h|help)
+    print_usage
+    exit 0
+    ;;
+esac
 
 # Determine if we're starting a secure datanode, and if so, redefine appropriate variables
 if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
