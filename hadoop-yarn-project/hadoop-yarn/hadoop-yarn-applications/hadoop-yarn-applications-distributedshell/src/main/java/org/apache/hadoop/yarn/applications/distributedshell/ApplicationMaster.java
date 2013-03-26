@@ -319,10 +319,7 @@ public class ApplicationMaster {
 
     Map<String, String> envs = System.getenv();
 
-    if (envs.containsKey(ApplicationConstants.AM_APP_ATTEMPT_ID_ENV)) {
-      appAttemptID = ConverterUtils.toApplicationAttemptId(envs
-          .get(ApplicationConstants.AM_APP_ATTEMPT_ID_ENV));
-    } else if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
+    if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
       if (cliParser.hasOption("app_attempt_id")) {
         String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
         appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
@@ -334,6 +331,23 @@ public class ApplicationMaster {
       ContainerId containerId = ConverterUtils.toContainerId(envs
           .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
       appAttemptID = containerId.getApplicationAttemptId();
+    }
+
+    if (!envs.containsKey(ApplicationConstants.APP_SUBMIT_TIME_ENV)) {
+      throw new RuntimeException(ApplicationConstants.APP_SUBMIT_TIME_ENV
+          + " not set in the environment");
+    }
+    if (!envs.containsKey(ApplicationConstants.NM_HOST_ENV)) {
+      throw new RuntimeException(ApplicationConstants.NM_HOST_ENV
+          + " not set in the environment");
+    }
+    if (!envs.containsKey(ApplicationConstants.NM_HTTP_PORT_ENV)) {
+      throw new RuntimeException(ApplicationConstants.NM_HTTP_PORT_ENV
+          + " not set in the environment");
+    }
+    if (!envs.containsKey(ApplicationConstants.NM_PORT_ENV)) {
+      throw new RuntimeException(ApplicationConstants.NM_PORT_ENV
+          + " not set in the environment");
     }
 
     LOG.info("Application master for app" + ", appId="

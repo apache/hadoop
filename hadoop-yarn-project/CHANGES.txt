@@ -81,6 +81,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-378. Fix RM to make the AM max attempts/retries to be configurable
     per application by clients. (Zhijie Shen via vinodkv)
 
+    YARN-498. Unmanaged AM launcher does not set various constants in env for
+    an AM, also does not handle failed AMs properly. (Hitesh Shah via bikas)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
