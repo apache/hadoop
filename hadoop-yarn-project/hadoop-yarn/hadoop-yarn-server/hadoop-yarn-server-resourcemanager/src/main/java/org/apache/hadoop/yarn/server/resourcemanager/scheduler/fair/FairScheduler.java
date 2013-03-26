@@ -803,7 +803,7 @@ public class FairScheduler implements ResourceScheduler {
         // At most one task is scheduled each iteration of this loop
         List<FSLeafQueue> scheds = new ArrayList<FSLeafQueue>(
             queueMgr.getLeafQueues());
-        Collections.sort(scheds, new SchedulingAlgorithms.FairShareComparator());
+        Collections.sort(scheds, SchedulingMode.getDefault().getComparator());
         boolean assignedContainer = false;
         for (FSLeafQueue sched : scheds) {
           Resource assigned = sched.assignContainer(node, false);

@@ -51,7 +51,7 @@ public class FSParentQueue extends FSQueue {
 
   @Override
   public void recomputeFairShares() {
-    SchedulingAlgorithms.computeFairShares(childQueues, getFairShare());
+    SchedulingMode.getDefault().computeShares(childQueues, getFairShare());
     for (FSQueue childQueue : childQueues) {
       childQueue.getMetrics().setAvailableResourcesToQueue(childQueue.getFairShare());
       childQueue.recomputeFairShares();

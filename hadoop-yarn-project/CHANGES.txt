@@ -96,6 +96,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-497. Yarn unmanaged-am launcher jar does not define a main class in
     its manifest (Hitesh Shah via bikas)
 
+    YARN-469. Make scheduling mode in FS pluggable. (kkambatl via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

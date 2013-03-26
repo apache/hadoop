@@ -92,13 +92,7 @@ public class FSLeafQueue extends FSQueue {
   
   @Override
   public void recomputeFairShares() {
-    if (schedulingMode == SchedulingMode.FAIR) {
-      SchedulingAlgorithms.computeFairShares(appScheds, getFairShare());
-    } else {
-      for (AppSchedulable sched: appScheds) {
-        sched.setFairShare(Resources.createResource(0));
-      }
-    }
+    schedulingMode.computeShares(getAppSchedulables(), getFairShare());
   }
 
   @Override
@@ -162,17 +156,9 @@ public class FSLeafQueue extends FSQueue {
       return Resources.none(); // We should never get here
     }
 
-    // Otherwise, chose app to schedule based on given policy (fair vs fifo).
+    // Otherwise, chose app to schedule based on given policy.
     else {
-      Comparator<Schedulable> comparator;
-      if (schedulingMode == SchedulingMode.FIFO) {
-        comparator = new SchedulingAlgorithms.FifoComparator();
-      } else if (schedulingMode == SchedulingMode.FAIR) {
-        comparator = new SchedulingAlgorithms.FairShareComparator();
-      } else {
-        throw new RuntimeException("Unsupported queue scheduling mode " + 
-            schedulingMode);
-      }
+      Comparator<Schedulable> comparator = schedulingMode.getComparator();
 
       Collections.sort(appScheds, comparator);
       for (AppSchedulable sched: appScheds) {
