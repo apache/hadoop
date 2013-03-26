@@ -109,7 +109,7 @@ WebHDFS REST API
     * {{{Append to a File}<<<APPEND>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.append)
 
-    * {{{Concat File(s)}<<<CONCAT>>>}}
+    * {{{Concatenate Files}<<<CONCAT>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.concat)
 
   * HTTP DELETE
@@ -307,7 +307,7 @@ Content-Length: 0
   * Submit a HTTP POST request.
 
 +---------------------------------
-curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CONCAT&sources=<SOURCES>"
+curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CONCAT&sources=<PATHS>"
 +---------------------------------
 
   The client receives a response with zero content length:
@@ -318,10 +318,6 @@ Content-Length: 0
 +---------------------------------
 
   []
-
-  This REST API call is available as of Hadoop version 2.0.3.
-  Please note that <SOURCES> is a comma seperated list of absolute paths.
-  (Example: sources=/test/file1,/test/file2,/test/file3)
 
   See also:
   {{{Sources}<<<sources>>>}},
@@ -1761,7 +1757,7 @@ var tokenProperties =
 *----------------+-------------------------------------------------------------------+
 || Name          | <<<sources>>> |
 *----------------+-------------------------------------------------------------------+
-|| Description   | The comma seperated absolute paths used for concatenation. |
+|| Description   | A list of source paths. |
 *----------------+-------------------------------------------------------------------+
 || Type          | String |
 *----------------+-------------------------------------------------------------------+
@@ -1769,11 +1765,8 @@ var tokenProperties =
 *----------------+-------------------------------------------------------------------+
 || Valid Values  | A list of comma seperated absolute FileSystem paths without scheme and authority. |
 *----------------+-------------------------------------------------------------------+
-|| Syntax        | See the note in {{Delegation}}. |
+|| Syntax        | Any string. |
 *----------------+-------------------------------------------------------------------+
-
-  <<Note>> that sources are absolute FileSystem paths.
-
 
   See also:
   {{{Concat File(s)}<<<CONCAT>>>}}
