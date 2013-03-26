@@ -65,6 +65,9 @@ Release 1.2.0 - unreleased
 
   IMPROVEMENTS
 
+    HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.
+    (Yu Li via llu)
+
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)
 
     HDFS-3479. Port HDFS-3335 to branch-1. (Colin Patrick McCabe via eli)
