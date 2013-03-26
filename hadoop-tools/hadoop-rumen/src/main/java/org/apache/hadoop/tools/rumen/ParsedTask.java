@@ -91,7 +91,10 @@ public class ParsedTask extends LoggedTask {
     return failedDueToAttempt;
   }
 
-  List<ParsedTaskAttempt> obtainTaskAttempts() {
+  /**
+   * @return the list of attempts of this task.
+   */
+  public List<ParsedTaskAttempt> obtainTaskAttempts() {
     List<LoggedTaskAttempt> attempts = getAttempts();
     return convertTaskAttempts(attempts);
   }

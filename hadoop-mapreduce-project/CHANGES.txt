@@ -101,6 +101,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
     map only jobs. (amarrk via tgraves)
 
+    MAPREDUCE-4356. [Rumen] Provide access to the method
+    ParsedTask.obtainTaskAttempts(). (ravigummadi via tgraves)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
