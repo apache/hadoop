@@ -80,6 +80,8 @@ abstract class HistoryEventEmitter {
     }
 
     counters = counters.replace("\\.", "\\\\.");
+    counters = counters.replace("\\\\{", "\\{");
+    counters = counters.replace("\\\\}", "\\}");
     counters = counters.replace("\\\\(", "\\(");
     counters = counters.replace("\\\\)", "\\)");
     counters = counters.replace("\\\\[", "\\[");

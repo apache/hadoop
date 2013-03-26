@@ -104,6 +104,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4356. [Rumen] Provide access to the method
     ParsedTask.obtainTaskAttempts(). (ravigummadi via tgraves)
 
+    MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
+    strings. (ravigummadi via tgraves) 
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
