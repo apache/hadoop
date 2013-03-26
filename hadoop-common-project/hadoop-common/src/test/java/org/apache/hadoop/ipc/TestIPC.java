@@ -25,6 +25,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.NetUtils;
@@ -521,10 +522,52 @@ public class TestIPC {
   }
   
   /**
+   * Check service class byte in IPC header is correct on wire.
+   */
+  @Test(timeout=60000)
+  public void testIpcWithServiceClass() throws Exception {
+    // start server
+    Server server = new TestServer(5, false);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    // start client
+    Client.setConnectTimeout(conf, 10000);
+
+    callAndVerify(server, addr, 0, true);
+    // Service Class is low to -128 as byte on wire.
+    // -128 shouldn't be casted on wire but -129 should.
+    callAndVerify(server, addr, -128, true);
+    callAndVerify(server, addr, -129, false);
+
+    // Service Class is up to 127.
+    // 127 shouldn't be casted on wire but 128 should.
+    callAndVerify(server, addr, 127, true);
+    callAndVerify(server, addr, 128, false);
+
+    server.stop();
+  }
+
+  /**
+   * Make a call from a client and verify if header info is changed in server side
+   */
+  private void callAndVerify(Server server, InetSocketAddress addr,
+      int serviceClass, boolean noChanged) throws Exception{
+    Client client = new Client(LongWritable.class, conf);
+
+    client.call(new LongWritable(RANDOM.nextLong()),
+        addr, null, null, MIN_SLEEP_TIME, serviceClass, conf);
+    Connection connection = server.getConnections().get(0);
+    int serviceClass2 = connection.getServiceClass();
+    assertFalse(noChanged ^ serviceClass == serviceClass2);
+    client.stop();
+  }
+
+  /**
    * Check that file descriptors aren't leaked by starting
    * and stopping IPC servers.
    */
-  @Test
+  @Test(timeout=60000)
   public void testSocketLeak() throws Exception {
     Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
 

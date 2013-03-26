@@ -438,6 +438,11 @@ public abstract class Server {
     return Arrays.asList(handlers);
   }
 
+  @VisibleForTesting
+  List<Connection> getConnections() {
+    return connectionList;
+  }
+
   /**
    * Refresh the service authorization ACL for the service handled by this server.
    */
@@ -1104,6 +1109,7 @@ public abstract class Server {
     private ByteBuffer connectionHeaderBuf = null;
     private ByteBuffer unwrappedData;
     private ByteBuffer unwrappedDataLengthBuffer;
+    private int serviceClass;
     
     UserGroupInformation user = null;
     public UserGroupInformation attemptingUser = null; // user name before auth
@@ -1314,14 +1320,17 @@ public abstract class Server {
         if (!connectionHeaderRead) {
           //Every connection is expected to send the header.
           if (connectionHeaderBuf == null) {
-            connectionHeaderBuf = ByteBuffer.allocate(3);
+            connectionHeaderBuf = ByteBuffer.allocate(4);
           }
           count = channelRead(channel, connectionHeaderBuf);
           if (count < 0 || connectionHeaderBuf.remaining() > 0) {
             return count;
           }
           int version = connectionHeaderBuf.get(0);
-          byte[] method = new byte[] {connectionHeaderBuf.get(1)};
+          // TODO we should add handler for service class later
+          this.setServiceClass(connectionHeaderBuf.get(1));
+
+          byte[] method = new byte[] {connectionHeaderBuf.get(2)};
           authMethod = AuthMethod.read(new DataInputStream(
               new ByteArrayInputStream(method)));
           dataLengthBuffer.flip();
@@ -1345,7 +1354,7 @@ public abstract class Server {
           }
           
           IpcSerializationType serializationType = IpcSerializationType
-              .fromByte(connectionHeaderBuf.get(2));
+              .fromByte(connectionHeaderBuf.get(3));
           if (serializationType != IpcSerializationType.PROTOBUF) {
             respondUnsupportedSerialization(serializationType);
             return -1;
@@ -1735,6 +1744,22 @@ public abstract class Server {
       return true;
     }
     
+    /**
+     * Get service class for connection
+     * @return the serviceClass
+     */
+    public int getServiceClass() {
+      return serviceClass;
+    }
+
+    /**
+     * Set service class for connection
+     * @param serviceClass the serviceClass to set
+     */
+    public void setServiceClass(int serviceClass) {
+      this.serviceClass = serviceClass;
+    }
+
     private synchronized void close() throws IOException {
       disposeSasl();
       data = null;
