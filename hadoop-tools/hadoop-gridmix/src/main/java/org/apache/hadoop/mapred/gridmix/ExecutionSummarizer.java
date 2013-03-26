@@ -53,6 +53,7 @@ class ExecutionSummarizer implements StatListener<JobStats> {
   private int numJobsInInputTrace;
   private int totalSuccessfulJobs;
   private int totalFailedJobs;
+  private int totalLostJobs;
   private int totalMapTasksLaunched;
   private int totalReduceTasksLaunched;
   private long totalSimulationTime;
@@ -90,31 +91,32 @@ class ExecutionSummarizer implements StatListener<JobStats> {
     simulationStartTime = System.currentTimeMillis();
   }
   
-  private void processJobState(JobStats stats) throws Exception {
+  private void processJobState(JobStats stats) {
     Job job = stats.getJob();
-    if (job.isSuccessful()) {
-      ++totalSuccessfulJobs;
-    } else {
-      ++totalFailedJobs;
+    try {
+      if (job.isSuccessful()) {
+        ++totalSuccessfulJobs;
+      } else {
+        ++totalFailedJobs;
+      }
+    } catch (Exception e) {
+      // this behavior is consistent with job-monitor which marks the job as 
+      // complete (lost) if the status polling bails out
+      ++totalLostJobs; 
     }
   }
   
-  private void processJobTasks(JobStats stats) throws Exception {
+  private void processJobTasks(JobStats stats) {
     totalMapTasksLaunched += stats.getNoOfMaps();
-    Job job = stats.getJob();
-    totalReduceTasksLaunched += job.getNumReduceTasks();
+    totalReduceTasksLaunched += stats.getNoOfReds();
   }
   
   private void process(JobStats stats) {
-    try {
-      // process the job run state
-      processJobState(stats);
-      
-      // process the tasks information
-      processJobTasks(stats);
-    } catch (Exception e) {
-      LOG.info("Error in processing job " + stats.getJob().getJobID() + ".");
-    }
+    // process the job run state
+    processJobState(stats);
+
+    // process the tasks information
+    processJobTasks(stats);
   }
   
   @Override
@@ -191,6 +193,8 @@ class ExecutionSummarizer implements StatListener<JobStats> {
            .append(getNumSuccessfulJobs());
     builder.append("\nTotal number of failed jobs: ")
            .append(getNumFailedJobs());
+    builder.append("\nTotal number of lost jobs: ")
+           .append(getNumLostJobs());
     builder.append("\nTotal number of map tasks launched: ")
            .append(getNumMapTasksLaunched());
     builder.append("\nTotal number of reduce task launched: ")
@@ -266,8 +270,12 @@ class ExecutionSummarizer implements StatListener<JobStats> {
     return totalFailedJobs;
   }
   
+  protected int getNumLostJobs() {
+    return totalLostJobs;
+  }
+  
   protected int getNumSubmittedJobs() {
-    return totalSuccessfulJobs + totalFailedJobs;
+    return totalSuccessfulJobs + totalFailedJobs + totalLostJobs;
   }
   
   protected int getNumMapTasksLaunched() {

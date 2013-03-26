@@ -20,6 +20,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred 
     (Aleksey Gorshkov via bobby)
 
+    MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
+    faster job submission. (amarrk via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES

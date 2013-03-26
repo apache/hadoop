@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 
 /**
  * Component accepting deserialized job traces, computing split data, and
@@ -46,6 +47,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
   private final JobMonitor monitor;
   private final ExecutorService sched;
   private volatile boolean shutdown = false;
+  private final int queueDepth;
 
   /**
    * Initialize the submission component with downstream monitor and pool of
@@ -61,6 +63,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
    */
   public JobSubmitter(JobMonitor monitor, int threads, int queueDepth,
       FilePool inputDir, Statistics statistics) {
+    this.queueDepth = queueDepth;
     sem = new Semaphore(queueDepth);
     sched = new ThreadPoolExecutor(threads, threads, 0L,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
@@ -79,19 +82,25 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
       this.job = job;
     }
     public void run() {
+      JobStats stats = 
+        Statistics.generateJobStats(job.getJob(), job.getJobDesc());
       try {
         // pre-compute split information
         try {
+          long start = System.currentTimeMillis();
           job.buildSplits(inputDir);
+          long end = System.currentTimeMillis();
+          LOG.info("[JobSubmitter] Time taken to build splits for job " 
+                   + job.getJob().getJobID() + ": " + (end - start) + " ms.");
         } catch (IOException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " 
                    + job.getUgi(), e);
-          monitor.submissionFailed(job.getJob());
+          monitor.submissionFailed(stats);
           return;
         } catch (Exception e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " 
                    + job.getUgi(), e);
-          monitor.submissionFailed(job.getJob());
+          monitor.submissionFailed(stats);
           return;
         }
         // Sleep until deadline
@@ -102,10 +111,28 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
         }
         try {
           // submit job
-          monitor.add(job.call());
-          statistics.addJobStats(job.getJob(), job.getJobDesc());
-          LOG.debug("SUBMIT " + job + "@" + System.currentTimeMillis() +
-              " (" + job.getJob().getJobID() + ")");
+          long start = System.currentTimeMillis();
+          job.call();
+          long end = System.currentTimeMillis();
+          LOG.info("[JobSubmitter] Time taken to submit the job " 
+                   + job.getJob().getJobID() + ": " + (end - start) + " ms.");
+          
+          // mark it as submitted
+          job.setSubmitted();
+          
+          // add to the monitor
+          monitor.add(stats);
+          
+          // add to the statistics
+          statistics.addJobStats(stats);
+          if (LOG.isDebugEnabled()) {
+            String jobID = 
+              job.getJob().getConfiguration().get(Gridmix.ORIGINAL_JOB_ID);
+            LOG.debug("Original job '" + jobID + "' is being simulated as '" 
+                      + job.getJob().getJobID() + "'");
+            LOG.debug("SUBMIT " + job + "@" + System.currentTimeMillis() 
+                      + " (" + job.getJob().getJobID() + ")");
+          }
         } catch (IOException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " 
                    + job.getUgi(), e);
@@ -113,21 +140,21 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
             throw new InterruptedException("Failed to submit " +
                 job.getJob().getJobName());
           }
-          monitor.submissionFailed(job.getJob());
+          monitor.submissionFailed(stats);
         } catch (ClassNotFoundException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName(), e);
-          monitor.submissionFailed(job.getJob());
+          monitor.submissionFailed(stats);
         }
       } catch (InterruptedException e) {
         // abort execution, remove splits if nesc
         // TODO release ThdLoc
         GridmixJob.pullDescription(job.id());
         Thread.currentThread().interrupt();
-        monitor.submissionFailed(job.getJob());
+        monitor.submissionFailed(stats);
       } catch(Exception e) {
         //Due to some exception job wasnt submitted.
         LOG.info(" Job " + job.getJob().getJobID() + " submission failed " , e);
-        monitor.submissionFailed(job.getJob());
+        monitor.submissionFailed(stats);
       } finally {
         sem.release();
       }
@@ -141,6 +168,8 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
     final boolean addToQueue = !shutdown;
     if (addToQueue) {
       final SubmitTask task = new SubmitTask(job);
+      LOG.info("Total number of queued jobs: " 
+               + (queueDepth - sem.availablePermits()));
       sem.acquire();
       try {
         sched.execute(task);
