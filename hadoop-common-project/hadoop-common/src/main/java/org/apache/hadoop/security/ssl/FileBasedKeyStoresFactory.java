@@ -164,7 +164,9 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     } else {
       keystore.load(null, null);
     }
-    KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance("SunX509");
+    KeyManagerFactory keyMgrFactory = KeyManagerFactory
+        .getInstance(SSLFactory.SSLCERTIFICATE);
+      
     keyMgrFactory.init(keystore, (keystorePassword != null) ?
                                  keystorePassword.toCharArray() : null);
     keyManagers = keyMgrFactory.getKeyManagers();

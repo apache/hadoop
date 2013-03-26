@@ -592,6 +592,8 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
     is not configured (daryn)
 
+    HADOOP-9430. TestSSLFactory fails on IBM JVM. (Amir Sanjar via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
