@@ -29,6 +29,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4246. The exclude node list should be more forgiving, for each output
     stream. (harsh via atm)
 
+    HDFS-4635. Move BlockManager#computeCapacity to LightWeightGSet. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
