@@ -90,6 +90,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
     become slow in some cases (ravigummadi via tgraves).
 
+    MAPREDUCE-5077. Remove mapreduce.util.ResourceCalculatorPlugin and related
+    code. (Karthik Kambatla via sseth)
+
 
 Release 2.0.4-alpha - UNRELEASED
 

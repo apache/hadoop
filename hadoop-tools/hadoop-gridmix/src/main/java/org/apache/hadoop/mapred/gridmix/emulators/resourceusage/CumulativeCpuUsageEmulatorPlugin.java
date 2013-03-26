@@ -22,8 +22,8 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.gridmix.Progressive;
-import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
  * <p>A {@link ResourceUsageEmulatorPlugin} that emulates the cumulative CPU 
@@ -166,7 +166,7 @@ implements ResourceUsageEmulatorPlugin {
      */
     public void calibrate(ResourceCalculatorPlugin monitor, 
                           long totalCpuUsage) {
-      long initTime = monitor.getProcResourceValues().getCumulativeCpuTime();
+      long initTime = monitor.getCumulativeCpuTime();
       
       long defaultLoopSize = 0;
       long finalTime = initTime;
@@ -175,7 +175,7 @@ implements ResourceUsageEmulatorPlugin {
       while (finalTime - initTime < 100) { // 100 ms
         ++defaultLoopSize;
         performUnitComputation(); //perform unit computation
-        finalTime = monitor.getProcResourceValues().getCumulativeCpuTime();
+        finalTime = monitor.getCumulativeCpuTime();
       }
       
       long referenceRuntime = finalTime - initTime;
@@ -250,7 +250,7 @@ implements ResourceUsageEmulatorPlugin {
         //   section
         
         long currentCpuUsage = 
-          monitor.getProcResourceValues().getCumulativeCpuTime();
+ monitor.getCumulativeCpuTime();
         // estimate the cpu usage rate
         float rate = (currentCpuUsage - lastSeenCpuUsageCpuUsage)
                      / (currentProgress - lastSeenProgress);
@@ -264,7 +264,7 @@ implements ResourceUsageEmulatorPlugin {
             (long)(targetCpuUsage 
                    * getWeightForProgressInterval(currentProgress));
           
-          while (monitor.getProcResourceValues().getCumulativeCpuTime() 
+          while (monitor.getCumulativeCpuTime()
                  < currentWeighedTarget) {
             emulatorCore.compute();
             // sleep for 100ms
@@ -282,7 +282,7 @@ implements ResourceUsageEmulatorPlugin {
         lastSeenProgress = progress.getProgress();
         // set the last seen usage
         lastSeenCpuUsageCpuUsage = 
-          monitor.getProcResourceValues().getCumulativeCpuTime();
+ monitor.getCumulativeCpuTime();
       }
     }
   }
