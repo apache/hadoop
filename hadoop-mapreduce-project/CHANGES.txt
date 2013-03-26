@@ -76,6 +76,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5062. Fix MR AM to read max-retries from the RM. (Zhijie Shen via
     vinodkv)
 
+    MAPREDUCE-3829. [Gridmix] Gridmix should give better error message when
+    input data directory already exists and -generate opton is
+    given.(ravigummadi via tgraves)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

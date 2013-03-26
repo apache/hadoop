@@ -86,11 +86,6 @@ class DistributedCacheEmulator {
 
   static final long AVG_BYTES_PER_MAP = 128 * 1024 * 1024L;// 128MB
 
-  // If at least 1 distributed cache file is missing in the expected
-  // distributed cache dir, Gridmix cannot proceed with emulation of
-  // distributed cache load.
-  int MISSING_DIST_CACHE_FILES_ERROR = 1;
-
   private Path distCachePath;
 
   /**
@@ -154,7 +149,7 @@ class DistributedCacheEmulator {
    * <li> execute permission is not there for any of the ascendant directories
    * of &lt;ioPath&gt; till root. This is because for emulation of distributed
    * cache load, distributed cache files created under
-   * &lt;ioPath/distributedCache/public/&gt; should be considered by hadoop
+   * &lt;ioPath/distributedCache/&gt; should be considered by hadoop
    * as public distributed cache files.
    * <li> creation of pseudo local file system fails.</ol>
    * <br> For (2), (3), (4) and (5), generation of distributed cache data
@@ -470,7 +465,7 @@ class DistributedCacheEmulator {
           + "disable\ndistributed cache emulation by configuring '"
           + DistributedCacheEmulator.GRIDMIX_EMULATE_DISTRIBUTEDCACHE
           + "' to false.");
-      return MISSING_DIST_CACHE_FILES_ERROR;
+      return Gridmix.MISSING_DIST_CACHE_FILES_ERROR;
     }
     return 0;
   }
