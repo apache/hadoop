@@ -31,14 +31,13 @@ import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
-import org.apache.hadoop.mapred.DummyResourceCalculatorPlugin;
 import org.apache.hadoop.mapred.gridmix.LoadJob.ResourceUsageMatcherRunner;
 import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.CumulativeCpuUsageEmulatorPlugin;
 import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.ResourceUsageEmulatorPlugin;
 import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.ResourceUsageMatcher;
 import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.CumulativeCpuUsageEmulatorPlugin.DefaultCpuUsageEmulator;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
  * Test Gridmix's resource emulator framework and supported plugins.
@@ -241,16 +240,6 @@ public class TestResourceUsageEmulators {
     @Override
     public long getCumulativeCpuTime() {
       return core.getCpuUsage();
-    }
-
-    /**
-     * Returns a {@link ProcResourceValues} with cumulative cpu usage  
-     * computed using {@link #getCumulativeCpuTime()}.
-     */
-    @Override
-    public ProcResourceValues getProcResourceValues() {
-      long usageValue = getCumulativeCpuTime();
-      return new ProcResourceValues(usageValue, -1, -1);
     }
   }
   

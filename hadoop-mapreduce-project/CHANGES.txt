@@ -259,6 +259,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5062. Fix MR AM to read max-retries from the RM. (Zhijie Shen via
     vinodkv)
 
+    MAPREDUCE-5077. Remove mapreduce.util.ResourceCalculatorPlugin and related
+    code. (Karthik Kambatla via sseth)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
