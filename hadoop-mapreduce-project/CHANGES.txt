@@ -83,6 +83,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-2722. [Gridmix] Gridmix simulated job's map's hdfsBytesRead
     counter is wrong when compressed input is used.(ravigummadi via tgraves)
 
+    MAPREDUCE-3953. [Gridmix] Gridmix throws NPE and does not simulate a
+    job if the trace contains null taskStatus for a task.  (ravigummadi via 
+    tgraves)
+
 
 Release 2.0.4-alpha - UNRELEASED
 

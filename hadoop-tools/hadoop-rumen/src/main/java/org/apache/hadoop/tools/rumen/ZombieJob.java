@@ -638,6 +638,9 @@ public class ZombieJob implements JobStory {
   }
 
   private TaskInfo getTaskInfo(LoggedTask loggedTask) {
+    if (loggedTask == null) {
+      return new TaskInfo(0, 0, 0, 0, 0);
+    }
     List<LoggedTaskAttempt> attempts = loggedTask.getAttempts();
 
     long inputBytes = -1;
