@@ -24,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
@@ -120,6 +121,15 @@ class QuorumCall<KEY, RESULT> {
         String msg = String.format(
             "Waited %s ms (timeout=%s ms) for a response for %s",
             waited, millis, operationName);
+        if (!successes.isEmpty()) {
+          msg += ". Succeeded so far: [" + Joiner.on(",").join(successes.keySet()) + "]";
+        }
+        if (!exceptions.isEmpty()) {
+          msg += ". Exceptions so far: [" + getExceptionMapString() + "]";
+        }
+        if (successes.isEmpty() && exceptions.isEmpty()) {
+          msg += ". No responses yet.";
+        }
         if (waited > millis * WAIT_PROGRESS_WARN_THRESHOLD) {
           QuorumJournalManager.LOG.warn(msg);
         } else {
@@ -224,6 +234,24 @@ class QuorumCall<KEY, RESULT> {
       first = false;
       sb.append(e.getKey()).append(": ")
         .append(TextFormat.shortDebugString(e.getValue()));
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Return a string suitable for displaying to the user, containing
+   * any exceptions that have been received so far.
+   */
+  private String getExceptionMapString() {
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (Map.Entry<KEY, Throwable> e : exceptions.entrySet()) {
+      if (!first) {
+        sb.append(", ");
+      }
+      first = false;
+      sb.append(e.getKey()).append(": ")
+        .append(e.getValue().getLocalizedMessage());
     }
     return sb.toString();
   }
