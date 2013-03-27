@@ -1237,7 +1237,8 @@ public abstract class Server {
           rpcMetrics.incrAuthenticationFailures();
           String clientIP = this.toString();
           // attempting user could be null
-          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
+          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser +
+            " (" + e.getLocalizedMessage() + ")");
           throw e;
         }
         if (saslServer.isComplete() && replyToken == null) {
