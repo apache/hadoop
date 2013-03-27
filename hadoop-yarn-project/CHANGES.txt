@@ -146,6 +146,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-474. Fix CapacityScheduler to trigger application-activation when
     am-resource-percent configuration is refreshed. (Zhijie Shen via vinodkv)
 
+    YARN-496. Fair scheduler configs are refreshed inconsistently in
+    reinitialize. (Sandy Ryza via tomwhite)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
