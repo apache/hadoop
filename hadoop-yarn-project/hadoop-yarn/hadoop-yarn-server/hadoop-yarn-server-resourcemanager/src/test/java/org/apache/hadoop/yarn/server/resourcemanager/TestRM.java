@@ -26,10 +26,12 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -133,6 +135,51 @@ public class TestRM {
     am.waitForState(RMAppAttemptState.FINISHED);
 
     rm.stop();
+  }
+
+  @Test (timeout = 30000)
+  public void testActivatingApplicationAfterAddingNM() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+
+    MockRM rm1 = new MockRM(conf);
+
+    // start like normal because state is empty
+    rm1.start();
+
+    // app that gets launched
+    RMApp app1 = rm1.submitApp(200);
+
+    // app that does not get launched
+    RMApp app2 = rm1.submitApp(200);
+
+    // app1 and app2 should be scheduled, but because no resource is available,
+    // they are not activated.
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    ApplicationAttemptId attemptId1 = attempt1.getAppAttemptId();
+    rm1.waitForState(attemptId1, RMAppAttemptState.SCHEDULED);
+    RMAppAttempt attempt2 = app2.getCurrentAppAttempt();
+    ApplicationAttemptId attemptId2 = attempt2.getAppAttemptId();
+    rm1.waitForState(attemptId2, RMAppAttemptState.SCHEDULED);
+
+    MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
+    MockNM nm2 = new MockNM("h2:5678", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    nm2.registerNode();
+
+    //kick the scheduling
+    nm1.nodeHeartbeat(true);
+
+    // app1 should be allocated now
+    rm1.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
+    rm1.waitForState(attemptId2, RMAppAttemptState.SCHEDULED);
+
+    nm2.nodeHeartbeat(true);
+
+    // app2 should be allocated now
+    rm1.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
+    rm1.waitForState(attemptId2, RMAppAttemptState.ALLOCATED);
+
+    rm1.stop();
   }
 
   public static void main(String[] args) throws Exception {
