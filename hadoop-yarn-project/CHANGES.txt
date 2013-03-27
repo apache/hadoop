@@ -152,6 +152,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-209. Fix CapacityScheduler to trigger application-activation when
     the cluster capacity changes. (Zhijie Shen via vinodkv)
 
+    YARN-24. Nodemanager fails to start if log aggregation enabled and 
+    namenode unavailable. (sandyr via tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
