@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
@@ -97,7 +96,7 @@ public class LogAggregationService extends AbstractService implements
   private final ConcurrentMap<ApplicationId, AppLogAggregator> appLogAggregators;
 
   private final ExecutorService threadPool;
-
+  
   public LogAggregationService(Dispatcher dispatcher, Context context,
       DeletionService deletionService, LocalDirsHandlerService dirsHandler) {
     super(LogAggregationService.class.getName());
@@ -129,7 +128,6 @@ public class LogAggregationService extends AbstractService implements
     // NodeId is only available during start, the following cannot be moved
     // anywhere else.
     this.nodeId = this.context.getNodeId();
-    verifyAndCreateRemoteLogDir(getConfig());
     super.start();
   }
   
@@ -164,7 +162,7 @@ public class LogAggregationService extends AbstractService implements
     }
   }
   
-  private void verifyAndCreateRemoteLogDir(Configuration conf) {
+  void verifyAndCreateRemoteLogDir(Configuration conf) {
     // Checking the existance of the TLD
     FileSystem remoteFS = null;
     try {
@@ -177,7 +175,7 @@ public class LogAggregationService extends AbstractService implements
       remoteExists = remoteFS.exists(this.remoteRootLogDir);
     } catch (IOException e) {
       throw new YarnException("Failed to check for existence of remoteLogDir ["
-          + this.remoteRootLogDir + "]");
+          + this.remoteRootLogDir + "]", e);
     }
     if (remoteExists) {
       try {
@@ -191,8 +189,8 @@ public class LogAggregationService extends AbstractService implements
         }
       } catch (IOException e) {
         throw new YarnException(
-            "Failed while attempting to check permissions for dir ["
-                + this.remoteRootLogDir + "]");
+            "Failed to check permissions for dir ["
+                + this.remoteRootLogDir + "]", e);
       }
     } else {
       LOG.warn("Remote Root Log Dir [" + this.remoteRootLogDir
@@ -208,7 +206,6 @@ public class LogAggregationService extends AbstractService implements
             + this.remoteRootLogDir + "]", e);
       }
     }
-
   }
 
   Path getRemoteNodeLogFileForApp(ApplicationId appId, String user) {
@@ -296,6 +293,7 @@ public class LogAggregationService extends AbstractService implements
       Map<ApplicationAccessType, String> appAcls) {
     ApplicationEvent eventResponse;
     try {
+      verifyAndCreateRemoteLogDir(getConfig());
       initAppAggregator(appId, user, credentials, logRetentionPolicy, appAcls);
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_INITED);

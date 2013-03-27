@@ -44,6 +44,7 @@ import junit.framework.Assert;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -79,7 +80,6 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.mortbay.util.MultiException;
 
 
@@ -393,7 +394,76 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   
   @Test
   @SuppressWarnings("unchecked")
-  public void testLogAggregationInitFailsWithoutKillingNM() throws Exception {
+  public void testVerifyAndCreateRemoteDirsFailure()
+      throws Exception {
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        this.remoteRootLogDir.getAbsolutePath());
+    
+    DrainDispatcher dispatcher = createDispatcher();
+    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
+    
+    LogAggregationService logAggregationService = spy(
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler));
+    logAggregationService.init(this.conf);
+    
+    YarnException e = new YarnException("KABOOM!");
+    doThrow(e)
+      .when(logAggregationService).verifyAndCreateRemoteLogDir(
+          any(Configuration.class));
+        
+    logAggregationService.start();
+    
+    // Now try to start an application
+    ApplicationId appId = BuilderUtils.newApplicationId(
+        System.currentTimeMillis(), (int)Math.random());
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
+        this.user, null,
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY,
+        this.acls));
+    dispatcher.await();
+    
+    // Verify that it failed
+    ApplicationEvent[] expectedEvents = new ApplicationEvent[] {
+        new ApplicationEvent(appId, 
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
+    };
+    checkEvents(appEventHandler, expectedEvents, false,
+        "getType", "getApplicationID", "getDiagnostic");
+
+    Mockito.reset(logAggregationService);
+    
+    // Now try to start another one
+    ApplicationId appId2 = BuilderUtils.newApplicationId(
+        System.currentTimeMillis(), (int)Math.random());
+    File appLogDir =
+        new File(localLogDir, ConverterUtils.toString(appId2));
+    appLogDir.mkdir();
+    
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId2,
+        this.user, null,
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY,
+        this.acls));
+    dispatcher.await();
+    
+    // Verify that it worked
+    expectedEvents = new ApplicationEvent[] {
+        new ApplicationEvent(appId, // original failure
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED), 
+        new ApplicationEvent(appId2, // success
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED)
+    };
+    checkEvents(appEventHandler, expectedEvents, false,
+        "getType", "getApplicationID", "getDiagnostic");
+    
+    logAggregationService.stop();
+  }
+  
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testLogAggregationInitAppFailsWithoutKillingNM() throws Exception {
 
     this.conf.set(YarnConfiguration.NM_LOG_DIRS,
         localLogDir.getAbsolutePath());
