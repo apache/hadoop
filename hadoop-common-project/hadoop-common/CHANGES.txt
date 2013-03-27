@@ -92,9 +92,6 @@ Trunk (Unreleased)
     HADOOP-8367 Improve documentation of declaringClassProtocolName in 
     rpc headers. (Sanjay Radia)
 
-    HADOOP-8415. Add getDouble() and setDouble() in
-    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
-
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
 
@@ -513,6 +510,9 @@ Release 2.0.5-beta - UNRELEASED
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
+
+    HADOOP-8415. Add getDouble() and setDouble() in
+    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
 
   IMPROVEMENTS
 
