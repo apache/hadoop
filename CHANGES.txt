@@ -28,6 +28,9 @@ Release 1.3.0 - unreleased
     HDFS-4622. Remove redundant synchronized from 
     FSNamesystem#rollEditLog in branch-1. (Jing Zhao via suresh)
 
+    HDFS-4581. DataNode.checkDiskError should not be called on network errors.
+    (Rohit Kochar via kihwal)
+
 Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES
