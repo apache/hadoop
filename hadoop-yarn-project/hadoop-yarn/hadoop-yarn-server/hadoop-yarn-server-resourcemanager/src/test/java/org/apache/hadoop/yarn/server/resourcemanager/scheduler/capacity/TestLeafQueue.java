@@ -138,7 +138,6 @@ public class TestLeafQueue {
   private static final String C = "c";
   private static final String C1 = "c1";
   private static final String D = "d";
-  private static final String E = "e";
   private void setupQueueConfiguration(
       CapacitySchedulerConfiguration conf, 
       final String newRoot) {
@@ -149,7 +148,7 @@ public class TestLeafQueue {
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
     final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "." + newRoot;
-    conf.setQueues(Q_newRoot, new String[] {A, B, C, D, E});
+    conf.setQueues(Q_newRoot, new String[] {A, B, C, D});
     conf.setCapacity(Q_newRoot, 100);
     conf.setMaximumCapacity(Q_newRoot, 100);
     conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
@@ -175,14 +174,10 @@ public class TestLeafQueue {
     conf.setCapacity(Q_C1, 100);
 
     final String Q_D = Q_newRoot + "." + D;
-    conf.setCapacity(Q_D, 9);
+    conf.setCapacity(Q_D, 10);
     conf.setMaximumCapacity(Q_D, 11);
     conf.setAcl(Q_D, QueueACL.SUBMIT_APPLICATIONS, "user_d");
     
-    final String Q_E = Q_newRoot + "." + E;
-    conf.setCapacity(Q_E, 1);
-    conf.setMaximumCapacity(Q_E, 1);
-    conf.setAcl(Q_E, QueueACL.SUBMIT_APPLICATIONS, "user_e");
   }
 
   static LeafQueue stubLeafQueue(LeafQueue queue) {
@@ -1570,59 +1565,6 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
     assertEquals(0, app_0.getTotalRequiredResources(priority));
 
-  }
-
-  @Test (timeout = 30000)
-  public void testActivateApplicationAfterQueueRefresh() throws Exception {
-
-    // Manipulate queue 'e'
-    LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
-
-    // Users
-    final String user_e = "user_e";
-
-    // Submit applications
-    final ApplicationAttemptId appAttemptId_0 =
-        TestUtils.getMockApplicationAttemptId(0, 0);
-    FiCaSchedulerApp app_0 =
-        new FiCaSchedulerApp(appAttemptId_0, user_e, e,
-            mock(ActiveUsersManager.class), rmContext);
-    e.submitApplication(app_0, user_e, E);
-
-    final ApplicationAttemptId appAttemptId_1 =
-        TestUtils.getMockApplicationAttemptId(1, 0);
-    FiCaSchedulerApp app_1 =
-        new FiCaSchedulerApp(appAttemptId_1, user_e, e,
-            mock(ActiveUsersManager.class), rmContext);
-    e.submitApplication(app_1, user_e, E);  // same user
-
-    final ApplicationAttemptId appAttemptId_2 =
-        TestUtils.getMockApplicationAttemptId(2, 0);
-    FiCaSchedulerApp app_2 =
-        new FiCaSchedulerApp(appAttemptId_2, user_e, e,
-            mock(ActiveUsersManager.class), rmContext);
-    e.submitApplication(app_2, user_e, E);  // same user
-
-    // before reinitialization
-    assertEquals(2, e.activeApplications.size());
-    assertEquals(1, e.pendingApplications.size());
-
-    csConf.setDouble(CapacitySchedulerConfiguration
-        .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
-        CapacitySchedulerConfiguration
-        .DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT * 2);
-    Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
-    CSQueue newRoot =
-        CapacityScheduler.parseQueue(csContext, csConf, null,
-            CapacitySchedulerConfiguration.ROOT,
-            newQueues, queues,
-            TestUtils.spyHook);
-    queues = newQueues;
-    root.reinitialize(newRoot, cs.getClusterResources());
-
-    // after reinitialization
-    assertEquals(3, e.activeApplications.size());
-    assertEquals(0, e.pendingApplications.size());
   }
 
   public boolean hasQueueACL(List<QueueUserACLInfo> aclInfos, QueueACL acl) {
