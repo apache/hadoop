@@ -128,6 +128,10 @@ class Journal implements Closeable {
 
   private final JournalMetrics metrics;
 
+  /**
+   * Time threshold for sync calls, beyond which a warning should be logged to the console.
+   */
+  private static final int WARN_SYNC_MILLIS_THRESHOLD = 1000;
 
   Journal(File logDir, String journalId,
       StorageErrorReporter errorReporter) throws IOException {
@@ -370,6 +374,10 @@ class Journal implements Closeable {
     sw.stop();
     
     metrics.addSync(sw.elapsedTime(TimeUnit.MICROSECONDS));
+    if (sw.elapsedTime(TimeUnit.MILLISECONDS) > WARN_SYNC_MILLIS_THRESHOLD) {
+      LOG.warn("Sync of transaction range " + firstTxnId + "-" + lastTxnId +
+               " took " + sw.elapsedTime(TimeUnit.MILLISECONDS) + "ms");
+    }
 
     if (isLagging) {
       // This batch of edits has already been committed on a quorum of other
