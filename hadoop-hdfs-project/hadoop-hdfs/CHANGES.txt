@@ -181,6 +181,9 @@ Trunk (Unreleased)
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
 
+    HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
+    cache expires too quickly  (Chris Nauroth via Sanjay)
+
   OPTIMIZATIONS
 
   BUG FIXES
