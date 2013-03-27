@@ -52,7 +52,7 @@ class DomainSocketFactory {
     this.conf = conf;
 
     String feature = null;
-    if (conf.shortCircuitLocalReads) {
+    if (conf.shortCircuitLocalReads && (!conf.useLegacyBlockReaderLocal)) {
       feature = "The short-circuit local reads feature";
     } else if (conf.domainSocketDataTraffic) {
       feature = "UNIX domain socket data traffic";
@@ -86,7 +86,8 @@ class DomainSocketFactory {
     // sockets.
     if (conf.domainSocketPath.isEmpty()) return null;
     // If we can't do anything with the domain socket, don't create it.
-    if (!(conf.domainSocketDataTraffic || conf.shortCircuitLocalReads)) {
+    if ((conf.domainSocketDataTraffic == false) &&
+        ((!conf.shortCircuitLocalReads) || conf.useLegacyBlockReaderLocal)) {
       return null;
     }
     // UNIX domain sockets can only be used to talk to local peers

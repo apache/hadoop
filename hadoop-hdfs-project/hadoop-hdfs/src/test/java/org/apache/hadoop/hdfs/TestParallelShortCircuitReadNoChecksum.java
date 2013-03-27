@@ -33,6 +33,7 @@ public class TestParallelShortCircuitReadNoChecksum extends TestParallelReadUtil
   @BeforeClass
   static public void setupCluster() throws Exception {
     if (DomainSocket.getLoadingFailureReason() != null) return;
+    DFSInputStream.tcpReadsDisabledForTesting = true;
     sockDir = new TemporarySocketDirectory();
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,

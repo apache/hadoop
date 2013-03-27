@@ -917,6 +917,23 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
       return new BlockReaderLocal(dfsClient.conf, file,
         block, startOffset, len, fis[0], fis[1], chosenNode, verifyChecksum);
     }
+    
+    // If the legacy local block reader is enabled and we are reading a local
+    // block, try to create a BlockReaderLocalLegacy.  The legacy local block
+    // reader implements local reads in the style first introduced by HDFS-2246.
+    if ((dfsClient.useLegacyBlockReaderLocal()) &&
+        DFSClient.isLocalAddress(dnAddr) &&
+        (!shortCircuitForbidden())) {
+      try {
+        return BlockReaderFactory.getLegacyBlockReaderLocal(dfsClient.conf,
+            clientName, block, blockToken, chosenNode,
+            dfsClient.hdfsTimeout, startOffset,dfsClient.connectToDnViaHostname());
+      } catch (IOException e) {
+        DFSClient.LOG.warn("error creating legacy BlockReaderLocal.  " +
+            "Disabling legacy local reads.", e);
+        dfsClient.disableLegacyBlockReaderLocal();
+      }
+    }
 
     // Look for cached domain peers.
     int cacheTries = 0;
