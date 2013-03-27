@@ -2467,6 +2467,9 @@ Release 0.23.7 - UNRELEASED
     HDFS-3367. WebHDFS doesn't use the logged in user when opening
     connections (daryn)
 
+    HDFS-4581. checkDiskError should not be called on network errors (Rohit
+    Kochar via kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
