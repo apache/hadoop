@@ -110,6 +110,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
     sortFinished times when needed. (Ravi Gummadi via tgraves)
 
+    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
+    (Sandy Ryza via tomwhite)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
