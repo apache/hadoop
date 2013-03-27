@@ -143,6 +143,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-498. Unmanaged AM launcher does not set various constants in env for
     an AM, also does not handle failed AMs properly. (Hitesh Shah via bikas)
 
+    YARN-474. Fix CapacityScheduler to trigger application-activation when
+    am-resource-percent configuration is refreshed. (Zhijie Shen via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
