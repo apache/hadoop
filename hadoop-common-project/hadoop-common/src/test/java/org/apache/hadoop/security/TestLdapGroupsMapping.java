@@ -26,6 +26,7 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.naming.CommunicationException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -46,21 +47,15 @@ public class TestLdapGroupsMapping {
   private DirContext mockContext;
   
   private LdapGroupsMapping mappingSpy = spy(new LdapGroupsMapping());
+  private NamingEnumeration mockUserNamingEnum = mock(NamingEnumeration.class);
+  private NamingEnumeration mockGroupNamingEnum = mock(NamingEnumeration.class);
+  private String[] testGroups = new String[] {"group1", "group2"};
   
   @Before
   public void setupMocks() throws NamingException {
     mockContext = mock(DirContext.class);
     doReturn(mockContext).when(mappingSpy).getDirContext();
-    
-    NamingEnumeration mockUserNamingEnum = mock(NamingEnumeration.class);
-    NamingEnumeration mockGroupNamingEnum = mock(NamingEnumeration.class);
-    
-    // The search functionality of the mock context is reused, so we will
-    // return the user NamingEnumeration first, and then the group
-    when(mockContext.search(anyString(), anyString(), any(Object[].class),
-        any(SearchControls.class)))
-        .thenReturn(mockUserNamingEnum, mockGroupNamingEnum);
-    
+            
     SearchResult mockUserResult = mock(SearchResult.class);
     // We only ever call hasMoreElements once for the user NamingEnum, so 
     // we can just have one return value
@@ -76,23 +71,57 @@ public class TestLdapGroupsMapping {
     
     // Define the attribute for the name of the first group
     Attribute group1Attr = new BasicAttribute("cn");
-    group1Attr.add("group1");
+    group1Attr.add(testGroups[0]);
     Attributes group1Attrs = new BasicAttributes();
     group1Attrs.put(group1Attr);
     
     // Define the attribute for the name of the second group
     Attribute group2Attr = new BasicAttribute("cn");
-    group2Attr.add("group2");
+    group2Attr.add(testGroups[1]);
     Attributes group2Attrs = new BasicAttributes();
     group2Attrs.put(group2Attr);
     
     // This search result gets reused, so return group1, then group2
     when(mockGroupResult.getAttributes()).thenReturn(group1Attrs, group2Attrs);
-    
   }
   
   @Test
   public void testGetGroups() throws IOException, NamingException {
+    // The search functionality of the mock context is reused, so we will
+    // return the user NamingEnumeration first, and then the group
+    when(mockContext.search(anyString(), anyString(), any(Object[].class),
+        any(SearchControls.class)))
+        .thenReturn(mockUserNamingEnum, mockGroupNamingEnum);
+    
+    doTestGetGroups(Arrays.asList(testGroups), 2);
+  }
+
+  @Test
+  public void testGetGroupsWithConnectionClosed() throws IOException, NamingException {
+    // The case mocks connection is closed/gc-ed, so the first search call throws CommunicationException,
+    // then after reconnected return the user NamingEnumeration first, and then the group
+    when(mockContext.search(anyString(), anyString(), any(Object[].class),
+        any(SearchControls.class)))
+        .thenThrow(new CommunicationException("Connection is closed"))
+        .thenReturn(mockUserNamingEnum, mockGroupNamingEnum);
+    
+    // Although connection is down but after reconnected it still should retrieve the result groups
+    doTestGetGroups(Arrays.asList(testGroups), 1 + 2); // 1 is the first failure call 
+  }
+
+  @Test
+  public void testGetGroupsWithLdapDown() throws IOException, NamingException {
+    // This mocks the case where Ldap server is down, and always throws CommunicationException 
+    when(mockContext.search(anyString(), anyString(), any(Object[].class),
+        any(SearchControls.class)))
+        .thenThrow(new CommunicationException("Connection is closed"));
+    
+    // Ldap server is down, no groups should be retrieved
+    doTestGetGroups(Arrays.asList(new String[] {}), 
+        1 + LdapGroupsMapping.RECONNECT_RETRY_COUNT); // 1 is the first normal call
+  }
+  
+  private void doTestGetGroups(List<String> expectedGroups, int searchTimes) throws IOException, NamingException {  
     Configuration conf = new Configuration();
     // Set this, so we don't throw an exception
     conf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
@@ -102,10 +131,10 @@ public class TestLdapGroupsMapping {
     // regardless of input
     List<String> groups = mappingSpy.getGroups("some_user");
     
-    Assert.assertEquals(Arrays.asList("group1", "group2"), groups);
+    Assert.assertEquals(expectedGroups, groups);
     
     // We should have searched for a user, and then two groups
-    verify(mockContext, times(2)).search(anyString(),
+    verify(mockContext, times(searchTimes)).search(anyString(),
                                          anyString(),
                                          any(Object[].class),
                                          any(SearchControls.class));

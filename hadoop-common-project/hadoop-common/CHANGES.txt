@@ -598,6 +598,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9430. TestSSLFactory fails on IBM JVM. (Amir Sanjar via suresh)
 
+    HADOOP-9125. LdapGroupsMapping threw CommunicationException after some
+    idle time. (Kai Zheng via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
