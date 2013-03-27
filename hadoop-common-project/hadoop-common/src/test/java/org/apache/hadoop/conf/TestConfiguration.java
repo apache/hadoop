@@ -579,6 +579,29 @@ public class TestConfiguration extends TestCase {
     }
   }
   
+  public void testDoubleValues() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.double1", "3.1415");
+    appendProperty("test.double2", "003.1415");
+    appendProperty("test.double3", "-3.1415");
+    appendProperty("test.double4", " -3.1415 ");
+    appendProperty("test.double5", "xyz-3.1415xyz");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(3.1415, conf.getDouble("test.double1", 0.0));
+    assertEquals(3.1415, conf.getDouble("test.double2", 0.0));
+    assertEquals(-3.1415, conf.getDouble("test.double3", 0.0));
+    assertEquals(-3.1415, conf.getDouble("test.double4", 0.0));
+    try {
+      conf.getDouble("test.double5", 0.0);
+      fail("Property had invalid double value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
+  }
+  
   public void testGetClass() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
