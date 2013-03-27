@@ -373,6 +373,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4621. Additional logging to help diagnose slow QJM syncs. (todd)
 
+    HDFS-4618. Default transaction interval for checkpoints is too low. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

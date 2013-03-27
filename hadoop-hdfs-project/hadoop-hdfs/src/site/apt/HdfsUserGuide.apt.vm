@@ -193,7 +193,7 @@ HDFS Users Guide
      * <<<dfs.namenode.checkpoint.period>>>, set to 1 hour by default, specifies
        the maximum delay between two consecutive checkpoints, and
 
-     * <<<dfs.namenode.checkpoint.txns>>>, set to 40000 default, defines the
+     * <<<dfs.namenode.checkpoint.txns>>>, set to 1 million by default, defines the
        number of uncheckpointed transactions on the NameNode which will
        force an urgent checkpoint, even if the checkpoint period has not
        been reached.
@@ -232,7 +232,7 @@ HDFS Users Guide
      * <<<dfs.namenode.checkpoint.period>>>, set to 1 hour by default, specifies
        the maximum delay between two consecutive checkpoints
 
-     * <<<dfs.namenode.checkpoint.txns>>>, set to 40000 default, defines the
+     * <<<dfs.namenode.checkpoint.txns>>>, set to 1 million by default, defines the
        number of uncheckpointed transactions on the NameNode which will
        force an urgent checkpoint, even if the checkpoint period has not
        been reached.
