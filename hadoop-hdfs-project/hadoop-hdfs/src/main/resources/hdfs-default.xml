@@ -635,7 +635,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.txns</name>
-  <value>40000</value>
+  <value>1000000</value>
   <description>The Secondary NameNode or CheckpointNode will create a checkpoint
   of the namespace every 'dfs.namenode.checkpoint.txns' transactions, regardless
   of whether 'dfs.namenode.checkpoint.period' has expired.
