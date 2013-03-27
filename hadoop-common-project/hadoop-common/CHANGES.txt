@@ -31,6 +31,8 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9318. When exiting on a signal, print the signal name first. (Colin
     Patrick McCabe via atm)
 
+    HADOOP-9358. "Auth failed" log should include exception string (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
