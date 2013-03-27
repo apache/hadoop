@@ -1625,6 +1625,49 @@ public class TestLeafQueue {
     assertEquals(0, e.pendingApplications.size());
   }
 
+  @Test (timeout = 30000)
+  public void testActivateApplicationByUpdatingClusterResource()
+      throws Exception {
+
+    // Manipulate queue 'e'
+    LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
+
+    // Users
+    final String user_e = "user_e";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app_0 =
+        new FiCaSchedulerApp(appAttemptId_0, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_0, user_e, E);
+
+    final ApplicationAttemptId appAttemptId_1 =
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app_1 =
+        new FiCaSchedulerApp(appAttemptId_1, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_1, user_e, E);  // same user
+
+    final ApplicationAttemptId appAttemptId_2 =
+        TestUtils.getMockApplicationAttemptId(2, 0);
+    FiCaSchedulerApp app_2 =
+        new FiCaSchedulerApp(appAttemptId_2, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_2, user_e, E);  // same user
+
+    // before updating cluster resource
+    assertEquals(2, e.activeApplications.size());
+    assertEquals(1, e.pendingApplications.size());
+
+    e.updateClusterResource(Resources.createResource(200 * 16 * GB, 100 * 32));
+
+    // after updating cluster resource
+    assertEquals(3, e.activeApplications.size());
+    assertEquals(0, e.pendingApplications.size());
+  }
+
   public boolean hasQueueACL(List<QueueUserACLInfo> aclInfos, QueueACL acl) {
     for (QueueUserACLInfo aclInfo : aclInfos) {
       if (aclInfo.getUserAcls().contains(acl)) {

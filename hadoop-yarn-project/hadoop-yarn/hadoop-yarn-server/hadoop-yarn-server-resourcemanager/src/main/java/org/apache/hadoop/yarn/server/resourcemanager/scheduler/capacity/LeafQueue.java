@@ -1481,7 +1481,11 @@ public class LeafQueue implements CSQueue {
     CSQueueUtils.updateQueueStatistics(
         resourceCalculator, this, getParent(), clusterResource, 
         minimumAllocation);
-    
+
+    // queue metrics are updated, more resource may be available
+    // activate the pending applications if possible
+    activateApplications();
+
     // Update application properties
     for (FiCaSchedulerApp application : activeApplications) {
       synchronized (application) {
