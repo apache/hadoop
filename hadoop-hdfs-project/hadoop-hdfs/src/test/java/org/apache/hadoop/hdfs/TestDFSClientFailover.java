@@ -26,8 +26,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.lang.reflect.Field;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 import javax.net.SocketFactory;
 
@@ -35,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -48,9 +52,12 @@ import org.apache.hadoop.util.StringUtils;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import sun.net.spi.nameservice.NameService;
 
 public class TestDFSClientFailover {
   
@@ -200,5 +207,75 @@ public class TestDFSClientFailover {
           StringUtils.stringifyException(ioe).contains(
           "Could not find any configured addresses for URI " + uri));
     }
+  }
+
+  /**
+   * Spy on the Java DNS infrastructure.
+   * This likely only works on Sun-derived JDKs, but uses JUnit's
+   * Assume functionality so that any tests using it are skipped on
+   * incompatible JDKs.
+   */
+  private NameService spyOnNameService() {
+    try {
+      Field f = InetAddress.class.getDeclaredField("nameServices");
+      f.setAccessible(true);
+      Assume.assumeNotNull(f);
+      @SuppressWarnings("unchecked")
+      List<NameService> nsList = (List<NameService>) f.get(null);
+
+      NameService ns = nsList.get(0);
+      Log log = LogFactory.getLog("NameServiceSpy");
+      
+      ns = Mockito.mock(NameService.class,
+          new GenericTestUtils.DelegateAnswer(log, ns));
+      nsList.set(0, ns);
+      return ns;
+    } catch (Throwable t) {
+      LOG.info("Unable to spy on DNS. Skipping test.", t);
+      // In case the JDK we're testing on doesn't work like Sun's, just
+      // skip the test.
+      Assume.assumeNoException(t);
+      throw new RuntimeException(t);
+    }
+  }
+  
+  /**
+   * Test that the client doesn't ever try to DNS-resolve the logical URI.
+   * Regression test for HADOOP-9150.
+   */
+  @Test
+  public void testDoesntDnsResolveLogicalURI() throws Exception {
+    NameService spyNS = spyOnNameService();
+    
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    String logicalHost = fs.getUri().getHost();
+    Path qualifiedRoot = fs.makeQualified(new Path("/"));
+    
+    // Make a few calls against the filesystem.
+    fs.getCanonicalServiceName();
+    fs.listStatus(qualifiedRoot);
+    
+    // Ensure that the logical hostname was never resolved.
+    Mockito.verify(spyNS, Mockito.never()).lookupAllHostAddr(Mockito.eq(logicalHost));
+  }
+  
+  /**
+   * Same test as above, but for FileContext.
+   */
+  @Test
+  public void testFileContextDoesntDnsResolveLogicalURI() throws Exception {
+    NameService spyNS = spyOnNameService();
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    String logicalHost = fs.getUri().getHost();
+    Configuration haClientConf = fs.getConf();
+    
+    FileContext fc = FileContext.getFileContext(haClientConf);
+    Path root = new Path("/");
+    fc.listStatus(root);
+    fc.listStatus(fc.makeQualified(root));
+    fc.getDefaultFileSystem().getCanonicalServiceName();
+
+    // Ensure that the logical hostname was never resolved.
+    Mockito.verify(spyNS, Mockito.never()).lookupAllHostAddr(Mockito.eq(logicalHost));
   }
 }

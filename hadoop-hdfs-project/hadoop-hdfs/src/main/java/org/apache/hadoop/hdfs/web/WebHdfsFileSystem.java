@@ -238,6 +238,11 @@ public class WebHdfsFileSystem extends FileSystem
   public URI getUri() {
     return this.uri;
   }
+  
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    return NetUtils.getCanonicalUri(uri, getDefaultPort());
+  }
 
   /** @return the home directory. */
   public static String getHomeDirectoryString(final UserGroupInformation ugi) {

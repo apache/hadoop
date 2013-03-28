@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -211,12 +212,46 @@ public abstract class FileSystem extends Configured implements Closeable {
   public abstract URI getUri();
   
   /**
-   * Resolve the uri's hostname and add the default port if not in the uri
+   * Return a canonicalized form of this FileSystem's URI.
+   * 
+   * The default implementation simply calls {@link #canonicalizeUri(URI)}
+   * on the filesystem's own URI, so subclasses typically only need to
+   * implement that method.
+   *
+   * @see #canonicalizeUri(URI)
+   */
+  protected URI getCanonicalUri() {
+    return canonicalizeUri(getUri());
+  }
+  
+  /**
+   * Canonicalize the given URI.
+   * 
+   * This is filesystem-dependent, but may for example consist of
+   * canonicalizing the hostname using DNS and adding the default
+   * port if not specified.
+   * 
+   * The default implementation simply fills in the default port if
+   * not specified and if the filesystem has a default port.
+   *
    * @return URI
    * @see NetUtils#getCanonicalUri(URI, int)
    */
-  protected URI getCanonicalUri() {
-    return NetUtils.getCanonicalUri(getUri(), getDefaultPort());
+  protected URI canonicalizeUri(URI uri) {
+    if (uri.getPort() == -1 && getDefaultPort() > 0) {
+      // reconstruct the uri with the default port set
+      try {
+        uri = new URI(uri.getScheme(), uri.getUserInfo(),
+            uri.getHost(), getDefaultPort(),
+            uri.getPath(), uri.getQuery(), uri.getFragment());
+      } catch (URISyntaxException e) {
+        // Should never happen!
+        throw new AssertionError("Valid URI became unparseable: " +
+            uri);
+      }
+    }
+    
+    return uri;
   }
   
   /**
@@ -581,7 +616,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       }
       if (uri != null) {
         // canonicalize uri before comparing with this fs
-        uri = NetUtils.getCanonicalUri(uri, getDefaultPort());
+        uri = canonicalizeUri(uri);
         thatAuthority = uri.getAuthority();
         if (thisAuthority == thatAuthority ||       // authorities match
             (thisAuthority != null &&

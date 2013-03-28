@@ -20,6 +20,7 @@ package org.apache.hadoop.test;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
@@ -266,15 +267,29 @@ public abstract class GenericTestUtils {
    */
   public static class DelegateAnswer implements Answer<Object> { 
     private final Object delegate;
+    private final Log log;
     
     public DelegateAnswer(Object delegate) {
+      this(null, delegate);
+    }
+    
+    public DelegateAnswer(Log log, Object delegate) {
+      this.log = log;
       this.delegate = delegate;
     }
 
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
-      return invocation.getMethod().invoke(
-          delegate, invocation.getArguments());
+      try {
+        if (log != null) {
+          log.info("Call to " + invocation + " on " + delegate,
+              new Exception("TRACE"));
+        }
+        return invocation.getMethod().invoke(
+            delegate, invocation.getArguments());
+      } catch (InvocationTargetException ite) {
+        throw ite.getCause();
+      }
     }
   }
 
