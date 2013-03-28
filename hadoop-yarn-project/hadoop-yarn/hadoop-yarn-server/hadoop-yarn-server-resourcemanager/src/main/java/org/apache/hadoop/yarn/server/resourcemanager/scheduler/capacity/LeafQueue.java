@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -816,7 +815,8 @@ public class LeafQueue implements CSQueue {
         for (Priority priority : application.getPriorities()) {
           // Required resource
           Resource required = 
-              application.getResourceRequest(priority, RMNode.ANY).getCapability();
+              application.getResourceRequest(
+                  priority, ResourceRequest.ANY).getCapability();
 
           // Do we need containers at this 'priority'?
           if (!needContainers(application, priority, required)) {
@@ -1161,7 +1161,7 @@ public class LeafQueue implements CSQueue {
       FiCaSchedulerApp application, Priority priority, 
       RMContainer reservedContainer) {
     ResourceRequest request = 
-      application.getResourceRequest(priority, RMNode.ANY);
+      application.getResourceRequest(priority, ResourceRequest.ANY);
     if (request != null) {
       if (canAssign(application, priority, node, NodeType.OFF_SWITCH, 
           reservedContainer)) {
@@ -1183,7 +1183,7 @@ public class LeafQueue implements CSQueue {
 
       // 'Delay' off-switch
       ResourceRequest offSwitchRequest = 
-          application.getResourceRequest(priority, RMNode.ANY);
+          application.getResourceRequest(priority, ResourceRequest.ANY);
       long missedOpportunities = application.getSchedulingOpportunities(priority);
       long requiredContainers = offSwitchRequest.getNumContainers(); 
       

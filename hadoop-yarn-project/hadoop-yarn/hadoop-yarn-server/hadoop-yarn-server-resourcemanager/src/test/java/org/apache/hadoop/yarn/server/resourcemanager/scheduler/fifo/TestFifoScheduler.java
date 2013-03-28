@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
@@ -40,7 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -200,15 +200,15 @@ public class TestFifoScheduler {
     LOG.info("Adding new tasks...");
     
     Task task_1_1 = new Task(application_1, priority_1, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_1);
 
     Task task_1_2 = new Task(application_1, priority_1, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_2);
 
     Task task_1_3 = new Task(application_1, priority_0, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_3);
     
     application_1.schedule();
@@ -222,7 +222,7 @@ public class TestFifoScheduler {
     application_0.addTask(task_0_2);
     
     Task task_0_3 = new Task(application_0, priority_0, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_0.addTask(task_0_3);
 
     application_0.schedule();

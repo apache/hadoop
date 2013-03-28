@@ -18,18 +18,15 @@
 
 package org.apache.hadoop.yarn.client;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -57,6 +54,11 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestAMRMClient {
   Configuration conf = null;
@@ -182,7 +184,7 @@ public class TestAMRMClient {
     int containersRequestedRack = amClient.remoteRequestsTable.get(priority)
         .get(rack).get(capability).getNumContainers();
     int containersRequestedAny = amClient.remoteRequestsTable.get(priority)
-        .get(AMRMClient.ANY).get(capability).getNumContainers();
+        .get(ResourceRequest.ANY).get(capability).getNumContainers();
 
     assertTrue(containersRequestedNode == 2);
     assertTrue(containersRequestedRack == 2);

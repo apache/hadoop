@@ -43,11 +43,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
@@ -200,9 +198,7 @@ public class Application {
     }
       
     // Off-switch
-    addResourceRequest(priority, requests, 
-        org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode.ANY, 
-        capability);
+    addResourceRequest(priority, requests, ResourceRequest.ANY, capability);
   }
   
   public synchronized void finishTask(Task task) throws IOException {
@@ -377,10 +373,7 @@ public class Application {
       }
     }
     
-    updateResourceRequest(
-        requests.get(
-            org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode.ANY)
-            );
+    updateResourceRequest(requests.get(ResourceRequest.ANY));
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("updateResourceRequests:" + " application=" + applicationId

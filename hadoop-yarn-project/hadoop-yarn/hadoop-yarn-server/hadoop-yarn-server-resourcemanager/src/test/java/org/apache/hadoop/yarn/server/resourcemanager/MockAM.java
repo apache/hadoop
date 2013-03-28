@@ -120,8 +120,8 @@ public class MockAM {
       reqs.add(rackReq);
     }
 
-    ResourceRequest offRackReq = createResourceReq("*", memory, priority,
-        containers);
+    ResourceRequest offRackReq = createResourceReq(ResourceRequest.ANY, memory,
+        priority, containers);
     reqs.add(offRackReq);
     return reqs;
 

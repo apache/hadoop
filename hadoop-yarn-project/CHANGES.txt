@@ -45,6 +45,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-469. Make scheduling mode in FS pluggable. (kkambatl via tucu)
 
+    YARN-450. Define value for * in the scheduling protocol (Zhijie Shen via
+    bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
