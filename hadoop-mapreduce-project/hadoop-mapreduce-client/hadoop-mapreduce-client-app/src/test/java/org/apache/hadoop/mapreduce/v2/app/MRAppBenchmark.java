@@ -230,7 +230,7 @@ public class MRAppBenchmark {
                 List<ResourceRequest> askList = request.getAskList();
                 List<Container> containers = new ArrayList<Container>();
                 for (ResourceRequest req : askList) {
-                  if (req.getHostName() != "*") {
+                  if (!ResourceRequest.isAnyLocation(req.getHostName())) {
                     continue;
                   }
                   int numContainers = req.getNumContainers();
