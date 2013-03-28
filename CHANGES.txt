@@ -94,6 +94,8 @@ Release 1.2.0 - unreleased
 
     HDFS-4597. Backport WebHDFS concat.  (szetszwo)
 
+    MAPREDUCE-5081. Backport DistCpV2.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.
