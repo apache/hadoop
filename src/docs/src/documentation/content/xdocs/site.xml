@@ -47,6 +47,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <streaming  label="Hadoop Streaming"  href="streaming.html" />
     <commands label="Hadoop Commands"  href="commands_manual.html" />
     <distcp         label="DistCp"  href="distcp.html" />
+    <distcp2        label="DistCp Version 2"  href="distcp2.html" />
     <vaidya         label="Vaidya"  href="vaidya.html"/>
     <archives     label="Hadoop Archives" href="hadoop_archives.html"/>
     <gridmix       label="Gridmix"  href="gridmix.html"/>
