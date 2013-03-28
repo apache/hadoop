@@ -538,6 +538,9 @@ Release 2.0.5-beta - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
+    (todd)
+
   BUG FIXES
 
     HADOOP-9294. GetGroupsTestBase fails on Windows. (Chris Nauroth via suresh)
