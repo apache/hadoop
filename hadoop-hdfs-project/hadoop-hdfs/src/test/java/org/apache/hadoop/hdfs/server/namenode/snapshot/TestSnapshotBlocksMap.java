@@ -101,18 +101,20 @@ public class TestSnapshotBlocksMap {
     }
   }
 
-  INodeFile assertBlockCollection(String path, int numBlocks) throws Exception {
-    final INodeFile file = INodeFile.valueOf(fsdir.getINode(path), path);
+  static INodeFile assertBlockCollection(String path, int numBlocks,
+     final FSDirectory dir, final BlockManager blkManager) throws Exception {
+    final INodeFile file = INodeFile.valueOf(dir.getINode(path), path);
     assertEquals(numBlocks, file.getBlocks().length);
     for(BlockInfo b : file.getBlocks()) {
-      assertBlockCollection(file, b);
+      assertBlockCollection(blkManager, file, b);
     }
     return file;
   }
 
-  void assertBlockCollection(final INodeFile file, final BlockInfo b) { 
-    Assert.assertSame(b, blockmanager.getStoredBlock(b));
-    Assert.assertSame(file, blockmanager.getBlockCollection(b));
+  static void assertBlockCollection(final BlockManager blkManager,
+      final INodeFile file, final BlockInfo b) { 
+    Assert.assertSame(b, blkManager.getStoredBlock(b));
+    Assert.assertSame(file, blkManager.getBlockCollection(b));
     Assert.assertSame(file, b.getBlockCollection());
   }
 
@@ -139,7 +141,8 @@ public class TestSnapshotBlocksMap {
     
     // Normal deletion
     {
-      final INodeFile f2 = assertBlockCollection(file2.toString(), 3);
+      final INodeFile f2 = assertBlockCollection(file2.toString(), 3, fsdir,
+          blockmanager);
       BlockInfo[] blocks = f2.getBlocks();
       hdfs.delete(sub2, true);
       // The INode should have been removed from the blocksMap
@@ -159,21 +162,23 @@ public class TestSnapshotBlocksMap {
 
     // set replication so that the inode should be replaced for snapshots
     {
-      INodeFile f1 = assertBlockCollection(file1.toString(), 2);
+      INodeFile f1 = assertBlockCollection(file1.toString(), 2, fsdir,
+          blockmanager);
       Assert.assertSame(INodeFile.class, f1.getClass());
       hdfs.setReplication(file1, (short)2);
-      f1 = assertBlockCollection(file1.toString(), 2);
+      f1 = assertBlockCollection(file1.toString(), 2, fsdir, blockmanager);
       Assert.assertSame(INodeFileWithSnapshot.class, f1.getClass());
     }
     
     // Check the block information for file0
-    final INodeFile f0 = assertBlockCollection(file0.toString(), 4);
+    final INodeFile f0 = assertBlockCollection(file0.toString(), 4, fsdir,
+        blockmanager);
     BlockInfo[] blocks0 = f0.getBlocks();
     
     // Also check the block information for snapshot of file0
     Path snapshotFile0 = SnapshotTestHelper.getSnapshotPath(sub1, "s0",
         file0.getName());
-    assertBlockCollection(snapshotFile0.toString(), 4);
+    assertBlockCollection(snapshotFile0.toString(), 4, fsdir, blockmanager);
     
     // Delete file0
     hdfs.delete(file0, true);
@@ -181,12 +186,12 @@ public class TestSnapshotBlocksMap {
     for(BlockInfo b : blocks0) {
       assertNotNull(blockmanager.getBlockCollection(b));
     }
-    assertBlockCollection(snapshotFile0.toString(), 4);
+    assertBlockCollection(snapshotFile0.toString(), 4, fsdir, blockmanager);
     
     // Compare the INode in the blocksMap with INodes for snapshots
     String s1f0 = SnapshotTestHelper.getSnapshotPath(sub1, "s1",
         file0.getName()).toString();
-    assertBlockCollection(s1f0, 4);
+    assertBlockCollection(s1f0, 4, fsdir, blockmanager);
     
     // Delete snapshot s1
     hdfs.deleteSnapshot(sub1, "s1");
@@ -195,7 +200,7 @@ public class TestSnapshotBlocksMap {
     for(BlockInfo b : blocks0) {
       assertNotNull(blockmanager.getBlockCollection(b));
     }
-    assertBlockCollection(snapshotFile0.toString(), 4);
+    assertBlockCollection(snapshotFile0.toString(), 4, fsdir, blockmanager);
 
     try {
       INodeFile.valueOf(fsdir.getINode(s1f0), s1f0);
@@ -206,21 +211,25 @@ public class TestSnapshotBlocksMap {
     
     // concat file1, file3 and file5 to file4
     if (runConcatTest) {
-      final INodeFile f1 = assertBlockCollection(file1.toString(), 2);
+      final INodeFile f1 = assertBlockCollection(file1.toString(), 2, fsdir,
+          blockmanager);
       final BlockInfo[] f1blocks = f1.getBlocks();
-      final INodeFile f3 = assertBlockCollection(file3.toString(), 5);
+      final INodeFile f3 = assertBlockCollection(file3.toString(), 5, fsdir,
+          blockmanager);
       final BlockInfo[] f3blocks = f3.getBlocks();
-      final INodeFile f5 = assertBlockCollection(file5.toString(), 7);
+      final INodeFile f5 = assertBlockCollection(file5.toString(), 7, fsdir,
+          blockmanager);
       final BlockInfo[] f5blocks = f5.getBlocks();
-      assertBlockCollection(file4.toString(), 1);
+      assertBlockCollection(file4.toString(), 1, fsdir, blockmanager);
 
       hdfs.concat(file4, new Path[]{file1, file3, file5});
 
-      final INodeFile f4 = assertBlockCollection(file4.toString(), 15);
+      final INodeFile f4 = assertBlockCollection(file4.toString(), 15, fsdir,
+          blockmanager);
       final BlockInfo[] blocks4 = f4.getBlocks();
       for(BlockInfo[] blocks : Arrays.asList(f1blocks, f3blocks, blocks4, f5blocks)) {
         for(BlockInfo b : blocks) {
-          assertBlockCollection(f4, b);
+          assertBlockCollection(blockmanager, f4, b);
         }
       }
       assertAllNull(f1, file1, snapshots);
