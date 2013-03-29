@@ -82,6 +82,8 @@ public class SchedulerApp {
   = new HashMap<ContainerId, RMContainer>();
   private List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
+  
+  private boolean isStopped = false;
 
   final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
@@ -125,7 +127,9 @@ public class SchedulerApp {
 
   public synchronized void updateResourceRequests(
       List<ResourceRequest> requests) {
-    this.appSchedulingInfo.updateResourceRequests(requests);
+    if (!isStopped) {
+      this.appSchedulingInfo.updateResourceRequests(requests);
+    }
   }
 
   public Map<String, ResourceRequest> getResourceRequests(Priority priority) {
@@ -159,6 +163,10 @@ public class SchedulerApp {
   public boolean isPending() {
     return this.appSchedulingInfo.isPending();
   }
+  
+  public synchronized boolean isStopped() {
+    return this.isStopped;
+  }
 
   public String getQueueName() {
     return this.appSchedulingInfo.getQueueName();
@@ -174,6 +182,7 @@ public class SchedulerApp {
 
   public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
     // Cleanup all scheduling information
+    this.isStopped = true;
     this.appSchedulingInfo.stop(rmAppAttemptFinalState);
   }
 
@@ -225,6 +234,10 @@ public class SchedulerApp {
   synchronized public RMContainer allocate(NodeType type, SchedulerNode node,
       Priority priority, ResourceRequest request, 
       Container container) {
+    
+    if (isStopped) {
+      return null;
+    }
     
     // Required sanity check - AM can call 'allocate' to update resource 
     // request without locking the scheduler, hence we need to check
