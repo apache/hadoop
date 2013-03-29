@@ -62,10 +62,13 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /****************************************************************
@@ -310,13 +313,14 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /**
-   * Move blocks from srcs to trg
-   * and delete srcs afterwards
-   * RESTRICTION: all blocks should be the same size
+   * Move blocks from srcs to trg and delete srcs afterwards.
+   * The file block sizes must be the same.
+   * 
    * @param trg existing file to append to
    * @param psrcs list of files (same block size, same replication)
    * @throws IOException
    */
+  @Override
   public void concat(Path trg, Path [] psrcs) throws IOException {
     String [] srcs = new String [psrcs.length];
     for(int i=0; i<psrcs.length; i++) {
@@ -564,9 +568,8 @@ public class DistributedFileSystem extends FileSystem {
     return "DFS[" + dfs + "]";
   }
 
-  /** @deprecated DFSClient should not be accessed directly. */
   @InterfaceAudience.Private
-  @Deprecated
+  @VisibleForTesting
   public DFSClient getClient() {
     return dfs;
   }        
@@ -890,6 +893,17 @@ public class DistributedFileSystem extends FileSystem {
   @Override
   public String getCanonicalServiceName() {
     return dfs.getCanonicalServiceName();
+  }
+  
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    if (HAUtil.isLogicalUri(getConf(), uri)) {
+      // Don't try to DNS-resolve logical URIs, since the 'authority'
+      // portion isn't a proper hostname
+      return uri;
+    } else {
+      return NetUtils.getCanonicalUri(uri, getDefaultPort());
+    }
   }
 
   /**

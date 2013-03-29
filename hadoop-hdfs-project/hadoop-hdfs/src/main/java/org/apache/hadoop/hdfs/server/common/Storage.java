@@ -33,6 +33,7 @@ import java.util.Properties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
@@ -663,7 +664,9 @@ public abstract class Storage extends StorageInfo {
         file.write(jvmName.getBytes(Charsets.UTF_8));
         LOG.info("Lock on " + lockF + " acquired by nodename " + jvmName);
       } catch(OverlappingFileLockException oe) {
-        LOG.error("It appears that another namenode " + file.readLine() 
+        // Cannot read from the locked file on Windows.
+        String lockingJvmName = Path.WINDOWS ? "" : (" " + file.readLine());
+        LOG.error("It appears that another namenode" + lockingJvmName
             + " has already locked the storage directory");
         file.close();
         return null;

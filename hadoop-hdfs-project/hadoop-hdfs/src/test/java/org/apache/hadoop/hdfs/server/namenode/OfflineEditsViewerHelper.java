@@ -143,7 +143,7 @@ public class OfflineEditsViewerHelper {
       (DistributedFileSystem)cluster.getFileSystem();
     FileContext fc = FileContext.getFileContext(cluster.getURI(0), config);
     // OP_ADD 0, OP_SET_GENSTAMP 10
-    Path pathFileCreate = new Path("/file_create");
+    Path pathFileCreate = new Path("/file_create_u\1F431");
     FSDataOutputStream s = dfs.create(pathFileCreate);
     // OP_CLOSE 9
     s.close();

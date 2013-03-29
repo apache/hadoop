@@ -15,6 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Environment Variables
+#
+#   JSVC_HOME  home directory of jsvc binary.  Required for starting secure
+#              datanode.
+#
+#   JSVC_OUTFILE  path to jsvc output file.  Defaults to
+#                 $HADOOP_LOG_DIR/jsvc.out.
+#
+#   JSVC_ERRFILE  path to jsvc error file.  Defaults to $HADOOP_LOG_DIR/jsvc.err.
+
 bin=`which $0`
 bin=`dirname ${bin}`
 bin=`cd "$bin" > /dev/null; pwd`
@@ -56,6 +66,14 @@ fi
 COMMAND=$1
 shift
 
+case $COMMAND in
+  # usage flags
+  --help|-help|-h)
+    print_usage
+    exit
+    ;;
+esac
+
 # Determine if we're starting a secure datanode, and if so, redefine appropriate variables
 if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
   if [ -n "$JSVC_HOME" ]; then
@@ -65,9 +83,11 @@ if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_
   
     if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
       HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+      HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
     fi
    
     HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
+    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
     starting_secure_dn="true"
   else
     echo "It looks like you're trying to start a secure DN, but \$JSVC_HOME"\
@@ -126,9 +146,6 @@ else
   CLASS="$COMMAND"
 fi
 
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-fi
 export CLASSPATH=$CLASSPATH
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
@@ -148,9 +165,18 @@ if [ "$starting_secure_dn" = "true" ]; then
       "and set JSVC_HOME to the directory containing the jsvc binary."
     exit
   fi
+
+  if [[ ! $JSVC_OUTFILE ]]; then
+    JSVC_OUTFILE="$HADOOP_LOG_DIR/jsvc.out"
+  fi
+
+  if [[ ! $JSVC_ERRFILE ]]; then
+    JSVC_ERRFILE="$HADOOP_LOG_DIR/jsvc.err"
+  fi
+
   exec "$JSVC" \
-           -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-           -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+           -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
+           -errfile "$JSVC_ERRFILE" \
            -pidfile "$HADOOP_SECURE_DN_PID" \
            -nodetach \
            -user "$HADOOP_SECURE_DN_USER" \

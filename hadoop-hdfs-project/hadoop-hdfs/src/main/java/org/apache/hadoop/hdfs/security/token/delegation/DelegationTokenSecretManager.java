@@ -78,6 +78,7 @@ public class DelegationTokenSecretManager
   
   @Override //SecretManager
   public void checkAvailableForRead() throws StandbyException {
+    namesystem.checkOperation(OperationCategory.READ);
     namesystem.readLock();
     try {
       namesystem.checkOperation(OperationCategory.READ);

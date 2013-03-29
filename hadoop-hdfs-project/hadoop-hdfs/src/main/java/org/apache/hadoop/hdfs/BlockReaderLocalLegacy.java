@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -31,6 +32,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.util.DirectBufferPool;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -92,11 +95,21 @@ class BlockReaderLocalLegacy implements BlockReader {
     }
 
     private synchronized ClientDatanodeProtocol getDatanodeProxy(
-        DatanodeInfo node, Configuration conf, int socketTimeout,
-        boolean connectToDnViaHostname) throws IOException {
+        UserGroupInformation ugi, final DatanodeInfo node,
+        final Configuration conf, final int socketTimeout,
+        final boolean connectToDnViaHostname) throws IOException {
       if (proxy == null) {
-        proxy = DFSUtil.createClientDatanodeProtocolProxy(node, conf,
-            socketTimeout, connectToDnViaHostname);
+        try {
+          proxy = ugi.doAs(new PrivilegedExceptionAction<ClientDatanodeProtocol>() {
+            @Override
+            public ClientDatanodeProtocol run() throws Exception {
+              return DFSUtil.createClientDatanodeProtocolProxy(node, conf,
+                  socketTimeout, connectToDnViaHostname);
+            }
+          });
+        } catch (InterruptedException e) {
+          LOG.warn("encountered exception ", e);
+        }
       }
       return proxy;
     }
@@ -160,17 +173,18 @@ class BlockReaderLocalLegacy implements BlockReader {
   /**
    * The only way this object can be instantiated.
    */
-  static BlockReaderLocalLegacy newBlockReader(Configuration conf, String file,
-      ExtendedBlock blk, Token<BlockTokenIdentifier> token, DatanodeInfo node,
-      int socketTimeout, long startOffset, long length,
-      boolean connectToDnViaHostname) throws IOException {
+  static BlockReaderLocalLegacy newBlockReader(UserGroupInformation ugi,
+      Configuration conf, String file, ExtendedBlock blk,
+      Token<BlockTokenIdentifier> token, DatanodeInfo node, int socketTimeout,
+      long startOffset, long length, boolean connectToDnViaHostname)
+      throws IOException {
 
     LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node
         .getIpcPort());
     // check the cache first
     BlockLocalPathInfo pathinfo = localDatanodeInfo.getBlockLocalPathInfo(blk);
     if (pathinfo == null) {
-      pathinfo = getBlockPathInfo(blk, node, conf, socketTimeout, token,
+      pathinfo = getBlockPathInfo(ugi, blk, node, conf, socketTimeout, token,
           connectToDnViaHostname);
     }
 
@@ -247,13 +261,13 @@ class BlockReaderLocalLegacy implements BlockReader {
     return ldInfo;
   }
   
-  private static BlockLocalPathInfo getBlockPathInfo(ExtendedBlock blk,
-      DatanodeInfo node, Configuration conf, int timeout,
+  private static BlockLocalPathInfo getBlockPathInfo(UserGroupInformation ugi,
+      ExtendedBlock blk, DatanodeInfo node, Configuration conf, int timeout,
       Token<BlockTokenIdentifier> token, boolean connectToDnViaHostname)
-          throws IOException {
+      throws IOException {
     LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node.getIpcPort());
     BlockLocalPathInfo pathinfo = null;
-    ClientDatanodeProtocol proxy = localDatanodeInfo.getDatanodeProxy(node,
+    ClientDatanodeProtocol proxy = localDatanodeInfo.getDatanodeProxy(ugi, node,
         conf, timeout, connectToDnViaHostname);
     try {
       // make RPC to local datanode to find local pathnames of blocks
@@ -282,9 +296,11 @@ class BlockReaderLocalLegacy implements BlockReader {
         DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_DEFAULT);
 
     if (bufferSizeBytes < bytesPerChecksum) {
-      throw new IllegalArgumentException("Configured BlockReaderLocalLegacy buffer size (" + bufferSizeBytes + ") " +
-          "is not large enough to hold a single chunk (" + bytesPerChecksum +  "). Please configure " +
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY + " appropriately");
+      throw new IllegalArgumentException("Configured BlockReaderLocalLegacy " +
+          "buffer size (" + bufferSizeBytes + ") is not large enough to hold " +
+          "a single chunk (" + bytesPerChecksum +  "). Please configure " +
+          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY +
+          " appropriately");
     }
 
     // Round down to nearest chunk size

@@ -22,6 +22,10 @@ Trunk (Unreleased)
 
     HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
 
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -177,6 +181,9 @@ Trunk (Unreleased)
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
 
+    HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
+    cache expires too quickly  (Chris Nauroth via Sanjay)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -299,13 +306,77 @@ Trunk (Unreleased)
     HDFS-4340. Update addBlock() to inculde inode id as additional argument.
     (Brandon Li via suresh)
 
-Release 2.0.4-beta - UNRELEASED
+    HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
+    exists.  (Brandon Li via suresh)
+
+    HDFS-4391. TestDataTransferKeepalive fails when tests are executed in a
+    certain order. (Andrew Wang via atm)
+
+    HDFS-4586. TestDataDirs.testGetDataDirsFromURIs fails with all directories
+    in dfs.datanode.data.dir are invalid. (Ivan Mitic via atm)
+
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
+
+    HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
+    Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
+    HDFS-4163. HDFS distribution build fails on Windows. (Chris Nauroth via
+    suresh)
+
+    HDFS-4316. branch-trunk-win contains test code accidentally added during 
+    work on fixing tests on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4297. Fix issues related to datanode concurrent reading and writing on
+    Windows. (Arpit Agarwal, Chuan Liu via suresh)
+
+    HDFS-4573. Fix TestINodeFile on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4572. Fix TestJournal failures on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4287. HTTPFS tests fail on Windows. (Chris Nauroth via suresh)
+
+    HDFS-4593. TestSaveNamespace fails on Windows. (Arpit Agarwal via suresh)
+
+    HDFS-4582. TestHostsFiles fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4603. TestMiniDFSCluster fails on Windows. (Ivan Mitic via suresh)
+
+    HDFS-4604. TestJournalNode fails on Windows. (Ivan Mitic via suresh)
+
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
+    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
+
+    HDFS-4304. Make FSEditLogOp.MAX_OP_SIZE configurable. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-4518. Finer grained metrics for HDFS capacity.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4519. Support overriding jsvc binary and log file locations
+    when launching secure datanode. (Chris Nauroth via suresh)
+
+    HDFS-4569. Small image transfer related cleanups.
+    (Andrew Wang via suresh)
+
+    HDFS-4521. Invalid network toploogies should not be cached. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-4246. The exclude node list should be more forgiving, for each output
+    stream. (harsh via atm)
+
+    HDFS-4635. Move BlockManager#computeCapacity to LightWeightGSet. (suresh)
+
+    HDFS-4621. Additional logging to help diagnose slow QJM syncs. (todd)
+
+    HDFS-4618. Default transaction interval for checkpoints is too low. (todd)
 
   OPTIMIZATIONS
 
@@ -320,6 +391,86 @@ Release 2.0.4-beta - UNRELEASED
     HDFS-4342. Directories configured in dfs.namenode.edits.dir.required
     but not in dfs.namenode.edits.dir are silently ignored.  (Arpit Agarwal
     via szetszwo)
+
+    HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
+    between delete and replication of same file. (umamahesh)
+
+    HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
+    containing non-ASCII strings. (Colin Patrick McCabe via atm)
+
+    HDFS-4541. Set hadoop.log.dir and hadoop.id.str when starting secure
+    datanode to write the logs to right dir by default. (Arpit Gupta via
+    suresh)
+
+    HDFS-4540. Namenode http server should use the web authentication 
+    keytab for spnego principal. (Arpit Gupta via suresh)
+
+    HDFS-4544. Error in deleting blocks should not do check disk, for
+    all types of errors. (Arpit Agarwal via suresh)
+
+    HDFS-4565. Use DFSUtil.getSpnegoKeytabKey() to get the spnego keytab key
+    in secondary namenode and namenode http server. (Arpit Gupta via suresh)
+
+    HDFS-4571. WebHDFS should not set the service hostname on the server side. 
+    (tucu)
+
+    HDFS-4013. TestHftpURLTimeouts throws NPE. (Chao Shi via suresh)
+
+    HDFS-4592. Default values for access time precision are out of sync between
+    hdfs-default.xml and the code. (atm)
+
+    HDFS-4522. LightWeightGSet expects incrementing a volatile to be atomic.
+    (Colin Patrick McCabe via atm)
+
+    HDFS-4484. libwebhdfs compilation broken with gcc 4.6.2. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-4595. When short circuit read is fails, DFSClient does not fallback
+    to regular reads. (suresh)
+
+    HDFS-4583. TestNodeCount fails. (Ivan Mitic via suresh)
+
+    HDFS-4591. HA clients can fail to fail over while Standby NN is performing
+    long checkpoint. (atm)
+
+    HDFS-3277. fail over to loading a different FSImage if the first one we
+    try to load is corrupt. (Colin Patrick McCabe and Andrew Wang via atm)
+
+    HDFS-4596. Shutting down namenode during checkpointing can lead to md5sum
+    error. (Andrew Wang via atm)
+
+    HDFS-4614. FSNamesystem#getContentSummary should use getPermissionChecker
+    helper method. (atm)
+
+    HDFS-4620. Documentation for dfs.namenode.rpc-address specifies wrong
+    format. (Sandy Ryza via atm)
+
+    HDFS-4607. In TestGetConf.testGetSpecificKey(), use a platform-specific
+    line separator; otherwise, it fails on Windows.  (Ivan Mitic via szetszwo)
+
+    HDFS-4609. TestAuditLogs should release log handles between tests. 
+    (Ivan Mitic via szetszwo)
+
+    HDFS-4615. Fix TestDFSShell failures on Windows.  (Arpit Agarwal
+    via szetszwo)
+
+    HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
+    (Arpit Agarwal via szetszwo)
+
+    HDFS-4598. Fix the default value of ConcatSourcesParam and the WebHDFS doc.
+    (szetszwo)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.3-alpha - 2013-02-06
 
@@ -2292,12 +2443,39 @@ Release 0.23.7 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-4532. RPC call queue may fill due to current user lookup (daryn)
+
   BUG FIXES
 
     HDFS-4288. NN accepts incremental BR as IBR in safemode (daryn via kihwal)
 
     HDFS-4495. Allow client-side lease renewal to be retried beyond soft-limit
     (kihwal)
+
+    HDFS-4128. 2NN gets stuck in inconsistent state if edit log replay fails
+    in the middle (kihwal via daryn)
+
+    HDFS-4542. Webhdfs doesn't support secure proxy users (Daryn Sharp via
+    kihwal)
+
+    HDFS-4560. Webhdfs cannot use tokens obtained by another user (daryn)
+
+    HDFS-4566. Webdhfs token cancelation should use authentication (daryn)
+
+    HDFS-4567. Webhdfs does not need a token for token operations (daryn via
+    kihwal)
+
+    HDFS-4577. Webhdfs operations should declare if authentication is required
+    (daryn via kihwal)
+
+    HDFS-3344. Unreliable corrupt blocks counting in TestProcessCorruptBlocks
+    (kihwal)
+
+    HDFS-3367. WebHDFS doesn't use the logged in user when opening
+    connections (daryn)
+
+    HDFS-4581. checkDiskError should not be called on network errors (Rohit
+    Kochar via kihwal)
 
 Release 0.23.6 - UNRELEASED
 

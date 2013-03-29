@@ -99,7 +99,6 @@ import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -212,7 +211,6 @@ public class NamenodeWebHdfsMethods {
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
     t.setKind(WebHdfsFileSystem.TOKEN_KIND);
-    SecurityUtil.setTokenService(t, namenode.getHttpAddress());
     return t;
   }
 

@@ -602,13 +602,13 @@ class BlockReceiver implements Closeable {
           offsetInBlock > lastCacheDropOffset + CACHE_DROP_LAG_BYTES) {
         long twoWindowsAgo = lastCacheDropOffset - CACHE_DROP_LAG_BYTES;
         if (twoWindowsAgo > 0 && dropCacheBehindWrites) {
-          NativeIO.posixFadviseIfPossible(outFd, 0, lastCacheDropOffset,
-              NativeIO.POSIX_FADV_DONTNEED);
+          NativeIO.POSIX.posixFadviseIfPossible(outFd, 0, lastCacheDropOffset,
+              NativeIO.POSIX.POSIX_FADV_DONTNEED);
         }
         
         if (syncBehindWrites) {
-          NativeIO.syncFileRangeIfPossible(outFd, lastCacheDropOffset, CACHE_DROP_LAG_BYTES,
-              NativeIO.SYNC_FILE_RANGE_WRITE);
+          NativeIO.POSIX.syncFileRangeIfPossible(outFd, lastCacheDropOffset, CACHE_DROP_LAG_BYTES,
+              NativeIO.POSIX.SYNC_FILE_RANGE_WRITE);
         }
         
         lastCacheDropOffset += CACHE_DROP_LAG_BYTES;

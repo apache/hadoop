@@ -25,10 +25,10 @@ import java.util.Map;
 
 import javax.servlet.ServletContext;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.AuthFilter;
@@ -77,7 +77,8 @@ public class NameNodeHttpServer {
         if (UserGroupInformation.isSecurityEnabled()) {
           initSpnego(conf,
               DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+              DFSUtil.getSpnegoKeytabKey(conf,
+                  DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
         }
         if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
           //add SPNEGO authentication filter for webhdfs
@@ -112,11 +113,8 @@ public class NameNodeHttpServer {
                     DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
                     "' is not set.");
         }
-        String httpKeytab = conf.get(
-          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
-        if (httpKeytab == null) {
-          httpKeytab = conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
-        }
+        String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
+            DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
         if (httpKeytab != null && !httpKeytab.isEmpty()) {
           params.put(
             DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,

@@ -55,6 +55,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -476,6 +477,10 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                              " for " + blk);
         }
         return chosenNode;
+      } catch (AccessControlException ex) {
+        DFSClient.LOG.warn("Short circuit access failed " + ex);
+        dfsClient.disableLegacyBlockReaderLocal();
+        continue;
       } catch (IOException ex) {
         if (ex instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
           DFSClient.LOG.info("Will fetch a new encryption key and retry, " 
@@ -822,6 +827,10 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                  e.getPos() + " from " + chosenNode);
         // we want to remember what we have tried
         addIntoCorruptedBlockMap(block.getBlock(), chosenNode, corruptedBlockMap);
+      } catch (AccessControlException ex) {
+        DFSClient.LOG.warn("Short circuit access failed " + ex);
+        dfsClient.disableLegacyBlockReaderLocal();
+        continue;
       } catch (IOException e) {
         if (e instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
           DFSClient.LOG.info("Will fetch a new encryption key and retry, " 
@@ -925,8 +934,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         DFSClient.isLocalAddress(dnAddr) &&
         (!shortCircuitForbidden())) {
       try {
-        return BlockReaderFactory.getLegacyBlockReaderLocal(dfsClient.conf,
-            clientName, block, blockToken, chosenNode,
+        return BlockReaderFactory.getLegacyBlockReaderLocal(dfsClient.ugi,
+            dfsClient.conf, clientName, block, blockToken, chosenNode,
             dfsClient.hdfsTimeout, startOffset,dfsClient.connectToDnViaHostname());
       } catch (IOException e) {
         DFSClient.LOG.warn("error creating legacy BlockReaderLocal.  " +
@@ -1083,8 +1092,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
    * only report if the total number of replica is 1. We do not
    * report otherwise since this maybe due to the client is a handicapped client
    * (who can not read).
-   * @param corruptedBlockMap, map of corrupted blocks
-   * @param dataNodeCount, number of data nodes who contains the block replicas
+   * @param corruptedBlockMap map of corrupted blocks
+   * @param dataNodeCount number of data nodes who contains the block replicas
    */
   private void reportCheckSumFailure(
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap, 

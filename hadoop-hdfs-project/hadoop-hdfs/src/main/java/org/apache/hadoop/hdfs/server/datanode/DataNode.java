@@ -60,8 +60,11 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.AbstractList;
@@ -1281,7 +1284,13 @@ public class DataNode extends Configured
   protected void checkDiskError(Exception e ) throws IOException {
     
     LOG.warn("checkDiskError: exception: ", e);
-    
+    if (e instanceof SocketException || e instanceof SocketTimeoutException
+    	  || e instanceof ClosedByInterruptException 
+    	  || e.getMessage().startsWith("Broken pipe")) {
+      LOG.info("Not checking disk as checkDiskError was called on a network" +
+      		" related exception");	
+      return;
+    }
     if (e.getMessage() != null &&
         e.getMessage().startsWith("No space left on device")) {
       throw new DiskOutOfSpaceException("No space left on device");
@@ -1593,8 +1602,12 @@ public class DataNode extends Configured
       } catch (IOException ie) {
         LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
             targets[0] + " got ", ie);
-        // check if there are any disk problem
-        checkDiskError();
+          // check if there are any disk problem
+        try{
+          checkDiskError(ie);
+        } catch(IOException e) {
+            LOG.warn("DataNode.checkDiskError failed in run() with: ", e);
+        }
         
       } finally {
         xmitsInProgress.getAndDecrement();
@@ -1729,6 +1742,21 @@ public class DataNode extends Configured
     }
   }
 
+  // Small wrapper around the DiskChecker class that provides means to mock
+  // DiskChecker static methods and unittest DataNode#getDataDirsFromURIs.
+  static class DataNodeDiskChecker {
+    private FsPermission expectedPermission;
+
+    public DataNodeDiskChecker(FsPermission expectedPermission) {
+      this.expectedPermission = expectedPermission;
+    }
+
+    public void checkDir(LocalFileSystem localFS, Path path)
+        throws DiskErrorException, IOException {
+      DiskChecker.checkDir(localFS, path, expectedPermission);
+    }
+  }
+
   /**
    * Make an instance of DataNode after ensuring that at least one of the
    * given data directories (and their parent directories, if necessary)
@@ -1747,7 +1775,10 @@ public class DataNode extends Configured
     FsPermission permission = new FsPermission(
         conf.get(DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
                  DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
-    ArrayList<File> dirs = getDataDirsFromURIs(dataDirs, localFS, permission);
+    DataNodeDiskChecker dataNodeDiskChecker =
+        new DataNodeDiskChecker(permission);
+    ArrayList<File> dirs =
+        getDataDirsFromURIs(dataDirs, localFS, dataNodeDiskChecker);
     DefaultMetricsSystem.initialize("DataNode");
 
     assert dirs.size() > 0 : "number of data directories should be > 0";
@@ -1756,7 +1787,8 @@ public class DataNode extends Configured
 
   // DataNode ctor expects AbstractList instead of List or Collection...
   static ArrayList<File> getDataDirsFromURIs(Collection<URI> dataDirs,
-      LocalFileSystem localFS, FsPermission permission) throws IOException {
+      LocalFileSystem localFS, DataNodeDiskChecker dataNodeDiskChecker)
+          throws IOException {
     ArrayList<File> dirs = new ArrayList<File>();
     StringBuilder invalidDirs = new StringBuilder();
     for (URI dirURI : dataDirs) {
@@ -1768,7 +1800,7 @@ public class DataNode extends Configured
       // drop any (illegal) authority in the URI for backwards compatibility
       File dir = new File(dirURI.getPath());
       try {
-        DiskChecker.checkDir(localFS, new Path(dir.toURI()), permission);
+        dataNodeDiskChecker.checkDir(localFS, new Path(dir.toURI()));
         dirs.add(dir);
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "

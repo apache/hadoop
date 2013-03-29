@@ -47,7 +47,7 @@
     RPC address that handles all clients requests. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.rpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+    The value of this property will take the form of nn-host1:rpc-port.
   </description>
 </property>
 
@@ -59,7 +59,7 @@
     connecting to this address if it is configured. In the case of HA/Federation where multiple namenodes exist,
     the name service id is added to the name e.g. dfs.namenode.servicerpc-address.ns1
     dfs.namenode.rpc-address.EXAMPLENAMESERVICE
-    The value of this property will take the form of hdfs://nn-host1:rpc-port.
+    The value of this property will take the form of nn-host1:rpc-port.
     If the value of this property is unset the value of dfs.namenode.rpc-address will be used as the default.
   </description>
 </property>
@@ -595,6 +595,17 @@
 </property>
 
 <property>
+  <name>dfs.client.write.exclude.nodes.cache.expiry.interval.millis</name>
+  <value>600000</value>
+  <description>The maximum period to keep a DN in the excluded nodes list
+  at a client. After this period, in milliseconds, the previously excluded node(s) will
+  be removed automatically from the cache and will be considered good for block allocations
+  again. Useful to lower or raise in situations where you keep a file open for very long
+  periods (such as a Write-Ahead-Log (WAL) file) to make the writer tolerant to cluster maintenance
+  restarts. Defaults to 10 minutes.</description>
+</property>
+
+<property>
   <name>dfs.namenode.checkpoint.dir</name>
   <value>file://${hadoop.tmp.dir}/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
@@ -624,7 +635,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.txns</name>
-  <value>40000</value>
+  <value>1000000</value>
   <description>The Secondary NameNode or CheckpointNode will create a checkpoint
   of the namespace every 'dfs.namenode.checkpoint.txns' transactions, regardless
   of whether 'dfs.namenode.checkpoint.period' has expired.
@@ -637,6 +648,15 @@
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
   of uncheckpointed transactions.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.checkpoint.max-retries</name>
+  <value>3</value>
+  <description>The SecondaryNameNode retries failed checkpointing. If the 
+  failure occurs while loading fsimage or replaying edits, the number of
+  retries is limited by this variable. 
   </description>
 </property>
 
@@ -725,11 +745,28 @@
 </property>
 
 <property>
+  <name>dfs.image.transfer.timeout</name>
+  <value>600000</value>
+  <description>
+        Timeout for image transfer in milliseconds. This timeout and the related
+        dfs.image.transfer.bandwidthPerSec parameter should be configured such
+        that normal image transfer can complete within the timeout.
+        This timeout prevents client hangs when the sender fails during
+        image transfer, which is particularly important during checkpointing.
+        Note that this timeout applies to the entirety of image transfer, and
+        is not a socket timeout.
+  </description>
+</property>
+
+<property>
   <name>dfs.image.transfer.bandwidthPerSec</name>
   <value>0</value>
   <description>
-        Specifies the maximum amount of bandwidth that can be utilized for image
-        transfer in term of the number of bytes per second.
+        Maximum bandwidth used for image transfer in bytes per second.
+        This can help keep normal namenode operations responsive during
+        checkpointing. The maximum bandwidth and timeout in
+        dfs.image.transfer.timeout should be set such that normal image
+        transfers can complete successfully.
         A default value of 0 indicates that throttling is disabled. 
   </description>
 </property>

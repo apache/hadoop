@@ -40,6 +40,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 
@@ -242,14 +243,15 @@ public class BlockReaderFactory {
    * This block reader implements the path-based style of local reads
    * first introduced in HDFS-2246.
    */
-  static BlockReader getLegacyBlockReaderLocal(Configuration conf,
-      String src, ExtendedBlock blk, Token<BlockTokenIdentifier> accessToken,
-      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock,
+  static BlockReader getLegacyBlockReaderLocal(UserGroupInformation ugi,
+      Configuration conf, String src, ExtendedBlock blk,
+      Token<BlockTokenIdentifier> accessToken, DatanodeInfo chosenNode,
+      int socketTimeout, long offsetIntoBlock,
       boolean connectToDnViaHostname) throws InvalidToken, IOException {
     try {
-      return BlockReaderLocalLegacy.newBlockReader(conf, src, blk, accessToken,
-          chosenNode, socketTimeout, offsetIntoBlock, blk.getNumBytes()
-              - offsetIntoBlock, connectToDnViaHostname);
+      return BlockReaderLocalLegacy.newBlockReader(ugi, conf, src,
+          blk, accessToken, chosenNode, socketTimeout, offsetIntoBlock,
+          blk.getNumBytes() - offsetIntoBlock, connectToDnViaHostname);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
           AccessControlException.class);

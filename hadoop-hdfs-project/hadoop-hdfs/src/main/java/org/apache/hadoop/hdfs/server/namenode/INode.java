@@ -282,7 +282,11 @@ abstract class INode implements Comparable<byte[]> {
 
   String getLocalParentDir() {
     INode inode = isRoot() ? this : getParent();
-    return (inode != null) ? inode.getFullPathName() : "";
+    String parentDir = "";
+    if (inode != null) {
+      parentDir = inode.getFullPathName();
+    }
+    return (parentDir != null) ? parentDir : "";
   }
 
   /**
