@@ -440,6 +440,9 @@ Release 0.23.7 - UNRELEASED
     YARN-109. .tmp file is not deleted for localized archives (Mayank Bansal 
     via bobby)
 
+    YARN-460. CS user left in list of active users for the queue even when 
+    application finished (tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES

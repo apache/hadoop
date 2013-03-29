@@ -91,6 +91,9 @@ public class FiCaSchedulerApp extends SchedulerApplication {
 
   final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
+
+  private boolean isStopped = false;
+
   
   /**
    * Count how many times the application has been given an opportunity
@@ -132,7 +135,9 @@ public class FiCaSchedulerApp extends SchedulerApplication {
 
   public synchronized void updateResourceRequests(
       List<ResourceRequest> requests) {
-    this.appSchedulingInfo.updateResourceRequests(requests);
+    if (!isStopped) {
+      this.appSchedulingInfo.updateResourceRequests(requests);
+    }
   }
 
   public Map<String, ResourceRequest> getResourceRequests(Priority priority) {
@@ -168,6 +173,10 @@ public class FiCaSchedulerApp extends SchedulerApplication {
     return this.appSchedulingInfo.isPending();
   }
 
+  public synchronized boolean isStopped() {
+    return this.isStopped;
+  }
+
   public String getQueueName() {
     return this.appSchedulingInfo.getQueueName();
   }
@@ -183,6 +192,7 @@ public class FiCaSchedulerApp extends SchedulerApplication {
 
   public synchronized void stop(RMAppAttemptState rmAppAttemptFinalState) {
     // Cleanup all scheduling information
+    this.isStopped = true;
     this.appSchedulingInfo.stop(rmAppAttemptFinalState);
   }
 
@@ -234,6 +244,10 @@ public class FiCaSchedulerApp extends SchedulerApplication {
   synchronized public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
       Priority priority, ResourceRequest request, 
       Container container) {
+
+    if (isStopped) {
+      return null;
+    }
     
     // Required sanity check - AM can call 'allocate' to update resource 
     // request without locking the scheduler, hence we need to check
