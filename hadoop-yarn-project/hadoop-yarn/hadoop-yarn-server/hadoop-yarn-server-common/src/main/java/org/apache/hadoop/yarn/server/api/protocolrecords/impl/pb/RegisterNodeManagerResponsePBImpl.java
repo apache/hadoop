@@ -98,6 +98,7 @@ public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeMan
     if (masterKey == null)
       builder.clearMasterKey();
     this.masterKey = masterKey;
+    rebuild = true;
   }
 
   @Override
@@ -114,9 +115,10 @@ public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeMan
     maybeInitBuilder();
     if (nodeAction == null) {
       builder.clearNodeAction();
-      return;
+    } else {
+      builder.setNodeAction(convertToProtoFormat(nodeAction));
     }
-    builder.setNodeAction(convertToProtoFormat(nodeAction));
+    rebuild = true;
   }
 
   private NodeAction convertFromProtoFormat(NodeActionProto p) {

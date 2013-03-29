@@ -103,6 +103,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-24. Nodemanager fails to start if log aggregation enabled and 
     namenode unavailable. (sandyr via tucu)
 
+    YARN-515. Node Manager not getting the master key. (Robert Joseph Evans
+    via jlowe)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
