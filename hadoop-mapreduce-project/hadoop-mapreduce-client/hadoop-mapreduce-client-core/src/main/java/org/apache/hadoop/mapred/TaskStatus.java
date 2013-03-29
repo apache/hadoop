@@ -58,7 +58,6 @@ public abstract class TaskStatus implements Writable, Cloneable {
   private volatile State runState;
   private String diagnosticInfo;
   private String stateString;
-  private String taskTracker;
   private int numSlots;
     
   private long startTime; //in ms
@@ -98,7 +97,6 @@ public abstract class TaskStatus implements Writable, Cloneable {
     this.runState = runState;
     setDiagnosticInfo(diagnosticInfo);
     setStateString(stateString);
-    this.taskTracker = taskTracker;
     this.phase = phase;
     this.counters = counters;
     this.includeAllCounters = true;
@@ -106,17 +104,12 @@ public abstract class TaskStatus implements Writable, Cloneable {
   
   public TaskAttemptID getTaskID() { return taskid; }
   public abstract boolean getIsMap();
-  public int getNumSlots() {
-    return numSlots;
-  }
 
   public float getProgress() { return progress; }
   public void setProgress(float progress) {
     this.progress = progress;
   } 
   public State getRunState() { return runState; }
-  public String getTaskTracker() {return taskTracker;}
-  public void setTaskTracker(String tracker) { this.taskTracker = tracker;}
   public void setRunState(State runState) { this.runState = runState; }
   public String getDiagnosticInfo() { return diagnosticInfo; }
   public void setDiagnosticInfo(String info) {
@@ -163,7 +156,6 @@ public abstract class TaskStatus implements Writable, Cloneable {
 
   /**
    * Set the next record range which is going to be processed by Task.
-   * @param nextRecordRange
    */
   public void setNextRecordRange(SortedRanges.Range nextRecordRange) {
     this.nextRecordRange = nextRecordRange;
@@ -212,7 +204,6 @@ public abstract class TaskStatus implements Writable, Cloneable {
 
   /**
    * Set shuffle finish time. 
-   * @param shuffleFinishTime 
    */
   void setShuffleFinishTime(long shuffleFinishTime) {}
 
@@ -230,7 +221,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
   
   /**
    * Set map phase finish time. 
-   * @param mapFinishTime 
+   * @param mapFinishTime
    */
   void setMapFinishTime(long mapFinishTime) {}
 
@@ -306,21 +297,6 @@ public abstract class TaskStatus implements Writable, Cloneable {
     }
   }
 
-  boolean inTaskCleanupPhase() {
-    return (this.phase == TaskStatus.Phase.CLEANUP && 
-      (this.runState == TaskStatus.State.FAILED_UNCLEAN || 
-      this.runState == TaskStatus.State.KILLED_UNCLEAN));
-  }
-  
-  public boolean getIncludeAllCounters() {
-    return includeAllCounters;
-  }
-  
-  public void setIncludeAllCounters(boolean send) {
-    includeAllCounters = send;
-    counters.setWriteAllCounters(send);
-  }
-  
   /**
    * Get task's counters.
    */
@@ -494,18 +470,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
   // Factory-like methods to create/read/write appropriate TaskStatus objects
   //////////////////////////////////////////////////////////////////////////////
   
-  static TaskStatus createTaskStatus(DataInput in, TaskAttemptID taskId, 
-                                     float progress, int numSlots,
-                                     State runState, String diagnosticInfo,
-                                     String stateString, String taskTracker,
-                                     Phase phase, Counters counters) 
-  throws IOException {
-    boolean isMap = in.readBoolean();
-    return createTaskStatus(isMap, taskId, progress, numSlots, runState, 
-                            diagnosticInfo, stateString, taskTracker, phase, 
-                            counters);
-  }
-  
+
   static TaskStatus createTaskStatus(boolean isMap, TaskAttemptID taskId, 
                                      float progress, int numSlots,
                                      State runState, String diagnosticInfo,
@@ -523,17 +488,5 @@ public abstract class TaskStatus implements Writable, Cloneable {
     return (isMap) ? new MapTaskStatus() : new ReduceTaskStatus();
   }
 
-  static TaskStatus readTaskStatus(DataInput in) throws IOException {
-    boolean isMap = in.readBoolean();
-    TaskStatus taskStatus = createTaskStatus(isMap);
-    taskStatus.readFields(in);
-    return taskStatus;
-  }
-  
-  static void writeTaskStatus(DataOutput out, TaskStatus taskStatus) 
-  throws IOException {
-    out.writeBoolean(taskStatus.getIsMap());
-    taskStatus.write(out);
-  }
 }
 

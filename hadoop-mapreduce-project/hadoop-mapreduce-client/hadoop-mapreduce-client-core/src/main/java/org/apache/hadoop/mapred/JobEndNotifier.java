@@ -19,8 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
@@ -39,62 +37,9 @@ public class JobEndNotifier {
   private static final Log LOG =
     LogFactory.getLog(JobEndNotifier.class.getName());
 
-  private static Thread thread;
-  private static volatile boolean running;
-  private static BlockingQueue<JobEndStatusInfo> queue =
-    new DelayQueue<JobEndStatusInfo>();
 
-  public static void startNotifier() {
-    running = true;
-    thread = new Thread(
-                        new Runnable() {
-                          public void run() {
-                            try {
-                              while (running) {
-                                sendNotification(queue.take());
-                              }
-                            }
-                            catch (InterruptedException irex) {
-                              if (running) {
-                                LOG.error("Thread has ended unexpectedly", irex);
-                              }
-                            }
-                          }
-
-                          private void sendNotification(JobEndStatusInfo notification) {
-                            try {
-                              int code = httpNotification(notification.getUri());
-                              if (code != 200) {
-                                throw new IOException("Invalid response status code: " + code);
-                              }
-                            }
-                            catch (IOException ioex) {
-                              LOG.error("Notification failure [" + notification + "]", ioex);
-                              if (notification.configureForRetry()) {
-                                try {
-                                  queue.put(notification);
-                                }
-                                catch (InterruptedException iex) {
-                                  LOG.error("Notification queuing error [" + notification + "]",
-                                            iex);
-                                }
-                              }
-                            }
-                            catch (Exception ex) {
-                              LOG.error("Notification failure [" + notification + "]", ex);
-                            }
-                          }
-
-                        }
-
-                        );
-    thread.start();
-  }
-
-  public static void stopNotifier() {
-    running = false;
-    thread.interrupt();
-  }
+  
+ 
 
   private static JobEndStatusInfo createNotification(JobConf conf,
                                                      JobStatus status) {
@@ -118,17 +63,7 @@ public class JobEndNotifier {
     return notification;
   }
 
-  public static void registerNotification(JobConf jobConf, JobStatus status) {
-    JobEndStatusInfo notification = createNotification(jobConf, status);
-    if (notification != null) {
-      try {
-        queue.put(notification);
-      }
-      catch (InterruptedException iex) {
-        LOG.error("Notification queuing failure [" + notification + "]", iex);
-      }
-    }
-  }
+  
 
   private static int httpNotification(String uri) throws IOException {
     URI url = new URI(uri, false);
@@ -194,10 +129,6 @@ public class JobEndNotifier {
       return retryInterval;
     }
 
-    public long getDelayTime() {
-      return delayTime;
-    }
-
     public boolean configureForRetry() {
       boolean retry = false;
       if (getRetryAttempts() > 0) {
@@ -219,13 +150,7 @@ public class JobEndNotifier {
 
     @Override
     public boolean equals(Object o) {
-      if (!(o instanceof JobEndStatusInfo)) {
-        return false;
-      }
-      if (delayTime == ((JobEndStatusInfo)o).delayTime) {
-        return true;
-      }
-      return false;
+      return o instanceof JobEndStatusInfo && delayTime == ((JobEndStatusInfo) o).delayTime;
     }
 
     @Override

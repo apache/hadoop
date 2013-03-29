@@ -119,7 +119,7 @@ public class TaskLog {
     //stderr:<start-offset in the stderr file> <length>
     //syslog:<start-offset in the syslog file> <length>
     LogFileDetail l = new LogFileDetail();
-    String str = null;
+    String str;
     try {
       str = fis.readLine();
       if (str == null) { // the file doesn't have anything
@@ -199,7 +199,7 @@ public class TaskLog {
 
     BufferedOutputStream bos = 
       new BufferedOutputStream(
-        SecureIOUtils.createForWrite(tmpIndexFile, 0644));
+        SecureIOUtils.createForWrite(tmpIndexFile, 644));
     DataOutputStream dos = new DataOutputStream(bos);
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
@@ -391,74 +391,7 @@ public class TaskLog {
     return conf.getLong(JobContext.TASK_USERLOG_LIMIT, 0) * 1024;
   }
 
-  /**
-   * Wrap a command in a shell to capture stdout and stderr to files.
-   * If the tailLength is 0, the entire output will be saved.
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @return the modified command that should be run
-   */
-  public static List<String> captureOutAndError(List<String> cmd, 
-                                                File stdoutFilename,
-                                                File stderrFilename,
-                                                long tailLength
-                                               ) throws IOException {
-    return captureOutAndError(null, cmd, stdoutFilename,
-                              stderrFilename, tailLength, false);
-  }
 
-  /**
-   * Wrap a command in a shell to capture stdout and stderr to files.
-   * Setup commands such as setting memory limit can be passed which 
-   * will be executed before exec.
-   * If the tailLength is 0, the entire output will be saved.
-   * @param setup The setup commands for the execed process.
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @return the modified command that should be run
-   */
-  public static List<String> captureOutAndError(List<String> setup,
-                                                List<String> cmd, 
-                                                File stdoutFilename,
-                                                File stderrFilename,
-                                                long tailLength
-                                               ) throws IOException {
-    return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
-                              tailLength, false);
-  }
-
-  /**
-   * Wrap a command in a shell to capture stdout and stderr to files.
-   * Setup commands such as setting memory limit can be passed which 
-   * will be executed before exec.
-   * If the tailLength is 0, the entire output will be saved.
-   * @param setup The setup commands for the execed process.
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @param pidFileName The name of the pid-file. pid-file's usage is deprecated
-   * @return the modified command that should be run
-   * 
-   * @deprecated     pidFiles are no more used. Instead pid is exported to
-   *                 env variable JVM_PID.
-   */
-  @Deprecated
-  public static List<String> captureOutAndError(List<String> setup,
-                                                List<String> cmd, 
-                                                File stdoutFilename,
-                                                File stderrFilename,
-                                                long tailLength,
-                                                String pidFileName
-                                               ) throws IOException {
-    return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
-        tailLength, false);
-  }
-  
   /**
    * Wrap a command in a shell to capture stdout and stderr to files.
    * Setup commands such as setting memory limit can be passed which 
@@ -506,10 +439,10 @@ public class TaskLog {
                                       boolean useSetsid)
                                 throws IOException {
     
-    String stdout = FileUtil.makeShellPath(stdoutFilename);
-    String stderr = FileUtil.makeShellPath(stderrFilename);    
-    StringBuffer mergedCmd = new StringBuffer();
-    
+    String stdOut = FileUtil.makeShellPath(stdoutFilename);
+    String stdErr = FileUtil.makeShellPath(stderrFilename);
+    StringBuffer mergedCmd= new StringBuffer();
+
     // Export the pid of taskJvm to env variable JVM_PID.
     // Currently pid is not used on Windows
     if (!Shell.WINDOWS) {
@@ -536,54 +469,24 @@ public class TaskLog {
       mergedCmd.append(" -c ");
       mergedCmd.append(tailLength);
       mergedCmd.append(" >> ");
-      mergedCmd.append(stdout);
+      mergedCmd.append(stdOut);
       mergedCmd.append(" ; exit $PIPESTATUS ) 2>&1 | ");
       mergedCmd.append(tailCommand);
       mergedCmd.append(" -c ");
       mergedCmd.append(tailLength);
       mergedCmd.append(" >> ");
-      mergedCmd.append(stderr);
+      mergedCmd.append(stdErr);
       mergedCmd.append(" ; exit $PIPESTATUS");
     } else {
       mergedCmd.append(" 1>> ");
-      mergedCmd.append(stdout);
+      mergedCmd.append(stdOut);
       mergedCmd.append(" 2>> ");
-      mergedCmd.append(stderr);
+      mergedCmd.append(stdErr);
     }
     return mergedCmd.toString();
   }
   
-  /**
-   * Construct the command line for running the debug script
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @return the command line as a String
-   * @throws IOException
-   */
-  static String buildDebugScriptCommandLine(List<String> cmd, String debugout)
-  throws IOException {
-    StringBuilder mergedCmd = new StringBuilder();
-    mergedCmd.append("exec ");
-    boolean isExecutable = true;
-    for(String s: cmd) {
-      if (isExecutable) {
-        // the executable name needs to be expressed as a shell path for the  
-        // shell to find it.
-        mergedCmd.append(FileUtil.makeShellPath(new File(s)));
-        isExecutable = false; 
-      } else {
-        mergedCmd.append(s);
-      }
-      mergedCmd.append(" ");
-    }
-    mergedCmd.append(" < /dev/null ");
-    mergedCmd.append(" >");
-    mergedCmd.append(debugout);
-    mergedCmd.append(" 2>&1 ");
-    return mergedCmd.toString();
-  }
+
   /**
    * Add quotes to each of the command strings and
    * return as a single string 
@@ -595,7 +498,7 @@ public class TaskLog {
    */
   public static String addCommand(List<String> cmd, boolean isExecutable) 
   throws IOException {
-    StringBuffer command = new StringBuffer();
+    StringBuilder command = new StringBuilder();
     for(String s: cmd) {
     	command.append('\'');
       if (isExecutable) {
@@ -612,25 +515,7 @@ public class TaskLog {
     return command.toString();
   }
   
-  /**
-   * Wrap a command in a shell to capture debug script's 
-   * stdout and stderr to debugout.
-   * @param cmd The command and the arguments that should be run
-   * @param debugoutFilename The filename that stdout and stderr
-   *  should be saved to.
-   * @return the modified command that should be run
-   * @throws IOException
-   */
-  public static List<String> captureDebugOut(List<String> cmd, 
-                                             File debugoutFilename
-                                            ) throws IOException {
-    String debugout = FileUtil.makeShellPath(debugoutFilename);
-    List<String> result = new ArrayList<String>(3);
-    result.add(bashCommand);
-    result.add("-c");
-    result.add(buildDebugScriptCommandLine(cmd, debugout));
-    return result;
-  }
+  
   
   /**
    * Method to return the location of user log directory.
@@ -644,7 +529,6 @@ public class TaskLog {
   /**
    * Get the user log directory for the job jobid.
    * 
-   * @param jobid
    * @return user log directory for the job
    */
   public static File getJobDir(JobID jobid) {
