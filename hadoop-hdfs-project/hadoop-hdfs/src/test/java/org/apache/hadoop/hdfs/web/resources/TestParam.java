@@ -17,17 +17,21 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+import java.util.Arrays;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 public class TestParam {
   public static final Log LOG = LogFactory.getLog(TestParam.class);
@@ -264,5 +268,21 @@ public class TestParam {
   public void userNameValidDollarSign() {
     UserParam userParam = new UserParam("a$");
     assertNotNull(userParam.getValue());
+  }
+  
+  @Test
+  public void testConcatSourcesParam() {
+    final String[] strings = {"/", "/foo", "/bar"};
+    for(int n = 0; n < strings.length; n++) {
+      final String[] sub = new String[n]; 
+      final Path[] paths = new Path[n];
+      for(int i = 0; i < paths.length; i++) {
+        paths[i] = new Path(sub[i] = strings[i]);
+      }
+
+      final String expected = StringUtils.join(",", Arrays.asList(sub));
+      final ConcatSourcesParam computed = new ConcatSourcesParam(paths);
+      Assert.assertEquals(expected, computed.getValue());
+    }
   }
 }

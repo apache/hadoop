@@ -18,10 +18,28 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
 public interface NodeHeartbeatResponse {
-  public abstract HeartbeatResponse getHeartbeatResponse();
+  int getResponseId();
+  NodeAction getNodeAction();
+
+  List<ContainerId> getContainersToCleanup();
+
+  List<ApplicationId> getApplicationsToCleanup();
+
+  void setResponseId(int responseId);
+  void setNodeAction(NodeAction action);
+
+  MasterKey getMasterKey();
+  void setMasterKey(MasterKey secretKey);
+
+  void addAllContainersToCleanup(List<ContainerId> containers);
   
-  public abstract void setHeartbeatResponse(HeartbeatResponse heartbeatResponse);
+  void addAllApplicationsToCleanup(List<ApplicationId> applications);
 }

@@ -48,6 +48,7 @@ public class MockRMApp implements RMApp {
   String url = null;
   StringBuilder diagnostics = new StringBuilder();
   RMAppAttempt attempt;
+  int maxAppAttempts = 1;
 
   public MockRMApp(int newid, long time, RMAppState newState) {
     finish = time;
@@ -184,6 +185,15 @@ public class MockRMApp implements RMApp {
 
   public void setDiagnostics(String diag) {
     this.diagnostics  = new StringBuilder(diag);
+  }
+
+  @Override
+  public int getMaxAppAttempts() {
+    return maxAppAttempts;
+  }
+
+  public void setNumMaxRetries(int maxAppAttempts) {
+    this.maxAppAttempts = maxAppAttempts;
   }
 
   @Override

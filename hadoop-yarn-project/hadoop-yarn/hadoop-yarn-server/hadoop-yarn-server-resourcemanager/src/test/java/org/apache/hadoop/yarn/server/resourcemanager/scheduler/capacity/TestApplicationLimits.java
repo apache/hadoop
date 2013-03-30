@@ -47,10 +47,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.junit.After;
@@ -506,7 +505,7 @@ public class TestApplicationLimits {
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
     app_0_0_requests.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             priority_1, recordFactory));
     app_0_0.updateResourceRequests(app_0_0_requests);
 
@@ -525,7 +524,7 @@ public class TestApplicationLimits {
     
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
     app_0_1_requests.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             priority_1, recordFactory));
     app_0_1.updateResourceRequests(app_0_1_requests);
 
@@ -544,7 +543,7 @@ public class TestApplicationLimits {
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
     app_1_0_requests.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             priority_1, recordFactory));
     app_1_0.updateResourceRequests(app_1_0_requests);
     

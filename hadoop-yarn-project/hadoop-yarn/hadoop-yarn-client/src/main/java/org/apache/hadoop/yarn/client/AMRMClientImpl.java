@@ -258,7 +258,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
     }
 
     // Off-switch
-    addResourceRequest(req.priority, ANY, req.capability, req.containerCount); 
+    addResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.containerCount);
   }
 
   @Override
@@ -276,7 +277,8 @@ public class AMRMClientImpl extends AbstractService implements AMRMClient {
       }
     }
    
-    decResourceRequest(req.priority, ANY, req.capability, req.containerCount);
+    decResourceRequest(req.priority, ResourceRequest.ANY, req.capability,
+        req.containerCount);
   }
 
   @Override

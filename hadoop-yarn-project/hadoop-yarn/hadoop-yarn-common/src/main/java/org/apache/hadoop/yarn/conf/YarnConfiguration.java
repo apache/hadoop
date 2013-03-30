@@ -180,10 +180,13 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "admin.client.thread-count";
   public static final int DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT = 1;
   
-  /** The maximum number of application master retries.*/
-  public static final String RM_AM_MAX_RETRIES = 
-    RM_PREFIX + "am.max-retries";
-  public static final int DEFAULT_RM_AM_MAX_RETRIES = 1;
+  /**
+   * The maximum number of application attempts.
+   * It's a global setting for all application masters.
+   */
+  public static final String RM_AM_MAX_ATTEMPTS =
+    RM_PREFIX + "am.max-attempts";
+  public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 1;
   
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 

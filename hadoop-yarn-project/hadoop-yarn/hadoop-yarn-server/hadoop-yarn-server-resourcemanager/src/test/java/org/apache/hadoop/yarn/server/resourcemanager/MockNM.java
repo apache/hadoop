@@ -33,11 +33,11 @@ import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -79,7 +79,7 @@ public class MockNM {
     nodeHeartbeat(conts, true);
   }
 
-  public RegistrationResponse registerNode() throws Exception {
+  public RegisterNodeManagerResponse registerNode() throws Exception {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
@@ -87,18 +87,18 @@ public class MockNM {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     req.setResource(resource);
-    RegistrationResponse registrationResponse =
-        resourceTracker.registerNodeManager(req).getRegistrationResponse();
+    RegisterNodeManagerResponse registrationResponse =
+        resourceTracker.registerNodeManager(req);
     this.currentMasterKey = registrationResponse.getMasterKey();
     return registrationResponse;
   }
 
-  public HeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
+  public NodeHeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
     return nodeHeartbeat(new HashMap<ApplicationId, List<ContainerStatus>>(),
         isHealthy, ++responseId);
   }
 
-  public HeartbeatResponse nodeHeartbeat(ApplicationAttemptId attemptId,
+  public NodeHeartbeatResponse nodeHeartbeat(ApplicationAttemptId attemptId,
       int containerId, ContainerState containerState) throws Exception {
     HashMap<ApplicationId, List<ContainerStatus>> nodeUpdate =
         new HashMap<ApplicationId, List<ContainerStatus>>(1);
@@ -112,12 +112,12 @@ public class MockNM {
     return nodeHeartbeat(nodeUpdate, true);
   }
 
-  public HeartbeatResponse nodeHeartbeat(Map<ApplicationId, 
+  public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy) throws Exception {
     return nodeHeartbeat(conts, isHealthy, ++responseId);
   }
 
-  public HeartbeatResponse nodeHeartbeat(Map<ApplicationId, 
+  public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy, int resId) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
@@ -133,8 +133,8 @@ public class MockNM {
     status.setNodeHealthStatus(healthStatus);
     req.setNodeStatus(status);
     req.setLastKnownMasterKey(this.currentMasterKey);
-    HeartbeatResponse heartbeatResponse =
-        resourceTracker.nodeHeartbeat(req).getHeartbeatResponse();
+    NodeHeartbeatResponse heartbeatResponse =
+        resourceTracker.nodeHeartbeat(req);
     MasterKey masterKeyFromRM = heartbeatResponse.getMasterKey();
     this.currentMasterKey =
         (masterKeyFromRM != null

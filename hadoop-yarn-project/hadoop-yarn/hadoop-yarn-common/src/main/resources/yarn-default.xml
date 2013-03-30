@@ -135,8 +135,12 @@
   </property>
 
   <property>
-    <description>The maximum number of application master retries.</description>
-    <name>yarn.resourcemanager.am.max-retries</name>
+    <description>The maximum number of application attempts. It's a global
+    setting for all application masters. Each application master can specify
+    its individual maximum number of application attempts via the API, but the
+    individual number cannot be more than the global upper bound. If it is,
+    the resourcemanager will override it.</description>
+    <name>yarn.resourcemanager.am.max-attempts</name>
     <value>1</value>
   </property>
 

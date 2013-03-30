@@ -24,8 +24,8 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -55,13 +55,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -138,6 +137,7 @@ public class TestLeafQueue {
   private static final String C = "c";
   private static final String C1 = "c1";
   private static final String D = "d";
+  private static final String E = "e";
   private void setupQueueConfiguration(
       CapacitySchedulerConfiguration conf, 
       final String newRoot) {
@@ -148,7 +148,7 @@ public class TestLeafQueue {
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
     final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "." + newRoot;
-    conf.setQueues(Q_newRoot, new String[] {A, B, C, D});
+    conf.setQueues(Q_newRoot, new String[] {A, B, C, D, E});
     conf.setCapacity(Q_newRoot, 100);
     conf.setMaximumCapacity(Q_newRoot, 100);
     conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
@@ -174,10 +174,14 @@ public class TestLeafQueue {
     conf.setCapacity(Q_C1, 100);
 
     final String Q_D = Q_newRoot + "." + D;
-    conf.setCapacity(Q_D, 10);
+    conf.setCapacity(Q_D, 9);
     conf.setMaximumCapacity(Q_D, 11);
     conf.setAcl(Q_D, QueueACL.SUBMIT_APPLICATIONS, "user_d");
     
+    final String Q_E = Q_newRoot + "." + E;
+    conf.setCapacity(Q_E, 1);
+    conf.setMaximumCapacity(Q_E, 1);
+    conf.setAcl(Q_E, QueueACL.SUBMIT_APPLICATIONS, "user_e");
   }
 
   static LeafQueue stubLeafQueue(LeafQueue queue) {
@@ -282,7 +286,7 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 3, priority, 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, priority,
                 recordFactory))); 
 
     // Start testing...
@@ -404,11 +408,11 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 3, priority, 
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, priority,
                 recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
             recordFactory))); 
 
     // Start testing...
@@ -537,11 +541,11 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 2*GB, 1, priority,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, priority,
                 recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
             recordFactory))); 
 
     /**
@@ -630,11 +634,11 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 2*GB, 1, priority,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, priority,
                 recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
             recordFactory))); 
 
     /**
@@ -669,7 +673,7 @@ public class TestLeafQueue {
     // Submit requests for app_1 and set max-cap
     a.setMaxCapacity(.1f);
     app_2.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 1, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, priority,
             recordFactory))); 
     assertEquals(2, a.getActiveUsersManager().getNumActiveUsers());
 
@@ -686,7 +690,7 @@ public class TestLeafQueue {
     // Check headroom for app_2 
     LOG.info("here");
     app_1.updateResourceRequests(Collections.singletonList(     // unset
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 0, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 0, priority,
             recordFactory))); 
     assertEquals(1, a.getActiveUsersManager().getNumActiveUsers());
     a.assignContainers(clusterResource, node_1);
@@ -747,11 +751,11 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 10, priority,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 10, priority,
                 recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 10, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 10, priority,
             recordFactory))); 
 
     /** 
@@ -781,11 +785,11 @@ public class TestLeafQueue {
     // Submit resource requests for other apps now to 'activate' them
     
     app_2.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 3*GB, 1, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 1, priority,
             recordFactory))); 
 
     app_3.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
             recordFactory))); 
 
     // Now allocations should goto app_2 since 
@@ -909,11 +913,11 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
                 recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 4*GB, 1, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, priority,
             recordFactory))); 
 
     // Start testing...
@@ -1011,7 +1015,7 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 2*GB, 1, priority,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1, priority,
                 recordFactory)));
 
     // Setup app_1 to request a 4GB container on host_0 and
@@ -1022,7 +1026,7 @@ public class TestLeafQueue {
         priority, recordFactory));
     appRequests_1.add(TestUtils.createResourceRequest(DEFAULT_RACK, 4*GB, 1,
         priority, recordFactory));
-    appRequests_1.add(TestUtils.createResourceRequest(RMNodeImpl.ANY, 4*GB, 2,
+    appRequests_1.add(TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 2,
         priority, recordFactory));
     app_1.updateResourceRequests(appRequests_1);
 
@@ -1117,11 +1121,11 @@ public class TestLeafQueue {
     // Setup resource-requests
     Priority priority = TestUtils.createMockPriority(1);
     app_0.updateResourceRequests(Collections.singletonList(
-            TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, priority,
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, priority,
                 recordFactory))); 
 
     app_1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 4*GB, 1, priority,
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 4*GB, 1, priority,
             recordFactory))); 
 
     // Start testing...
@@ -1243,7 +1247,7 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
             priority, recordFactory));
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 3, // one extra 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 3, // one extra
             priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
 
@@ -1308,7 +1312,7 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
             priority, recordFactory));
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, // one extra 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, // one extra
             priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
     assertEquals(2, app_0.getTotalRequiredResources(priority));
@@ -1386,7 +1390,7 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(rack_1, 1*GB, 1, 
             priority_1, recordFactory));
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2,
             priority_1, recordFactory));
     
     // P2
@@ -1398,7 +1402,7 @@ public class TestLeafQueue {
         TestUtils.createResourceRequest(rack_2, 2*GB, 1, 
             priority_2, recordFactory));
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 2*GB, 1, 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 2*GB, 1,
             priority_2, recordFactory));
     
     app_0.updateResourceRequests(app_0_requests_0);
@@ -1523,7 +1527,7 @@ public class TestLeafQueue {
     // Add one request
     app_0_requests_0.clear();
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 1, // only one 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // only one
             priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
     
@@ -1546,7 +1550,7 @@ public class TestLeafQueue {
     // Add one request
     app_0_requests_0.clear();
     app_0_requests_0.add(
-        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 1, // only one 
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, // only one
             priority, recordFactory));
     app_0.updateResourceRequests(app_0_requests_0);
 
@@ -1565,6 +1569,102 @@ public class TestLeafQueue {
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
     assertEquals(0, app_0.getTotalRequiredResources(priority));
 
+  }
+
+  @Test (timeout = 30000)
+  public void testActivateApplicationAfterQueueRefresh() throws Exception {
+
+    // Manipulate queue 'e'
+    LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
+
+    // Users
+    final String user_e = "user_e";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app_0 =
+        new FiCaSchedulerApp(appAttemptId_0, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_0, user_e, E);
+
+    final ApplicationAttemptId appAttemptId_1 =
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app_1 =
+        new FiCaSchedulerApp(appAttemptId_1, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_1, user_e, E);  // same user
+
+    final ApplicationAttemptId appAttemptId_2 =
+        TestUtils.getMockApplicationAttemptId(2, 0);
+    FiCaSchedulerApp app_2 =
+        new FiCaSchedulerApp(appAttemptId_2, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_2, user_e, E);  // same user
+
+    // before reinitialization
+    assertEquals(2, e.activeApplications.size());
+    assertEquals(1, e.pendingApplications.size());
+
+    csConf.setDouble(CapacitySchedulerConfiguration
+        .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
+        CapacitySchedulerConfiguration
+        .DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT * 2);
+    Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
+    CSQueue newRoot =
+        CapacityScheduler.parseQueue(csContext, csConf, null,
+            CapacitySchedulerConfiguration.ROOT,
+            newQueues, queues,
+            TestUtils.spyHook);
+    queues = newQueues;
+    root.reinitialize(newRoot, cs.getClusterResources());
+
+    // after reinitialization
+    assertEquals(3, e.activeApplications.size());
+    assertEquals(0, e.pendingApplications.size());
+  }
+
+  @Test (timeout = 30000)
+  public void testActivateApplicationByUpdatingClusterResource()
+      throws Exception {
+
+    // Manipulate queue 'e'
+    LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
+
+    // Users
+    final String user_e = "user_e";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app_0 =
+        new FiCaSchedulerApp(appAttemptId_0, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_0, user_e, E);
+
+    final ApplicationAttemptId appAttemptId_1 =
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app_1 =
+        new FiCaSchedulerApp(appAttemptId_1, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_1, user_e, E);  // same user
+
+    final ApplicationAttemptId appAttemptId_2 =
+        TestUtils.getMockApplicationAttemptId(2, 0);
+    FiCaSchedulerApp app_2 =
+        new FiCaSchedulerApp(appAttemptId_2, user_e, e,
+            mock(ActiveUsersManager.class), rmContext);
+    e.submitApplication(app_2, user_e, E);  // same user
+
+    // before updating cluster resource
+    assertEquals(2, e.activeApplications.size());
+    assertEquals(1, e.pendingApplications.size());
+
+    e.updateClusterResource(Resources.createResource(200 * 16 * GB, 100 * 32));
+
+    // after updating cluster resource
+    assertEquals(3, e.activeApplications.size());
+    assertEquals(0, e.pendingApplications.size());
   }
 
   public boolean hasQueueACL(List<QueueUserACLInfo> aclInfos, QueueACL acl) {

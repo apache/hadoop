@@ -21,13 +21,20 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-
+/**
+ * 
+ * test MultiFileSplit class
+ */
 public class TestMultiFileSplit extends TestCase{
 
     public void testReadWrite() throws Exception {
@@ -57,5 +64,27 @@ public class TestMultiFileSplit extends TestCase{
       assertTrue(Arrays.equals(split.getPaths(), readSplit.getPaths()));
       assertTrue(Arrays.equals(split.getLengths(), readSplit.getLengths()));
       System.out.println(split.toString());
+    }
+    
+    /**
+     * test method getLocations
+     * @throws IOException
+     */
+    public void testgetLocations() throws IOException{
+        JobConf job= new JobConf();
+      
+      File tmpFile = File.createTempFile("test","txt");
+      tmpFile.createNewFile();
+      OutputStream out=new FileOutputStream(tmpFile);
+      out.write("tempfile".getBytes());
+      out.flush();
+      out.close();
+      Path[] path= {new Path(tmpFile.getAbsolutePath())};
+      long[] lengths = {100};
+      
+      MultiFileSplit  split = new MultiFileSplit(job,path,lengths);
+     String [] locations= split.getLocations();
+     assertTrue(locations.length==1);
+     assertEquals(locations[0], "localhost");
     }
 }

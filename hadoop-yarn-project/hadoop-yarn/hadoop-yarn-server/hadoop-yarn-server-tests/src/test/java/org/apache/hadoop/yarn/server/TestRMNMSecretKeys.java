@@ -27,9 +27,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -62,12 +62,12 @@ public class TestRMNMSecretKeys {
     rm.start();
 
     MockNM nm = new MockNM("host:1234", 3072, rm.getResourceTrackerService());
-    RegistrationResponse registrationResponse = nm.registerNode();
+    RegisterNodeManagerResponse registrationResponse = nm.registerNode();
     MasterKey masterKey = registrationResponse.getMasterKey();
     Assert.assertNotNull("Registration should cause a key-update!", masterKey);
     dispatcher.await();
 
-    HeartbeatResponse response = nm.nodeHeartbeat(true);
+    NodeHeartbeatResponse response = nm.nodeHeartbeat(true);
     Assert.assertNull(
       "First heartbeat after registration shouldn't get any key updates!",
       response.getMasterKey());

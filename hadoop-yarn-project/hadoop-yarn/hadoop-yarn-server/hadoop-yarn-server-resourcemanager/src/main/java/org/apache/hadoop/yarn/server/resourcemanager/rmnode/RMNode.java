@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 
 /**
  * Node managers information on available resources 
@@ -35,8 +35,6 @@ import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
  *
  */
 public interface RMNode {
-
-  public static final String ANY = "*";
 
   /**
    * the node id of of this node.
@@ -106,13 +104,13 @@ public interface RMNode {
   public List<ApplicationId> getAppsToCleanup();
 
   /**
-   * Update a {@link HeartbeatResponse} with the list of containers and
+   * Update a {@link NodeHeartbeatResponse} with the list of containers and
    * applications to clean up for this node.
-   * @param response the {@link HeartbeatResponse} to update
+   * @param response the {@link NodeHeartbeatResponse} to update
    */
-  public void updateHeartbeatResponseForCleanup(HeartbeatResponse response);
+  public void updateNodeHeartbeatResponseForCleanup(NodeHeartbeatResponse response);
 
-  public HeartbeatResponse getLastHeartBeatResponse();
+  public NodeHeartbeatResponse getLastNodeHeartBeatResponse();
   
   /**
    * Get and clear the list of containerUpdates accumulated across NM
@@ -121,5 +119,4 @@ public interface RMNode {
    * @return containerUpdates accumulated across NM heartbeats.
    */
   public List<UpdatedContainerInfo> pullContainerUpdates();
-  
 }

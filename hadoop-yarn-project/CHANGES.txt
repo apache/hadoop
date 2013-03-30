@@ -62,6 +62,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-396. Rationalize AllocateResponse in RM Scheduler API. (Zhijie Shen
     via hitesh)
 
+    YARN-439. Flatten NodeHeartbeatResponse. (Xuan Gong via sseth)
+
+    YARN-440. Flatten RegisterNodeManagerResponse. (Xuan Gong via sseth)
+
   NEW FEATURES
 
   IMPROVEMENTS
@@ -90,6 +94,14 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-417. Create AMRMClient wrapper that provides asynchronous callbacks.
     (Sandy Ryza via bikas)
+
+    YARN-497. Yarn unmanaged-am launcher jar does not define a main class in
+    its manifest (Hitesh Shah via bikas)
+
+    YARN-469. Make scheduling mode in FS pluggable. (kkambatl via tucu)
+
+    YARN-450. Define value for * in the scheduling protocol (Zhijie Shen via
+    bikas)
 
   OPTIMIZATIONS
 
@@ -124,6 +136,30 @@ Release 2.0.5-beta - UNRELEASED
  
     YARN-470. Support a way to disable resource monitoring on the NodeManager.
     (Siddharth Seth via hitesh)
+    
+    YARN-71. Fix the NodeManager to clean up local-dirs on restart.
+    (Xuan Gong via sseth)
+
+    YARN-378. Fix RM to make the AM max attempts/retries to be configurable
+    per application by clients. (Zhijie Shen via vinodkv)
+
+    YARN-498. Unmanaged AM launcher does not set various constants in env for
+    an AM, also does not handle failed AMs properly. (Hitesh Shah via bikas)
+
+    YARN-474. Fix CapacityScheduler to trigger application-activation when
+    am-resource-percent configuration is refreshed. (Zhijie Shen via vinodkv)
+
+    YARN-496. Fair scheduler configs are refreshed inconsistently in
+    reinitialize. (Sandy Ryza via tomwhite)
+
+    YARN-209. Fix CapacityScheduler to trigger application-activation when
+    the cluster capacity changes. (Zhijie Shen via vinodkv)
+
+    YARN-24. Nodemanager fails to start if log aggregation enabled and 
+    namenode unavailable. (sandyr via tucu)
+
+    YARN-515. Node Manager not getting the master key. (Robert Joseph Evans
+    via jlowe)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -462,6 +498,12 @@ Release 0.23.7 - UNRELEASED
 
     YARN-345. Many InvalidStateTransitonException errors for ApplicationImpl
     in Node Manager (Robert Parker via jlowe)
+
+    YARN-109. .tmp file is not deleted for localized archives (Mayank Bansal 
+    via bobby)
+
+    YARN-460. CS user left in list of active users for the queue even when 
+    application finished (tgraves)
 
 Release 0.23.6 - UNRELEASED
 

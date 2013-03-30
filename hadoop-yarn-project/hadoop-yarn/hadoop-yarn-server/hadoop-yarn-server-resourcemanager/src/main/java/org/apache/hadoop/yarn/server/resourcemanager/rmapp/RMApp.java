@@ -173,4 +173,10 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
    */
   FinalApplicationStatus getFinalApplicationStatus();
+
+  /**
+   * The number of max attempts of the application.
+   * @return the number of max attempts of the application.
+   */
+  int getMaxAppAttempts();
 }

@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -92,15 +92,15 @@ public class TestApplicationCleanup {
     Assert.assertEquals(request, contReceived);
     
     am.unregisterAppAttempt();
-    HeartbeatResponse resp = nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
+    NodeHeartbeatResponse resp = nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
         ContainerState.COMPLETE);
     am.waitForState(RMAppAttemptState.FINISHED);
 
     //currently only containers are cleaned via this
     //AM container is cleaned via container launcher
     resp = nm1.nodeHeartbeat(true);
-    List<ContainerId> contsToClean = resp.getContainersToCleanupList();
-    List<ApplicationId> apps = resp.getApplicationsToCleanupList();
+    List<ContainerId> contsToClean = resp.getContainersToCleanup();
+    List<ApplicationId> apps = resp.getApplicationsToCleanup();
     int cleanedConts = contsToClean.size();
     int cleanedApps = apps.size();
     waitCount = 0;
@@ -109,8 +109,8 @@ public class TestApplicationCleanup {
           + cleanedConts + " cleanedApps: " + cleanedApps);
       Thread.sleep(100);
       resp = nm1.nodeHeartbeat(true);
-      contsToClean = resp.getContainersToCleanupList();
-      apps = resp.getApplicationsToCleanupList();
+      contsToClean = resp.getContainersToCleanup();
+      apps = resp.getApplicationsToCleanup();
       cleanedConts += contsToClean.size();
       cleanedApps += apps.size();
     }
@@ -198,9 +198,9 @@ public class TestApplicationCleanup {
       .getId(), ContainerState.RUNNING, "nothing", 0));
     containerStatuses.put(app.getApplicationId(), containerStatusList);
 
-    HeartbeatResponse resp = nm1.nodeHeartbeat(containerStatuses, true);
+    NodeHeartbeatResponse resp = nm1.nodeHeartbeat(containerStatuses, true);
     dispatcher.await();
-    List<ContainerId> contsToClean = resp.getContainersToCleanupList();
+    List<ContainerId> contsToClean = resp.getContainersToCleanup();
     int cleanedConts = contsToClean.size();
     waitCount = 0;
     while (cleanedConts < 1 && waitCount++ < 200) {
@@ -208,7 +208,7 @@ public class TestApplicationCleanup {
       Thread.sleep(100);
       resp = nm1.nodeHeartbeat(true);
       dispatcher.await();
-      contsToClean = resp.getContainersToCleanupList();
+      contsToClean = resp.getContainersToCleanup();
       cleanedConts += contsToClean.size();
     }
     LOG.info("Got cleanup for " + contsToClean.get(0));
@@ -226,7 +226,7 @@ public class TestApplicationCleanup {
 
     resp = nm1.nodeHeartbeat(containerStatuses, true);
     dispatcher.await();
-    contsToClean = resp.getContainersToCleanupList();
+    contsToClean = resp.getContainersToCleanup();
     cleanedConts = contsToClean.size();
     // The cleanup list won't be instantaneous as it is given out by scheduler
     // and not RMNodeImpl.
@@ -236,7 +236,7 @@ public class TestApplicationCleanup {
       Thread.sleep(100);
       resp = nm1.nodeHeartbeat(true);
       dispatcher.await();
-      contsToClean = resp.getContainersToCleanupList();
+      contsToClean = resp.getContainersToCleanup();
       cleanedConts += contsToClean.size();
     }
     LOG.info("Got cleanup for " + contsToClean.get(0));

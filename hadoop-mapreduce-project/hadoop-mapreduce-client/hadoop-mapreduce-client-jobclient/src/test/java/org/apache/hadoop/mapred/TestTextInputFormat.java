@@ -61,11 +61,12 @@ public class TestTextInputFormat {
       throw new RuntimeException("init failure", e);
     }
   }
+  @SuppressWarnings("deprecation")
   private static Path workDir =
     new Path(new Path(System.getProperty("test.build.data", "/tmp")),
              "TestTextInputFormat").makeQualified(localFs);
 
-  @Test
+  @Test (timeout=500000)
   public void testFormat() throws Exception {
     JobConf job = new JobConf(defaultConf);
     Path file = new Path(workDir, "test.txt");
@@ -145,7 +146,7 @@ public class TestTextInputFormat {
     }
   }
 
-  @Test
+  @Test (timeout=900000)
   public void testSplitableCodecs() throws IOException {
     JobConf conf = new JobConf(defaultConf);
     int seed = new Random().nextInt();
@@ -250,7 +251,7 @@ public class TestTextInputFormat {
                                            bufsz);
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testUTF8() throws Exception {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
@@ -269,7 +270,7 @@ public class TestTextInputFormat {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=5000)
   public void testNewLines() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\r\r\n\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
@@ -309,7 +310,7 @@ public class TestTextInputFormat {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=5000)
   public void testMaxLineLength() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
@@ -334,7 +335,7 @@ public class TestTextInputFormat {
     }
   }
 
-  @Test
+  @Test (timeout=5000)
   public void testMRMaxLine() throws Exception {
     final int MAXPOS = 1024 * 1024;
     final int MAXLINE = 10 * 1024;
@@ -354,6 +355,9 @@ public class TestTextInputFormat {
         position += b.length;
         return b.length;
       }
+      public void reset() {
+        position=0;
+      }
     };
     final LongWritable key = new LongWritable();
     final Text val = new Text();
@@ -362,8 +366,14 @@ public class TestTextInputFormat {
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
                 LineRecordReader.MAX_LINE_LENGTH, MAXLINE);
     conf.setInt("io.file.buffer.size", BUF); // used by LRR
-    final LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
+    // test another constructor 
+     LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
     assertFalse("Read a line from null", lrr.next(key, val));
+    infNull.reset();
+     lrr = new LineRecordReader(infNull, 0L, MAXLINE, MAXPOS);
+    assertFalse("Read a line from null", lrr.next(key, val));
+    
+    
   }
 
   private static void writeFile(FileSystem fs, Path name, 
@@ -400,7 +410,7 @@ public class TestTextInputFormat {
   /**
    * Test using the gzip codec for reading
    */
-  @Test
+  @Test (timeout=5000)
   public void testGzip() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
@@ -434,7 +444,7 @@ public class TestTextInputFormat {
   /**
    * Test using the gzip codec and an empty input file
    */
-  @Test
+  @Test (timeout=5000)
   public void testGzipEmpty() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();

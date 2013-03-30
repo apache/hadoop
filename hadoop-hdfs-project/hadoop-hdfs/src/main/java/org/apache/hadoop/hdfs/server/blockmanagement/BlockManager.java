@@ -235,6 +235,7 @@ public class BlockManager {
     heartbeatManager = datanodeManager.getHeartbeatManager();
     invalidateBlocks = new InvalidateBlocks(datanodeManager);
 
+    // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
         conf, stats, datanodeManager.getNetworkTopology());

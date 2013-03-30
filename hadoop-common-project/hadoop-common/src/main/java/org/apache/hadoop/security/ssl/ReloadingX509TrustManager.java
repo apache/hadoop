@@ -169,8 +169,8 @@ public final class ReloadingX509TrustManager
       in.close();
     }
 
-    TrustManagerFactory trustManagerFactory =
-      TrustManagerFactory.getInstance("SunX509");
+    TrustManagerFactory trustManagerFactory = 
+      TrustManagerFactory.getInstance(SSLFactory.SSLCERTIFICATE);
     trustManagerFactory.init(ks);
     TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
     for (TrustManager trustManager1 : trustManagers) {

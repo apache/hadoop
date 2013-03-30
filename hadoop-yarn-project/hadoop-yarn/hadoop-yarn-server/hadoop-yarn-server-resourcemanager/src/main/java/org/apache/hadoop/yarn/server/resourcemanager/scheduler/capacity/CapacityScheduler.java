@@ -504,6 +504,14 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
     synchronized (application) {
 
+      // make sure we aren't stopping/removing the application
+      // when the allocate comes in
+      if (application.isStopped()) {
+        LOG.info("Calling allocate on a stopped " +
+            "application " + applicationAttemptId);
+        return EMPTY_ALLOCATION;
+      }
+
       if (!ask.isEmpty()) {
 
         if(LOG.isDebugEnabled()) {

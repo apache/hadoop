@@ -23,9 +23,9 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.gridmix.Progressive;
-import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
  * <p>This is the driver class for managing all the resource usage emulators.

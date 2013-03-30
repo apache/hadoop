@@ -17,6 +17,8 @@ Trunk (Unreleased)
 
     HADOOP-9380 Add totalLength to rpc response  (sanjay Radia)
 
+    HADOOP-9194. RPC Support for QoS. (Junping Du via llu)
+
   NEW FEATURES
     
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child
@@ -90,9 +92,6 @@ Trunk (Unreleased)
     HADOOP-8367 Improve documentation of declaringClassProtocolName in 
     rpc headers. (Sanjay Radia)
 
-    HADOOP-8415. Add getDouble() and setDouble() in
-    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
-
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
 
@@ -162,9 +161,7 @@ Trunk (Unreleased)
 
     HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
 
-    HADOOP-9112. test-patch should -1 for @Tests without a timeout 
-    (Surenkumar Nihalani via bobby)
-
+	HADOOP-9258 Add stricter tests to FileSystemContractTestBase (stevel)
 
   BUG FIXES
 
@@ -358,6 +355,15 @@ Trunk (Unreleased)
     HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
     contains capital letters  (Chris Nauroth via sanjay)
 
+    HADOOP-9261 S3n filesystem can move a directory under itself -and so lose data
+    (fixed in HADOOP-9258) (stevel)
+
+    HADOOP-9265 S3 blockstore filesystem breaks part of the Filesystem contract
+    (fixed in HADOOP-9258) (stevel)
+
+    HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
+    (Chris Nauroth via sanjay)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -505,6 +511,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
+    HADOOP-8415. Add getDouble() and setDouble() in
+    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
+
   IMPROVEMENTS
 
     HADOOP-9253. Capture ulimit info in the logs at service start time.
@@ -525,7 +534,12 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9318. When exiting on a signal, print the signal name first. (Colin
     Patrick McCabe via atm)
 
+    HADOOP-9358. "Auth failed" log should include exception string (todd)
+
   OPTIMIZATIONS
+
+    HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
+    (todd)
 
   BUG FIXES
 
@@ -585,6 +599,14 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
     is not configured (daryn)
 
+    HADOOP-9430. TestSSLFactory fails on IBM JVM. (Amir Sanjar via suresh)
+
+    HADOOP-9125. LdapGroupsMapping threw CommunicationException after some
+    idle time. (Kai Zheng via atm)
+
+    HADOOP-9357. Fallback to default authority if not specified in FileContext.
+    (Andrew Wang via eli)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -604,6 +626,9 @@ Release 2.0.4-alpha - UNRELEASED
 
     HADOOP-9408. misleading description for net.topology.table.file.name
     property in core-default.xml. (rajeshbabu via suresh)
+
+    HADOOP-9444. Modify hadoop-policy.xml to replace unexpanded variables to a
+    default value of '*'. (Roman Shaposhnik via vinodkv)
 
 Release 2.0.3-alpha - 2013-02-06 
 

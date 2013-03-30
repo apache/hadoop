@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapred.gridmix;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
- * Plugin class to test resource information reported by TT. Use
- * configuration items {@link #MAXVMEM_TESTING_PROPERTY} and
- * {@link #MAXPMEM_TESTING_PROPERTY} to tell TT the total vmem and the total
- * pmem. Use configuration items {@link #NUM_PROCESSORS},
- * {@link #CPU_FREQUENCY}, {@link #CUMULATIVE_CPU_TIME} and {@link #CPU_USAGE}
- * to tell TT the CPU information.
+ * Plugin class to test resource information reported by NM. Use configuration
+ * items {@link #MAXVMEM_TESTING_PROPERTY} and {@link #MAXPMEM_TESTING_PROPERTY}
+ * to tell NM the total vmem and the total pmem. Use configuration items
+ * {@link #NUM_PROCESSORS}, {@link #CPU_FREQUENCY}, {@link #CUMULATIVE_CPU_TIME}
+ * and {@link #CPU_USAGE} to tell TT the CPU information.
  */
 @InterfaceAudience.Private
 public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
@@ -48,15 +47,14 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   public static final String CUMULATIVE_CPU_TIME =
       "mapred.tasktracker.cumulativecputime.testing";
   /** CPU usage percentage for testing */
-  public static final String CPU_USAGE =
-      "mapred.tasktracker.cpuusage.testing";
+  public static final String CPU_USAGE = "mapred.tasktracker.cpuusage.testing";
   /** process cumulative CPU usage time for testing */
   public static final String PROC_CUMULATIVE_CPU_TIME =
       "mapred.tasktracker.proccumulativecputime.testing";
-  /** process pmem for testing*/
+  /** process pmem for testing */
   public static final String PROC_PMEM_TESTING_PROPERTY =
       "mapred.tasktracker.procpmem.testing";
-  /** process vmem for testing*/
+  /** process vmem for testing */
   public static final String PROC_VMEM_TESTING_PROPERTY =
       "mapred.tasktracker.procvmem.testing";
 
@@ -106,13 +104,5 @@ public class DummyResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public float getCpuUsage() {
     return getConf().getFloat(CPU_USAGE, -1);
-  }
-
-  @Override
-  public ProcResourceValues getProcResourceValues() {
-    long cpuTime = getConf().getLong(PROC_CUMULATIVE_CPU_TIME, -1);
-    long pMem = getConf().getLong(PROC_PMEM_TESTING_PROPERTY, -1);
-    long vMem = getConf().getLong(PROC_VMEM_TESTING_PROPERTY, -1);
-    return new ProcResourceValues(cpuTime, pMem, vMem);
   }
 }

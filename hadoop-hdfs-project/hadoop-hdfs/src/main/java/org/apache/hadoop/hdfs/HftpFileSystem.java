@@ -161,6 +161,11 @@ public class HftpFileSystem extends FileSystem
     // actual port in the uri
     return SecurityUtil.buildTokenService(nnSecureUri).toString();
   }
+  
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    return NetUtils.getCanonicalUri(uri, getDefaultPort());
+  }
 
   /**
    * Return the protocol scheme for the FileSystem.

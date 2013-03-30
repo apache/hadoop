@@ -37,9 +37,7 @@ public class LocalClientProtocolProvider extends ClientProtocolProvider {
     if (!MRConfig.LOCAL_FRAMEWORK_NAME.equals(framework)) {
       return null;
     }
-    if (conf.get("mapreduce.job.maps") == null) {
-      conf.setInt("mapreduce.job.maps", 1);
-    }
+    conf.setInt(JobContext.NUM_MAPS, 1);
 
     return new LocalJobRunner(conf);
   }

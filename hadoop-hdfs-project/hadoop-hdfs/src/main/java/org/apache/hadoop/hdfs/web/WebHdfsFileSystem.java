@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +63,33 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
-import org.apache.hadoop.hdfs.web.resources.*;
+import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
+import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
+import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
+import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
+import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
+import org.apache.hadoop.hdfs.web.resources.DelegationParam;
+import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
+import org.apache.hadoop.hdfs.web.resources.DestinationParam;
+import org.apache.hadoop.hdfs.web.resources.DoAsParam;
+import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.GroupParam;
+import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
+import org.apache.hadoop.hdfs.web.resources.LengthParam;
+import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
+import org.apache.hadoop.hdfs.web.resources.OffsetParam;
+import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
+import org.apache.hadoop.hdfs.web.resources.OwnerParam;
+import org.apache.hadoop.hdfs.web.resources.Param;
+import org.apache.hadoop.hdfs.web.resources.PermissionParam;
+import org.apache.hadoop.hdfs.web.resources.PostOpParam;
+import org.apache.hadoop.hdfs.web.resources.PutOpParam;
+import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
+import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
+import org.apache.hadoop.hdfs.web.resources.RenewerParam;
+import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
+import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
@@ -82,7 +107,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.StringUtils;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -213,6 +237,11 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public URI getUri() {
     return this.uri;
+  }
+  
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    return NetUtils.getCanonicalUri(uri, getDefaultPort());
   }
 
   /** @return the home directory. */
@@ -729,16 +758,9 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public void concat(final Path trg, final Path [] psrcs) throws IOException {
+  public void concat(final Path trg, final Path [] srcs) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PostOpParam.Op.CONCAT;
-
-    List<String> strPaths = new ArrayList<String>(psrcs.length);
-    for(Path psrc : psrcs) {
-       strPaths.add(psrc.toUri().getPath());
-    }
-
-    String srcs = StringUtils.join(",", strPaths);
 
     ConcatSourcesParam param = new ConcatSourcesParam(srcs);
     run(op, trg, param);

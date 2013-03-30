@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
@@ -183,7 +184,7 @@ public class TestCapacityScheduler {
     LOG.info("Adding new tasks...");
     
     Task task_1_1 = new Task(application_1, priority_0, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_1);
 
     application_1.schedule();

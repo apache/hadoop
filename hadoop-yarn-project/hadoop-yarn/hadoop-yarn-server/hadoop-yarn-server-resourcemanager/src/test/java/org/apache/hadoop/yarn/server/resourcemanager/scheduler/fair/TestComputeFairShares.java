@@ -24,6 +24,7 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.modes.FairSchedulingMode;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -32,10 +33,12 @@ import org.junit.Test;
  */
 public class TestComputeFairShares {
   private List<Schedulable> scheds;
+  private SchedulingMode schedulingMode;
   
   @Before
   public void setUp() throws Exception {
     scheds = new ArrayList<Schedulable>();
+    schedulingMode = new FairSchedulingMode();
   }
   
   /** 
@@ -48,7 +51,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(50));
     scheds.add(new FakeSchedulable(30));
     scheds.add(new FakeSchedulable(20));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(40));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(40));
     verifyShares(10, 10, 10, 10);
   }
   
@@ -65,7 +69,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(50));
     scheds.add(new FakeSchedulable(11));
     scheds.add(new FakeSchedulable(3));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(40));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(40));
     verifyShares(13, 13, 11, 3);
   }
   
@@ -83,7 +88,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(10, 20));
     scheds.add(new FakeSchedulable(10, 0));
     scheds.add(new FakeSchedulable(3, 2));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(40));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(40));
     verifyShares(20, 10, 7, 3);
   }
   
@@ -97,7 +103,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(50,  0, 1.0));
     scheds.add(new FakeSchedulable(30,  0, 1.0));
     scheds.add(new FakeSchedulable(20,  0, 0.5));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(45));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(45));
     verifyShares(20, 10, 10, 5);
   }
 
@@ -114,7 +121,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(11, 0, 1.0));
     scheds.add(new FakeSchedulable(30, 0, 1.0));
     scheds.add(new FakeSchedulable(20, 0, 0.5));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(45));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(45));
     verifyShares(10, 11, 16, 8);
   }
 
@@ -131,7 +139,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(11, 0, 1.0));
     scheds.add(new FakeSchedulable(30, 5, 1.0));
     scheds.add(new FakeSchedulable(20, 15, 0.5));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(45));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(45));
     verifyShares(10, 10, 10, 15);
   }
 
@@ -146,7 +155,9 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(50 * million));
     scheds.add(new FakeSchedulable(30 * million));
     scheds.add(new FakeSchedulable(20 * million));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(40 * million));
+    schedulingMode
+        .computeShares(scheds,
+        Resources.createResource(40 * million));
     verifyShares(10 * million, 10 * million, 10 * million, 10 * million);
   }
 
@@ -159,7 +170,8 @@ public class TestComputeFairShares {
     scheds.add(new FakeSchedulable(50));
     scheds.add(new FakeSchedulable(30));
     scheds.add(new FakeSchedulable(0));
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(30));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(30));
     verifyShares(10, 10, 10, 0);
   }
   
@@ -168,7 +180,8 @@ public class TestComputeFairShares {
    */
   @Test
   public void testEmptyList() {
-    SchedulingAlgorithms.computeFairShares(scheds, Resources.createResource(40));
+    schedulingMode.computeShares(scheds,
+        Resources.createResource(40));
     verifyShares();
   }
   

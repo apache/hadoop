@@ -189,4 +189,22 @@ public interface ApplicationSubmissionContext {
   @LimitedPrivate("mapreduce")
   @Unstable
   public void setCancelTokensWhenComplete(boolean cancel);
+
+  /**
+   * @return the number of max attempts of the application to be submitted
+   */
+  @Public
+  @Unstable
+  public int getMaxAppAttempts();
+
+  /**
+   * Set the number of max attempts of the application to be submitted. WARNING:
+   * it should be no larger than the global number of max attempts in the Yarn
+   * configuration.
+   * @param maxAppAttempts the number of max attempts of the application
+   * to be submitted.
+   */
+  @Public
+  @Unstable
+  public void setMaxAppAttempts(int maxAppAttempts);
 }

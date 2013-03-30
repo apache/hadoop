@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -15,15 +16,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.api.records;
+package org.apache.hadoop.mapred;
 
-public interface RegistrationResponse {
+import org.junit.Test;
 
-  MasterKey getMasterKey();
-  
-  void setMasterKey(MasterKey secretKey);
-  
-  NodeAction getNodeAction();
-  
-  void setNodeAction(NodeAction nodeAction);
+import static org.junit.Assert.*;
+/**
+ *  test Clock class
+ *
+ */
+public class TestClock {
+
+  @Test  (timeout=1000)
+  public void testClock(){
+    Clock clock= new Clock();
+    long templateTime=System.currentTimeMillis();
+    long time=clock.getTime();
+    assertEquals(templateTime, time,30);
+
+  }
 }

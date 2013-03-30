@@ -386,73 +386,6 @@ public class TaskLog {
     return conf.getLong(JobContext.TASK_USERLOG_LIMIT, 0) * 1024;
   }
 
-  /**
-   * Wrap a command in a shell to capture stdout and stderr to files.
-   * If the tailLength is 0, the entire output will be saved.
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @return the modified command that should be run
-   */
-  public static List<String> captureOutAndError(List<String> cmd, 
-                                                File stdoutFilename,
-                                                File stderrFilename,
-                                                long tailLength
-                                               ) throws IOException {
-    return captureOutAndError(null, cmd, stdoutFilename,
-                              stderrFilename, tailLength, false);
-  }
-
-  /**
-   * Wrap a command in a shell to capture stdout and stderr to files.
-   * Setup commands such as setting memory limit can be passed which 
-   * will be executed before exec.
-   * If the tailLength is 0, the entire output will be saved.
-   * @param setup The setup commands for the execed process.
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @return the modified command that should be run
-   */
-  public static List<String> captureOutAndError(List<String> setup,
-                                                List<String> cmd, 
-                                                File stdoutFilename,
-                                                File stderrFilename,
-                                                long tailLength
-                                               ) throws IOException {
-    return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
-                              tailLength, false);
-  }
-
-  /**
-   * Wrap a command in a shell to capture stdout and stderr to files.
-   * Setup commands such as setting memory limit can be passed which 
-   * will be executed before exec.
-   * If the tailLength is 0, the entire output will be saved.
-   * @param setup The setup commands for the execed process.
-   * @param cmd The command and the arguments that should be run
-   * @param stdoutFilename The filename that stdout should be saved to
-   * @param stderrFilename The filename that stderr should be saved to
-   * @param tailLength The length of the tail to be saved.
-   * @param pidFileName The name of the pid-file. pid-file's usage is deprecated
-   * @return the modified command that should be run
-   * 
-   * @deprecated     pidFiles are no more used. Instead pid is exported to
-   *                 env variable JVM_PID.
-   */
-  @Deprecated
-  public static List<String> captureOutAndError(List<String> setup,
-                                                List<String> cmd, 
-                                                File stdoutFilename,
-                                                File stderrFilename,
-                                                long tailLength,
-                                                String pidFileName
-                                               ) throws IOException {
-    return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
-        tailLength, false);
-  }
   
   /**
    * Wrap a command in a shell to capture stdout and stderr to files.
@@ -607,25 +540,6 @@ public class TaskLog {
     return command.toString();
   }
   
-  /**
-   * Wrap a command in a shell to capture debug script's 
-   * stdout and stderr to debugout.
-   * @param cmd The command and the arguments that should be run
-   * @param debugoutFilename The filename that stdout and stderr
-   *  should be saved to.
-   * @return the modified command that should be run
-   * @throws IOException
-   */
-  public static List<String> captureDebugOut(List<String> cmd, 
-                                             File debugoutFilename
-                                            ) throws IOException {
-    String debugout = FileUtil.makeShellPath(debugoutFilename);
-    List<String> result = new ArrayList<String>(3);
-    result.add(bashCommand);
-    result.add("-c");
-    result.add(buildDebugScriptCommandLine(cmd, debugout));
-    return result;
-  }
   
   /**
    * Method to return the location of user log directory.

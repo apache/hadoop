@@ -216,6 +216,10 @@ public abstract class MockAsm extends MockApps {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
+    public int getMaxAppAttempts() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
     public ApplicationReport createAndGetApplicationReport(boolean allowAccess) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -248,6 +252,7 @@ public abstract class MockAsm extends MockApps {
     final long finish = 234567 + i * 1000;
     RMAppState[] allStates = RMAppState.values();
     final RMAppState state = allStates[i % allStates.length];
+    final int maxAppAttempts = i % 1000;
     return new ApplicationBase() {
       @Override
       public ApplicationId getApplicationId() {
@@ -301,6 +306,11 @@ public abstract class MockAsm extends MockApps {
       @Override
       public RMAppAttempt getCurrentAppAttempt() {
         return null;
+      }
+
+      @Override
+      public int getMaxAppAttempts() {
+        return maxAppAttempts;
       }
       
     };

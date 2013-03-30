@@ -49,6 +49,26 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 @Public
 @Stable
 public abstract class ResourceRequest implements Comparable<ResourceRequest> {
+
+  /**
+   * The constant string representing no locality.
+   * It should be used by all references that want to pass an arbitrary host
+   * name in.
+   */
+  public static final String ANY = "*";
+
+  /**
+   * Check whether the given <em>host/rack</em> string represents an arbitrary
+   * host name.
+   *
+   * @param hostName <em>host/rack</em> on which the allocation is desired
+   * @return whether the given <em>host/rack</em> string represents an arbitrary
+   * host name
+   */
+  public static boolean isAnyLocation(String hostName) {
+    return ANY.equals(hostName);
+  }
+
   /**
    * Get the <code>Priority</code> of the request.
    * @return <code>Priority</code> of the request

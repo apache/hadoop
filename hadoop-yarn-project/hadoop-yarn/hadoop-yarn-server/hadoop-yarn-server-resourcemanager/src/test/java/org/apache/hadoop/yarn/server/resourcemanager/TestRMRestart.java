@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
@@ -219,7 +219,7 @@ public class TestRMRestart {
     Assert.assertTrue(allocResponse.getReboot());
     
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
-    HeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
     Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());
     hbResponse = nm2.nodeHeartbeat(true);
     Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());

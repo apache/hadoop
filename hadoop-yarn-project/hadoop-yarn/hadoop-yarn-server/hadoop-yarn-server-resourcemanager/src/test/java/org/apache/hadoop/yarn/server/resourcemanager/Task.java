@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 
 public class Task {
@@ -57,8 +58,7 @@ public class Task {
     
     // Special case: Don't care about locality
     if (!(hosts.length == 1 && 
-        hosts[0].equals(
-            org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode.ANY))) {
+        hosts[0].equals(ResourceRequest.ANY))) {
       for (String host : hosts) {
         this.hosts.add(host);
         this.racks.add(Application.resolve(host));

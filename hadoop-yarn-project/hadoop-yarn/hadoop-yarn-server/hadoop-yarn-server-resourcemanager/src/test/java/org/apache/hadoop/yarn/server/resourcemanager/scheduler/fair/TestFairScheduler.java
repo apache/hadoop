@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -72,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.modes.FifoSchedulingMode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -141,7 +141,8 @@ public class TestFairScheduler {
   }
 
 
-  private ResourceRequest createResourceRequest(int memory, String host, int priority, int numContainers) {
+  private ResourceRequest createResourceRequest(int memory, String host,
+      int priority, int numContainers) {
     ResourceRequest request = recordFactory.newRecordInstance(ResourceRequest.class);
     request.setCapability(Resources.createResource(memory));
     request.setHostName(host);
@@ -156,33 +157,59 @@ public class TestFairScheduler {
    * Creates a single container priority-1 request and submits to
    * scheduler.
    */
-  private ApplicationAttemptId createSchedulingRequest(int memory, String queueId, String userId) {
+  private ApplicationAttemptId createSchedulingRequest(int memory, String queueId,
+      String userId) {
     return createSchedulingRequest(memory, queueId, userId, 1);
   }
 
-  private ApplicationAttemptId createSchedulingRequest(int memory, String queueId, String userId, int numContainers) {
+  private ApplicationAttemptId createSchedulingRequest(int memory, String queueId,
+      String userId, int numContainers) {
     return createSchedulingRequest(memory, queueId, userId, numContainers, 1);
   }
 
-  private ApplicationAttemptId createSchedulingRequest(int memory, String queueId, String userId, int numContainers, int priority) {
+  private ApplicationAttemptId createSchedulingRequest(int memory, String queueId,
+      String userId, int numContainers, int priority) {
     ApplicationAttemptId id = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
     scheduler.addApplication(id, queueId, userId);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ResourceRequest request = createResourceRequest(memory, "*", priority, numContainers);
+    ResourceRequest request = createResourceRequest(memory, ResourceRequest.ANY,
+        priority, numContainers);
     ask.add(request);
     scheduler.allocate(id, ask,  new ArrayList<ContainerId>());
     return id;
   }
   
-  private void createSchedulingRequestExistingApplication(int memory, int priority, ApplicationAttemptId attId) {
+  private void createSchedulingRequestExistingApplication(int memory, int priority,
+      ApplicationAttemptId attId) {
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ResourceRequest request = createResourceRequest(memory, "*", priority, 1);
+    ResourceRequest request = createResourceRequest(memory, ResourceRequest.ANY,
+        priority, 1);
     ask.add(request);
     scheduler.allocate(attId, ask,  new ArrayList<ContainerId>());
   }
 
   // TESTS
 
+  @Test(timeout=2000)
+  public void testLoadConfigurationOnInitialize() throws IOException {
+    Configuration conf = createConfiguration();
+    conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    conf.setInt(FairSchedulerConfiguration.MAX_ASSIGN, 3);
+    conf.setBoolean(FairSchedulerConfiguration.SIZE_BASED_WEIGHT, true);
+    conf.setDouble(FairSchedulerConfiguration.LOCALITY_THRESHOLD_NODE, .5);
+    conf.setDouble(FairSchedulerConfiguration.LOCALITY_THRESHOLD_RACK, .7);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    Assert.assertEquals(true, scheduler.assignMultiple);
+    Assert.assertEquals(3, scheduler.maxAssign);
+    Assert.assertEquals(true, scheduler.sizeBasedWeight);
+    Assert.assertEquals(.5, scheduler.nodeLocalityThreshold, .01);
+    Assert.assertEquals(.7, scheduler.rackLocalityThreshold, .01);
+    Assert.assertEquals(1024, scheduler.getMaximumResourceCapability().getMemory());
+    Assert.assertEquals(512, scheduler.getMinimumResourceCapability().getMemory());
+  }
+  
   @Test
   public void testAggregateCapacityTracking() throws Exception {
     // Add a node
@@ -438,7 +465,8 @@ public class TestFairScheduler {
     
     // First ask, queue1 requests 1 large (minReqSize * 2).
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
-    ResourceRequest request1 = createResourceRequest(minReqSize * 2, "*", 1, 1);
+    ResourceRequest request1 =
+        createResourceRequest(minReqSize * 2, ResourceRequest.ANY, 1, 1);
     ask1.add(request1);
     scheduler.allocate(id11, ask1, new ArrayList<ContainerId>());
 
@@ -452,7 +480,8 @@ public class TestFairScheduler {
 
     // Third ask, queue2 requests 1 large
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
-    ResourceRequest request4 = createResourceRequest(2 * minReqSize, "*", 1, 1);
+    ResourceRequest request4 =
+        createResourceRequest(2 * minReqSize, ResourceRequest.ANY, 1, 1);
     ask3.add(request4);
     scheduler.allocate(id22, ask3, new ArrayList<ContainerId>());
 
@@ -1290,7 +1319,7 @@ public class TestFairScheduler {
     asks.add(createResourceRequest(1024, node3.getHostName(), 1, 1));
     asks.add(createResourceRequest(1024, node1.getRackName(), 1, 1));
     asks.add(createResourceRequest(1024, node3.getRackName(), 1, 1));
-    asks.add(createResourceRequest(1024, RMNode.ANY, 1, 2));
+    asks.add(createResourceRequest(1024, ResourceRequest.ANY, 1, 2));
 
     scheduler.allocate(appId, asks, new ArrayList<ContainerId>());
     
@@ -1325,7 +1354,7 @@ public class TestFairScheduler {
     FSSchedulerApp app2 = scheduler.applications.get(attId2);
     
     FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1");
-    queue1.setSchedulingMode(SchedulingMode.FIFO);
+    queue1.setSchedulingMode(new FifoSchedulingMode());
     
     scheduler.update();
 

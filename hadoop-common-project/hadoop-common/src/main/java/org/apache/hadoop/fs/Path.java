@@ -256,6 +256,10 @@ public class Path implements Comparable {
     return  (isUriPathAbsolute() && 
         uri.getScheme() == null && uri.getAuthority() == null);
   }
+
+  public boolean hasSchemeAndNoAuthority() {
+    return uri.getScheme() != null && uri.getAuthority() == null;
+  }
   
   /**
    *  True if the path component (i.e. directory) of this URI is absolute.

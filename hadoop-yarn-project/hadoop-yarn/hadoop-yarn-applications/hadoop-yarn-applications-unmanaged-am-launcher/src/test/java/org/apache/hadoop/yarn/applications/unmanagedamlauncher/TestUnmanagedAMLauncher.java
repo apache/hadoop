@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.applications.unmanagedamlauncher;
 
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -99,7 +101,7 @@ public class TestUnmanagedAMLauncher {
       LOG.fatal("JAVA_HOME not defined. Test not running.");
       return;
     }
-    // start dist-shell with 0 containers because container launch will fail if 
+    // start dist-shell with 0 containers because container launch will fail if
     // there are no dist cache resources.
     String[] args = {
         "--classpath",
@@ -123,6 +125,42 @@ public class TestUnmanagedAMLauncher {
     LOG.info("Launcher run completed. Result=" + result);
     Assert.assertTrue(result);
 
+  }
+
+  @Test(timeout=30000)
+  public void testDSShellError() throws Exception {
+    String classpath = getTestRuntimeClasspath();
+    String javaHome = System.getenv("JAVA_HOME");
+    if (javaHome == null) {
+      LOG.fatal("JAVA_HOME not defined. Test not running.");
+      return;
+    }
+
+    // remove shell command to make dist-shell fail in initialization itself
+    String[] args = {
+        "--classpath",
+        classpath,
+        "--queue",
+        "default",
+        "--cmd",
+        javaHome
+            + "/bin/java -Xmx512m "
+            + "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster "
+            + "--container_memory 128 --num_containers 1 --priority 0" };
+
+    LOG.info("Initializing Launcher");
+    UnmanagedAMLauncher launcher = new UnmanagedAMLauncher(new Configuration(
+        yarnCluster.getConfig()));
+    boolean initSuccess = launcher.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running Launcher");
+
+    try {
+      launcher.run();
+      fail("Expected an exception to occur as launch should have failed");
+    } catch (RuntimeException e) {
+      // Expected
+    }
   }
 
 }
