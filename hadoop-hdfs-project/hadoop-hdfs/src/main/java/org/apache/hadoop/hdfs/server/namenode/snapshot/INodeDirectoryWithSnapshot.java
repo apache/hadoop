@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -674,8 +676,26 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (prior != null) {
         DirectoryDiff priorDiff = this.getDiffs().getDiff(prior);
         if (priorDiff != null) {
-          for (INode cNode : priorDiff.getChildrenDiff().getList(ListType.CREATED)) {
+          // For files/directories created between "prior" and "snapshot", 
+          // we need to clear snapshot copies for "snapshot". Note that we must
+          // use null as prior in the cleanSubtree call. Files/directories that
+          // were created before "prior" will be covered by the later 
+          // cleanSubtreeRecursively call.
+          for (INode cNode : priorDiff.getChildrenDiff().getList(
+              ListType.CREATED)) {
             counts.add(cNode.cleanSubtree(snapshot, null, collectedBlocks));
+          }
+          // When a directory is moved from the deleted list of the posterior
+          // diff to the deleted list of this diff, we need to destroy its
+          // descendants that were 1) created after taking this diff and 2)
+          // deleted after taking posterior diff.
+
+          // For files moved from posterior's deleted list, we also need to
+          // delete its snapshot copy associated with the posterior snapshot.
+          for (INode dNode : priorDiff.getChildrenDiff().getList(
+              ListType.DELETED)) {
+            counts.add(cleanDeletedINode(dNode, snapshot, prior,
+                collectedBlocks));
           }
         }
       }
@@ -685,6 +705,46 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     if (isQuotaSet()) {
       this.addSpaceConsumed2Cache(-counts.get(Quota.NAMESPACE),
           -counts.get(Quota.DISKSPACE));
+    }
+    return counts;
+  }
+  
+  /**
+   * Clean an inode while we move it from the deleted list of post to the
+   * deleted list of prior.
+   * @param inode The inode to clean.
+   * @param post The post snapshot.
+   * @param prior The prior snapshot.
+   * @param collectedBlocks Used to collect blocks for later deletion.
+   * @return Quota usage update.
+   */
+  private Quota.Counts cleanDeletedINode(INode inode, Snapshot post,
+      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks) {
+    Quota.Counts counts = Quota.Counts.newInstance();
+    Deque<INode> queue = new ArrayDeque<INode>();
+    queue.addLast(inode);
+    while (!queue.isEmpty()) {
+      INode topNode = queue.pollFirst();
+      if (topNode instanceof FileWithSnapshot) {
+        FileWithSnapshot fs = (FileWithSnapshot) topNode;
+        counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior,
+            topNode.asFile(), collectedBlocks));
+      } else if (topNode.isDirectory()) {
+        INodeDirectory dir = topNode.asDirectory();
+        if (dir instanceof INodeDirectoryWithSnapshot) {
+          // delete files/dirs created after prior. Note that these
+          // files/dirs, along with inode, were deleted right after post.
+          INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
+          DirectoryDiff priorDiff = sdir.getDiffs().getDiff(prior);
+          if (priorDiff != null) {
+            counts.add(priorDiff.diff.destroyCreatedList(sdir,
+                collectedBlocks));
+          }
+        }
+        for (INode child : dir.getChildrenList(prior)) {
+          queue.addLast(child);
+        }
+      }
     }
     return counts;
   }

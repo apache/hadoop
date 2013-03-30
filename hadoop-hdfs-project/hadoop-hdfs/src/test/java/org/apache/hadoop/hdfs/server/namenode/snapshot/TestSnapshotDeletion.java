@@ -525,6 +525,57 @@ public class TestSnapshotDeletion {
   }
   
   /**
+   * When combine two snapshots, make sure files/directories created after the 
+   * prior snapshot get destroyed.
+   */
+  @Test (timeout=300000)
+  public void testCombineSnapshotDiff3() throws Exception {
+    // create initial dir and subdir
+    Path dir = new Path("/dir");
+    Path subDir1 = new Path(dir, "subdir1");
+    Path subDir2 = new Path(dir, "subdir2");
+    hdfs.mkdirs(subDir2);
+    Path subsubDir = new Path(subDir1, "subsubdir");
+    hdfs.mkdirs(subsubDir);
+    
+    // take snapshots on subdir and dir
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
+    
+    // create new dir under initial dir
+    Path newDir = new Path(subsubDir, "newdir");
+    Path newFile = new Path(newDir, "newfile");
+    DFSTestUtil.createFile(hdfs, newFile, BLOCKSIZE, REPLICATION, seed);
+    Path newFile2 = new Path(subDir2, "newfile");
+    DFSTestUtil.createFile(hdfs, newFile2, BLOCKSIZE, REPLICATION, seed);
+    
+    // create another snapshot
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s2");
+    
+    checkQuotaUsageComputation(dir, 11, BLOCKSIZE * 2 * REPLICATION);
+    
+    // delete subsubdir and subDir2
+    hdfs.delete(subsubDir, true);
+    hdfs.delete(subDir2, true);
+    
+    // add diff of s2 to subDir1, subsubDir, and subDir2
+    checkQuotaUsageComputation(dir, 14, BLOCKSIZE * 2 * REPLICATION);
+    
+    // delete snapshot s2
+    hdfs.deleteSnapshot(dir, "s2");
+    
+    // delete s2 diff in dir, subDir2, and subsubDir. Delete newFile, newDir,
+    // and newFile2. Rename s2 diff to s1 for subDir1 
+    checkQuotaUsageComputation(dir, 8, 0);
+    // Check rename of snapshot diff in subDir1
+    Path subdir1_s1 = SnapshotTestHelper.getSnapshotPath(dir, "s1",
+        subDir1.getName());
+    Path subdir1_s2 = SnapshotTestHelper.getSnapshotPath(dir, "s2",
+        subDir1.getName());
+    assertTrue(hdfs.exists(subdir1_s1));
+    assertFalse(hdfs.exists(subdir1_s2));
+  }
+  
+  /**
    * Test snapshot deletion
    * @param snapshotRoot The dir where the snapshots are created
    * @param modDirStr The snapshotRoot itself or one of its sub-directory, 

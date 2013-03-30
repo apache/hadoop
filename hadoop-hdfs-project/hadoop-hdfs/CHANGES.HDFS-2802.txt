@@ -216,3 +216,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4636. Update quota usage when deleting files/dirs that were created
   after taking the latest snapshot. (Jing Zhao via szetszwo)
+
+  HDFS-4648. For snapshot deletion, when merging the diff from to-delete
+  snapshot to the prior snapshot, make sure files/directories created after
+  the prior snapshot get deleted. (Jing Zhao via szetszwo)

@@ -322,11 +322,9 @@ public class TestFSImageWithSnapshot {
     DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, REPLICATION, seed);
     
-    // 1. create snapshot s0
     hdfs.allowSnapshot(dir.toString());
     hdfs.createSnapshot(dir, "s0");
     
-    // 2. create snapshot s1 before appending sub1file1 finishes
     HdfsDataOutputStream out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);
     out.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));      
     
@@ -347,7 +345,7 @@ public class TestFSImageWithSnapshot {
    * Test fsimage loading when 1) there is an empty file loaded from fsimage,
    * and 2) there is later an append operation to be applied from edit log.
    */
-  @Test
+  @Test (timeout=60000)
   public void testLoadImageWithEmptyFile() throws Exception {
     // create an empty file
     Path file = new Path(dir, "file");
@@ -373,5 +371,67 @@ public class TestFSImageWithSnapshot {
     
     FileStatus status = hdfs.getFileStatus(file);
     assertEquals(1, status.getLen());
+  }
+  
+  /**
+   * Testing a special case with snapshots. When the following steps happen:
+   * <pre>
+   * 1. Take snapshot s1 on dir.
+   * 2. Create new dir and files under subsubDir, which is descendant of dir.
+   * 3. Take snapshot s2 on dir.
+   * 4. Delete subsubDir.
+   * 5. Delete snapshot s2.
+   * </pre>
+   * When we merge the diff from s2 to s1 (since we deleted s2), we need to make
+   * sure all the files/dirs created after s1 should be destroyed. Otherwise
+   * we may save these files/dirs to the fsimage, and cause FileNotFound 
+   * Exception while loading fsimage.  
+   */
+  @Test (timeout=300000)
+  public void testSaveLoadImageAfterSnapshotDeletion()
+      throws Exception {
+    // create initial dir and subdir
+    Path dir = new Path("/dir");
+    Path subDir = new Path(dir, "subdir");
+    Path subsubDir = new Path(subDir, "subsubdir");
+    hdfs.mkdirs(subsubDir);
+    
+    // take snapshots on subdir and dir
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
+    
+    // create new dir under initial dir
+    Path newDir = new Path(subsubDir, "newdir");
+    Path newFile = new Path(newDir, "newfile");
+    hdfs.mkdirs(newDir);
+    DFSTestUtil.createFile(hdfs, newFile, BLOCKSIZE, REPLICATION, seed);
+    
+    // create another snapshot
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s2");
+    
+    // delete subsubdir
+    hdfs.delete(subsubDir, true);
+    
+    // delete snapshot s2
+    hdfs.deleteSnapshot(dir, "s2");
+    
+    // restart cluster
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
+        .format(false).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    
+    // save namespace to fsimage
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(REPLICATION).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
   }
 }

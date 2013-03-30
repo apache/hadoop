@@ -622,7 +622,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     // the diff list, the snapshot to be deleted has been combined or renamed
     // to its latest previous snapshot. (besides, we also need to consider nodes
     // created after prior but before snapshot. this will be done in 
-    // INodeDirectoryWithSnapshot#cleanSubtree
+    // INodeDirectoryWithSnapshot#cleanSubtree)
     Snapshot s = snapshot != null && prior != null ? prior : snapshot;
     for (INode child : getChildrenList(s)) {
       Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
