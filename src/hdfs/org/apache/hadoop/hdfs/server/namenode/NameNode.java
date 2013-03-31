@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -294,8 +297,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     
     myMetrics = NameNodeInstrumentation.create(conf);
     this.namesystem = new FSNamesystem(this, conf);
+    
+    // For testing purposes, allow the DT secret manager to be started regardless
+    // of whether security is enabled.
+    boolean alwaysUseDelegationTokensForTests = 
+      conf.getBoolean(DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
+          DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
 
-    if (UserGroupInformation.isSecurityEnabled()) {
+    if (UserGroupInformation.isSecurityEnabled() ||
+        alwaysUseDelegationTokensForTests) {
       namesystem.activateSecretManager();
     }
 
