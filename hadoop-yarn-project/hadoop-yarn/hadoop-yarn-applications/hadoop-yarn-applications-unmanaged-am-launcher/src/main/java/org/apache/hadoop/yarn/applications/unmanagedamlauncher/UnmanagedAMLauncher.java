@@ -57,10 +57,11 @@ import org.apache.hadoop.yarn.util.Records;
  * unmanagedAM is an AM that is not launched and managed by the RM. The client
  * creates a new application on the RM and negotiates a new attempt id. Then it
  * waits for the RM app state to reach be YarnApplicationState.ACCEPTED after
- * which it spawns the AM in another process and passes it the attempt id via
- * env variable ApplicationConstants.AM_APP_ATTEMPT_ID_ENV. The AM can be in any
- * language. The AM can register with the RM using the attempt id and proceed as
- * normal. The client redirects app stdout and stderr to its own stdout and
+ * which it spawns the AM in another process and passes it the container id via
+ * env variable ApplicationConstants.AM_CONTAINER_ID_ENV. The AM can be in any
+ * language. The AM can register with the RM using the attempt id obtained
+ * from the container id and proceed as normal.
+ * The client redirects app stdout and stderr to its own stdout and
  * stderr and waits for the AM process to exit. Then it waits for the RM to
  * report app completion.
  */
