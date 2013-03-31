@@ -96,6 +96,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-5081. Backport DistCpV2.  (szetszwo)
 
+    HDFS-4651. Offline Image Viewer backport to branch-1.
+    (Chris Nauroth via suresh)
+
   IMPROVEMENTS
 
     HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.
