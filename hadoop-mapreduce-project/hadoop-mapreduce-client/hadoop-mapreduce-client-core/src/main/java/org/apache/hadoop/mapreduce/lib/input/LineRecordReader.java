@@ -81,13 +81,13 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     start = split.getStart();
     end = start + split.getLength();
     final Path file = split.getPath();
-    compressionCodecs = new CompressionCodecFactory(job);
-    codec = compressionCodecs.getCodec(file);
 
     // open the file and seek to the start of the split
     final FileSystem fs = file.getFileSystem(job);
     fileIn = fs.open(file);
     if (isCompressedInput()) {
+      compressionCodecs = new CompressionCodecFactory(job);
+      codec = compressionCodecs.getCodec(file);
       decompressor = CodecPool.getDecompressor(codec);
       if (codec instanceof SplittableCompressionCodec) {
         final SplitCompressionInputStream cIn =
@@ -166,9 +166,6 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     while (getFilePosition() <= end) {
       newSize = in.readLine(value, maxLineLength,
           Math.max(maxBytesToConsume(pos), maxLineLength));
-      if (newSize == 0) {
-        break;
-      }
       pos += newSize;
       if (newSize < maxLineLength) {
         break;
