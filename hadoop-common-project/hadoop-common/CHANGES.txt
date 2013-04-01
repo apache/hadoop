@@ -95,6 +95,9 @@ Release 2.0.4-alpha - UNRELEASED
     HADOOP-9444. Modify hadoop-policy.xml to replace unexpanded variables to a
     default value of '*'. (Roman Shaposhnik via vinodkv)
 
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken.
+    (Andrew Wang via atm)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
