@@ -54,6 +54,9 @@ Trunk - Unreleased
 
     YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
     via vinodkv)
+    
+    YARN-524 TestYarnVersionInfo failing if generated properties doesn't
+    include an SVN URL(stevel)
 
 Release 2.0.5-beta - UNRELEASED
 
