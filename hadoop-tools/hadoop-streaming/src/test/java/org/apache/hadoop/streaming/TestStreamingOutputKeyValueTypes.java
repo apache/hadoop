@@ -24,6 +24,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.junit.Before;
 import org.junit.Test;
@@ -175,6 +176,17 @@ public class TestStreamingOutputKeyValueTypes extends TestStreaming {
     reduce = "cat";
     args.add("-numReduceTasks");
     args.add("0");
+    super.testCommandLine();
+  }
+  
+  @Test
+  public void testDefaultToIdentityReducer() throws Exception {
+    args.add("-mapper");args.add(map);
+    args.add("-jobconf");
+    args.add("mapreduce.task.files.preserve.failedtasks=true");
+    args.add("-jobconf");
+    args.add("stream.tmpdir="+System.getProperty("test.build.data","/tmp"));
+    args.add("-inputformat");args.add(TextInputFormat.class.getName());
     super.testCommandLine();
   }
 
