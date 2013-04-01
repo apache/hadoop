@@ -87,7 +87,7 @@ public class TestFSImageWithSnapshot {
       cluster.shutdown();
     }
   }
-  
+
   /**
    * Create a temp fsimage file for testing.
    * @param dir The directory where the fsimage file resides
@@ -205,7 +205,16 @@ public class TestFSImageWithSnapshot {
     hdfs.setReplication(sub1file1, (short) (REPLICATION - 1));
     hdfs.delete(sub1file2, true);
     hdfs.setOwner(sub2, "dr.who", "unknown");
-    hdfs.delete(sub2file2, true);
+    hdfs.delete(sub2file1, true);
+    checkImage(s);
+    
+    hdfs.createSnapshot(dir, "s" + ++s);
+    Path sub1_sub2file2 = new Path(sub1, "sub2file2");
+    hdfs.rename(sub2file2, sub1_sub2file2);
+    
+    hdfs.rename(sub1file1, sub2file1);
+    // TODO: fix case hdfs.rename(sub1file1, sub1file2);
+
     checkImage(s);
   }
 
@@ -222,8 +231,14 @@ public class TestFSImageWithSnapshot {
     long numSnapshotBefore = fsn.getNumSnapshots();
     SnapshottableDirectoryStatus[] dirBefore = hdfs.getSnapshottableDirListing();
 
-    // restart the cluster, and format the cluster
+    // shutdown the cluster
     cluster.shutdown();
+
+    // dump the fsdir tree
+    File fsnBetween = dumpTree2File(name + "_between");
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnBetween);
+
+    // restart the cluster, and format the cluster
     cluster = new MiniDFSCluster.Builder(conf).format(true)
         .numDataNodes(REPLICATION).build();
     cluster.waitActive();

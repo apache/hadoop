@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.io.DataOutputStream;
+import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
 /**
  * {@link INodeFile} with a link to the next element.
@@ -90,9 +91,9 @@ public interface FileWithSnapshot {
           + (snapshotINode == null? "?": snapshotINode.getFileReplication());
     }
 
-    /** Serialize fields to out */
-    void write(DataOutputStream out) throws IOException {
-      writeSnapshotPath(out);
+    @Override
+    void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
+      writeSnapshot(out);
       out.writeLong(fileSize);
 
       // write snapshotINode

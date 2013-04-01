@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.io.DataOutputStream;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.hdfs.util.Diff.Container;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
@@ -122,7 +123,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     /** Serialize {@link #created} */
-    private void writeCreated(DataOutputStream out) throws IOException {
+    private void writeCreated(DataOutput out) throws IOException {
       final List<INode> created = getList(ListType.CREATED);
       out.writeInt(created.size());
       for (INode node : created) {
@@ -134,18 +135,20 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     /** Serialize {@link #deleted} */
-    private void writeDeleted(DataOutputStream out) throws IOException {
+    private void writeDeleted(DataOutput out,
+        ReferenceMap referenceMap) throws IOException {
       final List<INode> deleted = getList(ListType.DELETED);
       out.writeInt(deleted.size());
       for (INode node : deleted) {
-        FSImageSerialization.saveINode2Image(node, out, true);
+        FSImageSerialization.saveINode2Image(node, out, true, referenceMap);
       }
     }
     
     /** Serialize to out */
-    private void write(DataOutputStream out) throws IOException {
+    private void write(DataOutput out, ReferenceMap referenceMap
+        ) throws IOException {
       writeCreated(out);
-      writeDeleted(out);    
+      writeDeleted(out, referenceMap);    
     }
 
     /** @return The list of INodeDirectory contained in the deleted list */
@@ -339,8 +342,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     @Override
-    void write(DataOutputStream out) throws IOException {
-      writeSnapshotPath(out);
+    void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
+      writeSnapshot(out);
       out.writeInt(childrenSize);
 
       // write snapshotINode
@@ -356,7 +359,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         }
       }
       // Write diff. Node need to write poseriorDiff, since diffs is a list.
-      diff.write(out);
+      diff.write(out, referenceMap);
     }
 
     @Override
@@ -604,9 +607,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   /** The child just has been removed, replace it with a reference. */
   public INodeReference.WithName replaceRemovedChild4Reference(
       INode oldChild, INodeReference.WithCount newChild, byte[] childName) {
-    final INodeReference.WithName ref = new INodeReference.WithName(
+    final INodeReference.WithName ref = new INodeReference.WithName(this,
         newChild, childName);
     newChild.incrementReferenceCount();
+
     diffs.replaceChild(ListType.CREATED, oldChild, ref);
     // the old child must be in the deleted list
     Preconditions.checkState(

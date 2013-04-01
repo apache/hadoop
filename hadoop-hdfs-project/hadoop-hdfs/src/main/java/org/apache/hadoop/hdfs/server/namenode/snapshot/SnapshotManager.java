@@ -21,12 +21,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -195,23 +198,39 @@ public class SnapshotManager implements SnapshotStats {
   }
   
   /**
-   * Write {@link #snapshotCounter}, {@link #numSnapshots}, and
-   * {@link #numSnapshottableDirs} to the DataOutput.
+   * Write {@link #snapshotCounter}, {@link #numSnapshots},
+   * {@link #numSnapshottableDirs} and all snapshots to the DataOutput.
    */
   public void write(DataOutput out) throws IOException {
     out.writeInt(snapshotCounter);
-    out.writeInt(numSnapshots.get());
     out.writeInt(numSnapshottableDirs.get());
+    out.writeInt(numSnapshots.get());
+
+    // write all snapshots.
+    for(INodeDirectorySnapshottable snapshottableDir : snapshottables) {
+      for(Snapshot s : snapshottableDir.getSnapshotsByNames()) {
+        s.write(out);
+      }
+    }
   }
   
   /**
    * Read values of {@link #snapshotCounter}, {@link #numSnapshots}, and
-   * {@link #numSnapshottableDirs} from the DataInput
+   * {@link #numSnapshottableDirs} and all snapshots from the DataInput
    */
-  public void read(DataInput in) throws IOException {
+  public Map<Integer, Snapshot> read(DataInput in, FSImageFormat.Loader loader
+      ) throws IOException {
     snapshotCounter = in.readInt();
-    numSnapshots.set(in.readInt());
     numSnapshottableDirs.set(in.readInt());
+    numSnapshots.set(in.readInt());
+    
+    // read snapshots
+    final Map<Integer, Snapshot> snapshotMap = new HashMap<Integer, Snapshot>();
+    for(int i = 0; i < numSnapshots.get(); i++) {
+      final Snapshot s = Snapshot.read(in, loader);
+      snapshotMap.put(s.getId(), s);
+    }
+    return snapshotMap;
   }
   
   /**

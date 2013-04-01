@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.io.DataOutputStream;
+import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
 import com.google.common.base.Preconditions;
 
@@ -144,11 +144,11 @@ abstract class AbstractINodeDiff<N extends INode,
         + (posteriorDiff == null? null: posteriorDiff.snapshot) + ")";
   }
 
-  void writeSnapshotPath(DataOutputStream out) throws IOException {
-    // Assume the snapshot is recorded before.
-    // The root path is sufficient for looking up the Snapshot object.
-    FSImageSerialization.writeString(snapshot.getRoot().getFullPathName(), out);
+  void writeSnapshot(DataOutput out) throws IOException {
+    // Assume the snapshot is recorded before, write id only.
+    out.writeInt(snapshot.getId());
   }
   
-  abstract void write(DataOutputStream out) throws IOException;
+  abstract void write(DataOutput out, ReferenceMap referenceMap
+      ) throws IOException;
 }

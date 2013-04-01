@@ -17,48 +17,51 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat.Loader;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiffList;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
+import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A helper class defining static methods for reading/writing snapshot related
  * information from/to FSImage.
  */
 public class SnapshotFSImageFormat {
-
   /**
    * Save snapshots and snapshot quota for a snapshottable directory.
    * @param current The directory that the snapshots belongs to.
-   * @param out The {@link DataOutputStream} to write.
+   * @param out The {@link DataOutput} to write.
    * @throws IOException
    */
   public static void saveSnapshots(INodeDirectorySnapshottable current,
-      DataOutputStream out) throws IOException {
+      DataOutput out) throws IOException {
     // list of snapshots in snapshotsByNames
     ReadOnlyList<Snapshot> snapshots = current.getSnapshotsByNames();
     out.writeInt(snapshots.size());
-    for (Snapshot ss : snapshots) {
-      // write the snapshot
-      ss.write(out);
+    for (Snapshot s : snapshots) {
+      // write the snapshot id
+      out.writeInt(s.getId());
     }
     // snapshot quota
     out.writeInt(current.getSnapshotQuota());
@@ -67,11 +70,11 @@ public class SnapshotFSImageFormat {
   /**
    * Save SnapshotDiff list for an INodeDirectoryWithSnapshot.
    * @param sNode The directory that the SnapshotDiff list belongs to.
-   * @param out The {@link DataOutputStream} to write.
+   * @param out The {@link DataOutput} to write.
    */
   private static <N extends INode, D extends AbstractINodeDiff<N, D>>
       void saveINodeDiffs(final AbstractINodeDiffList<N, D> diffs,
-      final DataOutputStream out) throws IOException {
+      final DataOutput out, ReferenceMap referenceMap) throws IOException {
     // Record the diffs in reversed order, so that we can find the correct
     // reference for INodes in the created list when loading the FSImage
     if (diffs == null) {
@@ -81,24 +84,25 @@ public class SnapshotFSImageFormat {
       final int size = list.size();
       out.writeInt(size);
       for (int i = size - 1; i >= 0; i--) {
-        list.get(i).write(out);
+        list.get(i).write(out, referenceMap);
       }
     }
   }
   
   public static void saveDirectoryDiffList(final INodeDirectory dir,
-      final DataOutputStream out) throws IOException {
+      final DataOutput out, final ReferenceMap referenceMap
+      ) throws IOException {
     saveINodeDiffs(dir instanceof INodeDirectoryWithSnapshot?
-        ((INodeDirectoryWithSnapshot)dir).getDiffs(): null, out);
+        ((INodeDirectoryWithSnapshot)dir).getDiffs(): null, out, referenceMap);
   }
   
   public static void saveFileDiffList(final INodeFile file,
-      final DataOutputStream out) throws IOException {
+      final DataOutput out) throws IOException {
     saveINodeDiffs(file instanceof FileWithSnapshot?
-        ((FileWithSnapshot)file).getDiffs(): null, out);
+        ((FileWithSnapshot)file).getDiffs(): null, out, null);
   }
 
-  public static FileDiffList loadFileDiffList(DataInputStream in,
+  public static FileDiffList loadFileDiffList(DataInput in,
       FSImageFormat.Loader loader) throws IOException {
     final int size = in.readInt();
     if (size == -1) {
@@ -115,11 +119,10 @@ public class SnapshotFSImageFormat {
     }
   }
 
-  private static FileDiff loadFileDiff(FileDiff posterior, DataInputStream in,
+  private static FileDiff loadFileDiff(FileDiff posterior, DataInput in,
       FSImageFormat.Loader loader) throws IOException {
     // 1. Read the full path of the Snapshot root to identify the Snapshot
-    Snapshot snapshot = findSnapshot(FSImageSerialization.readString(in),
-        loader.getFSDirectoryInLoading());
+    final Snapshot snapshot = loader.getSnapshot(in);
 
     // 2. Load file size
     final long fileSize = in.readLong();
@@ -161,17 +164,16 @@ public class SnapshotFSImageFormat {
   /**
    * Load the created list from fsimage.
    * @param parent The directory that the created list belongs to.
-   * @param in The {@link DataInputStream} to read.
+   * @param in The {@link DataInput} to read.
    * @return The created list.
    */
   private static List<INode> loadCreatedList(INodeDirectoryWithSnapshot parent,
-      DataInputStream in) throws IOException {
+      DataInput in) throws IOException {
     // read the size of the created list
     int createdSize = in.readInt();
     List<INode> createdList = new ArrayList<INode>(createdSize);
     for (int i = 0; i < createdSize; i++) {
-      byte[] createdNodeName = new byte[in.readShort()];
-      in.readFully(createdNodeName);
+      byte[] createdNodeName = FSImageSerialization.readLocalName(in);
       INode created = loadCreated(createdNodeName, parent);
       createdList.add(created);
     }
@@ -184,12 +186,12 @@ public class SnapshotFSImageFormat {
    * @param parent The directory that the deleted list belongs to.
    * @param createdList The created list associated with the deleted list in 
    *                    the same Diff.
-   * @param in The {@link DataInputStream} to read.
+   * @param in The {@link DataInput} to read.
    * @param loader The {@link Loader} instance.
    * @return The deleted list.
    */
   private static List<INode> loadDeletedList(INodeDirectoryWithSnapshot parent,
-      List<INode> createdList, DataInputStream in, FSImageFormat.Loader loader)
+      List<INode> createdList, DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     int deletedSize = in.readInt();
     List<INode> deletedList = new ArrayList<INode>(deletedSize);
@@ -208,35 +210,21 @@ public class SnapshotFSImageFormat {
    * Load snapshots and snapshotQuota for a Snapshottable directory.
    * @param snapshottableParent The snapshottable directory for loading.
    * @param numSnapshots The number of snapshots that the directory has.
-   * @param in The {@link DataInputStream} instance to read.
+   * @param in The {@link DataInput} instance to read.
    * @param loader The {@link Loader} instance that this loading procedure is 
    *               using.
    */
   public static void loadSnapshotList(
       INodeDirectorySnapshottable snapshottableParent, int numSnapshots,
-      DataInputStream in, FSImageFormat.Loader loader) throws IOException {
+      DataInput in, FSImageFormat.Loader loader) throws IOException {
     for (int i = 0; i < numSnapshots; i++) {
       // read snapshots
-      Snapshot ss = loadSnapshot(snapshottableParent, in, loader);
-      snapshottableParent.addSnapshot(ss);
+      final Snapshot s = loader.getSnapshot(in);
+      s.getRoot().setParent(snapshottableParent);
+      snapshottableParent.addSnapshot(s);
     }
     int snapshotQuota = in.readInt();
     snapshottableParent.setSnapshotQuota(snapshotQuota);
-  }
-  
-  /**
-   * Load a {@link Snapshot} from fsimage.
-   * @param parent The directory that the snapshot belongs to.
-   * @param in The {@link DataInputStream} instance to read.
-   * @param loader The {@link Loader} instance that this loading procedure is 
-   *               using.
-   * @return The snapshot.
-   */
-  private static Snapshot loadSnapshot(INodeDirectorySnapshottable parent,
-      DataInputStream in, FSImageFormat.Loader loader) throws IOException {
-    int snapshotId = in.readInt();
-    final INode root = loader.loadINodeWithLocalName(false, in);
-    return new Snapshot(snapshotId, root.asDirectory(), parent);
   }
   
   /**
@@ -245,12 +233,12 @@ public class SnapshotFSImageFormat {
    * @param dir The snapshottable directory for loading.
    * @param numSnapshotDiffs The number of {@link SnapshotDiff} that the 
    *                         directory has.
-   * @param in The {@link DataInputStream} instance to read.
+   * @param in The {@link DataInput} instance to read.
    * @param loader The {@link Loader} instance that this loading procedure is 
    *               using.
    */
   public static void loadDirectoryDiffList(INodeDirectory dir,
-      DataInputStream in, FSImageFormat.Loader loader) throws IOException {
+      DataInput in, FSImageFormat.Loader loader) throws IOException {
     final int size = in.readInt();
     if (size != -1) {
       INodeDirectoryWithSnapshot withSnapshot = (INodeDirectoryWithSnapshot)dir;
@@ -262,29 +250,15 @@ public class SnapshotFSImageFormat {
   }
   
   /**
-   * Use the given full path to a {@link Root} directory to find the
-   * associated snapshot.
-   */
-  private static Snapshot findSnapshot(String sRootFullPath, FSDirectory fsdir)
-      throws IOException {
-    // find the root
-    INode root = fsdir.getINode(sRootFullPath);
-    INodeDirectorySnapshottable snapshotRoot = INodeDirectorySnapshottable
-        .valueOf(root.getParent(), root.getParent().getFullPathName());
-    // find the snapshot
-    return snapshotRoot.getSnapshot(root.getLocalNameBytes());
-  }
-  
-  /**
    * Load the snapshotINode field of {@link SnapshotDiff}.
    * @param snapshot The Snapshot associated with the {@link SnapshotDiff}.
-   * @param in The {@link DataInputStream} to read.
+   * @param in The {@link DataInput} to read.
    * @param loader The {@link Loader} instance that this loading procedure is 
    *               using.
    * @return The snapshotINode.
    */
   private static INodeDirectory loadSnapshotINodeInDirectoryDiff(
-      Snapshot snapshot, DataInputStream in, FSImageFormat.Loader loader)
+      Snapshot snapshot, DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     // read the boolean indicating whether snapshotINode == Snapshot.Root
     boolean useRoot = in.readBoolean();      
@@ -300,17 +274,16 @@ public class SnapshotFSImageFormat {
   /**
    * Load {@link DirectoryDiff} from fsimage.
    * @param parent The directory that the SnapshotDiff belongs to.
-   * @param in The {@link DataInputStream} instance to read.
+   * @param in The {@link DataInput} instance to read.
    * @param loader The {@link Loader} instance that this loading procedure is 
    *               using.
    * @return A {@link DirectoryDiff}.
    */
   private static DirectoryDiff loadDirectoryDiff(
-      INodeDirectoryWithSnapshot parent, DataInputStream in,
+      INodeDirectoryWithSnapshot parent, DataInput in,
       FSImageFormat.Loader loader) throws IOException {
     // 1. Read the full path of the Snapshot root to identify the Snapshot
-    Snapshot snapshot = findSnapshot(FSImageSerialization.readString(in),
-        loader.getFSDirectoryInLoading());
+    final Snapshot snapshot = loader.getSnapshot(in);
 
     // 2. Load DirectoryDiff#childrenSize
     int childrenSize = in.readInt();
@@ -333,4 +306,78 @@ public class SnapshotFSImageFormat {
     return sdiff;
   }
   
+
+  /** A reference with a fixed id for fsimage serialization. */
+  private static class INodeReferenceWithId extends INodeReference {
+    final long id;
+
+    private INodeReferenceWithId(WithCount parent, INode referred, long id) {
+      super(parent, referred);
+      this.id = id;
+    }
+    
+    /** @return the reference id. */
+    private long getReferenceId() {
+      return id;
+    }
+  }
+
+  /** A reference map for fsimage serialization. */
+  public static class ReferenceMap {
+    private final Map<Long, INodeReference.WithCount> referenceMap
+        = new HashMap<Long, INodeReference.WithCount>();
+    private long referenceId = 0;
+
+    public void writeINodeReferenceWithCount(INodeReference.WithCount withCount,
+        DataOutput out, boolean writeUnderConstruction) throws IOException {
+      final INode referred = withCount.getReferredINode();
+      final boolean firstReferred = !(referred instanceof INodeReferenceWithId);
+      out.writeBoolean(firstReferred);
+
+      if (firstReferred) {
+        FSImageSerialization.saveINode2Image(referred, out,
+            writeUnderConstruction, this);
+        final long id = ++referenceId;
+        referenceMap.put(id, withCount);
+
+        final INodeReferenceWithId withId = new INodeReferenceWithId(
+            withCount, referred, id);
+        withCount.setReferredINode(withId);
+        referred.setParentReference(withId);
+      } else {
+        final long id = ((INodeReferenceWithId)referred).getReferenceId();
+        Preconditions.checkState(referenceMap.containsKey(id));
+        out.writeLong(id);
+      }
+    }
+    
+    public INodeReference.WithCount loadINodeReferenceWithCount(
+        boolean isSnapshotINode, DataInput in, FSImageFormat.Loader loader
+        ) throws IOException {
+      final boolean firstReferred = in.readBoolean();
+
+      final INodeReference.WithCount withCount;
+      if (firstReferred) {
+        final INode referred = loader.loadINodeWithLocalName(isSnapshotINode, in);
+        withCount = new INodeReference.WithCount(null, referred);
+        referenceMap.put(++referenceId, withCount);
+      } else {
+        final long id = in.readLong();
+        withCount = referenceMap.get(id);
+        withCount.incrementReferenceCount();
+      }
+      return withCount;
+    }
+    
+    public void removeAllINodeReferenceWithId() {
+      for(INodeReference.WithCount withCount : referenceMap.values()) {
+        final INodeReference ref = withCount.getReferredINode().asReference();
+        final INode referred = ref.getReferredINode();
+        withCount.setReferredINode(referred);
+        referred.setParentReference(withCount);
+        ref.clear();
+      }
+      referenceMap.clear();
+    }
+  }
 }

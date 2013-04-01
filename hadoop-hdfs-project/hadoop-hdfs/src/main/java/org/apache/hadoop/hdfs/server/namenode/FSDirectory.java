@@ -570,7 +570,8 @@ public class FSDirectory implements Closeable {
             + " because the source can not be removed");
         return false;
       }
-      srcChild.setLocalName(dstComponents[dstComponents.length - 1]);
+      //TODO: setLocalName breaks created/deleted lists
+      srcChild.setLocalName(dstIIP.getLastLocalName());
       
       // add src to the destination
       added = addLastINodeNoQuotaCheck(dstIIP, srcChild);
@@ -750,6 +751,7 @@ public class FSDirectory implements Closeable {
           undoRemoveDst = true;
         }
       }
+      //TODO: setLocalName breaks created/deleted lists
       srcChild.setLocalName(dstIIP.getLastLocalName());
 
       // add src as dst to complete rename

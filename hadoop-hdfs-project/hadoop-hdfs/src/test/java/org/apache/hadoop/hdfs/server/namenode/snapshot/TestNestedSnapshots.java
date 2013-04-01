@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
@@ -55,7 +54,6 @@ public class TestNestedSnapshots {
   
   private static Configuration conf = new Configuration();
   private static MiniDFSCluster cluster;
-  private static FSNamesystem fsn;
   private static DistributedFileSystem hdfs;
   
   @BeforeClass
@@ -63,8 +61,6 @@ public class TestNestedSnapshots {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .build();
     cluster.waitActive();
-
-    fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();
   }
 
@@ -112,8 +108,7 @@ public class TestNestedSnapshots {
   }
 
   private static void print(String message) throws UnresolvedLinkException {
-    System.out.println("XXX " + message);
-    SnapshotTestHelper.dumpTreeRecursively(fsn.getFSDirectory().getINode("/"));
+    SnapshotTestHelper.dumpTree(message, cluster);
   }
 
   private static void assertFile(Path s1, Path s2, Path file,

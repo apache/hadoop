@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataInputStream;
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
@@ -87,7 +88,7 @@ public class FSImageSerialization {
   }
 
   private static void writeBlocks(final Block[] blocks,
-      final DataOutputStream out) throws IOException {
+      final DataOutput out) throws IOException {
     if (blocks == null) {
       out.writeInt(0);
     } else {
@@ -102,7 +103,7 @@ public class FSImageSerialization {
   // from the input stream
   //
   static INodeFileUnderConstruction readINodeUnderConstruction(
-      DataInputStream in) throws IOException {
+      DataInput in) throws IOException {
     byte[] name = readBytes(in);
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
@@ -164,7 +165,7 @@ public class FSImageSerialization {
    * @param out The {@link DataOutputStream} where the fields are written
    * @param writeBlock Whether to write block information
    */
-  public static void writeINodeFile(INodeFile file, DataOutputStream out,
+  public static void writeINodeFile(INodeFile file, DataOutput out,
       boolean writeUnderConstruction) throws IOException {
     writeLocalName(file, out);
     out.writeShort(file.getFileReplication());
@@ -233,17 +234,37 @@ public class FSImageSerialization {
     writePermissionStatus(node, out);
   }
   
+  /** Serialize a {@link INodeReference} node */
+  private static void writeINodeReference(INodeReference ref, DataOutput out,
+      boolean writeUnderConstruction, ReferenceMap referenceMap
+      ) throws IOException {
+    writeLocalName(ref, out);
+    out.writeShort(0);  // replication
+    out.writeLong(0);   // modification time
+    out.writeLong(0);   // access time
+    out.writeLong(0);   // preferred block size
+    out.writeInt(-3);   // # of blocks
+
+    out.writeBoolean(ref instanceof INodeReference.WithName);
+
+    final INodeReference.WithCount withCount
+        = (INodeReference.WithCount)ref.getReferredINode();
+    referenceMap.writeINodeReferenceWithCount(withCount, out, writeUnderConstruction);
+  }
+
   /**
    * Save one inode's attributes to the image.
    */
-  public static void saveINode2Image(INode node, DataOutputStream out,
-      boolean writeUnderConstruction)
+  public static void saveINode2Image(INode node, DataOutput out,
+      boolean writeUnderConstruction, ReferenceMap referenceMap)
       throws IOException {
-    if (node.isDirectory()) {
+    if (node.isReference()) {
+      writeINodeReference(node.asReference(), out, writeUnderConstruction, referenceMap);
+    } else if (node.isDirectory()) {
       writeINodeDirectory(node.asDirectory(), out);
     } else if (node.isSymlink()) {
       writeINodeSymlink(node.asSymlink(), out);      
-    } else {
+    } else if (node.isFile()) {
       writeINodeFile(node.asFile(), out, writeUnderConstruction);
     }
   }
@@ -252,19 +273,19 @@ public class FSImageSerialization {
   // code is moved into this package. This method should not be called
   // by other code.
   @SuppressWarnings("deprecation")
-  public static String readString(DataInputStream in) throws IOException {
+  public static String readString(DataInput in) throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     ustr.readFields(in);
     return ustr.toStringChecked();
   }
 
-  static String readString_EmptyAsNull(DataInputStream in) throws IOException {
+  static String readString_EmptyAsNull(DataInput in) throws IOException {
     final String s = readString(in);
     return s.isEmpty()? null: s;
   }
 
   @SuppressWarnings("deprecation")
-  public static void writeString(String str, DataOutputStream out) throws IOException {
+  public static void writeString(String str, DataOutput out) throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     ustr.set(str);
     ustr.write(out);
@@ -272,7 +293,7 @@ public class FSImageSerialization {
 
   
   /** read the long value */
-  static long readLong(DataInputStream in) throws IOException {
+  static long readLong(DataInput in) throws IOException {
     LongWritable ustr = TL_DATA.get().U_LONG;
     ustr.readFields(in);
     return ustr.get();
@@ -286,7 +307,7 @@ public class FSImageSerialization {
   }
 
   /** read short value */
-  static short readShort(DataInputStream in) throws IOException {
+  static short readShort(DataInput in) throws IOException {
     ShortWritable uShort = TL_DATA.get().U_SHORT;
     uShort.readFields(in);
     return uShort.get();
@@ -301,7 +322,7 @@ public class FSImageSerialization {
   
   // Same comments apply for this method as for readString()
   @SuppressWarnings("deprecation")
-  public static byte[] readBytes(DataInputStream in) throws IOException {
+  public static byte[] readBytes(DataInput in) throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     ustr.readFields(in);
     int len = ustr.getLength();
@@ -319,7 +340,7 @@ public class FSImageSerialization {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  public static byte[][] readPathComponents(DataInputStream in)
+  public static byte[][] readPathComponents(DataInput in)
       throws IOException {
     DeprecatedUTF8 ustr = TL_DATA.get().U_STR;
     
@@ -328,6 +349,12 @@ public class FSImageSerialization {
       ustr.getLength(), (byte) Path.SEPARATOR_CHAR);
   }
   
+  public static byte[] readLocalName(DataInput in) throws IOException {
+    byte[] createdNodeName = new byte[in.readShort()];
+    in.readFully(createdNodeName);
+    return createdNodeName;
+  }
+
   private static void writeLocalName(INode inode, DataOutput out)
       throws IOException {
     final byte[] name = inode.getLocalNameBytes();
@@ -358,7 +385,7 @@ public class FSImageSerialization {
   }
   
   public static Block[] readCompactBlockArray(
-      DataInputStream in, int logVersion) throws IOException {
+      DataInput in, int logVersion) throws IOException {
     int num = WritableUtils.readVInt(in);
     if (num < 0) {
       throw new IOException("Invalid block array length: " + num);

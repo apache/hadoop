@@ -458,6 +458,11 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   }
 
   @Override
+  public String toDetailString() {
+    return super.toDetailString() + ", snapshotsByNames=" + snapshotsByNames;
+  }
+
+  @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       Snapshot snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);

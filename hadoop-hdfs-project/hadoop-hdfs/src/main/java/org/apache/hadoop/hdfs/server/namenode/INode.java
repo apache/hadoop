@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -42,7 +43,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.SignedBytes;
-//import org.apache.hadoop.hdfs.util.EnumCounters;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -420,21 +420,30 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   @VisibleForTesting
-  public String getObjectString() {
+  public final String getObjectString() {
     return getClass().getSimpleName() + "@"
         + Integer.toHexString(super.hashCode());
   }
 
+  /** @return a string description of the parent. */
   @VisibleForTesting
-  public String toStringWithObjectType() {
-    return toString() + "(" + getObjectString() + ")";
+  public final String getParentString() {
+    final INodeReference parentRef = getParentReference();
+    if (parentRef != null) {
+      return "parentRef=" + parentRef.getLocalName() + "->";
+    } else {
+      final INodeDirectory parentDir = getParent();
+      if (parentDir != null) {
+        return "parentDir=" + parentDir.getLocalName() + "/";
+      } else {
+        return "parent=null";
+      }
+    }
   }
 
   @VisibleForTesting
   public String toDetailString() {
-    final INodeDirectory p = getParent();
-    return toStringWithObjectType()
-        + ", parent=" + (p == null? null: p.toStringWithObjectType());
+    return toString() + "(" + getObjectString() + "), " + getParentString();
   }
 
   /** @return the parent directory */
@@ -611,6 +620,11 @@ public abstract class INode implements Diff.Element<byte[]> {
     return out.getBuffer();
   }
 
+  @VisibleForTesting
+  public final void dumpTreeRecursively(PrintStream out) {
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(), null);
+  }
+
   /**
    * Dump tree recursively.
    * @param prefix The prefix string that each line should print.
@@ -623,10 +637,8 @@ public abstract class INode implements Diff.Element<byte[]> {
     out.print(getLocalName());
     out.print("   (");
     out.print(getObjectString());
-    out.print("), parent=");
-
-    final INodeDirectory p = getParent();
-    out.print(p == null? null: p.getLocalName() + "/");
+    out.print("), ");
+    out.print(getParentString());
     out.print(", " + getPermissionStatus(snapshot));
   }
   
