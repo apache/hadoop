@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
- 
+
 #include <jni.h>
 #include "file_descriptor.h"
 #include "org_apache_hadoop.h"
@@ -26,6 +26,10 @@ static jfieldID fd_descriptor;
 // the no-argument constructor
 static jmethodID fd_constructor;
 
+#ifdef WINDOWS
+// the internal field for the long handle
+static jfieldID fd_handle;
+#endif
 
 void fd_init(JNIEnv* env)
 {
@@ -37,6 +41,12 @@ void fd_init(JNIEnv* env)
 
   fd_descriptor = (*env)->GetFieldID(env, fd_class, "fd", "I");
   PASS_EXCEPTIONS(env);
+
+#ifdef WINDOWS
+  fd_handle = (*env)->GetFieldID(env, fd_class, "handle", "J");
+  PASS_EXCEPTIONS(env);
+#endif
+
   fd_constructor = (*env)->GetMethodID(env, fd_class, "<init>", "()V");
 }
 
@@ -46,9 +56,13 @@ void fd_deinit(JNIEnv *env) {
     fd_class = NULL;
   }
   fd_descriptor = NULL;
+#ifdef WINDOWS
+  fd_handle = NULL;
+#endif
   fd_constructor = NULL;
 }
 
+#ifdef UNIX
 /*
  * Given an instance 'obj' of java.io.FileDescriptor, return the
  * underlying fd, or throw if unavailable
@@ -71,4 +85,31 @@ jobject fd_create(JNIEnv *env, int fd) {
 
   (*env)->SetIntField(env, obj, fd_descriptor, fd);
   return obj;
-} 
+}
+#endif
+
+#ifdef WINDOWS
+/*
+ * Given an instance 'obj' of java.io.FileDescriptor, return the
+ * underlying fd, or throw if unavailable
+ */
+long fd_get(JNIEnv* env, jobject obj) {
+  if (obj == NULL) {
+    THROW(env, "java/lang/NullPointerException",
+          "FileDescriptor object is null");
+    return -1;
+  }
+  return (long) (*env)->GetLongField(env, obj, fd_handle);
+}
+
+/*
+ * Create a FileDescriptor object corresponding to the given int fd
+ */
+jobject fd_create(JNIEnv *env, long fd) {
+  jobject obj = (*env)->NewObject(env, fd_class, fd_constructor);
+  PASS_EXCEPTIONS_RET(env, (jobject) NULL);
+
+  (*env)->SetLongField(env, obj, fd_handle, fd);
+  return obj;
+}
+#endif

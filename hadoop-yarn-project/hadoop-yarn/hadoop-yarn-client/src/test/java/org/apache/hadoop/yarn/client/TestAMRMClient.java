@@ -18,25 +18,21 @@
 
 package org.apache.hadoop.yarn.client;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -58,6 +54,11 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestAMRMClient {
   Configuration conf = null;
@@ -183,7 +184,7 @@ public class TestAMRMClient {
     int containersRequestedRack = amClient.remoteRequestsTable.get(priority)
         .get(rack).get(capability).getNumContainers();
     int containersRequestedAny = amClient.remoteRequestsTable.get(priority)
-        .get(AMRMClient.ANY).get(capability).getNumContainers();
+        .get(ResourceRequest.ANY).get(capability).getNumContainers();
 
     assertTrue(containersRequestedNode == 2);
     assertTrue(containersRequestedRack == 2);
@@ -202,9 +203,8 @@ public class TestAMRMClient {
       assertTrue(amClient.release.size() == 0);
       
       assertTrue(nodeCount == amClient.getClusterNodeCount());
-      AMResponse amResponse = allocResponse.getAMResponse();
-      allocatedContainerCount += amResponse.getAllocatedContainers().size();
-      for(Container container : amResponse.getAllocatedContainers()) {
+      allocatedContainerCount += allocResponse.getAllocatedContainers().size();
+      for(Container container : allocResponse.getAllocatedContainers()) {
         ContainerId rejectContainerId = container.getId();
         releases.add(rejectContainerId);
         amClient.releaseAssignedContainer(rejectContainerId);
@@ -264,11 +264,11 @@ public class TestAMRMClient {
     while(!releases.isEmpty() || iterationsLeft-- > 0) {
       // inform RM of rejection
       AllocateResponse allocResponse = amClient.allocate(0.1f);
-      AMResponse amResponse = allocResponse.getAMResponse();
       // RM did not send new containers because AM does not need any
-      assertTrue(amResponse.getAllocatedContainers().size() == 0);
-      if(amResponse.getCompletedContainersStatuses().size() > 0) {
-        for(ContainerStatus cStatus : amResponse.getCompletedContainersStatuses()) {
+      assertTrue(allocResponse.getAllocatedContainers().size() == 0);
+      if(allocResponse.getCompletedContainersStatuses().size() > 0) {
+        for(ContainerStatus cStatus :allocResponse
+            .getCompletedContainersStatuses()) {
           if(releases.contains(cStatus.getContainerId())) {
             assertTrue(cStatus.getState() == ContainerState.COMPLETE);
             assertTrue(cStatus.getExitStatus() == -100);

@@ -29,8 +29,10 @@ message RegisterNodeManagerRequestProto {
   optional int32 http_port = 3;
   optional ResourceProto resource = 4;
 }
+
 message RegisterNodeManagerResponseProto {
-  optional RegistrationResponseProto registration_response = 1;
+  optional MasterKeyProto master_key = 1;
+  optional NodeActionProto nodeAction = 2;
 }
 
 message NodeHeartbeatRequestProto {
@@ -38,6 +40,11 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_master_key = 2;
 }
 
+
 message NodeHeartbeatResponseProto {
-  optional HeartbeatResponseProto heartbeat_response = 1;
+  optional int32 response_id = 1;
+  optional MasterKeyProto master_key = 2;
+  optional NodeActionProto nodeAction = 3;
+  repeated ContainerIdProto containers_to_cleanup = 4;
+  repeated ApplicationIdProto applications_to_cleanup = 5;
 }

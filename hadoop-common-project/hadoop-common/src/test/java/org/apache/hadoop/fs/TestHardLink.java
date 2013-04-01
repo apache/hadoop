@@ -54,17 +54,6 @@ import static org.apache.hadoop.fs.HardLink.*;
  * NOTICE: This test class only tests the functionality of the OS
  * upon which the test is run! (although you're pretty safe with the
  * unix-like OS's, unless a typo sneaks in.)
- * 
- * Notes about Windows testing:  
- * (a) In order to create hardlinks, the process must be run with 
- * administrative privs, in both the account AND the invocation.
- * For instance, to run within Eclipse, the Eclipse application must be 
- * launched by right-clicking on it, and selecting "Run as Administrator" 
- * (and that option will only be available if the current user id does 
- * in fact have admin privs).
- * (b) The getLinkCount() test case will fail for Windows, unless Cygwin
- * is set up properly.  In particular, ${cygwin}/bin must be in
- * the PATH environment variable, so the cygwin utilities can be found.
  */
 public class TestHardLink {
   
@@ -221,9 +210,6 @@ public class TestHardLink {
    * Sanity check the simplest case of HardLink.getLinkCount()
    * to make sure we get back "1" for ordinary single-linked files.
    * Tests with multiply-linked files are in later test cases.
-   * 
-   * If this fails on Windows but passes on Unix, the most likely cause is 
-   * incorrect configuration of the Cygwin installation; see above.
    */
   @Test
   public void testGetLinkCount() throws IOException {
@@ -412,7 +398,7 @@ public class TestHardLink {
     assertEquals(5, win.hardLinkCommand.length); 
     assertEquals(7, win.hardLinkMultPrefix.length);
     assertEquals(8, win.hardLinkMultSuffix.length);
-    assertEquals(3, win.getLinkCountCommand.length);
+    assertEquals(4, win.getLinkCountCommand.length);
 
     assertTrue(win.hardLinkMultPrefix[4].equals("%f"));
     //make sure "%f" was not munged
@@ -423,7 +409,7 @@ public class TestHardLink {
     assertTrue(win.hardLinkMultSuffix[7].equals("1>NUL"));
     //make sure "1>NUL" was not munged
     assertEquals(5, ("1>NUL").length()); 
-    assertTrue(win.getLinkCountCommand[1].equals("-c%h"));
+    assertTrue(win.getLinkCountCommand[1].equals("hardlink"));
     //make sure "-c%h" was not munged
     assertEquals(4, ("-c%h").length()); 
   }

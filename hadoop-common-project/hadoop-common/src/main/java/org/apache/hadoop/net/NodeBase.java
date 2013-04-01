@@ -167,4 +167,16 @@ public class NodeBase implements Node {
   public void setLevel(int level) {
     this.level = level;
   }
+  
+  public static int locationToDepth(String location) {
+    String normalizedLocation = normalize(location);
+    int length = normalizedLocation.length();
+    int depth = 0;
+    for (int i = 0; i < length; i++) {
+      if (normalizedLocation.charAt(i) == PATH_SEPARATOR) {
+        depth++;
+      }
+    }
+    return depth;
+  }
 }

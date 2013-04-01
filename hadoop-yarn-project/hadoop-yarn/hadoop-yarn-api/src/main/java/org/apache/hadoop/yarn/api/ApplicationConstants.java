@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 
 /**
  * This is the API for the applications comprising of constants that YARN sets
@@ -90,6 +91,12 @@ public interface ApplicationConstants {
   public static final String STDERR = "stderr";
 
   public static final String STDOUT = "stdout";
+
+  /**
+   * The environment variable for MAX_APP_ATTEMPTS. Set in AppMaster environment
+   * only
+   */
+  public static final String MAX_APP_ATTEMPTS_ENV = "MAX_APP_ATTEMPTS";
 
   /**
    * Environment for Applications.
@@ -192,7 +199,11 @@ public interface ApplicationConstants {
     }
     
     public String $() {
-      return "$" + variable;
+      if (Shell.WINDOWS) {
+        return "%" + variable + "%";
+      } else {
+        return "$" + variable;
+      }
     }
   }
 }

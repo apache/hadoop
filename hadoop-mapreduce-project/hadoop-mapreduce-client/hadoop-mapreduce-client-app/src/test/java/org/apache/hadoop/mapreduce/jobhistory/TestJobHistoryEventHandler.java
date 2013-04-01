@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -53,7 +54,7 @@ public class TestJobHistoryEventHandler {
   private static final Log LOG = LogFactory
       .getLog(TestJobHistoryEventHandler.class);
 
-  @Test
+  @Test (timeout=50000)
   public void testFirstFlushOnCompletionEvent() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -96,7 +97,7 @@ public class TestJobHistoryEventHandler {
     }
   }
 
-  @Test
+  @Test (timeout=50000)
   public void testMaxUnflushedCompletionEvents() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -131,17 +132,17 @@ public class TestJobHistoryEventHandler {
 
       handleNextNEvents(jheh, 1);
       verify(mockWriter).flush();
-      
+
       handleNextNEvents(jheh, 50);
       verify(mockWriter, times(6)).flush();
-      
+
     } finally {
       jheh.stop();
       verify(mockWriter).close();
     }
   }
-  
-  @Test
+
+  @Test (timeout=50000)
   public void testUnflushedTimer() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -181,8 +182,8 @@ public class TestJobHistoryEventHandler {
       verify(mockWriter).close();
     }
   }
-  
-  @Test
+
+  @Test (timeout=50000)
   public void testBatchedFlushJobEndMultiplier() throws Exception {
     TestParams t = new TestParams();
     Configuration conf = new Configuration();
@@ -265,7 +266,7 @@ public class TestJobHistoryEventHandler {
     when(mockContext.getApplicationID()).thenReturn(appId);
     return mockContext;
   }
-  
+
 
   private class TestParams {
     String workDir = setupTestWorkDir();
@@ -279,12 +280,8 @@ public class TestJobHistoryEventHandler {
   }
 
   private JobHistoryEvent getEventToEnqueue(JobId jobId) {
-    JobHistoryEvent toReturn = Mockito.mock(JobHistoryEvent.class);
-    HistoryEvent he = Mockito.mock(HistoryEvent.class);
-    Mockito.when(he.getEventType()).thenReturn(EventType.JOB_STATUS_CHANGED);
-    Mockito.when(toReturn.getHistoryEvent()).thenReturn(he);
-    Mockito.when(toReturn.getJobID()).thenReturn(jobId);
-    return toReturn;
+    HistoryEvent toReturn = new JobStatusChangedEvent(new JobID(Integer.toString(jobId.getId()), jobId.getId()), "change status");
+    return new JobHistoryEvent(jobId, toReturn);
   }
 
   @Test
@@ -344,8 +341,6 @@ public class TestJobHistoryEventHandler {
 class JHEvenHandlerForTest extends JobHistoryEventHandler {
 
   private EventWriter eventWriter;
-  volatile int handleEventCompleteCalls = 0;
-  volatile int handleEventStartedCalls = 0;
 
   public JHEvenHandlerForTest(AppContext context, int startCount) {
     super(context, startCount);
@@ -354,7 +349,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   @Override
   public void start() {
   }
-  
+
   @Override
   protected EventWriter createEventWriter(Path historyFilePath)
       throws IOException {
@@ -365,7 +360,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   @Override
   protected void closeEventWriter(JobId jobId) {
   }
-  
+
   public EventWriter getEventWriter() {
     return this.eventWriter;
   }
@@ -375,13 +370,12 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
  * Class to help with testSigTermedFunctionality
  */
 class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
-  private MetaInfo metaInfo;
   public JHEventHandlerForSigtermTest(AppContext context, int startCount) {
     super(context, startCount);
   }
 
   public void addToFileMap(JobId jobId) {
-    metaInfo = Mockito.mock(MetaInfo.class);
+    MetaInfo metaInfo = Mockito.mock(MetaInfo.class);
     Mockito.when(metaInfo.isWriterActive()).thenReturn(true);
     fileMap.put(jobId, metaInfo);
   }

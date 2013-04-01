@@ -139,6 +139,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Override
   public synchronized void init(Configuration conf) {
 
+    validateConfigs(conf);
+
     this.conf = conf;
 
     this.conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
@@ -323,6 +325,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected RMAppManager createRMAppManager() {
     return new RMAppManager(this.rmContext, this.scheduler, this.masterService,
       this.applicationACLsManager, this.conf);
+  }
+
+  protected static void validateConfigs(Configuration conf) {
+    int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    if (globalMaxAppAttempts <= 0) {
+      throw new YarnException(
+          "The global max attempts should be a positive integer.");
+    }
   }
 
   @Private

@@ -70,12 +70,11 @@ message RpcRequestHeaderProto { // the header for the RpcRequest
  * | RpcResponseHeaderProto - serialized delimited ie has len         |
  * +------------------------------------------------------------------+
  * | if request is successful:                                        |
- * |   - RpcResponse -  The actual rpc response  bytes                 |
- * |     This response is serialized based on RpcKindProto             |
+ * |   - RpcResponse -  The actual rpc response  bytes follow         |
+ *       the response header                                          |
+ * |     This response is serialized based on RpcKindProto            |
  * | if request fails :                                               |
- * |   - length (4 byte int) + Class name of exception - UTF-8 string |
- * |   - length (4 byte int) + Stacktrace - UTF-8 string              |
- * |   if the strings are null then the length is -1                  |
+ * |   The rpc response header contains the necessary info            |
  * +------------------------------------------------------------------+
  *
  */
@@ -88,5 +87,7 @@ message RpcResponseHeaderProto {
 
   required uint32 callId = 1; // callId used in Request
   required RpcStatusProto status = 2;
-  optional uint32 serverIpcVersionNum = 3; // in case of an fatal IPC error 
+  optional uint32 serverIpcVersionNum = 3; // Sent if success or fail
+  optional string exceptionClassName = 4;  // if request fails
+  optional string errorMsg = 5;  // if request fails, often contains strack trace
 }

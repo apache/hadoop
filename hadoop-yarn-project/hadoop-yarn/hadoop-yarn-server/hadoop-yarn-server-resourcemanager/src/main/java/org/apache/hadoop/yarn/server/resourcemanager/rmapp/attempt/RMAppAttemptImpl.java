@@ -38,9 +38,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -63,10 +63,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -146,6 +146,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final StringBuilder diagnostics = new StringBuilder();
 
   private Configuration conf;
+
+  private static final ExpiredTransition EXPIRED_TRANSITION =
+      new ExpiredTransition();
 
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
@@ -243,7 +246,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(
           RMAppAttemptState.LAUNCHED, RMAppAttemptState.FAILED,
           RMAppAttemptEventType.EXPIRE,
-          new FinalTransition(RMAppAttemptState.FAILED))
+          EXPIRED_TRANSITION)
       .addTransition(RMAppAttemptState.LAUNCHED, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL,
           new FinalTransition(RMAppAttemptState.KILLED))
@@ -268,7 +271,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(
           RMAppAttemptState.RUNNING, RMAppAttemptState.FAILED,
           RMAppAttemptEventType.EXPIRE,
-          new FinalTransition(RMAppAttemptState.FAILED))
+          EXPIRED_TRANSITION)
       .addTransition(
           RMAppAttemptState.RUNNING, RMAppAttemptState.KILLED,
           RMAppAttemptEventType.KILL,
@@ -489,6 +492,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  private void setTrackingUrlToRMAppPage() {
+    origTrackingUrl = pjoin(
+        YarnConfiguration.getRMWebAppHostAndPort(conf),
+        "cluster", "app", getAppAttemptId().getApplicationId());
+    proxiedTrackingUrl = origTrackingUrl;
   }
 
   @Override
@@ -727,7 +737,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
         // Request a container for the AM.
         ResourceRequest request = BuilderUtils.newResourceRequest(
-            AM_CONTAINER_PRIORITY, "*", appAttempt.submissionContext
+            AM_CONTAINER_PRIORITY, ResourceRequest.ANY, appAttempt.submissionContext
                 .getAMContainerSpec().getResource(), 1);
 
         Allocation amContainerAllocation = appAttempt.scheduler.allocate(
@@ -992,7 +1002,23 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
     }
   }
-  
+
+  private static class ExpiredTransition extends FinalTransition {
+
+    public ExpiredTransition() {
+      super(RMAppAttemptState.FAILED);
+    }
+
+    @Override
+    public void transition(RMAppAttemptImpl appAttempt,
+        RMAppAttemptEvent event) {
+      appAttempt.diagnostics.append("ApplicationMaster for attempt " +
+        appAttempt.getAppAttemptId() + " timed out");
+      appAttempt.setTrackingUrlToRMAppPage();
+      super.transition(appAttempt, event);
+    }
+  }
+
   private static class UnexpectedAMRegisteredTransition extends
       BaseFinalTransition {
 
@@ -1110,10 +1136,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         // When the AM dies, the trackingUrl is left pointing to the AM's URL,
         // which shows up in the scheduler UI as a broken link.  Direct the
         // user to the app page on the RM so they can see the status and logs.
-        appAttempt.origTrackingUrl = pjoin(
-            YarnConfiguration.getRMWebAppHostAndPort(appAttempt.conf),
-            "cluster", "app", appAttempt.getAppAttemptId().getApplicationId());
-        appAttempt.proxiedTrackingUrl = appAttempt.origTrackingUrl;
+        appAttempt.setTrackingUrlToRMAppPage();
 
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);

@@ -17,19 +17,22 @@
  */
 
 /**
- * This file includes some common utilities 
+ * This file includes some common utilities
  * for all native code used in hadoop.
  */
- 
+
 #if !defined ORG_APACHE_HADOOP_H
 #define ORG_APACHE_HADOOP_H
 
-#include <dlfcn.h>
-#include <jni.h>
+#if defined(_WIN32)
+#undef UNIX
+#define WINDOWS
+#else
+#undef WINDOWS
+#define UNIX
+#endif
 
-#include "config.h"
-
-/* A helper macro to 'throw' a java exception. */ 
+/* A helper macro to 'throw' a java exception. */
 #define THROW(env, exception_name, message) \
   { \
 	jclass ecls = (*env)->FindClass(env, exception_name); \
@@ -55,13 +58,21 @@
     if ((*env)->ExceptionCheck(env)) return (ret); \
   }
 
-/** 
- * A helper function to dlsym a 'symbol' from a given library-handle. 
- * 
+/**
+ * Unix definitions
+ */
+#ifdef UNIX
+#include <config.h>
+#include <dlfcn.h>
+#include <jni.h>
+
+/**
+ * A helper function to dlsym a 'symbol' from a given library-handle.
+ *
  * @param env jni handle to report contingencies.
  * @param handle handle to the dlopen'ed library.
  * @param symbol symbol to load.
- * @return returns the address where the symbol is loaded in memory, 
+ * @return returns the address where the symbol is loaded in memory,
  *         <code>NULL</code> on error.
  */
 static __attribute__ ((unused))
@@ -84,6 +95,76 @@ void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
   if ((func_ptr = do_dlsym(env, handle, symbol)) == NULL) { \
     return; \
   }
+#endif
+// Unix part end
+
+
+/**
+ * Windows definitions
+ */
+#ifdef WINDOWS
+
+/* Force using Unicode throughout the code */
+#ifndef UNICODE
+#define UNICODE
+#endif
+
+/* Microsoft C Compiler does not support the C99 inline keyword */
+#ifndef __cplusplus
+#define inline __inline;
+#endif // _cplusplus
+
+/* Optimization macros supported by GCC but for which there is no
+   direct equivalent in the Microsoft C compiler */
+#define likely(_c) (_c)
+#define unlikely(_c) (_c)
+
+/* Disable certain warnings in the native CRC32 code. */
+#pragma warning(disable:4018)		// Signed/unsigned mismatch.
+#pragma warning(disable:4244)		// Possible loss of data in conversion.
+#pragma warning(disable:4267)		// Possible loss of data.
+#pragma warning(disable:4996)		// Use of deprecated function.
+
+#include <Windows.h>
+#include <stdio.h>
+#include <jni.h>
+
+#define snprintf(a, b ,c, d) _snprintf_s((a), (b), _TRUNCATE, (c), (d))
+
+/* A helper macro to dlsym the requisite dynamic symbol and bail-out on error. */
+#define LOAD_DYNAMIC_SYMBOL(func_type, func_ptr, env, handle, symbol) \
+  if ((func_ptr = (func_type) do_dlsym(env, handle, symbol)) == NULL) { \
+    return; \
+  }
+
+/**
+ * A helper function to dynamic load a 'symbol' from a given library-handle.
+ *
+ * @param env jni handle to report contingencies.
+ * @param handle handle to the dynamic library.
+ * @param symbol symbol to load.
+ * @return returns the address where the symbol is loaded in memory,
+ *         <code>NULL</code> on error.
+ */
+static FARPROC WINAPI do_dlsym(JNIEnv *env, HMODULE handle, LPCSTR symbol) {
+  DWORD dwErrorCode = ERROR_SUCCESS;
+  FARPROC func_ptr = NULL;
+
+  if (!env || !handle || !symbol) {
+    THROW(env, "java/lang/InternalError", NULL);
+    return NULL;
+  }
+
+  func_ptr = GetProcAddress(handle, symbol);
+  if (func_ptr == NULL)
+  {
+    THROW(env, "java/lang/UnsatisfiedLinkError", symbol);
+  }
+  return func_ptr;
+}
+#endif
+// Windows part end
+
 
 #define LOCK_CLASS(env, clazz, classname) \
   if ((*env)->MonitorEnter(env, clazz) != 0) { \

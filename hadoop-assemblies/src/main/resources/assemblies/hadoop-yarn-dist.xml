@@ -33,6 +33,7 @@
       <outputDirectory>bin</outputDirectory>
       <includes>
         <include>yarn</include>
+        <include>yarn.cmd</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -41,6 +42,7 @@
       <outputDirectory>libexec</outputDirectory>
       <includes>
         <include>yarn-config.sh</include>
+        <include>yarn-config.cmd</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -52,6 +54,8 @@
         <include>yarn-daemons.sh</include>
         <include>start-yarn.sh</include>
         <include>stop-yarn.sh</include>
+        <include>start-yarn.cmd</include>
+        <include>stop-yarn.cmd</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -121,7 +125,7 @@
       </includes>
       <binaries>
         <attachmentClassifier>tests</attachmentClassifier>
-        <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
+        <outputDirectory>share/hadoop/${hadoop.component}/test</outputDirectory>
         <includeDependencies>false</includeDependencies>
         <unpack>false</unpack>
       </binaries>

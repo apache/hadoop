@@ -8,6 +8,16 @@ Trunk (Unreleased)
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
     HADOOP-8886. Remove KFS support. (eli)
+    
+    HADOOP-9163 The rpc msg in ProtobufRpcEngine.proto should be moved out to
+    avoid an extra copy (Sanjay Radia)
+
+    HADOOP-9151 Include RPC error info in RpcResponseHeader instead of sending
+    it separately (sanjay Radia)
+
+    HADOOP-9380 Add totalLength to rpc response  (sanjay Radia)
+
+    HADOOP-9194. RPC Support for QoS. (Junping Du via llu)
 
   NEW FEATURES
     
@@ -19,6 +29,10 @@ Trunk (Unreleased)
 
     HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
     of NetworkTopology.  (Junping Du via szetszwo)
+
+    HADOOP-8562. Enhancements to support Hadoop on Windows Server and Windows
+    Azure environments. (See breakdown of tasks below for subtasks and
+    contributors)
 
   IMPROVEMENTS
 
@@ -77,9 +91,6 @@ Trunk (Unreleased)
 
     HADOOP-8367 Improve documentation of declaringClassProtocolName in 
     rpc headers. (Sanjay Radia)
-
-    HADOOP-8415. Add getDouble() and setDouble() in
-    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
 
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
@@ -149,6 +160,8 @@ Trunk (Unreleased)
     HADOOP-9277. Improve javadoc for FileContext. (Andrew Wang via suresh)
 
     HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
+
+	HADOOP-9258 Add stricter tests to FileSystemContractTestBase (stevel)
 
   BUG FIXES
 
@@ -326,6 +339,31 @@ Trunk (Unreleased)
     HADOOP-9264. Port change to use Java untar API on Windows from 
     branch-1-win to trunk. (Chris Nauroth via suresh)
 
+    HADOOP-9393. TestRPC fails with JDK7. (Andrew Wang via atm)
+
+    HADOOP-9394. Port findHangingTest.sh from HBase to Hadoop. (Andrew Wang
+    via atm)
+
+    HADOOP-9099. NetUtils.normalizeHostName fails on domains where 
+    UnknownHost resolves to an IP address. (Ivan Mitic via suresh)
+
+    HADOOP-9397. Incremental dist tar build fails (Chris Nauroth via jlowe)
+
+    HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken. (Andrew
+    Wang via atm)
+
+    HADOOP-9431 TestSecurityUtil#testLocalHostNameForNullOrWild on systems where hostname
+    contains capital letters  (Chris Nauroth via sanjay)
+
+    HADOOP-9261 S3n filesystem can move a directory under itself -and so lose data
+    (fixed in HADOOP-9258) (stevel)
+
+    HADOOP-9265 S3 blockstore filesystem breaks part of the Filesystem contract
+    (fixed in HADOOP-9258) (stevel)
+
+    HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
+    (Chris Nauroth via sanjay)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -334,13 +372,147 @@ Trunk (Unreleased)
 
     HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
 
-Release 2.0.4-beta - UNRELEASED
+  BREAKDOWN OF HADOOP-8562 SUBTASKS
+
+    HADOOP-8924. Hadoop Common creating package-info.java must not depend on
+    sh. (Chris Nauroth via suresh)
+
+    HADOOP-8945. Merge winutils from branch-1-win to branch-trunk-win.
+    (Bikas Saha, Chuan Liu, Giridharan Kesavan, Ivan Mitic, and Steve Maine
+    ported by Chris Nauroth via suresh)
+
+    HADOOP-8946. winutils: compile codebase during Maven build on 
+    branch-trunk-win. (Chris Nauroth via suresh)
+
+    HADOOP-8947. Merge FileUtil and Shell changes from branch-1-win to 
+    branch-trunk-win to enable initial test pass. (Raja Aluri, Davio Lao, 
+    Sumadhur Reddy Bolli, Ahmed El Baz, Kanna Karanam, Chuan Liu, 
+    Ivan Mitic, Chris Nauroth, and Bikas Saha via suresh)
+
+    HADOOP-8954. "stat" executable not found on Windows. (Bikas Saha, Ivan Mitic
+    ported by Chris Narouth via suresh)
+
+    HADOOP-8959. TestUserGroupInformation fails on Windows due to "id" executable
+    not found. (Bikas Saha, Ivan Mitic, ported by Chris Narouth via suresh)
+
+    HADOOP-8955. "chmod" executable not found on Windows.
+    (Chris Nauroth via suresh)
+
+    HADOOP-8960. TestMetricsServlet fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-8961. GenericOptionsParser URI parsing failure on Windows.
+    (Ivan Mitic via suresh)
+
+    HADOOP-8949. Remove FileUtil.CygPathCommand dead code. (Chris Nauroth via 
+    suresh)
+
+    HADOOP-8956. FileSystem.primitiveMkdir failures on Windows cause multiple
+    test suites to fail. (Chris Nauroth via suresh)
+
+    HADOOP-8978. TestTrash fails on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-8979. TestHttpServer fails on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-8953. Shell PathData parsing failures on Windows. (Arpit Agarwal via
+    suresh)
+
+    HADOOP-8975. TestFileContextResolveAfs fails on Windows. (Chris Nauroth via
+    suresh)
+
+    HADOOP-8977. Multiple FsShell test failures on Windows. (Chris Nauroth via
+    suresh)
+
+    HADOOP-9005. Merge hadoop cmd line scripts from branch-1-win. (David Lao, 
+    Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
+
+    HADOOP-9008. Building hadoop tarball fails on Windows. (Chris Nauroth via
+    suresh)
+
+    HADOOP-9011. saveVersion.py does not include branch in version annotation.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9110. winutils ls off-by-one error indexing MONTHS array can cause 
+    access violation. (Chris Nauroth via suresh)
+
+    HADOOP-9056. Build native library on Windows. (Chuan Liu, Arpit Agarwal via
+    suresh)
+
+    HADOOP-9144. Fix findbugs warnings. (Chris Nauroth via suresh)
+
+    HADOOP-9081. Add TestWinUtils. (Chuan Liu, Ivan Mitic, Chris Nauroth, 
+    and Bikas Saha via suresh)
+
+    HADOOP-9146. Fix sticky bit regression on branch-trunk-win.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9266. Fix javac, findbugs, and release audit warnings on
+    branch-trunk-win. (Chris Nauroth via suresh)
+
+    HADOOP-9270. Remove a stale java comment from FileUtil. (Chris Nauroth via
+    szetszwo)
+
+    HADOOP-9271. Revert Python build scripts from branch-trunk-win.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9313. Remove spurious mkdir from hadoop-config.cmd.
+    (Ivan Mitic via suresh)
+
+    HADOOP-9309. Test failures on Windows due to UnsatisfiedLinkError
+    in NativeCodeLoader#buildSupportsSnappy. (Arpit Agarwal via suresh)
+
+    HADOOP-9347. Add instructions to BUILDING.txt describing how to
+    build on Windows. (Chris Nauroth via suresh)
+
+    HADOOP-9348. Address TODO in winutils to add more command line usage
+    and examples. (Chris Nauroth via suresh)
+
+    HADOOP-9354. Windows native project files missing license headers.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9356. Remove remaining references to cygwin/cygpath from scripts.
+    (Chris Nauroth via suresh)
+
+    HADOOP-9232. JniBasedUnixGroupsMappingWithFallback fails on Windows
+    with UnsatisfiedLinkError. (Ivan Mitic via suresh)
+
+    HADOOP-9368. Add timeouts to new tests in branch-trunk-win.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-9373. Merge CHANGES.branch-trunk-win.txt to CHANGES.txt.
+    (suresh)
+
+    HADOOP-9372. Fix bad timeout annotations on tests.
+    (Arpit Agarwal via suresh)
+
+    HADOOP-9376. TestProxyUserFromEnv fails on a Windows domain joined machine.
+    (Ivan Mitic via suresh)
+
+    HADOOP-9365. TestHAZKUtil fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-9364. PathData#expandAsGlob does not return correct results for
+    absolute paths on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-8973. DiskChecker cannot reliably detect an inaccessible disk on
+    Windows with NTFS ACLs. (Chris Nauroth via suresh)
+
+    HADOOP-9388. TestFsShellCopy fails on Windows. (Ivan Mitic via suresh)
+
+    HADOOP-9387. Fix DF so that it won't execute a shell command on Windows
+    to compute the file system/mount point.  (Ivan Mitic via szetszwo)
+
+    HADOOP-9353. Activate native-win maven profile by default on Windows.
+    (Arpit Agarwal via szetszwo)
+    
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
+
+    HADOOP-8415. Add getDouble() and setDouble() in
+    org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
 
   IMPROVEMENTS
 
@@ -352,7 +524,22 @@ Release 2.0.4-beta - UNRELEASED
 
     HADOOP-9117. replace protoc ant plugin exec with a maven plugin. (tucu)
 
+    HADOOP-9279. Document the need to build hadoop-maven-plugins for
+    eclipse and separate project builds. (Tsuyoshi Ozawa via suresh)
+
+    HADOOP-9334. Upgrade netty version. (Nicolas Liochon via suresh)
+
+    HADOOP-9343. Allow additional exceptions through the RPC layer. (sseth)
+
+    HADOOP-9318. When exiting on a signal, print the signal name first. (Colin
+    Patrick McCabe via atm)
+
+    HADOOP-9358. "Auth failed" log should include exception string (todd)
+
   OPTIMIZATIONS
+
+    HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
+    (todd)
 
   BUG FIXES
 
@@ -372,6 +559,76 @@ Release 2.0.4-beta - UNRELEASED
     the map. (Karthik Kambatla via tomwhite)
 
     HADOOP-9304. remove addition of avro genreated-sources dirs to build. (tucu)
+
+    HADOOP-9267. hadoop -help, -h, --help should show usage instructions.
+    (Andrew Wang via atm)
+
+    HADOOP-8569. CMakeLists.txt: define _GNU_SOURCE and _LARGEFILE_SOURCE.
+    (Colin Patrick McCabe via atm)
+
+    HADOOP-9323. Fix typos in API documentation. (suresh)
+
+    HADOOP-7487. DF should throw a more reasonable exception when mount cannot
+    be determined. (Andrew Wang via atm)
+
+    HADOOP-8917. add LOCALE.US to toLowerCase in SecurityUtil.replacePattern.
+    (Arpit Gupta via suresh)
+
+    HADOOP-9342. Remove jline from distribution. (thw via tucu)
+
+    HADOOP-9230. TestUniformSizeInputFormat fails intermittently. 
+    (kkambatl via tucu)
+
+    HADOOP-9349. Confusing output when running hadoop version from one hadoop 
+    installation when HADOOP_HOME points to another. (sandyr via tucu)
+
+    HADOOP-9337. org.apache.hadoop.fs.DF.getMount() does not work on Mac OS.
+    (Ivan A. Veselovsky via atm)
+
+    HADOOP-9369. DNS#reverseDns() can return hostname with . appended at the
+    end. (Karthik Kambatla via atm)
+
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
+
+    HADOOP-9399. protoc maven plugin doesn't work on mvn 3.0.2 (todd)
+
+    HADOOP-9407. commons-daemon 1.0.3 dependency has bad group id causing
+    build issues. (Sangjin Lee via suresh)
+
+    HADOOP-9299.  kerberos name resolution is kicking in even when kerberos
+    is not configured (daryn)
+
+    HADOOP-9430. TestSSLFactory fails on IBM JVM. (Amir Sanjar via suresh)
+
+    HADOOP-9125. LdapGroupsMapping threw CommunicationException after some
+    idle time. (Kai Zheng via atm)
+
+    HADOOP-9357. Fallback to default authority if not specified in FileContext.
+    (Andrew Wang via eli)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
+
+    HADOOP-9301. hadoop client servlet/jsp/jetty/tomcat JARs creating
+    conflicts in Oozie & HttpFS. (tucu)
+
+    HADOOP-9408. misleading description for net.topology.table.file.name
+    property in core-default.xml. (rajeshbabu via suresh)
+
+    HADOOP-9444. Modify hadoop-policy.xml to replace unexpanded variables to a
+    default value of '*'. (Roman Shaposhnik via vinodkv)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -633,14 +890,14 @@ Release 2.0.3-alpha - 2013-02-06
     HADOOP-9124. SortedMapWritable violates contract of Map interface for
     equals() and hashCode(). (Surenkumar Nihalani via tomwhite)
 
+    HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
+    HarFileSystem. (Chris Nauroth via szetszwo)
+
     HADOOP-9252. In StringUtils, humanReadableInt(..) has a race condition and
     the synchronization of limitDecimalTo2(double) can be avoided.  (szetszwo)
 
     HADOOP-9260. Hadoop version may be not correct when starting name node or
     data node. (Chris Nauroth via jlowe)
-
-    HADOOP-9278. Fix the file handle leak in HarMetaData.parseMetaData() in
-    HarFileSystem. (Chris Nauroth via szetszwo)
 
     HADOOP-9289. FsShell rm -f fails for non-matching globs. (Daryn Sharp via
     suresh)
@@ -1348,9 +1605,22 @@ Release 0.23.7 - UNRELEASED
     permissions (Ivan A. Veselovsky via bobby)
 
     HADOOP-9067. provide test for LocalFileSystem.reportChecksumFailure
-    (Ivan A. Veselovsky via bobby) 
+    (Ivan A. Veselovsky via bobby)
+
+    HADOOP-9336. Allow UGI of current connection to be queried. (Daryn Sharp
+    via kihwal)
+
+    HADOOP-9352. Expose UGI.setLoginUser for tests (daryn)
+
+    HADOOP-9209. Add shell command to dump file checksums (Todd Lipcon via
+    jeagles)
+
+    HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
 
   OPTIMIZATIONS
+
+    HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via
+    jlowe)
 
   BUG FIXES
 
@@ -1359,6 +1629,9 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9303. command manual dfsadmin missing entry for restoreFailedStorage
     option (Andy Isaacson via tgraves)
+
+    HADOOP-9339. IPC.Server incorrectly sets UGI auth type (Daryn Sharp via 
+    kihwal)
 
 Release 0.23.6 - UNRELEASED
 
@@ -2598,6 +2871,9 @@ Release 0.23.0 - 2011-11-01
     HADOOP-7797. Fix top-level pom.xml to refer to correct staging maven
     repository. (omalley via acmurthy) 
 
+    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
+    non-Hadoop JAAS context. (todd)
+
 Release 0.22.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -3054,9 +3330,6 @@ Release 0.22.0 - 2011-11-29
     todd)
 
     HADOOP-7093. Servlets should default to text/plain (todd)
-
-    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
-    non-Hadoop JAAS context. (todd)
 
     HADOOP-7089. Fix link resolution logic in hadoop-config.sh. (eli)
 

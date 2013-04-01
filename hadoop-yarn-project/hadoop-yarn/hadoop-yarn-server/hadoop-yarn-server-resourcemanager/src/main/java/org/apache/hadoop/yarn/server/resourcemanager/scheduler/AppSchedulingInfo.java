@@ -38,8 +38,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 
 /**
  * This class keeps track of all the consumption of an application. This also
@@ -129,7 +127,7 @@ public class AppSchedulingInfo {
       boolean updatePendingResources = false;
       ResourceRequest lastRequest = null;
 
-      if (hostName.equals(RMNode.ANY)) {
+      if (hostName.equals(ResourceRequest.ANY)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("update:" + " application=" + applicationId + " request="
               + request);
@@ -195,7 +193,7 @@ public class AppSchedulingInfo {
   }
 
   public synchronized Resource getResource(Priority priority) {
-    ResourceRequest request = getResourceRequest(priority, RMNode.ANY);
+    ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
     return request.getCapability();
   }
 
@@ -261,7 +259,7 @@ public class AppSchedulingInfo {
       this.requests.get(priority).remove(node.getRackName());
     }
 
-    decrementOutstanding(requests.get(priority).get(RMNode.ANY));
+    decrementOutstanding(requests.get(priority).get(ResourceRequest.ANY));
   }
 
   /**
@@ -284,7 +282,7 @@ public class AppSchedulingInfo {
       this.requests.get(priority).remove(node.getRackName());
     }
 
-    decrementOutstanding(requests.get(priority).get(RMNode.ANY));
+    decrementOutstanding(requests.get(priority).get(ResourceRequest.ANY));
   }
 
   /**
@@ -322,7 +320,7 @@ public class AppSchedulingInfo {
   synchronized private void checkForDeactivation() {
     boolean deactivate = true;
     for (Priority priority : getPriorities()) {
-      ResourceRequest request = getResourceRequest(priority, RMNodeImpl.ANY);
+      ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
       if (request.getNumContainers() > 0) {
         deactivate = false;
         break;
@@ -351,7 +349,7 @@ public class AppSchedulingInfo {
     // clear pending resources metrics for the application
     QueueMetrics metrics = queue.getMetrics();
     for (Map<String, ResourceRequest> asks : requests.values()) {
-      ResourceRequest request = asks.get(RMNode.ANY);
+      ResourceRequest request = asks.get(ResourceRequest.ANY);
       if (request != null) {
         metrics.decrPendingResources(user, request.getNumContainers(),
             Resources.multiply(request.getCapability(), request

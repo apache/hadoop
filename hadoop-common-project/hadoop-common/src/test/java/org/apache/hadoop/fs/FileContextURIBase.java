@@ -20,9 +20,11 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 import junit.framework.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,6 +54,12 @@ public abstract class FileContextURIBase {
   private static final String basePath = System.getProperty("test.build.data",
   "build/test/data") + "/testContextURI";
   private static final Path BASE = new Path(basePath);
+
+  // Matches anything containing <, >, :, ", |, ?, *, or anything that ends with
+  // space or dot.
+  private static final Pattern WIN_INVALID_FILE_NAME_PATTERN = Pattern.compile(
+    "^(.*?[<>\\:\"\\|\\?\\*].*?)|(.*?[ \\.])$");
+
   protected FileContext fc1;
   protected FileContext fc2;
 
@@ -81,6 +89,10 @@ public abstract class FileContextURIBase {
         "  ", "^ " };
 
     for (String f : fileNames) {
+      if (!isTestableFileNameOnPlatform(f)) {
+        continue;
+      }
+
       // Create a file on fc2's file system using fc1
       Path testPath = qualifiedPath(f, fc2);
       // Ensure file does not exist
@@ -205,6 +217,10 @@ public abstract class FileContextURIBase {
         "deleteTest/()&^%$#@!~_+}{><?", "  ", "^ " };
 
     for (String f : dirNames) {
+      if (!isTestableFileNameOnPlatform(f)) {
+        continue;
+      }
+
       // Create a file on fc2's file system using fc1
       Path testPath = qualifiedPath(f, fc2);
       // Ensure file does not exist
@@ -374,6 +390,10 @@ public abstract class FileContextURIBase {
         "deleteTest/()&^%$#@!~_+}{><?", "  ", "^ " };
 
     for (String f : dirNames) {
+      if (!isTestableFileNameOnPlatform(f)) {
+        continue;
+      }
+
       // Create a file on fc2's file system using fc1
       Path testPath = qualifiedPath(f, fc2);
       // Ensure file does not exist
@@ -492,6 +512,10 @@ public abstract class FileContextURIBase {
     ArrayList<Path> testDirs = new ArrayList<Path>();
 
     for (String d : dirs) {
+      if (!isTestableFileNameOnPlatform(d)) {
+        continue;
+      }
+
       testDirs.add(qualifiedPath(d, fc2));
     }
     Assert.assertFalse(exists(fc1, testDirs.get(0)));
@@ -506,15 +530,17 @@ public abstract class FileContextURIBase {
     Assert.assertEquals(qualifiedPath(hPrefix, fc1), paths[0].getPath());
 
     paths = fc1.util().listStatus(qualifiedPath(hPrefix, fc1));
-    Assert.assertEquals(6, paths.length);
-    for (int i = 0; i < dirs.length; i++) {
+    Assert.assertEquals(testDirs.size(), paths.length);
+    for (int i = 0; i < testDirs.size(); i++) {
       boolean found = false;
       for (int j = 0; j < paths.length; j++) {
-        if (qualifiedPath(dirs[i],fc1).equals(paths[j].getPath())) {
+        if (qualifiedPath(testDirs.get(i).toString(), fc1).equals(
+            paths[j].getPath())) {
+
           found = true;
         }
       }
-      Assert.assertTrue(dirs[i] + " not found", found);
+      Assert.assertTrue(testDirs.get(i) + " not found", found);
     }
 
     paths = fc1.util().listStatus(qualifiedPath(dirs[0], fc1));
@@ -539,9 +565,32 @@ public abstract class FileContextURIBase {
       }
       Assert.assertTrue(stat.getPath() + " not found", found);
     }
-    Assert.assertEquals(6, dirLen);
+    Assert.assertEquals(testDirs.size(), dirLen);
 
     pathsItor = fc1.listStatus(qualifiedPath(dirs[0], fc1));
     Assert.assertFalse(pathsItor.hasNext());
+  }
+
+  /**
+   * Returns true if the argument is a file name that is testable on the platform
+   * currently running the test.  This is intended for use by tests so that they
+   * can skip checking file names that aren't supported by the underlying
+   * platform.  The current implementation specifically checks for patterns that
+   * are not valid file names on Windows when the tests are running on Windows.
+   * 
+   * @param fileName String file name to check
+   * @return boolean true if the argument is valid as a file name
+   */
+  private static boolean isTestableFileNameOnPlatform(String fileName) {
+    boolean valid = true;
+
+    if (Shell.WINDOWS) {
+      // Disallow reserved characters: <, >, :, ", |, ?, *.
+      // Disallow trailing space or period.
+      // See http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
+      valid = !WIN_INVALID_FILE_NAME_PATTERN.matcher(fileName).matches();
+    }
+
+    return valid;
   }
 }

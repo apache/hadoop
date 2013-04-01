@@ -50,6 +50,12 @@ fi
 
 COMMAND=$1
 case $COMMAND in
+  # usage flags
+  --help|-help|-h)
+    print_usage
+    exit
+    ;;
+
   #hdfs commands
   namenode|secondarynamenode|datanode|dfs|dfsadmin|fsck|balancer|fetchdt|oiv|dfsgroups)
     echo "DEPRECATED: Use of this script to execute hdfs command is deprecated." 1>&2
@@ -85,9 +91,6 @@ case $COMMAND in
     ;;
 
   classpath)
-    if $cygwin; then
-      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-    fi
     echo $CLASSPATH
     exit
     ;;
@@ -126,9 +129,6 @@ case $COMMAND in
     #make sure security appender is turned off
     HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
 
-    if $cygwin; then
-      CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-    fi
     export CLASSPATH=$CLASSPATH
     exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
     ;;

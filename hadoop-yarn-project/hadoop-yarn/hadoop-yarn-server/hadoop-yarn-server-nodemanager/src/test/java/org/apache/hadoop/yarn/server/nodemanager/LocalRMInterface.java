@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 
 public class LocalRMInterface implements ResourceTracker {
 
@@ -34,9 +33,7 @@ public class LocalRMInterface implements ResourceTracker {
   
   @Override
   public RegisterNodeManagerResponse registerNodeManager(RegisterNodeManagerRequest request) throws YarnRemoteException {
-    RegistrationResponse registrationResponse = recordFactory.newRecordInstance(RegistrationResponse.class);
     RegisterNodeManagerResponse response = recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
-    response.setRegistrationResponse(registrationResponse);
     return response;
   }
 

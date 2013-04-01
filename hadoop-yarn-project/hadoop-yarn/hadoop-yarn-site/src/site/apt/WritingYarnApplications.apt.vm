@@ -493,7 +493,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
 +---+
     
   * The AllocateResponse sent back from the ResourceManager provides the 
-    following information via the AMResponse object: 
+    following information:
   
     * Reboot flag: For scenarios when the ApplicationMaster may get out of sync 
       with the ResourceManager. 
@@ -511,7 +511,9 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
       allocated container, it will receive an update from the ResourceManager 
       when the container completes. The ApplicationMaster can look into the 
       status of the completed container and take appropriate actions such as 
-      re-trying a particular sub-task in case of a failure. 
+      re-trying a particular sub-task in case of a failure.
+
+    * Number of cluster nodes: The number of hosts available on the cluster.
       
     [] 
       
@@ -525,13 +527,11 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     containers. 
 
 +---+
-    // Get AMResponse from AllocateResponse 
-    AMResponse amResp = allocateResponse.getAMResponse(); 			
 
     // Retrieve list of allocated containers from the response 
     // and on each allocated container, lets assume we are launching 
     // the same job.
-    List<Container> allocatedContainers = amResp.getAllocatedContainers();
+    List<Container> allocatedContainers = allocateResponse.getAllocatedContainers();
     for (Container allocatedContainer : allocatedContainers) {
       LOG.info("Launching shell command on a new container."
           + ", containerId=" + allocatedContainer.getId()
@@ -553,7 +553,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     }
 
     // Check what the current available resources in the cluster are
-    Resource availableResources = amResp.getAvailableResources();
+    Resource availableResources = allocateResponse.getAvailableResources();
     // Based on this information, an ApplicationMaster can make appropriate 
     // decisions
 
@@ -561,7 +561,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     // Let's assume we are keeping a count of total completed containers, 
     // containers that failed and ones that completed successfully.  			
     List<ContainerStatus> completedContainers = 
-        amResp.getCompletedContainersStatuses();
+        allocateResponse.getCompletedContainersStatuses();
     for (ContainerStatus containerStatus : completedContainers) {				
       LOG.info("Got container status for containerID= " 
           + containerStatus.getContainerId()
@@ -611,7 +611,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
        
 +---+
        
-    //Assuming an allocated Container obtained from AMResponse 
+    //Assuming an allocated Container obtained from AllocateResponse
     Container container;   
     // Connect to ContainerManager on the allocated container 
     String cmIpPortStr = container.getNodeId().getHost() + ":" 

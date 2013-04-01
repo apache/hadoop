@@ -82,7 +82,7 @@ class Fetcher<K,V> extends Thread {
   private final int connectionTimeout;
   private final int readTimeout;
   
-  private final SecretKey jobTokenSecret;
+  private final SecretKey shuffleSecretKey;
 
   private volatile boolean stopped = false;
 
@@ -92,7 +92,7 @@ class Fetcher<K,V> extends Thread {
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
                  ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
-                 ExceptionReporter exceptionReporter, SecretKey jobTokenSecret) {
+                 ExceptionReporter exceptionReporter, SecretKey shuffleKey) {
     this.reporter = reporter;
     this.scheduler = scheduler;
     this.merger = merger;
@@ -100,7 +100,7 @@ class Fetcher<K,V> extends Thread {
     this.exceptionReporter = exceptionReporter;
     this.id = ++nextId;
     this.reduce = reduceId.getTaskID().getId();
-    this.jobTokenSecret = jobTokenSecret;
+    this.shuffleSecretKey = shuffleKey;
     ioErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
         ShuffleErrors.IO_ERROR.toString());
     wrongLengthErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
@@ -221,7 +221,6 @@ class Fetcher<K,V> extends Thread {
     
     // Construct the url and connect
     DataInputStream input;
-    boolean connectSucceeded = false;
     
     try {
       URL url = getMapOutputURL(host, maps);
@@ -229,7 +228,8 @@ class Fetcher<K,V> extends Thread {
       
       // generate hash of the url
       String msgToEncode = SecureShuffleUtils.buildMsgFrom(url);
-      String encHash = SecureShuffleUtils.hashFromString(msgToEncode, jobTokenSecret);
+      String encHash = SecureShuffleUtils.hashFromString(msgToEncode,
+          shuffleSecretKey);
       
       // put url hash into http header
       connection.addRequestProperty(
@@ -237,7 +237,6 @@ class Fetcher<K,V> extends Thread {
       // set the read timeout
       connection.setReadTimeout(readTimeout);
       connect(connection, connectionTimeout);
-      connectSucceeded = true;
       input = new DataInputStream(connection.getInputStream());
 
       // Validate response code
@@ -255,7 +254,7 @@ class Fetcher<K,V> extends Thread {
       }
       LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
       // verify that replyHash is HMac of encHash
-      SecureShuffleUtils.verifyReply(replyHash, encHash, jobTokenSecret);
+      SecureShuffleUtils.verifyReply(replyHash, encHash, shuffleSecretKey);
       LOG.info("for url="+msgToEncode+" sent hash and received reply");
     } catch (IOException ie) {
       boolean connectExcpt = ie instanceof ConnectException;
@@ -265,18 +264,10 @@ class Fetcher<K,V> extends Thread {
 
       // If connect did not succeed, just mark all the maps as failed,
       // indirectly penalizing the host
-      if (!connectSucceeded) {
-        for(TaskAttemptID left: remaining) {
-          scheduler.copyFailed(left, host, connectSucceeded, connectExcpt);
-        }
-      } else {
-        // If we got a read error at this stage, it implies there was a problem
-        // with the first map, typically lost map. So, penalize only that map
-        // and add the rest
-        TaskAttemptID firstMap = maps.get(0);
-        scheduler.copyFailed(firstMap, host, connectSucceeded, connectExcpt);
+      for(TaskAttemptID left: remaining) {
+        scheduler.copyFailed(left, host, false, connectExcpt);
       }
-      
+     
       // Add back all the remaining maps, WITHOUT marking them as failed
       for(TaskAttemptID left: remaining) {
         scheduler.putBackKnownMapOutput(host, left);
@@ -366,13 +357,20 @@ class Fetcher<K,V> extends Thread {
         return EMPTY_ATTEMPT_ID_ARRAY;
       } 
       
-      // Go!
-      LOG.info("fetcher#" + id + " about to shuffle output of map " + 
-               mapOutput.getMapId() + " decomp: " +
-               decompressedLength + " len: " + compressedLength + " to " +
-               mapOutput.getDescription());
-      mapOutput.shuffle(host, input, compressedLength, decompressedLength,
-                        metrics, reporter);
+      // The codec for lz0,lz4,snappy,bz2,etc. throw java.lang.InternalError
+      // on decompression failures. Catching and re-throwing as IOException
+      // to allow fetch failure logic to be processed
+      try {
+        // Go!
+        LOG.info("fetcher#" + id + " about to shuffle output of map "
+            + mapOutput.getMapId() + " decomp: " + decompressedLength
+            + " len: " + compressedLength + " to " + mapOutput.getDescription());
+        mapOutput.shuffle(host, input, compressedLength, decompressedLength,
+            metrics, reporter);
+      } catch (java.lang.InternalError e) {
+        LOG.warn("Failed to shuffle for fetcher#"+id, e);
+        throw new IOException(e);
+      }
       
       // Inform the shuffle scheduler
       long endTime = System.currentTimeMillis();

@@ -92,7 +92,8 @@ public class GetClusterNodesResponsePBImpl extends
     viaProto = false;
   }
 
-  //Once this is called. containerList will never be null - untill a getProto is called.
+  // Once this is called. containerList will never be null - until a getProto
+  // is called.
   private void initLocalNodeManagerInfosList() {
     if (this.nodeManagerInfoList != null) {
       return;

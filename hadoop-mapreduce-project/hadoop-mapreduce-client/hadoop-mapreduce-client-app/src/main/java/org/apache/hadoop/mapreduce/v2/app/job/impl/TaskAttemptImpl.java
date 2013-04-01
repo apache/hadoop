@@ -238,7 +238,6 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_CONTAINER_COMPLETED,
          CLEANUP_CONTAINER_TRANSITION)
-      // ^ If RM kills the container due to expiry, preemption etc. 
      .addTransition(TaskAttemptStateInternal.ASSIGNED, 
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_KILL, CLEANUP_CONTAINER_TRANSITION)
@@ -703,10 +702,21 @@ public abstract class TaskAttemptImpl implements
           ByteBuffer.wrap(containerTokens_dob.getData(), 0,
               containerTokens_dob.getLength());
 
-      // Add shuffle token
+      // Add shuffle secret key
+      // The secret key is converted to a JobToken to preserve backwards
+      // compatibility with an older ShuffleHandler running on an NM.
       LOG.info("Putting shuffle token in serviceData");
+      byte[] shuffleSecret = TokenCache.getShuffleSecretKey(credentials);
+      if (shuffleSecret == null) {
+        LOG.warn("Cannot locate shuffle secret in credentials."
+            + " Using job token as shuffle secret.");
+        shuffleSecret = jobToken.getPassword();
+      }
+      Token<JobTokenIdentifier> shuffleToken = new Token<JobTokenIdentifier>(
+          jobToken.getIdentifier(), shuffleSecret, jobToken.getKind(),
+          jobToken.getService());
       serviceData.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
-          ShuffleHandler.serializeServiceData(jobToken));
+          ShuffleHandler.serializeServiceData(shuffleToken));
 
       Apps.addToEnvironment(
           environment,  
@@ -995,6 +1005,16 @@ public abstract class TaskAttemptImpl implements
   }
 
   @Override
+  public Phase getPhase() {
+    readLock.lock();
+    try {
+      return reportedStatus.phase;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
   public TaskAttemptState getState() {
     readLock.lock();
     try {
@@ -1184,7 +1204,8 @@ public abstract class TaskAttemptImpl implements
             taskAttempt.nodeRackName == null ? "UNKNOWN" 
                 : taskAttempt.nodeRackName,
             StringUtils.join(
-                LINE_SEPARATOR, taskAttempt.getDiagnostics()), taskAttempt
+                LINE_SEPARATOR, taskAttempt.getDiagnostics()),
+                taskAttempt.getCounters(), taskAttempt
                 .getProgressSplitBlock().burst());
     return tauce;
   }

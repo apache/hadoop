@@ -364,7 +364,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
   }
 
-  private void testSetPermission() throws Exception {
+  protected void testSetPermission() throws Exception {
     FileSystem fs = FileSystem.get(getProxiedFSConf());
     Path path = new Path(getProxiedFSTestDir(), "foodir");
     fs.mkdirs(path);

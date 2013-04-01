@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -403,5 +404,22 @@ public class BuilderUtils {
     allocateRequest.addAllAsks(resourceAsk);
     allocateRequest.addAllReleases(containersToBeReleased);
     return allocateRequest;
+  }
+  
+  public static AllocateResponse newAllocateResponse(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, boolean reboot, int numClusterNodes) {
+    AllocateResponse response = recordFactory
+        .newRecordInstance(AllocateResponse.class);
+    response.setNumClusterNodes(numClusterNodes);
+    response.setResponseId(responseId);
+    response.setCompletedContainersStatuses(completedContainers);
+    response.setAllocatedContainers(allocatedContainers);
+    response.setUpdatedNodes(updatedNodes);
+    response.setAvailableResources(availResources);
+    response.setReboot(reboot);
+
+    return response;
   }
 }

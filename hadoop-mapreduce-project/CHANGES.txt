@@ -152,6 +152,12 @@ Trunk (Unreleased)
     MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
     queue configuration. (Chris Nauroth via suresh)
 
+    MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
+    via suresh)
+
+    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
+    (Sandy Ryza via tomwhite)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -159,6 +165,9 @@ Release 2.0.4-beta - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-5033. mapred shell script should respect usage flags
+    (--help -help -h). (Andrew Wang via atm)
 
   OPTIMIZATIONS
 
@@ -173,6 +182,18 @@ Release 2.0.4-beta - UNRELEASED
     of the best attempt for a task. (Jason Lowe via sseth)
 
     MAPREDUCE-4994. Addendum fixing testcases failures. (sandyr via tucu)
+
+    MAPREDUCE-4846. Some JobQueueInfo methods are public in MR1 but protected
+    in MR2. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-5013. mapred.JobStatus compatibility: MR2 missing constructors
+    from MR1. (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-4951. Container preemption interpreted as task failure.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-5008. Merger progress miscounts with respect to EOF_MARKER.
+    (Sandy Ryza via tomwhite)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -719,6 +740,10 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-4992. AM hangs in RecoveryService when recovering tasks with
     speculative attempts (Robert Parker via jlowe)
+
+    MAPREDUCE-5009. Killing the Task Attempt slated for commit does not clear
+    the value from the Task commitAttempt member (Robert Parker via jeagles)
+
 
 Release 0.23.6 - UNRELEASED
 

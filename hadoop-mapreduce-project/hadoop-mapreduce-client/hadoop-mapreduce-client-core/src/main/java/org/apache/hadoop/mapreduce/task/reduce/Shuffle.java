@@ -108,7 +108,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     for (int i=0; i < numFetchers; ++i) {
       fetchers[i] = new Fetcher<K,V>(jobConf, reduceId, scheduler, merger, 
                                      reporter, metrics, this, 
-                                     reduceTask.getJobTokenSecret());
+                                     reduceTask.getShuffleSecret());
       fetchers[i].start();
     }
     

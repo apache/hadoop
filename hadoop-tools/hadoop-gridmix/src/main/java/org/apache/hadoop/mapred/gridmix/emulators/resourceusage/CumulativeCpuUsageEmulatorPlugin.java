@@ -22,8 +22,8 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.gridmix.Progressive;
-import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
+import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 /**
  * <p>A {@link ResourceUsageEmulatorPlugin} that emulates the cumulative CPU 
@@ -166,7 +166,7 @@ implements ResourceUsageEmulatorPlugin {
      */
     public void calibrate(ResourceCalculatorPlugin monitor, 
                           long totalCpuUsage) {
-      long initTime = monitor.getProcResourceValues().getCumulativeCpuTime();
+      long initTime = monitor.getCumulativeCpuTime();
       
       long defaultLoopSize = 0;
       long finalTime = initTime;
@@ -175,7 +175,7 @@ implements ResourceUsageEmulatorPlugin {
       while (finalTime - initTime < 100) { // 100 ms
         ++defaultLoopSize;
         performUnitComputation(); //perform unit computation
-        finalTime = monitor.getProcResourceValues().getCumulativeCpuTime();
+        finalTime = monitor.getCumulativeCpuTime();
       }
       
       long referenceRuntime = finalTime - initTime;
@@ -230,7 +230,7 @@ implements ResourceUsageEmulatorPlugin {
   }
   
   private synchronized long getCurrentCPUUsage() {
-    return monitor.getProcResourceValues().getCumulativeCpuTime();
+    return monitor.getCumulativeCpuTime();
   }
   
   @Override

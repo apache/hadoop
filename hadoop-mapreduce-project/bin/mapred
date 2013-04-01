@@ -50,6 +50,14 @@ fi
 COMMAND=$1
 shift
 
+case $COMMAND in
+  # usage flags
+  --help|-help|-h)
+    print_usage
+    exit
+    ;;
+esac
+
 if [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
 elif [ "$COMMAND" = "queue" ] ; then
@@ -126,10 +134,6 @@ done
 for f in $HADOOP_MAPRED_HOME/modules/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
-
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-fi
 
 if [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH

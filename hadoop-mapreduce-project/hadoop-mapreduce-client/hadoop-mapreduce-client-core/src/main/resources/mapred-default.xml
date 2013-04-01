@@ -296,6 +296,14 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.max.connections</name>
+  <value>0</value>
+  <description>Max allowed connections for the shuffle.  Set to 0 (zero)
+               to indicate no limit on the number of connections.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to
@@ -796,6 +804,14 @@
   <value>/tmp/hadoop-yarn/staging</value>
   <description>The staging dir used while submitting jobs.
   </description>
+</property>
+
+<property>
+  <name>mapreduce.am.max-attempts</name>
+  <value>1</value>
+  <description>The maximum number of application attempts. It is a
+  application-specific setting. It should not be larger than the global number
+  set by resourcemanager. Otherwise, it will be override.</description>
 </property>
 
 <!-- Job Notification Configuration -->

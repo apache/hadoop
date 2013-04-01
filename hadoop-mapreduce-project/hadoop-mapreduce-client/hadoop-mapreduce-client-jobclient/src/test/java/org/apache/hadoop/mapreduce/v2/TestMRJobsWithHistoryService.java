@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -57,6 +58,9 @@ public class TestMRJobsWithHistoryService {
 
   private static final Log LOG =
     LogFactory.getLog(TestMRJobsWithHistoryService.class);
+
+  private static final EnumSet<RMAppState> TERMINAL_RM_APP_STATES =
+    EnumSet.of(RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED);
 
   private static MiniMRYarnCluster mrCluster;
 
@@ -108,7 +112,7 @@ public class TestMRJobsWithHistoryService {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testJobHistoryData() throws IOException, InterruptedException,
       AvroRemoteException, ClassNotFoundException {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -129,12 +133,24 @@ public class TestMRJobsWithHistoryService {
     Counters counterMR = job.getCounters();
     JobId jobId = TypeConverter.toYarn(job.getJobID());
     ApplicationId appID = jobId.getAppId();
+    int pollElapsed = 0;
     while (true) {
       Thread.sleep(1000);
-      if (mrCluster.getResourceManager().getRMContext().getRMApps()
-          .get(appID).getState().equals(RMAppState.FINISHED))
+      pollElapsed += 1000;
+
+      if (TERMINAL_RM_APP_STATES.contains(
+          mrCluster.getResourceManager().getRMContext().getRMApps().get(appID)
+          .getState())) {
         break;
+      }
+
+      if (pollElapsed >= 60000) {
+        LOG.warn("application did not reach terminal state within 60 seconds");
+        break;
+      }
     }
+    Assert.assertEquals(RMAppState.FINISHED, mrCluster.getResourceManager()
+      .getRMContext().getRMApps().get(appID).getState());
     Counters counterHS = job.getCounters();
     //TODO the Assert below worked. need to check
     //Should we compare each field or convert to V2 counter and compare

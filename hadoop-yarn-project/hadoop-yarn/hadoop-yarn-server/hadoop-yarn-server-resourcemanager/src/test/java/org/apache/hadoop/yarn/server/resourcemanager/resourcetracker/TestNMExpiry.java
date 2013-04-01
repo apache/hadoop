@@ -109,7 +109,7 @@ public class TestNMExpiry {
               .newRecordInstance(NodeHeartbeatRequest.class);
           request.setNodeStatus(nodeStatus);
           lastResponseID = resourceTrackerService.nodeHeartbeat(request)
-              .getHeartbeatResponse().getResponseId();
+              .getResponseId();
 
           Thread.sleep(1000);
         } catch(Exception e) {
@@ -166,7 +166,7 @@ public class TestNMExpiry {
     request3.setHttpPort(0);
     request3.setResource(capability);
     resourceTrackerService
-        .registerNodeManager(request3).getRegistrationResponse();
+        .registerNodeManager(request3);
 
     /* test to see if hostanme 3 does not expire */
     stopT = false;

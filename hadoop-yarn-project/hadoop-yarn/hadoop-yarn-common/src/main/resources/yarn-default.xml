@@ -135,8 +135,12 @@
   </property>
 
   <property>
-    <description>The maximum number of application master retries.</description>
-    <name>yarn.resourcemanager.am.max-retries</name>
+    <description>The maximum number of application attempts. It's a global
+    setting for all application masters. Each application master can specify
+    its individual maximum number of application attempts via the API, but the
+    individual number cannot be more than the global upper bound. If it is,
+    the resourcemanager will override it.</description>
+    <name>yarn.resourcemanager.am.max-attempts</name>
     <value>1</value>
   </property>
 
@@ -448,6 +452,20 @@
   </property>
 
   <property>
+    <description>Whether physical memory limits will be enforced for
+    containers.</description>
+    <name>yarn.nodemanager.pmem-check-enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>Whether virtual memory limits will be enforced for
+    containers.</description>
+    <name>yarn.nodemanager.vmem-check-enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Ratio between virtual memory to physical memory when
     setting memory limits for containers. Container allocations are
     expressed in terms of physical memory, and virtual memory usage
@@ -595,6 +613,20 @@
     <description>Max time to wait for a process to come up when trying to cleanup a container</description>
     <name>yarn.nodemanager.process-kill-wait.ms</name>
     <value>2000</value>
+  </property>
+
+  <property>
+    <description>Max time, in seconds, to wait to establish a connection to RM when NM starts.
+    The NM will shutdown if it cannot connect to RM within the specified max time period.
+    If the value is set as -1, then NM will retry forever.</description>
+    <name>yarn.nodemanager.resourcemanager.connect.wait.secs</name>
+    <value>900</value>
+  </property>
+
+  <property>
+    <description>Time interval, in seconds, between each NM attempt to connect to RM.</description>
+    <name>yarn.nodemanager.resourcemanager.connect.retry_interval.secs</name>
+    <value>30</value>
   </property>
 
   <!--Map Reduce configuration-->

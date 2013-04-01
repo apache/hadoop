@@ -39,8 +39,8 @@ public abstract class Priority implements Comparable<Priority> {
   
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
+    final int prime = 517861;
+    int result = 9511;
     result = prime * result + getPriority();
     return result;
   }

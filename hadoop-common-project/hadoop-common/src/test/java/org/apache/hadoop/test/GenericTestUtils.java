@@ -20,6 +20,7 @@ package org.apache.hadoop.test;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
@@ -162,6 +163,9 @@ public abstract class GenericTestUtils {
     private final CountDownLatch waitLatch = new CountDownLatch(1);
     private final CountDownLatch resultLatch = new CountDownLatch(1);
     
+    private final AtomicInteger fireCounter = new AtomicInteger(0);
+    private final AtomicInteger resultCounter = new AtomicInteger(0);
+    
     // Result fields set after proceed() is called.
     private volatile Throwable thrown;
     private volatile Object returnValue;
@@ -188,6 +192,7 @@ public abstract class GenericTestUtils {
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
+      fireCounter.getAndIncrement();
       fireLatch.countDown();
       try {
         LOG.info("DelayAnswer waiting on waitLatch");
@@ -208,6 +213,7 @@ public abstract class GenericTestUtils {
         thrown = t;
         throw t;
       } finally {
+        resultCounter.incrementAndGet();
         resultLatch.countDown();
       }
     }
@@ -235,6 +241,14 @@ public abstract class GenericTestUtils {
     public Object getReturnValue() {
       return returnValue;
     }
+    
+    public int getFireCount() {
+      return fireCounter.get();
+    }
+    
+    public int getResultCount() {
+      return resultCounter.get();
+    }
   }
   
   /**
@@ -253,15 +267,29 @@ public abstract class GenericTestUtils {
    */
   public static class DelegateAnswer implements Answer<Object> { 
     private final Object delegate;
+    private final Log log;
     
     public DelegateAnswer(Object delegate) {
+      this(null, delegate);
+    }
+    
+    public DelegateAnswer(Log log, Object delegate) {
+      this.log = log;
       this.delegate = delegate;
     }
 
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
-      return invocation.getMethod().invoke(
-          delegate, invocation.getArguments());
+      try {
+        if (log != null) {
+          log.info("Call to " + invocation + " on " + delegate,
+              new Exception("TRACE"));
+        }
+        return invocation.getMethod().invoke(
+            delegate, invocation.getArguments());
+      } catch (InvocationTargetException ite) {
+        throw ite.getCause();
+      }
     }
   }
 

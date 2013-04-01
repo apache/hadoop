@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.yarn.api.records.AMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
@@ -213,12 +213,13 @@ public class TestRMRestart {
     // verify old AM is not accepted
     // change running AM to talk to new RM
     am1.setAMRMProtocol(rm2.getApplicationMasterService());
-    AMResponse amResponse = am1.allocate(new ArrayList<ResourceRequest>(),
+    AllocateResponse allocResponse = am1.allocate(
+        new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
-    Assert.assertTrue(amResponse.getReboot());
+    Assert.assertTrue(allocResponse.getReboot());
     
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
-    HeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
     Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());
     hbResponse = nm2.nodeHeartbeat(true);
     Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());

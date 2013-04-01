@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -51,6 +50,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -69,11 +69,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -88,7 +85,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -401,10 +397,15 @@ public class TestContainerManagerSecurity {
       UnsupportedFileSystemException, YarnRemoteException,
       InterruptedException {
 
+    // Use ping to simulate sleep on Windows.
+    List<String> cmd = Shell.WINDOWS ?
+      Arrays.asList("ping", "-n", "100", "127.0.0.1", ">nul") :
+      Arrays.asList("sleep", "100");
+
     ContainerLaunchContext amContainer = BuilderUtils
         .newContainerLaunchContext(null, "testUser", BuilderUtils
             .newResource(1024, 1), Collections.<String, LocalResource>emptyMap(),
-            new HashMap<String, String>(), Arrays.asList("sleep", "100"),
+            new HashMap<String, String>(), cmd,
             new HashMap<String, ByteBuffer>(), null,
             new HashMap<ApplicationAccessType, String>());
 
@@ -480,14 +481,14 @@ public class TestContainerManagerSecurity {
 
     // Request a container allocation.
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0), "*",
-        BuilderUtils.newResource(1024, 1), 1));
+    ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
+        ResourceRequest.ANY, BuilderUtils.newResource(1024, 1), 1));
 
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
         BuilderUtils.newApplicationAttemptId(appID, 1), 0, 0F, ask,
         new ArrayList<ContainerId>());
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
-        .getAMResponse().getAllocatedContainers();
+        .getAllocatedContainers();
 
     // Modify ask to request no more.
     allocateRequest.clearAsks();
@@ -499,7 +500,7 @@ public class TestContainerManagerSecurity {
       Thread.sleep(1000);
       allocateRequest.setResponseId(allocateRequest.getResponseId() + 1);
       allocatedContainers = scheduler.allocate(allocateRequest)
-          .getAMResponse().getAllocatedContainers();
+          .getAllocatedContainers();
     }
 
     Assert.assertNotNull("Container is not allocted!", allocatedContainers);

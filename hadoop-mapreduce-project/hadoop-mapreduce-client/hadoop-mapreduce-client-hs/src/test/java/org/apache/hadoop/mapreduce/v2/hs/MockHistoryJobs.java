@@ -77,13 +77,18 @@ public class MockHistoryJobs extends MockJobs {
     for(Map.Entry<JobId, Job> entry: mocked.entrySet()) {
       JobId id = entry.getKey();
       Job j = entry.getValue();
-      ret.full.put(id, new MockCompletedJob(j));
-      JobReport report = j.getReport();
+      MockCompletedJob mockJob = new MockCompletedJob(j);
+      // use MockCompletedJob to set everything below to make sure
+      // consistent with what history server would do
+      ret.full.put(id, mockJob);
+      JobReport report = mockJob.getReport();
       JobIndexInfo info = new JobIndexInfo(report.getStartTime(), 
-          report.getFinishTime(), j.getUserName(), j.getName(), id, 
-          j.getCompletedMaps(), j.getCompletedReduces(), String.valueOf(j.getState()));
-      info.setQueueName(j.getQueueName());
+          report.getFinishTime(), mockJob.getUserName(), mockJob.getName(), id, 
+          mockJob.getCompletedMaps(), mockJob.getCompletedReduces(),
+          String.valueOf(mockJob.getState()));
+      info.setQueueName(mockJob.getQueueName());
       ret.partial.put(id, new PartialJob(info, id));
+
     }
     return ret;
   }
@@ -99,12 +104,16 @@ public class MockHistoryJobs extends MockJobs {
 
     @Override
     public int getCompletedMaps() {
-      return job.getCompletedMaps();
+      // we always return total since this is history server
+      // and PartialJob also assumes completed - total
+      return job.getTotalMaps();
     }
 
     @Override
     public int getCompletedReduces() {
-      return job.getCompletedReduces();
+      // we always return total since this is history server
+      // and PartialJob also assumes completed - total
+      return job.getTotalReduces();
     }
 
     @Override

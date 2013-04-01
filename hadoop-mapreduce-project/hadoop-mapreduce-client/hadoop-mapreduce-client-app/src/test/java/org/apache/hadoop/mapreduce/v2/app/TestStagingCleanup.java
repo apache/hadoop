@@ -49,7 +49,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -93,10 +92,9 @@ import org.junit.Test;
      verify(fs).delete(stagingJobPath, true);
    }
    
-   @Test
+   @Test (timeout = 30000)
    public void testDeletionofStagingOnKill() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
-     conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, 4);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
      //Staging Dir exists
@@ -113,7 +111,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc);
+     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc, 4);
      appMaster.init(conf);
      //simulate the process being killed
      MRAppMaster.MRAppMasterShutdownHook hook = 
@@ -122,10 +120,9 @@ import org.junit.Test;
      verify(fs, times(0)).delete(stagingJobPath, true);
    }
    
-   @Test
+   @Test (timeout = 30000)
    public void testDeletionofStagingOnKillLastTry() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
-     conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, 1);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
      //Staging Dir exists
@@ -142,7 +139,8 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc);
+     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
+         MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
      //simulate the process being killed
      MRAppMaster.MRAppMasterShutdownHook hook = 
@@ -155,15 +153,16 @@ import org.junit.Test;
      ContainerAllocator allocator;
 
      public TestMRApp(ApplicationAttemptId applicationAttemptId, 
-         ContainerAllocator allocator) {
+         ContainerAllocator allocator, int maxAppAttempts) {
        super(applicationAttemptId, BuilderUtils.newContainerId(
-           applicationAttemptId, 1), "testhost", 2222, 3333, System
-           .currentTimeMillis());
+           applicationAttemptId, 1), "testhost", 2222, 3333,
+           System.currentTimeMillis(), maxAppAttempts);
        this.allocator = allocator;
      }
 
      public TestMRApp(ApplicationAttemptId applicationAttemptId) {
-       this(applicationAttemptId, null);
+       this(applicationAttemptId, null,
+           MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      }
 
      @Override

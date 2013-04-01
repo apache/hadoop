@@ -40,7 +40,8 @@ public class TestHAZKUtil {
       "test-file");
   
   /** A path which is expected not to exist */
-  private static final String BOGUS_FILE = "/xxxx-this-does-not-exist";
+  private static final String BOGUS_FILE =
+      new File("/xxxx-this-does-not-exist").getPath();
 
   @Test
   public void testEmptyACL() {

@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.List;
 import java.net.URL;
 
 
@@ -487,73 +486,8 @@ public class QueueManager {
       new QueueAclsInfo[queueAclsInfolist.size()]);
   }
 
-  /**
-   * ONLY FOR TESTING - Do not use in production code.
-   * This method is used for setting up of leafQueues only.
-   * We are not setting the hierarchy here.
-   *
-   * @param queues
-   */
-  synchronized void setQueues(Queue[] queues) {
-    root.getChildren().clear();
-    leafQueues.clear();
-    allQueues.clear();
-
-    for (Queue queue : queues) {
-      root.addChild(queue);
-    }
-    //At this point we have root populated
-    //update data structures leafNodes.
-    leafQueues = getRoot().getLeafQueues();
-    allQueues.putAll(getRoot().getInnerQueues());
-    allQueues.putAll(leafQueues);
-  }
-
-  /**
-   * Return an array of {@link JobQueueInfo} objects for the root
-   * queues configured in the system.
-   * <p/>
-   * Root queues are queues that are at the top-most level in the
-   * hierarchy of queues in mapred-queues.xml, or they are the queues
-   * configured in the mapred.queue.names key in mapred-site.xml.
-   *
-   * @return array of JobQueueInfo objects for root level queues.
-   */
-
-  JobQueueInfo[] getRootQueues() {
-    List<JobQueueInfo> list = getRoot().getJobQueueInfo().getChildren();
-    return list.toArray(new JobQueueInfo[list.size()]);
-  }
-
-  /**
-   * Get the complete hierarchy of children for queue
-   * queueName
-   *
-   * @param queueName
-   * @return
-   */
-  JobQueueInfo[] getChildQueues(String queueName) {
-    List<JobQueueInfo> list =
-      allQueues.get(queueName).getJobQueueInfo().getChildren();
-    if (list != null) {
-      return list.toArray(new JobQueueInfo[list.size()]);
-    } else {
-      return new JobQueueInfo[0];
-    }
-  }
-
-  /**
-   * Used only for testing purposes .
-   * This method is unstable as refreshQueues would leave this
-   * data structure in unstable state.
-   *
-   * @param queueName
-   * @return
-   */
-  Queue getQueue(String queueName) {
-    return this.allQueues.get(queueName);
-  }
-
+ 
+ 
 
   /**
    * Return if ACLs are enabled for the Map/Reduce system
@@ -573,29 +507,7 @@ public class QueueManager {
     return root;
   }
 
-  /**
-   * Returns the specific queue ACL for the given queue.
-   * Returns null if the given queue does not exist or the acl is not
-   * configured for that queue.
-   * If acls are disabled(mapreduce.cluster.acls.enabled set to false), returns
-   * ACL with all users.
-   */
-  synchronized AccessControlList getQueueACL(String queueName,
-      QueueACL qACL) {
-    if (areAclsEnabled) {
-      Queue q = leafQueues.get(queueName);
-      if (q != null) {
-        return q.getAcls().get(toFullPropertyName(
-          queueName, qACL.getAclName()));
-      }
-      else {
-        LOG.warn("Queue " + queueName + " is not present.");
-        return null;
-      }
-    }
-    return new AccessControlList("*");
-  }
-
+  
   /**
    * Dumps the configuration of hierarchy of queues
    * @param out the writer object to which dump is written

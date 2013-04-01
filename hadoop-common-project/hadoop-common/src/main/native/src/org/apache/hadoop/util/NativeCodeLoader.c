@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
+#include "org_apache_hadoop.h"
+
+#ifdef UNIX
 #include "config.h"
+#endif // UNIX
 
 #include <jni.h>
 

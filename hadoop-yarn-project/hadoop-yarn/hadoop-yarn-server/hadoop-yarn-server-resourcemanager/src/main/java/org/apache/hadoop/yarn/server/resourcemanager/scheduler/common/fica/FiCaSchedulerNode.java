@@ -60,8 +60,6 @@ public class FiCaSchedulerNode extends SchedulerNode {
   
   private final RMNode rmNode;
 
-  public static final String ANY = "*";
-
   public FiCaSchedulerNode(RMNode node) {
     this.rmNode = node;
     this.availableResource.setMemory(node.getTotalCapability().getMemory());

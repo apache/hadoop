@@ -156,6 +156,7 @@ case $startStop in
     esac
     echo $! > $pid
     sleep 1
+    head "$log"
     # capture the ulimit output
     if [ "true" = "$starting_secure_dn" ]; then
       echo "ulimit -a for secure datanode user $HADOOP_SECURE_DN_USER" >> $log
@@ -165,7 +166,6 @@ case $startStop in
       echo "ulimit -a for user $USER" >> $log
       ulimit -a >> $log 2>&1
     fi
-    head -30 "$log"
     sleep 3;
     if ! ps -p $! > /dev/null ; then
       exit 1

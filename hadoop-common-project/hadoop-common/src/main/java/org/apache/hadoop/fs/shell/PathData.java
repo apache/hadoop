@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -39,6 +40,9 @@ import org.apache.hadoop.fs.PathNotFoundException;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
+ * PathData ensures that the returned path string will be the same as the
+ * one passed in during initialization (unlike Path objects which can
+ * modify the path string).
  * The stat field will be null if the path does not exist.
  */
 @InterfaceAudience.Private
@@ -50,6 +54,20 @@ public class PathData implements Comparable<PathData> {
   public final Path path;
   public FileStatus stat;
   public boolean exists;
+
+  /* True if the URI scheme was not present in the pathString but inferred.
+   */
+  private boolean inferredSchemeFromPath = false;
+
+  /**
+   *  Pre-compiled regular expressions to detect path formats.
+   */
+  private static final Pattern potentialUri =
+      Pattern.compile("^[a-zA-Z][a-zA-Z0-9+-.]+:");
+  private static final Pattern windowsNonUriAbsolutePath1 =
+      Pattern.compile("^/?[a-zA-Z]:\\\\");
+  private static final Pattern windowsNonUriAbsolutePath2 =
+      Pattern.compile("^/?[a-zA-Z]:/");
 
   /**
    * Creates an object to wrap the given parameters as fields.  The string
@@ -67,12 +85,12 @@ public class PathData implements Comparable<PathData> {
    * Creates an object to wrap the given parameters as fields.  The string
    * used to create the path will be recorded since the Path object does not
    * return exactly the same string used to initialize it
-   * @param localPath a local File
+   * @param localPath a local URI
    * @param conf the configuration file
    * @throws IOException if anything goes wrong...
    */
-  public PathData(File localPath, Configuration conf) throws IOException {
-    this(FileSystem.getLocal(conf), localPath.toString());
+  public PathData(URI localPath, Configuration conf) throws IOException {
+    this(FileSystem.getLocal(conf), localPath.getPath());
   }
 
   /**
@@ -84,6 +102,39 @@ public class PathData implements Comparable<PathData> {
    */
   private PathData(FileSystem fs, String pathString) throws IOException {
     this(fs, pathString, lookupStat(fs, pathString, true));
+  }
+
+  /**
+   * Validates the given Windows path.
+   * Throws IOException on failure.
+   * @param pathString a String of the path suppliued by the user.
+   */
+  private void ValidateWindowsPath(String pathString)
+  throws IOException
+  {
+    if (windowsNonUriAbsolutePath1.matcher(pathString).find()) {
+      // Forward slashes disallowed in a backslash-separated path.
+      if (pathString.indexOf('/') != -1) {
+        throw new IOException("Invalid path string " + pathString);
+      }
+
+      inferredSchemeFromPath = true;
+      return;
+    }
+
+    // Is it a forward slash-separated absolute path?
+    if (windowsNonUriAbsolutePath2.matcher(pathString).find()) {
+      inferredSchemeFromPath = true;
+      return;
+    }
+
+    // Does it look like a URI? If so then just leave it alone.
+    if (potentialUri.matcher(pathString).find()) {
+      return;
+    }
+
+    // Looks like a relative path on Windows.
+    return;
   }
 
   /**
@@ -100,6 +151,10 @@ public class PathData implements Comparable<PathData> {
     this.uri = stringToUri(pathString);
     this.path = fs.makeQualified(new Path(uri));
     setStat(stat);
+
+    if (Path.WINDOWS) {
+      ValidateWindowsPath(pathString);
+    }
   }
 
   // need a static method for the ctor above
@@ -236,7 +291,7 @@ public class PathData implements Comparable<PathData> {
    * Given a child of this directory, use the directory's path and the child's
    * basename to construct the string to the child.  This preserves relative
    * paths since Path will fully qualify.
-   * @param child a path contained within this directory
+   * @param childPath a path contained within this directory
    * @return String of the path relative to this directory
    */
   private String getStringForChildPath(Path childPath) {
@@ -283,7 +338,8 @@ public class PathData implements Comparable<PathData> {
       URI globUri = globPath.toUri();
       if (globUri.getScheme() != null) {
         globType = PathType.HAS_SCHEME;
-      } else if (new File(globUri.getPath()).isAbsolute()) {
+      } else if (!globUri.getPath().isEmpty() &&
+                 new Path(globUri.getPath()).isAbsolute()) {
         globType = PathType.SCHEMELESS_ABSOLUTE;
       } else {
         globType = PathType.RELATIVE;
@@ -386,7 +442,14 @@ public class PathData implements Comparable<PathData> {
     // No interpretation of symbols. Just decode % escaped chars.
     String decodedRemainder = uri.getSchemeSpecificPart();
 
-    if (scheme == null) {
+    // Drop the scheme if it was inferred to ensure fidelity between
+    // the input and output path strings.
+    if ((scheme == null) || (inferredSchemeFromPath)) {
+      if (Path.isWindowsAbsolutePath(decodedRemainder, true)) {
+        // Strip the leading '/' added in stringToUri so users see a valid
+        // Windows path.
+        decodedRemainder = decodedRemainder.substring(1);
+      }
       return decodedRemainder;
     } else {
       StringBuilder buffer = new StringBuilder();
@@ -409,13 +472,56 @@ public class PathData implements Comparable<PathData> {
     return ((LocalFileSystem)fs).pathToFile(path);
   }
 
+  /** Normalize the given Windows path string. This does the following:
+   *    1. Adds "file:" scheme for absolute paths.
+   *    2. Ensures the scheme-specific part starts with '/' per RFC2396.
+   *    3. Replaces backslash path separators with forward slashes.
+   *    @param pathString Path string supplied by the user.
+   *    @return normalized absolute path string. Returns the input string
+   *            if it is not a Windows absolute path.
+   */
+  private static String normalizeWindowsPath(String pathString)
+  throws IOException
+  {
+    if (!Path.WINDOWS) {
+      return pathString;
+    }
+
+    boolean slashed =
+        ((pathString.length() >= 1) && (pathString.charAt(0) == '/'));
+
+    // Is it a backslash-separated absolute path?
+    if (windowsNonUriAbsolutePath1.matcher(pathString).find()) {
+      // Forward slashes disallowed in a backslash-separated path.
+      if (pathString.indexOf('/') != -1) {
+        throw new IOException("Invalid path string " + pathString);
+      }
+
+      pathString = pathString.replace('\\', '/');
+      return "file:" + (slashed ? "" : "/") + pathString;
+    }
+
+    // Is it a forward slash-separated absolute path?
+    if (windowsNonUriAbsolutePath2.matcher(pathString).find()) {
+      return "file:" + (slashed ? "" : "/") + pathString;
+    }
+
+    // Is it a backslash-separated relative file path (no scheme and
+    // no drive-letter specifier)?
+    if ((pathString.indexOf(':') == -1) && (pathString.indexOf('\\') != -1)) {
+      pathString = pathString.replace('\\', '/');
+    }
+
+    return pathString;
+  }
+
   /** Construct a URI from a String with unescaped special characters
-   *  that have non-standard sematics. e.g. /, ?, #. A custom parsing
-   *  is needed to prevent misbihaviors.
+   *  that have non-standard semantics. e.g. /, ?, #. A custom parsing
+   *  is needed to prevent misbehavior.
    *  @param pathString The input path in string form
    *  @return URI
    */
-  private static URI stringToUri(String pathString) {
+  private static URI stringToUri(String pathString) throws IOException {
     // We can't use 'new URI(String)' directly. Since it doesn't do quoting
     // internally, the internal parser may fail or break the string at wrong
     // places. Use of multi-argument ctors will quote those chars for us,
@@ -424,8 +530,9 @@ public class PathData implements Comparable<PathData> {
     // parse uri components
     String scheme = null;
     String authority = null;
-
     int start = 0;
+
+    pathString = normalizeWindowsPath(pathString);
 
     // parse uri scheme, if any
     int colon = pathString.indexOf(':');
@@ -445,8 +552,7 @@ public class PathData implements Comparable<PathData> {
       authority = pathString.substring(start, authEnd);
       start = authEnd;
     }
-
-    // uri path is the rest of the string. ? or # are not interpreated,
+    // uri path is the rest of the string. ? or # are not interpreted,
     // but any occurrence of them will be quoted by the URI ctor.
     String path = pathString.substring(start, pathString.length());
 

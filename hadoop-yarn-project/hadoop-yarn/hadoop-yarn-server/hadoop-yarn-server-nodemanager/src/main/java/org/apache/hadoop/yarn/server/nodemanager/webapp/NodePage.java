@@ -42,7 +42,7 @@ public class NodePage extends NMView {
   protected void commonPreHead(HTML<_> html) {
     super.commonPreHead(html);
 
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
   }
 
   @Override
@@ -67,8 +67,12 @@ public class NodePage extends NMView {
       info("NodeManager information")
           ._("Total Vmem allocated for Containers",
               StringUtils.byteDesc(info.getTotalVmemAllocated() * BYTES_IN_MB))
+          ._("Vmem enforcement enabled",
+              info.isVmemCheckEnabled())
           ._("Total Pmem allocated for Container",
               StringUtils.byteDesc(info.getTotalPmemAllocated() * BYTES_IN_MB))
+          ._("Pmem enforcement enabled",
+              info.isVmemCheckEnabled())
           ._("NodeHealthyStatus",
               info.getHealthStatus())
           ._("LastNodeHealthTime", new Date(

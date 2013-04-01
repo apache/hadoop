@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
@@ -60,7 +61,7 @@ public class TestRMAppTransitions {
   static final Log LOG = LogFactory.getLog(TestRMAppTransitions.class);
 
   private RMContext rmContext;
-  private static int maxRetries = 4;
+  private static int maxAppAttempts = 4;
   private static int appId = 1;
   private DrainDispatcher rmDispatcher;
 
@@ -166,8 +167,8 @@ public class TestRMAppTransitions {
     String name = MockApps.newAppName();
     String queue = MockApps.newQueue();
     Configuration conf = new YarnConfiguration();
-    // ensure max retries set to known value
-    conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, maxRetries);
+    // ensure max application attempts set to known value
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, maxAppAttempts);
     YarnScheduler scheduler = mock(YarnScheduler.class);
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
@@ -436,7 +437,7 @@ public class TestRMAppTransitions {
 
     RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => ACCEPTED event RMAppEventType.RMAppEventType.ATTEMPT_FAILED
-    for (int i=1; i<maxRetries; i++) {
+    for (int i=1; i < maxAppAttempts; i++) {
       RMAppEvent event = 
           new RMAppFailedAttemptEvent(application.getApplicationId(), 
               RMAppEventType.ATTEMPT_FAILED, "");
@@ -451,7 +452,7 @@ public class TestRMAppTransitions {
     }
 
     // ACCEPTED => FAILED event RMAppEventType.RMAppEventType.ATTEMPT_FAILED 
-    // after max retries
+    // after max application attempts
     String message = "Test fail";
     RMAppEvent event = 
         new RMAppFailedAttemptEvent(application.getApplicationId(), 
@@ -499,7 +500,7 @@ public class TestRMAppTransitions {
     Assert.assertEquals(expectedAttemptId, 
         appAttempt.getAppAttemptId().getAttemptId());
     // RUNNING => FAILED/RESTARTING event RMAppEventType.ATTEMPT_FAILED
-    for (int i=1; i<maxRetries; i++) {
+    for (int i=1; i<maxAppAttempts; i++) {
       RMAppEvent event = 
           new RMAppFailedAttemptEvent(application.getApplicationId(), 
               RMAppEventType.ATTEMPT_FAILED, "");
@@ -524,7 +525,7 @@ public class TestRMAppTransitions {
     }
 
     // RUNNING => FAILED/RESTARTING event RMAppEventType.ATTEMPT_FAILED 
-    // after max retries
+    // after max application attempts
     RMAppEvent event = 
         new RMAppFailedAttemptEvent(application.getApplicationId(), 
             RMAppEventType.ATTEMPT_FAILED, "");
@@ -615,5 +616,13 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
+  }
+
+  @Test
+  public void testGetAppReport() {
+    RMApp app = createNewTestApp(null);
+    assertAppState(RMAppState.NEW, app);
+    ApplicationReport report = app.createAndGetApplicationReport(true);
+    Assert.assertNotNull(report.getApplicationResourceUsageReport());
   }
 }

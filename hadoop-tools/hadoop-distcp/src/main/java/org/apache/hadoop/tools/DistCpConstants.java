@@ -82,6 +82,9 @@ public class DistCpConstants {
   /* Meta folder where the job's intermediate data is kept */
   public static final String CONF_LABEL_META_FOLDER = "distcp.meta.folder";
 
+  /* DistCp CopyListing class override param */
+  public static final String CONF_LABEL_COPY_LISTING_CLASS = "distcp.copy.listing.class";
+
   /**
    * Conf label for SSL Trust-store location.
    */

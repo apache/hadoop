@@ -76,20 +76,24 @@ public class TableMapping extends CachedDNSToSwitchMapping {
     getRawMapping().setConf(conf);
   }
   
+  @Override
+  public void reloadCachedMappings() {
+    super.reloadCachedMappings();
+    getRawMapping().reloadCachedMappings();
+  }
+  
   private static final class RawTableMapping extends Configured
       implements DNSToSwitchMapping {
     
-    private final Map<String, String> map = new HashMap<String, String>();
-    private boolean initialized = false;
+    private Map<String, String> map;
   
-    private synchronized void load() {
-      map.clear();
+    private Map<String, String> load() {
+      Map<String, String> loadMap = new HashMap<String, String>();
   
       String filename = getConf().get(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, null);
       if (StringUtils.isBlank(filename)) {
-        LOG.warn(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY + " not configured. "
-            + NetworkTopology.DEFAULT_RACK + " will be returned.");
-        return;
+        LOG.warn(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY + " not configured. ");
+        return null;
       }
   
       BufferedReader reader = null;
@@ -101,7 +105,7 @@ public class TableMapping extends CachedDNSToSwitchMapping {
           if (line.length() != 0 && line.charAt(0) != '#') {
             String[] columns = line.split("\\s+");
             if (columns.length == 2) {
-              map.put(columns[0], columns[1]);
+              loadMap.put(columns[0], columns[1]);
             } else {
               LOG.warn("Line does not have two columns. Ignoring. " + line);
             }
@@ -109,29 +113,31 @@ public class TableMapping extends CachedDNSToSwitchMapping {
           line = reader.readLine();
         }
       } catch (Exception e) {
-        LOG.warn(filename + " cannot be read. " + NetworkTopology.DEFAULT_RACK
-            + " will be returned.", e);
-        map.clear();
+        LOG.warn(filename + " cannot be read.", e);
+        return null;
       } finally {
         if (reader != null) {
           try {
             reader.close();
           } catch (IOException e) {
-            LOG.warn(filename + " cannot be read. "
-                + NetworkTopology.DEFAULT_RACK + " will be returned.", e);
-            map.clear();
+            LOG.warn(filename + " cannot be read.", e);
+            return null;
           }
         }
       }
+      return loadMap;
     }
   
     @Override
     public synchronized List<String> resolve(List<String> names) {
-      if (!initialized) {
-        initialized = true;
-        load();
+      if (map == null) {
+        map = load();
+        if (map == null) {
+          LOG.warn("Failed to read topology table. " +
+            NetworkTopology.DEFAULT_RACK + " will be used for all nodes.");
+          map = new HashMap<String, String>();
+        }
       }
-  
       List<String> results = new ArrayList<String>(names.size());
       for (String name : names) {
         String result = map.get(name);
@@ -143,6 +149,18 @@ public class TableMapping extends CachedDNSToSwitchMapping {
       }
       return results;
     }
-    
+
+    @Override
+    public void reloadCachedMappings() {
+      Map<String, String> newMap = load();
+      if (newMap == null) {
+        LOG.error("Failed to reload the topology table.  The cached " +
+            "mappings will not be cleared.");
+      } else {
+        synchronized(this) {
+          map = newMap;
+        }
+      }
+    }
   }
 }

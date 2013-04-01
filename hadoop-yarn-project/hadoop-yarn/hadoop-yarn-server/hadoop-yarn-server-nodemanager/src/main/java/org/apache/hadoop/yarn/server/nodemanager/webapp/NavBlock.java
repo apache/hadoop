@@ -18,16 +18,32 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
+import com.google.inject.Inject;
+
 public class NavBlock extends HtmlBlock implements YarnWebParams {
 
+  private Configuration conf;
+
+  @Inject
+  public NavBlock(Configuration conf) {
+	 this.conf = conf;
+  }
+  
   @Override
   protected void render(Block html) {
-    html
+	
+	String RMWebAppURL = YarnConfiguration.getRMWebAppURL(this.conf);
+	html
       .div("#nav")
-        .h3()._("NodeManager")._() // TODO: Problem if no header like this
+      .h3()._("ResourceManager")._()
+        .ul()
+          .li().a(RMWebAppURL, "RM Home")._()._()
+      .h3()._("NodeManager")._() // TODO: Problem if no header like this
         .ul()
           .li()
             .a(url("node"), "Node Information")._()
@@ -37,7 +53,7 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
           .li()
             .a(url("allContainers"), "List of Containers")._()
         ._()
-        .h3("Tools")
+      .h3("Tools")
         .ul()
           .li().a("/conf", "Configuration")._()
           .li().a("/logs", "Local logs")._()

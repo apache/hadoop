@@ -56,10 +56,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
-import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -124,12 +122,9 @@ public class TestNodeStatusUpdater {
       Assert.assertEquals(NetUtils.getHostPortString(expected), nodeId.toString());
       Assert.assertEquals(5 * 1024, resource.getMemory());
       registeredNodes.add(nodeId);
-      RegistrationResponse regResponse = recordFactory
-          .newRecordInstance(RegistrationResponse.class);
 
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
-      response.setRegistrationResponse(regResponse);
       return response;
     }
 
@@ -218,13 +213,10 @@ public class TestNodeStatusUpdater {
             this.context.getContainers();
         Assert.assertEquals(2, activeContainers.size());
       }
-      HeartbeatResponse response = recordFactory
-          .newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
 
       NodeHeartbeatResponse nhResponse = recordFactory
           .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
+      nhResponse.setResponseId(heartBeatID);
       return nhResponse;
     }
   }
@@ -267,6 +259,36 @@ public class TestNodeStatusUpdater {
     }
   }
 
+  private class MyNodeStatusUpdater4 extends NodeStatusUpdaterImpl {
+    public ResourceTracker resourceTracker =
+        new MyResourceTracker(this.context);
+    private Context context;
+    private final long waitStartTime;
+    private final long rmStartIntervalMS;
+    private final boolean rmNeverStart;
+
+    public MyNodeStatusUpdater4(Context context, Dispatcher dispatcher,
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
+        long rmStartIntervalMS, boolean rmNeverStart) {
+      super(context, dispatcher, healthChecker, metrics);
+      this.context = context;
+      this.waitStartTime = System.currentTimeMillis();
+      this.rmStartIntervalMS = rmStartIntervalMS;
+      this.rmNeverStart = rmNeverStart;
+    }
+
+    @Override
+    protected ResourceTracker getRMClient() {
+      if(System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
+          || rmNeverStart) {
+        throw new YarnException("Faking RM start failure as start " +
+            "delay timer has not expired.");
+      } else {
+        return resourceTracker;
+      }
+    }
+  }
+
   private class MyNodeManager extends NodeManager {
     
     private MyNodeStatusUpdater3 nodeStatusUpdater;
@@ -294,10 +316,7 @@ public class TestNodeStatusUpdater {
       
       RegisterNodeManagerResponse response = recordFactory
           .newRecordInstance(RegisterNodeManagerResponse.class);
-      RegistrationResponse regResponse = recordFactory
-      .newRecordInstance(RegistrationResponse.class);
-      regResponse.setNodeAction(registerNodeAction );
-      response.setRegistrationResponse(regResponse);
+      response.setNodeAction(registerNodeAction );
       return response;
     }
     @Override
@@ -305,14 +324,11 @@ public class TestNodeStatusUpdater {
         throws YarnRemoteException {
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
-      HeartbeatResponse response = recordFactory
-          .newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
-      response.setNodeAction(heartBeatNodeAction);
       
       NodeHeartbeatResponse nhResponse = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
+      nhResponse.setResponseId(heartBeatID);
+      nhResponse.setNodeAction(heartBeatNodeAction);
       return nhResponse;
     }
   }
@@ -335,10 +351,7 @@ public class TestNodeStatusUpdater {
 
       RegisterNodeManagerResponse response =
           recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
-      RegistrationResponse regResponse =
-          recordFactory.newRecordInstance(RegistrationResponse.class);
-      regResponse.setNodeAction(registerNodeAction);
-      response.setRegistrationResponse(regResponse);
+      response.setNodeAction(registerNodeAction);
       return response;
     }
 
@@ -348,10 +361,10 @@ public class TestNodeStatusUpdater {
       LOG.info("Got heartBeatId: [" + heartBeatID +"]");
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
-      HeartbeatResponse response =
-          recordFactory.newRecordInstance(HeartbeatResponse.class);
-      response.setResponseId(heartBeatID);
-      response.setNodeAction(heartBeatNodeAction);
+      NodeHeartbeatResponse nhResponse =
+              recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
+      nhResponse.setResponseId(heartBeatID);
+      nhResponse.setNodeAction(heartBeatNodeAction);
 
       if (nodeStatus.getKeepAliveApplications() != null
           && nodeStatus.getKeepAliveApplications().size() > 0) {
@@ -367,11 +380,8 @@ public class TestNodeStatusUpdater {
       if (heartBeatID == 2) {
         LOG.info("Sending FINISH_APP for application: [" + appId + "]");
         this.context.getApplications().put(appId, mock(Application.class));
-        response.addAllApplicationsToCleanup(Collections.singletonList(appId));
+        nhResponse.addAllApplicationsToCleanup(Collections.singletonList(appId));
       }
-      NodeHeartbeatResponse nhResponse =
-          recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setHeartbeatResponse(response);
       return nhResponse;
     }
   }
@@ -578,6 +588,73 @@ public class TestNodeStatusUpdater {
     };
     verifyNodeStartFailure("org.apache.hadoop.yarn.YarnException: "
         + "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed");
+  }
+
+  @Test (timeout = 15000)
+  public void testNMConnectionToRM() {
+    final long delta = 1500;
+    final long connectionWaitSecs = 5;
+    final long connectionRetryIntervalSecs = 1;
+    //Waiting for rmStartIntervalMS, RM will be started
+    final long rmStartIntervalMS = 2*1000;
+    YarnConfiguration conf = createNMConfig();
+    conf.setLong(YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS,
+        connectionWaitSecs);
+    conf.setLong(YarnConfiguration
+        .RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
+        connectionRetryIntervalSecs);
+
+    //Test NM try to connect to RM Several times, but finally fail
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
+            context, dispatcher, healthChecker, metrics,
+            rmStartIntervalMS, true);
+        return nodeStatusUpdater;
+      }
+    };
+    nm.init(conf);
+    long waitStartTime = System.currentTimeMillis();
+    try {
+      nm.start();
+      Assert.fail("NM should have failed to start due to RM connect failure");
+    } catch(Exception e) {
+      Assert.assertTrue("NM should have tried re-connecting to RM during " +
+          "period of at least " + connectionWaitSecs + " seconds, but " +
+          "stopped retrying within " + (connectionWaitSecs + delta/1000) +
+          " seconds", (System.currentTimeMillis() - waitStartTime
+              >= connectionWaitSecs*1000) && (System.currentTimeMillis()
+              - waitStartTime < (connectionWaitSecs*1000+delta)));
+    }
+
+    //Test NM connect to RM, fail at first several attempts,
+    //but finally success.
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
+            context, dispatcher, healthChecker, metrics, rmStartIntervalMS,
+            false);
+        return nodeStatusUpdater;
+      }
+    };
+
+    nm.init(conf);
+    waitStartTime = System.currentTimeMillis();
+    try {
+      nm.start();
+    } catch (Exception ex){
+      Assert.fail("NM should have started successfully " +
+          "after connecting to RM.");
+    }
+    Assert.assertTrue("NM should have connected to RM within " + delta/1000
+        +" seconds of RM starting up.",
+        (System.currentTimeMillis() - waitStartTime >= rmStartIntervalMS)
+        && (System.currentTimeMillis() - waitStartTime
+        < (rmStartIntervalMS+delta)));
   }
 
   /**

@@ -35,11 +35,6 @@ import org.apache.hadoop.yarn.service.Service;
 public interface AMRMClient extends Service {
 
   /**
-   * Value used to define no locality
-   */
-  static final String ANY = "*";
-
-  /**
    * Object to represent container request for resources.
    * Resources may be localized to nodes and racks.
    * Resources may be assigned priorities.

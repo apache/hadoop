@@ -244,17 +244,33 @@ public final class FileContext {
   }
  
   /* 
-   * Remove relative part - return "absolute":
-   * If input is relative path ("foo/bar") add wd: ie "/<workingDir>/foo/bar"
-   * A fully qualified uri ("hdfs://nn:p/foo/bar") or a slash-relative path
+   * Resolve a relative path passed from the user.
+   * 
+   * Relative paths are resolved against the current working directory
+   * (e.g. "foo/bar" becomes "/<workingDir>/foo/bar").
+   * Fully-qualified URIs (e.g. "hdfs://nn:p/foo/bar") and slash-relative paths
    * ("/foo/bar") are returned unchanged.
    * 
+   * Additionally, we fix malformed URIs that specify a scheme but not an 
+   * authority (e.g. "hdfs:///foo/bar"). Per RFC 2395, we remove the scheme
+   * if it matches the default FS, and let the default FS add in the default
+   * scheme and authority later (see {@link #AbstractFileSystem#checkPath}).
+   * 
    * Applications that use FileContext should use #makeQualified() since
-   * they really want a fully qualified URI.
+   * they really want a fully-qualified URI.
    * Hence this method is not called makeAbsolute() and 
    * has been deliberately declared private.
    */
   private Path fixRelativePart(Path p) {
+    // Per RFC 2396 5.2, drop schema if there is a scheme but no authority.
+    if (p.hasSchemeAndNoAuthority()) {
+      String scheme = p.toUri().getScheme();
+      if (scheme.equalsIgnoreCase(defaultFS.getUri().getScheme())) {
+        p = new Path(p.toUri().getSchemeSpecificPart());
+      }
+    }
+    // Absolute paths are unchanged. Relative paths are resolved against the
+    // current working directory.
     if (p.isUriPathAbsolute()) {
       return p;
     } else {
@@ -1326,7 +1342,7 @@ public final class FileContext {
    * 
    * 2. Partially qualified URIs (eg scheme but no host)
    * 
-   * fs:///A/B/file  Resolved according to the target file sytem. Eg resolving
+   * fs:///A/B/file  Resolved according to the target file system. Eg resolving
    *                 a symlink to hdfs:///A results in an exception because
    *                 HDFS URIs must be fully qualified, while a symlink to 
    *                 file:///A will not since Hadoop's local file systems 

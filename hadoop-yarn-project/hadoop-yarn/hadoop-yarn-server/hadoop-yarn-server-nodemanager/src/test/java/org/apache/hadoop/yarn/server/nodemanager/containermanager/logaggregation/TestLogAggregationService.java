@@ -22,11 +22,13 @@ import static org.mockito.Mockito.*;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
@@ -40,7 +42,9 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -76,7 +80,6 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
@@ -84,6 +87,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.mortbay.util.MultiException;
 
 
@@ -390,7 +394,76 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   
   @Test
   @SuppressWarnings("unchecked")
-  public void testLogAggregationInitFailsWithoutKillingNM() throws Exception {
+  public void testVerifyAndCreateRemoteDirsFailure()
+      throws Exception {
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        this.remoteRootLogDir.getAbsolutePath());
+    
+    DrainDispatcher dispatcher = createDispatcher();
+    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
+    
+    LogAggregationService logAggregationService = spy(
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler));
+    logAggregationService.init(this.conf);
+    
+    YarnException e = new YarnException("KABOOM!");
+    doThrow(e)
+      .when(logAggregationService).verifyAndCreateRemoteLogDir(
+          any(Configuration.class));
+        
+    logAggregationService.start();
+    
+    // Now try to start an application
+    ApplicationId appId = BuilderUtils.newApplicationId(
+        System.currentTimeMillis(), (int)Math.random());
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
+        this.user, null,
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY,
+        this.acls));
+    dispatcher.await();
+    
+    // Verify that it failed
+    ApplicationEvent[] expectedEvents = new ApplicationEvent[] {
+        new ApplicationEvent(appId, 
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
+    };
+    checkEvents(appEventHandler, expectedEvents, false,
+        "getType", "getApplicationID", "getDiagnostic");
+
+    Mockito.reset(logAggregationService);
+    
+    // Now try to start another one
+    ApplicationId appId2 = BuilderUtils.newApplicationId(
+        System.currentTimeMillis(), (int)Math.random());
+    File appLogDir =
+        new File(localLogDir, ConverterUtils.toString(appId2));
+    appLogDir.mkdir();
+    
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId2,
+        this.user, null,
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY,
+        this.acls));
+    dispatcher.await();
+    
+    // Verify that it worked
+    expectedEvents = new ApplicationEvent[] {
+        new ApplicationEvent(appId, // original failure
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED), 
+        new ApplicationEvent(appId2, // success
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED)
+    };
+    checkEvents(appEventHandler, expectedEvents, false,
+        "getType", "getApplicationID", "getDiagnostic");
+    
+    logAggregationService.stop();
+  }
+  
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testLogAggregationInitAppFailsWithoutKillingNM() throws Exception {
 
     this.conf.set(YarnConfiguration.NM_LOG_DIRS,
         localLogDir.getAbsolutePath());
@@ -421,8 +494,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     dispatcher.await();
     ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
-        new ApplicationFinishEvent(appId,
-            "Application failed to init aggregation: KABOOM!")
+        new ApplicationEvent(appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
@@ -471,8 +544,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     dispatcher.await();
     ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
-        new ApplicationFinishEvent(appId,
-            "Application failed to init aggregation: "+e)
+        new ApplicationEvent(appId, 
+        		ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED)
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
@@ -531,24 +604,26 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
         while (true) {
           try {
-            DataOutputBuffer dob = new DataOutputBuffer();
-            LogReader.readAContainerLogsForALogType(valueStream, dob);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream ps = new PrintStream(baos);
+            LogReader.readAContainerLogsForALogType(valueStream, ps);
 
-            DataInputBuffer dib = new DataInputBuffer();
-            dib.reset(dob.getData(), dob.getLength());
+            String writtenLines[] = baos.toString().split(
+              System.getProperty("line.separator"));
 
-            Assert.assertEquals("\nLogType:", dib.readUTF());
-            String fileType = dib.readUTF();
+            Assert.assertEquals("LogType:", writtenLines[0].substring(0, 8));
+            String fileType = writtenLines[0].substring(9);
 
-            Assert.assertEquals("\nLogLength:", dib.readUTF());
-            String fileLengthStr = dib.readUTF();
+            Assert.assertEquals("LogLength:", writtenLines[1].substring(0, 10));
+            String fileLengthStr = writtenLines[1].substring(11);
             long fileLength = Long.parseLong(fileLengthStr);
 
-            Assert.assertEquals("\nLog Contents:\n", dib.readUTF());
-            byte[] buf = new byte[(int) fileLength]; // cast is okay in this
-                                                     // test.
-            dib.read(buf, 0, (int) fileLength);
-            perContainerMap.put(fileType, new String(buf));
+            Assert.assertEquals("Log Contents:",
+              writtenLines[2].substring(0, 13));
+
+            String logContents = StringUtils.join(
+              Arrays.copyOfRange(writtenLines, 3, writtenLines.length), "\n");
+            perContainerMap.put(fileType, logContents);
 
             LOG.info("LogType:" + fileType);
             LOG.info("LogType:" + fileLength);

@@ -21,8 +21,6 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -32,7 +30,7 @@ import org.apache.hadoop.util.PureJavaCrc32;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
- * It provide a basice implementation of a Checksumed FileSystem,
+ * It provide a basic implementation of a Checksumed FileSystem,
  * which creates a checksum file for each raw file.
  * It generates & verifies checksums at the client side.
  *
@@ -118,9 +116,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * It verifies that data matches checksums.
    *******************************************************/
   private static class ChecksumFSInputChecker extends FSInputChecker {
-    public static final Log LOG 
-      = LogFactory.getLog(FSInputChecker.class);
-    
     private ChecksumFileSystem fs;
     private FSDataInputStream datas;
     private FSDataInputStream sums;
@@ -373,19 +368,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private FSDataOutputStream datas;    
     private FSDataOutputStream sums;
     private static final float CHKSUM_AS_FRACTION = 0.01f;
-    
-    public ChecksumFSOutputSummer(ChecksumFileSystem fs, 
-                          Path file, 
-                          boolean overwrite, 
-                          short replication,
-                          long blockSize,
-                          Configuration conf)
-      throws IOException {
-      this(fs, file, overwrite, 
-           conf.getInt(LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_KEY,
-		       LocalFileSystemConfigKeys.LOCAL_FS_STREAM_BUFFER_SIZE_DEFAULT),
-           replication, blockSize, null);
-    }
     
     public ChecksumFSOutputSummer(ChecksumFileSystem fs, 
                           Path file, 

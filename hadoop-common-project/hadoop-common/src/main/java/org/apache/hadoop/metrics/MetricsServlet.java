@@ -140,10 +140,12 @@ public class MetricsServlet extends HttpServlet {
    */
   void printMap(PrintWriter out, Map<String, Map<String, List<TagsMetricsPair>>> map) {
     for (Map.Entry<String, Map<String, List<TagsMetricsPair>>> context : map.entrySet()) {
-      out.println(context.getKey());
+      out.print(context.getKey());
+      out.print("\n");
       for (Map.Entry<String, List<TagsMetricsPair>> record : context.getValue().entrySet()) {
         indent(out, 1);
-        out.println(record.getKey());
+        out.print(record.getKey());
+        out.print("\n");
         for (TagsMetricsPair pair : record.getValue()) {
           indent(out, 2);
           // Prints tag values in the form "{key=value,key=value}:"
@@ -159,7 +161,7 @@ public class MetricsServlet extends HttpServlet {
             out.print("=");
             out.print(tagValue.getValue().toString());
           }
-          out.println("}:");
+          out.print("}:\n");
           
           // Now print metric values, one per line
           for (Map.Entry<String, Number> metricValue : 
@@ -167,7 +169,8 @@ public class MetricsServlet extends HttpServlet {
             indent(out, 3);
             out.print(metricValue.getKey());
             out.print("=");
-            out.println(metricValue.getValue().toString());
+            out.print(metricValue.getValue().toString());
+            out.print("\n");
           }
         }
       }

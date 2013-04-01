@@ -26,6 +26,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.apache.hadoop.util.Progressable;
 import org.junit.BeforeClass;
@@ -312,6 +313,11 @@ public class TestFileSystemCanonicalization {
       return defaultPort;
     }
     
+    @Override
+    protected URI canonicalizeUri(URI uri) {
+      return NetUtils.getCanonicalUri(uri, getDefaultPort());
+    }
+
     @Override
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
       throw new IOException("not supposed to be here");
