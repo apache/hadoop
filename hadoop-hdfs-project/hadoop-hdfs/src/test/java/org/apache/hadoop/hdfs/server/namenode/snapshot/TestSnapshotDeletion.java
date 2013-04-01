@@ -61,7 +61,6 @@ public class TestSnapshotDeletion {
   protected static final short REPLICATION = 3;
   protected static final short REPLICATION_1 = 2;
   protected static final long BLOCKSIZE = 1024;
-  public static final int SNAPSHOTNUMBER = 10;
   
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub = new Path(dir, "sub1");

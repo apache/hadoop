@@ -159,7 +159,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     Preconditions.checkState(!(this instanceof INodeDirectoryWithQuota),
         "this is already an INodeDirectoryWithQuota, this=%s", this);
 
-    if (latest == null) {
+    if (!this.isInLatestSnapshot(latest)) {
       final INodeDirectoryWithQuota q = new INodeDirectoryWithQuota(
           this, true, nsQuota, dsQuota);
       replaceSelf(q);

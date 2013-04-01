@@ -220,3 +220,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4648. For snapshot deletion, when merging the diff from to-delete
   snapshot to the prior snapshot, make sure files/directories created after
   the prior snapshot get deleted. (Jing Zhao via szetszwo)
+
+  HDFS-4637. INodeDirectory#replaceSelf4Quota may incorrectly convert a newly
+  created directory to an INodeDirectoryWithSnapshot. (Jing Zhao via szetszwo)
