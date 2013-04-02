@@ -120,6 +120,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4656. DN heartbeat loop can be briefly tight. (atm)
 
+    HDFS-4658. Standby NN will log that it has received a block report "after
+    becoming active" (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
