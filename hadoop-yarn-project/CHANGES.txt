@@ -51,6 +51,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-475. Remove a unused constant in the public API -
     ApplicationConstants.AM_APP_ATTEMPT_ID_ENV. (Hitesh Shah via vinodkv)
 
+    YARN-309. Changed NodeManager to obtain heart-beat interval from the
+    ResourceManager. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

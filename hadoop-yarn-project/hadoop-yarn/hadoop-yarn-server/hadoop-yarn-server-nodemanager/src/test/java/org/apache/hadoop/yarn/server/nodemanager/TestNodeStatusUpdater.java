@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -214,9 +215,8 @@ public class TestNodeStatusUpdater {
         Assert.assertEquals(2, activeContainers.size());
       }
 
-      NodeHeartbeatResponse nhResponse = recordFactory
-          .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setResponseId(heartBeatID);
+      NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
+          newNodeHeartbeatResponse(heartBeatID, null, null, null, null, 1000L);
       return nhResponse;
     }
   }
@@ -325,10 +325,9 @@ public class TestNodeStatusUpdater {
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
       
-      NodeHeartbeatResponse nhResponse = recordFactory
-      .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setResponseId(heartBeatID);
-      nhResponse.setNodeAction(heartBeatNodeAction);
+      NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
+          newNodeHeartbeatResponse(heartBeatID, heartBeatNodeAction, null,
+              null, null, 1000L);
       return nhResponse;
     }
   }
@@ -361,10 +360,9 @@ public class TestNodeStatusUpdater {
       LOG.info("Got heartBeatId: [" + heartBeatID +"]");
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID++);
-      NodeHeartbeatResponse nhResponse =
-              recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setResponseId(heartBeatID);
-      nhResponse.setNodeAction(heartBeatNodeAction);
+      NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
+          newNodeHeartbeatResponse(heartBeatID, heartBeatNodeAction, null,
+              null, null, 1000L);
 
       if (nodeStatus.getKeepAliveApplications() != null
           && nodeStatus.getKeepAliveApplications().size() > 0) {
