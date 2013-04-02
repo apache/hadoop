@@ -2,6 +2,8 @@ Hadoop Change Log
 
 Release 1.1.0 - (partial upto at r1293509 as of 2012-02-24 17:46:42)
 
+    HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
+
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
