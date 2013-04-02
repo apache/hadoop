@@ -460,6 +460,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4598. Fix the default value of ConcatSourcesParam and the WebHDFS doc.
     (szetszwo)
 
+    HDFS-4655. DNA_FINALIZE is logged as being an unknown command by the DN
+    when received from the standby NN. (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
