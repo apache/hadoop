@@ -2216,6 +2216,8 @@ Release 0.23.7 - UNRELEASED
     HDFS-4581. checkDiskError should not be called on network errors (Rohit
     Kochar via kihwal)
 
+    HDFS-4649. Webhdfs cannot list large directories (daryn via kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
