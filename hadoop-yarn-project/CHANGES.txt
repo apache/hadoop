@@ -112,6 +112,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-515. Node Manager not getting the master key. (Robert Joseph Evans
     via jlowe)
 
+    YARN-516. Fix failure in TestContainerLocalizer caused by HADOOP-9357.
+    (Andrew Wang via vinodkv)
+ 
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
