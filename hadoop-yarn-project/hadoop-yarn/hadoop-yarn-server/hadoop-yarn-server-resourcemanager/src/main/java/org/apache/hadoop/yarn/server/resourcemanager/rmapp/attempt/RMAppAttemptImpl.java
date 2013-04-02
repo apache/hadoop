@@ -771,6 +771,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Set the masterContainer
       appAttempt.setMasterContainer(amContainerAllocation.getContainers().get(
                                                                            0));
+      // Updating CLC's resource is no longer necessary once YARN-486 is
+      // completed, because nothing from Container to CLC will be copied into
+      // CLC then.
+      appAttempt.getSubmissionContext().getAMContainerSpec().setResource(
+          appAttempt.getMasterContainer().getResource());
 
       RMStateStore store = appAttempt.rmContext.getStateStore();
       appAttempt.storeAttempt(store);
