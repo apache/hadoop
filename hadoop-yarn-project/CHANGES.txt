@@ -54,6 +54,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-309. Changed NodeManager to obtain heart-beat interval from the
     ResourceManager. (Xuan Gong via vinodkv)
 
+    YARN-447. Move ApplicationComparator in CapacityScheduler to use comparator
+    in ApplicationId. (Nemon Lou via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
