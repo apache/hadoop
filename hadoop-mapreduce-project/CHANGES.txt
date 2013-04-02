@@ -748,9 +748,6 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4822. Unnecessary conversions in History Events. (Chu Tong via
     jlowe)
 
-    MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
-    (Gelesh via bobby)
-
   BUG FIXES
 
     MAPREDUCE-4458. Warn if java.library.path is used for AM or Task
