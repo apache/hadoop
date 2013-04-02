@@ -278,6 +278,12 @@
     <value>86400</value>
   </property>
 
+  <property>
+    <description>The heart-beat interval in milliseconds for every NodeManager in the cluster.</description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-ms</name>
+    <value>1000</value>
+  </property>
+
   <!-- Node Manager Configs -->
   <property>
     <description>The address of the container manager in the NM.</description>
@@ -334,12 +340,6 @@
     </description>
     <name>yarn.nodemanager.delete.debug-delay-sec</name>
     <value>0</value>
-  </property>
-
-  <property>
-    <description>Heartbeat interval to RM</description>
-    <name>yarn.nodemanager.heartbeat.interval-ms</name>
-    <value>1000</value>
   </property>
 
   <property>
