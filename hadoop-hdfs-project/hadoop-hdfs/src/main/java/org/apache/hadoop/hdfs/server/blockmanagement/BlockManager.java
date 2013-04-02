@@ -1569,8 +1569,8 @@ public class BlockManager {
       node.receivedBlockReport();
       if (staleBefore && !node.areBlockContentsStale()) {
         LOG.info("BLOCK* processReport: Received first block report from "
-            + node + " after becoming active. Its block contents are no longer"
-            + " considered stale");
+            + node + " after starting up or becoming active. Its block "
+            + "contents are no longer considered stale");
         rescanPostponedMisreplicatedBlocks();
       }
       
