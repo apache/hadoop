@@ -143,6 +143,8 @@ Release 1.1.0 - (partial upto at r1293509 as of 2012-02-24 17:46:42)
 
     HDFS-2701. Cleanup FS* processIOError methods. (eli)
 
+    HADOOP-8329. Build fails with Java 7. (eli)
+
     HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
 
     MAPREDUCE-2919. The JT web UI should show job start times. (harsh)

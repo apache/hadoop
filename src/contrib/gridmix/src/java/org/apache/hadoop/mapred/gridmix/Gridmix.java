@@ -613,10 +613,10 @@ public class Gridmix extends Configured implements Tool {
     }
   }
 
-  private <T> String getEnumValues(Enum<? extends T>[] e) {
+  private String getEnumValues(Enum<?>[] e) {
     StringBuilder sb = new StringBuilder();
     String sep = "";
-    for (Enum<? extends T> v : e) {
+    for (Enum<?> v : e) {
       sb.append(sep);
       sb.append(v.name());
       sep = "|";
