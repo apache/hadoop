@@ -463,6 +463,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4655. DNA_FINALIZE is logged as being an unknown command by the DN
     when received from the standby NN. (atm)
 
+    HDFS-4656. DN heartbeat loop can be briefly tight. (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
