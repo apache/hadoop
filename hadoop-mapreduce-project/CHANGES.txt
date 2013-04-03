@@ -173,6 +173,8 @@ Release 2.0.5-alpha - UNRELEASED
     MAPREDUCE-5113. Streaming input/output types are ignored with java 
     mapper/reducer. (sandyr via tucu)
 
+    MAPREDUCE-5098. Fix findbugs warnings in gridmix. (kkambatl via tucu)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

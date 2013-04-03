@@ -93,7 +93,7 @@ implements ResourceUsageEmulatorPlugin {
   
   private static final float DEFAULT_HEAP_LOAD_RATIO = 0.1F;
   
-  public static int ONE_MB = 1024 * 1024;
+  public static final int ONE_MB = 1024 * 1024;
   
   /**
    * Defines the core heap usage emulation algorithm. This engine is expected
@@ -129,7 +129,8 @@ implements ResourceUsageEmulatorPlugin {
   public static class DefaultHeapUsageEmulator 
   implements HeapUsageEmulatorCore {
     // store the unit loads in a list
-    protected static ArrayList<Object> heapSpace = new ArrayList<Object>();
+    protected static final ArrayList<Object> heapSpace =
+        new ArrayList<Object>();
     
     /**
      * Increase heap usage by current process by the given amount.
