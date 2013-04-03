@@ -45,7 +45,7 @@ public class TestGridmixSummary {
   /**
    * Test {@link DataStatistics}.
    */
-  @Test
+  @Test (timeout=10000)
   public void testDataStatistics() throws Exception {
     // test data-statistics getters with compression enabled
     DataStatistics stats = new DataStatistics(10, 2, true);
@@ -133,7 +133,8 @@ public class TestGridmixSummary {
   /**
    * A fake {@link JobFactory}.
    */
-  @SuppressWarnings("unchecked")
+  
+  @SuppressWarnings("rawtypes")
   private static class FakeJobFactory extends JobFactory {
     /**
      * A fake {@link JobStoryProducer} for {@link FakeJobFactory}.
@@ -166,7 +167,7 @@ public class TestGridmixSummary {
   /**
    * Test {@link ExecutionSummarizer}.
    */
-  @Test
+  @Test  (timeout=10000)
   @SuppressWarnings("unchecked")
   public void testExecutionSummarizer() throws IOException {
     Configuration conf = new Configuration();
@@ -344,8 +345,7 @@ public class TestGridmixSummary {
   /**
    * Test {@link ClusterSummarizer}.
    */
-  @Test
-  @SuppressWarnings("deprecation")
+  @Test  (timeout=10000)
   public void testClusterSummarizer() throws IOException {
     ClusterSummarizer cs = new ClusterSummarizer();
     Configuration conf = new Configuration();

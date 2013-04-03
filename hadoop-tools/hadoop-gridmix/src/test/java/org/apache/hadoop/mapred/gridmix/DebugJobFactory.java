@@ -29,13 +29,13 @@ import java.util.concurrent.CountDownLatch;
 /**
  * Component generating random job traces for testing on a single node.
  */
-class DebugJobFactory {
+public class DebugJobFactory {
 
   interface Debuggable {
     ArrayList<JobStory> getSubmitted();
   }
 
-  public static JobFactory getFactory(
+  public static JobFactory<?> getFactory(
     JobSubmitter submitter, Path scratch, int numJobs, Configuration conf,
     CountDownLatch startFlag, UserResolver resolver) throws IOException {
     GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.getPolicy(

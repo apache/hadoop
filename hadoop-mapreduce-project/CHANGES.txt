@@ -115,6 +115,8 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream
     does not close the wrapped InputStream.  (Chris Nauroth via tgraves)
 
+    MAPREDUCE-4991. coverage for gridmix (Aleksey Gorshkov via tgraves)
+
 Release 0.23.6 - 2013-02-06
 
   INCOMPATIBLE CHANGES
