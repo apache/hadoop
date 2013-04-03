@@ -115,6 +115,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-447. Move ApplicationComparator in CapacityScheduler to use comparator
     in ApplicationId. (Nemon Lou via vinodkv)
 
+    YARN-381. Improve fair scheduler docs. (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
