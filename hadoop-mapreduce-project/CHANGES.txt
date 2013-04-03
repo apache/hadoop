@@ -125,6 +125,9 @@ Release 2.0.4-alpha - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5088. MR Client gets an renewer token exception while Oozie is
+    submitting a job (Daryn Sharp via cos)
+
     MAPREDUCE-5117. Changed MRClientProtocolPBClientImpl to be closeable and thus
     fix failures in renewal of HistoryServer's delegations tokens. (Siddharth
     Seth via vinodkv)
