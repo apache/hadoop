@@ -125,6 +125,9 @@ Release 2.0.5-beta - UNRELEASED
     local directory hits unix file count limits and thus prevent job failures.
     (Omkar Vinit Joshi via vinodkv)
 
+    YARN-101. Fix NodeManager heartbeat processing to not lose track of completed
+    containers in case of dropped heartbeats. (Xuan Gong via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
