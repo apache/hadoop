@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
 import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -136,6 +137,7 @@ public class Gridmix extends Configured implements Tool {
   private DistributedCacheEmulator distCacheEmulator;
 
   // Submit data structures
+  @SuppressWarnings("rawtypes")
   private JobFactory factory;
   private JobSubmitter submitter;
   private JobMonitor monitor;
@@ -176,6 +178,7 @@ public class Gridmix extends Configured implements Tool {
    * @see org.apache.hadoop.mapred.gridmix.GenerateData
    * @return exit status
    */
+  @SuppressWarnings("deprecation")
   protected int writeInputData(long genbytes, Path inputDir)
       throws IOException, InterruptedException {
     if (genbytes > 0) {
@@ -287,6 +290,7 @@ public class Gridmix extends Configured implements Tool {
    * @param scratchDir Path into which job output is written
    * @param startFlag Semaphore for starting job trace pipeline
    */
+  @SuppressWarnings("unchecked")
   private void startThreads(Configuration conf, String traceIn, Path ioPath,
       Path scratchDir, CountDownLatch startFlag, UserResolver userResolver)
       throws IOException {
@@ -345,6 +349,7 @@ public class Gridmix extends Configured implements Tool {
     return new JobSubmitter(monitor, threads, queueDepth, pool, statistics);
   }
 
+  @SuppressWarnings("rawtypes")
   protected JobFactory createJobFactory(JobSubmitter submitter, String traceIn,
       Path scratchDir, Configuration conf, CountDownLatch startFlag, 
       UserResolver resolver)
@@ -383,6 +388,7 @@ public class Gridmix extends Configured implements Tool {
     return val; 
   }
 
+  @SuppressWarnings("deprecation")
   private int runJob(Configuration conf, String[] argv)
     throws IOException, InterruptedException {
     if (argv.length < 2) {
@@ -693,7 +699,7 @@ public class Gridmix extends Configured implements Tool {
     try {
       res = ToolRunner.run(new Configuration(), new Gridmix(argv), argv);
     } finally {
-      System.exit(res);
+      ExitUtil.terminate(res);
     }
   }
 
@@ -800,6 +806,10 @@ public class Gridmix extends Configured implements Tool {
      */
     void abort();
   }
-
+  // it is need for tests
+  protected Summarizer getSummarizer() {
+    return summarizer;
+  }
+  
 }
 

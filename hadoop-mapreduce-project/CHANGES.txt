@@ -708,6 +708,8 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-5053. java.lang.InternalError from decompression codec cause
     reducer to fail (Robert Parker via jeagles)
 
+    MAPREDUCE-4991. coverage for gridmix (Aleksey Gorshkov via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
