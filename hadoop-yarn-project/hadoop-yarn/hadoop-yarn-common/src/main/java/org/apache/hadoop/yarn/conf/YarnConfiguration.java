@@ -717,21 +717,16 @@ public class YarnConfiguration extends Configuration {
   }
   
   public static String getRMWebAppHostAndPort(Configuration conf) {
-    int port = conf.getSocketAddr(
+    InetSocketAddress address = conf.getSocketAddr(
         YarnConfiguration.RM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT).getPort();
-    // Use apps manager address to figure out the host for webapp
-    String host = conf.getSocketAddr(
-        YarnConfiguration.RM_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_PORT).getHostName();
-    InetSocketAddress address = NetUtils.createSocketAddrForHost(host, port);
+        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
+    address = NetUtils.getConnectAddress(address);
     StringBuffer sb = new StringBuffer();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() || 
         resolved.isLoopbackAddress()) {
-      String lh = host;
+      String lh = address.getHostName();
       try {
         lh = InetAddress.getLocalHost().getCanonicalHostName();
       } catch (UnknownHostException e) {
