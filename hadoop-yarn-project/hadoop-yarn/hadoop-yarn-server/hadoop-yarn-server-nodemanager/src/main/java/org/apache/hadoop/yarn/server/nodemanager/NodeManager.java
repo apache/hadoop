@@ -119,6 +119,10 @@ public class NodeManager extends CompositeService
     return new DeletionService(exec);
   }
 
+  protected NMContext createNMContext(NMContainerTokenSecretManager containerTokenSecretManager) {
+    return new NMContext(containerTokenSecretManager);
+  }
+
   protected void doSecureLogin() throws IOException {
     SecurityUtil.login(getConfig(), YarnConfiguration.NM_KEYTAB,
         YarnConfiguration.NM_PRINCIPAL);
@@ -137,7 +141,7 @@ public class NodeManager extends CompositeService
       containerTokenSecretManager = new NMContainerTokenSecretManager(conf);
     }
 
-    this.context = new NMContext(containerTokenSecretManager);
+    this.context = createNMContext(containerTokenSecretManager);
 
     this.aclsManager = new ApplicationACLsManager(conf);
 

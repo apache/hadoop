@@ -88,6 +88,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
+  private boolean previousHeartBeatSucceeded;
+  private List<ContainerStatus> previousContainersStatuses =
+      new ArrayList<ContainerStatus>();
+
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
@@ -95,6 +99,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.context = context;
     this.dispatcher = dispatcher;
     this.metrics = metrics;
+    this.previousHeartBeatSucceeded = true;
   }
 
   @Override
@@ -314,8 +319,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
     nodeStatus.setNodeId(this.nodeId);
 
-    int numActiveContainers = 0;
     List<ContainerStatus> containersStatuses = new ArrayList<ContainerStatus>();
+    if(previousHeartBeatSucceeded) {
+      previousContainersStatuses.clear();
+    } else {
+      containersStatuses.addAll(previousContainersStatuses);
+    }
+
+    int numActiveContainers = 0;
     for (Iterator<Entry<ContainerId, Container>> i =
         this.context.getContainers().entrySet().iterator(); i.hasNext();) {
       Entry<ContainerId, Container> e = i.next();
@@ -330,6 +341,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       LOG.info("Sending out status for container: " + containerStatus);
 
       if (containerStatus.getState() == ContainerState.COMPLETE) {
+        previousContainersStatuses.add(containerStatus);
         // Remove
         i.remove();
 
@@ -404,6 +416,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
             NodeHeartbeatResponse response =
               resourceTracker.nodeHeartbeat(request);
+            previousHeartBeatSucceeded = true;
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
             // See if the master-key has rolled over
@@ -449,6 +462,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
           } catch (Throwable e) {
+            previousHeartBeatSucceeded = false;
             // TODO Better error handling. Thread can die with the rest of the
             // NM still running.
             LOG.error("Caught exception in status-updater", e);
