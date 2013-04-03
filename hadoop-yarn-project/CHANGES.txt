@@ -59,6 +59,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-381. Improve fair scheduler docs. (Sandy Ryza via tomwhite)
 
+    YARN-458. YARN daemon addresses must be placed in many different configs. 
+    (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

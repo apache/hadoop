@@ -59,9 +59,15 @@
   
   <!-- Resource Manager Configs -->
   <property>
+    <description>The hostname of the RM.</description>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>0.0.0.0</value>
+  </property>    
+  
+  <property>
     <description>The address of the applications manager interface in the RM.</description>
     <name>yarn.resourcemanager.address</name>
-    <value>0.0.0.0:8032</value>
+    <value>${yarn.resourcemanager.hostname}:8032</value>
   </property>
 
   <property>
@@ -84,7 +90,7 @@
   <property>
     <description>The address of the scheduler interface.</description>
     <name>yarn.resourcemanager.scheduler.address</name>
-    <value>0.0.0.0:8030</value>
+    <value>${yarn.resourcemanager.hostname}:8030</value>
   </property>
 
   <property>
@@ -96,12 +102,12 @@
   <property>
     <description>The address of the RM web application.</description>
     <name>yarn.resourcemanager.webapp.address</name>
-    <value>0.0.0.0:8088</value>
+    <value>${yarn.resourcemanager.hostname}:8088</value>
   </property>
 
   <property>
     <name>yarn.resourcemanager.resource-tracker.address</name>
-    <value>0.0.0.0:8031</value>
+    <value>${yarn.resourcemanager.hostname}:8031</value>
   </property>
 
   <property>
@@ -119,7 +125,7 @@
   <property>
     <description>The address of the RM admin interface.</description>
     <name>yarn.resourcemanager.admin.address</name>
-    <value>0.0.0.0:8033</value>
+    <value>${yarn.resourcemanager.hostname}:8033</value>
   </property>
 
   <property>
@@ -286,9 +292,15 @@
 
   <!-- Node Manager Configs -->
   <property>
+    <description>The hostname of the NM.</description>
+    <name>yarn.nodemanager.hostname</name>
+    <value>0.0.0.0</value>
+  </property>
+  
+  <property>
     <description>The address of the container manager in the NM.</description>
     <name>yarn.nodemanager.address</name>
-    <value>0.0.0.0:0</value>
+    <value>${yarn.nodemanager.hostname}:0</value>
   </property>
 
   <property>
@@ -381,7 +393,7 @@
   <property>
     <description>Address where the localizer IPC is.</description>
     <name>yarn.nodemanager.localizer.address</name>
-    <value>0.0.0.0:8040</value>
+    <value>${yarn.nodemanager.hostname}:8040</value>
   </property>
 
   <property>
@@ -512,7 +524,7 @@
   <property>
     <description>NM Webapp address.</description>
     <name>yarn.nodemanager.webapp.address</name>
-    <value>0.0.0.0:8042</value>
+    <value>${yarn.nodemanager.hostname}:8042</value>
   </property>
 
   <property>
