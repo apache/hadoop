@@ -133,7 +133,7 @@ public class TestGridmixSummary {
   /**
    * A fake {@link JobFactory}.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   private static class FakeJobFactory extends JobFactory {
     /**
      * A fake {@link JobStoryProducer} for {@link FakeJobFactory}.
@@ -167,7 +167,7 @@ public class TestGridmixSummary {
    * Test {@link ExecutionSummarizer}.
    */
   @Test
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public void testExecutionSummarizer() throws IOException {
     Configuration conf = new Configuration();
     
@@ -360,7 +360,6 @@ public class TestGridmixSummary {
    * Test {@link ClusterSummarizer}.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void testClusterSummarizer() throws IOException {
     ClusterSummarizer cs = new ClusterSummarizer();
     Configuration conf = new Configuration();
@@ -374,13 +373,13 @@ public class TestGridmixSummary {
     assertEquals("JT name mismatch", jt, cs.getJobTrackerInfo());
     assertEquals("NN name mismatch", nn, cs.getNamenodeInfo());
     
-    ClusterStats cstats = ClusterStats.getClusterStats();
+    ClusterStats cStats = ClusterStats.getClusterStats();
     conf.set(JTConfig.JT_IPC_ADDRESS, "local");
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "local");
     JobClient jc = new JobClient(conf);
-    cstats.setClusterMetric(jc.getClusterStatus());
+    cStats.setClusterMetric(jc.getClusterStatus());
     
-    cs.update(cstats);
+    cs.update(cStats);
     
     // test
     assertEquals("Cluster summary test failed!", 1, cs.getMaxMapTasks());
