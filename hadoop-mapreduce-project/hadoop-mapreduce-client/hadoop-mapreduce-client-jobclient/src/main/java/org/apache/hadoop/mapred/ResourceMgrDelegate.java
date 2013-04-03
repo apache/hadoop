@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,6 +88,10 @@ public class ResourceMgrDelegate extends YarnClientImpl {
     return oldMetrics;
   }
 
+  InetSocketAddress getConnectAddress() {
+    return rmAddress;
+  }
+  
   @SuppressWarnings("rawtypes")
   public Token getDelegationToken(Text renewer) throws IOException,
       InterruptedException {
