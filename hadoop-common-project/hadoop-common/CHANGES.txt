@@ -604,9 +604,6 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9125. LdapGroupsMapping threw CommunicationException after some
     idle time. (Kai Zheng via atm)
 
-    HADOOP-9357. Fallback to default authority if not specified in FileContext.
-    (Andrew Wang via eli)
-
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

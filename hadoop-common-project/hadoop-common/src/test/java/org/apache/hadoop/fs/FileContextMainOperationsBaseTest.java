@@ -21,8 +21,6 @@ package org.apache.hadoop.fs;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -1165,40 +1163,6 @@ public abstract class FileContextMainOperationsBaseTest  {
       }
       Assert.assertEquals(fc.getFileStatus(file), fc.getFileLinkStatus(file));
     }
-  }
-
-  /**
-   * Test that URIs with a scheme, no authority, and absolute path component
-   * resolve with the authority of the default FS.
-   */
-  @Test(timeout=30000)
-  public void testAbsolutePathSchemeNoAuthority() throws IOException,
-      URISyntaxException {
-    Path file = getTestRootPath(fc, "test/file");
-    createFile(file);
-    URI uri = file.toUri();
-    URI noAuthorityUri = new URI(uri.getScheme(), null, uri.getPath(),
-        uri.getQuery(), uri.getFragment());
-    Path noAuthority = new Path(noAuthorityUri);
-    Assert.assertEquals(fc.getFileStatus(file), fc.getFileStatus(noAuthority));
-  }
-
-  /**
-   * Test that URIs with a scheme, no authority, and relative path component
-   * resolve with the authority of the default FS.
-   */
-  @Test(timeout=30000)
-  public void testRelativePathSchemeNoAuthority() throws IOException,
-      URISyntaxException {
-    Path workDir = new Path(getAbsoluteTestRootPath(fc), new Path("test"));
-    fc.setWorkingDirectory(workDir);
-    Path file = new Path(workDir, "file");
-    createFile(file);
-    URI uri = file.toUri();
-    URI noAuthorityUri = new URI(uri.getScheme() + ":file");
-    System.out.println(noAuthorityUri);
-    Path noAuthority = new Path(noAuthorityUri);
-    Assert.assertEquals(fc.getFileStatus(file), fc.getFileStatus(noAuthority));
   }
   
   protected void createFile(Path path) throws IOException {
