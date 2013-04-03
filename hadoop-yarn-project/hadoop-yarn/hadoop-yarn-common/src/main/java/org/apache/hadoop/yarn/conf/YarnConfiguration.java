@@ -340,7 +340,15 @@ public class YarnConfiguration extends Configuration {
   /**List of directories to store localized files in.*/
   public static final String NM_LOCAL_DIRS = NM_PREFIX + "local-dirs";
   public static final String DEFAULT_NM_LOCAL_DIRS = "/tmp/nm-local-dir";
-  
+
+  /**
+   * Number of files in each localized directories
+   * Avoid tuning this too low. 
+   */
+  public static final String NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY =
+    NM_PREFIX + "local-cache.max-files-per-directory";
+  public static final int DEFAULT_NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY = 8192;
+
   /** Address where the localizer IPC is.*/
   public static final String NM_LOCALIZER_ADDRESS =
     NM_PREFIX + "localizer.address";

@@ -26,12 +26,13 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEventType;
+
 
 /**
  * A collection of {@link LocalizedResource}s all of same
@@ -49,17 +50,43 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   private final String user;
   private final Dispatcher dispatcher;
   private final ConcurrentMap<LocalResourceRequest,LocalizedResource> localrsrc;
+  private Configuration conf;
+  /*
+   * This flag controls whether this resource tracker uses hierarchical
+   * directories or not. For PRIVATE and PUBLIC resource trackers it
+   * will be set whereas for APPLICATION resource tracker it would
+   * be false.
+   */
+  private final boolean useLocalCacheDirectoryManager;
+  private ConcurrentHashMap<Path, LocalCacheDirectoryManager> directoryManagers;
+  /*
+   * It is used to keep track of resource into hierarchical directory
+   * while it is getting downloaded. It is useful for reference counting
+   * in case resource localization fails.
+   */
+  private ConcurrentHashMap<LocalResourceRequest, Path>
+    inProgressLocalResourcesMap;
 
-  public LocalResourcesTrackerImpl(String user, Dispatcher dispatcher) {
+  public LocalResourcesTrackerImpl(String user, Dispatcher dispatcher,
+      boolean useLocalCacheDirectoryManager, Configuration conf) {
     this(user, dispatcher,
-        new ConcurrentHashMap<LocalResourceRequest,LocalizedResource>());
+      new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>(),
+      useLocalCacheDirectoryManager, conf);
   }
 
   LocalResourcesTrackerImpl(String user, Dispatcher dispatcher,
-      ConcurrentMap<LocalResourceRequest,LocalizedResource> localrsrc) {
+      ConcurrentMap<LocalResourceRequest,LocalizedResource> localrsrc,
+      boolean useLocalCacheDirectoryManager, Configuration conf) {
     this.user = user;
     this.dispatcher = dispatcher;
     this.localrsrc = localrsrc;
+    this.useLocalCacheDirectoryManager = useLocalCacheDirectoryManager;
+    if ( this.useLocalCacheDirectoryManager) {
+      directoryManagers = new ConcurrentHashMap<Path, LocalCacheDirectoryManager>();
+      inProgressLocalResourcesMap =
+        new ConcurrentHashMap<LocalResourceRequest, Path>();
+    }
+    this.conf = conf;
   }
 
   @Override
@@ -73,6 +100,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
         LOG.info("Resource " + rsrc.getLocalPath()
             + " is missing, localizing it again");
         localrsrc.remove(req);
+        decrementFileCountForLocalCacheDirectory(req, rsrc);
         rsrc = null;
       }
       if (null == rsrc) {
@@ -90,7 +118,52 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
     rsrc.handle(event);
   }
 
-  /**
+  /*
+   * Update the file-count statistics for a local cache-directory.
+   * This will retrieve the localized path for the resource from
+   * 1) inProgressRsrcMap if the resource was under localization and it
+   * failed.
+   * 2) LocalizedResource if the resource is already localized.
+   * From this path it will identify the local directory under which the
+   * resource was localized. Then rest of the path will be used to decrement
+   * file count for the HierarchicalSubDirectory pointing to this relative
+   * path.
+   */
+  private void decrementFileCountForLocalCacheDirectory(LocalResourceRequest req,
+      LocalizedResource rsrc) {
+    if ( useLocalCacheDirectoryManager) {
+      Path rsrcPath = null;
+      if (inProgressLocalResourcesMap.containsKey(req)) {
+        // This happens when localization of a resource fails.
+        rsrcPath = inProgressLocalResourcesMap.remove(req);
+      } else if (rsrc != null && rsrc.getLocalPath() != null) {
+        rsrcPath = rsrc.getLocalPath().getParent().getParent();
+      }
+      if (rsrcPath != null) {
+        Path parentPath = new Path(rsrcPath.toUri().getRawPath());
+        while (!directoryManagers.containsKey(parentPath)) {
+          parentPath = parentPath.getParent();
+          if ( parentPath == null) {
+            return;
+          }
+        }
+        if ( parentPath != null) {
+          String parentDir = parentPath.toUri().getRawPath().toString();
+          LocalCacheDirectoryManager dir = directoryManagers.get(parentPath);
+          String rsrcDir = rsrcPath.toUri().getRawPath(); 
+          if (rsrcDir.equals(parentDir)) {
+            dir.decrementFileCountForPath("");
+          } else {
+            dir.decrementFileCountForPath(
+              rsrcDir.substring(
+              parentDir.length() + 1));
+          }
+        }
+      }
+    }
+  }
+
+/**
    * This module checks if the resource which was localized is already present
    * or not
    * 
@@ -100,7 +173,8 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   public boolean isResourcePresent(LocalizedResource rsrc) {
     boolean ret = true;
     if (rsrc.getState() == ResourceState.LOCALIZED) {
-      File file = new File(rsrc.getLocalPath().toUri().getRawPath().toString());
+      File file = new File(rsrc.getLocalPath().toUri().getRawPath().
+        toString());
       if (!file.exists()) {
         ret = false;
       }
@@ -133,10 +207,10 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
         delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
       }
+      decrementFileCountForLocalCacheDirectory(rem.getRequest(), rsrc);
       return true;
     }
   }
-
 
   /**
    * Returns the path up to the random directory component.
@@ -162,5 +236,51 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   @Override
   public Iterator<LocalizedResource> iterator() {
     return localrsrc.values().iterator();
+  }
+
+  /**
+   * @return {@link Path} absolute path for localization which includes local
+   *         directory path and the relative hierarchical path (if use local
+   *         cache directory manager is enabled)
+   * 
+   * @param {@link LocalResourceRequest} Resource localization request to
+   *        localize the resource.
+   * @param {@link Path} local directory path
+   */
+  @Override
+  public Path
+      getPathForLocalization(LocalResourceRequest req, Path localDirPath) {
+    if (useLocalCacheDirectoryManager && localDirPath != null) {
+
+      if (!directoryManagers.containsKey(localDirPath)) {
+        directoryManagers.putIfAbsent(localDirPath,
+          new LocalCacheDirectoryManager(conf));
+      }
+      LocalCacheDirectoryManager dir = directoryManagers.get(localDirPath);
+
+      Path rPath = localDirPath;
+      String hierarchicalPath = dir.getRelativePathForLocalization();
+      // For most of the scenarios we will get root path only which
+      // is an empty string
+      if (!hierarchicalPath.isEmpty()) {
+        rPath = new Path(localDirPath, hierarchicalPath);
+      }
+      inProgressLocalResourcesMap.put(req, rPath);
+      return rPath;
+    } else {
+      return localDirPath;
+    }
+  }
+
+  @Override
+  public void localizationCompleted(LocalResourceRequest req,
+      boolean success) {
+    if (useLocalCacheDirectoryManager) {
+      if (!success) {
+        decrementFileCountForLocalCacheDirectory(req, null);
+      } else {
+        inProgressLocalResourcesMap.remove(req);
+      }
+    }
   }
 }

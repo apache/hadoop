@@ -120,7 +120,11 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-382. SchedulerUtils improve way normalizeRequest sets the resource
     capabilities. (Zhijie Shen via bikas)
- 
+
+    YARN-467. Modify public distributed cache to localize files such that no
+    local directory hits unix file count limits and thus prevent job failures.
+    (Omkar Vinit Joshi via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
