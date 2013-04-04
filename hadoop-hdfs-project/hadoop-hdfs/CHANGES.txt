@@ -28,6 +28,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
+    (Junping Du via llu)
+
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
 
