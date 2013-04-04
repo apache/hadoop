@@ -568,6 +568,11 @@ Release 1.2.0 - unreleased
     HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
     non-Hadoop JAAS context. (todd, backported by suresh)
 
+    MAPREDUCE-4463. Fix job recovery failures which were caused by HDFS
+    permission issues since the token file was being read as the user who
+    submitted the job rather than JobTracker user. (tomwhite, acmurthy via
+    acmurthy) 
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
