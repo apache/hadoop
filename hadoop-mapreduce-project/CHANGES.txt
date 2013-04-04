@@ -70,9 +70,6 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-3872. Fix an event handling races in ContainerLauncherImpl.
     (Robert Kanter via sseth)
 
-    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
-    actual cluster (Siddharth Seth via hitesh)
-
     MAPREDUCE-5062. Fix MR AM to read max-retries from the RM. (Zhijie Shen via
     vinodkv)
 
@@ -131,6 +128,9 @@ Release 2.0.4-alpha - UNRELEASED
     MAPREDUCE-5117. Changed MRClientProtocolPBClientImpl to be closeable and thus
     fix failures in renewal of HistoryServer's delegations tokens. (Siddharth
     Seth via vinodkv)
+
+    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
+    actual cluster (Siddharth Seth via hitesh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
