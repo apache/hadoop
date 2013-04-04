@@ -191,7 +191,12 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
       }
       rack = getNode(nodeGroup.getNetworkLocation());
 
-      if (rack != null && !(rack instanceof InnerNode)) {
+      // rack should be an innerNode and with parent.
+      // note: rack's null parent case is: node's topology only has one layer, 
+      //       so rack is recognized as "/" and no parent. 
+      // This will be recognized as a node with fault topology.
+      if (rack != null && 
+          (!(rack instanceof InnerNode) || rack.getParent() == null)) {
         throw new IllegalArgumentException("Unexpected data node " 
             + node.toString() 
             + " at an illegal network location");
