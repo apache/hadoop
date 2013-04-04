@@ -19,6 +19,9 @@ Release 2.0.4-beta - UNRELEASED
     fix failures in renewal of HistoryServer's delegations tokens. (Siddharth
     Seth via vinodkv)
 
+    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
+    actual cluster (Siddharth Seth via hitesh)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -177,8 +178,10 @@ public class MiniMRCluster {
       int numTrackerToExclude, Clock clock) throws IOException {
     if (conf == null) conf = new JobConf();
     FileSystem.setDefaultUri(conf, namenode);
+    String identifier = this.getClass().getName() + "_"
+        + Integer.toString(new Random().nextInt(Integer.MAX_VALUE));
     mrClientCluster = MiniMRClientClusterFactory.create(this.getClass(),
-        numTaskTrackers, conf);
+        identifier, numTaskTrackers, conf);
   }
 
   public UserGroupInformation getUgi() {
