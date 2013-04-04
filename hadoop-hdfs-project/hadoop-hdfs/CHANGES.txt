@@ -2218,6 +2218,8 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4649. Webhdfs cannot list large directories (daryn via kihwal)
 
+    HDFS-4548. Webhdfs doesn't renegotiate SPNEGO token (daryn via kihwal)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
