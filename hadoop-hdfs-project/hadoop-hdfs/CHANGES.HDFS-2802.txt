@@ -225,3 +225,6 @@ Branch-2802 Snapshot (Unreleased)
   created directory to an INodeDirectoryWithSnapshot. (Jing Zhao via szetszwo)
 
   HDFS-4611. Update FSImage for INodeReference.  (szetszwo)
+
+  HDFS-4647. Rename should call setLocalName after an inode is removed from
+  snapshots.  (Arpit Agarwal via szetszwo)

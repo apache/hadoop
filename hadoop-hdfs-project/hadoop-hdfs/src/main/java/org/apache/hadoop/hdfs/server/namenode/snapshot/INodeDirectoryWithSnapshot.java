@@ -610,12 +610,15 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     final INodeReference.WithName ref = new INodeReference.WithName(this,
         newChild, childName);
     newChild.incrementReferenceCount();
+    replaceRemovedChild(oldChild, ref);
+    return ref;
+  }
 
-    diffs.replaceChild(ListType.CREATED, oldChild, ref);
+  /** The child just has been removed, replace it with a reference. */
+  public void replaceRemovedChild(INode oldChild, INode newChild) {
     // the old child must be in the deleted list
     Preconditions.checkState(
-        diffs.replaceChild(ListType.DELETED, oldChild, ref));
-    return ref;
+        diffs.replaceChild(ListType.DELETED, oldChild, newChild));
   }
 
   @Override

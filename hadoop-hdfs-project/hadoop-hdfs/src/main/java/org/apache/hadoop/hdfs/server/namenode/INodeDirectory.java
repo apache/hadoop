@@ -215,7 +215,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     Preconditions.checkState(i >= 0);
     Preconditions.checkState(oldChild == children.get(i));
     
-    if (oldChild.isReference()) {
+    if (oldChild.isReference() && !newChild.isReference()) {
       final INode withCount = oldChild.asReference().getReferredINode();
       withCount.asReference().setReferredINode(newChild);
     } else {
@@ -234,6 +234,23 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     return withCount;
   }
 
+  INodeReference.WithName replaceChild4ReferenceWithName(INode oldChild) {
+    if (oldChild instanceof INodeReference.WithName) {
+      return (INodeReference.WithName)oldChild;
+    }
+
+    final INodeReference.WithCount withCount;
+    if (oldChild.isReference()) {
+      withCount = (INodeReference.WithCount) oldChild.asReference().getReferredINode();
+    } else {
+      withCount = new INodeReference.WithCount(null, oldChild);
+    }
+    final INodeReference.WithName ref = new INodeReference.WithName(
+        this, withCount, oldChild.getLocalNameBytes());
+    replaceChild(oldChild, ref);
+    return ref;
+  }
+  
   private void replaceChildFile(final INodeFile oldChild, final INodeFile newChild) {
     replaceChild(oldChild, newChild);
     oldChild.clear();

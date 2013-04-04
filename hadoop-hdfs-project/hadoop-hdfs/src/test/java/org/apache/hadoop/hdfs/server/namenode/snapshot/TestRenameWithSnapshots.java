@@ -17,19 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 /** Testing rename with snapshots. */
@@ -37,9 +46,9 @@ public class TestRenameWithSnapshots {
   {
     SnapshotTestHelper.disableLogs();
   }
-
+  private static final Log LOG = LogFactory.getLog(TestRenameWithSnapshots.class);
+  
   private static final long SEED = 0;
-
   private static final short REPL = 3;
   private static final long BLOCKSIZE = 1024;
   
@@ -49,9 +58,19 @@ public class TestRenameWithSnapshots {
   private static FSDirectory fsdir;
   private static DistributedFileSystem hdfs;
   
-  @BeforeClass
-  public static void setUp() throws Exception {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
+  static private final Path dir = new Path("/testRenameWithSnapshots");
+  static private final Path sub1 = new Path(dir, "sub1");
+  static private final Path file1 = new Path(sub1, "file1");
+  static private final Path file2 = new Path(sub1, "file2");
+  static private final Path file3 = new Path(sub1, "file3");
+  static private final String snap1 = "snap1";
+  static private final String snap2 = "snap2";
+
+  
+  @Before
+  public void setUp() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).format(true)
+        .build();
     cluster.waitActive();
 
     fsn = cluster.getNamesystem();
@@ -60,8 +79,8 @@ public class TestRenameWithSnapshots {
     hdfs = cluster.getFileSystem();
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -103,5 +122,99 @@ public class TestRenameWithSnapshots {
     
     hdfs.delete(bar, false);
     Assert.assertEquals(1, withCount.getReferenceCount());
+  }
+  
+  private static boolean existsInDiffReport(List<DiffReportEntry> entries,
+      DiffType type, String relativePath) {
+    for (DiffReportEntry entry : entries) {
+      System.out.println("DiffEntry is:" + entry.getType() + "\""
+          + new String(entry.getRelativePath()) + "\"");
+      if ((entry.getType() == type)
+          && ((new String(entry.getRelativePath())).compareTo(relativePath) == 0)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * Rename a file under a snapshottable directory, file does not exist
+   * in a snapshot.
+   */
+  @Test (timeout=60000)
+  public void testRenameFileNotInSnapshot() throws Exception {
+    hdfs.mkdirs(sub1);
+    hdfs.allowSnapshot(sub1.toString());
+    hdfs.createSnapshot(sub1, snap1);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPL, SEED);
+    hdfs.rename(file1, file2);
+
+    // Query the diff report and make sure it looks as expected.
+    SnapshotDiffReport diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
+    List<DiffReportEntry> entries = diffReport.getDiffList();
+    assertTrue(entries.size() == 2);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
+  }
+
+  /**
+   * Rename a file under a snapshottable directory, file exists
+   * in a snapshot.
+   */
+  @Test (timeout=60000)
+  public void testRenameFileInSnapshot() throws Exception {
+    hdfs.mkdirs(sub1);
+    hdfs.allowSnapshot(sub1.toString());
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap1);
+    hdfs.rename(file1, file2);
+
+    // Query the diff report and make sure it looks as expected.
+    SnapshotDiffReport diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
+    System.out.println("DiffList is " + diffReport.toString());
+    List<DiffReportEntry> entries = diffReport.getDiffList();
+    assertTrue(entries.size() == 3);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+  }
+
+  @Test (timeout=60000)
+  public void testRenameTwiceInSnapshot() throws Exception {
+    hdfs.mkdirs(sub1);
+    hdfs.allowSnapshot(sub1.toString());
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap1);
+    hdfs.rename(file1, file2);
+    
+    hdfs.createSnapshot(sub1, snap2);
+    hdfs.rename(file2, file3);
+
+    SnapshotDiffReport diffReport;
+    
+    // Query the diff report and make sure it looks as expected.
+    diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, snap2);
+    LOG.info("DiffList is " + diffReport.toString());
+    List<DiffReportEntry> entries = diffReport.getDiffList();
+    assertTrue(entries.size() == 3);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file2.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
+    
+    diffReport = hdfs.getSnapshotDiffReport(sub1, snap2, "");
+    LOG.info("DiffList is " + diffReport.toString());
+    entries = diffReport.getDiffList();
+    assertTrue(entries.size() == 3);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file3.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file2.getName()));
+    
+    diffReport = hdfs.getSnapshotDiffReport(sub1, snap1, "");
+    LOG.info("DiffList is " + diffReport.toString());
+    entries = diffReport.getDiffList();
+    assertTrue(entries.size() == 3);
+    assertTrue(existsInDiffReport(entries, DiffType.MODIFY, ""));
+    assertTrue(existsInDiffReport(entries, DiffType.CREATE, file3.getName()));
+    assertTrue(existsInDiffReport(entries, DiffType.DELETE, file1.getName()));
   }
 }

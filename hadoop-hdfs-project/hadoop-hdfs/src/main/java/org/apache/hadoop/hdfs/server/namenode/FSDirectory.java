@@ -559,8 +559,24 @@ public class FSDirectory implements Closeable {
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
     
     boolean added = false;
-    final INode srcChild = srcIIP.getLastINode();
+    INode srcChild = srcIIP.getLastINode();
     final byte[] srcChildName = srcChild.getLocalNameBytes();
+    final boolean isSrcInSnapshot = srcChild.isInLatestSnapshot(
+        srcIIP.getLatestSnapshot());
+    final boolean srcChildIsReference = srcChild.isReference();
+    
+    // check srcChild for reference
+    final INodeReference.WithCount withCount;
+    if (srcChildIsReference || isSrcInSnapshot) {
+      final INodeReference.WithName withName = srcIIP.getINode(-2).asDirectory()
+          .replaceChild4ReferenceWithName(srcChild); 
+      withCount = (INodeReference.WithCount)withName.getReferredINode();
+      srcChild = withName;
+      srcIIP.setLastINode(srcChild);
+    } else {
+      withCount = null;
+    }
+
     try {
       // remove src
       final long removedSrc = removeLastINode(srcIIP);
@@ -570,11 +586,23 @@ public class FSDirectory implements Closeable {
             + " because the source can not be removed");
         return false;
       }
-      //TODO: setLocalName breaks created/deleted lists
-      srcChild.setLocalName(dstIIP.getLastLocalName());
+      
+      srcChild = srcIIP.getLastINode();
+      final byte[] dstChildName = dstIIP.getLastLocalName();
+      final INode toDst;
+      if (withCount == null) {
+        srcChild.setLocalName(dstChildName);
+        toDst = srcChild;
+      } else {
+        withCount.getReferredINode().setLocalName(dstChildName);
+        final INodeReference ref = new INodeReference(dstIIP.getINode(-2), withCount);
+        withCount.setParentReference(ref);
+        withCount.incrementReferenceCount();
+        toDst = ref;
+      }
       
       // add src to the destination
-      added = addLastINodeNoQuotaCheck(dstIIP, srcChild);
+      added = addLastINodeNoQuotaCheck(dstIIP, toDst);
       if (added) {
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: " 
@@ -587,17 +615,20 @@ public class FSDirectory implements Closeable {
         // update moved leases with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);        
 
-        if (srcIIP.getLatestSnapshot() != null) {
-          createReferences4Rename(srcChild, srcChildName,
-              (INodeDirectoryWithSnapshot)srcParent.asDirectory(),
-              dstParent.asDirectory());
-        }
         return true;
       }
     } finally {
       if (!added) {
         // put it back
-        srcChild.setLocalName(srcChildName);
+        if (withCount == null) {
+          srcChild.setLocalName(srcChildName);
+        } else if (!srcChildIsReference) { // src must be in snapshot
+          final INodeDirectoryWithSnapshot srcParent = 
+              (INodeDirectoryWithSnapshot) srcIIP.getINode(-2).asDirectory();
+          final INode originalChild = withCount.getReferredINode();
+          srcParent.replaceRemovedChild(srcChild, originalChild);
+          srcChild = originalChild;
+        }
         addLastINodeNoQuotaCheck(srcIIP, srcChild);
       }
     }
@@ -730,6 +761,24 @@ public class FSDirectory implements Closeable {
     // Ensure dst has quota to accommodate rename
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
 
+    INode srcChild = srcIIP.getLastINode();
+    final byte[] srcChildName = srcChild.getLocalNameBytes();
+    final boolean isSrcInSnapshot = srcChild.isInLatestSnapshot(
+        srcIIP.getLatestSnapshot());
+    final boolean srcChildIsReference = srcChild.isReference();
+    
+    // check srcChild for reference
+    final INodeReference.WithCount withCount;
+    if (srcChildIsReference || isSrcInSnapshot) {
+      final INodeReference.WithName withName = srcIIP.getINode(-2).asDirectory()
+          .replaceChild4ReferenceWithName(srcChild); 
+      withCount = (INodeReference.WithCount)withName.getReferredINode();
+      srcChild = withName;
+      srcIIP.setLastINode(srcChild);
+    } else {
+      withCount = null;
+    }
+    
     boolean undoRemoveSrc = true;
     final long removedSrc = removeLastINode(srcIIP);
     if (removedSrc == -1) {
@@ -739,9 +788,7 @@ public class FSDirectory implements Closeable {
           + error);
       throw new IOException(error);
     }
-    final INode srcChild = srcIIP.getLastINode();
-    final byte[] srcChildName = srcChild.getLocalNameBytes();
-
+    
     boolean undoRemoveDst = false;
     INode removedDst = null;
     try {
@@ -751,11 +798,24 @@ public class FSDirectory implements Closeable {
           undoRemoveDst = true;
         }
       }
-      //TODO: setLocalName breaks created/deleted lists
-      srcChild.setLocalName(dstIIP.getLastLocalName());
+      
+      srcChild = srcIIP.getLastINode();
+
+      final byte[] dstChildName = dstIIP.getLastLocalName();
+      final INode toDst;
+      if (withCount == null) {
+        srcChild.setLocalName(dstChildName);
+        toDst = srcChild;
+      } else {
+        withCount.getReferredINode().setLocalName(dstChildName);
+        final INodeReference ref = new INodeReference(dstIIP.getINode(-2), withCount);
+        withCount.setParentReference(ref);
+        withCount.incrementReferenceCount();
+        toDst = ref;
+      }
 
       // add src as dst to complete rename
-      if (addLastINodeNoQuotaCheck(dstIIP, srcChild)) {
+      if (addLastINodeNoQuotaCheck(dstIIP, toDst)) {
         undoRemoveSrc = false;
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug(
@@ -780,12 +840,6 @@ public class FSDirectory implements Closeable {
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
         }
 
-        if (srcIIP.getLatestSnapshot() != null) {
-          createReferences4Rename(srcChild, srcChildName,
-              (INodeDirectoryWithSnapshot)srcParent.asDirectory(),
-              dstParent.asDirectory());
-        }
-
         if (snapshottableDirs.size() > 0) {
           // There are snapshottable directories (without snapshots) to be
           // deleted. Need to update the SnapshotManager.
@@ -796,7 +850,16 @@ public class FSDirectory implements Closeable {
     } finally {
       if (undoRemoveSrc) {
         // Rename failed - restore src
-        srcChild.setLocalName(srcChildName);
+        srcChild = srcIIP.getLastINode();
+        if (withCount == null) {
+          srcChild.setLocalName(srcChildName);
+        } else if (!srcChildIsReference) { // src must be in snapshot
+          final INodeDirectoryWithSnapshot srcParent
+              = (INodeDirectoryWithSnapshot)srcIIP.getINode(-2).asDirectory();
+          final INode originalChild = withCount.getReferredINode();
+          srcParent.replaceRemovedChild(srcChild, originalChild);
+          srcChild = originalChild;
+        }
         addLastINodeNoQuotaCheck(srcIIP, srcChild);
       }
       if (undoRemoveDst) {
@@ -808,19 +871,7 @@ public class FSDirectory implements Closeable {
         + "failed to rename " + src + " to " + dst);
     throw new IOException("rename from " + src + " to " + dst + " failed.");
   }
-
-  /** The renamed inode is also in a snapshot, create references */
-  private static void createReferences4Rename(final INode srcChild,
-      final byte[] srcChildName, final INodeDirectoryWithSnapshot srcParent,
-      final INodeDirectory dstParent) {
-    final INodeReference.WithCount ref;
-    if (srcChild.isReference()) {
-      ref = (INodeReference.WithCount)srcChild.asReference().getReferredINode();
-    } else {
-      ref = dstParent.asDirectory().replaceChild4Reference(srcChild);
-    }
-    srcParent.replaceRemovedChild4Reference(srcChild, ref, srcChildName);
-  }
+  
   /**
    * Set file replication
    * 
