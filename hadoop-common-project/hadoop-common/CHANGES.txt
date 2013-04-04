@@ -610,6 +610,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9125. LdapGroupsMapping threw CommunicationException after some
     idle time. (Kai Zheng via atm)
 
+    HADOOP-9429. TestConfiguration fails with IBM JAVA. (Amir Sanjar via
+    suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

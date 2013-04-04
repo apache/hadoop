@@ -51,6 +51,10 @@ public class TestConfiguration extends TestCase {
   final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
   final static Random RAN = new Random();
+  final static boolean IBMJAVA = System.getProperty("java.vendor").contains("IBM"); 
+  final static String XMLHEADER = 
+            IBMJAVA?"<?xml version=\"1.0\" encoding=\"UTF-8\"?><configuration>":
+  "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>";
 
   @Override
   protected void setUp() throws Exception {
@@ -327,8 +331,8 @@ public class TestConfiguration extends TestCase {
     ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
     conf.writeXml(baos);
     String result = baos.toString();
-    assertTrue("Result has proper header", result.startsWith(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>"));
+    assertTrue("Result has proper header", result.startsWith(XMLHEADER));
+	  
     assertTrue("Result has proper footer", result.endsWith("</configuration>"));
   }
   
