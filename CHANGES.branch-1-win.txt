@@ -349,3 +349,7 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     HADOOP-8973. DiskChecker cannot reliably detect an inaccessible disk on
     Windows with NTFS ACLs. (Chris Nauroth via suresh)
 
+    MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. (Todd Lipcon, backport by Brandon Li via sseth)
+
+    HADOOP-9071. Configure ivy log levels for resolve/retrieve.
+    (Giridharan Kesavan via suresh)
