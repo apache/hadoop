@@ -346,6 +346,9 @@ Trunk (Unreleased)
 
     HDFS-4604. TestJournalNode fails on Windows. (Ivan Mitic via suresh)
 
+    HDFS-4625. Make TestNNWithQJM#testNewNamenodeTakesOverWriter work on
+    Windows. (Ivan Mitic via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
