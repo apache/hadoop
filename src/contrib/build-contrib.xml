@@ -77,6 +77,8 @@
 
    <!-- IVY properties set here -->
   <property name="ivy.dir" location="ivy" />
+  <!-- loglevel take values like default|download-only|quiet -->
+  <property name="loglevel" value="quiet"/>
   <property name="ivysettings.xml" location="${hadoop.root}/ivy/ivysettings.xml"/>
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
   <loadproperties srcfile="${hadoop.root}/ivy/libraries.properties"/>
@@ -487,13 +489,13 @@
   </target>
 
   <target name="ivy-resolve-common" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common" log="${loglevel}"/>
   </target>
 
   <target name="ivy-retrieve-common" depends="ivy-resolve-common"
     description="Retrieve Ivy-managed artifacts for the compile/test configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings" 
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" log="${loglevel}"/>
     <ivy:cachepath pathid="${ant.project.name}.common-classpath" conf="common" />
   </target>
 </project>

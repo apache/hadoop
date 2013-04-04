@@ -228,6 +228,8 @@
 
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
+  <!-- loglevel take values like default|download-only|quiet -->
+  <property name="loglevel" value="quiet"/>
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
   <property name="mvnrepo" value="http://repo2.maven.org/maven2"/>
   <property name="asfrepo" value="https://repository.apache.org"/> 
@@ -2463,78 +2465,78 @@
   </target>
 
   <target name="ivy-resolve" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" log="${loglevel}" />
   </target>
 
   <target name="ivy-resolve-javadoc" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="javadoc"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="javadoc" log="${loglevel}"/>
   </target>
 
   <target name="ivy-resolve-releaseaudit" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="releaseaudit"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="releaseaudit" log="${loglevel}"/>
   </target>
 
   <target name="ivy-resolve-test" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test"  log="${loglevel}"/>
   </target>
 
   <target name="ivy-resolve-common" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common"  log="${loglevel}"/>
   </target>
 
   <target name="ivy-resolve-jdiff" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="jdiff" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="jdiff"  log="${loglevel}"/>
   </target>
 
   <target name="ivy-resolve-checkstyle" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="checkstyle"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="checkstyle" log="${loglevel}"/>
   </target>
 
   <target name="ivy-retrieve" depends="ivy-resolve"
     description="Retrieve Ivy-managed artifacts">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" log="${loglevel}"/>
   </target>
 
   <target name="ivy-retrieve-checkstyle" depends="ivy-resolve-checkstyle"
     description="Retrieve Ivy-managed artifacts for the checkstyle configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" log="${loglevel}"/>
     <ivy:cachepath pathid="checkstyle-classpath" conf="checkstyle"/>
   </target>
 
   <target name="ivy-retrieve-jdiff" depends="ivy-resolve-jdiff"
     description="Retrieve Ivy-managed artifacts for the javadoc configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" log="${loglevel}"/>
     <ivy:cachepath pathid="jdiff-classpath" conf="jdiff"/>
   </target>
 
   <target name="ivy-retrieve-javadoc" depends="ivy-resolve-javadoc"
     description="Retrieve Ivy-managed artifacts for the javadoc configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" log="${loglevel}"/>
     <ivy:cachepath pathid="javadoc-classpath" conf="javadoc"/>
   </target>
 
   <target name="ivy-retrieve-test" depends="ivy-resolve-test"
     description="Retrieve Ivy-managed artifacts for the test configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" log="${loglevel}"/>
     <ivy:cachepath pathid="ivy-test.classpath" conf="test"/>
   </target>
 
   <target name="ivy-retrieve-common" depends="ivy-resolve-common"
     description="Retrieve Ivy-managed artifacts for the compile configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" log="${loglevel}"/>
     <ivy:cachepath pathid="ivy-common.classpath" conf="common"/>
   </target>
 
   <target name="ivy-retrieve-releaseaudit" depends="ivy-resolve-releaseaudit"
     description="Retrieve Ivy-managed artifacts for the compile configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" />
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"  log="${loglevel}"/>
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
     <available classname="${rat.reporting.classname}" 
       classpathref="releaseaudit-classpath" property="rat.present" value="true"/>
@@ -2807,8 +2809,7 @@
 
   <target name="jsvc" >
     <mkdir dir="${jsvc.build.dir}" />
-    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
-
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}"/>
     <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
 
     <copy file="${jsvc.build.dir}/jsvc" toFile="${jsvc.install.dir}/jsvc.${os.arch}" verbose="true" />
