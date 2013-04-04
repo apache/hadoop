@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -65,7 +66,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Refre
 import com.google.protobuf.ServiceException;
 
 
-public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
+public class RMAdminProtocolPBClientImpl implements RMAdminProtocol, Closeable {
 
   private RMAdminProtocolPB proxy;
   
@@ -75,6 +76,13 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
         ProtobufRpcEngine.class);
     proxy = (RMAdminProtocolPB)RPC.getProxy(
         RMAdminProtocolPB.class, clientVersion, addr, conf);
+  }
+
+  @Override
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
   }
 
   @Override
