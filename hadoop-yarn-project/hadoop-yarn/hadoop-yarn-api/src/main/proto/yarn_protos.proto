@@ -67,9 +67,7 @@ message ContainerProto {
   optional string node_http_address = 3;
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
-  optional ContainerStateProto state = 6;
-  optional hadoop.common.TokenProto container_token = 7;
-  optional ContainerStatusProto container_status = 8;
+  optional hadoop.common.TokenProto container_token = 6;
 }
 
 enum YarnApplicationStateProto {
