@@ -43,6 +43,12 @@ Release 2.0.5-beta - UNRELEASED
     YARN-376. Fixes a bug which would prevent the NM knowing about completed
     containers and applications. (Jason Lowe via sseth)
 
+    YARN-196. Nodemanager should be more robust in handling connection failure
+    to ResourceManager when a cluster is started (Xuan Gong via hitesh)
+
+    YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
+    for the process to die. (kkambatl via tucu)
+ 
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -57,6 +63,9 @@ Release 2.0.4-alpha - UNRELEASED
 
     YARN-429. capacity-scheduler config missing from yarn-test artifact.
     (sseth via hitesh)
+
+    YARN-470. Support a way to disable resource monitoring on the NodeManager.
+    (Siddharth Seth via hitesh)
 
 Release 2.0.3-alpha - 2013-02-06 
 

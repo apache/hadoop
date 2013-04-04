@@ -426,6 +426,16 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
   public static final int DEFAULT_NM_PMEM_MB = 8 * 1024;
 
+  /** Specifies whether physical memory check is enabled. */
+  public static final String NM_PMEM_CHECK_ENABLED = NM_PREFIX
+      + "pmem-check-enabled";
+  public static final boolean DEFAULT_NM_PMEM_CHECK_ENABLED = true;
+
+  /** Specifies whether physical memory check is enabled. */
+  public static final String NM_VMEM_CHECK_ENABLED = NM_PREFIX
+      + "vmem-check-enabled";
+  public static final boolean DEFAULT_NM_VMEM_CHECK_ENABLED = true;
+
   /** Conversion ratio for physical memory to virtual memory. */
   public static final String NM_VMEM_PMEM_RATIO =
     NM_PREFIX + "vmem-pmem-ratio";

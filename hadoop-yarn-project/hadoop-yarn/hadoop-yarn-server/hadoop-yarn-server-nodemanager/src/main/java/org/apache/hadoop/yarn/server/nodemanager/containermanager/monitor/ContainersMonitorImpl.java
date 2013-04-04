@@ -63,14 +63,13 @@ public class ContainersMonitorImpl extends AbstractService implements
   private Configuration conf;
   private Class<? extends ResourceCalculatorProcessTree> processTreeClass;
 
-  private long maxVmemAllottedForContainers = DISABLED_MEMORY_LIMIT;
-  private long maxPmemAllottedForContainers = DISABLED_MEMORY_LIMIT;
+  private long maxVmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
+  private long maxPmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
 
-  /**
-   * A value which if set for memory related configuration options, indicates
-   * that the options are turned off.
-   */
-  public static final long DISABLED_MEMORY_LIMIT = -1L;
+  private boolean pmemCheckEnabled;
+  private boolean vmemCheckEnabled;
+
+  private static final long UNKNOWN_MEMORY_LIMIT = -1L;
 
   public ContainersMonitorImpl(ContainerExecutor exec,
       AsyncDispatcher dispatcher, Context context) {
@@ -104,63 +103,55 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info(" Using ResourceCalculatorProcessTree : "
         + this.processTreeClass);
 
-    long totalPhysicalMemoryOnNM = DISABLED_MEMORY_LIMIT;
-    if (this.resourceCalculatorPlugin != null) {
-      totalPhysicalMemoryOnNM =
-          this.resourceCalculatorPlugin.getPhysicalMemorySize();
-      if (totalPhysicalMemoryOnNM <= 0) {
-        LOG.warn("NodeManager's totalPmem could not be calculated. "
-            + "Setting it to " + DISABLED_MEMORY_LIMIT);
-        totalPhysicalMemoryOnNM = DISABLED_MEMORY_LIMIT;
-      }
-    }
+    long configuredPMemForContainers = conf.getLong(
+        YarnConfiguration.NM_PMEM_MB,
+        YarnConfiguration.DEFAULT_NM_PMEM_MB) * 1024 * 1024l;
 
+    // Setting these irrespective of whether checks are enabled. Required in
+    // the UI.
     // ///////// Physical memory configuration //////
-    this.maxPmemAllottedForContainers =
-        conf.getLong(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
-    this.maxPmemAllottedForContainers =
-        this.maxPmemAllottedForContainers * 1024 * 1024L; //Normalize to bytes
-
-    if (totalPhysicalMemoryOnNM != DISABLED_MEMORY_LIMIT &&
-        this.maxPmemAllottedForContainers >
-        totalPhysicalMemoryOnNM * 0.80f) {
-      LOG.warn("NodeManager configured with " +
-          TraditionalBinaryPrefix.long2String(maxPmemAllottedForContainers, "", 1) +
-          " physical memory allocated to containers, which is more than " +
-          "80% of the total physical memory available (" +
-          TraditionalBinaryPrefix.long2String(totalPhysicalMemoryOnNM, "", 1) +
-          "). Thrashing might happen.");
-    }
+    this.maxPmemAllottedForContainers = configuredPMemForContainers;
 
     // ///////// Virtual memory configuration //////
-    float vmemRatio = conf.getFloat(
-        YarnConfiguration.NM_VMEM_PMEM_RATIO,
+    float vmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
         YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
     Preconditions.checkArgument(vmemRatio > 0.99f,
-        YarnConfiguration.NM_VMEM_PMEM_RATIO +
-        " should be at least 1.0");
+        YarnConfiguration.NM_VMEM_PMEM_RATIO + " should be at least 1.0");
     this.maxVmemAllottedForContainers =
-      (long)(vmemRatio * maxPmemAllottedForContainers);
+        (long) (vmemRatio * configuredPMemForContainers);
 
+    pmemCheckEnabled = conf.getBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_PMEM_CHECK_ENABLED);
+    vmemCheckEnabled = conf.getBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_VMEM_CHECK_ENABLED);
+    LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
+    LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
+
+    if (pmemCheckEnabled) {
+      // Logging if actual pmem cannot be determined.
+      long totalPhysicalMemoryOnNM = UNKNOWN_MEMORY_LIMIT;
+      if (this.resourceCalculatorPlugin != null) {
+        totalPhysicalMemoryOnNM = this.resourceCalculatorPlugin
+            .getPhysicalMemorySize();
+        if (totalPhysicalMemoryOnNM <= 0) {
+          LOG.warn("NodeManager's totalPmem could not be calculated. "
+              + "Setting it to " + UNKNOWN_MEMORY_LIMIT);
+          totalPhysicalMemoryOnNM = UNKNOWN_MEMORY_LIMIT;
+        }
+      }
+
+      if (totalPhysicalMemoryOnNM != UNKNOWN_MEMORY_LIMIT &&
+          this.maxPmemAllottedForContainers > totalPhysicalMemoryOnNM * 0.80f) {
+        LOG.warn("NodeManager configured with "
+            + TraditionalBinaryPrefix.long2String(maxPmemAllottedForContainers,
+                "", 1)
+            + " physical memory allocated to containers, which is more than "
+            + "80% of the total physical memory available ("
+            + TraditionalBinaryPrefix.long2String(totalPhysicalMemoryOnNM, "",
+                1) + "). Thrashing might happen.");
+      }
+    }
     super.init(conf);
-  }
-
-  /**
-   * Is the total physical memory check enabled?
-   *
-   * @return true if total physical memory check is enabled.
-   */
-  boolean isPhysicalMemoryCheckEnabled() {
-    return !(this.maxPmemAllottedForContainers == DISABLED_MEMORY_LIMIT);
-  }
-
-  /**
-   * Is the total virtual memory check enabled?
-   *
-   * @return true if total virtual memory check is enabled.
-   */
-  boolean isVirtualMemoryCheckEnabled() {
-    return !(this.maxVmemAllottedForContainers == DISABLED_MEMORY_LIMIT);
   }
 
   private boolean isEnabled() {
@@ -174,7 +165,7 @@ public class ContainersMonitorImpl extends AbstractService implements
                 + this.getClass().getName() + " is disabled.");
             return false;
     }
-    if (!(isPhysicalMemoryCheckEnabled() || isVirtualMemoryCheckEnabled())) {
+    if (!(isPmemCheckEnabled() || isVmemCheckEnabled())) {
       LOG.info("Neither virutal-memory nor physical-memory monitoring is " +
           "needed. Not running the monitor-thread");
       return false;
@@ -412,7 +403,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
             boolean isMemoryOverLimit = false;
             String msg = "";
-            if (isVirtualMemoryCheckEnabled()
+            if (isVmemCheckEnabled()
                 && isProcessTreeOverLimit(containerId.toString(),
                     currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
               // Container (the root process) is still alive and overflowing
@@ -423,7 +414,7 @@ public class ContainersMonitorImpl extends AbstractService implements
                   currentPmemUsage, pmemLimit,
                   pId, containerId, pTree);
               isMemoryOverLimit = true;
-            } else if (isPhysicalMemoryCheckEnabled()
+            } else if (isPmemCheckEnabled()
                 && isProcessTreeOverLimit(containerId.toString(),
                     currentPmemUsage, curRssMemUsageOfAgedProcesses,
                     pmemLimit)) {
@@ -507,9 +498,29 @@ public class ContainersMonitorImpl extends AbstractService implements
     return this.maxVmemAllottedForContainers;
   }
 
+  /**
+   * Is the total physical memory check enabled?
+   *
+   * @return true if total physical memory check is enabled.
+   */
+  @Override
+  public boolean isPmemCheckEnabled() {
+    return this.pmemCheckEnabled;
+  }
+
   @Override
   public long getPmemAllocatedForContainers() {
     return this.maxPmemAllottedForContainers;
+  }
+
+  /**
+   * Is the total virtual memory check enabled?
+   *
+   * @return true if total virtual memory check is enabled.
+   */
+  @Override
+  public boolean isVmemCheckEnabled() {
+    return this.vmemCheckEnabled;
   }
 
   @Override
