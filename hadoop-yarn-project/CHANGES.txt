@@ -69,6 +69,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-440. Flatten RegisterNodeManagerResponse. (Xuan Gong via sseth)
 
+    YARN-536. Removed the unused objects ContainerStatus and ContainerStatus from
+    Container which also don't belong to the container. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS

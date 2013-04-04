@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
@@ -71,11 +70,11 @@ public class MockNM {
     this.resourceTracker = resourceTracker;
   }
 
-  public void containerStatus(Container container) throws Exception {
+  public void containerStatus(ContainerStatus containerStatus) throws Exception {
     Map<ApplicationId, List<ContainerStatus>> conts = 
         new HashMap<ApplicationId, List<ContainerStatus>>();
-    conts.put(container.getId().getApplicationAttemptId().getApplicationId(), 
-        Arrays.asList(new ContainerStatus[] { container.getContainerStatus() }));
+    conts.put(containerStatus.getContainerId().getApplicationAttemptId().getApplicationId(),
+        Arrays.asList(new ContainerStatus[] { containerStatus }));
     nodeHeartbeat(conts, true);
   }
 

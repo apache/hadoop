@@ -288,14 +288,9 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
 
-      // Update container-status for diagnostics. Today we completely
-      // replace it on finish. We may just need to update diagnostics.
-      container.container.setContainerStatus(finishedEvent
-          .getRemoteContainerStatus());
-
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
-          container.appAttemptId, container.container.getContainerStatus()));
+          container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
     }
   }
 
