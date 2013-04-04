@@ -39,6 +39,8 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
   };
 
   private final static NodeBase computeNode = new NodeBase("/d1/r1/n1/h9");
+  
+  private final static NodeBase rackOnlyNode = new NodeBase("h10", "/r1");
 
   static {
     for(int i=0; i<dataNodes.length; i++) {
@@ -157,6 +159,22 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
     for (Node key : dataNodes) {
       // all nodes except the first should be more than zero
       assertTrue(frequency.get(key) > 0 || key == dataNodes[0]);
+    }
+  }
+  /**
+   * This test checks that adding a node with invalid topology will be failed 
+   * with an exception to show topology is invalid.
+   */
+  public void testAddNodeWithInvalidTopology() {
+    // The last node is a node with invalid topology
+    try {
+      cluster.add(rackOnlyNode);
+      fail("Exception should be thrown, so we should not have reached here.");
+    } catch (Exception e) {
+      if (!(e instanceof IllegalArgumentException)) {
+        fail("Expecting IllegalArgumentException, but caught:" + e);
+      }
+      assertTrue(e.getMessage().contains("illegal network location"));
     }
   }
 
