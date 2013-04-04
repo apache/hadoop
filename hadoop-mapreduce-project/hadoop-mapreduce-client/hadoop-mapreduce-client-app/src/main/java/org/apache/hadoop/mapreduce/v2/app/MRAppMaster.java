@@ -549,8 +549,14 @@ public class MRAppMaster extends CompositeService {
     }
 
     try {
-      //We are finishing cleanly so this is the last retry
-      isLastAMRetry = true;
+      //if isLastAMRetry comes as true, should never set it to false
+      if ( !isLastAMRetry){
+        if (((JobImpl)job).getInternalState() != JobStateInternal.REBOOT) {
+          LOG.info("We are finishing cleanly so this is the last retry");
+          isLastAMRetry = true;
+        }
+      }
+      notifyIsLastAMRetry(isLastAMRetry);
       // Stop all services
       // This will also send the final report to the ResourceManager
       LOG.info("Calling stop for all the services");
@@ -1272,16 +1278,22 @@ public class MRAppMaster extends CompositeService {
       // that they don't take too long in shutting down
       if(appMaster.containerAllocator instanceof ContainerAllocatorRouter) {
         ((ContainerAllocatorRouter) appMaster.containerAllocator)
-        .setSignalled(true);
-        ((ContainerAllocatorRouter) appMaster.containerAllocator)
-        .setShouldUnregister(appMaster.isLastAMRetry);
+          .setSignalled(true);
       }
-      
-      if(appMaster.jobHistoryEventHandler != null) {
-        appMaster.jobHistoryEventHandler
-          .setForcejobCompletion(appMaster.isLastAMRetry);
-      }
+      appMaster.notifyIsLastAMRetry(appMaster.isLastAMRetry);
       appMaster.stop();
+    }
+  }
+
+  public void notifyIsLastAMRetry(boolean isLastAMRetry){
+    if(containerAllocator instanceof ContainerAllocatorRouter) {
+      LOG.info("Notify RMCommunicator isAMLastRetry: " + isLastAMRetry);
+      ((ContainerAllocatorRouter) containerAllocator)
+        .setShouldUnregister(isLastAMRetry);
+    }
+    if(jobHistoryEventHandler != null) {
+      LOG.info("Notify JHEH isAMLastRetry: " + isLastAMRetry);
+      jobHistoryEventHandler.setForcejobCompletion(isLastAMRetry);
     }
   }
 

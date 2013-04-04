@@ -54,6 +54,6 @@ public enum JobEventType {
   JOB_TASK_ATTEMPT_FETCH_FAILURE,
   
   //Producer:RMContainerAllocator
-  JOB_UPDATED_NODES
-  
+  JOB_UPDATED_NODES,
+  JOB_AM_REBOOT
 }

@@ -574,7 +574,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       // This can happen if the RM has been restarted. If it is in that state,
       // this application must clean itself up.
       eventHandler.handle(new JobEvent(this.getJob().getID(),
-                                       JobEventType.INTERNAL_ERROR));
+                                       JobEventType.JOB_AM_REBOOT));
       throw new YarnException("Resource Manager doesn't recognize AttemptId: " +
                                this.getContext().getApplicationID());
     }

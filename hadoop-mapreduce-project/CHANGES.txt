@@ -175,6 +175,9 @@ Release 2.0.5-alpha - UNRELEASED
 
     MAPREDUCE-5098. Fix findbugs warnings in gridmix. (kkambatl via tucu)
 
+    MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
+    command from the RM. (Jian He via jlowe)
+
 Release 2.0.4-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES

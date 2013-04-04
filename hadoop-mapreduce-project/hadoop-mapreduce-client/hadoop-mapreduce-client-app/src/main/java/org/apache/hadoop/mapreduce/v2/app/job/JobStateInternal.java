@@ -30,5 +30,6 @@ public enum JobStateInternal {
   KILL_WAIT,
   KILL_ABORT,
   KILLED,
-  ERROR
+  ERROR,
+  REBOOT
 }
