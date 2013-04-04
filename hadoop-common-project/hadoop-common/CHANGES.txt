@@ -107,6 +107,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9357. Fallback to default authority if not specified in FileContext.
     (Andrew Wang via eli)
 
+    HADOOP-9429. TestConfiguration fails with IBM JAVA. (Amir Sanjar via
+    suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
