@@ -191,6 +191,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-538. RM address DNS lookup can cause unnecessary slowness on every JHS 
     page load. (sandyr via tucu)
 
+    YARN-532. Change RMAdmin and Localization client protocol PB implementations
+    to implement closeable so that they can be stopped when needed via
+    RPC.stopProxy(). (Siddharth Seth via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
