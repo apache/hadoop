@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -86,8 +87,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -272,6 +276,21 @@ public class ClientRMService extends AbstractService implements
 
       // Safety 
       submissionContext.setUser(user);
+
+      // Check whether AM resource requirements are within required limits
+      if (!submissionContext.getUnmanagedAM()) {
+        ResourceRequest amReq = BuilderUtils.newResourceRequest(
+            RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+            submissionContext.getAMContainerSpec().getResource(), 1);
+        try {
+          SchedulerUtils.validateResourceRequest(amReq,
+              scheduler.getMaximumResourceCapability());
+        } catch (InvalidResourceRequestException e) {
+          LOG.warn("RM app submission failed in validating AM resource request"
+              + " for application " + applicationId, e);
+          throw RPCUtil.getRemoteException(e);
+        }
+      }
 
       // This needs to be synchronous as the client can query 
       // immediately following the submission to get the application status.

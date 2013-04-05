@@ -483,7 +483,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     
     // Sanity check
     SchedulerUtils.normalizeRequests(
-        ask, calculator, getClusterResources(), minimumAllocation);
+        ask, calculator, getClusterResources(), minimumAllocation,
+        maximumAllocation);
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
