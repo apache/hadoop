@@ -129,6 +129,7 @@ public class TestLeafQueue {
   private static final String C = "c";
   private static final String C1 = "c1";
   private static final String D = "d";
+  private static final String E = "e";
   private void setupQueueConfiguration(
       CapacitySchedulerConfiguration conf, 
       final String newRoot) {
@@ -140,7 +141,7 @@ public class TestLeafQueue {
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
     final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "." + newRoot;
-    conf.setQueues(Q_newRoot, new String[] {A, B, C, D});
+    conf.setQueues(Q_newRoot, new String[] {A, B, C, D, E});
     conf.setCapacity(Q_newRoot, 100);
     conf.setMaximumCapacity(Q_newRoot, 100);
     conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
@@ -166,9 +167,14 @@ public class TestLeafQueue {
     conf.setCapacity(Q_C1, 100);
 
     final String Q_D = Q_newRoot + "." + D;
-    conf.setCapacity(Q_D, 10);
+    conf.setCapacity(Q_D, 9);
     conf.setMaximumCapacity(Q_D, 11);
     conf.setAcl(Q_D, QueueACL.SUBMIT_APPLICATIONS, "user_d");
+
+    final String Q_E = Q_newRoot + "." + E;
+    conf.setCapacity(Q_E, 1);
+    conf.setMaximumCapacity(Q_E, 1);
+    conf.setAcl(Q_E, QueueACL.SUBMIT_APPLICATIONS, "user_e");
     
   }
 
@@ -1582,6 +1588,33 @@ public class TestLeafQueue {
           c1.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
 
   }
+
+  @Test (timeout = 30000)
+  public void testNodeLocalityAfterQueueRefresh() throws Exception {
+
+    // Manipulate queue 'e'
+    LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
+
+    // before reinitialization
+    assertEquals(0, e.getNodeLocalityDelay());
+
+    csConf.setInt(CapacitySchedulerConfiguration
+        .NODE_LOCALITY_DELAY, 60);
+    Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
+    CSQueue newRoot =
+        CapacityScheduler.parseQueue(csContext, csConf, null,
+            CapacitySchedulerConfiguration.ROOT,
+            newQueues, queues,
+            CapacityScheduler.queueComparator,
+            CapacityScheduler.applicationComparator,
+            TestUtils.spyHook);
+    queues = newQueues;
+    root.reinitialize(newRoot, cs.getClusterResources());
+
+    // after reinitialization
+    assertEquals(60, e.getNodeLocalityDelay());
+  }
+
   
   @After
   public void tearDown() throws Exception {
