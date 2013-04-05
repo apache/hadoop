@@ -202,12 +202,33 @@ public class TestRecoveryManager {
         new Path(TEST_DIR, "output3"), 2, 0, "test-resubmission", signalFile,
         signalFile);
 
-    JobClient jc = new JobClient(job1);
-    RunningJob rJob1 = jc.submitJob(job1);
+    JobClient jc1 = new JobClient(job1);
+    RunningJob rJob1 = jc1.submitJob(job1);
     LOG.info("Submitted first job " + rJob1.getID());
 
     while (rJob1.mapProgress() < 0.5f) {
       LOG.info("Waiting for job " + rJob1.getID() + " to be 50% done");
+      UtilsForTests.waitFor(100);
+    }
+
+    // now submit job2
+    JobConf job2 = mr.createJobConf();
+
+    String signalFile1 = new Path(TEST_DIR, "signal1").toString();
+    UtilsForTests.configureWaitingJobConf(job2, 
+        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output4"), 20, 0, 
+        "test-recovery-manager", signalFile1, signalFile1);
+    job2.setBoolean(JobConf.MAPREDUCE_RECOVER_JOB, false); // don't recover
+    
+    // submit the job
+    RunningJob rJob2 = (new JobClient(job2)).submitJob(job2);
+    LOG.info("Submitted job " + rJob2.getID());
+    
+    // wait for it to init
+    JobInProgress jip2 = jobtracker.getJob(rJob2.getID());
+    
+    while (!jip2.inited()) {
+      LOG.info("Waiting for job " + jip2.getJobID() + " to be inited");
       UtilsForTests.waitFor(100);
     }
 
@@ -218,11 +239,11 @@ public class TestRecoveryManager {
     // start the jobtracker
     LOG.info("Starting jobtracker");
     mr.startJobTracker();
-    UtilsForTests.waitForJobTracker(jc);
+    UtilsForTests.waitForJobTracker(jc1);
 
     jobtracker = mr.getJobTrackerRunner().getJobTracker();
 
-    // assert that job is recovered by the jobtracker
+    // assert that only job1 is recovered by the jobtracker
     Assert.assertEquals("Resubmission failed ", 1, 
         jobtracker.getAllJobs().length);
 

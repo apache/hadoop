@@ -102,6 +102,9 @@ Release 1.2.0 - unreleased
     HDFS-4651. Offline Image Viewer backport to branch-1.
     (Chris Nauroth via suresh)
 
+    MAPREDUCE-4824. Provide a mechanism for jobs to indicate they should not
+    be recovered on JobTracker restart. (tomwhite & acmurthy via acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.

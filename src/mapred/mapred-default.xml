@@ -289,6 +289,17 @@
 </property>
 
 <property>
+  <name>mapreduce.job.restart.recover</name>
+  <value>true</value>
+  <description>A per-job override for job recovery. If set to false for a
+      job then job recovery will not be attempted for that job upon restart
+      even if mapred.jobtracker.restart.recover is enabled. Defaults to true
+      so that jobs are recovered by default if
+      mapred.jobtracker.restart.recover is enabled.
+  </description>
+</property>
+
+<property>
   <name>mapred.jobtracker.job.history.block.size</name>
   <value>3145728</value>
   <description>The block size of the job history file. Since the job recovery
