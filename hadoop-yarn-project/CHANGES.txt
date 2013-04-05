@@ -123,6 +123,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-458. YARN daemon addresses must be placed in many different configs. 
     (sandyr via tucu)
 
+    YARN-193. Scheduler.normalizeRequest does not account for allocation
+    requests that exceed maximumAllocation limits (Zhijie Shen via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES

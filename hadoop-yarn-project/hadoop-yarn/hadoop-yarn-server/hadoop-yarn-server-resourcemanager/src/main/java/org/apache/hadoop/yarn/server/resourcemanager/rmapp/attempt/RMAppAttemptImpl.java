@@ -740,6 +740,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             AM_CONTAINER_PRIORITY, ResourceRequest.ANY, appAttempt.submissionContext
                 .getAMContainerSpec().getResource(), 1);
 
+        // SchedulerUtils.validateResourceRequests is not necessary because
+        // AM resource has been checked when submission
         Allocation amContainerAllocation = appAttempt.scheduler.allocate(
             appAttempt.applicationAttemptId,
             Collections.singletonList(request), EMPTY_CONTAINER_RELEASE_LIST);

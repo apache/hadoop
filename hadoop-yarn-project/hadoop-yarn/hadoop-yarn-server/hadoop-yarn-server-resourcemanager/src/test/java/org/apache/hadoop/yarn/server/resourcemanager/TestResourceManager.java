@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -192,9 +193,41 @@ public class TestResourceManager {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
     try {
       resourceManager.init(conf);
-      fail("Exception is expected because the global max attempts is negative.");
+      fail("Exception is expected because the global max attempts" +
+          " is negative.");
     } catch (YarnException e) {
       // Exception is expected.
+      assertTrue("The thrown exception is not the expected one.",
+          e.getMessage().startsWith(
+              "Invalid global max attempts configuration"));
+    }
+
+    conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 2048);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
+    try {
+      resourceManager.init(conf);
+      fail("Exception is expected because the min memory allocation is" +
+          " larger than the max memory allocation.");
+    } catch (YarnException e) {
+      // Exception is expected.
+      assertTrue("The thrown exception is not the expected one.",
+          e.getMessage().startsWith(
+              "Invalid resource scheduler memory"));
+    }
+
+    conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 2);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 1);
+    try {
+      resourceManager.init(conf);
+      fail("Exception is expected because the min vcores allocation is" +
+          " larger than the max vcores allocation.");
+    } catch (YarnException e) {
+      // Exception is expected.
+      assertTrue("The thrown exception is not the expected one.",
+          e.getMessage().startsWith(
+              "Invalid resource scheduler vcores"));
     }
   }
 

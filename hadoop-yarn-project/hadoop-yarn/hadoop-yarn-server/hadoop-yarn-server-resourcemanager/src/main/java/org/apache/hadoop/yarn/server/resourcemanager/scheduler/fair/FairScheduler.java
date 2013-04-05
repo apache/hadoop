@@ -650,11 +650,12 @@ public class FairScheduler implements ResourceScheduler {
    *
    * @param asks a list of resource requests
    * @param minMemory the configured minimum memory allocation
+   * @param maxMemory the configured maximum memory allocation
    */
   static void normalizeRequests(List<ResourceRequest> asks,
-      int minMemory) {
+      int minMemory, int maxMemory) {
     for (ResourceRequest ask : asks) {
-      normalizeRequest(ask, minMemory);
+      normalizeRequest(ask, minMemory, maxMemory);
     }
   }
 
@@ -664,11 +665,14 @@ public class FairScheduler implements ResourceScheduler {
    *
    * @param ask the resource request
    * @param minMemory the configured minimum memory allocation
+   * @param maxMemory the configured maximum memory allocation
    */
-  static void normalizeRequest(ResourceRequest ask, int minMemory) {
+  static void normalizeRequest(ResourceRequest ask, int minMemory,
+      int maxMemory) {
     int memory = Math.max(ask.getCapability().getMemory(), minMemory);
-    ask.getCapability().setMemory(
-        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0)));
+    int normalizedMemory =
+        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0));
+    ask.getCapability().setMemory(Math.min(normalizedMemory, maxMemory));
   }
 
   @Override
@@ -684,7 +688,8 @@ public class FairScheduler implements ResourceScheduler {
     }
 
     // Sanity check
-    normalizeRequests(ask, minimumAllocation.getMemory());
+    normalizeRequests(ask, minimumAllocation.getMemory(),
+        maximumAllocation.getMemory());
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
