@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -46,6 +47,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(value = Parameterized.class)
@@ -79,7 +81,7 @@ public class TestJobHistoryEntities {
   }
 
   /* Verify some expected values based on the history file */
-  @Test (timeout=10000)
+  @Test (timeout=100000)
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
@@ -168,4 +170,45 @@ public class TestJobHistoryEntities {
     assertEquals(45454, rta1Report.getNodeManagerPort());
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
   }
+  /**
+   * Simple test of some methods of CompletedJob
+   * @throws Exception
+   */
+  @Test (timeout=30000)
+  public void testGetTaskAttemptCompletionEvent() throws Exception{
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
+    completedJob =
+      new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
+          info, jobAclsManager);
+    TaskCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
+    assertEquals(10, completedJob.getMapAttemptCompletionEvents(0,10).length);
+    int currentEventId=0;
+    for (TaskCompletionEvent taskAttemptCompletionEvent : events) {
+      int eventId= taskAttemptCompletionEvent.getEventId();
+      assertTrue(eventId>=currentEventId);
+      currentEventId=eventId;
+    }
+    assertNull(completedJob.loadConfFile() );
+    // job name
+    assertEquals("Sleep job",completedJob.getName());
+    // queue name
+    assertEquals("default",completedJob.getQueueName());
+    // progress
+    assertEquals(1.0, completedJob.getProgress(),0.001);
+    // 11 rows in answer
+    assertEquals(11,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
+    // select first 10 rows
+    assertEquals(10,completedJob.getTaskAttemptCompletionEvents(0,10).length);
+    // select 5-10 rows include 5th
+    assertEquals(6,completedJob.getTaskAttemptCompletionEvents(5,10).length);
+
+    // without errors
+    assertEquals(1,completedJob.getDiagnostics().size());
+    assertEquals("",completedJob.getDiagnostics().get(0));
+
+    assertEquals(0, completedJob.getJobACLs().size());
+
+  }
+
 }

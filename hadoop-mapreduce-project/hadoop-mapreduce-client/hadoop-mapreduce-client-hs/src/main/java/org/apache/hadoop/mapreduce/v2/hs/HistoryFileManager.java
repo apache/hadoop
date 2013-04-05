@@ -869,4 +869,8 @@ public class HistoryFileManager extends AbstractService {
       }
     }
   }
+  @VisibleForTesting
+  protected void setMaxHistoryAge(long newValue){
+    maxHistoryAge=newValue;
+  } 
 }

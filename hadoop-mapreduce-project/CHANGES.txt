@@ -717,6 +717,9 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-4991. coverage for gridmix (Aleksey Gorshkov via tgraves)
 
+    MAPREDUCE-5007. fix coverage org.apache.hadoop.mapreduce.v2.hs (Aleksey
+    Gorshkov via tgraves)
+
 Release 0.23.6 - UNRELEASED
 
   INCOMPATIBLE CHANGES
