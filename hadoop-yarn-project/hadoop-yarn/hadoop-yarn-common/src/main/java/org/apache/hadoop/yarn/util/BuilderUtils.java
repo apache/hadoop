@@ -246,11 +246,6 @@ public class BuilderUtils {
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
     container.setPriority(priority);
-    container.setState(ContainerState.NEW);
-    ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
-    containerStatus.setContainerId(containerId);
-    containerStatus.setState(ContainerState.NEW);
-    container.setContainerStatus(containerStatus);
     container.setContainerToken(containerToken);
     return container;
   }

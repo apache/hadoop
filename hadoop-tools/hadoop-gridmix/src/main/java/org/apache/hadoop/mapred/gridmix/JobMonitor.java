@@ -86,9 +86,7 @@ class JobMonitor implements Gridmix.Component<JobStats> {
    * Add a running job's status to the polling queue.
    */
   public void add(JobStats job) throws InterruptedException {
-    synchronized (runningJobs) {
       runningJobs.put(job);
-    }
   }
 
   /**
@@ -147,12 +145,10 @@ class JobMonitor implements Gridmix.Component<JobStats> {
       boolean shutdown;
       while (true) {
         try {
-          synchronized (runningJobs) {
-            synchronized (mJobs) {
-              graceful = JobMonitor.this.graceful;
-              shutdown = JobMonitor.this.shutdown;
-              runningJobs.drainTo(mJobs);
-            }
+          synchronized (mJobs) {
+            graceful = JobMonitor.this.graceful;
+            shutdown = JobMonitor.this.shutdown;
+            runningJobs.drainTo(mJobs);
           }
 
           // shutdown conditions; either shutdown requested and all jobs
@@ -160,11 +156,9 @@ class JobMonitor implements Gridmix.Component<JobStats> {
           // submitted jobs not in the monitored set
           if (shutdown) {
             if (!graceful) {
-              synchronized (runningJobs) {
-                while (!runningJobs.isEmpty()) {
-                  synchronized (mJobs) {
-                    runningJobs.drainTo(mJobs);
-                  }
+              while (!runningJobs.isEmpty()) {
+                synchronized (mJobs) {
+                  runningJobs.drainTo(mJobs);
                 }
               }
               break;

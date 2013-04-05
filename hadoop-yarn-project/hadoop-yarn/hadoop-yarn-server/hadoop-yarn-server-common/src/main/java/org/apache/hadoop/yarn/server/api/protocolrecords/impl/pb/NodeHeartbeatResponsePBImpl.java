@@ -271,6 +271,18 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     builder.addAllApplicationsToCleanup(iterable);
   }
 
+  @Override
+  public long getNextHeartBeatInterval() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getNextHeartBeatInterval());
+  }
+
+  @Override
+  public void setNextHeartBeatInterval(long nextHeartBeatInterval) {
+    maybeInitBuilder();
+    builder.setNextHeartBeatInterval(nextHeartBeatInterval);
+  }
+
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
     return new ContainerIdPBImpl(p);
   }

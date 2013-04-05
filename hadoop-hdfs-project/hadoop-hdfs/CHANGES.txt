@@ -28,6 +28,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
+    (Junping Du via llu)
+
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
 
@@ -343,6 +346,9 @@ Trunk (Unreleased)
 
     HDFS-4604. TestJournalNode fails on Windows. (Ivan Mitic via suresh)
 
+    HDFS-4625. Make TestNNWithQJM#testNewNamenodeTakesOverWriter work on
+    Windows. (Ivan Mitic via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -459,6 +465,14 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4598. Fix the default value of ConcatSourcesParam and the WebHDFS doc.
     (szetszwo)
+
+    HDFS-4655. DNA_FINALIZE is logged as being an unknown command by the DN
+    when received from the standby NN. (atm)
+
+    HDFS-4656. DN heartbeat loop can be briefly tight. (atm)
+
+    HDFS-4658. Standby NN will log that it has received a block report "after
+    becoming active" (atm)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -2476,6 +2490,10 @@ Release 0.23.7 - UNRELEASED
 
     HDFS-4581. checkDiskError should not be called on network errors (Rohit
     Kochar via kihwal)
+
+    HDFS-4649. Webhdfs cannot list large directories (daryn via kihwal)
+
+    HDFS-4548. Webhdfs doesn't renegotiate SPNEGO token (daryn via kihwal)
 
 Release 0.23.6 - UNRELEASED
 

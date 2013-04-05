@@ -20,30 +20,31 @@ package org.apache.hadoop.net;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.junit.Test;
 
 public class TestNetworkTopologyWithNodeGroup {
   private final static NetworkTopologyWithNodeGroup cluster = new 
       NetworkTopologyWithNodeGroup();
 
-  private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
-      DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1/s1"),
-      DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1/s1"),
-      DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r1/s2"),
-      DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2/s3"),
-      DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2/s3"),
-      DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d1/r2/s4"),
-      DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3/s5"),
-      DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r3/s6")
+  private final static NodeBase dataNodes[] = new NodeBase[] {
+      new NodeBase("h1", "/d1/r1/s1"),
+      new NodeBase("h2", "/d1/r1/s1"),
+      new NodeBase("h3", "/d1/r1/s2"),
+      new NodeBase("h4", "/d1/r2/s3"),
+      new NodeBase("h5", "/d1/r2/s3"),
+      new NodeBase("h6", "/d1/r2/s4"),
+      new NodeBase("h7", "/d2/r3/s5"),
+      new NodeBase("h8", "/d2/r3/s6")
   };
 
   private final static NodeBase computeNode = new NodeBase("/d1/r1/s1/h9");
+  
+  private final static NodeBase rackOnlyNode = new NodeBase("h10", "/r2");
 
   static {
     for(int i=0; i<dataNodes.length; i++) {
@@ -96,7 +97,7 @@ public class TestNetworkTopologyWithNodeGroup {
 
   @Test
   public void testPseudoSortByDistance() throws Exception {
-    DatanodeDescriptor[] testNodes = new DatanodeDescriptor[4];
+    NodeBase[] testNodes = new NodeBase[4];
 
     // array contains both local node, local node group & local rack node
     testNodes[0] = dataNodes[1];
@@ -147,7 +148,7 @@ public class TestNetworkTopologyWithNodeGroup {
   private Map<Node, Integer> pickNodesAtRandom(int numNodes,
       String excludedScope) {
     Map<Node, Integer> frequency = new HashMap<Node, Integer>();
-    for (DatanodeDescriptor dnd : dataNodes) {
+    for (NodeBase dnd : dataNodes) {
       frequency.put(dnd, 0);
     }
 
@@ -161,6 +162,12 @@ public class TestNetworkTopologyWithNodeGroup {
   /**
    * This test checks that chooseRandom works for an excluded node.
    */
+  /**
+   * Test replica placement policy in case last node is invalid.
+   * We create 6 nodes but the last node is in fault topology (with rack info),
+   * so cannot be added to cluster. We should test proper exception is thrown in 
+   * adding node but shouldn't affect the cluster.
+   */
   @Test
   public void testChooseRandomExcludedNode() {
     String scope = "~" + NodeBase.getPath(dataNodes[0]);
@@ -169,6 +176,24 @@ public class TestNetworkTopologyWithNodeGroup {
     for (Node key : dataNodes) {
       // all nodes except the first should be more than zero
       assertTrue(frequency.get(key) > 0 || key == dataNodes[0]);
+    }
+  }
+  
+  /**
+   * This test checks that adding a node with invalid topology will be failed 
+   * with an exception to show topology is invalid.
+   */
+  @Test
+  public void testAddNodeWithInvalidTopology() {
+    // The last node is a node with invalid topology
+    try {
+      cluster.add(rackOnlyNode);
+      fail("Exception should be thrown, so we should not have reached here.");
+    } catch (Exception e) {
+      if (!(e instanceof IllegalArgumentException)) {
+        fail("Expecting IllegalArgumentException, but caught:" + e);
+      }
+      assertTrue(e.getMessage().contains("illegal network location"));
     }
   }
 

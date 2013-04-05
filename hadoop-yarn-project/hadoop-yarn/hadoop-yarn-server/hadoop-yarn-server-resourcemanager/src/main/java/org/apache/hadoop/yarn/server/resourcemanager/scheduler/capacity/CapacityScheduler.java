@@ -108,7 +108,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     new Comparator<FiCaSchedulerApp>() {
     @Override
     public int compare(FiCaSchedulerApp a1, FiCaSchedulerApp a2) {
-      return a1.getApplicationId().getId() - a2.getApplicationId().getId();
+      return a1.getApplicationId().compareTo(a2.getApplicationId());
     }
   };
 

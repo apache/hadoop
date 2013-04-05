@@ -202,9 +202,10 @@ public class TestRMAppAttemptTransitions {
     submissionContext = mock(ApplicationSubmissionContext.class);
     when(submissionContext.getUser()).thenReturn(user);
     when(submissionContext.getQueue()).thenReturn(queue);
-    ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
-    Resource resource = mock(Resource.class);
-    when(amContainerSpec.getResource()).thenReturn(resource);
+    Resource resource = BuilderUtils.newResource(1536, 1);
+    ContainerLaunchContext amContainerSpec =
+        BuilderUtils.newContainerLaunchContext(null, user, resource, null, null,
+            null, null, null, null);
     when(submissionContext.getAMContainerSpec()).thenReturn(amContainerSpec);
     
     unmanagedAM = false;
@@ -469,8 +470,10 @@ public class TestRMAppAttemptTransitions {
     
     // Mock the allocation of AM container 
     Container container = mock(Container.class);
+    Resource resource = BuilderUtils.newResource(2048, 1);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
+    when(container.getResource()).thenReturn(resource);
     Allocation allocation = mock(Allocation.class);
     when(allocation.getContainers()).
         thenReturn(Collections.singletonList(container));
@@ -491,6 +494,9 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt.handle(
         new RMAppAttemptStoredEvent(
             applicationAttempt.getAppAttemptId(), null));
+    assertEquals(resource,
+        applicationAttempt.getSubmissionContext()
+        .getAMContainerSpec().getResource());
     
     testAppAttemptAllocatedState(container);
     

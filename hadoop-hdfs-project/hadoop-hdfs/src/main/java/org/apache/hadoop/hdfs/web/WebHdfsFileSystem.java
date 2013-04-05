@@ -156,7 +156,6 @@ public class WebHdfsFileSystem extends FileSystem
   private URI uri;
   private boolean hasInitedToken;
   private Token<?> delegationToken;
-  private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private RetryPolicy retryPolicy = null;
   private Path workingDir;
 
@@ -481,6 +480,8 @@ public class WebHdfsFileSystem extends FileSystem
       try {
         if (op.getRequireAuth()) {
           LOG.debug("open AuthenticatedURL connection");
+          UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
+          final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
           conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
         } else {
           LOG.debug("open URL connection");
@@ -1006,20 +1007,12 @@ public class WebHdfsFileSystem extends FileSystem
     @Override
     public long renew(final Token<?> token, final Configuration conf
         ) throws IOException, InterruptedException {
-      final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-      // update the kerberos credentials, if they are coming from a keytab
-      ugi.reloginFromKeytab();
-
       return getWebHdfs(token, conf).renewDelegationToken(token);
     }
   
     @Override
     public void cancel(final Token<?> token, final Configuration conf
         ) throws IOException, InterruptedException {
-      final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-      // update the kerberos credentials, if they are coming from a keytab
-      ugi.checkTGTAndReloginFromKeytab();
-
       getWebHdfs(token, conf).cancelDelegationToken(token);
     }
   }

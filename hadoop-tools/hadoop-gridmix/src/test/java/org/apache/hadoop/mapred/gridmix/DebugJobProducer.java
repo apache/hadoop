@@ -216,7 +216,7 @@ public class DebugJobProducer implements JobStoryProducer {
      if (user == null) {
        user = String.format("foobar%d", id);
      }
-     GridmixTestUtils.createHomeAndStagingDirectory(user, (JobConf)conf);
+     GridmixTestUtils.createHomeAndStagingDirectory(user, conf);
      return user;
    }
 
@@ -300,7 +300,7 @@ public class DebugJobProducer implements JobStoryProducer {
 
     @Override
     public String getQueueName() {
-      String qName = "q" + ((id % 2) + 1);
+      String qName = "default";
       return qName;
     }
     

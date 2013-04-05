@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -43,13 +45,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
+
 
 public class TestCapacityScheduler {
   private static final Log LOG = LogFactory.getLog(TestCapacityScheduler.class);
@@ -452,5 +460,33 @@ public class TestCapacityScheduler {
     }
     return result;
   }
+  
+    
+    @Test (timeout = 5000)
+    public void testApplicationComparator()
+    {
+      CapacityScheduler cs = new CapacityScheduler();
+      Comparator<FiCaSchedulerApp> appComparator= cs.getApplicationComparator();
+      ApplicationId id1 = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
+      id1.setClusterTimestamp(1);
+      id1.setId(1);
+      ApplicationId id2 = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
+      id2.setClusterTimestamp(1);
+      id2.setId(2);
+      ApplicationId id3 = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
+      id3.setClusterTimestamp(2);
+      id3.setId(1);
+      //same clusterId
+      FiCaSchedulerApp app1 = Mockito.mock(FiCaSchedulerApp.class);
+      when(app1.getApplicationId()).thenReturn(id1);
+      FiCaSchedulerApp app2 = Mockito.mock(FiCaSchedulerApp.class);
+      when(app2.getApplicationId()).thenReturn(id2);
+      FiCaSchedulerApp app3 = Mockito.mock(FiCaSchedulerApp.class);
+      when(app3.getApplicationId()).thenReturn(id3);
+      assertTrue(appComparator.compare(app1, app2) < 0);
+      //different clusterId
+      assertTrue(appComparator.compare(app1, app3) < 0);
+      assertTrue(appComparator.compare(app2, app3) < 0);
+    }
 
 }

@@ -71,7 +71,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final Dispatcher dispatcher;
 
   private NodeId nodeId;
-  private long heartBeatInterval;
+  private long nextHeartBeatInterval;
   private ResourceTracker resourceTracker;
   private InetSocketAddress rmAddress;
   private Resource totalResource;
@@ -88,6 +88,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
+  private boolean previousHeartBeatSucceeded;
+  private List<ContainerStatus> previousContainersStatuses =
+      new ArrayList<ContainerStatus>();
+
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
@@ -95,6 +99,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.context = context;
     this.dispatcher = dispatcher;
     this.metrics = metrics;
+    this.previousHeartBeatSucceeded = true;
   }
 
   @Override
@@ -103,9 +108,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
-    this.heartBeatInterval =
-        conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);
+
     int memoryMb = 
         conf.getInt(
             YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
@@ -316,8 +319,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
     nodeStatus.setNodeId(this.nodeId);
 
-    int numActiveContainers = 0;
     List<ContainerStatus> containersStatuses = new ArrayList<ContainerStatus>();
+    if(previousHeartBeatSucceeded) {
+      previousContainersStatuses.clear();
+    } else {
+      containersStatuses.addAll(previousContainersStatuses);
+    }
+
+    int numActiveContainers = 0;
     for (Iterator<Entry<ContainerId, Container>> i =
         this.context.getContainers().entrySet().iterator(); i.hasNext();) {
       Entry<ContainerId, Container> e = i.next();
@@ -332,6 +341,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       LOG.info("Sending out status for container: " + containerStatus);
 
       if (containerStatus.getState() == ContainerState.COMPLETE) {
+        previousContainersStatuses.add(containerStatus);
         // Remove
         i.remove();
 
@@ -394,9 +404,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         while (!isStopped) {
           // Send heartbeat
           try {
-            synchronized (heartbeatMonitor) {
-              heartbeatMonitor.wait(heartBeatInterval);
-            }
             NodeStatus nodeStatus = getNodeStatus();
             nodeStatus.setResponseId(lastHeartBeatID);
             
@@ -409,7 +416,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
             NodeHeartbeatResponse response =
               resourceTracker.nodeHeartbeat(request);
-
+            previousHeartBeatSucceeded = true;
+            //get next heartbeat interval from response
+            nextHeartBeatInterval = response.getNextHeartBeatInterval();
             // See if the master-key has rolled over
             if (isSecurityEnabled()) {
               MasterKey updatedMasterKey = response.getMasterKey();
@@ -453,9 +462,21 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
           } catch (Throwable e) {
+            previousHeartBeatSucceeded = false;
             // TODO Better error handling. Thread can die with the rest of the
             // NM still running.
             LOG.error("Caught exception in status-updater", e);
+          } finally {
+            synchronized (heartbeatMonitor) {
+              nextHeartBeatInterval = nextHeartBeatInterval <= 0 ?
+                  YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS :
+                    nextHeartBeatInterval;
+              try {
+                heartbeatMonitor.wait(nextHeartBeatInterval);
+              } catch (InterruptedException e) {
+                // Do Nothing
+              }
+            }
           }
         }
       }

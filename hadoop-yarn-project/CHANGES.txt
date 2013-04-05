@@ -54,6 +54,9 @@ Trunk - Unreleased
 
     YARN-359. Fixing commands for container signalling in Windows. (Chris Nauroth
     via vinodkv)
+    
+    YARN-524 TestYarnVersionInfo failing if generated properties doesn't
+    include an SVN URL(stevel)
 
 Release 2.0.5-beta - UNRELEASED
 
@@ -65,6 +68,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-439. Flatten NodeHeartbeatResponse. (Xuan Gong via sseth)
 
     YARN-440. Flatten RegisterNodeManagerResponse. (Xuan Gong via sseth)
+
+    YARN-536. Removed the unused objects ContainerStatus and ContainerStatus from
+    Container which also don't belong to the container. (Xuan Gong via vinodkv)
 
   NEW FEATURES
 
@@ -103,6 +109,20 @@ Release 2.0.5-beta - UNRELEASED
     YARN-450. Define value for * in the scheduling protocol (Zhijie Shen via
     bikas)
 
+    YARN-475. Remove a unused constant in the public API -
+    ApplicationConstants.AM_APP_ATTEMPT_ID_ENV. (Hitesh Shah via vinodkv)
+
+    YARN-309. Changed NodeManager to obtain heart-beat interval from the
+    ResourceManager. (Xuan Gong via vinodkv)
+
+    YARN-447. Move ApplicationComparator in CapacityScheduler to use comparator
+    in ApplicationId. (Nemon Lou via vinodkv)
+
+    YARN-381. Improve fair scheduler docs. (Sandy Ryza via tomwhite)
+
+    YARN-458. YARN daemon addresses must be placed in many different configs. 
+    (sandyr via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -134,9 +154,6 @@ Release 2.0.5-beta - UNRELEASED
     YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
     for the process to die. (kkambatl via tucu)
  
-    YARN-470. Support a way to disable resource monitoring on the NodeManager.
-    (Siddharth Seth via hitesh)
-    
     YARN-71. Fix the NodeManager to clean up local-dirs on restart.
     (Xuan Gong via sseth)
 
@@ -161,6 +178,23 @@ Release 2.0.5-beta - UNRELEASED
     YARN-515. Node Manager not getting the master key. (Robert Joseph Evans
     via jlowe)
 
+    YARN-382. SchedulerUtils improve way normalizeRequest sets the resource
+    capabilities. (Zhijie Shen via bikas)
+
+    YARN-467. Modify public distributed cache to localize files such that no
+    local directory hits unix file count limits and thus prevent job failures.
+    (Omkar Vinit Joshi via vinodkv)
+
+    YARN-101. Fix NodeManager heartbeat processing to not lose track of completed
+    containers in case of dropped heartbeats. (Xuan Gong via vinodkv)
+
+    YARN-538. RM address DNS lookup can cause unnecessary slowness on every JHS 
+    page load. (sandyr via tucu)
+
+    YARN-532. Change RMAdmin and Localization client protocol PB implementations
+    to implement closeable so that they can be stopped when needed via
+    RPC.stopProxy(). (Siddharth Seth via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -176,6 +210,9 @@ Release 2.0.4-alpha - UNRELEASED
     YARN-429. capacity-scheduler config missing from yarn-test artifact.
     (sseth via hitesh)
 
+    YARN-470. Support a way to disable resource monitoring on the NodeManager.
+    (Siddharth Seth via hitesh)
+    
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
