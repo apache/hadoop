@@ -260,7 +260,9 @@ public class NameNodeProxies {
     final long version = RPC.getProtocolVersion(ClientNamenodeProtocolPB.class);
     ClientNamenodeProtocolPB proxy = RPC.getProtocolProxy(
         ClientNamenodeProtocolPB.class, version, address, ugi, conf,
-        NetUtils.getDefaultSocketFactory(conf), 0, defaultPolicy).getProxy();
+        NetUtils.getDefaultSocketFactory(conf),
+        org.apache.hadoop.ipc.Client.getTimeout(conf), defaultPolicy)
+            .getProxy();
 
     if (withRetries) { // create the proxy with retries
 
