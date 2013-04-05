@@ -66,6 +66,9 @@ Release 2.0.4-alpha - UNRELEASED
 
   BUG FIXES
 
+  HDFS-4646. createNNProxyWithClientProtocol ignores configured timeout value
+  (Jagane Sundar via cos)
+
 Release 2.0.3-alpha - 2013-02-06
 
   INCOMPATIBLE CHANGES
