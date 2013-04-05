@@ -1623,6 +1623,30 @@ public class TestLeafQueue {
     assertEquals(3, e.activeApplications.size());
     assertEquals(0, e.pendingApplications.size());
   }
+  
+  @Test (timeout = 30000)
+  public void testNodeLocalityAfterQueueRefresh() throws Exception {
+
+    // Manipulate queue 'e'
+    LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
+
+    // before reinitialization
+    assertEquals(0, e.getNodeLocalityDelay());
+
+    csConf.setInt(CapacitySchedulerConfiguration
+        .NODE_LOCALITY_DELAY, 60);
+    Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
+    CSQueue newRoot =
+        CapacityScheduler.parseQueue(csContext, csConf, null,
+            CapacitySchedulerConfiguration.ROOT,
+            newQueues, queues,
+            TestUtils.spyHook);
+    queues = newQueues;
+    root.reinitialize(newRoot, cs.getClusterResources());
+
+    // after reinitialization
+    assertEquals(60, e.getNodeLocalityDelay());
+  }
 
   @Test (timeout = 30000)
   public void testActivateApplicationByUpdatingClusterResource()
