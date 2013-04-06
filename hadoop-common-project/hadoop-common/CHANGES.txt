@@ -98,6 +98,9 @@ Release 2.0.4-alpha - UNRELEASED
     HADOOP-9405. TestGridmixSummary#testExecutionSummarizer is broken.
     (Andrew Wang via atm)
 
+    HADOOP-9379. capture the ulimit info after printing the log to the 
+    console. (Arpit Gupta via suresh)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
