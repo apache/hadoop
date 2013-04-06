@@ -95,7 +95,8 @@
           {"name": "workflowId", "type": "string"},
           {"name": "workflowName", "type": "string"},
           {"name": "workflowNodeName", "type": "string"},
-          {"name": "workflowAdjacencies", "type": "string"}
+          {"name": "workflowAdjacencies", "type": "string"},
+          {"name": "workflowTags", "type": "string"}
       ]
      },
 
