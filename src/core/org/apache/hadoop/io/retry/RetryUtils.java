@@ -47,7 +47,7 @@ public class RetryUtils {
    * @param defaultRetryPolicyEnabled default retryPolicyEnabledKey conf value 
    * @param retryPolicySpecKey        conf property key for retry policy spec
    * @param defaultRetryPolicySpec    default retryPolicySpecKey conf value
-   * @param remoteExceptionToRetry    The particular RemoteException to retry
+   * @param remoteExceptionsToRetry   The particular RemoteExceptions to retry
    * @return the default retry policy.
    */
   public static RetryPolicy getDefaultRetryPolicy(
@@ -56,7 +56,7 @@ public class RetryUtils {
       boolean defaultRetryPolicyEnabled,
       String retryPolicySpecKey,
       String defaultRetryPolicySpec,
-      final Class<? extends Exception> remoteExceptionToRetry
+      final Class<? extends Exception> ... remoteExceptionsToRetry
       ) {
     
     final RetryPolicy multipleLinearRandomRetry = 
@@ -81,8 +81,14 @@ public class RetryUtils {
           final RetryPolicy p;
           if (e instanceof RemoteException) {
             final RemoteException re = (RemoteException)e;
-            p = remoteExceptionToRetry.getName().equals(re.getClassName())?
-                multipleLinearRandomRetry: RetryPolicies.TRY_ONCE_THEN_FAIL;
+            RetryPolicy found = null;
+            for(Class<? extends Exception> reToRetry : remoteExceptionsToRetry) {
+              if (reToRetry.getName().equals(re.getClassName())) {
+                found = multipleLinearRandomRetry;
+                break;
+              }
+            }
+            p = found != null? found: RetryPolicies.TRY_ONCE_THEN_FAIL;          
           } else if (e instanceof IOException) {
             p = multipleLinearRandomRetry;
           } else { //non-IOException

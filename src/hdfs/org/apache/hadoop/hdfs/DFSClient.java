@@ -147,6 +147,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private static ClientProtocol createNamenode(ClientProtocol rpcNamenode,
       Configuration conf) throws IOException {
     //default policy
+    @SuppressWarnings("unchecked")
     final RetryPolicy defaultPolicy = 
         RetryUtils.getDefaultRetryPolicy(
             conf, 

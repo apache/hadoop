@@ -154,6 +154,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public synchronized void initialize(URI uri, Configuration conf
       ) throws IOException {
     super.initialize(uri, conf);
