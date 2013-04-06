@@ -114,6 +114,7 @@ public class TestJobImpl {
     conf.set(MRJobConfig.WORKFLOW_NODE_NAME, "testNodeName");
     conf.set(MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING + "key1", "value1");
     conf.set(MRJobConfig.WORKFLOW_ADJACENCY_PREFIX_STRING + "key2", "value2");
+    conf.set(MRJobConfig.WORKFLOW_TAGS, "tag1,tag2");
     
  
     AsyncDispatcher dispatcher = new AsyncDispatcher();
@@ -126,7 +127,8 @@ public class TestJobImpl {
     commitHandler.start();
 
     JobSubmittedEventHandler jseHandler = new JobSubmittedEventHandler("testId",
-        "testName", "testNodeName", "\"key2\"=\"value2\" \"key1\"=\"value1\" ");
+        "testName", "testNodeName", "\"key2\"=\"value2\" \"key1\"=\"value1\" ",
+        "tag1,tag2");
     dispatcher.register(EventType.class, jseHandler);
     JobImpl job = createStubbedJob(conf, dispatcher, 0);
     job.handle(new JobEvent(job.getID(), JobEventType.JOB_INIT));
@@ -644,14 +646,18 @@ public class TestJobImpl {
     
     private String workflowAdjacencies;
     
+    private String workflowTags;
+    
     private Boolean assertBoolean;
 
     public JobSubmittedEventHandler(String workflowId, String workflowName,
-        String workflowNodeName, String workflowAdjacencies) {
+        String workflowNodeName, String workflowAdjacencies,
+        String workflowTags) {
       this.workflowId = workflowId;
       this.workflowName = workflowName;
       this.workflowNodeName = workflowNodeName;
       this.workflowAdjacencies = workflowAdjacencies;
+      this.workflowTags = workflowTags;
       assertBoolean = null;
     }
 
@@ -674,6 +680,10 @@ public class TestJobImpl {
         return;
       }
       if (!workflowAdjacencies.equals(jsEvent.getWorkflowAdjacencies())) {
+        setAssertValue(false);
+        return;
+      }
+      if (!workflowTags.equals(jsEvent.getWorkflowTags())) {
         setAssertValue(false);
         return;
       }

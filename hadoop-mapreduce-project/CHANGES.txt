@@ -118,6 +118,9 @@ Release 2.0.4-alpha - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
+    acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -75,6 +75,31 @@ public class JobSubmittedEvent implements HistoryEvent {
       Map<JobACL, AccessControlList> jobACLs, String jobQueueName,
       String workflowId, String workflowName, String workflowNodeName,
       String workflowAdjacencies) {
+    this(id, jobName, userName, submitTime, jobConfPath, jobACLs,
+        jobQueueName, workflowId, workflowName, workflowNodeName,
+        workflowAdjacencies, "");
+  }
+
+    /**
+     * Create an event to record job submission
+     * @param id The job Id of the job
+     * @param jobName Name of the job
+     * @param userName Name of the user who submitted the job
+     * @param submitTime Time of submission
+     * @param jobConfPath Path of the Job Configuration file
+     * @param jobACLs The configured acls for the job.
+     * @param jobQueueName The job-queue to which this job was submitted to
+     * @param workflowId The Id of the workflow
+     * @param workflowName The name of the workflow
+     * @param workflowNodeName The node name of the workflow
+     * @param workflowAdjacencies The adjacencies of the workflow
+     * @param workflowTags Comma-separated tags for the workflow
+     */
+    public JobSubmittedEvent(JobID id, String jobName, String userName,
+        long submitTime, String jobConfPath,
+        Map<JobACL, AccessControlList> jobACLs, String jobQueueName,
+        String workflowId, String workflowName, String workflowNodeName,
+        String workflowAdjacencies, String workflowTags) {
     datum.jobid = new Utf8(id.toString());
     datum.jobName = new Utf8(jobName);
     datum.userName = new Utf8(userName);
@@ -100,6 +125,9 @@ public class JobSubmittedEvent implements HistoryEvent {
     }
     if (workflowAdjacencies != null) {
       datum.workflowAdjacencies = new Utf8(workflowAdjacencies);
+    }
+    if (workflowTags != null) {
+      datum.workflowTags = new Utf8(workflowTags);
     }
   }
 
@@ -165,6 +193,13 @@ public class JobSubmittedEvent implements HistoryEvent {
   public String getWorkflowAdjacencies() {
     if (datum.workflowAdjacencies != null) {
       return datum.workflowAdjacencies.toString();
+    }
+    return null;
+  }
+  /** Get the workflow tags */
+  public String getWorkflowTags() {
+    if (datum.workflowTags != null) {
+      return datum.workflowTags.toString();
     }
     return null;
   }
