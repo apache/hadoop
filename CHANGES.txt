@@ -199,6 +199,9 @@ Release 1.2.0 - unreleased
     HADOOP-9071. Configure ivy log levels for resolve/retrieve.
     (Giridharan Kesavan via suresh)
 
+    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
+    acmurthy)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

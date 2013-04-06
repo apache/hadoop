@@ -476,7 +476,8 @@ public class JobHistory {
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
     TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS,
     VIEW_JOB, MODIFY_JOB, JOB_QUEUE, FAIL_REASON, LOCALITY, AVATAAR,
-    WORKFLOW_ID, WORKFLOW_NAME, WORKFLOW_NODE_NAME, WORKFLOW_ADJACENCIES
+    WORKFLOW_ID, WORKFLOW_NAME, WORKFLOW_NODE_NAME, WORKFLOW_ADJACENCIES,
+    WORKFLOW_TAGS
   }
 
   /**
@@ -1781,15 +1782,17 @@ public class JobHistory {
                                   Keys.VIEW_JOB, Keys.MODIFY_JOB,
                                   Keys.JOB_QUEUE, Keys.WORKFLOW_ID,
                                   Keys.WORKFLOW_NAME, Keys.WORKFLOW_NODE_NAME,
-                                  Keys.WORKFLOW_ADJACENCIES}, 
+                                  Keys.WORKFLOW_ADJACENCIES,
+                                  Keys.WORKFLOW_TAGS}, 
                        new String[]{jobId.toString(), jobName, user, 
                                     String.valueOf(submitTime) , jobConfPath,
                                     viewJobACL, modifyJobACL,
                                     jobConf.getQueueName(),
-                                    jobConf.get(jobConf.WORKFLOW_ID, ""),
-                                    jobConf.get(jobConf.WORKFLOW_NAME, ""),
-                                    jobConf.get(jobConf.WORKFLOW_NODE_NAME, ""),
-                                    getWorkflowAdjacencies(jobConf)
+                                    jobConf.get(JobConf.WORKFLOW_ID, ""),
+                                    jobConf.get(JobConf.WORKFLOW_NAME, ""),
+                                    jobConf.get(JobConf.WORKFLOW_NODE_NAME, ""),
+                                    getWorkflowAdjacencies(jobConf),
+                                    jobConf.get(JobConf.WORKFLOW_TAGS, ""),
                                     }, 
                                     jobId
                       ); 

@@ -82,6 +82,10 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
       if (workflowAdjacencies == null) {
         workflowAdjacencies = "";
       }
+      String workflowTags = line.get("WORKFLOW_TAGS");
+      if (workflowTags == null) {
+        workflowTags = "";
+      }
 
       if (submitTime != null) {
         Job20LineHistoryEventEmitter that =
@@ -94,7 +98,7 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
         return new JobSubmittedEvent(jobID, jobName,
             user == null ? "nulluser" : user, that.originalSubmitTime,
             jobConf, jobACLs, queueName, workflowId, workflowName,
-            workflowNodeName, workflowAdjacencies);
+            workflowNodeName, workflowAdjacencies, workflowTags);
       }
 
       return null;
