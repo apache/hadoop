@@ -6,6 +6,9 @@ Release 2.0.5-beta - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-1804. Add a new block-volume device choosing policy that looks at
+    free space. (atm)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 

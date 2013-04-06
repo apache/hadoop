@@ -1231,4 +1231,32 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.datanode.fsdataset.volume.choosing.balanced-space-threshold</name>
+  <value>10737418240</value> <!-- 10 GB -->
+  <description>
+    Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
+    org.apache.hadoop.hdfs.server.datanode.fsdataset.AvailableSpaceVolumeChoosingPolicy.
+    This setting controls how much DN volumes are allowed to differ in terms of
+    bytes of free disk space before they are considered imbalanced. If the free
+    space of all the volumes are within this range of each other, the volumes
+    will be considered balanced and block assignments will be done on a pure
+    round robin basis.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.fsdataset.volume.choosing.balanced-space-preference-percent</name>
+  <value>0.75f</value>
+  <description>
+    Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
+    org.apache.hadoop.hdfs.server.datanode.fsdataset.AvailableSpaceVolumeChoosingPolicy.
+    This setting controls what percentage of new block allocations will be sent
+    to volumes with more available disk space than others. This setting should
+    be in the range 0.0 - 1.0, though in practice 0.5 - 1.0, since there should
+    be no reason to prefer that volumes with less available disk space receive
+    more block allocations.
+  </description>
+</property>
+
 </configuration>

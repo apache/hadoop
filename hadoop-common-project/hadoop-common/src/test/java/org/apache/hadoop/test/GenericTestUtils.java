@@ -330,4 +330,14 @@ public abstract class GenericTestUtils {
         " but got:\n" + output,
         Pattern.compile(pattern).matcher(output).find());
   }
+  
+  public static void assertValueNear(long expected, long actual, long allowedError) {
+    assertValueWithinRange(expected - allowedError, expected + allowedError, actual);
+  }
+  
+  public static void assertValueWithinRange(long expectedMin, long expectedMax,
+      long actual) {
+    Assert.assertTrue("Expected " + actual + " to be in range (" + expectedMin + ","
+        + expectedMax + ")", expectedMin <= actual && actual <= expectedMax);
+  }
 }
