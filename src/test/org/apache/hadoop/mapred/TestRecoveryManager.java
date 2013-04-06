@@ -631,6 +631,7 @@ public class TestRecoveryManager {
 
     conf.set("mapreduce.jobtracker.staging.root.dir", "/user");
     conf.set("mapred.system.dir", "/mapred");
+    
     String mapredSysDir =  conf.get("mapred.system.dir");
     mkdirWithPerms(fs, mapredSysDir, (short)0700);
     fs.setOwner(new Path(mapredSysDir),
@@ -679,12 +680,36 @@ public class TestRecoveryManager {
     LOG.info("Stopping jobtracker");
     mr.stopJobTracker();
 
+    // Blocking JT INIT on restart
+    mr.getJobTrackerConf().setBoolean(
+        JobTracker.JT_INIT_CONFIG_KEY_FOR_TESTS, false);
+    
+
     // start the jobtracker
     LOG.info("Starting jobtracker");
-    mr.startJobTracker();
+    mr.startJobTracker(false);
+
+    while (!mr.getJobTrackerRunner().isUp()) {
+      Thread.sleep(100);
+    }
+    jobtracker = mr.getJobTrackerRunner().getJobTracker();
+    Assert.assertNotNull(jobtracker);
+    
+    // now check for job status ... 
+    // should throw JobTrackerNotYetInitializedException
+    boolean gotJTNYIException = false;
+    try {
+      jobtracker.getJobStatus(rJob1.getID());
+    } catch (JobTrackerNotYetInitializedException jtnyie) {
+      LOG.info("Caught JobTrackerNotYetInitializedException", jtnyie);
+      gotJTNYIException = true;
+    }
+    Assert.assertTrue(gotJTNYIException);
+    
+    jobtracker.setInitDone(true);
+
     UtilsForTests.waitForJobTracker(jc);
 
-    jobtracker = mr.getJobTrackerRunner().getJobTracker();
     // assert that job is recovered by the jobtracker
     Assert.assertEquals("Resubmission failed ", 1, jobtracker.getAllJobs().length);
     JobInProgress jip = jobtracker.getJob(rJob1.getID());

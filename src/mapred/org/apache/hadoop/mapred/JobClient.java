@@ -525,6 +525,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       JobSubmissionProtocol rpcJobSubmitClient,
       Configuration conf) throws IOException {
 
+    /*
+     * Default is to retry on JobTrackerNotYetInitializedException
+     * i.e. wait for JobTracker to get to RUNNING state and for
+     * SafeModeException
+     */
+    @SuppressWarnings("unchecked")
     RetryPolicy defaultPolicy = 
         RetryUtils.getDefaultRetryPolicy(
             conf,
@@ -532,13 +538,14 @@ public class JobClient extends Configured implements MRConstants, Tool  {
             MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
             MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY,
             MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
+            JobTrackerNotYetInitializedException.class,
             SafeModeException.class
             ); 
-    
-    /* 
+
+    /*
      * Method specific retry policies for killJob and killTask...
-     * 
-     * No retries on any exception including 
+     *
+     * No retries on any exception including
      * ConnectionException and SafeModeException
      */
     Map<String,RetryPolicy> methodNameToPolicyMap = 
