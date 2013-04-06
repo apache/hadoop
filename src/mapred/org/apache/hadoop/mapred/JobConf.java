@@ -327,6 +327,8 @@ public class JobConf extends Configuration {
   public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
       "^mapreduce\\.workflow\\.adjacency\\..+";
 
+  public static final String WORKFLOW_TAGS = "mapreduce.workflow.tags";
+
   public static final String MAPREDUCE_RECOVER_JOB = 
       "mapreduce.job.restart.recover";
 

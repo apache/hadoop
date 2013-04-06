@@ -42,11 +42,12 @@ public class JobSubmittedEvent implements HistoryEvent {
   private String workflowName;
   private String workflowNodeName;
   private String workflowAdjacencies;
+  private String workflowTags;
 
   /**
    * @deprecated Use
    *             {@link #JobSubmittedEvent(JobID, String, String, long, String,
-   *             Map, String)}
+   *             Map, String, String, String, String, String, String)}
    *             instead.
    */
   @Deprecated
@@ -59,7 +60,7 @@ public class JobSubmittedEvent implements HistoryEvent {
   /**
    * @deprecated Use
    *             {@link #JobSubmittedEvent(JobID, String, String, long, String,
-   *             Map, String)}
+   *             Map, String, String, String, String, String, String)}
    *             instead.
    */
   @Deprecated
@@ -68,6 +69,22 @@ public class JobSubmittedEvent implements HistoryEvent {
       Map<JobACL, AccessControlList> jobACLs) {
     this(id, jobName, userName, submitTime, jobConfPath, jobACLs, null,
         "", "", "", "");
+  }
+
+  /**
+   * @deprecated Use
+   *             {@link #JobSubmittedEvent(JobID, String, String, long, String,
+   *             Map, String, String, String, String, String, String)}
+   *             instead.
+   */
+  @Deprecated
+  public JobSubmittedEvent(JobID id, String jobName, String userName,
+      long submitTime, String jobConfPath,
+      Map<JobACL, AccessControlList> jobACLs, String queue,
+      String workflowId, String workflowName, String workflowNodeName,
+      String workflowAdjacencies) {
+    this(id, jobName, userName, submitTime, jobConfPath, jobACLs, queue,
+        workflowId, workflowName, workflowNodeName, workflowAdjacencies, "");
   }
 
   /**
@@ -83,12 +100,13 @@ public class JobSubmittedEvent implements HistoryEvent {
    * @param workflowName the workflow name
    * @param workflowNodeName the workflow node name
    * @param workflowAdjacencies the workflow adjacencies
+   * @param workflowTags Comma-separated workflow tags
    */
   public JobSubmittedEvent(JobID id, String jobName, String userName,
       long submitTime, String jobConfPath,
       Map<JobACL, AccessControlList> jobACLs, String queue,
       String workflowId, String workflowName, String workflowNodeName,
-      String workflowAdjacencies) {
+      String workflowAdjacencies, String workflowTags) {
     this.jobId = id;
     this.jobName = jobName;
     this.userName = userName;
@@ -100,6 +118,7 @@ public class JobSubmittedEvent implements HistoryEvent {
     this.workflowName = workflowName;
     this.workflowNodeName = workflowNodeName;
     this.workflowAdjacencies = workflowAdjacencies;
+    this.workflowTags = workflowTags;
   }
 
   /** Get the Job Id */
@@ -135,6 +154,10 @@ public class JobSubmittedEvent implements HistoryEvent {
   /** Get the workflow adjacencies */
   public String getWorkflowAdjacencies() {
     return workflowAdjacencies;
+  }
+  /** Get the workflow tags */
+  public String getWorkflowTags() {
+    return workflowTags;
   }
 
   /** Get the event type */
