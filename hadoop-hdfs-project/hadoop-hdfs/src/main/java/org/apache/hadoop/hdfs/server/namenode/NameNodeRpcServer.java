@@ -682,7 +682,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, true);
   }
-
+  
+  @Override // ClientProtocol
+  public boolean isFileClosed(String src) throws IOException{
+    return namesystem.isFileClosed(src);
+  }
+  
   @Override // ClientProtocol
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException { 
     metrics.incrFileInfoOps();
