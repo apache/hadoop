@@ -390,6 +390,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4618. Default transaction interval for checkpoints is too low. (todd)
 
+    HDFS-4525. Provide an API for knowing that whether file is closed or not. 
+    (SreeHari via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

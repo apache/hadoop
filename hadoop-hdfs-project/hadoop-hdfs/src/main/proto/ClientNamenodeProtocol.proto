@@ -332,6 +332,14 @@ message GetFileInfoResponseProto {
   optional HdfsFileStatusProto fs = 1;
 }
 
+message IsFileClosedRequestProto {
+  required string src = 1;
+}
+
+message IsFileClosedResponseProto {
+  required bool result = 1;
+}
+
 message GetFileLinkInfoRequestProto {
   required string src = 1;
 }
@@ -498,4 +506,6 @@ service ClientNamenodeProtocol {
       returns(SetBalancerBandwidthResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
       returns(GetDataEncryptionKeyResponseProto);
+  rpc isFileClosed(IsFileClosedRequestProto)
+      returns(IsFileClosedResponseProto);
 }

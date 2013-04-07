@@ -762,4 +762,27 @@ public class TestDistributedFileSystem {
       }
     }
   }
+
+  @Test(timeout=60000)
+  public void testFileCloseStatus() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      // create a new file.
+      Path file = new Path("/simpleFlush.dat");
+      FSDataOutputStream output = fs.create(file);
+      // write to file
+      output.writeBytes("Some test data");
+      output.flush();
+      assertFalse("File status should be open", fs.isFileClosed(file));
+      output.close();
+      assertTrue("File status should be closed", fs.isFileClosed(file));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
 }

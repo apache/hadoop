@@ -917,4 +917,17 @@ public class DistributedFileSystem extends FileSystem {
   public boolean isInSafeMode() throws IOException {
     return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
+ 
+  /**
+   * Get the close status of a file
+   * @param src The path to the file
+   *
+   * @return return true if file is closed
+   * @throws FileNotFoundException if the file does not exist.
+   * @throws IOException If an I/O error occurred     
+   */
+  public boolean isFileClosed(Path src) throws IOException {
+    return dfs.isFileClosed(getPathName(src));
+  }
+  
 }
