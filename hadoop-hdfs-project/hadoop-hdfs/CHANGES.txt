@@ -132,6 +132,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4646. createNNProxyWithClientProtocol ignores configured timeout
     value (Jagane Sundar via cos)
 
+    HDFS-3981. Fix handling of FSN lock in getBlockLocations. (Xiaobo Peng
+    and todd via todd)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
