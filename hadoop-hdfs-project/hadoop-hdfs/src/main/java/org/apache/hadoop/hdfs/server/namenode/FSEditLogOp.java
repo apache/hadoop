@@ -158,6 +158,7 @@ public abstract class FSEditLogOp {
   @SuppressWarnings("unchecked")
   static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
     int length;
+    long inodeId;
     String path;
     short replication;
     long mtime;
@@ -171,6 +172,11 @@ public abstract class FSEditLogOp {
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
       assert(opCode == OP_ADD || opCode == OP_CLOSE);
+    }
+    
+    <T extends AddCloseOp> T setInodeId(long inodeId) {
+      this.inodeId = inodeId;
+      return (T)this;
     }
 
     <T extends AddCloseOp> T setPath(String path) {
@@ -235,6 +241,7 @@ public abstract class FSEditLogOp {
     @Override
     public 
     void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(inodeId, out);
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeShort(replication, out);
       FSImageSerialization.writeLong(mtime, out);
@@ -254,6 +261,12 @@ public abstract class FSEditLogOp {
         throws IOException {
       if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         this.length = in.readInt();
+      }
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+        this.inodeId = in.readLong();
+      } else {
+        // The inodeId should be updated when this editLogOp is applied
+        this.inodeId = INodeId.GRANDFATHER_INODE_ID;
       }
       if ((-17 < logVersion && length != 4) ||
           (logVersion <= -17 && length != 5 && !LayoutVersion.supports(
@@ -327,6 +340,8 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("[length=");
       builder.append(length);
+      builder.append(", inodeId=");
+      builder.append(inodeId);
       builder.append(", path=");
       builder.append(path);
       builder.append(", replication=");
@@ -357,6 +372,8 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "LENGTH",
           Integer.valueOf(length).toString());
+      XMLUtils.addSaxString(contentHandler, "INODEID",
+          Long.valueOf(inodeId).toString());
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
           Short.valueOf(replication).toString());
@@ -376,6 +393,7 @@ public abstract class FSEditLogOp {
 
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
+      this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.replication = Short.valueOf(st.getValue("REPLICATION"));
       this.mtime = Long.valueOf(st.getValue("MTIME"));
@@ -907,6 +925,7 @@ public abstract class FSEditLogOp {
     
   static class MkdirOp extends FSEditLogOp {
     int length;
+    long inodeId;
     String path;
     long timestamp;
     PermissionStatus permissions;
@@ -919,6 +938,11 @@ public abstract class FSEditLogOp {
       return (MkdirOp)cache.get(OP_MKDIR);
     }
 
+    MkdirOp setInodeId(long inodeId) {
+      this.inodeId = inodeId;
+      return this;
+    }
+    
     MkdirOp setPath(String path) {
       this.path = path;
       return this;
@@ -937,6 +961,7 @@ public abstract class FSEditLogOp {
     @Override
     public 
     void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(inodeId, out);
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeLong(timestamp, out); // mtime
       FSImageSerialization.writeLong(timestamp, out); // atime, unused at this
@@ -952,6 +977,12 @@ public abstract class FSEditLogOp {
           logVersion <= -17 && length != 3
           && !LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         throw new IOException("Incorrect data format. Mkdir operation.");
+      }
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+        this.inodeId = FSImageSerialization.readLong(in);
+      } else {
+        // This id should be updated when this editLogOp is applied
+        this.inodeId = INodeId.GRANDFATHER_INODE_ID;
       }
       this.path = FSImageSerialization.readString(in);
       if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
@@ -979,6 +1010,8 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("MkdirOp [length=");
       builder.append(length);
+      builder.append(", inodeId=");
+      builder.append(inodeId);
       builder.append(", path=");
       builder.append(path);
       builder.append(", timestamp=");
@@ -997,6 +1030,8 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "LENGTH",
           Integer.valueOf(length).toString());
+      XMLUtils.addSaxString(contentHandler, "INODEID",
+          Long.valueOf(inodeId).toString());
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.valueOf(timestamp).toString());
@@ -1005,6 +1040,7 @@ public abstract class FSEditLogOp {
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
+      this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.timestamp = Long.valueOf(st.getValue("TIMESTAMP"));
       this.permissions =
@@ -1483,6 +1519,7 @@ public abstract class FSEditLogOp {
 
   static class SymlinkOp extends FSEditLogOp {
     int length;
+    long inodeId;
     String path;
     String value;
     long mtime;
@@ -1497,6 +1534,11 @@ public abstract class FSEditLogOp {
       return (SymlinkOp)cache.get(OP_SYMLINK);
     }
 
+    SymlinkOp setId(long inodeId) {
+      this.inodeId = inodeId;
+      return this;
+    }
+    
     SymlinkOp setPath(String path) {
       this.path = path;
       return this;
@@ -1525,6 +1567,7 @@ public abstract class FSEditLogOp {
     @Override
     public 
     void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(inodeId, out);      
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeString(value, out);
       FSImageSerialization.writeLong(mtime, out);
@@ -1541,6 +1584,12 @@ public abstract class FSEditLogOp {
           throw new IOException("Incorrect data format. "
               + "symlink operation.");
         }
+      }
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+        this.inodeId = FSImageSerialization.readLong(in);
+      } else {
+        // This id should be updated when the editLogOp is applied
+        this.inodeId = INodeId.GRANDFATHER_INODE_ID;
       }
       this.path = FSImageSerialization.readString(in);
       this.value = FSImageSerialization.readString(in);
@@ -1560,6 +1609,8 @@ public abstract class FSEditLogOp {
       StringBuilder builder = new StringBuilder();
       builder.append("SymlinkOp [length=");
       builder.append(length);
+      builder.append(", inodeId=");
+      builder.append(inodeId);
       builder.append(", path=");
       builder.append(path);
       builder.append(", value=");
@@ -1582,6 +1633,8 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "LENGTH",
           Integer.valueOf(length).toString());
+      XMLUtils.addSaxString(contentHandler, "INODEID",
+          Long.valueOf(inodeId).toString());
       XMLUtils.addSaxString(contentHandler, "PATH", path);
       XMLUtils.addSaxString(contentHandler, "VALUE", value);
       XMLUtils.addSaxString(contentHandler, "MTIME",
@@ -1593,6 +1646,7 @@ public abstract class FSEditLogOp {
 
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.length = Integer.valueOf(st.getValue("LENGTH"));
+      this.inodeId = Long.valueOf(st.getValue("INODEID"));
       this.path = st.getValue("PATH");
       this.value = st.getValue("VALUE");
       this.mtime = Long.valueOf(st.getValue("MTIME"));

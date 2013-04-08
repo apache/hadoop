@@ -656,6 +656,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
     AddOp op = AddOp.getInstance(cache.get())
+      .setInodeId(newNode.getId())
       .setPath(path)
       .setReplication(newNode.getBlockReplication())
       .setModificationTime(newNode.getModificationTime())
@@ -697,6 +698,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public void logMkDir(String path, INode newNode) {
     MkdirOp op = MkdirOp.getInstance(cache.get())
+      .setInodeId(newNode.getId())
       .setPath(path)
       .setTimestamp(newNode.getModificationTime())
       .setPermissionStatus(newNode.getPermissionStatus());
@@ -814,6 +816,7 @@ public class FSEditLog implements LogsPurgeable {
   void logSymlink(String path, String value, long mtime, 
                   long atime, INodeSymlink node) {
     SymlinkOp op = SymlinkOp.getInstance(cache.get())
+      .setId(node.getId())
       .setPath(path)
       .setValue(value)
       .setModificationTime(mtime)
