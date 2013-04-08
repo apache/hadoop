@@ -20,6 +20,9 @@ package org.apache.hadoop.test;
 import java.io.Closeable;
 
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.mockito.stubbing.Stubber;
 
 public abstract class MockitoUtil {
 
@@ -32,5 +35,30 @@ public abstract class MockitoUtil {
   public static <T> T mockProtocol(Class<T> clazz) {
     return Mockito.mock(clazz,
         Mockito.withSettings().extraInterfaces(Closeable.class));
+  }
+
+  /**
+   * Throw an exception from the mock/spy only in the case that the
+   * call stack at the time the method has a line which matches the given
+   * pattern.
+   *
+   * @param t the Throwable to throw
+   * @param pattern the pattern against which to match the call stack trace
+   * @return the stub in progress
+   */
+  public static Stubber doThrowWhenCallStackMatches(
+      final Throwable t, final String pattern) {
+    return Mockito.doAnswer(new Answer<Object>() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        t.setStackTrace(Thread.currentThread().getStackTrace());
+        for (StackTraceElement elem : t.getStackTrace()) {
+          if (elem.toString().matches(pattern)) {
+            throw t;
+          }
+        }
+        return invocation.callRealMethod();
+      }
+    });
   }
 }
