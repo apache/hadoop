@@ -68,6 +68,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-193. Scheduler.normalizeRequest does not account for allocation
     requests that exceed maximumAllocation limits (Zhijie Shen via bikas)
 
+    YARN-479. NM retry behavior for connection to RM should be similar for
+    lost heartbeats (Jian He via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
