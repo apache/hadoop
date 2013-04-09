@@ -81,4 +81,6 @@ public interface GSet<K, E extends K> extends Iterable<E> {
     * @throws NullPointerException if key == null.
   */
   E remove(K key);
+
+  void clear();
 }

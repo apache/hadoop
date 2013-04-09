@@ -65,4 +65,9 @@ public class GSetByHashMap<K, E extends K> implements GSet<K, E> {
   public Iterator<E> iterator() {
     return m.values().iterator();
   }
+  
+  @Override
+  public void clear() {
+    m.clear();
+  }
 }
