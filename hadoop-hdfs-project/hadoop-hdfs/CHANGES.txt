@@ -141,6 +141,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4676. TestHDFSFileSystemContract should set MiniDFSCluster variable
     to null to free up memory. (suresh)
 
+    HDFS-4669. TestBlockPoolManager fails using IBM java. (Tian Hong Wang via
+    suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
