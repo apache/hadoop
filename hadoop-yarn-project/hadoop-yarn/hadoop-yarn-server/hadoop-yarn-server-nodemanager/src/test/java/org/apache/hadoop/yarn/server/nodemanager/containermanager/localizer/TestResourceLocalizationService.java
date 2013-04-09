@@ -520,7 +520,10 @@ public class TestResourceLocalizationService {
         new LocalResourceRequest(response.getResourceSpecs().get(0).getResource()));
       URL localizedPath =
           response.getResourceSpecs().get(0).getDestinationDirectory();
-      assertTrue(localizedPath.getFile().endsWith(localPath));
+      // Appending to local path unique number(10) generated as a part of
+      // LocalResourcesTracker
+      assertTrue(localizedPath.getFile().endsWith(
+        localPath + Path.SEPARATOR + "10"));
 
       // get second resource
       response = spyService.heartbeat(stat);
@@ -534,7 +537,7 @@ public class TestResourceLocalizationService {
       // LocalCacheDirectoryManager will be used and we have restricted number
       // of files per directory to 1.
       assertTrue(localizedPath.getFile().endsWith(
-        localPath + Path.SEPARATOR + "0"));
+        localPath + Path.SEPARATOR + "0" + Path.SEPARATOR + "11"));
 
       // empty rsrc
       response = spyService.heartbeat(stat);
