@@ -153,6 +153,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-112. Fixed a race condition during localization that fails containers.
     (Omkar Vinit Joshi via vinodkv)
 
+    YARN-534. Change RM restart recovery to also account for AM max-attempts 
+    configuration after the restart. (Jian He via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
