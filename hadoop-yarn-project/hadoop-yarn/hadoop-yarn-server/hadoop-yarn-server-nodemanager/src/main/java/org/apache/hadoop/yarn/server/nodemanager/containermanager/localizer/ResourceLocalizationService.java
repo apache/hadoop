@@ -34,7 +34,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
@@ -666,8 +665,11 @@ public class ResourceLocalizationService extends CompositeService
               DiskChecker.checkDir(
                 new File(publicDirDestPath.toUri().getPath()));
             }
+            publicDirDestPath =
+                new Path(publicDirDestPath, Long.toString(publicRsrc
+                  .nextUniqueNumber()));
             pending.put(queue.submit(new FSDownload(
-                lfs, null, conf, publicDirDestPath, resource, new Random())),
+                lfs, null, conf, publicDirDestPath, resource)),
                 request);
             attempts.put(key, new LinkedList<LocalizerResourceRequestEvent>());
           } catch (IOException e) {
@@ -955,9 +957,9 @@ public class ResourceLocalizationService extends CompositeService
       Path dirPath =
           dirsHandler.getLocalPathForWrite(cacheDirectory,
             ContainerLocalizer.getEstimatedSize(rsrc), false);
-      return tracker.getPathForLocalization(new LocalResourceRequest(rsrc),
+      dirPath = tracker.getPathForLocalization(new LocalResourceRequest(rsrc),
         dirPath);
-
+      return new Path (dirPath, Long.toString(tracker.nextUniqueNumber()));
     }
 
     @Override
