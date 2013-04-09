@@ -67,7 +67,7 @@ class BlocksMap {
 
 
   void close() {
-    // Empty blocks once GSet#clear is implemented (HDFS-3940)
+    blocks.clear();
   }
 
   BlockCollection getBlockCollection(Block b) {
