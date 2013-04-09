@@ -352,6 +352,9 @@ Trunk (Unreleased)
     HDFS-4625. Make TestNNWithQJM#testNewNamenodeTakesOverWriter work on
     Windows. (Ivan Mitic via suresh)
 
+    HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
+    datanode data directory as URI. (Chris Nauroth via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
