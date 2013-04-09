@@ -20,6 +20,9 @@ package org.apache.hadoop.test;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Random;
@@ -339,5 +342,24 @@ public abstract class GenericTestUtils {
       long actual) {
     Assert.assertTrue("Expected " + actual + " to be in range (" + expectedMin + ","
         + expectedMax + ")", expectedMin <= actual && actual <= expectedMax);
+  }
+
+  /**
+   * Assert that there are no threads running whose name matches the
+   * given regular expression.
+   * @param regex the regex to match against
+   */
+  public static void assertNoThreadsMatching(String regex) {
+    Pattern pattern = Pattern.compile(regex);
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+    
+    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null) continue;
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        Assert.fail("Leaked thread: " + info + "\n" +
+            Joiner.on("\n").join(info.getStackTrace()));
+      }
+    }
   }
 }

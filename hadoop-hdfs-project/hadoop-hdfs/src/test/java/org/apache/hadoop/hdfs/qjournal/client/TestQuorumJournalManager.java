@@ -74,6 +74,8 @@ public class TestQuorumJournalManager {
   private Configuration conf;
   private QuorumJournalManager qjm;
   private List<AsyncLogger> spies;
+
+  private List<QuorumJournalManager> toClose = Lists.newLinkedList();
   
   static {
     ((Log4JLogger)ProtobufRpcEngine.LOG).getLogger().setLevel(Level.ALL);
@@ -98,9 +100,24 @@ public class TestQuorumJournalManager {
   
   @After
   public void shutdown() throws IOException {
+    IOUtils.cleanup(LOG, toClose.toArray(new Closeable[0]));
+    
+    // Should not leak clients between tests -- this can cause flaky tests.
+    // (See HDFS-4643)
+    GenericTestUtils.assertNoThreadsMatching(".*IPC Client.*");
+    
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+  
+  /**
+   * Enqueue a QJM for closing during shutdown. This makes the code a little
+   * easier to follow, with fewer try..finally clauses necessary.
+   */
+  private QuorumJournalManager closeLater(QuorumJournalManager qjm) {
+    toClose.add(qjm);
+    return qjm;
   }
   
   @Test
@@ -119,8 +136,8 @@ public class TestQuorumJournalManager {
   
   @Test
   public void testFormat() throws Exception {
-    QuorumJournalManager qjm = new QuorumJournalManager(
-        conf, cluster.getQuorumJournalURI("testFormat-jid"), FAKE_NSINFO);
+    QuorumJournalManager qjm = closeLater(new QuorumJournalManager(
+        conf, cluster.getQuorumJournalURI("testFormat-jid"), FAKE_NSINFO));
     assertFalse(qjm.hasSomeData());
     qjm.format(FAKE_NSINFO);
     assertTrue(qjm.hasSomeData());
@@ -128,8 +145,7 @@ public class TestQuorumJournalManager {
   
   @Test
   public void testReaderWhileAnotherWrites() throws Exception {
-    
-    QuorumJournalManager readerQjm = createSpyingQJM();
+    QuorumJournalManager readerQjm = closeLater(createSpyingQJM());
     List<EditLogInputStream> streams = Lists.newArrayList();
     readerQjm.selectInputStreams(streams, 0, false);
     assertEquals(0, streams.size());
@@ -251,8 +267,8 @@ public class TestQuorumJournalManager {
     
     
     // Make a new QJM
-    qjm = new QuorumJournalManager(
-        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO);
+    qjm = closeLater(new QuorumJournalManager(
+        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO));
     qjm.recoverUnfinalizedSegments();
     checkRecovery(cluster, 1, 3);
 
@@ -364,8 +380,8 @@ public class TestQuorumJournalManager {
         NNStorage.getInProgressEditsFileName(1));
 
     // Make a new QJM
-    qjm = new QuorumJournalManager(
-        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO);
+    qjm = closeLater(new QuorumJournalManager(
+        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO));
     qjm.recoverUnfinalizedSegments();
     checkRecovery(cluster, 1, 3);
   }
@@ -902,8 +918,8 @@ public class TestQuorumJournalManager {
         return Mockito.spy(logger);
       }
     };
-    return new QuorumJournalManager(
-        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO, spyFactory);
+    return closeLater(new QuorumJournalManager(
+        conf, cluster.getQuorumJournalURI(JID), FAKE_NSINFO, spyFactory));
   }
 
   private static void waitForAllPendingCalls(AsyncLoggerSet als)
