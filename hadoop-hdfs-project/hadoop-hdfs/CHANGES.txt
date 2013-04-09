@@ -498,6 +498,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4669. TestBlockPoolManager fails using IBM java. (Tian Hong Wang via
     suresh)
 
+    HDFS-4643. Fix flakiness in TestQuorumJournalManager. (todd)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
