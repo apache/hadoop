@@ -44,6 +44,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-3940. Add Gset#clear method and clear the block map when namenode is
     shutdown. (suresh)
 
+    HDFS-4679. Namenode operation checks should be done in a consistent
+    manner. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
