@@ -585,6 +585,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5131. Fix handling of job monitoring APIs during JobTracker
     restart. (acmurthy) 
 
+    HDFS-4413. Secondary namenode won't start if HDFS isn't the default
+    file system. (Mostafa Elhemali via suresh)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
