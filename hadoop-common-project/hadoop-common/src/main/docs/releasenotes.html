@@ -1,4 +1,144 @@
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop  2.0.4-alpha Release Notes</title>
+<STYLE type="text/css">
+	H1 {font-family: sans-serif}
+	H2 {font-family: sans-serif; margin-left: 7mm}
+	TABLE {margin-left: 7mm}
+</STYLE>
+</head>
+<body>
+<h1>Hadoop  2.0.4-alpha Release Notes</h1>
+These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
+<a name="changes"/>
+<h2>Changes since Hadoop 2.0.3-alpha</h2>
+<ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-470">YARN-470</a>.
+     Major bug reported by Hitesh Shah and fixed by Siddharth Seth (nodemanager)<br>
+     <b>Support a way to disable resource monitoring on the NodeManager</b><br>
+     <blockquote>Currently, the memory management monitor's check is disabled when the maxMem is set to -1. However, the maxMem is also sent to the RM when the NM registers with it ( to define the max limit of allocate-able resources ). 
+
+We need an explicit flag to disable monitoring to avoid the problems caused by the overloading of the max memory value.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-449">YARN-449</a>.
+     Blocker bug reported by Siddharth Seth and fixed by  <br>
+     <b>HBase test failures when running against Hadoop 2</b><br>
+     <blockquote>Post YARN-429, unit tests for HBase continue to fail since the classpath for the MRAppMaster is not being set correctly.
+Reverting YARN-129 may fix this, but I'm not sure that's the correct solution. My guess is, as Alexandro pointed out in YARN-129, maven classloader magic is messing up java.class.path.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-443">YARN-443</a>.
+     Major improvement reported by Thomas Graves and fixed by Thomas Graves (nodemanager)<br>
+     <b>allow OS scheduling priority of NM to be different than the containers it launches</b><br>
+     <blockquote>It would be nice if we could have the nodemanager run at a different OS scheduling priority than the containers so that you can still communicate with the nodemanager if the containers out of control.  
+
+On linux we could launch the nodemanager at a higher priority, but then all the containers it launches would also be at that higher priority, so we need a way for the container executor to launch them at a lower priority.
+
+I'm not sure how this applies to windows if at all.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-429">YARN-429</a>.
+     Blocker bug reported by Siddharth Seth and fixed by Siddharth Seth (resourcemanager)<br>
+     <b>capacity-scheduler config missing from yarn-test artifact</b><br>
+     <blockquote>MiniYARNCluster and MiniMRCluster are unusable by downstream projects with the 2.0.3-alpha release, since the capacity-scheduler configuration is missing from the test artifact.
+hadoop-yarn-server-tests-3.0.0-SNAPSHOT-tests.jar should include the default capacity-scheduler configuration. Also, this doesn't need to be part of the default classpath - and should be moved out of the top level directory in the dist package.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5117">MAPREDUCE-5117</a>.
+     Blocker bug reported by Roman Shaposhnik and fixed by Siddharth Seth (security)<br>
+     <b>With security enabled HS delegation token renewer fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5088">MAPREDUCE-5088</a>.
+     Blocker bug reported by Roman Shaposhnik and fixed by Daryn Sharp <br>
+     <b>MR Client gets an renewer token exception while Oozie is submitting a job</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5083">MAPREDUCE-5083</a>.
+     Major bug reported by Siddharth Seth and fixed by Siddharth Seth (mrv2)<br>
+     <b>MiniMRCluster should use a random component when creating an actual cluster</b><br>
+     <blockquote>Committed to branch-2.0.4. Modified changes.txt in trunk, branch-2 and branch-2.0.4 accordingly.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5053">MAPREDUCE-5053</a>.
+     Major bug reported by Robert Parker and fixed by Robert Parker <br>
+     <b>java.lang.InternalError from decompression codec cause reducer to fail</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5023">MAPREDUCE-5023</a>.
+     Critical bug reported by Kendall Thrapp and fixed by Ravi Prakash (jobhistoryserver , webapps)<br>
+     <b>History Server Web Services missing Job Counters</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5006">MAPREDUCE-5006</a>.
+     Major bug reported by Alejandro Abdelnur and fixed by Sandy Ryza (contrib/streaming)<br>
+     <b>streaming tests failing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4549">MAPREDUCE-4549</a>.
+     Blocker bug reported by Robert Joseph Evans and fixed by Robert Joseph Evans (mrv2)<br>
+     <b>Distributed cache conflicts breaks backwards compatability</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4649">HDFS-4649</a>.
+     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (namenode , security , webhdfs)<br>
+     <b>Webhdfs cannot list large directories</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4646">HDFS-4646</a>.
+     Minor bug reported by Jagane Sundar and fixed by  (namenode)<br>
+     <b>createNNProxyWithClientProtocol ignores configured timeout value</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4581">HDFS-4581</a>.
+     Major bug reported by Rohit Kochar and fixed by Rohit Kochar (datanode)<br>
+     <b>DataNode#checkDiskError should not be called on network errors</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4577">HDFS-4577</a>.
+     Major sub-task reported by Daryn Sharp and fixed by Daryn Sharp (webhdfs)<br>
+     <b>Webhdfs operations should declare if authentication is required</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4571">HDFS-4571</a>.
+     Major bug reported by Alejandro Abdelnur and fixed by Alejandro Abdelnur (webhdfs)<br>
+     <b>WebHDFS should not set the service hostname on the server side</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4567">HDFS-4567</a>.
+     Major sub-task reported by Daryn Sharp and fixed by Daryn Sharp (webhdfs)<br>
+     <b>Webhdfs does not need a token for token operations</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4566">HDFS-4566</a>.
+     Major sub-task reported by Daryn Sharp and fixed by Daryn Sharp (webhdfs)<br>
+     <b>Webdhfs token cancelation should use authentication</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4560">HDFS-4560</a>.
+     Major sub-task reported by Daryn Sharp and fixed by Daryn Sharp (webhdfs)<br>
+     <b>Webhdfs cannot use tokens obtained by another user</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4548">HDFS-4548</a>.
+     Blocker sub-task reported by Daryn Sharp and fixed by Daryn Sharp <br>
+     <b>Webhdfs doesn't renegotiate SPNEGO token</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3344">HDFS-3344</a>.
+     Major bug reported by Tsz Wo (Nicholas), SZE and fixed by Kihwal Lee (namenode)<br>
+     <b>Unreliable corrupt blocks counting in TestProcessCorruptBlocks</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9444">HADOOP-9444</a>.
+     Blocker bug reported by Konstantin Boudnik and fixed by Roman Shaposhnik (conf)<br>
+     <b>$var shell substitution in properties are not expanded in hadoop-policy.xml</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9406">HADOOP-9406</a>.
+     Major bug reported by Alejandro Abdelnur and fixed by Alejandro Abdelnur (build)<br>
+     <b>hadoop-client leaks dependency on JDK tools jar</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9405">HADOOP-9405</a>.
+     Minor bug reported by Andrew Wang and fixed by Andrew Wang (test , tools)<br>
+     <b>TestGridmixSummary#testExecutionSummarizer is broken</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9399">HADOOP-9399</a>.
+     Minor bug reported by Todd Lipcon and fixed by Konstantin Boudnik (build)<br>
+     <b>protoc maven plugin doesn't work on mvn 3.0.2</b><br>
+     <blockquote>Committed to 2.0.4-alpha branch</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9379">HADOOP-9379</a>.
+     Trivial improvement reported by Arpit Gupta and fixed by Arpit Gupta <br>
+     <b>capture the ulimit info after printing the log to the console</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9374">HADOOP-9374</a>.
+     Major improvement reported by Daryn Sharp and fixed by Daryn Sharp (security)<br>
+     <b>Add tokens from -tokenCacheFile into UGI</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9301">HADOOP-9301</a>.
+     Blocker bug reported by Roman Shaposhnik and fixed by Alejandro Abdelnur (build)<br>
+     <b>hadoop client servlet/jsp/jetty/tomcat JARs creating conflicts in Oozie &amp; HttpFS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9299">HADOOP-9299</a>.
+     Blocker bug reported by Roman Shaposhnik and fixed by Daryn Sharp (security)<br>
+     <b>kerberos name resolution is kicking in even when kerberos is not configured</b><br>
+     <blockquote></blockquote></li>
+</ul>
+</body></html>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Hadoop  2.0.3-alpha Release Notes</title>
 <STYLE type="text/css">
 	H1 {font-family: sans-serif}
