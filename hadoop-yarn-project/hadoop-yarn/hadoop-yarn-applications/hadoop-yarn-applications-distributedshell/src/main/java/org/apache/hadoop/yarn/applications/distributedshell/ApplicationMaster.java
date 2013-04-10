@@ -683,7 +683,7 @@ public class ApplicationMaster {
       ctx.setResource(container.getResource());
 
       String jobUserName = System.getenv(ApplicationConstants.Environment.USER
-          .name());
+          .key());
       ctx.setUser(jobUserName);
       LOG.info("Setting user in ContainerLaunchContext to: " + jobUserName);
 

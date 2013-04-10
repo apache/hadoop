@@ -664,6 +664,8 @@ public interface MRJobConfig {
   public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
       "^mapreduce\\.workflow\\.adjacency\\..+";
 
+  public static final String WORKFLOW_TAGS = "mapreduce.workflow.tags";
+
   /**
    * The maximum number of application attempts.
    * It is a application-specific setting.

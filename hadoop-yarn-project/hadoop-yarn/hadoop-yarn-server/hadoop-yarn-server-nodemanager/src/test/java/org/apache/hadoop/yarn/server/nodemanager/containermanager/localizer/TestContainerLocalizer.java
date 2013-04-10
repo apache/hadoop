@@ -50,7 +50,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -66,9 +65,11 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
+import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAction;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
@@ -95,12 +96,33 @@ public class TestContainerLocalizer {
   public void testContainerLocalizerMain() throws Exception {
     ContainerLocalizer localizer = setupContainerLocalizerForTest();
 
+    // verify created cache
+    List<Path> privCacheList = new ArrayList<Path>();
+    List<Path> appCacheList = new ArrayList<Path>();
+    for (Path p : localDirs) {
+      Path base = new Path(new Path(p, ContainerLocalizer.USERCACHE), appUser);
+      Path privcache = new Path(base, ContainerLocalizer.FILECACHE);
+      privCacheList.add(privcache);
+      Path appDir =
+          new Path(base, new Path(ContainerLocalizer.APPCACHE, appId));
+      Path appcache = new Path(appDir, ContainerLocalizer.FILECACHE);
+      appCacheList.add(appcache);
+    }
+
     // mock heartbeat responses from NM
-    LocalResource rsrcA = getMockRsrc(random, LocalResourceVisibility.PRIVATE);
-    LocalResource rsrcB = getMockRsrc(random, LocalResourceVisibility.PRIVATE);
-    LocalResource rsrcC = getMockRsrc(random,
-        LocalResourceVisibility.APPLICATION);
-    LocalResource rsrcD = getMockRsrc(random, LocalResourceVisibility.PRIVATE);
+    ResourceLocalizationSpec rsrcA =
+        getMockRsrc(random, LocalResourceVisibility.PRIVATE,
+          privCacheList.get(0));
+    ResourceLocalizationSpec rsrcB =
+        getMockRsrc(random, LocalResourceVisibility.PRIVATE,
+          privCacheList.get(0));
+    ResourceLocalizationSpec rsrcC =
+        getMockRsrc(random, LocalResourceVisibility.APPLICATION,
+          appCacheList.get(0));
+    ResourceLocalizationSpec rsrcD =
+        getMockRsrc(random, LocalResourceVisibility.PRIVATE,
+          privCacheList.get(0));
+    
     when(nmProxy.heartbeat(isA(LocalizerStatus.class)))
       .thenReturn(new MockLocalizerHeartbeatResponse(LocalizerAction.LIVE,
             Collections.singletonList(rsrcA)))
@@ -111,27 +133,33 @@ public class TestContainerLocalizer {
       .thenReturn(new MockLocalizerHeartbeatResponse(LocalizerAction.LIVE,
             Collections.singletonList(rsrcD)))
       .thenReturn(new MockLocalizerHeartbeatResponse(LocalizerAction.LIVE,
-            Collections.<LocalResource>emptyList()))
+            Collections.<ResourceLocalizationSpec>emptyList()))
       .thenReturn(new MockLocalizerHeartbeatResponse(LocalizerAction.DIE,
             null));
 
-    doReturn(new FakeDownload(rsrcA.getResource().getFile(), true)).when(
-        localizer).download(isA(LocalDirAllocator.class), eq(rsrcA),
+    LocalResource tRsrcA = rsrcA.getResource();
+    LocalResource tRsrcB = rsrcB.getResource();
+    LocalResource tRsrcC = rsrcC.getResource();
+    LocalResource tRsrcD = rsrcD.getResource();
+    doReturn(
+      new FakeDownload(rsrcA.getResource().getResource().getFile(), true))
+      .when(localizer).download(isA(Path.class), eq(tRsrcA),
         isA(UserGroupInformation.class));
-    doReturn(new FakeDownload(rsrcB.getResource().getFile(), true)).when(
-        localizer).download(isA(LocalDirAllocator.class), eq(rsrcB),
+    doReturn(
+      new FakeDownload(rsrcB.getResource().getResource().getFile(), true))
+      .when(localizer).download(isA(Path.class), eq(tRsrcB),
         isA(UserGroupInformation.class));
-    doReturn(new FakeDownload(rsrcC.getResource().getFile(), true)).when(
-        localizer).download(isA(LocalDirAllocator.class), eq(rsrcC),
+    doReturn(
+      new FakeDownload(rsrcC.getResource().getResource().getFile(), true))
+      .when(localizer).download(isA(Path.class), eq(tRsrcC),
         isA(UserGroupInformation.class));
-    doReturn(new FakeDownload(rsrcD.getResource().getFile(), true)).when(
-        localizer).download(isA(LocalDirAllocator.class), eq(rsrcD),
+    doReturn(
+      new FakeDownload(rsrcD.getResource().getResource().getFile(), true))
+      .when(localizer).download(isA(Path.class), eq(tRsrcD),
         isA(UserGroupInformation.class));
 
     // run localization
     assertEquals(0, localizer.runLocalization(nmAddr));
-
-    // verify created cache
     for (Path p : localDirs) {
       Path base = new Path(new Path(p, ContainerLocalizer.USERCACHE), appUser);
       Path privcache = new Path(base, ContainerLocalizer.FILECACHE);
@@ -143,15 +171,14 @@ public class TestContainerLocalizer {
       Path appcache = new Path(appDir, ContainerLocalizer.FILECACHE);
       verify(spylfs).mkdir(eq(appcache), isA(FsPermission.class), eq(false));
     }
-
     // verify tokens read at expected location
     verify(spylfs).open(tokenPath);
 
     // verify downloaded resources reported to NM
-    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcA)));
-    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcB)));
-    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcC)));
-    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcD)));
+    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcA.getResource())));
+    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcB.getResource())));
+    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcC.getResource())));
+    verify(nmProxy).heartbeat(argThat(new HBMatches(rsrcD.getResource())));
 
     // verify all HB use localizerID provided
     verify(nmProxy, never()).heartbeat(argThat(
@@ -306,10 +333,12 @@ public class TestContainerLocalizer {
     return mockRF;
   }
 
-  static LocalResource getMockRsrc(Random r,
-      LocalResourceVisibility vis) {
-    LocalResource rsrc = mock(LocalResource.class);
+  static ResourceLocalizationSpec getMockRsrc(Random r,
+      LocalResourceVisibility vis, Path p) {
+    ResourceLocalizationSpec resourceLocalizationSpec =
+      mock(ResourceLocalizationSpec.class);
 
+    LocalResource rsrc = mock(LocalResource.class);
     String name = Long.toHexString(r.nextLong());
     URL uri = mock(org.apache.hadoop.yarn.api.records.URL.class);
     when(uri.getScheme()).thenReturn("file");
@@ -322,7 +351,10 @@ public class TestContainerLocalizer {
     when(rsrc.getType()).thenReturn(LocalResourceType.FILE);
     when(rsrc.getVisibility()).thenReturn(vis);
 
-    return rsrc;
+    when(resourceLocalizationSpec.getResource()).thenReturn(rsrc);
+    when(resourceLocalizationSpec.getDestinationDirectory()).
+      thenReturn(ConverterUtils.getYarnUrlFromPath(p));
+    return resourceLocalizationSpec;
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })

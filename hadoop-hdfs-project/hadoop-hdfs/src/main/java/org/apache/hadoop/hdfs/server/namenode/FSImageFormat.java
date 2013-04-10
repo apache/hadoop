@@ -275,6 +275,20 @@ public class FSImageFormat {
           snapshotMap = namesystem.getSnapshotManager().read(in, this);
         }
 
+        // read the last allocated inode id in the fsimage
+        if (LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion)) {
+          long lastInodeId = in.readLong();
+          namesystem.resetLastInodeId(lastInodeId);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("load last allocated InodeId from fsimage:" + lastInodeId);
+          }
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Old layout version doesn't have inode id."
+                + " Will assign new id for each inode.");
+          }
+        }
+        
         // read compression related info
         FSImageCompression compression;
         if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imgVersion)) {
@@ -285,8 +299,7 @@ public class FSImageFormat {
         in = compression.unwrapInputStream(fin);
 
         LOG.info("Loading image file " + curFile + " using " + compression);
-        // reset INodeId. TODO: remove this after inodeId is persisted in fsimage
-        namesystem.resetLastInodeIdWithoutChecking(INodeId.LAST_RESERVED_ID); 
+        
         // load all inodes
         LOG.info("Number of files = " + numFiles);
         if (LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
@@ -356,7 +369,7 @@ public class FSImageFormat {
    * @throws IOException
    */  
    private void loadLocalNameINodes(long numFiles, DataInput in) 
-   throws IOException {
+       throws IOException {
      assert LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
          getLayoutVersion());
      assert numFiles > 0;
@@ -546,7 +559,8 @@ public class FSImageFormat {
   INode loadINode(final byte[] localName, boolean isSnapshotINode,
       DataInput in) throws IOException {
     final int imgVersion = getLayoutVersion();
-    final long inodeId = namesystem.allocateNewInodeId();
+    long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? 
+           in.readLong() : namesystem.allocateNewInodeId();
     
     final short replication = namesystem.getBlockManager().adjustReplication(
         in.readShort());
@@ -662,8 +676,8 @@ public class FSImageFormat {
       LOG.info("Number of files under construction = " + size);
 
       for (int i = 0; i < size; i++) {
-        INodeFileUnderConstruction cons
-            = FSImageSerialization.readINodeUnderConstruction(in);
+        INodeFileUnderConstruction cons = FSImageSerialization
+            .readINodeUnderConstruction(in, namesystem, getLayoutVersion());
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
@@ -804,6 +818,8 @@ public class FSImageFormat {
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
         out.writeLong(context.getTxId());
+        out.writeLong(sourceNamesystem.getLastInodeId());
+        
         sourceNamesystem.getSnapshotManager().write(out);
         
         // write compression info and set up compressed stream

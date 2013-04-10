@@ -505,6 +505,10 @@ Trunk (Unreleased)
 
     HADOOP-9353. Activate native-win maven profile by default on Windows.
     (Arpit Agarwal via szetszwo)
+
+    HADOOP-9437. TestNativeIO#testRenameTo fails on Windows due to assumption
+    that POSIX errno is embedded in NativeIOException. (Chris Nauroth via
+    suresh)
     
 Release 2.0.5-beta - UNRELEASED
 
@@ -624,6 +628,9 @@ Release 2.0.4-alpha - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9467. Metrics2 record filter should check name as well as tags.
+    (Ganeshan Iyler via llu)
 
     HADOOP-9406. hadoop-client leaks dependency on JDK tools jar. (tucu)
 

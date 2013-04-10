@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -103,8 +105,11 @@ public class FSImageSerialization {
   // from the input stream
   //
   static INodeFileUnderConstruction readINodeUnderConstruction(
-      DataInput in) throws IOException {
+      DataInput in, FSNamesystem fsNamesys, int imgVersion)
+      throws IOException {
     byte[] name = readBytes(in);
+    long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? in
+        .readLong() : fsNamesys.allocateNewInodeId();
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();
@@ -132,10 +137,16 @@ public class FSImageSerialization {
     int numLocs = in.readInt();
     assert numLocs == 0 : "Unexpected block locations";
 
-    //TODO: get inodeId from fsimage after inodeId is persisted
-    return new INodeFileUnderConstruction(
-        INodeId.GRANDFATHER_INODE_ID, name, blockReplication, modificationTime,
-        preferredBlockSize, blocks, perm, clientName, clientMachine, null);
+    return new INodeFileUnderConstruction(inodeId,
+                                          name,
+                                          blockReplication, 
+                                          modificationTime,
+                                          preferredBlockSize,
+                                          blocks,
+                                          perm,
+                                          clientName,
+                                          clientMachine,
+                                          null);
   }
 
   // Helper function that writes an INodeUnderConstruction
@@ -146,6 +157,7 @@ public class FSImageSerialization {
                                            String path) 
                                            throws IOException {
     writeString(path, out);
+    out.writeLong(cons.getId());
     out.writeShort(cons.getFileReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
@@ -168,6 +180,7 @@ public class FSImageSerialization {
   public static void writeINodeFile(INodeFile file, DataOutput out,
       boolean writeUnderConstruction) throws IOException {
     writeLocalName(file, out);
+    out.writeLong(file.getId());
     out.writeShort(file.getFileReplication());
     out.writeLong(file.getModificationTime());
     out.writeLong(file.getAccessTime());
@@ -198,6 +211,7 @@ public class FSImageSerialization {
   public static void writeINodeDirectory(INodeDirectory node, DataOutput out)
       throws IOException {
     writeLocalName(node, out);
+    out.writeLong(node.getId());
     out.writeShort(0);  // replication
     out.writeLong(node.getModificationTime());
     out.writeLong(0);   // access time
@@ -224,6 +238,7 @@ public class FSImageSerialization {
   private static void writeINodeSymlink(INodeSymlink node, DataOutput out)
       throws IOException {
     writeLocalName(node, out);
+    out.writeLong(node.getId());
     out.writeShort(0);  // replication
     out.writeLong(0);   // modification time
     out.writeLong(0);   // access time
@@ -239,6 +254,7 @@ public class FSImageSerialization {
       boolean writeUnderConstruction, ReferenceMap referenceMap
       ) throws IOException {
     writeLocalName(ref, out);
+    out.writeLong(ref.getId());
     out.writeShort(0);  // replication
     out.writeLong(0);   // modification time
     out.writeLong(0);   // access time

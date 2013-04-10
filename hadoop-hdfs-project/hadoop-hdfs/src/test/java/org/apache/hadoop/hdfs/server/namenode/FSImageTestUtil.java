@@ -218,7 +218,7 @@ public abstract class FSImageTestUtil {
         FsPermission.createImmutable((short)0755));
     for (int i = 1; i <= numDirs; i++) {
       String dirName = "dir" + i;
-      INodeDirectory dir = new INodeDirectory(newInodeId + i -1,
+      INodeDirectory dir = new INodeDirectory(newInodeId + i - 1,
           DFSUtil.string2Bytes(dirName), perms, 0L);
       editLog.logMkDir("/" + dirName, dir);
     }

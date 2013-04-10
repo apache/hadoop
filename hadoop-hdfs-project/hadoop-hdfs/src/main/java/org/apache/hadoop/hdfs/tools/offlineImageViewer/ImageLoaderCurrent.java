@@ -171,6 +171,10 @@ class ImageLoaderCurrent implements ImageLoader {
         v.visit(ImageElement.NUM_SNAPSHOTTABLE_DIRS, in.readInt());
       }
 
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
+        v.visit(ImageElement.LAST_INODE_ID, in.readLong());
+      }
+      
       if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imageVersion)) {
         boolean isCompressed = in.readBoolean();
         v.visit(ImageElement.IS_COMPRESSED, String.valueOf(isCompressed));
@@ -577,6 +581,9 @@ class ImageLoaderCurrent implements ImageLoader {
     }
 
     v.visit(ImageElement.INODE_PATH, pathName);
+    if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
+      v.visit(ImageElement.INODE_ID, in.readLong());
+    }
     v.visit(ImageElement.REPLICATION, in.readShort());
     v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
     if(LayoutVersion.supports(Feature.FILE_ACCESS_TIME, imageVersion))

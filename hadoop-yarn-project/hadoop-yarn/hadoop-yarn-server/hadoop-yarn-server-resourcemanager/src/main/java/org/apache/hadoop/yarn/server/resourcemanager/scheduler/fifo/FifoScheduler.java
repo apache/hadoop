@@ -232,7 +232,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
 
     // Sanity check
     SchedulerUtils.normalizeRequests(ask, resourceCalculator, 
-        clusterResource, minimumAllocation);
+        clusterResource, minimumAllocation, maximumAllocation);
 
     // Release containers
     for (ContainerId releasedContainer : release) {

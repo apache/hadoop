@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <EDITS>
-  <EDITS_VERSION>-41</EDITS_VERSION>
+  <EDITS_VERSION>-42</EDITS_VERSION>
   <RECORD>
     <OPCODE>OP_START_LOG_SEGMENT</OPCODE>
     <DATA>
@@ -41,6 +41,7 @@
     <DATA>
       <TXID>5</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1002</INODEID>
       <PATH>/file_create</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709370</MTIME>
@@ -60,6 +61,7 @@
     <DATA>
       <TXID>6</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>0</INODEID>
       <PATH>/file_create</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709398</MTIME>
@@ -98,6 +100,7 @@
     <DATA>
       <TXID>9</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1003</INODEID>
       <PATH>/directory_mkdir</PATH>
       <TIMESTAMP>1357889709598</TIMESTAMP>
       <PERMISSION_STATUS>
@@ -165,6 +168,7 @@
     <DATA>
       <TXID>17</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1004</INODEID>
       <PATH>/file_create</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709615</MTIME>
@@ -184,6 +188,7 @@
     <DATA>
       <TXID>18</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>0</INODEID>
       <PATH>/file_create</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709616</MTIME>
@@ -264,6 +269,7 @@
     <DATA>
       <TXID>26</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1005</INODEID>
       <PATH>/file_concat_target</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709631</MTIME>
@@ -355,6 +361,7 @@
     <DATA>
       <TXID>33</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>0</INODEID>
       <PATH>/file_concat_target</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709689</MTIME>
@@ -396,6 +403,7 @@
     <DATA>
       <TXID>35</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1006</INODEID>
       <PATH>/file_concat_0</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709692</MTIME>
@@ -487,6 +495,7 @@
     <DATA>
       <TXID>42</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>0</INODEID>
       <PATH>/file_concat_0</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709710</MTIME>
@@ -528,6 +537,7 @@
     <DATA>
       <TXID>44</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1007</INODEID>
       <PATH>/file_concat_1</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709713</MTIME>
@@ -619,6 +629,7 @@
     <DATA>
       <TXID>51</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>0</INODEID>
       <PATH>/file_concat_1</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709744</MTIME>
@@ -666,6 +677,7 @@
     <DATA>
       <TXID>53</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1008</INODEID>
       <PATH>/file_symlink</PATH>
       <VALUE>/file_concat_target</VALUE>
       <MTIME>1357889709751</MTIME>
@@ -739,6 +751,7 @@
     <DATA>
       <TXID>58</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>1009</INODEID>
       <PATH>/hard-lease-recovery-test</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889709825</MTIME>
@@ -805,6 +818,7 @@
     <DATA>
       <TXID>64</TXID>
       <LENGTH>0</LENGTH>
+      <INODEID>0</INODEID>
       <PATH>/hard-lease-recovery-test</PATH>
       <REPLICATION>1</REPLICATION>
       <MTIME>1357889712257</MTIME>

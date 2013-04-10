@@ -198,6 +198,8 @@ public class TestFifoScheduler {
     int allocMB = 1536;
     YarnConfiguration conf = new YarnConfiguration(TestFifoScheduler.conf);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, allocMB);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        allocMB * 10);
     // Test for something lesser than this.
     testMinimumAllocation(conf, allocMB / 2);
   }

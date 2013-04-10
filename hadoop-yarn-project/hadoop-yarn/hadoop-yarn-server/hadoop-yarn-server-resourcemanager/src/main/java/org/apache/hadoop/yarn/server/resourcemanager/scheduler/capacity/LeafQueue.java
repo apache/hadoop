@@ -89,6 +89,8 @@ public class LeafQueue implements CSQueue {
   private int maxActiveAppsUsingAbsCap; // Based on absolute capacity
   private int maxActiveApplicationsPerUser;
   
+  private int nodeLocalityDelay;
+  
   private Resource usedResources = Resources.createResource(0, 0);
   private float usedCapacity = 0.0f;
   private volatile int numContainers;
@@ -122,8 +124,6 @@ public class LeafQueue implements CSQueue {
   private CapacitySchedulerContext scheduler;
   
   private final ActiveUsersManager activeUsersManager;
-  
-  private final int nodeLocalityDelay;
   
   private final ResourceCalculator resourceCalculator;
   
@@ -196,9 +196,6 @@ public class LeafQueue implements CSQueue {
     Map<QueueACL, AccessControlList> acls = 
       cs.getConfiguration().getAcls(getQueuePath());
 
-    this.nodeLocalityDelay = 
-        cs.getConfiguration().getNodeLocalityDelay();
-    
     setupQueueConfigs(
         cs.getClusterResources(),
         capacity, absoluteCapacity, 
@@ -206,7 +203,7 @@ public class LeafQueue implements CSQueue {
         userLimit, userLimitFactor, 
         maxApplications, maxApplicationsPerUser,
         maxActiveApplications, maxActiveApplicationsPerUser,
-        state, acls);
+        state, acls, cs.getConfiguration().getNodeLocalityDelay());
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("LeafQueue:" + " name=" + queueName
@@ -227,7 +224,8 @@ public class LeafQueue implements CSQueue {
       int userLimit, float userLimitFactor,
       int maxApplications, int maxApplicationsPerUser,
       int maxActiveApplications, int maxActiveApplicationsPerUser,
-      QueueState state, Map<QueueACL, AccessControlList> acls)
+      QueueState state, Map<QueueACL, AccessControlList> acls, 
+      int nodeLocalityDelay)
   {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -256,6 +254,8 @@ public class LeafQueue implements CSQueue {
     this.queueInfo.setCapacity(this.capacity);
     this.queueInfo.setMaximumCapacity(this.maximumCapacity);
     this.queueInfo.setQueueState(this.state);
+    
+    this.nodeLocalityDelay = nodeLocalityDelay;
 
     StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
@@ -319,7 +319,8 @@ public class LeafQueue implements CSQueue {
         "state = " + state +
         " [= configuredState ]" + "\n" +
         "acls = " + aclsString +
-        " [= configuredAcls ]" + "\n");
+        " [= configuredAcls ]" + "\n" + 
+        "nodeLocalityDelay = " +  nodeLocalityDelay + "\n");
   }
   
   @Override
@@ -605,7 +606,8 @@ public class LeafQueue implements CSQueue {
         newlyParsedLeafQueue.getMaxApplicationsPerUser(),
         newlyParsedLeafQueue.getMaximumActiveApplications(), 
         newlyParsedLeafQueue.getMaximumActiveApplicationsPerUser(),
-        newlyParsedLeafQueue.state, newlyParsedLeafQueue.acls);
+        newlyParsedLeafQueue.state, newlyParsedLeafQueue.acls,
+        newlyParsedLeafQueue.getNodeLocalityDelay());
 
     // queue metrics are updated, more resource may be available
     // activate the pending applications if possible

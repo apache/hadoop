@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Map;
@@ -68,6 +70,8 @@ public class TestBPOfferService {
       TestBPOfferService.class);
   private static final ExtendedBlock FAKE_BLOCK =
     new ExtendedBlock(FAKE_BPID, 12345L);
+  private static final String TEST_BUILD_DATA = System.getProperty(
+    "test.build.data", "build/test/data");
 
   static {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
@@ -90,6 +94,8 @@ public class TestBPOfferService {
     mockDn = Mockito.mock(DataNode.class);
     Mockito.doReturn(true).when(mockDn).shouldRun();
     Configuration conf = new Configuration();
+    File dnDataDir = new File(new File(TEST_BUILD_DATA, "dfs"), "data");
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, dnDataDir.toURI().toString());
     Mockito.doReturn(conf).when(mockDn).getConf();
     Mockito.doReturn(new DNConf(conf)).when(mockDn).getDnConf();
     Mockito.doReturn(DataNodeMetrics.create(conf, "fake dn"))

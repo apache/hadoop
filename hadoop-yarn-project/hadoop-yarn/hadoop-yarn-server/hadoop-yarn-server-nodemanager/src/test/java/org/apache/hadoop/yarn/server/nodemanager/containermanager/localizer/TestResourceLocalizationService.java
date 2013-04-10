@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -375,7 +377,7 @@ public class TestResourceLocalizationService {
     }
   }
   
-  @Test
+  @Test( timeout = 10000)
   @SuppressWarnings("unchecked") // mocked generics
   public void testLocalizationHeartbeat() throws Exception {
     Configuration conf = new YarnConfiguration();
@@ -386,12 +388,17 @@ public class TestResourceLocalizationService {
         isA(Path.class), isA(FsPermission.class), anyBoolean());
 
     List<Path> localDirs = new ArrayList<Path>();
-    String[] sDirs = new String[4];
-    for (int i = 0; i < 4; ++i) {
-      localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
-      sDirs[i] = localDirs.get(i).toString();
-    }
+    String[] sDirs = new String[1];
+    // Making sure that we have only one local disk so that it will only be
+    // selected for consecutive resource localization calls.  This is required
+    // to test LocalCacheDirectoryManager.
+    localDirs.add(lfs.makeQualified(new Path(basedir, 0 + "")));
+    sDirs[0] = localDirs.get(0).toString();
+
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
+    // Adding configuration to make sure there is only one file per
+    // directory
+    conf.set(YarnConfiguration.NM_LOCAL_CACHE_MAX_FILES_PER_DIRECTORY, "37");
     String logDir = lfs.makeQualified(new Path(basedir, "logdir " )).toString();
     conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
     DrainDispatcher dispatcher = new DrainDispatcher();
@@ -452,12 +459,23 @@ public class TestResourceLocalizationService {
       doReturn(out).when(spylfs).createInternal(isA(Path.class),
           isA(EnumSet.class), isA(FsPermission.class), anyInt(), anyShort(),
           anyLong(), isA(Progressable.class), isA(ChecksumOpt.class), anyBoolean());
-      final LocalResource resource = getPrivateMockedResource(r);
-      final LocalResourceRequest req = new LocalResourceRequest(resource);
+      final LocalResource resource1 = getPrivateMockedResource(r);
+      LocalResource resource2 = null;
+      do {
+        resource2 = getPrivateMockedResource(r);
+      } while (resource2 == null || resource2.equals(resource1));
+      // above call to make sure we don't get identical resources.
+      
+      final LocalResourceRequest req1 = new LocalResourceRequest(resource1);
+      final LocalResourceRequest req2 = new LocalResourceRequest(resource2);
       Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs =
         new HashMap<LocalResourceVisibility, 
                     Collection<LocalResourceRequest>>();
-      rsrcs.put(LocalResourceVisibility.PRIVATE, Collections.singletonList(req));
+      List<LocalResourceRequest> privateResourceList =
+          new ArrayList<LocalResourceRequest>();
+      privateResourceList.add(req1);
+      privateResourceList.add(req2);
+      rsrcs.put(LocalResourceVisibility.PRIVATE, privateResourceList);
       spyService.handle(new ContainerLocalizationRequestEvent(c, rsrcs));
       // Sigh. Thread init of private localizer not accessible
       Thread.sleep(1000);
@@ -471,33 +489,67 @@ public class TestResourceLocalizationService {
       Path localizationTokenPath = tokenPathCaptor.getValue();
 
       // heartbeat from localizer
-      LocalResourceStatus rsrcStat = mock(LocalResourceStatus.class);
+      LocalResourceStatus rsrcStat1 = mock(LocalResourceStatus.class);
+      LocalResourceStatus rsrcStat2 = mock(LocalResourceStatus.class);
       LocalizerStatus stat = mock(LocalizerStatus.class);
       when(stat.getLocalizerId()).thenReturn(ctnrStr);
-      when(rsrcStat.getResource()).thenReturn(resource);
-      when(rsrcStat.getLocalSize()).thenReturn(4344L);
+      when(rsrcStat1.getResource()).thenReturn(resource1);
+      when(rsrcStat2.getResource()).thenReturn(resource2);
+      when(rsrcStat1.getLocalSize()).thenReturn(4344L);
+      when(rsrcStat2.getLocalSize()).thenReturn(2342L);
       URL locPath = getPath("/cache/private/blah");
-      when(rsrcStat.getLocalPath()).thenReturn(locPath);
-      when(rsrcStat.getStatus()).thenReturn(ResourceStatusType.FETCH_SUCCESS);
+      when(rsrcStat1.getLocalPath()).thenReturn(locPath);
+      when(rsrcStat2.getLocalPath()).thenReturn(locPath);
+      when(rsrcStat1.getStatus()).thenReturn(ResourceStatusType.FETCH_SUCCESS);
+      when(rsrcStat2.getStatus()).thenReturn(ResourceStatusType.FETCH_SUCCESS);
       when(stat.getResources())
         .thenReturn(Collections.<LocalResourceStatus>emptyList())
-        .thenReturn(Collections.singletonList(rsrcStat))
+        .thenReturn(Collections.singletonList(rsrcStat1))
+        .thenReturn(Collections.singletonList(rsrcStat2))
         .thenReturn(Collections.<LocalResourceStatus>emptyList());
 
-      // get rsrc
+      String localPath = Path.SEPARATOR + ContainerLocalizer.USERCACHE +
+          Path.SEPARATOR + "user0" + Path.SEPARATOR +
+          ContainerLocalizer.FILECACHE;
+      
+      // get first resource
       LocalizerHeartbeatResponse response = spyService.heartbeat(stat);
       assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
-      assertEquals(req, new LocalResourceRequest(response.getLocalResource(0)));
+      assertEquals(1, response.getResourceSpecs().size());
+      assertEquals(req1,
+        new LocalResourceRequest(response.getResourceSpecs().get(0).getResource()));
+      URL localizedPath =
+          response.getResourceSpecs().get(0).getDestinationDirectory();
+      // Appending to local path unique number(10) generated as a part of
+      // LocalResourcesTracker
+      assertTrue(localizedPath.getFile().endsWith(
+        localPath + Path.SEPARATOR + "10"));
+
+      // get second resource
+      response = spyService.heartbeat(stat);
+      assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
+      assertEquals(1, response.getResourceSpecs().size());
+      assertEquals(req2, new LocalResourceRequest(response.getResourceSpecs()
+        .get(0).getResource()));
+      localizedPath =
+          response.getResourceSpecs().get(0).getDestinationDirectory();
+      // Resource's destination path should be now inside sub directory 0 as
+      // LocalCacheDirectoryManager will be used and we have restricted number
+      // of files per directory to 1.
+      assertTrue(localizedPath.getFile().endsWith(
+        localPath + Path.SEPARATOR + "0" + Path.SEPARATOR + "11"));
 
       // empty rsrc
       response = spyService.heartbeat(stat);
       assertEquals(LocalizerAction.LIVE, response.getLocalizerAction());
-      assertEquals(0, response.getAllResources().size());
+      assertEquals(0, response.getResourceSpecs().size());
 
       // get shutdown
       response = spyService.heartbeat(stat);
       assertEquals(LocalizerAction.DIE, response.getLocalizerAction());
 
+
+      dispatcher.await();
       // verify container notification
       ArgumentMatcher<ContainerEvent> matchesContainerLoc =
         new ArgumentMatcher<ContainerEvent>() {
@@ -508,9 +560,9 @@ public class TestResourceLocalizationService {
               && c.getContainerID() == evt.getContainerID();
           }
         };
-      dispatcher.await();
-      verify(containerBus).handle(argThat(matchesContainerLoc));
-      
+      // total 2 resource localzation calls. one for each resource.
+      verify(containerBus, times(2)).handle(argThat(matchesContainerLoc));
+        
       // Verify deletion of localization token.
       verify(delService).delete((String)isNull(), eq(localizationTokenPath));
     } finally {

@@ -166,6 +166,9 @@ Release 2.0.5-alpha - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
+    acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -221,6 +224,9 @@ Release 2.0.4-beta - UNRELEASED
 
     MAPREDUCE-5088. MR Client gets an renewer token exception while Oozie is
     submitting a job (Daryn Sharp via cos)
+
+    MAPREDUCE-5138. Fix LocalDistributedCacheManager after YARN-112. (Omkar Vinit
+    Joshi via vinodkv)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -772,6 +778,9 @@ Release 0.23.7 - UNRELEASED
     the value from the Task commitAttempt member (Robert Parker via jeagles)
 
     MAPREDUCE-4991. coverage for gridmix (Aleksey Gorshkov via tgraves)
+
+    MAPREDUCE-5007. fix coverage org.apache.hadoop.mapreduce.v2.hs (Aleksey 
+    Gorshkov via tgraves)
 
 Release 0.23.6 - UNRELEASED
 
