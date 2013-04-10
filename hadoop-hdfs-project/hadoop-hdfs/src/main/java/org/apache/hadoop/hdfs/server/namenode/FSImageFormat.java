@@ -270,10 +270,6 @@ public class FSImageFormat {
         } else {
           imgTxId = 0;
         }
-        
-        if (supportSnapshot) {
-          snapshotMap = namesystem.getSnapshotManager().read(in, this);
-        }
 
         // read the last allocated inode id in the fsimage
         if (LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion)) {
@@ -289,6 +285,10 @@ public class FSImageFormat {
           }
         }
         
+        if (supportSnapshot) {
+          snapshotMap = namesystem.getSnapshotManager().read(in, this);
+        }
+
         // read compression related info
         FSImageCompression compression;
         if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imgVersion)) {
@@ -843,7 +843,6 @@ public class FSImageFormat {
         context.checkCancelled();
         fout.getChannel().force(true);
       } finally {
-        referenceMap.removeAllINodeReferenceWithId();
         out.close();
       }
 

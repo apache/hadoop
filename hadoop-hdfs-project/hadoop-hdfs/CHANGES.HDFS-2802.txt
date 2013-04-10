@@ -228,3 +228,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4647. Rename should call setLocalName after an inode is removed from
   snapshots.  (Arpit Agarwal via szetszwo)
+
+  HDFS-4684. Use INode id for image serialization when writing INodeReference.
+  (szetszwo)

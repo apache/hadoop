@@ -41,8 +41,6 @@ import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.base.Preconditions;
-
 /**
  * A helper class defining static methods for reading/writing snapshot related
  * information from/to FSImage.
@@ -307,46 +305,23 @@ public class SnapshotFSImageFormat {
   }
   
 
-  /** A reference with a fixed id for fsimage serialization. */
-  private static class INodeReferenceWithId extends INodeReference {
-    final long id;
-
-    private INodeReferenceWithId(WithCount parent, INode referred, long id) {
-      super(parent, referred);
-      this.id = id;
-    }
-    
-    /** @return the reference id. */
-    private long getReferenceId() {
-      return id;
-    }
-  }
-
   /** A reference map for fsimage serialization. */
   public static class ReferenceMap {
     private final Map<Long, INodeReference.WithCount> referenceMap
         = new HashMap<Long, INodeReference.WithCount>();
-    private long referenceId = 0;
 
     public void writeINodeReferenceWithCount(INodeReference.WithCount withCount,
         DataOutput out, boolean writeUnderConstruction) throws IOException {
       final INode referred = withCount.getReferredINode();
-      final boolean firstReferred = !(referred instanceof INodeReferenceWithId);
+      final long id = withCount.getId();
+      final boolean firstReferred = !referenceMap.containsKey(id);
       out.writeBoolean(firstReferred);
 
       if (firstReferred) {
         FSImageSerialization.saveINode2Image(referred, out,
             writeUnderConstruction, this);
-        final long id = ++referenceId;
         referenceMap.put(id, withCount);
-
-        final INodeReferenceWithId withId = new INodeReferenceWithId(
-            withCount, referred, id);
-        withCount.setReferredINode(withId);
-        referred.setParentReference(withId);
       } else {
-        final long id = ((INodeReferenceWithId)referred).getReferenceId();
-        Preconditions.checkState(referenceMap.containsKey(id));
         out.writeLong(id);
       }
     }
@@ -360,24 +335,13 @@ public class SnapshotFSImageFormat {
       if (firstReferred) {
         final INode referred = loader.loadINodeWithLocalName(isSnapshotINode, in);
         withCount = new INodeReference.WithCount(null, referred);
-        referenceMap.put(++referenceId, withCount);
+        referenceMap.put(withCount.getId(), withCount);
       } else {
         final long id = in.readLong();
         withCount = referenceMap.get(id);
         withCount.incrementReferenceCount();
       }
       return withCount;
-    }
-    
-    public void removeAllINodeReferenceWithId() {
-      for(INodeReference.WithCount withCount : referenceMap.values()) {
-        final INodeReference ref = withCount.getReferredINode().asReference();
-        final INode referred = ref.getReferredINode();
-        withCount.setReferredINode(referred);
-        referred.setParentReference(withCount);
-        ref.clear();
-      }
-      referenceMap.clear();
     }
   }
 }
