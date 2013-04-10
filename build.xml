@@ -84,10 +84,15 @@
   <property name="build.anttasks" value="${build.dir}/ant"/>
   <property name="build.librecordio" value="${build.dir}/librecordio"/>
   <!-- convert spaces to _ so that mac os doesn't break things -->
-  <script language="javascript">
-    var before = project.getProperty("os.name");
-    project.setProperty("nonspace.os", before.replaceAll(" ", "_"));
-  </script>
+  <loadresource property="nonspace.os">
+    <propertyresource name="os.name"/>
+    <filterchain>
+      <tokenfilter>
+        <filetokenizer/>
+        <replacestring from=" " to="_"/>
+      </tokenfilter>
+    </filterchain>
+  </loadresource>
   <condition property="build.platform"
     value="${env.OS}-${os.arch}-${sun.arch.data.model}"
     else="${nonspace.os}-${os.arch}-${sun.arch.data.model}">

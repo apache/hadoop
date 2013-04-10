@@ -252,6 +252,9 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-9250. Windows installer bugfixes. (Ivan Mitic via suresh)
 
+    HADOOP-9463. branch-1-win fails to build with OpenJDK7.
+    (Ivan Mitic via suresh)
+
   Merged from branch-1
 
     HDFS-385. Backport: Add support for an experimental API that allows a
