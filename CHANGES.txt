@@ -10,6 +10,9 @@ Release 1.1.3 - unreleased
 
   BUG FIXES
 
+    HADOOP-9467. Metrics2 record filter should check name as well as tags.
+    (Ganeshan Iyler via llu)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
