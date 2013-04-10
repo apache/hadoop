@@ -8,6 +8,9 @@ Release 1.0.5 - unreleased
 
   BUG FIXES
 
+    HADOOP-9467. Metrics2 record filter should check name as well as tags.
+    (Ganeshan Iyler via llu)
+
     HADOOP-8419. Fixed GzipCode NPE reset for IBM JDK. (Yu Li via eyang)
 
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
