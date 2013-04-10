@@ -476,11 +476,10 @@ public class SecondaryNameNode implements Runnable {
    * Returns the Jetty server that the Namenode is listening on.
    */
   private String getInfoServer() throws IOException {
-    URI fsName = FileSystem.getDefaultUri(conf);
-    if (!"hdfs".equals(fsName.getScheme())) {
+    String infoAddr = NameNode.getInfoServer(conf);
+    if (infoAddr == null) {
       throw new IOException("This is not a DFS");
     }
-    String infoAddr = NameNode.getInfoServer(conf);
     LOG.debug("infoAddr = " + infoAddr);
     return infoAddr;
   }
