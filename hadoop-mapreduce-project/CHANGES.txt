@@ -36,6 +36,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4981. Add WordMean, WordMedian, WordStandardDeviation
     to ExamplesDriver. (Plamen Jeliazkov via shv)
 
+    MAPREUDUCE-5059. Change average merge time on Job overview page to be the
+    time delta between the end of the shuffle and the start of the reduce.
+    (Omkar Vinit Joshi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
