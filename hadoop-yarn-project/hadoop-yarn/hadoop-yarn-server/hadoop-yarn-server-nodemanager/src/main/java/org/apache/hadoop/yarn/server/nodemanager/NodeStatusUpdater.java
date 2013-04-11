@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.service.Service;
 
 public interface NodeStatusUpdater extends Service {
 
   void sendOutofBandHeartBeat();
+  NodeStatus getNodeStatusAndUpdateContainersInContext();
 }

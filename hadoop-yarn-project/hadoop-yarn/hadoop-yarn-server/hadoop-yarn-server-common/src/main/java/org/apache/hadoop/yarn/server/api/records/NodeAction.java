@@ -24,5 +24,5 @@ package org.apache.hadoop.yarn.server.api.records;
  */
 
 public enum NodeAction {
-  NORMAL, REBOOT, SHUTDOWN
+  NORMAL, RESYNC, SHUTDOWN
 }
