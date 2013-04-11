@@ -43,7 +43,6 @@ public class TrApp
     // Note the dots translated to underscore: 
     // property names have been escaped in PipeMapRed.safeEnvVarName()
     expectDefined("mapreduce_cluster_local_dir");
-    expect("mapred_output_format_class", "org.apache.hadoop.mapred.TextOutputFormat");
     expect("mapreduce_map_output_key_class", "org.apache.hadoop.io.Text");
     expect("mapreduce_map_output_value_class", "org.apache.hadoop.io.Text");
 

@@ -120,6 +120,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
     command from the RM. (Jian He via jlowe)
 
+    MAPREDUCE-5113. Streaming input/output types are ignored with java
+    mapper/reducer. (sandyr via tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
