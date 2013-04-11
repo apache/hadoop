@@ -163,6 +163,9 @@ Release 2.0.4-alpha - UNRELEASED
     MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
     actual cluster (Siddharth Seth via hitesh)
 
+    MAPREDUCE-5094. Disabled memory monitoring by default in MiniMRYarnCluster
+    to avoid some downstream tests failing. (Siddharth Seth via vinodkv)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES

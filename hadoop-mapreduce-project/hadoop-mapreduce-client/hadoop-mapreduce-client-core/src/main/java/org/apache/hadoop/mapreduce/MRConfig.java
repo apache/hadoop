@@ -103,4 +103,15 @@ public interface MRConfig {
     "mapreduce.ifile.readahead.bytes";
 
   public static final int DEFAULT_MAPRED_IFILE_READAHEAD_BYTES =
-    4 * 1024 * 1024;}
+    4 * 1024 * 1024;
+
+  /**
+   * Whether users are explicitly trying to control resource monitoring
+   * configuration for the MiniMRCluster. Disabled by default.
+   */
+  public static final String MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING
+      = "mapreduce.minicluster.control-resource-monitoring";
+  public static final boolean
+      DEFAULT_MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
+}
+  
