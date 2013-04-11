@@ -37,6 +37,10 @@ Release 0.23.7 - UNRELEASED
     MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred
     (Aleksey Gorshkov via bobby)
 
+    MAPREDUCE-5079. Changes job recovery to restore state directly from job
+    history, instaed of simulating state machine events.
+    (Jason Lowe and Robert Parker via sseth)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4946. Fix a performance problem for large jobs by reducing the
