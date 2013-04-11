@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +37,6 @@ import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskCounter;
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
@@ -80,7 +78,6 @@ public class TestTaskImpl {
   private Path remoteJobConfFile;
   private Credentials credentials;
   private Clock clock;
-  private Map<TaskId, TaskInfo> completedTasksFromPreviousRun;
   private MRAppMetrics metrics;
   private TaskImpl mockTask;
   private ApplicationId appId;
@@ -104,13 +101,12 @@ public class TestTaskImpl {
         EventHandler eventHandler, Path remoteJobConfFile, JobConf conf,
         TaskAttemptListener taskAttemptListener,
         Token<JobTokenIdentifier> jobToken,
-        Credentials credentials, Clock clock,
-        Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
+        Credentials credentials, Clock clock, int startCount,
         MRAppMetrics metrics, AppContext appContext, TaskType taskType) {
       super(jobId, taskType , partition, eventHandler,
           remoteJobConfFile, conf, taskAttemptListener,
           jobToken, credentials, clock,
-          completedTasksFromPreviousRun, startCount, metrics, appContext);
+          startCount, metrics, appContext);
       this.taskType = taskType;
     }
 
@@ -247,8 +243,7 @@ public class TestTaskImpl {
     return new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, jobToken,
         credentials, clock,
-        completedTasksFromPreviousRun, startCount,
-        metrics, appContext, taskType);
+        startCount, metrics, appContext, taskType);
   }
 
   @After 
@@ -652,9 +647,7 @@ public class TestTaskImpl {
   public void testFailedTransitions() {
     mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, jobToken,
-        credentials, clock,
-        completedTasksFromPreviousRun, startCount,
-        metrics, appContext, TaskType.MAP) {
+        credentials, clock, startCount, metrics, appContext, TaskType.MAP) {
           @Override
           protected int getMaxAttempts() {
             return 1;
@@ -721,9 +714,7 @@ public class TestTaskImpl {
   public void testCountersWithSpeculation() {
     mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, jobToken,
-        credentials, clock,
-        completedTasksFromPreviousRun, startCount,
-        metrics, appContext, TaskType.MAP) {
+        credentials, clock, startCount, metrics, appContext, TaskType.MAP) {
           @Override
           protected int getMaxAttempts() {
             return 1;

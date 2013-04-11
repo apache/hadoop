@@ -23,6 +23,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
     faster job submission. (amarrk via tgraves)
 
+    MAPREDUCE-5079. Changes job recovery to restore state directly from job
+    history, instaed of simulating state machine events.
+    (Jason Lowe and Robert Parker via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
