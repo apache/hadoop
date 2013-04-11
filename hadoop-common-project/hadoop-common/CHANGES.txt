@@ -620,6 +620,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9471. hadoop-client wrongfully excludes jetty-util JAR, 
     breaking webhdfs. (tucu)
 
+    HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
+    Bondarev via jlowe)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1620,6 +1623,9 @@ Release 0.23.8 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
+    Bondarev via jlowe)
 
 Release 0.23.7 - UNRELEASED
 
