@@ -617,9 +617,6 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9429. TestConfiguration fails with IBM JAVA. (Amir Sanjar via
     suresh)
 
-    HADOOP-9471. hadoop-client wrongfully excludes jetty-util JAR, 
-    breaking webhdfs. (tucu)
-
     HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
     Bondarev via jlowe)
 
@@ -651,6 +648,9 @@ Release 2.0.4-alpha - UNRELEASED
 
     HADOOP-9444. Modify hadoop-policy.xml to replace unexpanded variables to a
     default value of '*'. (Roman Shaposhnik via vinodkv)
+
+    HADOOP-9471. hadoop-client wrongfully excludes jetty-util JAR, 
+    breaking webhdfs. (tucu)
 
 Release 2.0.3-alpha - 2013-02-06 
 
