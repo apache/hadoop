@@ -116,6 +116,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
     Bondarev via jlowe)
 
+    HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
+    tests (Vadim Bondarev via jlowe)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1141,6 +1144,9 @@ Release 0.23.8 - UNRELEASED
 
     HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
     Bondarev via jlowe)
+
+    HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
+    tests (Vadim Bondarev via jlowe)
 
 Release 0.23.7 - UNRELEASED
 
