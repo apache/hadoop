@@ -99,7 +99,6 @@ public class TestNodeStatusUpdater {
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private final Configuration conf = createNMConfig();
   private NodeManager nm;
-  protected NodeManager rebootedNodeManager;
   private boolean containerStatusBackupSuccessfully = true;
   private List<ContainerStatus> completedContainerStatusList = new ArrayList<ContainerStatus>();
 
@@ -663,8 +662,8 @@ public class TestNodeStatusUpdater {
       }
       
       @Override
-      protected void cleanupContainers() {
-        super.cleanupContainers();
+      protected void cleanupContainers(NodeManagerEventType eventType) {
+        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
         numCleanups.incrementAndGet();
       }
     };
@@ -717,50 +716,6 @@ public class TestNodeStatusUpdater {
     Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
   }
 
-  @Test
-  public void testNodeReboot() throws Exception {
-    nm = getNodeManager(NodeAction.REBOOT);
-    YarnConfiguration conf = createNMConfig();
-    nm.init(conf);
-    Assert.assertEquals(STATE.INITED, nm.getServiceState());
-    nm.start();
-
-    int waitCount = 0;
-    while (heartBeatID < 1 && waitCount++ != 20) {
-      Thread.sleep(500);
-    }
-    Assert.assertFalse(heartBeatID < 1);
-
-    // NM takes a while to reach the STOPPED state.
-    waitCount = 0;
-    while (nm.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
-      LOG.info("Waiting for NM to stop..");
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
-    
-    waitCount = 0;
-    while (null == rebootedNodeManager && waitCount++ != 20) {
-      LOG.info("Waiting for NM to reinitialize..");
-      Thread.sleep(1000);
-    }
-      
-    waitCount = 0;
-    while (rebootedNodeManager.getServiceState() != STATE.STARTED && waitCount++ != 20) {
-      LOG.info("Waiting for NM to start..");
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals(STATE.STARTED, rebootedNodeManager.getServiceState());
-
-    rebootedNodeManager.stop();
-    waitCount = 0;
-    while (rebootedNodeManager.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
-      LOG.info("Waiting for NM to stop..");
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals(STATE.STOPPED, rebootedNodeManager.getServiceState());
-  }
-  
   @Test
   public void testNMShutdownForRegistrationFailure() {
 
@@ -1107,12 +1062,6 @@ public class TestNodeStatusUpdater {
         myResourceTracker2.heartBeatNodeAction = nodeHeartBeatAction;
         myNodeStatusUpdater.resourceTracker = myResourceTracker2;
         return myNodeStatusUpdater;
-      }
-
-      @Override
-      NodeManager createNewNodeManager() {
-        rebootedNodeManager = getNodeManager(NodeAction.NORMAL);
-        return rebootedNodeManager;
       }
     };
   }

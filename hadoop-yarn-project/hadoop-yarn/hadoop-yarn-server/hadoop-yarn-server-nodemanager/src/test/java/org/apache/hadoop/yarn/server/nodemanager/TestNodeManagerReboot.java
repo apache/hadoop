@@ -160,7 +160,10 @@ public class TestNodeManagerReboot {
         "container is launched", numOfLocalDirs(nmLocalDir.getAbsolutePath(),
         ResourceLocalizationService.NM_PRIVATE_DIR) > 0);
 
-    nm.handle(new NodeManagerEvent(NodeManagerEventType.REBOOT));
+    // restart the NodeManager
+    nm.stop();
+    nm = new MyNodeManager();
+    nm.start();    
 
     numTries = 0;
     while ((numOfLocalDirs(nmLocalDir.getAbsolutePath(), ContainerLocalizer
@@ -248,26 +251,6 @@ public class TestNodeManagerReboot {
     protected DeletionService createDeletionService(ContainerExecutor exec) {
       delService = spy(new DeletionService(exec));
       return delService;
-    }
-
-    // mimic part of reboot process
-    @Override
-    public void handle(NodeManagerEvent event) {
-      switch (event.getType()) {
-        case SHUTDOWN:
-          this.stop();
-          break;
-        case REBOOT:
-          this.stop();
-          this.createNewMyNodeManager().start();
-          break;
-        default:
-          LOG.warn("Invalid shutdown event " + event.getType() + ". Ignoring.");
-      }
-    }
-
-    private MyNodeManager createNewMyNodeManager() {
-      return new MyNodeManager();
     }
 
     private YarnConfiguration createNMConfig() {

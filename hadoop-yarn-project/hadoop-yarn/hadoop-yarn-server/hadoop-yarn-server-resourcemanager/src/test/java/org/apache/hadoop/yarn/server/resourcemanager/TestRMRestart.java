@@ -225,9 +225,9 @@ public class TestRMRestart {
     
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
     NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());
+    Assert.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
     hbResponse = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());
+    Assert.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
     
     // new NM to represent NM re-register
     nm1 = rm2.registerNode("h1:1234", 15120);
@@ -235,9 +235,9 @@ public class TestRMRestart {
 
     // verify no more reboot response sent
     hbResponse = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.REBOOT != hbResponse.getNodeAction());
+    Assert.assertTrue(NodeAction.RESYNC != hbResponse.getNodeAction());
     hbResponse = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.REBOOT != hbResponse.getNodeAction());
+    Assert.assertTrue(NodeAction.RESYNC != hbResponse.getNodeAction());
     
     // assert app1 attempt is saved
     attempt1 = loadedApp1.getCurrentAppAttempt();

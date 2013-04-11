@@ -73,13 +73,13 @@ public class ResourceTrackerService extends AbstractService implements
   private Server server;
   private InetSocketAddress resourceTrackerAddress;
 
-  private static final NodeHeartbeatResponse reboot = recordFactory
+  private static final NodeHeartbeatResponse resync = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
   private static final NodeHeartbeatResponse shutDown = recordFactory
   .newRecordInstance(NodeHeartbeatResponse.class);
   
   static {
-    reboot.setNodeAction(NodeAction.REBOOT);
+    resync.setNodeAction(NodeAction.RESYNC);
 
     shutDown.setNodeAction(NodeAction.SHUTDOWN);
   }
@@ -220,7 +220,7 @@ public class ResourceTrackerService extends AbstractService implements
     if (rmNode == null) {
       /* node does not exist */
       LOG.info("Node not found rebooting " + remoteNodeStatus.getNodeId());
-      return reboot;
+      return resync;
     }
 
     // Send ping
@@ -250,7 +250,7 @@ public class ResourceTrackerService extends AbstractService implements
       // TODO: Just sending reboot is not enough. Think more.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeEvent(nodeId, RMNodeEventType.REBOOTING));
-      return reboot;
+      return resync;
     }
 
     // Heartbeat response
