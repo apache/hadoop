@@ -128,6 +128,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
     (Thomas Graves via jlowe)
 
+    MAPREDUCE-5136. TestJobImpl->testJobNoTasks fails with IBM JAVA (Amir
+    Sanjar via jlowe)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
