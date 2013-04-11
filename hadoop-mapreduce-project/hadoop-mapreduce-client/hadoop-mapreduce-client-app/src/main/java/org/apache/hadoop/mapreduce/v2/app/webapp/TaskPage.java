@@ -33,6 +33,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 
 import com.google.inject.Inject;
 
@@ -53,7 +56,7 @@ public class TaskPage extends AppView {
           h2($(TITLE));
         return;
       }
-      html.
+      TBODY<TABLE<Hamlet>> tbody = html.
       table("#attempts").
         thead().
           tr().
@@ -65,7 +68,8 @@ public class TaskPage extends AppView {
             th(".tsh", "Started").
             th(".tsh", "Finished").
             th(".tsh", "Elapsed").
-            th(".note", "Note")._()._();
+            th(".note", "Note")._()._().
+      tbody();
       // Write all the data into a JavaScript array of arrays for JQuery
       // DataTables to display
       StringBuilder attemptsTableData = new StringBuilder("[\n");
@@ -105,6 +109,9 @@ public class TaskPage extends AppView {
       attemptsTableData.append("]");
       html.script().$type("text/javascript").
       _("var attemptsTableData=" + attemptsTableData)._();
+
+      tbody._()._();
+
     }
 
     protected boolean isValidRequest() {
