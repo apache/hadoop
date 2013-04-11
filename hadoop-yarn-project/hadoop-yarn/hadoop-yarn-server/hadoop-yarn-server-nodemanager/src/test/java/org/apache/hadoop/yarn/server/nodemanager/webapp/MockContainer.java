@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -58,7 +59,6 @@ public class MockContainer implements Container {
         uniqId);
     this.launchContext = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    launchContext.setContainerId(id);
     launchContext.setUser(user);
     this.state = ContainerState.NEW;
 
@@ -104,7 +104,6 @@ public class MockContainer implements Container {
         .newRecordInstance(ContainerStatus.class);
     containerStatus
         .setState(org.apache.hadoop.yarn.api.records.ContainerState.RUNNING);
-    containerStatus.setContainerId(this.launchContext.getContainerId());
     containerStatus.setDiagnostics("testing");
     containerStatus.setExitStatus(0);
     return containerStatus;
@@ -117,6 +116,11 @@ public class MockContainer implements Container {
 
   @Override
   public void handle(ContainerEvent event) {
+  }
+
+  @Override
+  public Resource getResource() {
+    return null;
   }
 
 }

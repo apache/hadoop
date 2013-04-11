@@ -340,7 +340,7 @@ public class TestClientRMService {
     final SubmitApplicationRequest submitRequest = mockSubmitAppRequest(appId);
     Resource resource = Resources.createResource(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB + 1);
-    when(submitRequest.getApplicationSubmissionContext().getAMContainerSpec()
+    when(submitRequest.getApplicationSubmissionContext()
         .getResource()).thenReturn(resource);
 
     final ClientRMService rmService =
@@ -364,16 +364,17 @@ public class TestClientRMService {
     String queue = MockApps.newQueue();
 
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
+
     Resource resource = Resources.createResource(
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    when(amContainerSpec.getResource()).thenReturn(resource);
 
     ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
-    when(submissionContext.getUser()).thenReturn(user);
-    when(submissionContext.getQueue()).thenReturn(queue);
     when(submissionContext.getAMContainerSpec()).thenReturn(amContainerSpec);
+    when(submissionContext.getAMContainerSpec().getUser()).thenReturn(user);
+    when(submissionContext.getQueue()).thenReturn(queue);
     when(submissionContext.getApplicationId()).thenReturn(appId);
-    
+    when(submissionContext.getResource()).thenReturn(resource);
+
    SubmitApplicationRequest submitRequest =
        recordFactory.newRecordInstance(SubmitApplicationRequest.class);
    submitRequest.setApplicationSubmissionContext(submissionContext);

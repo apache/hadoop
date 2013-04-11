@@ -176,6 +176,8 @@ public class TestNodeStatusUpdater {
       nodeStatus.setResponseId(heartBeatID++);
       Map<ApplicationId, List<ContainerStatus>> appToContainers =
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
+      org.apache.hadoop.yarn.api.records.Container mockContainer =
+          mock(org.apache.hadoop.yarn.api.records.Container.class);
       if (heartBeatID == 1) {
         Assert.assertEquals(0, nodeStatus.getContainersStatuses().size());
 
@@ -186,11 +188,12 @@ public class TestNodeStatusUpdater {
         firstContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        launchContext.setContainerId(firstContainerID);
-        launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
-        launchContext.getResource().setMemory(2);
-        Container container = new ContainerImpl(conf , mockDispatcher,
-            launchContext, null, mockMetrics);
+        when(mockContainer.getId()).thenReturn(firstContainerID);
+        Resource resource = BuilderUtils.newResource(2, 1);
+        when(mockContainer.getResource()).thenReturn(resource);
+        Container container =
+            new ContainerImpl(conf, mockDispatcher, launchContext,
+                mockContainer, null, mockMetrics);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -211,11 +214,12 @@ public class TestNodeStatusUpdater {
         secondContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        launchContext.setContainerId(secondContainerID);
-        launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
-        launchContext.getResource().setMemory(3);
-        Container container = new ContainerImpl(conf, mockDispatcher,
-            launchContext, null, mockMetrics);
+        when(mockContainer.getId()).thenReturn(secondContainerID);
+        Resource resource = BuilderUtils.newResource(3, 1);
+        when(mockContainer.getResource()).thenReturn(resource);
+        Container container =
+            new ContainerImpl(conf, mockDispatcher, launchContext,
+                mockContainer, null, mockMetrics);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end

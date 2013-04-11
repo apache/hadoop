@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -150,10 +151,14 @@ public class ContainerLauncherImpl extends AbstractService implements
         ContainerLaunchContext containerLaunchContext =
           event.getContainer();
 
+        org.apache.hadoop.yarn.api.records.Container container =
+            BuilderUtils.newContainer(containerID, null, null,
+                event.getResource(), null, containerToken);
         // Now launch the actual container
         StartContainerRequest startRequest = Records
           .newRecord(StartContainerRequest.class);
         startRequest.setContainerLaunchContext(containerLaunchContext);
+        startRequest.setContainer(container);
         StartContainerResponse response = proxy.startContainer(startRequest);
 
         ByteBuffer portInfo = response

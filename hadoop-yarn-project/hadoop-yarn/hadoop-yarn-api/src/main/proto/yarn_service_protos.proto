@@ -151,6 +151,7 @@ message GetQueueUserAclsInfoResponseProto {
 
 message StartContainerRequestProto {
   optional ContainerLaunchContextProto container_launch_context = 1;
+  optional ContainerProto container = 2;
 }
 
 message StartContainerResponseProto {

@@ -72,7 +72,7 @@ public class ContainerInfo {
     }
 
     this.user = container.getUser();
-    Resource res = container.getLaunchContext().getResource();
+    Resource res = container.getResource();
     if (res != null) {
       this.totalMemoryNeededMB = res.getMemory();
     }

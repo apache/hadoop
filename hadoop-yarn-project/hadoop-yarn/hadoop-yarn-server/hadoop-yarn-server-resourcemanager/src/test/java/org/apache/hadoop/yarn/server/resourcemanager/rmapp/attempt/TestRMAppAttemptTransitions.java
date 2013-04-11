@@ -200,14 +200,14 @@ public class TestRMAppAttemptTransitions {
     final String user = MockApps.newUserName();
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
-    when(submissionContext.getUser()).thenReturn(user);
     when(submissionContext.getQueue()).thenReturn(queue);
     Resource resource = BuilderUtils.newResource(1536, 1);
     ContainerLaunchContext amContainerSpec =
-        BuilderUtils.newContainerLaunchContext(null, user, resource, null, null,
+        BuilderUtils.newContainerLaunchContext(user, null, null,
             null, null, null, null);
     when(submissionContext.getAMContainerSpec()).thenReturn(amContainerSpec);
-    
+    when(submissionContext.getResource()).thenReturn(resource);
+
     unmanagedAM = false;
     
     application = mock(RMApp.class);
@@ -494,9 +494,6 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt.handle(
         new RMAppAttemptStoredEvent(
             applicationAttempt.getAppAttemptId(), null));
-    assertEquals(resource,
-        applicationAttempt.getSubmissionContext()
-        .getAMContainerSpec().getResource());
     
     testAppAttemptAllocatedState(container);
     

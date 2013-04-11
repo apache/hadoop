@@ -283,6 +283,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5136. TestJobImpl->testJobNoTasks fails with IBM JAVA (Amir
     Sanjar via jlowe)
 
+    MAPREDUCE-5139. Update MR AM to use the modified startContainer API after
+    YARN-486. (Xuan Gong via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 
 /**
@@ -58,4 +59,12 @@ public interface StartContainerRequest {
   @Public
   @Stable
   public abstract void setContainerLaunchContext(ContainerLaunchContext context);
+
+  @Public
+  @Stable
+  public Container getContainer();
+
+  @Public
+  @Stable
+  public void setContainer(Container container);
 }

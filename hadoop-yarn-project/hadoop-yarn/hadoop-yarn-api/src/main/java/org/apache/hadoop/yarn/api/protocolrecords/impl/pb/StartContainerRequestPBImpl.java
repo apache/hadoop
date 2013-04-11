@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProtoOrBuilder;
 
@@ -35,7 +38,8 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
   boolean viaProto = false;
   
   private ContainerLaunchContext containerLaunchContext = null;
-  
+
+  private Container container = null;
   
   public StartContainerRequestPBImpl() {
     builder = StartContainerRequestProto.newBuilder();
@@ -56,6 +60,9 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
   private void mergeLocalToBuilder() {
     if (this.containerLaunchContext != null) {
       builder.setContainerLaunchContext(convertToProtoFormat(this.containerLaunchContext));
+    }
+    if(this.container != null) {
+      builder.setContainer(convertToProtoFormat(this.container));
     }
   }
 
@@ -96,6 +103,28 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
     this.containerLaunchContext = containerLaunchContext;
   }
 
+  @Override
+  public Container getContainer() {
+    StartContainerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.container != null) {
+      return this.container;
+    }
+    if (!p.hasContainer()) {
+      return null;
+    }
+    this.container = convertFromProtoFormat(p.getContainer());
+    return this.container;
+  }
+
+  @Override
+  public void setContainer(Container container) {
+    maybeInitBuilder();
+    if(container == null) {
+      builder.clearContainer();
+    }
+    this.container = container;
+  }
+
   private ContainerLaunchContextPBImpl convertFromProtoFormat(ContainerLaunchContextProto p) {
     return new ContainerLaunchContextPBImpl(p);
   }
@@ -106,4 +135,11 @@ public class StartContainerRequestPBImpl extends ProtoBase<StartContainerRequest
 
 
 
+  private ContainerPBImpl convertFromProtoFormat(ContainerProto containerProto) {
+    return new ContainerPBImpl(containerProto);
+  }
+
+  private ContainerProto convertToProtoFormat(Container container) {
+    return ((ContainerPBImpl)container).getProto();
+  }
 }  
