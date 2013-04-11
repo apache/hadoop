@@ -12,6 +12,9 @@ Release 0.23.8 - UNRELEASED
  
   BUG FIXES
 
+    HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
+    Bondarev via jlowe)
+
 Release 0.23.7 - UNRELEASED
 
   INCOMPATIBLE CHANGES
