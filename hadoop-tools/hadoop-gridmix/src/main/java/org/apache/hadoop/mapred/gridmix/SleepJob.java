@@ -84,7 +84,7 @@ public class SleepJob extends GridmixJob {
       String[] hosts) throws IOException {
     super(conf, submissionMillis, jobdesc, outRoot, ugi, seq);
     this.fakeLocations = numLocations;
-    this.hosts = hosts;
+    this.hosts = hosts.clone();
     this.selector = (fakeLocations > 0)? new Selector(hosts.length, (float) fakeLocations
         / hosts.length, rand.get()) : null;
     this.mapTasksOnly = conf.getBoolean(SLEEPJOB_MAPTASK_ONLY, false);
@@ -289,9 +289,9 @@ public class SleepJob extends GridmixJob {
       this.id = id;
       this.sleepDuration = sleepDuration;
       nSpec = reduceDurations.length;
-      this.reduceDurations = reduceDurations;
+      this.reduceDurations = reduceDurations.clone();
       this.nMaps = nMaps;
-      this.locations = locations;
+      this.locations = locations.clone();
     }
 
     @Override
@@ -349,7 +349,7 @@ public class SleepJob extends GridmixJob {
 
     @Override
     public String[] getLocations() {
-      return locations;
+      return locations.clone();
     }
   }
 
