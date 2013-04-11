@@ -277,6 +277,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
     command from the RM. (Jian He via jlowe)
 
+    MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
+    (Thomas Graves via jlowe)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -883,6 +886,9 @@ Release 0.23.7 - UNRELEASED
 
     MAPREDUCE-5007. fix coverage org.apache.hadoop.mapreduce.v2.hs (Aleksey 
     Gorshkov via tgraves)
+
+    MAPREDUCE-5137. AM web UI: clicking on Map Task results in 500 error
+    (Thomas Graves via jlowe)
 
 Release 0.23.6 - UNRELEASED
 
