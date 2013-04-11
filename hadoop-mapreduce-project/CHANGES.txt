@@ -20,9 +20,6 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
-    MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
-                    faster job submission. (amarrk)
-
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
 
     MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the
@@ -33,9 +30,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests.
                     (Vinay Thota via amarrk)
-
-    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
-                    tasks in Gridmix. (amarrk)
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
     fair scheduler pools. (Ahmed Radwan via todd)
@@ -82,34 +76,6 @@ Trunk (Unreleased)
 
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
     (Yu Gao via llu)
-
-    MAPREDUCE-4356. [Rumen] Provide access to the method
-                    ParsedTask.obtainTaskAttempts(). (ravigummadi)
-
-    MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
-                    map only jobs. (amarrk)
-
-    MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
-                    strings. (ravigummadi)
-
-    MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk)
-
-    MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
-                    become slow in some cases (ravigummadi).
-
-    MAPREDUCE-3953. [Gridmix] Gridmix throws NPE and does not simulate a
-                    job if the trace contains null taskStatus for a task.
-                    (ravigummadi)
-
-    MAPREDUCE-3829. [Gridmix] Gridmix should give better error message when
-                    input data directory already exists and -generate opton is
-                    given.(ravigummadi)
-
-    MAPREDUCE-2722. [Gridmix] Gridmix simulated job's map's hdfsBytesRead
-                    counter is wrong when compressed input is used.(ravigummadi)
-
-    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
-                    sortFinished times when needed.(ravigummadi)
 
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
@@ -186,7 +152,7 @@ Trunk (Unreleased)
     HADOOP-9372. Fix bad timeout annotations on tests.
     (Arpit Agarwal via suresh)
 
-Release 2.0.5-alpha - UNRELEASED
+Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -194,32 +160,8 @@ Release 2.0.5-alpha - UNRELEASED
 
   IMPROVEMENTS
 
-    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
-    acmurthy)
-
-    MAPREDUCE-5079. Changes job recovery to restore state directly from job
-    history, instaed of simulating state machine events.
-    (Jason Lowe and Robert Parker via sseth)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    MAPREDUCE-5113. Streaming input/output types are ignored with java 
-    mapper/reducer. (sandyr via tucu)
-
-    MAPREDUCE-5098. Fix findbugs warnings in gridmix. (kkambatl via tucu)
-
-    MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
-    command from the RM. (Jian He via jlowe)
-
-Release 2.0.4-beta - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
+    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
+    tasks in Gridmix. (amarrk via tgraves)
 
     MAPREDUCE-5033. mapred shell script should respect usage flags
     (--help -help -h). (Andrew Wang via atm)
@@ -232,6 +174,16 @@ Release 2.0.4-beta - UNRELEASED
     
     MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred
     (Aleksey Gorshkov via bobby)
+
+    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
+    acmurthy)
+
+    MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
+    faster job submission. (amarrk via tgraves)
+
+    MAPREDUCE-5079. Changes job recovery to restore state directly from job
+    history, instaed of simulating state machine events.
+    (Jason Lowe and Robert Parker via sseth)
 
   OPTIMIZATIONS
 
@@ -280,27 +232,75 @@ Release 2.0.4-beta - UNRELEASED
     MAPREDUCE-3872. Fix an event handling races in ContainerLauncherImpl.
     (Robert Kanter via sseth)
 
-    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
-    actual cluster (Siddharth Seth via hitesh)
-
     MAPREDUCE-5062. Fix MR AM to read max-retries from the RM. (Zhijie Shen via
     vinodkv)
 
+    MAPREDUCE-3829. [Gridmix] Gridmix should give better error message when
+    input data directory already exists and -generate opton is
+    given.(ravigummadi via tgraves)
+
+    MAPREDUCE-2722. [Gridmix] Gridmix simulated job's map's hdfsBytesRead
+    counter is wrong when compressed input is used.(ravigummadi via tgraves)
+
+    MAPREDUCE-3953. [Gridmix] Gridmix throws NPE and does not simulate a
+    job if the trace contains null taskStatus for a task.  (ravigummadi via 
+    tgraves)
+
+    MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
+    become slow in some cases (ravigummadi via tgraves).
+
     MAPREDUCE-5077. Remove mapreduce.util.ResourceCalculatorPlugin and related
     code. (Karthik Kambatla via sseth)
+
+    MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk via tgraves)
+
+    MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
+    map only jobs. (amarrk via tgraves)
+
+    MAPREDUCE-4356. [Rumen] Provide access to the method
+    ParsedTask.obtainTaskAttempts(). (ravigummadi via tgraves)
+
+    MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
+    strings. (ravigummadi via tgraves) 
+
+    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
+    sortFinished times when needed. (Ravi Gummadi via tgraves)
+
+    MAPREDUCE-5138. Fix LocalDistributedCacheManager after YARN-112. (Omkar Vinit
+    Joshi via vinodkv)
+
+    MAPREDUCE-5113. Streaming input/output types are ignored with java 
+    mapper/reducer. (sandyr via tucu)
+
+    MAPREDUCE-5098. Fix findbugs warnings in gridmix. (kkambatl via tucu)
+
+    MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
+    command from the RM. (Jian He via jlowe)
+
+Release 2.0.4-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
+    (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-5088. MR Client gets an renewer token exception while Oozie is
+    submitting a job (Daryn Sharp via cos)
 
     MAPREDUCE-5117. Changed MRClientProtocolPBClientImpl to be closeable and thus
     fix failures in renewal of HistoryServer's delegations tokens. (Siddharth
     Seth via vinodkv)
 
-    MAPREDUCE-5088. MR Client gets an renewer token exception while Oozie is
-    submitting a job (Daryn Sharp via cos)
-
-    MAPREDUCE-5138. Fix LocalDistributedCacheManager after YARN-112. (Omkar Vinit
-    Joshi via vinodkv)
-
-    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
-    (Sandy Ryza via tomwhite)
+    MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
+    actual cluster (Siddharth Seth via hitesh)
 
 Release 2.0.3-alpha - 2013-02-06 
 
