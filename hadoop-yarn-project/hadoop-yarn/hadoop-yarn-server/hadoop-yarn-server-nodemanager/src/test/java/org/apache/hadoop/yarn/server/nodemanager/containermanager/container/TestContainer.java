@@ -525,8 +525,9 @@ public class TestContainer {
     return serviceData;
   }
 
-  private Container newContainer(Dispatcher disp, ContainerLaunchContext ctx) {
-    return new ContainerImpl(conf, disp, ctx, null, metrics);
+  private Container newContainer(Dispatcher disp, ContainerLaunchContext ctx,
+      org.apache.hadoop.yarn.api.records.Container container) {
+    return new ContainerImpl(conf, disp, ctx, container, null, metrics);
   }
   
   @SuppressWarnings("unchecked")
@@ -570,12 +571,14 @@ public class TestContainer {
       this.user = user;
 
       ctxt = mock(ContainerLaunchContext.class);
+      org.apache.hadoop.yarn.api.records.Container mockContainer =
+          mock(org.apache.hadoop.yarn.api.records.Container.class);
       cId = BuilderUtils.newContainerId(appId, 1, timestamp, id);
       when(ctxt.getUser()).thenReturn(this.user);
-      when(ctxt.getContainerId()).thenReturn(cId);
+      when(mockContainer.getId()).thenReturn(cId);
 
       Resource resource = BuilderUtils.newResource(1024, 1);
-      when(ctxt.getResource()).thenReturn(resource);
+      when(mockContainer.getResource()).thenReturn(resource);
 
       if (withLocalRes) {
         Random r = new Random();
@@ -599,7 +602,7 @@ public class TestContainer {
       }
       when(ctxt.getServiceData()).thenReturn(serviceData);
 
-      c = newContainer(dispatcher, ctxt);
+      c = newContainer(dispatcher, ctxt, mockContainer);
       dispatcher.start();
     }
 

@@ -1079,8 +1079,9 @@ public class TestRMWebServicesApps extends JerseyTest {
         .getMasterContainer().getNodeId().toString(), nodeId);
     assertTrue("logsLink doesn't match",
         logsLink.startsWith("http://"));
-    assertTrue("logsLink doesn't contain user info",
-        logsLink.endsWith("/" + appAttempt.getSubmissionContext().getUser()));
+    assertTrue(
+        "logsLink doesn't contain user info", logsLink.endsWith("/"
+        + appAttempt.getSubmissionContext().getAMContainerSpec().getUser()));
   }
 
 }

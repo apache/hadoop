@@ -52,22 +52,6 @@ import org.apache.hadoop.yarn.api.ContainerManager;
 @Stable
 public interface ContainerLaunchContext {
   /**
-   * Get <code>ContainerId</code> of container to be launched.
-   * @return <code>ContainerId</code> of container to be launched
-   */
-  @Public
-  @Stable
-  ContainerId getContainerId();
-
-  /**
-   * Set <code>ContainerId</code> of container to be launched.
-   * @param containerId et <code>ContainerId</code> of container to be launched
-   */
-  @Public
-  @Stable
-  void setContainerId(ContainerId containerId);
-
-  /**
    * Get the <em>user</em> to whom the container has been allocated.
    * @return the <em>user</em> to whom the container has been allocated
    */
@@ -82,25 +66,6 @@ public interface ContainerLaunchContext {
   @Public
   @Stable
   void setUser(String user);
-
-  /**
-   * Get the <code>Resource</code> allocated to the container by the
-   * <code>ResourceManager</code>.
-   * @return <code>Resource</code> allocated to the container by the
-   *         <code>ResourceManager</code>
-   */
-  @Public
-  @Stable
-  Resource getResource();
-
-  /**
-   * Set the <code>Resource</code> allocated to the container by the
-   * <code>ResourceManager</code>.
-   * @param resource allocated resource
-   */
-  @Public
-  @Stable
-  void setResource(Resource resource);
 
   /**
    * Get security tokens (if security is enabled).

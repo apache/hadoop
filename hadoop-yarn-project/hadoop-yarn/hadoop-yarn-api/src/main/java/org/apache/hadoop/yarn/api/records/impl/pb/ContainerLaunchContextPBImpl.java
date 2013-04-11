@@ -26,17 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
@@ -50,8 +46,6 @@ implements ContainerLaunchContext {
   ContainerLaunchContextProto.Builder builder = null;
   boolean viaProto = false;
   
-  private ContainerId containerId = null;
-  private Resource resource = null;
   private Map<String, LocalResource> localResources = null;
   private ByteBuffer containerTokens = null;
   private Map<String, ByteBuffer> serviceData = null;
@@ -76,16 +70,6 @@ implements ContainerLaunchContext {
   }
   
   private void mergeLocalToBuilder() {
-    if (this.containerId != null && 
-        !((ContainerIdPBImpl)containerId).getProto().equals(
-            builder.getContainerId())) {
-      builder.setContainerId(convertToProtoFormat(this.containerId));
-    }
-    if (this.resource != null && 
-        !((ResourcePBImpl)this.resource).getProto().equals(
-            builder.getResource())) {
-      builder.setResource(convertToProtoFormat(this.resource));
-    }
     if (this.localResources != null) {
       addLocalResourcesToProto();
     }
@@ -119,28 +103,6 @@ implements ContainerLaunchContext {
       builder = ContainerLaunchContextProto.newBuilder(proto);
     }
     viaProto = false;
-  }
-    
-  
-  @Override
-  public Resource getResource() {
-    ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.resource != null) {
-      return this.resource;
-    }
-    if (!p.hasResource()) {
-      return null;
-    }
-    this.resource = convertFromProtoFormat(p.getResource());
-    return this.resource;
-  }
-
-  @Override
-  public void setResource(Resource resource) {
-    maybeInitBuilder();
-    if (resource == null) 
-      builder.clearResource();
-    this.resource = resource;
   }
   
   @Override
@@ -196,26 +158,6 @@ implements ContainerLaunchContext {
       return;
     }
     builder.setUser((user));
-  }
-  @Override
-  public ContainerId getContainerId() {
-    ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.containerId != null) {
-      return this.containerId;
-    }
-    if (!p.hasContainerId()) {
-      return null;
-    }
-    this.containerId = convertFromProtoFormat(p.getContainerId());
-    return this.containerId;
-  }
-
-  @Override
-  public void setContainerId(ContainerId containerId) {
-    maybeInitBuilder();
-    if (containerId == null) 
-      builder.clearContainerId();
-    this.containerId = containerId;
   }
   
   @Override
@@ -299,11 +241,12 @@ implements ContainerLaunchContext {
   @Override
   public void setContainerTokens(ByteBuffer containerTokens) {
     maybeInitBuilder();
-    if (containerTokens == null)
+    if (containerTokens == null) {
       builder.clearContainerTokens();
+    }
     this.containerTokens = containerTokens;
   }
-  
+
   @Override
   public Map<String, ByteBuffer> getServiceData() {
     initServiceData();
@@ -498,22 +441,6 @@ implements ContainerLaunchContext {
     initApplicationACLs();
     this.applicationACLS.clear();
     this.applicationACLS.putAll(appACLs);
-  }
-
-  private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
-    return new ResourcePBImpl(p);
-  }
-
-  private ResourceProto convertToProtoFormat(Resource t) {
-    return ((ResourcePBImpl)t).getProto();
-  }
-
-  private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
-    return new ContainerIdPBImpl(p);
-  }
-
-  private ContainerIdProto convertToProtoFormat(ContainerId t) {
-    return ((ContainerIdPBImpl)t).getProto();
   }
 
   private LocalResourcePBImpl convertFromProtoFormat(LocalResourceProto p) {

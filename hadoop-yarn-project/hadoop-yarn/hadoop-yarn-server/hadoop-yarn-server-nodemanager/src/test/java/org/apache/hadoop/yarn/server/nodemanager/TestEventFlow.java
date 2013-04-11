@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -43,6 +44,8 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
+
 
 public class TestEventFlow {
 
@@ -117,12 +120,15 @@ public class TestEventFlow {
     applicationAttemptId.setApplicationId(applicationId);
     applicationAttemptId.setAttemptId(0);
     cID.setApplicationAttemptId(applicationAttemptId);
-    launchContext.setContainerId(cID);
+    Container mockContainer = mock(Container.class);
+    when(mockContainer.getId()).thenReturn(cID);
+    when(mockContainer.getResource()).thenReturn(recordFactory
+        .newRecordInstance(Resource.class));
     launchContext.setUser("testing");
-    launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
+    request.setContainer(mockContainer);
     containerManager.startContainer(request);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,

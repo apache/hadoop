@@ -14,6 +14,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-536. Removed the unused objects ContainerStatus and ContainerStatus from
     Container which also don't belong to the container. (Xuan Gong via vinodkv)
 
+    YARN-486. Changed NM's startContainer API to accept Container record given by
+    RM as a direct parameter instead of as part of the ContainerLaunchContext
+    record. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS

@@ -134,7 +134,7 @@ public class TestApplicationMasterLauncher {
     Assert.assertEquals(app.getSubmitTime(),
         containerManager.submitTimeAtContainerManager);
     Assert.assertEquals(app.getRMAppAttempt(appAttemptId)
-        .getSubmissionContext().getAMContainerSpec().getContainerId()
+        .getMasterContainer().getId()
         .toString(), containerManager.containerIdAtContainerManager);
     Assert.assertEquals(nm1.getNodeId().getHost(),
         containerManager.nmHostAtContainerManager);

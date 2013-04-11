@@ -249,10 +249,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       // Create RMApp
       application =
           new RMAppImpl(applicationId, rmContext, this.conf,
-            submissionContext.getApplicationName(),
-            submissionContext.getUser(), submissionContext.getQueue(),
-            submissionContext, this.scheduler, this.masterService,
-            submitTime);
+              submissionContext.getApplicationName(),
+              submissionContext.getAMContainerSpec().getUser(),
+              submissionContext.getQueue(),
+              submissionContext, this.scheduler, this.masterService,
+              submitTime);
 
       // Sanity check - duplicate?
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 

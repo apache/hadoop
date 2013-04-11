@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 
 public interface Container extends EventHandler<ContainerEvent> {
@@ -44,4 +45,6 @@ public interface Container extends EventHandler<ContainerEvent> {
   ContainerStatus cloneAndGetContainerStatus();
 
   String toString();
+
+  Resource getResource();
 }

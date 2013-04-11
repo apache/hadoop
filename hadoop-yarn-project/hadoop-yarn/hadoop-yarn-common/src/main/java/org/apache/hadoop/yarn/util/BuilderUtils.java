@@ -284,16 +284,13 @@ public class BuilderUtils {
   }
 
   public static ContainerLaunchContext newContainerLaunchContext(
-      ContainerId containerID, String user, Resource assignedCapability,
-      Map<String, LocalResource> localResources,
+      String user, Map<String, LocalResource> localResources,
       Map<String, String> environment, List<String> commands,
-      Map<String, ByteBuffer> serviceData, ByteBuffer containerTokens,
+      Map<String, ByteBuffer> serviceData,  ByteBuffer containerTokens,
       Map<ApplicationAccessType, String> acls) {
     ContainerLaunchContext container = recordFactory
         .newRecordInstance(ContainerLaunchContext.class);
-    container.setContainerId(containerID);
     container.setUser(user);
-    container.setResource(assignedCapability);
     container.setLocalResources(localResources);
     container.setEnvironment(environment);
     container.setCommands(commands);
