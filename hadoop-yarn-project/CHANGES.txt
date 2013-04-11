@@ -1,54 +1,5 @@
 Hadoop YARN Change Log
 
-Release 2.0.5-beta - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    YARN-365. Change NM heartbeat handling to not generate a scheduler event
-    on each heartbeat. (Xuan Gong via sseth)
-
-    YARN-380. Fix yarn node -status output to be better readable. (Omkar Vinit
-    Joshi via vinodkv)
-
-    YARN-410. Fixed RM UI so that the new lines diagnostics for a failed app on
-    the per-application page are translated to html line breaks. (Omkar Vinit
-    Joshi via vinodkv)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    YARN-383. AMRMClientImpl should handle null rmClient in stop()
-    (Hitesh Shah via sseth)
-
-    YARN-385. Add missing fields - location and #containers to
-    ResourceRequestPBImpl's toString(). (Sandy Ryza via sseth)
-
-    YARN-377. Use the new StringUtils methods added by HADOOP-9252 and fix
-    TestContainersMonitor.  (Chris Nauroth via szetszwo)
-
-    YARN-391. Formatting fixes for LCEResourceHandler classes.
-    (Steve Loughran via sseth)
-
-    YARN-390. ApplicationCLI and NodeCLI hard-coded platform-specific line
-    separator causes test failures on Windows. (Chris Nauroth via suresh)
-
-    YARN-406. Fix TestRackResolver to function in networks where "host1"
-    resolves to a valid host. (Hitesh Shah via sseth)
-
-    YARN-376. Fixes a bug which would prevent the NM knowing about completed
-    containers and applications. (Jason Lowe via sseth)
-
-    YARN-196. Nodemanager should be more robust in handling connection failure
-    to ResourceManager when a cluster is started (Xuan Gong via hitesh)
-
-    YARN-485. TestProcfsProcessTree#testProcessTree() doesn't wait long enough 
-    for the process to die. (kkambatl via tucu)
- 
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

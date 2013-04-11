@@ -1,59 +1,5 @@
 Hadoop HDFS Change Log
 
-Release 2.0.5-beta - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
-    configured to use LDAP and LDAP has issues. (Xiaobo Peng, suresh)
-
-    HDFS-4304. Make FSEditLogOp.MAX_OP_SIZE configurable. (Colin Patrick
-    McCabe via atm)
-
-    HDFS-4518. Finer grained metrics for HDFS capacity.
-    (Arpit Agarwal via suresh)
-
-    HDFS-4519. Support overriding jsvc binary and log file locations
-    when launching secure datanode. (Chris Nauroth via suresh)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-    
-    HDFS-4470. Several HDFS tests attempt file operations on invalid HDFS
-    paths when running on Windows. (Chris Nauroth via suresh)
-
-    HDFS-4471. Namenode WebUI file browsing does not work with wildcard
-    addresses configured. (Andrew Wang via atm)
-
-    HDFS-4342. Directories configured in dfs.namenode.edits.dir.required
-    but not in dfs.namenode.edits.dir are silently ignored.  (Arpit Agarwal
-    via szetszwo)
-
-    HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
-    between delete and replication of same file. (umamahesh)
-
-    HDFS-4269. DatanodeManager#registerDatanode rejects all datanode
-    registrations from localhost in single-node developer setup  (Chris
-    Nauroth)
-
-    HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
-    containing non-ASCII strings. (Colin Patrick McCabe via atm)
-
-    HDFS-4541. Set hadoop.log.dir and hadoop.id.str when starting secure
-    datanode to write the logs to right dir by default. (Arpit Gupta via
-    suresh)
-
-    HDFS-4540. Namenode http server should use the web authentication 
-    keytab for spnego principal. (Arpit Gupta via suresh)
-
-    HDFS-4544. Error in deleting blocks should not do check disk, for
-    all types of errors. (Arpit Agarwal via suresh)
-
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
