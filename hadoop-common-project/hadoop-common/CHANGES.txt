@@ -617,6 +617,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9429. TestConfiguration fails with IBM JAVA. (Amir Sanjar via
     suresh)
 
+    HADOOP-9471. hadoop-client wrongfully excludes jetty-util JAR, 
+    breaking webhdfs. (tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
