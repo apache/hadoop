@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 2.0.4-beta - UNRELEASED
+Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -24,6 +24,9 @@ Release 2.0.4-beta - UNRELEASED
 
     MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
     (Sandy Ryza via tomwhite)
+
+    MAPREDUCE-5094. Disabled memory monitoring by default in MiniMRYarnCluster
+    to avoid some downstream tests failing. (Siddharth Seth via vinodkv)
 
 Release 2.0.3-alpha - 2013-02-06 
 
