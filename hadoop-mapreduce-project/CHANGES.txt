@@ -185,6 +185,9 @@ Release 2.0.5-beta - UNRELEASED
     history, instaed of simulating state machine events.
     (Jason Lowe and Robert Parker via sseth)
 
+    MAPREDUCE-4981. Add WordMean, WordMedian, WordStandardDeviation
+    to ExamplesDriver. (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
