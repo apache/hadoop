@@ -8,6 +8,9 @@ Release 2.0.5-beta - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
+    tasks in Gridmix. (amarrk via tgraves)
+
     MAPREDUCE-5033. mapred shell script should respect usage flags
     (--help -help -h). (Andrew Wang via atm)
 
@@ -19,6 +22,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-4875. coverage fixing for org.apache.hadoop.mapred 
     (Aleksey Gorshkov via bobby)
+
+    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
+    acmurthy)
 
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for
     faster job submission. (amarrk via tgraves)
@@ -94,9 +100,6 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5077. Remove mapreduce.util.ResourceCalculatorPlugin and related
     code. (Karthik Kambatla via sseth)
 
-    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
-    tasks in Gridmix. (amarrk via tgraves)
-
     MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk via tgraves)
 
     MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
@@ -111,8 +114,8 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
     sortFinished times when needed. (Ravi Gummadi via tgraves)
 
-    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
-    (Sandy Ryza via tomwhite)
+    MAPREDUCE-5138. Fix LocalDistributedCacheManager after YARN-112. (Omkar Vinit
+    Joshi via vinodkv)
 
     MAPREDUCE-5086. MR app master deletes staging dir when sent a reboot
     command from the RM. (Jian He via jlowe)
@@ -125,12 +128,12 @@ Release 2.0.4-alpha - UNRELEASED
 
   IMPROVEMENTS
 
-    MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
-    acmurthy)
-
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-5006. Fix failing streaming tests due to MAPREDUCE-4994.
+    (Sandy Ryza via tomwhite)
 
     MAPREDUCE-5088. MR Client gets an renewer token exception while Oozie is
     submitting a job (Daryn Sharp via cos)
@@ -141,9 +144,6 @@ Release 2.0.4-alpha - UNRELEASED
 
     MAPREDUCE-5083. MiniMRCluster should use a random component when creating an
     actual cluster (Siddharth Seth via hitesh)
-
-    MAPREDUCE-5138. Fix LocalDistributedCacheManager after YARN-112. (Omkar Vinit
-    Joshi via vinodkv)
 
 Release 2.0.3-alpha - 2013-02-06 
 
