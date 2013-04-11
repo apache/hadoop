@@ -15,11 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event;
 
-enum ResourceState {
-  INIT,
-  DOWNLOADING,
-  LOCALIZED,
-  FAILED
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
+
+/**
+ * This event is sent by the localizer in case resource localization fails for
+ * the requested resource.
+ */
+public class ResourceFailedLocalizationEvent extends ResourceEvent {
+
+  private Throwable cause;
+
+  public ResourceFailedLocalizationEvent(LocalResourceRequest rsrc,
+      Throwable cause) {
+    super(rsrc, ResourceEventType.LOCALIZATION_FAILED);
+    this.cause = cause;
+  }
+
+  public Throwable getCause() {
+    return cause;
+  }
 }

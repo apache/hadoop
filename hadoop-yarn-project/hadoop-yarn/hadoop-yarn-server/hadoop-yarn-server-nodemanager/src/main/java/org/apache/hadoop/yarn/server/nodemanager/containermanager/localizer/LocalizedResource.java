@@ -32,10 +32,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceLocalizedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceFailedLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
@@ -89,6 +91,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
     .addTransition(ResourceState.DOWNLOADING,
         EnumSet.of(ResourceState.DOWNLOADING, ResourceState.INIT),
         ResourceEventType.RELEASE, new ReleasePendingTransition())
+    .addTransition(ResourceState.DOWNLOADING, ResourceState.FAILED,
+        ResourceEventType.LOCALIZATION_FAILED, new FetchFailedTransition())
 
     // From LOCALIZED (ref >= 0, on disk)
     .addTransition(ResourceState.LOCALIZED, ResourceState.LOCALIZED,
@@ -126,12 +130,14 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
   }
 
   private void release(ContainerId container) {
-    if (!ref.remove(container)) {
-      LOG.info("Attempt to release claim on " + this +
-               " from unregistered container " + container);
-      assert false; // TODO: FIX
+    if (ref.remove(container)) {
+      // updating the timestamp only in case of success.
+      timestamp.set(currentTime());
+    } else {
+      LOG.info("Container " + container
+          + " doesn't exist in the container list of the Resource " + this
+          + " to which it sent RELEASE event");
     }
-    timestamp.set(currentTime());
   }
 
   private long currentTime() {
@@ -246,6 +252,25 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
         rsrc.dispatcher.getEventHandler().handle(
             new ContainerResourceLocalizedEvent(
               container, rsrc.rsrc, rsrc.localPath));
+      }
+    }
+  }
+
+  /**
+   * Resource localization failed, notify waiting containers.
+   */
+  @SuppressWarnings("unchecked")
+  private static class FetchFailedTransition extends ResourceTransition {
+    @Override
+    public void transition(LocalizedResource rsrc, ResourceEvent event) {
+      ResourceFailedLocalizationEvent failedEvent =
+          (ResourceFailedLocalizationEvent) event;
+      Queue<ContainerId> containers = rsrc.ref;
+      Throwable failureCause = failedEvent.getCause();
+      for (ContainerId container : containers) {
+        rsrc.dispatcher.getEventHandler().handle(
+          new ContainerResourceFailedEvent(container, failedEvent
+            .getLocalResourceRequest(), failureCause));
       }
     }
   }

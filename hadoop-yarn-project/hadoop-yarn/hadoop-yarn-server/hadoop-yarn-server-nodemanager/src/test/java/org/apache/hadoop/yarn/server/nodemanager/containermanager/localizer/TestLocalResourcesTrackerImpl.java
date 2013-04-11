@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import static org.mockito.Mockito.any;
+import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,11 +42,15 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceLocalizedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceFailedLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
@@ -224,6 +229,142 @@ public class TestLocalResourcesTrackerImpl {
     }
   }
 
+  @Test(timeout = 1000)
+  @SuppressWarnings("unchecked")
+  public void testLocalResourceCache() {
+    String user = "testuser";
+    DrainDispatcher dispatcher = null;
+    try {
+      Configuration conf = new Configuration();
+      dispatcher = createDispatcher(conf);
+
+      EventHandler<LocalizerEvent> localizerEventHandler =
+          mock(EventHandler.class);
+      EventHandler<ContainerEvent> containerEventHandler =
+          mock(EventHandler.class);
+
+      // Registering event handlers.
+      dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+      dispatcher.register(ContainerEventType.class, containerEventHandler);
+
+      ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc =
+          new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>();
+      LocalResourcesTracker tracker =
+          new LocalResourcesTrackerImpl(user, dispatcher, localrsrc, true, conf);
+
+      LocalResourceRequest lr =
+          createLocalResourceRequest(user, 1, 1, LocalResourceVisibility.PUBLIC);
+
+      // Creating 2 containers for same application which will be requesting
+      // same local resource.
+      // Container 1 requesting local resource.
+      ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+      LocalizerContext lc1 = new LocalizerContext(user, cId1, null);
+      ResourceEvent reqEvent1 =
+          new ResourceRequestEvent(lr, LocalResourceVisibility.PRIVATE, lc1);
+
+      // No resource request is initially present in local cache
+      Assert.assertEquals(0, localrsrc.size());
+
+      // Container-1 requesting local resource.
+      tracker.handle(reqEvent1);
+
+      // New localized Resource should have been added to local resource map
+      // and the requesting container will be added to its waiting queue.
+      Assert.assertEquals(1, localrsrc.size());
+      Assert.assertTrue(localrsrc.containsKey(lr));
+      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
+      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId1));
+      Assert.assertEquals(ResourceState.DOWNLOADING, localrsrc.get(lr)
+        .getState());
+
+      // Container 2 requesting the resource
+      ContainerId cId2 = BuilderUtils.newContainerId(1, 1, 1, 2);
+      LocalizerContext lc2 = new LocalizerContext(user, cId2, null);
+      ResourceEvent reqEvent2 =
+          new ResourceRequestEvent(lr, LocalResourceVisibility.PRIVATE, lc2);
+      tracker.handle(reqEvent2);
+
+      // Container 2 should have been added to the waiting queue of the local
+      // resource
+      Assert.assertEquals(2, localrsrc.get(lr).getRefCount());
+      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId2));
+
+      // Failing resource localization
+      ResourceEvent resourceFailedEvent =
+          new ResourceFailedLocalizationEvent(lr, new Exception("test"));
+      
+      // Backing up the resource to track its state change as it will be
+      // removed after the failed event.
+      LocalizedResource localizedResource = localrsrc.get(lr);
+      
+      tracker.handle(resourceFailedEvent);
+
+      // After receiving failed resource event; all waiting containers will be
+      // notified with Container Resource Failed Event.
+      Assert.assertEquals(0, localrsrc.size());
+      verify(containerEventHandler, times(2)).handle(
+        isA(ContainerResourceFailedEvent.class));
+      Assert.assertEquals(ResourceState.FAILED, localizedResource.getState());
+
+      // Container 1 trying to release the resource (This resource is already
+      // deleted from the cache. This call should return silently without
+      // exception.
+      ResourceReleaseEvent relEvent1 = new ResourceReleaseEvent(lr, cId1);
+      tracker.handle(relEvent1);
+
+      // Container-3 now requests for the same resource. This request call
+      // is coming prior to Container-2's release call.
+      ContainerId cId3 = BuilderUtils.newContainerId(1, 1, 1, 3);
+      LocalizerContext lc3 = new LocalizerContext(user, cId3, null);
+      ResourceEvent reqEvent3 =
+          new ResourceRequestEvent(lr, LocalResourceVisibility.PRIVATE, lc3);
+      tracker.handle(reqEvent3);
+
+      // Local resource cache now should have the requested resource and the
+      // number of waiting containers should be 1.
+      Assert.assertEquals(1, localrsrc.size());
+      Assert.assertTrue(localrsrc.containsKey(lr));
+      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
+      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId3));
+
+      // Container-2 Releases the resource
+      ResourceReleaseEvent relEvent2 = new ResourceReleaseEvent(lr, cId2);
+      tracker.handle(relEvent2);
+
+      // Making sure that there is no change in the cache after the release.
+      Assert.assertEquals(1, localrsrc.size());
+      Assert.assertTrue(localrsrc.containsKey(lr));
+      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
+      Assert.assertTrue(localrsrc.get(lr).ref.contains(cId3));
+      
+      // Sending ResourceLocalizedEvent to tracker. In turn resource should
+      // send Container Resource Localized Event to waiting containers.
+      Path localizedPath = new Path("/tmp/file1");
+      ResourceLocalizedEvent localizedEvent =
+          new ResourceLocalizedEvent(lr, localizedPath, 123L);
+      tracker.handle(localizedEvent);
+      
+      // Verifying ContainerResourceLocalizedEvent .
+      verify(containerEventHandler, times(1)).handle(
+        isA(ContainerResourceLocalizedEvent.class));
+      Assert.assertEquals(ResourceState.LOCALIZED, localrsrc.get(lr)
+        .getState());
+      Assert.assertEquals(1, localrsrc.get(lr).getRefCount());
+      
+      // Container-3 releasing the resource.
+      ResourceReleaseEvent relEvent3 = new ResourceReleaseEvent(lr, cId3);
+      tracker.handle(relEvent3);
+      
+      Assert.assertEquals(0, localrsrc.get(lr).getRefCount());
+      
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
   @Test(timeout = 100000)
   @SuppressWarnings("unchecked")
   public void testHierarchicalLocalCacheDirectories() {
@@ -266,19 +407,25 @@ public class TestLocalResourcesTrackerImpl {
       // Simulate the process of localization of lr1
       Path hierarchicalPath1 = tracker.getPathForLocalization(lr1, localDir);
       // Simulate lr1 getting localized
-      ResourceLocalizedEvent rle =
+      ResourceLocalizedEvent rle1 =
           new ResourceLocalizedEvent(lr1,
               new Path(hierarchicalPath1.toUri().toString() +
                   Path.SEPARATOR + "file1"), 120);
-      tracker.handle(rle);
+      tracker.handle(rle1);
       // Localization successful.
-      tracker.localizationCompleted(lr1, true);
 
       LocalResourceRequest lr2 = createLocalResourceRequest(user, 3, 3,
           LocalResourceVisibility.PUBLIC);
+      // Container 1 requests lr2 to be localized.
+      ResourceEvent reqEvent2 =
+          new ResourceRequestEvent(lr2, LocalResourceVisibility.PUBLIC, lc1);
+      tracker.handle(reqEvent2);
+
       Path hierarchicalPath2 = tracker.getPathForLocalization(lr2, localDir);
       // localization failed.
-      tracker.localizationCompleted(lr2, false);
+      ResourceFailedLocalizationEvent rfe2 =
+          new ResourceFailedLocalizationEvent(lr2, new Exception("Test"));
+      tracker.handle(rfe2);
 
       /*
        * The path returned for two localization should be different because we
@@ -292,7 +439,11 @@ public class TestLocalResourcesTrackerImpl {
           LocalResourceVisibility.PUBLIC, lc1);
       tracker.handle(reqEvent3);
       Path hierarchicalPath3 = tracker.getPathForLocalization(lr3, localDir);
-      tracker.localizationCompleted(lr3, true);
+      // localization successful
+      ResourceLocalizedEvent rle3 =
+          new ResourceLocalizedEvent(lr3, new Path(hierarchicalPath3.toUri()
+            .toString() + Path.SEPARATOR + "file3"), 120);
+      tracker.handle(rle3);
 
       // Verifying that path created is inside the subdirectory
       Assert.assertEquals(hierarchicalPath3.toUri().toString(),
