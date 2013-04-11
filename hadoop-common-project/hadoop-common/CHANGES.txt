@@ -104,6 +104,9 @@ Release 2.0.4-alpha - UNRELEASED
     HADOOP-9379. capture the ulimit info after printing the log to the 
     console. (Arpit Gupta via suresh)
 
+    HADOOP-9471. hadoop-client wrongfully excludes jetty-util JAR, 
+    breaking webhdfs. (tucu)
+
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
