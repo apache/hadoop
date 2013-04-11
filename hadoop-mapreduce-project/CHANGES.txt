@@ -192,6 +192,9 @@ Release 2.0.5-beta - UNRELEASED
     time delta between the end of the shuffle and the start of the reduce.
     (Omkar Vinit Joshi via vinodkv)
 
+    MAPREDUCE-4985. Add compression option to TestDFSIO usage.
+    (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
