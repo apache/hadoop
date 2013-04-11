@@ -227,6 +227,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-539. Addressed memory leak of LocalResource objects NM when a resource
     localization fails. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-319. Submitting a job to a fair scheduler queue for which the user
+    does not have permission causes the client to wait forever.
+    (shenhong via tomwhite)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -443,10 +447,6 @@ Release 2.0.3-alpha - 2013-02-06
 
     YARN-302. Fair scheduler assignmultiple should default to false. (sandyr via tucu)
     
-    YARN-319. Submitting a job to a fair scheduler queue for which the user
-    does not have permission causes the client to wait forever.
-    (shenhong via tomwhite)
-
     YARN-372. Move InlineDispatcher from hadoop-yarn-server-resourcemanager to
     hadoop-yarn-common (sseth via hitesh)
 
