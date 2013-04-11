@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.concurrent.BrokenBarrierException;
@@ -744,7 +745,12 @@ public class TestJobImpl {
         setAssertValue(false);
         return;
       }
-      if (!workflowAdjacencies.equals(jsEvent.getWorkflowAdjacencies())) {
+     
+      String[] wrkflowAdj = workflowAdjacencies.split(" ");
+      String[] jswrkflowAdj = jsEvent.getWorkflowAdjacencies().split(" ");
+      Arrays.sort(wrkflowAdj);
+      Arrays.sort(jswrkflowAdj);
+      if (!Arrays.equals(wrkflowAdj, jswrkflowAdj)) {
         setAssertValue(false);
         return;
       }
