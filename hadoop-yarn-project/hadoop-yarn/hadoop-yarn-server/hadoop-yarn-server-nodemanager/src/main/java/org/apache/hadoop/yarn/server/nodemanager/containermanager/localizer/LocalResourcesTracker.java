@@ -40,8 +40,5 @@ interface LocalResourcesTracker
 
   String getUser();
 
-  // TODO: Remove this in favour of EventHandler.handle
-  void localizationCompleted(LocalResourceRequest req, boolean success);
-
   long nextUniqueNumber();
 }

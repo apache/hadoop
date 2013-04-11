@@ -159,6 +159,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-534. Change RM restart recovery to also account for AM max-attempts 
     configuration after the restart. (Jian He via vinodkv)
 
+    YARN-539. Addressed memory leak of LocalResource objects NM when a resource
+    localization fails. (Omkar Vinit Joshi via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
