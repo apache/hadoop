@@ -144,7 +144,10 @@ public class TestAMWebApp {
   @Test public void testTaskView() {
     AppContext appContext = new TestAppContext();
     Map<String, String> params = getTaskParams(appContext);
-    WebAppTests.testPage(TaskPage.class, AppContext.class, appContext, params);
+    App app = new App(appContext);
+    app.setJob(appContext.getAllJobs().values().iterator().next());
+    app.setTask(app.getJob().getTasks().values().iterator().next());
+    WebAppTests.testPage(TaskPage.class, App.class, app, params);
   }
 
   public static Map<String, String> getJobParams(AppContext appContext) {
