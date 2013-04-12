@@ -47,13 +47,13 @@ public class TestSymLink
   String OUTPUT_DIR = "/testing-streaming/out";
   String CACHE_FILE = "/testing-streaming/cache.txt";
   String input = "check to see if we can read this none reduce";
-  String map = "xargs cat ";
-  String reduce = "cat";
+  String map = TestStreaming.XARGS_CAT;
+  String reduce = TestStreaming.CAT;
   String mapString = "testlink\n";
   String cacheString = "This is just the cache string";
   StreamJob job;
 
-  @Test (timeout = 60000)
+  @Test (timeout = 120000)
   public void testSymLink() throws Exception
   {
     boolean mayExit = false;
