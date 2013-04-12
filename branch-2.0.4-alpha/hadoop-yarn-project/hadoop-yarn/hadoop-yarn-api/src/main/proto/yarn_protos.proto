@@ -1,0 +1,332 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "YarnProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "Security.proto";
+
+message YarnRemoteExceptionProto {
+  optional string message = 1;
+  optional string trace = 2;
+  optional string class_name = 3;
+  optional YarnRemoteExceptionProto cause = 4;
+}
+
+message ApplicationIdProto {
+  optional int32 id = 1;
+  optional int64 cluster_timestamp = 2;
+}
+
+message ApplicationAttemptIdProto {
+  optional ApplicationIdProto application_id = 1;
+  optional int32 attemptId = 2;
+}
+
+message ContainerIdProto {
+  optional ApplicationIdProto app_id = 1;
+  optional ApplicationAttemptIdProto app_attempt_id = 2;
+  optional int32 id = 3;
+}
+
+message ResourceProto {
+  optional int32 memory = 1;
+  optional int32 virtual_cores = 2;
+}
+
+message PriorityProto {
+  optional int32 priority = 1;
+}
+
+enum ContainerStateProto {
+  C_NEW = 1;
+  C_RUNNING = 2;
+  C_COMPLETE = 3;
+}
+
+message ContainerProto {
+  optional ContainerIdProto id = 1;
+  optional NodeIdProto nodeId = 2;
+  optional string node_http_address = 3;
+  optional ResourceProto resource = 4;
+  optional PriorityProto priority = 5;
+  optional ContainerStateProto state = 6;
+  optional hadoop.common.TokenProto container_token = 7;
+  optional ContainerStatusProto container_status = 8;
+}
+
+enum YarnApplicationStateProto {
+  NEW = 1;
+  SUBMITTED = 2;
+  RUNNING = 3;
+  FINISHED = 4;
+  FAILED = 5;
+  KILLED = 6;
+  ACCEPTED = 7;
+}
+
+enum FinalApplicationStatusProto {
+  APP_UNDEFINED = 0;
+  APP_SUCCEEDED = 1;
+  APP_FAILED = 2;
+  APP_KILLED = 3;
+}
+
+message ApplicationStatusProto {
+  optional int32 response_id = 1;
+  optional ApplicationAttemptIdProto application_attempt_id = 2;
+  optional float progress = 3;
+}
+
+message ApplicationMasterProto {
+  optional ApplicationIdProto application_id = 1;
+  optional string host = 2;
+  optional int32 rpc_port = 3;
+  optional string trackingUrl = 4;
+  optional ApplicationStatusProto status = 5;
+  optional YarnApplicationStateProto state = 6;
+  optional hadoop.common.TokenProto client_token = 7;
+  optional int32 containerCount = 8;
+  optional int32 amFailCount = 9;
+  optional string diagnostics = 10 [default = ""];
+}
+
+message URLProto {
+  optional string scheme = 1;
+  optional string host = 2;
+  optional int32 port = 3;
+  optional string file = 4;
+}
+
+enum LocalResourceVisibilityProto {
+  PUBLIC = 1;
+  PRIVATE = 2;
+  APPLICATION = 3;
+}
+
+enum LocalResourceTypeProto {
+  ARCHIVE = 1;
+  FILE = 2;
+  PATTERN = 3;
+}
+
+message LocalResourceProto {
+  optional URLProto resource = 1;
+  optional int64 size = 2;
+  optional int64 timestamp = 3;
+  optional LocalResourceTypeProto type = 4;
+  optional LocalResourceVisibilityProto visibility = 5;
+  optional string pattern = 6;
+}
+
+message ApplicationResourceUsageReportProto {
+  optional int32 num_used_containers = 1;
+  optional int32 num_reserved_containers = 2;
+  optional ResourceProto used_resources = 3;
+  optional ResourceProto reserved_resources = 4;
+  optional ResourceProto needed_resources = 5;
+}
+
+message ApplicationReportProto {
+  optional ApplicationIdProto applicationId = 1;
+  optional string user = 2;
+  optional string queue = 3;
+  optional string name = 4;
+  optional string host = 5;
+  optional int32 rpc_port = 6;
+  optional hadoop.common.TokenProto client_token = 7;
+  optional ApplicationStatusProto status = 8;
+  optional YarnApplicationStateProto yarn_application_state = 9;
+  optional ContainerProto masterContainer = 10;
+  optional string trackingUrl = 11;
+  optional string diagnostics = 12 [default = "N/A"];
+  optional int64 startTime = 13;
+  optional int64 finishTime = 14;
+  optional FinalApplicationStatusProto final_application_status = 15;
+  optional ApplicationResourceUsageReportProto app_resource_Usage = 16;
+  optional string originalTrackingUrl = 17;
+  optional ApplicationAttemptIdProto currentApplicationAttemptId = 18;
+}
+
+enum NodeStateProto {
+  NS_NEW = 1; 
+  NS_RUNNING = 2; 
+  NS_UNHEALTHY = 3;
+  NS_DECOMMISSIONED = 4; 
+  NS_LOST = 5;
+  NS_REBOOTED = 6;
+}
+
+message NodeIdProto {
+  optional string host = 1;
+  optional int32 port = 2;
+}
+
+message NodeHealthStatusProto {
+  optional bool is_node_healthy = 1;
+  optional string health_report = 2;
+  optional int64 last_health_report_time = 3;
+}
+
+message NodeReportProto {
+  optional NodeIdProto nodeId = 1;
+  optional string httpAddress = 2;
+  optional string rackName = 3;
+  optional ResourceProto used = 4;
+  optional ResourceProto capability = 5;
+  optional int32 numContainers = 6;
+  optional NodeHealthStatusProto node_health_status = 8;
+  optional NodeStateProto node_state = 9;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+////// From AM_RM_Protocol /////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ResourceRequestProto {
+  optional PriorityProto priority = 1;
+  optional string host_name = 2;
+  optional ResourceProto capability = 3;
+  optional int32 num_containers = 4;
+}
+
+message AMResponseProto {
+  optional bool reboot = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto allocated_containers = 3;
+  repeated ContainerStatusProto completed_container_statuses = 4;
+  optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+////// From client_RM_Protocol /////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ApplicationSubmissionContextProto {
+  optional ApplicationIdProto application_id = 1;
+  optional string application_name = 2 [default = "N/A"];
+  optional string user = 3;
+  optional string queue = 4 [default = "default"];
+  optional PriorityProto priority = 5;
+  optional ContainerLaunchContextProto am_container_spec = 6;
+  optional bool cancel_tokens_when_complete = 7 [default = true];
+  optional bool unmanaged_am = 8 [default = false];
+}
+
+enum ApplicationAccessTypeProto {
+  APPACCESS_VIEW_APP = 1;
+  APPACCESS_MODIFY_APP = 2;
+}
+
+message ApplicationACLMapProto {
+  optional ApplicationAccessTypeProto accessType = 1;
+  optional string acl = 2 [default = " "];
+}
+
+message YarnClusterMetricsProto {
+  optional int32 num_node_managers = 1;
+}
+
+enum QueueStateProto {
+  Q_STOPPED = 1;
+  Q_RUNNING = 2;
+}
+
+message QueueInfoProto {
+  optional string queueName = 1;
+  optional float capacity = 2;
+  optional float maximumCapacity = 3;
+  optional float currentCapacity = 4;
+  optional QueueStateProto state = 5;
+  repeated QueueInfoProto childQueues = 6;
+  repeated ApplicationReportProto applications = 7;
+}
+
+enum QueueACLProto {
+  QACL_SUBMIT_APPLICATIONS = 1;
+  QACL_ADMINISTER_QUEUE = 2;
+}
+
+message QueueUserACLInfoProto {
+  optional string queueName = 1;
+  repeated QueueACLProto userAcls = 2;
+}
+
+////////////////////////////////////////////////////////////////////////
+////// From container_manager //////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+message ContainerLaunchContextProto {
+  optional ContainerIdProto container_id = 1;
+  optional string user = 2;
+  optional ResourceProto resource = 3;
+  repeated StringLocalResourceMapProto localResources = 4;
+  optional bytes container_tokens = 5;
+  repeated StringBytesMapProto service_data = 6;
+  repeated StringStringMapProto environment = 7;
+  repeated string command = 8;
+  repeated ApplicationACLMapProto application_ACLs = 9;
+}
+
+message ContainerStatusProto {
+  optional ContainerIdProto container_id = 1;
+  optional ContainerStateProto state = 2;
+  optional string diagnostics = 3 [default = "N/A"];
+  optional int32 exit_status = 4 [default = -1000];
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
+////// From common//////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message StringURLMapProto {
+  optional string key = 1;
+  optional URLProto value = 2;
+}
+
+message StringLocalResourceMapProto {
+  optional string key = 1;
+  optional LocalResourceProto value = 2;
+}
+
+message StringStringMapProto {
+  optional string key = 1;
+  optional string value = 2;
+}
+
+message StringBytesMapProto {
+  optional string key = 1;
+  optional bytes value = 2;
+}
+
+////////////////////////////////////////////////////////////////////////
+////// From recovery////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ApplicationStateDataProto {
+  optional int64 submit_time = 1;
+  optional ApplicationSubmissionContextProto application_submission_context = 2;
+}
+
+message ApplicationAttemptStateDataProto {
+  optional ApplicationAttemptIdProto attemptId = 1;
+  optional ContainerProto master_container = 2;
+}

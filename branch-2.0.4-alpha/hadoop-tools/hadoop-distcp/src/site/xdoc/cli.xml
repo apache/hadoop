@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <head>
+    <title>Command Line Options</title>
+  </head>
+  <body>
+      <section name="Options Index"> 
+        <table>
+          <tr><th> Flag </th><th> Description </th><th> Notes </th></tr>
+
+          <tr><td><code>-p[rbugp]</code></td>
+              <td>Preserve<br/>
+                  r: replication number<br/>
+                  b: block size<br/>
+                  u: user<br/>
+                  g: group<br/>
+                  p: permission<br/></td>
+              <td>Modification times are not preserved. Also, when
+              <code>-update</code> is specified, status updates will
+              <strong>not</strong> be synchronized unless the file sizes
+              also differ (i.e. unless the file is re-created).
+              </td></tr>
+          <tr><td><code>-i</code></td>
+              <td>Ignore failures</td>
+              <td>As explained in the Appendix, this option
+              will keep more accurate statistics about the copy than the
+              default case. It also preserves logs from failed copies, which
+              can be valuable for debugging. Finally, a failing map will not
+              cause the job to fail before all splits are attempted.
+              </td></tr>
+          <tr><td><code>-log &lt;logdir&gt;</code></td>
+              <td>Write logs to &lt;logdir&gt;</td>
+              <td>DistCp keeps logs of each file it attempts to copy as map
+              output. If a map fails, the log output will not be retained if
+              it is re-executed.
+              </td></tr>
+          <tr><td><code>-m &lt;num_maps&gt;</code></td>
+              <td>Maximum number of simultaneous copies</td>
+              <td>Specify the number of maps to copy data. Note that more maps
+              may not necessarily improve throughput.
+              </td></tr>
+          <tr><td><code>-overwrite</code></td>
+              <td>Overwrite destination</td>
+              <td>If a map fails and <code>-i</code> is not specified, all the
+              files in the split, not only those that failed, will be recopied.
+              As discussed in the Usage documentation, it also changes
+              the semantics for generating destination paths, so users should
+              use this carefully.
+              </td></tr>
+          <tr><td><code>-update</code></td>
+              <td>Overwrite if src size different from dst size</td>
+              <td>As noted in the preceding, this is not a &quot;sync&quot;
+              operation. The only criterion examined is the source and
+              destination file sizes; if they differ, the source file
+              replaces the destination file. As discussed in the
+              Usage documentation, it also changes the semantics for
+              generating destination paths, so users should use this carefully.
+              </td></tr>
+          <tr><td><code>-f &lt;urilist_uri&gt;</code></td>
+              <td>Use list at &lt;urilist_uri&gt; as src list</td>
+              <td>This is equivalent to listing each source on the command
+              line. The <code>urilist_uri</code> list should be a fully
+              qualified URI.
+              </td></tr>
+          <tr><td><code>-filelimit &lt;n&gt;</code></td>
+              <td>Limit the total number of files to be &lt;= n</td>
+              <td><strong>Deprecated!</strong> Ignored in the new DistCp.
+              </td></tr>
+          <tr><td><code>-sizelimit &lt;n&gt;</code></td>
+              <td>Limit the total size to be &lt;= n bytes</td>
+              <td><strong>Deprecated!</strong> Ignored in the new DistCp.
+              </td></tr>
+          <tr><td><code>-delete</code></td>
+              <td>Delete the files existing in the dst but not in src</td>
+              <td>The deletion is done by FS Shell.  So the trash will be used,
+                  if it is enable.
+              </td></tr>
+          <tr><td><code>-strategy {dynamic|uniformsize}</code></td>
+              <td>Choose the copy-strategy to be used in DistCp.</td>
+              <td>By default, uniformsize is used. (i.e. Maps are balanced on the
+                  total size of files copied by each map. Similar to legacy.)
+                  If "dynamic" is specified, <code>DynamicInputFormat</code> is
+                  used instead. (This is described in the Architecture section,
+                  under InputFormats.)
+              </td></tr>
+          <tr><td><code>-bandwidth</code></td>
+                <td>Specify bandwidth per map, in MB/second.</td>
+                <td>Each map will be restricted to consume only the specified
+                    bandwidth. This is not always exact. The map throttles back
+                    its bandwidth consumption during a copy, such that the
+                    <strong>net</strong> bandwidth used tends towards the
+                    specified value.
+                </td></tr>
+          <tr><td><code>-atomic {-tmp &lt;tmp_dir&gt;}</code></td>
+                <td>Specify atomic commit, with optional tmp directory.</td>
+                <td><code>-atomic</code> instructs DistCp to copy the source
+                    data to a temporary target location, and then move the
+                    temporary target to the final-location atomically. Data will
+                    either be available at final target in a complete and consistent
+                    form, or not at all.
+                    Optionally, <code>-tmp</code> may be used to specify the
+                    location of the tmp-target. If not specified, a default is
+                    chosen. <strong>Note:</strong> tmp_dir must be on the final
+                    target cluster.
+                </td></tr>
+            <tr><td><code>-mapredSslConf &lt;ssl_conf_file&gt;</code></td>
+                  <td>Specify SSL Config file, to be used with HSFTP source</td>
+                  <td>When using the hsftp protocol with a source, the security-
+                      related properties may be specified in a config-file and
+                      passed to DistCp. &lt;ssl_conf_file&gt; needs to be in
+                      the classpath.
+                  </td></tr>
+            <tr><td><code>-async</code></td>
+                  <td>Run DistCp asynchronously. Quits as soon as the Hadoop
+                  Job is launched.</td>
+                  <td>The Hadoop Job-id is logged, for tracking.
+                  </td></tr>
+        </table>
+      </section>
+  </body>
+</document>

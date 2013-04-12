@@ -1,0 +1,1 @@
+hadoop httpfs secret

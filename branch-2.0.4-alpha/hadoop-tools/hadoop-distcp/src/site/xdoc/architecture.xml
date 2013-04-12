@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+    <head>
+        <title>Architecture of DistCp</title>
+    </head>
+    <body>
+      <section name="Architecture">
+
+        <p>The components of the new DistCp may be classified into the following
+           categories: </p>
+
+        <ul>
+
+          <li>DistCp Driver</li>
+          <li>Copy-listing generator</li>
+          <li>Input-formats and Map-Reduce components</li>
+
+        </ul>
+
+        <subsection name="DistCp Driver">
+          <p>The DistCp Driver components are responsible for:</p>
+
+          <ul>
+            <li>Parsing the arguments passed to the DistCp command on the
+                command-line, via:
+              <ul>
+                <li>OptionsParser, and</li>
+                <li>DistCpOptionsSwitch</li>
+              </ul>
+            </li>
+            <li>Assembling the command arguments into an appropriate
+                DistCpOptions object, and initializing DistCp. These arguments
+                include:
+              <ul>
+                <li>Source-paths</li>
+                <li>Target location</li>
+                <li>Copy options (e.g. whether to update-copy, overwrite, which
+                    file-attributes to preserve, etc.)</li>
+              </ul>
+            </li>
+            <li>Orchestrating the copy operation by:
+              <ul>
+                <li>Invoking the copy-listing-generator to create the list of
+                    files to be copied.</li>
+                <li>Setting up and launching the Hadoop Map-Reduce Job to carry
+                    out the copy.</li>
+                <li>Based on the options, either returning a handle to the
+                    Hadoop MR Job immediately, or waiting till completion.</li>
+              </ul>
+            </li>
+          </ul>
+          <br/>
+
+          <p>The parser-elements are exercised only from the command-line (or if
+             DistCp::run() is invoked). The DistCp class may also be used
+             programmatically, by constructing the DistCpOptions object, and
+             initializing a DistCp object appropriately.</p>
+
+        </subsection>
+
+        <subsection name="Copy-listing generator">
+
+          <p>The copy-listing-generator classes are responsible for creating the
+             list of files/directories to be copied from source. They examine
+             the contents of the source-paths (files/directories, including
+             wild-cards), and record all paths that need copy into a sequence-
+             file, for consumption by the DistCp Hadoop Job. The main classes in
+             this module include:</p>
+
+          <ol>
+
+            <li>CopyListing: The interface that should be implemented by any 
+                copy-listing-generator implementation. Also provides the factory
+                method by which the concrete CopyListing implementation is
+                chosen.</li>
+
+            <li>SimpleCopyListing: An implementation of CopyListing that accepts
+                multiple source paths (files/directories), and recursively lists
+                all the individual files and directories under each, for
+                copy.</li>
+
+            <li>GlobbedCopyListing: Another implementation of CopyListing that
+                expands wild-cards in the source paths.</li>
+
+            <li>FileBasedCopyListing: An implementation of CopyListing that
+                reads the source-path list from a specified file.</li>
+
+          </ol>
+          <p/>
+
+          <p>Based on whether a source-file-list is specified in the
+             DistCpOptions, the source-listing is generated in one of the
+             following ways:</p>
+
+          <ol>
+
+            <li>If there's no source-file-list, the GlobbedCopyListing is used.
+                All wild-cards are expanded, and all the expansions are
+                forwarded to the SimpleCopyListing, which in turn constructs the
+                listing (via recursive descent of each path). </li>
+
+            <li>If a source-file-list is specified, the FileBasedCopyListing is
+                used. Source-paths are read from the specified file, and then
+                forwarded to the GlobbedCopyListing. The listing is then
+                constructed as described above.</li>
+
+          </ol>
+
+          <br/>
+
+          <p>One may customize the method by which the copy-listing is
+             constructed by providing a custom implementation of the CopyListing
+             interface. The behaviour of DistCp differs here from the legacy
+             DistCp, in how paths are considered for copy. </p>
+
+          <p>The legacy implementation only lists those paths that must
+             definitely be copied on to target.
+             E.g. if a file already exists at the target (and -overwrite isn't
+             specified), the file isn't even considered in the Map-Reduce Copy
+             Job. Determining this during setup (i.e. before the Map-Reduce Job)
+             involves file-size and checksum-comparisons that are potentially
+             time-consuming.</p>
+
+          <p>The new DistCp postpones such checks until the Map-Reduce Job, thus
+             reducing setup time. Performance is enhanced further since these
+             checks are parallelized across multiple maps.</p>
+
+        </subsection>
+
+        <subsection name="Input-formats and Map-Reduce components">
+
+          <p> The Input-formats and Map-Reduce components are responsible for
+              the actual copy of files and directories from the source to the
+              destination path. The listing-file created during copy-listing
+              generation is consumed at this point, when the copy is carried
+              out. The classes of interest here include:</p>
+
+          <ul>
+            <li><strong>UniformSizeInputFormat:</strong> This implementation of
+                org.apache.hadoop.mapreduce.InputFormat provides equivalence
+                with Legacy DistCp in balancing load across maps.
+                The aim of the UniformSizeInputFormat is to make each map copy
+                roughly the same number of bytes. Apropos, the listing file is
+                split into groups of paths, such that the sum of file-sizes in
+                each InputSplit is nearly equal to every other map. The splitting
+                isn't always perfect, but its trivial implementation keeps the
+                setup-time low.</li>
+
+            <li><strong>DynamicInputFormat and DynamicRecordReader:</strong>
+                <p> The DynamicInputFormat implements org.apache.hadoop.mapreduce.InputFormat,
+                and is new to DistCp. The listing-file is split into several
+                "chunk-files", the exact number of chunk-files being a multiple
+                of the number of maps requested for in the Hadoop Job. Each map
+                task is "assigned" one of the chunk-files (by renaming the chunk
+                to the task's id), before the Job is launched.</p>
+
+                <p>Paths are read from each chunk using the DynamicRecordReader,
+                and processed in the CopyMapper. After all the paths in a chunk
+                are processed, the current chunk is deleted and a new chunk is
+                acquired. The process continues until no more chunks are
+                available.</p>
+                <p>This "dynamic" approach allows faster map-tasks to consume
+                more paths than slower ones, thus speeding up the DistCp job
+                overall. </p>
+            </li>
+
+            <li><strong>CopyMapper:</strong> This class implements the physical
+                file-copy. The input-paths are checked against the input-options
+                (specified in the Job's Configuration), to determine whether a
+                file needs copy. A file will be copied only if at least one of
+                the following is true:
+              <ul>
+                <li>A file with the same name doesn't exist at target.</li>
+                <li>A file with the same name exists at target, but has a
+                    different file size.</li>
+                <li>A file with the same name exists at target, but has a
+                    different checksum, and -skipcrccheck isn't mentioned.</li>
+                <li>A file with the same name exists at target, but -overwrite
+                    is specified.</li>
+                <li>A file with the same name exists at target, but differs in
+                    block-size (and block-size needs to be preserved.</li>
+              </ul>
+            </li>
+
+            <li><strong>CopyCommitter:</strong>
+                This class is responsible for the commit-phase of the DistCp
+                job, including:
+              <ul>
+                <li>Preservation of directory-permissions (if specified in the
+                    options)</li>
+                <li>Clean-up of temporary-files, work-directories, etc.</li>
+              </ul>
+            </li>
+          </ul>
+        </subsection>
+      </section>
+    </body>
+</document>

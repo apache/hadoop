@@ -1,0 +1,181 @@
+<html>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<body>
+  This package consists of a map/reduce application,
+  <i>distbbp</i>,
+  which computes exact binary digits of the mathematical constant &pi;.
+  distbbp is designed for computing the n<sup>th</sup> bit of &pi;,
+  for large n, say n &gt; 100,000,000.
+  For computing the lower bits of &pi;, consider using <i>bbp</i>.
+
+  <h3>The distbbp Program</h3>
+  The main class is DistBbp
+  and the actually computation is done by DistSum jobs.
+  The steps for launching the jobs are:
+ 
+  <ol>
+    <li>Initialize parameters.</li>
+    <li>Create a list of sums.</li>
+    <li>Read computed values from the given local directory.</li>
+    <li>Remove the computed values from the sums.</li>
+    <li>Partition the remaining sums into computation jobs.</li>
+    <li>Submit the computation jobs to a cluster and then wait for the results.</li>
+    <li>Write job outputs to the given local directory.</li>
+    <li>Combine the job outputs and print the &pi; bits.</li>
+  </ol>
+
+<table><tr valign=top><td width=420>
+  <h3>The Bits of &pi;</h3>
+  <p>
+The table on the right are the results computed by distbbp.
+</p>
+<ul>
+<p><li>Row 0 to Row 7
+<ul><li>They were computed by a single machine.</li>
+
+    <li>A single run of Row 7 took several seconds.</li>
+</ul></li></p>
+<p><li>Row 8 to Row 14
+<ul><li>They were computed by a 7600-task-capacity cluster.</li>
+    <li>A single run of Row 14 took 27 hours.</li>
+    <li>The computations in Row 13 and Row 14 were completed on May 20, 2009. 
+        It seems that the corresponding bits were never computed before.</li>
+</ul></li></p>
+<p><li>The first part of Row 15 (<tt>6216B06</tt>)
+
+<ul><li>The first 30% of the computation was done in idle cycles of some 
+        clusters spread over 20 days.</li>
+    <li>The remaining 70% was finished over a weekend on <i>Hammer</i>,
+        a 30,000-task-capacity cluster, which was also used for the
+        <a href="http://developer.yahoo.net/blogs/hadoop/2009/05/hadoop_sorts_a_petabyte_in_162.html">petabyte sort benchmark</a>.</li>
+    <li>The log files are available
+        <a href="https://issues.apache.org/jira/secure/attachment/12408543/1e15log.zip">here</a>.</li>
+    <li>The result was posted in
+        <a href="http://developer.yahoo.net/blogs/hadoop/2009/05/hadoop_computes_the_10151st_bi.html">this YDN blog</a>.</li>
+
+</ul></li></p>
+<p><li>The second part of Row 15 (<tt>D3611</tt>)
+<ul><li>The starting position is 1,000,000,000,000,053, totally 20 bits.</li>
+    <li>Two computations, at positions <i>n</i> and <i>n</i>+4, were performed.
+    <li>A single computation was divided into 14,000 jobs
+        and totally 7,000,000 tasks.
+        It took 208 years of CPU-time
+        or 12 days of cluster (with 7600-task-capacity) time.  </li>
+    <li>The log files are available
+        <a href="https://issues.apache.org/jira/secure/attachment/12412297/D3611.tar.gz">here</a>.</li>
+
+    <li>The computations were completed on June 30, 2009.
+        The last bit, the 1,000,000,000,000,072<sup>nd</sup> bit,
+        probably is the highest bit (or the least significant bit) of &pi;
+        computed ever in the history.</li>
+</ul></li></p>
+
+</td><td width=20></td><td>
+<table border=1 width=400 cellpadding=5>
+<tr><th width=30></th><th>Position <i>n</i></th><th>&pi; bits (in hex) starting at <i>n</i></th></tr>
+
+<tr><td align=right>0</td><td align=right>1</td><td><tt>243F6A8885A3</tt><sup>*</sup></td></tr>
+<tr><td align=right>1</td><td align=right>11</td><td><tt>FDAA22168C23</tt></td></tr>
+<tr><td align=right>2</td><td align=right>101</td><td><tt>3707344A409</tt></td></tr>
+<tr><td align=right>3</td><td align=right>1,001</td><td><tt>574E69A458F</tt></td></tr>
+
+<tr><td align=right>4</td><td align=right>10,001</td><td><tt>44EC5716F2B</tt></td></tr>
+<tr><td align=right>5</td><td align=right>100,001</td><td><tt>944F7A204</tt></td></tr>
+<tr><td align=right>6</td><td align=right>1,000,001</td><td><tt>6FFFA4103</tt></td></tr>
+<tr><td align=right>7</td><td align=right>10,000,001</td><td><tt>6CFDD54E3</tt></td></tr>
+<tr><td align=right>8</td><td align=right>100,000,001</td><td><tt>A306CFA7</tt></td></tr>
+
+<tr><td align=right>9</td><td align=right>1,000,000,001</td><td><tt>3E08FF2B</tt></td></tr>
+<tr><td align=right>10</td><td align=right>10,000,000,001</td><td><tt>0A8BD8C0</tt></td></tr>
+<tr><td align=right>11</td><td align=right>100,000,000,001</td><td><tt>B2238C1</tt></td></tr>
+<tr><td align=right>12</td><td align=right>1,000,000,000,001</td><td><tt>0FEE563</tt></td></tr>
+<tr><td align=right>13</td><td align=right>10,000,000,000,001</td><td><tt>896DC3</tt></td></tr>
+
+<tr><td align=right>14</td><td align=right>100,000,000,000,001</td><td><tt>C216EC</tt></td></tr>
+<tr><td align=right>15</td><td align=right>1,000,000,000,000,001</td><td><tt>6216B06</tt> ... <tt>D3611</tt></td></tr>
+</table>
+
+<p><sup>*</sup>
+By representing &pi; in decimal, hexadecimal and binary, we have
+
+<ul><table><tr>
+  <td>&pi;</td><td>=</td><td><tt>3.1415926535 8979323846 2643383279</tt> ...</td>
+</tr><tr>
+  <td></td><td>=</td><td><tt>3.243F6A8885 A308D31319 8A2E037073</tt> ...</td>
+</tr><tr>
+  <td></td><td>=</td><td><tt>11.0010010000 1111110110 1010100010</tt> ...</td>
+
+</td></tr></table></ul>
+The first ten bits of &pi; are <tt>0010010000</tt>.
+</p>
+</td></tr></table>
+
+
+  <h3>Command Line Usages</h3>
+  The command line format is:
+  <ul><pre>
+$ hadoop org.apache.hadoop.examples.pi.DistBbp \
+         &lt;b&gt; &lt;nThreads&gt; &lt;nJobs&gt; &lt;type&gt; &lt;nPart&gt; &lt;remoteDir&gt; &lt;localDir&gt;</pre></ul>
+  And the parameters are:
+  <ul><table>
+    <tr>
+      <td>&lt;b&gt;</td>
+      <td>The number of bits to skip, i.e. compute the (b+1)th position.</td>
+    </tr>
+    <tr>
+      <td>&lt;nThreads&gt;</td>
+      <td>The number of working threads.</td>
+    </tr>
+    <tr>
+      <td>&lt;nJobs&gt;</td><td>The number of jobs per sum.
+    </tr>
+    <tr>
+      <td>&lt;type&gt;</td><td>'m' for map side job, 'r' for reduce side job, 'x' for mix type.</td>
+    </tr>
+    <tr>
+      <td>&lt;nPart&gt;</td>
+      <td>The number of parts per job.</td>
+    </tr>
+    <tr>
+      <td>&lt;remoteDir&gt;</td>
+      <td>Remote directory for submitting jobs.</td>
+    </tr>
+    <tr>
+      <td>&lt;localDir&gt;</td>
+      <td>Local directory for storing output files.</td>
+    </tr>
+  </table></ul>
+   Note that it may take a long time to finish all the jobs when &lt;b&gt; is large.
+   If the program is killed in the middle of the execution, the same command with
+   a different &lt;remoteDir&gt; can be used to resume the execution.  For example, suppose
+   we use the following command to compute the (10^15+57)th bit of &pi;.
+   <ul><pre>
+$ hadoop org.apache.hadoop.examples.pi.DistBbp \
+	 1,000,000,000,000,056 20 1000 x 500 remote/a local/output</pre></ul>
+   It uses 20 threads to summit jobs so that there are at most 20 concurrent jobs.
+   Each sum (there are totally 14 sums) is partitioned into 1000 jobs.
+   The jobs will be executed in map-side or reduce-side.  Each job has 500 parts.
+   The remote directory for the jobs is remote/a and the local directory
+   for storing output is local/output.  Depends on the cluster configuration,
+   it may take many days to finish the entire execution.  If the execution is killed,
+   we may resume it by
+   <ul><pre>
+$ hadoop org.apache.hadoop.examples.pi.DistBbp \
+         1,000,000,000,000,056 20 1000 x 500 remote/b local/output</pre></ul>
+</body>
+</html>

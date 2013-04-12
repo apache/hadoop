@@ -1,0 +1,140 @@
+Build instructions for Hadoop
+
+----------------------------------------------------------------------------------
+Requirements:
+
+* Unix System
+* JDK 1.6
+* Maven 3.0
+* Findbugs 1.3.9 (if running findbugs)
+* ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
+* CMake 2.6 or newer (if compiling native code)
+* Internet connection for first build (to fetch all Maven and Hadoop dependencies)
+
+----------------------------------------------------------------------------------
+Maven main modules:
+
+  hadoop                            (Main Hadoop project)
+         - hadoop-project           (Parent POM for all Hadoop Maven modules.             )
+                                    (All plugins & dependencies versions are defined here.)
+         - hadoop-project-dist      (Parent POM for modules that generate distributions.)
+         - hadoop-annotations       (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-assemblies        (Maven assemblies used by the different modules)
+         - hadoop-common-project    (Hadoop Common)
+         - hadoop-hdfs-project      (Hadoop HDFS)
+         - hadoop-mapreduce-project (Hadoop MapReduce)
+         - hadoop-tools             (Hadoop tools like Streaming, Distcp, etc.)
+         - hadoop-dist              (Hadoop distribution assembler)
+
+----------------------------------------------------------------------------------
+Where to run Maven from?
+
+  It can be run from any module. The only catch is that if not run from utrunk
+  all modules that are not part of the build run must be installed in the local
+  Maven cache or available in a Maven repository.
+
+----------------------------------------------------------------------------------
+Maven build goals:
+
+ * Clean                     : mvn clean
+ * Compile                   : mvn compile [-Pnative]
+ * Run tests                 : mvn test [-Pnative]
+ * Create JAR                : mvn package
+ * Run findbugs              : mvn compile findbugs:findbugs
+ * Run checkstyle            : mvn compile checkstyle:checkstyle
+ * Install JAR in M2 cache   : mvn install
+ * Deploy JAR to Maven repo  : mvn deploy
+ * Run clover                : mvn test -Pclover [-DcloverLicenseLocation=${user.name}/.clover.license]
+ * Run Rat                   : mvn apache-rat:check
+ * Build javadocs            : mvn javadoc:javadoc
+ * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar]
+ * Change Hadoop version     : mvn versions:set -DnewVersion=NEWVERSION
+
+ Build options:
+
+  * Use -Pnative to compile/bundle native code
+  * Use -Pdocs to generate & bundle the documentation in the distribution (using -Pdist)
+  * Use -Psrc to create a project source TAR.GZ
+  * Use -Dtar to create a TAR with the distribution (using -Pdist)
+
+ Snappy build options:
+
+   Snappy is a compression library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency.
+
+  * Use -Drequire.snappy to fail the build if libsnappy.so is not found.
+    If this option is not specified and the snappy library is missing,
+    we silently build a version of libhadoop.so that cannot make use of snappy.
+    This option is recommended if you plan on making use of snappy and want
+    to get more repeatable builds.
+
+  * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
+    header files and library files. You do not need this option if you have
+    installed snappy using a package manager.
+  * Use -Dsnappy.lib to specify a nonstandard location for the libsnappy library
+    files.  Similarly to snappy.prefix, you do not need this option if you have
+    installed snappy using a package manager.
+  * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
+    the final tar file. This option requires that -Dsnappy.lib is also given,
+    and it ignores the -Dsnappy.prefix option.
+
+   Tests options:
+
+  * Use -DskipTests to skip tests when running the following Maven goals:
+    'package',  'install', 'deploy' or 'verify'
+  * -Dtest=<TESTCLASSNAME>,<TESTCLASSNAME#METHODNAME>,....
+  * -Dtest.exclude=<TESTCLASSNAME>
+  * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
+
+----------------------------------------------------------------------------------
+Building components separately
+
+If you are building a submodule directory, all the hadoop dependencies this
+submodule has will be resolved as all other 3rd party dependencies. This is,
+from the Maven cache or from a Maven repository (if not available in the cache
+or the SNAPSHOT 'timed out').
+An alternative is to run 'mvn install -DskipTests' from Hadoop source top
+level once; and then work from the submodule. Keep in mind that SNAPSHOTs
+time out after a while, using the Maven '-nsu' will stop Maven from trying
+to update SNAPSHOTs from external repos.
+
+----------------------------------------------------------------------------------
+Importing projects to eclipse
+
+When you import the project to eclipse, install hadoop-maven-plugins at first.
+
+  $ cd hadoop-maven-plugins
+  $ mvn install
+
+Then, generate ecplise project files.
+
+  $ mvn eclipse:eclipse -DskipTests
+
+At last, import to eclipse by specifying the root directory of the project via
+[File] > [Import] > [Existing Projects into Workspace].
+
+----------------------------------------------------------------------------------
+Building distributions:
+
+Create binary distribution without native code and without documentation:
+
+  $ mvn package -Pdist -DskipTests -Dtar
+
+Create binary distribution with native code and with documentation:
+
+  $ mvn package -Pdist,native,docs -DskipTests -Dtar
+
+Create source distribution:
+
+  $ mvn package -Psrc -DskipTests
+
+Create source and binary distributions with native code and documentation:
+
+  $ mvn package -Pdist,native,docs,src -DskipTests -Dtar
+
+Create a local staging version of the website (in /tmp/hadoop-site)
+
+  $ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+
+----------------------------------------------------------------------------------
