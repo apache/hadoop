@@ -209,6 +209,7 @@ public class MockNodes {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
     final String hostName = "host"+ nid;
+    final String nodeAddr = hostName + ":" + nid;
     final int port = 123;
     final NodeId nodeID = newNodeID(hostName, port);
     final String httpAddress = httpAddr;
@@ -218,7 +219,7 @@ public class MockNodes {
       nodeHealthStatus.setIsNodeHealthy(true);
       nodeHealthStatus.setHealthReport("HealthyMe");
     }
-    return new MockRMNodeImpl(nodeID, hostName, httpAddress, perNode, rackName,
+    return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode, rackName,
         nodeHealthStatus, nid, hostName, state); 
   }
 
