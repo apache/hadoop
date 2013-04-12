@@ -133,10 +133,10 @@ public class TestDiskFailures {
     dirSvc.init(conf);
     List<String> localDirs = dirSvc.getLocalDirs();
     Assert.assertEquals(1, localDirs.size());
-    Assert.assertEquals(localDir2, localDirs.get(0));
+    Assert.assertEquals(new Path(localDir2).toString(), localDirs.get(0));
     List<String> logDirs = dirSvc.getLogDirs();
     Assert.assertEquals(1, logDirs.size());
-    Assert.assertEquals(logDir1, logDirs.get(0));
+    Assert.assertEquals(new Path(logDir1).toString(), logDirs.get(0));
   }
 
   private void testDirsFailures(boolean localORLogDirs) throws IOException {

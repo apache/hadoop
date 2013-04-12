@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -79,8 +81,11 @@ public class FSImageSerialization {
   // from the input stream
   //
   static INodeFileUnderConstruction readINodeUnderConstruction(
-                            DataInputStream in) throws IOException {
+      DataInputStream in, FSNamesystem fsNamesys, int imgVersion)
+      throws IOException {
     byte[] name = readBytes(in);
+    long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? in
+        .readLong() : fsNamesys.allocateNewInodeId();
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();
@@ -107,8 +112,7 @@ public class FSImageSerialization {
     int numLocs = in.readInt();
     assert numLocs == 0 : "Unexpected block locations";
 
-    //TODO: get inodeId from fsimage after inodeId is persisted
-    return new INodeFileUnderConstruction(INodeId.GRANDFATHER_INODE_ID,
+    return new INodeFileUnderConstruction(inodeId,
                                           name,
                                           blockReplication, 
                                           modificationTime,
@@ -128,6 +132,7 @@ public class FSImageSerialization {
                                            String path) 
                                            throws IOException {
     writeString(path, out);
+    out.writeLong(cons.getId());
     out.writeShort(cons.getBlockReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
@@ -151,6 +156,7 @@ public class FSImageSerialization {
     byte[] name = node.getLocalNameBytes();
     out.writeShort(name.length);
     out.write(name);
+    out.writeLong(node.getId());
     FsPermission filePerm = TL_DATA.get().FILE_PERM;
     if (node.isDirectory()) {
       out.writeShort(0);  // replication

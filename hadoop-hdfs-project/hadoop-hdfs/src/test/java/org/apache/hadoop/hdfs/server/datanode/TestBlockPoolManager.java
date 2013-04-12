@@ -113,7 +113,7 @@ public class TestBlockPoolManager {
 
     // Remove the first NS
     conf.set(DFSConfigKeys.DFS_NAMESERVICES,
-        "ns1");
+        "ns2");
     bpm.refreshNamenodes(conf);
     assertEquals(
         "stop #1\n" +

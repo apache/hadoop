@@ -49,8 +49,8 @@ public class TestMultipleCachefiles
   String CACHE_FILE = "/testing-streaming/cache.txt";
   String CACHE_FILE_2 = "/testing-streaming/cache2.txt";
   String input = "check to see if we can read this none reduce";
-  String map = "xargs cat ";
-  String reduce = "cat";
+  String map = TestStreaming.XARGS_CAT;
+  String reduce = TestStreaming.CAT;
   String mapString = "testlink";
   String mapString2 = "testlink2";
   String cacheString = "This is just the cache string";

@@ -99,6 +99,7 @@ public class TestDFSIO implements Tool {
                     " [genericOptions]" +
                     " -read [-random | -backward | -skip [-skipSize Size]] |" +
                     " -write | -append | -clean" +
+                    " [-compression codecClassName]" +
                     " [-nrFiles N]" +
                     " [-size Size[B|KB|MB|GB|TB]]" +
                     " [-resFile resultFileName] [-bufferSize Bytes]";

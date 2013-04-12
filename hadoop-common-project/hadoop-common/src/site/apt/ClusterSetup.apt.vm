@@ -249,7 +249,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.scheduler.class>>> | | |
 | | <<<ResourceManager>>> Scheduler class. | |
-| | | <<<CapacityScheduler>>> (recommended) or <<<FifoScheduler>>> |
+| | | <<<CapacityScheduler>>> (recommended), <<<FairScheduler>>> (also recommended), or <<<FifoScheduler>>> |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.scheduler.minimum-allocation-mb>>> | | |
 | | Minimum limit of memory to allocate to each container request at the <<<Resource Manager>>>. | |

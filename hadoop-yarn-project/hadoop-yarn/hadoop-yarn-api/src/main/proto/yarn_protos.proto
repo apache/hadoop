@@ -67,9 +67,7 @@ message ContainerProto {
   optional string node_http_address = 3;
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
-  optional ContainerStateProto state = 6;
-  optional hadoop.common.TokenProto container_token = 7;
-  optional ContainerStatusProto container_status = 8;
+  optional hadoop.common.TokenProto container_token = 6;
 }
 
 enum YarnApplicationStateProto {
@@ -213,13 +211,13 @@ message ResourceRequestProto {
 message ApplicationSubmissionContextProto {
   optional ApplicationIdProto application_id = 1;
   optional string application_name = 2 [default = "N/A"];
-  optional string user = 3;
-  optional string queue = 4 [default = "default"];
-  optional PriorityProto priority = 5;
-  optional ContainerLaunchContextProto am_container_spec = 6;
-  optional bool cancel_tokens_when_complete = 7 [default = true];
-  optional bool unmanaged_am = 8 [default = false];
-  optional int32 maxAppAttempts = 9 [default = 0];
+  optional string queue = 3 [default = "default"];
+  optional PriorityProto priority = 4;
+  optional ContainerLaunchContextProto am_container_spec = 5;
+  optional bool cancel_tokens_when_complete = 6 [default = true];
+  optional bool unmanaged_am = 7 [default = false];
+  optional int32 maxAppAttempts = 8 [default = 0];
+  optional ResourceProto resource = 9;
 }
 
 enum ApplicationAccessTypeProto {
@@ -266,15 +264,13 @@ message QueueUserACLInfoProto {
 ////////////////////////////////////////////////////////////////////////
 
 message ContainerLaunchContextProto {
-  optional ContainerIdProto container_id = 1;
-  optional string user = 2;
-  optional ResourceProto resource = 3;
-  repeated StringLocalResourceMapProto localResources = 4;
-  optional bytes container_tokens = 5;
-  repeated StringBytesMapProto service_data = 6;
-  repeated StringStringMapProto environment = 7;
-  repeated string command = 8;
-  repeated ApplicationACLMapProto application_ACLs = 9;
+  optional string user = 1;
+  repeated StringLocalResourceMapProto localResources = 2;
+  optional bytes container_tokens = 3;
+  repeated StringBytesMapProto service_data = 4;
+  repeated StringStringMapProto environment = 5;
+  repeated string command = 6;
+  repeated ApplicationACLMapProto application_ACLs = 7;
 }
 
 message ContainerStatusProto {

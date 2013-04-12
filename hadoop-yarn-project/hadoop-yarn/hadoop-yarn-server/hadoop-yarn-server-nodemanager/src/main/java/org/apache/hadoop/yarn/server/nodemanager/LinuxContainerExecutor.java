@@ -220,7 +220,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     String containerIdStr = ConverterUtils.toString(containerId);
     
     resourcesHandler.preExecute(containerId,
-            container.getLaunchContext().getResource());
+            container.getResource());
     String resourcesOptions = resourcesHandler.getResourcesOption(
             containerId);
 

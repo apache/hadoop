@@ -42,12 +42,6 @@ public interface ApplicationConstants {
    * only
    */
   public static final String AM_CONTAINER_ID_ENV = "AM_CONTAINER_ID";
-  
-  /**
-   * The environment variable for APPLICATION_ATTEMPT_ID. Set in AppMaster
-   * environment only
-   */
-  public static final String AM_APP_ATTEMPT_ID_ENV = "AM_APP_ATTEMPT_ID";
 
   /**
    * The environment variable for the NM_HOST. Set in the AppMaster environment
@@ -109,7 +103,7 @@ public interface ApplicationConstants {
      * $USER
      * Final, non-modifiable.
      */
-    USER("USER"),
+    USER(Shell.WINDOWS ? "USERNAME": "USER"),
     
     /**
      * $LOGNAME

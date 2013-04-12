@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -35,6 +36,9 @@ interface LocalResourcesTracker
 
   boolean remove(LocalizedResource req, DeletionService delService);
 
+  Path getPathForLocalization(LocalResourceRequest req, Path localDirPath);
+
   String getUser();
 
+  long nextUniqueNumber();
 }

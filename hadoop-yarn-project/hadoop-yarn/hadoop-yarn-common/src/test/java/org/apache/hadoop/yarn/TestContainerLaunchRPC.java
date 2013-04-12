@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -50,6 +51,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 /*
@@ -101,13 +103,14 @@ public class TestContainerLaunchRPC {
       applicationAttemptId.setAttemptId(0);
       containerId.setApplicationAttemptId(applicationAttemptId);
       containerId.setId(100);
-      containerLaunchContext.setContainerId(containerId);
-      containerLaunchContext.setResource(recordFactory
-          .newRecordInstance(Resource.class));
+      Container container =
+          BuilderUtils.newContainer(containerId, null, null, recordFactory
+              .newRecordInstance(Resource.class), null, null);
 
       StartContainerRequest scRequest = recordFactory
           .newRecordInstance(StartContainerRequest.class);
       scRequest.setContainerLaunchContext(containerLaunchContext);
+      scRequest.setContainer(container);
       try {
         proxy.startContainer(scRequest);
       } catch (Exception e) {
@@ -141,7 +144,6 @@ public class TestContainerLaunchRPC {
     @Override
     public StartContainerResponse startContainer(StartContainerRequest request)
         throws YarnRemoteException {
-      ContainerLaunchContext container = request.getContainerLaunchContext();
       StartContainerResponse response = recordFactory
           .newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
@@ -153,7 +155,7 @@ public class TestContainerLaunchRPC {
         throw new UndeclaredThrowableException(e);
       }
       status.setState(ContainerState.RUNNING);
-      status.setContainerId(container.getContainerId());
+      status.setContainerId(request.getContainer().getId());
       status.setExitStatus(0);
       return response;
     }

@@ -422,6 +422,7 @@ public interface MRJobConfig {
   /** Enable job recovery.*/
   public static final String MR_AM_JOB_RECOVERY_ENABLE = 
     MR_AM_PREFIX + "job.recovery.enable";
+  public static final boolean MR_AM_JOB_RECOVERY_ENABLE_DEFAULT = true;
 
   /** 
    * Limit on the number of reducers that can be preempted to ensure that at
@@ -663,6 +664,8 @@ public interface MRJobConfig {
   
   public static final String WORKFLOW_ADJACENCY_PREFIX_PATTERN =
       "^mapreduce\\.workflow\\.adjacency\\..+";
+
+  public static final String WORKFLOW_TAGS = "mapreduce.workflow.tags";
 
   /**
    * The maximum number of application attempts.

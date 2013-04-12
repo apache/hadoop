@@ -294,8 +294,7 @@ public class StreamJob implements Tool {
         for (String file : values) {
           packageFiles_.add(file);
           try {
-            URI pathURI = new URI(file);
-            Path path = new Path(pathURI);
+            Path path = new Path(file);
             FileSystem localFs = FileSystem.getLocal(config_);
             String finalPath = path.makeQualified(localFs).toString();
             if(fileList.length() > 0) {
@@ -875,7 +874,7 @@ public class StreamJob implements Tool {
         IdentifierResolver.TEXT_ID));
     jobConf_.setClass("stream.map.output.reader.class",
       idResolver.getOutputReaderClass(), OutputReader.class);
-    if (isMapperACommand) {
+    if (isMapperACommand || jobConf_.get("stream.map.output") != null) {
       // if mapper is a command, then map output key/value classes come from the
       // idResolver
       jobConf_.setMapOutputKeyClass(idResolver.getOutputKeyClass());
@@ -891,7 +890,7 @@ public class StreamJob implements Tool {
         IdentifierResolver.TEXT_ID));
     jobConf_.setClass("stream.reduce.output.reader.class",
       idResolver.getOutputReaderClass(), OutputReader.class);
-    if (isReducerACommand) {
+    if (isReducerACommand || jobConf_.get("stream.reduce.output") != null) {
       // if reducer is a command, then output key/value classes come from the
       // idResolver
       jobConf_.setOutputKeyClass(idResolver.getOutputKeyClass());

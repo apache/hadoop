@@ -608,7 +608,6 @@ public class ApplicationMaster {
             + ", containerNode=" + allocatedContainer.getNodeId().getHost()
             + ":" + allocatedContainer.getNodeId().getPort()
             + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
-            + ", containerState" + allocatedContainer.getState()
             + ", containerResourceMemory"
             + allocatedContainer.getResource().getMemory());
         // + ", containerToken"
@@ -680,11 +679,8 @@ public class ApplicationMaster {
       ContainerLaunchContext ctx = Records
           .newRecord(ContainerLaunchContext.class);
 
-      ctx.setContainerId(container.getId());
-      ctx.setResource(container.getResource());
-
       String jobUserName = System.getenv(ApplicationConstants.Environment.USER
-          .name());
+          .key());
       ctx.setUser(jobUserName);
       LOG.info("Setting user in ContainerLaunchContext to: " + jobUserName);
 
@@ -753,6 +749,7 @@ public class ApplicationMaster {
       StartContainerRequest startReq = Records
           .newRecord(StartContainerRequest.class);
       startReq.setContainerLaunchContext(ctx);
+      startReq.setContainer(container);
       try {
         cm.startContainer(startReq);
       } catch (YarnRemoteException e) {

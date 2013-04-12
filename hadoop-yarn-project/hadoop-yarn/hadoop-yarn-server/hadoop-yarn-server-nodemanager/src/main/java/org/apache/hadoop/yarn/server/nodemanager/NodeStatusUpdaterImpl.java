@@ -60,6 +60,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
 
@@ -71,7 +73,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final Dispatcher dispatcher;
 
   private NodeId nodeId;
-  private long heartBeatInterval;
+  private long nextHeartBeatInterval;
   private ResourceTracker resourceTracker;
   private InetSocketAddress rmAddress;
   private Resource totalResource;
@@ -87,6 +89,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
+  private long rmConnectWaitMS;
+  private long rmConnectionRetryIntervalMS;
+  private boolean waitForEver;
+
+  private Runnable statusUpdaterRunnable;
+  private Thread  statusUpdater;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
@@ -103,9 +111,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
-    this.heartBeatInterval =
-        conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);
+
     int memoryMb = 
         conf.getInt(
             YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
@@ -134,8 +140,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
     
     LOG.info("Initialized nodemanager for " + nodeId + ":" +
-    		" physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
-    		" physical-cores=" + cpuCores + " virtual-cores=" + virtualCores);
+        " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
+        " physical-cores=" + cpuCores + " virtual-cores=" + virtualCores);
     
     super.init(conf);
   }
@@ -168,6 +174,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.isStopped = true;
     super.stop();
   }
+
+  protected void rebootNodeStatusUpdater() {
+    // Interrupt the updater.
+    this.isStopped = true;
+
+    try {
+      statusUpdater.join();
+      registerWithRM();
+      statusUpdater = new Thread(statusUpdaterRunnable, "Node Status Updater");
+      this.isStopped = false;
+      statusUpdater.start();
+      LOG.info("NodeStatusUpdater thread is reRegistered and restarted");
+    } catch (Exception e) {
+      throw new AvroRuntimeException(e);
+    }
+  }
   
   private boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
@@ -187,14 +209,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         conf);
   }
 
-  private void registerWithRM() throws YarnRemoteException {
+  @VisibleForTesting
+  protected void registerWithRM() throws YarnRemoteException {
     Configuration conf = getConfig();
-    long rmConnectWaitMS =
+    rmConnectWaitMS =
         conf.getInt(
             YarnConfiguration.RESOURCEMANAGER_CONNECT_WAIT_SECS,
             YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_WAIT_SECS)
         * 1000;
-    long rmConnectionRetryIntervalMS =
+    rmConnectionRetryIntervalMS =
         conf.getLong(
             YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_SECS,
             YarnConfiguration
@@ -207,7 +230,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           " should not be negative.");
     }
 
-    boolean waitForEver = (rmConnectWaitMS == -1000);
+    waitForEver = (rmConnectWaitMS == -1000);
 
     if(! waitForEver) {
       if(rmConnectWaitMS < 0) {
@@ -311,7 +334,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return appList;
   }
 
-  private NodeStatus getNodeStatus() {
+  public NodeStatus getNodeStatusAndUpdateContainersInContext() {
 
     NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
     nodeStatus.setNodeId(this.nodeId);
@@ -386,7 +409,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   protected void startStatusUpdater() {
 
-    new Thread("Node Status Updater") {
+    statusUpdaterRunnable = new Runnable() {
       @Override
       @SuppressWarnings("unchecked")
       public void run() {
@@ -394,10 +417,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         while (!isStopped) {
           // Send heartbeat
           try {
-            synchronized (heartbeatMonitor) {
-              heartbeatMonitor.wait(heartBeatInterval);
-            }
-            NodeStatus nodeStatus = getNodeStatus();
+            NodeHeartbeatResponse response = null;
+            int rmRetryCount = 0;
+            long waitStartTime = System.currentTimeMillis();
+            NodeStatus nodeStatus = getNodeStatusAndUpdateContainersInContext();
             nodeStatus.setResponseId(lastHeartBeatID);
             
             NodeHeartbeatRequest request = recordFactory
@@ -407,9 +430,33 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
                 .getContainerTokenSecretManager().getCurrentKey());
             }
-            NodeHeartbeatResponse response =
-              resourceTracker.nodeHeartbeat(request);
-
+            while (!isStopped) {
+              try {
+                rmRetryCount++;
+                response = resourceTracker.nodeHeartbeat(request);
+                break;
+              } catch (Throwable e) {
+                LOG.warn("Trying to heartbeat to ResourceManager, "
+                    + "current no. of failed attempts is " + rmRetryCount);
+                if(System.currentTimeMillis() - waitStartTime < rmConnectWaitMS
+                    || waitForEver) {
+                  try {
+                    LOG.info("Sleeping for " + rmConnectionRetryIntervalMS/1000
+                        + " seconds before next heartbeat to RM");
+                    Thread.sleep(rmConnectionRetryIntervalMS);
+                  } catch(InterruptedException ex) {
+                    //done nothing
+                  }
+                } else {
+                  String errorMessage = "Failed to heartbeat to RM, " +
+                      "no. of failed attempts is "+rmRetryCount;
+                  LOG.error(errorMessage,e);
+                  throw new YarnException(errorMessage,e);
+                }
+              }
+            }
+            //get next heartbeat interval from response
+            nextHeartBeatInterval = response.getNextHeartBeatInterval();
             // See if the master-key has rolled over
             if (isSecurityEnabled()) {
               MasterKey updatedMasterKey = response.getMasterKey();
@@ -423,16 +470,16 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (response.getNodeAction() == NodeAction.SHUTDOWN) {
               LOG
                   .info("Recieved SHUTDOWN signal from Resourcemanager as part of heartbeat," +
-                  		" hence shutting down.");
+                      " hence shutting down.");
               dispatcher.getEventHandler().handle(
                   new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
               break;
             }
-            if (response.getNodeAction() == NodeAction.REBOOT) {
+            if (response.getNodeAction() == NodeAction.RESYNC) {
               LOG.info("Node is out of sync with ResourceManager,"
                   + " hence rebooting.");
               dispatcher.getEventHandler().handle(
-                  new NodeManagerEvent(NodeManagerEventType.REBOOT));
+                  new NodeManagerEvent(NodeManagerEventType.RESYNC));
               break;
             }
 
@@ -452,13 +499,32 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
+          } catch (YarnException e) {
+            //catch and throw the exception if tried MAX wait time to connect RM
+            dispatcher.getEventHandler().handle(
+                new NodeManagerEvent(NodeManagerEventType.SHUTDOWN));
+            throw e;
           } catch (Throwable e) {
             // TODO Better error handling. Thread can die with the rest of the
             // NM still running.
             LOG.error("Caught exception in status-updater", e);
+          } finally {
+            synchronized (heartbeatMonitor) {
+              nextHeartBeatInterval = nextHeartBeatInterval <= 0 ?
+                  YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS :
+                    nextHeartBeatInterval;
+              try {
+                heartbeatMonitor.wait(nextHeartBeatInterval);
+              } catch (InterruptedException e) {
+                // Do Nothing
+              }
+            }
           }
         }
       }
-    }.start();
+    };
+    statusUpdater =
+        new Thread(statusUpdaterRunnable, "Node Status Updater");
+    statusUpdater.start();
   }
 }

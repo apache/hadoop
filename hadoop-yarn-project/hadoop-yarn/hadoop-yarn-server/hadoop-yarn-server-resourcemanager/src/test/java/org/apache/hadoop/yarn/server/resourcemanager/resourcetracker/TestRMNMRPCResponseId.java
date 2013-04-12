@@ -130,6 +130,6 @@ public class TestRMNMRPCResponseId {
 
     nodeStatus.setResponseId(0);
     response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest);
-    Assert.assertTrue(NodeAction.REBOOT.equals(response.getNodeAction()));
+    Assert.assertTrue(NodeAction.RESYNC.equals(response.getNodeAction()));
   }
 }

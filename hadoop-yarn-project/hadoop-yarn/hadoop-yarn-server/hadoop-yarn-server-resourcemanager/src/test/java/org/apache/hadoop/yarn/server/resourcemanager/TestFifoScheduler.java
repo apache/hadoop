@@ -139,8 +139,9 @@ public class TestFifoScheduler {
 
     Container c1 = allocated1.get(0);
     Assert.assertEquals(GB, c1.getResource().getMemory());
-    c1.setState(ContainerState.COMPLETE);
-    nm1.containerStatus(c1);
+    ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
+        c1.getId(), ContainerState.COMPLETE, "", 0);
+    nm1.containerStatus(containerStatus);
     int waitCount = 0;
     while (attempt1.getJustFinishedContainers().size() < 1
         && waitCount++ != 20) {
@@ -197,6 +198,8 @@ public class TestFifoScheduler {
     int allocMB = 1536;
     YarnConfiguration conf = new YarnConfiguration(TestFifoScheduler.conf);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, allocMB);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        allocMB * 10);
     // Test for something lesser than this.
     testMinimumAllocation(conf, allocMB / 2);
   }

@@ -128,21 +128,28 @@ public class MockRM extends ResourceManager {
 
   // client
   public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
-    return submitApp(masterMemory, name, user, null, false, null);
+    return submitApp(masterMemory, name, user, null, false, null,
+      super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
   }
   
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls) throws Exception {
-    return submitApp(masterMemory, name, user, acls, false, null);
+    return submitApp(masterMemory, name, user, acls, false, null,
+      super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
   }  
 
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, String queue) throws Exception {
-    return submitApp(masterMemory, name, user, acls, false, queue);
-  }  
+    return submitApp(masterMemory, name, user, acls, false, queue,
+      super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+  }
 
   public RMApp submitApp(int masterMemory, String name, String user,
-      Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue) throws Exception {
+      Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
+      int maxAppAttempts) throws Exception {
     ClientRMProtocol client = getClientRMService();
     GetNewApplicationResponse resp = client.getNewApplication(Records
         .newRecord(GetNewApplicationRequest.class));
@@ -154,7 +161,7 @@ public class MockRM extends ResourceManager {
         .newRecord(ApplicationSubmissionContext.class);
     sub.setApplicationId(appId);
     sub.setApplicationName(name);
-    sub.setUser(user);
+    sub.setMaxAppAttempts(maxAppAttempts);
     if(unmanaged) {
       sub.setUnmanagedAM(true);
     }
@@ -163,13 +170,13 @@ public class MockRM extends ResourceManager {
     }
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
-    Resource capability = Records.newRecord(Resource.class);
+    final Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(masterMemory);
-    clc.setResource(capability);
+    sub.setResource(capability);
     clc.setApplicationACLs(acls);
+    clc.setUser(user);
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
-
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
     PrivilegedAction<SubmitApplicationResponse> action =

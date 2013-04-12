@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 
 /**
  * This class allows a node manager to run without without communicating with a
@@ -73,9 +74,9 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
       LOG.info("Got heartbeat number " + heartBeatID);
       nodeStatus.setResponseId(heartBeatID++);
 
-      NodeHeartbeatResponse nhResponse = recordFactory
-          .newRecordInstance(NodeHeartbeatResponse.class);
-      nhResponse.setResponseId(heartBeatID);
+      NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils
+          .newNodeHeartbeatResponse(heartBeatID, null, null,
+              null, null, 1000L);
       return nhResponse;
     }
   }

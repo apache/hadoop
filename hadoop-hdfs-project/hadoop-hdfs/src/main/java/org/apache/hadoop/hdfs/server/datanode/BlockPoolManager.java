@@ -160,8 +160,8 @@ class BlockPoolManager {
       Map<String, Map<String, InetSocketAddress>> addrMap) throws IOException {
     assert Thread.holdsLock(refreshNamenodesLock);
 
-    Set<String> toRefresh = Sets.newHashSet();
-    Set<String> toAdd = Sets.newHashSet();
+    Set<String> toRefresh = Sets.newLinkedHashSet();
+    Set<String> toAdd = Sets.newLinkedHashSet();
     Set<String> toRemove;
     
     synchronized (this) {

@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -503,6 +504,10 @@ public class TestAppManager{
     RMApp appOrig = rmContext.getRMApps().get(appID);
     Assert.assertTrue("app name matches but shouldn't", "testApp1" != appOrig.getName());
 
+    ContainerLaunchContext clc =
+        BuilderUtils.newContainerLaunchContext(null, null, null, null, null,
+            null, null);
+    context.setAMContainerSpec(clc);
     // our testApp1 should be rejected and original app with same id should be left in place
     appMonitor.submitApplication(context);
 

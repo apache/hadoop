@@ -25,7 +25,7 @@ import "yarn_protos.proto";
 
 enum NodeActionProto {
   NORMAL = 0;
-  REBOOT = 1;
+  RESYNC = 1;
   SHUTDOWN = 2;
 }
 

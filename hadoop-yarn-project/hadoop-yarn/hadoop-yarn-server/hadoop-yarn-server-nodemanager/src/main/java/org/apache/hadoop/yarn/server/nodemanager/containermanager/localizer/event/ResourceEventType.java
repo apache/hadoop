@@ -29,5 +29,7 @@ public enum ResourceEventType {
   /** See {@link ResourceLocalizedEvent} */ 
   LOCALIZED,
   /** See {@link ResourceReleaseEvent} */
-  RELEASE
+  RELEASE,
+  /** See {@link ResourceFailedLocalizationEvent} */
+  LOCALIZATION_FAILED
 }

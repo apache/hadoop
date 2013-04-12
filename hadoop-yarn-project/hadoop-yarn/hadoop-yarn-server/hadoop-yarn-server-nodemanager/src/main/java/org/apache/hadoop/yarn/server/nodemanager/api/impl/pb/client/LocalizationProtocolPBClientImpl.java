@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -35,7 +36,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.Loc
 
 import com.google.protobuf.ServiceException;
 
-public class LocalizationProtocolPBClientImpl implements LocalizationProtocol {
+public class LocalizationProtocolPBClientImpl implements LocalizationProtocol,
+    Closeable {
 
   private LocalizationProtocolPB proxy;
   
@@ -44,7 +46,14 @@ public class LocalizationProtocolPBClientImpl implements LocalizationProtocol {
     proxy = (LocalizationProtocolPB)RPC.getProxy(
         LocalizationProtocolPB.class, clientVersion, addr, conf);
   }
-  
+
+  @Override
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
+  }
+
   @Override
   public LocalizerHeartbeatResponse heartbeat(LocalizerStatus status)
     throws YarnRemoteException {

@@ -256,4 +256,25 @@
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
+  <!-- Null pointer exception needs to be ignored here as this is never going to occur. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourcesTrackerImpl" />
+    <Method name="decrementFileCountForLocalCacheDirectory" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+  </Match>
+
+  <!-- Null pointer exception needs to be ignored here as this is never going to occur. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourcesTrackerImpl" />
+    <Method name="getPathForLocalization" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+  </Match>
+
+  <!-- This type cast problem will never occur. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourcesTrackerImpl" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
 </FindBugsFilter>

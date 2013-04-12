@@ -89,10 +89,12 @@ public class SchedulerUtils {
       List<ResourceRequest> asks,
       ResourceCalculator resourceCalculator, 
       Resource clusterResource,
-      Resource minimumResource) {
+      Resource minimumResource,
+      Resource maximumResource) {
     for (ResourceRequest ask : asks) {
       normalizeRequest(
-          ask, resourceCalculator, clusterResource, minimumResource);
+          ask, resourceCalculator, clusterResource, minimumResource,
+          maximumResource);
     }
   }
 
@@ -104,12 +106,50 @@ public class SchedulerUtils {
       ResourceRequest ask, 
       ResourceCalculator resourceCalculator, 
       Resource clusterResource,
-      Resource minimumResource) {
+      Resource minimumResource,
+      Resource maximumResource) {
     Resource normalized = 
         Resources.normalize(
-            resourceCalculator, ask.getCapability(), minimumResource);
-    ask.getCapability().setMemory(normalized.getMemory());
-    ask.getCapability().setVirtualCores(normalized.getVirtualCores());
+            resourceCalculator, ask.getCapability(), minimumResource,
+            maximumResource);
+    ask.setCapability(normalized);
+  }
+
+  /**
+   * Utility method to validate a resource request, by insuring that the
+   * requested memory/vcore is non-negative and not greater than max
+   */
+  public static void validateResourceRequest(ResourceRequest resReq,
+      Resource maximumResource) throws InvalidResourceRequestException {
+    if (resReq.getCapability().getMemory() < 0 ||
+        resReq.getCapability().getMemory() > maximumResource.getMemory()) {
+      throw new InvalidResourceRequestException("Invalid resource request"
+          + ", requested memory < 0"
+          + ", or requested memory > max configured"
+          + ", requestedMemory=" + resReq.getCapability().getMemory()
+          + ", maxMemory=" + maximumResource.getMemory());
+    }
+    if (resReq.getCapability().getVirtualCores() < 0 ||
+        resReq.getCapability().getVirtualCores() >
+        maximumResource.getVirtualCores()) {
+      throw new InvalidResourceRequestException("Invalid resource request"
+          + ", requested virtual cores < 0"
+          + ", or requested virtual cores > max configured"
+          + ", requestedVirtualCores="
+          + resReq.getCapability().getVirtualCores()
+          + ", maxVirtualCores=" + maximumResource.getVirtualCores());
+    }
+  }
+
+  /**
+   * Utility method to validate a list resource requests, by insuring that the
+   * requested memory/vcore is non-negative and not greater than max
+   */
+  public static void validateResourceRequests(List<ResourceRequest> ask,
+      Resource maximumResource) throws InvalidResourceRequestException {
+    for (ResourceRequest resReq : ask) {
+      validateResourceRequest(resReq, maximumResource);
+    }
   }
 
 }

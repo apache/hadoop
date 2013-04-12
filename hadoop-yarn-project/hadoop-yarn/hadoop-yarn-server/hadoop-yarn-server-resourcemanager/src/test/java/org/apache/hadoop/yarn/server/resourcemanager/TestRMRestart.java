@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -62,6 +64,7 @@ public class TestRMRestart {
     "org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore");
     conf.set(YarnConfiguration.RM_SCHEDULER, 
     "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler");
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 5);
 
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
@@ -152,7 +155,9 @@ public class TestRMRestart {
         .getApplicationId());
     
     // create unmanaged app
-    RMApp appUnmanaged = rm1.submitApp(200, "someApp", "someUser", null, true, null);
+    RMApp appUnmanaged = rm1.submitApp(200, "someApp", "someUser", null, true,
+        null, conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
     ApplicationAttemptId unmanagedAttemptId = 
                         appUnmanaged.getCurrentAppAttempt().getAppAttemptId();
     // assert appUnmanaged info is saved
@@ -220,9 +225,9 @@ public class TestRMRestart {
     
     // NM should be rebooted on heartbeat, even first heartbeat for nm2
     NodeHeartbeatResponse hbResponse = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());
+    Assert.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
     hbResponse = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.REBOOT, hbResponse.getNodeAction());
+    Assert.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
     
     // new NM to represent NM re-register
     nm1 = rm2.registerNode("h1:1234", 15120);
@@ -230,9 +235,9 @@ public class TestRMRestart {
 
     // verify no more reboot response sent
     hbResponse = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.REBOOT != hbResponse.getNodeAction());
+    Assert.assertTrue(NodeAction.RESYNC != hbResponse.getNodeAction());
     hbResponse = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.REBOOT != hbResponse.getNodeAction());
+    Assert.assertTrue(NodeAction.RESYNC != hbResponse.getNodeAction());
     
     // assert app1 attempt is saved
     attempt1 = loadedApp1.getCurrentAppAttempt();
@@ -306,4 +311,74 @@ public class TestRMRestart {
     Assert.assertEquals(0, rmAppState.size());
  }
   
+  @Test
+  public void testRMRestartOnMaxAppAttempts() throws Exception {
+    Logger rootLogger = LogManager.getRootLogger();
+    rootLogger.setLevel(Level.DEBUG);
+    ExitUtil.disableSystemExit();
+
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
+    conf.set(YarnConfiguration.RM_STORE, 
+    "org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore");
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();  
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 = new MockNM("h1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // submit an app with maxAppAttempts equals to 1
+    RMApp app1 = rm1.submitApp(200, "name", "user",
+        new HashMap<ApplicationAccessType, String>(), false, "default", 1);
+    // submit an app with maxAppAttempts equals to -1
+    RMApp app2 = rm1.submitApp(200, "name", "user",
+        new HashMap<ApplicationAccessType, String>(), false, "default", -1);
+
+    // assert app1 info is saved
+    ApplicationState appState = rmAppState.get(app1.getApplicationId());
+    Assert.assertNotNull(appState);
+    Assert.assertEquals(0, appState.getAttemptCount());
+    Assert.assertEquals(appState.getApplicationSubmissionContext()
+        .getApplicationId(), app1.getApplicationSubmissionContext()
+        .getApplicationId());
+
+    // Allocate the AM
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt = app1.getCurrentAppAttempt();
+    ApplicationAttemptId attemptId1 = attempt.getAppAttemptId();
+    rm1.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
+    Assert.assertEquals(1, appState.getAttemptCount());
+    ApplicationAttemptState attemptState = 
+                                appState.getAttempt(attemptId1);
+    Assert.assertNotNull(attemptState);
+    Assert.assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
+                        attemptState.getMasterContainer().getId());
+    rm1.stop();
+
+    // start new RM   
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+
+    // verify that maxAppAttempts is set to global value
+    Assert.assertEquals(2, 
+        rm2.getRMContext().getRMApps().get(app2.getApplicationId())
+        .getMaxAppAttempts());
+
+    // verify that app2 exists  app1 is removed
+    Assert.assertEquals(1, rm2.getRMContext().getRMApps().size());
+    Assert.assertNotNull(rm2.getRMContext().getRMApps()
+        .get(app2.getApplicationId()));
+    Assert.assertNull(rm2.getRMContext().getRMApps()
+        .get(app1.getApplicationId()));
+
+    // stop the RM
+    rm2.stop();
+  }
 }

@@ -33,7 +33,7 @@ public class TestStreamXmlRecordReader extends TestStreaming {
     INPUT_FILE = new File("target/input.xml");
     input = "<xmltag>\t\nroses.are.red\t\nviolets.are.blue\t\n" +
         "bunnies.are.pink\t\n</xmltag>\t\n";
-    map = "cat";
+    map = CAT;
     reduce = "NONE";
     outputExpect = input;
   }

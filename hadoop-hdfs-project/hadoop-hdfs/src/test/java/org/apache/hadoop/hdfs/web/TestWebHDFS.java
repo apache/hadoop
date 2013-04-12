@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdfs.web;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -29,9 +31,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
@@ -207,5 +213,49 @@ public class TestWebHDFS {
     ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
     final Configuration conf = WebHdfsTestUtil.createConf();
     TestDFSClientRetries.namenodeRestartTest(conf, true);
+  }
+  
+  @Test(timeout=300000)
+  public void testLargeDirectory() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final int listLimit = 2;
+    // force small chunking of directory listing
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, listLimit);
+    // force paths to be only owner-accessible to ensure ugi isn't changing
+    // during listStatus
+    FsPermission.setUMask(conf, new FsPermission((short)0077));
+    
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    try {
+      cluster.waitActive();
+      WebHdfsTestUtil.getWebHdfsFileSystem(conf).setPermission(
+          new Path("/"),
+          new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+
+      // trick the NN into not believing it's not the superuser so we can
+      // tell if the correct user is used by listStatus
+      UserGroupInformation.setLoginUser(
+          UserGroupInformation.createUserForTesting(
+              "not-superuser", new String[]{"not-supergroup"}));
+
+      UserGroupInformation.createUserForTesting("me", new String[]{"my-group"})
+        .doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException, URISyntaxException {
+            FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
+            Path d = new Path("/my-dir");
+            Assert.assertTrue(fs.mkdirs(d));
+            for (int i=0; i < listLimit*3; i++) {
+              Path p = new Path(d, "file-"+i);
+              Assert.assertTrue(fs.createNewFile(p));
+            }
+            Assert.assertEquals(listLimit*3, fs.listStatus(d).length);
+            return null;
+          }
+        });
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

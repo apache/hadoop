@@ -59,8 +59,8 @@ public class AppAttemptInfo {
         this.logsLink = join(HttpConfig.getSchemePrefix(),
             masterContainer.getNodeHttpAddress(),
             "/node", "/containerlogs/",
-            ConverterUtils.toString(masterContainer.getId()),
-            "/", attempt.getSubmissionContext().getUser());
+            ConverterUtils.toString(masterContainer.getId()), "/",
+            attempt.getSubmissionContext().getAMContainerSpec().getUser());
       }
     }
   }

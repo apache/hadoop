@@ -718,9 +718,15 @@ public class NamenodeWebHdfsMethods {
   
   private static StreamingOutput getListingStream(final NamenodeProtocols np, 
       final String p) throws IOException {
-    final DirectoryListing first = getDirectoryListing(np, p,
+    // allows exceptions like FNF or ACE to prevent http response of 200 for
+    // a failure since we can't (currently) return error responses in the
+    // middle of a streaming operation
+    final DirectoryListing firstDirList = getDirectoryListing(np, p,
         HdfsFileStatus.EMPTY_NAME);
 
+    // must save ugi because the streaming object will be executed outside
+    // the remote user's ugi
+    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     return new StreamingOutput() {
       @Override
       public void write(final OutputStream outstream) throws IOException {
@@ -729,21 +735,32 @@ public class NamenodeWebHdfsMethods {
         out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
             + FileStatus.class.getSimpleName() + "\":[");
 
-        final HdfsFileStatus[] partial = first.getPartialListing();
-        if (partial.length > 0) {
-          out.print(JsonUtil.toJsonString(partial[0], false));
-        }
-        for(int i = 1; i < partial.length; i++) {
-          out.println(',');
-          out.print(JsonUtil.toJsonString(partial[i], false));
-        }
-
-        for(DirectoryListing curr = first; curr.hasMore(); ) { 
-          curr = getDirectoryListing(np, p, curr.getLastName());
-          for(HdfsFileStatus s : curr.getPartialListing()) {
-            out.println(',');
-            out.print(JsonUtil.toJsonString(s, false));
-          }
+        try {
+          // restore remote user's ugi
+          ugi.doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws IOException {
+              long n = 0;
+              for (DirectoryListing dirList = firstDirList; ;
+                   dirList = getDirectoryListing(np, p, dirList.getLastName())
+              ) {
+                // send each segment of the directory listing
+                for (HdfsFileStatus s : dirList.getPartialListing()) {
+                  if (n++ > 0) {
+                    out.println(',');
+                  }
+                  out.print(JsonUtil.toJsonString(s, false));
+                }
+                // stop if last segment
+                if (!dirList.hasMore()) {
+                  break;
+                }
+              }
+              return null;
+            }
+          });
+        } catch (InterruptedException e) {
+          throw new IOException(e);
         }
         
         out.println();

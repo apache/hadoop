@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class TestUtils {
   private static final Log LOG = LogFactory.getLog(TestUtils.class);
@@ -136,9 +137,7 @@ public class TestUtils {
   
   public static ApplicationAttemptId 
   getMockApplicationAttemptId(int appId, int attemptId) {
-    ApplicationId applicationId = mock(ApplicationId.class);
-    when(applicationId.getClusterTimestamp()).thenReturn(0L);
-    when(applicationId.getId()).thenReturn(appId);
+    ApplicationId applicationId = BuilderUtils.newApplicationId(0l, appId);
     ApplicationAttemptId applicationAttemptId = mock(ApplicationAttemptId.class);  
     when(applicationAttemptId.getApplicationId()).thenReturn(applicationId);
     when(applicationAttemptId.getAttemptId()).thenReturn(attemptId);

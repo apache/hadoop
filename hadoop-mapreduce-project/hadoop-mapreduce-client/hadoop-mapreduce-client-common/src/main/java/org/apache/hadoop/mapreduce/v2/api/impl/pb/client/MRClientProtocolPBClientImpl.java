@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.api.impl.pb.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -101,7 +102,8 @@ import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 
 import com.google.protobuf.ServiceException;
 
-public class MRClientProtocolPBClientImpl implements MRClientProtocol {
+public class MRClientProtocolPBClientImpl implements MRClientProtocol,
+    Closeable {
 
   protected MRClientProtocolPB proxy;
   
@@ -115,6 +117,13 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
   @Override
   public InetSocketAddress getConnectAddress() {
     return RPC.getServerAddress(proxy);
+  }
+
+  @Override
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
   }
 
   @Override
