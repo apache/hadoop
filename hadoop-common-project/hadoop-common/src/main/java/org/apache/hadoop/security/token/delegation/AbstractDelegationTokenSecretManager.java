@@ -27,8 +27,10 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import javax.crypto.SecretKey;
 
@@ -144,6 +146,10 @@ extends AbstractDelegationTokenIdentifier>
     return;
   }
   
+  protected void logExpireToken(TokenIdent ident) throws IOException {
+    return;
+  }
+
   /** 
    * Update the current master key 
    * This is called once by startThreads before tokenRemoverThread is created, 
@@ -363,14 +369,24 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   /** Remove expired delegation tokens from cache */
-  private synchronized void removeExpiredToken() {
+  private void removeExpiredToken() throws IOException {
     long now = Time.now();
-    Iterator<DelegationTokenInformation> i = currentTokens.values().iterator();
-    while (i.hasNext()) {
-      long renewDate = i.next().getRenewDate();
-      if (now > renewDate) {
-        i.remove();
+    Set<TokenIdent> expiredTokens = new HashSet<TokenIdent>();
+    synchronized (this) {
+      Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
+          currentTokens.entrySet().iterator();
+      while (i.hasNext()) {
+        Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
+        long renewDate = entry.getValue().getRenewDate();
+        if (renewDate < now) {
+          expiredTokens.add(entry.getKey());
+          i.remove();
+        }
       }
+    }
+    // don't hold lock on 'this' to avoid edit log updates blocking token ops
+    for (TokenIdent ident : expiredTokens) {
+      logExpireToken(ident);
     }
   }
 
