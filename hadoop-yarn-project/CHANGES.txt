@@ -18,10 +18,6 @@ Release 2.0.4-alpha - UNRELEASED
     YARN-470. Support a way to disable resource monitoring on the NodeManager.
     (Siddharth Seth via hitesh)
 
-    YARN-412. Fixed FifoScheduler to check hostname of a NodeManager rather
-    than its host:port during scheduling which caused incorrect locality for
-    containers. (Roger Hoover via acmurthy)
-    
 Release 2.0.3-alpha - 2013-02-06 
 
   INCOMPATIBLE CHANGES
