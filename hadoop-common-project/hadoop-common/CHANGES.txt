@@ -623,6 +623,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
     tests (Vadim Bondarev via jlowe)
 
+    HADOOP-9211. Set default max heap size in HADOOP_CLIENT_OPTS to 512m
+    in order to avoid OOME. (Plamen Jeliazkov via shv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
