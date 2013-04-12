@@ -462,7 +462,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       FiCaSchedulerApp application, Priority priority) {
     int assignedContainers = 0;
     ResourceRequest request = 
-      application.getResourceRequest(priority, node.getRMNode().getNodeAddress());
+      application.getResourceRequest(priority, node.getHostName());
     if (request != null) {
       // Don't allocate on this node if we don't need containers on this rack
       ResourceRequest rackRequest =
