@@ -36,20 +36,6 @@ I'm not sure how this applies to windows if at all.</blockquote></li>
      <b>capacity-scheduler config missing from yarn-test artifact</b><br>
      <blockquote>MiniYARNCluster and MiniMRCluster are unusable by downstream projects with the 2.0.3-alpha release, since the capacity-scheduler configuration is missing from the test artifact.
 hadoop-yarn-server-tests-3.0.0-SNAPSHOT-tests.jar should include the default capacity-scheduler configuration. Also, this doesn't need to be part of the default classpath - and should be moved out of the top level directory in the dist package.</blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/YARN-412">YARN-412</a>.
-     Minor bug reported by Roger Hoover and fixed by Roger Hoover (scheduler)<br>
-     <b>FifoScheduler incorrectly checking for node locality</b><br>
-     <blockquote>In the FifoScheduler, the assignNodeLocalContainers method is checking if the data is local to a node by searching for the nodeAddress of the node in the set of outstanding requests for the app.  This seems to be incorrect as it should be checking hostname instead.  The offending line of code is 455:
-
-application.getResourceRequest(priority, node.getRMNode().getNodeAddress());
-
-Requests are formated by hostname (e.g. host1.foo.com) whereas node addresses are a concatenation of hostname and command port (e.g. host1.foo.com:1234)
-
-In the CapacityScheduler, it's done using hostname.  See LeafQueue.assignNodeLocalContainers, line 1129
-
-application.getResourceRequest(priority, node.getHostName());
-
-Note that this bug does not affect the actual scheduling decisions made by the FifoScheduler because even though it incorrect determines that a request is not local to the node, it will still schedule the request immediately because it's rack-local.  However, this bug may be adversely affecting the reporting of job status by underreporting the number of tasks that were node local.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5117">MAPREDUCE-5117</a>.
      Blocker bug reported by Roman Shaposhnik and fixed by Siddharth Seth (security)<br>
      <b>With security enabled HS delegation token renewer fails</b><br>
