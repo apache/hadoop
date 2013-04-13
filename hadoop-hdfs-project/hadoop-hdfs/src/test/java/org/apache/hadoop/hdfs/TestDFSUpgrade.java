@@ -53,7 +53,7 @@ import com.google.common.base.Joiner;
 */
 public class TestDFSUpgrade {
  
-  private static final int EXPECTED_TXID = 49;
+  private static final int EXPECTED_TXID = 45;
   private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;

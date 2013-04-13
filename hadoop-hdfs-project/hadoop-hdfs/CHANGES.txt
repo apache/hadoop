@@ -503,6 +503,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4643. Fix flakiness in TestQuorumJournalManager. (todd)
 
+    HDFS-4639. startFileInternal() should not increment generation stamp.
+    (Plamen Jeliazkov via shv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
