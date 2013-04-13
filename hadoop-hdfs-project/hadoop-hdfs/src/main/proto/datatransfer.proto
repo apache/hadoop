@@ -115,6 +115,16 @@ message OpBlockChecksumProto {
   required BaseHeaderProto header = 1;
 }
 
+message OpRequestShortCircuitAccessProto { 
+  required BaseHeaderProto header = 1;
+
+  /** In order to get short-circuit access to block data, clients must set this
+   * to the highest version of the block data that they can understand.
+   * Currently 1 is the only version, but more versions may exist in the future
+   * if the on-disk format changes.
+   */
+  required uint32 maxVersion = 2;
+}
 
 message PacketHeaderProto {
   // All fields must be fixed-length!
@@ -133,6 +143,7 @@ enum Status {
   ERROR_EXISTS = 4;
   ERROR_ACCESS_TOKEN = 5;
   CHECKSUM_OK = 6;
+  ERROR_UNSUPPORTED = 7;
 }
 
 message PipelineAckProto {
@@ -165,6 +176,16 @@ message BlockOpResponseProto {
 
   /** explanatory text which may be useful to log on the client side */
   optional string message = 5;
+
+  /** If the server chooses to agree to the request of a client for
+   * short-circuit access, it will send a response message with the relevant
+   * file descriptors attached.
+   *
+   * In the body of the message, this version number will be set to the
+   * specific version number of the block data that the client is about to
+   * read.
+   */
+  optional uint32 shortCircuitAccessVersion = 6;
 }
 
 /**

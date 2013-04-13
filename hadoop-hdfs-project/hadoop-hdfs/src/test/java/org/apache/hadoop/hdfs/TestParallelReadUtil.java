@@ -32,12 +32,18 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Driver class for testing the use of DFSInputStream by multiple concurrent
- * readers, using the different read APIs. See subclasses for the actual test
- * cases.
+ * readers, using the different read APIs.
+ *
+ * This class is marked as @Ignore so that junit doesn't try to execute the
+ * tests in here directly.  They are executed from subclasses.
  */
+@Ignore
 public class TestParallelReadUtil {
 
   static final Log LOG = LogFactory.getLog(TestParallelReadUtil.class);
@@ -388,4 +394,31 @@ public class TestParallelReadUtil {
     util.shutdown();
   }
 
+  /**
+   * Do parallel read several times with different number of files and threads.
+   *
+   * Note that while this is the only "test" in a junit sense, we're actually
+   * dispatching a lot more. Failures in the other methods (and other threads)
+   * need to be manually collected, which is inconvenient.
+   */
+  @Test
+  public void testParallelReadCopying() throws IOException {
+    runTestWorkload(new CopyingReadWorkerHelper());
+  }
+
+  @Test
+  public void testParallelReadByteBuffer() throws IOException {
+    runTestWorkload(new DirectReadWorkerHelper());
+  }
+
+  @Test
+  public void testParallelReadMixed() throws IOException {
+    runTestWorkload(new MixedWorkloadHelper());
+  }
+  
+  @Test
+  public void testParallelNoChecksums() throws IOException {
+    verifyChecksums = false;
+    runTestWorkload(new MixedWorkloadHelper());
+  }
 }

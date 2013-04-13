@@ -1129,7 +1129,7 @@ public class TestCheckpoint {
         throw new IOException(e);
       }
       
-      final int EXPECTED_TXNS_FIRST_SEG = 12;
+      final int EXPECTED_TXNS_FIRST_SEG = 11;
       
       // the following steps should have happened:
       //   edits_inprogress_1 -> edits_1-12  (finalized)

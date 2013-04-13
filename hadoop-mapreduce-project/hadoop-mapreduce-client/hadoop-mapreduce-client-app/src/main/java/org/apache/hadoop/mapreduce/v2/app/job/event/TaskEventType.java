@@ -28,6 +28,7 @@ public enum TaskEventType {
 
   //Producer:Job
   T_SCHEDULE,
+  T_RECOVER,
 
   //Producer:Speculator
   T_ADD_SPEC_ATTEMPT,

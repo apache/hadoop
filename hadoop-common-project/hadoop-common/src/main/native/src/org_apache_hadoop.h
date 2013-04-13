@@ -180,6 +180,10 @@ static FARPROC WINAPI do_dlsym(JNIEnv *env, HMODULE handle, LPCSTR symbol) {
     THROW(env, "java/lang/InternalError", exception_msg); \
   }
 
+#define RETRY_ON_EINTR(ret, expr) do { \
+  ret = expr; \
+} while ((ret == -1) && (errno == EINTR));
+
 #endif
 
 //vim: sw=2: ts=2: et

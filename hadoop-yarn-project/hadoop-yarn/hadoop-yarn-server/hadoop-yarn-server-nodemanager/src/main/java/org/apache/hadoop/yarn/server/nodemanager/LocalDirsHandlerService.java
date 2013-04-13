@@ -307,7 +307,7 @@ public class LocalDirsHandlerService extends AbstractService {
         URI uriPath = (new Path(paths[i])).toUri();
         if (uriPath.getScheme() == null
             || uriPath.getScheme().equals(FILE_SCHEME)) {
-          validPaths.add(uriPath.getPath());
+          validPaths.add(new Path(uriPath.getPath()).toString());
         } else {
           LOG.warn(paths[i] + " is not a valid path. Path should be with "
               + FILE_SCHEME + " scheme or without scheme");

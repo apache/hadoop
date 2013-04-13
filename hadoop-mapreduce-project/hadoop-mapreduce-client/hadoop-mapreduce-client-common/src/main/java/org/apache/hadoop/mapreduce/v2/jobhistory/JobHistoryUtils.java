@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 import com.google.common.base.Joiner;
@@ -524,5 +525,20 @@ public class JobHistoryUtils {
     JobID jobId = TypeConverter.fromYarn(appId);
     sb.append(jobId.toString());
     return sb.toString();
+  }
+
+  public static Path getPreviousJobHistoryPath(
+      Configuration conf, ApplicationAttemptId applicationAttemptId)
+      throws IOException {
+    String jobId =
+        TypeConverter.fromYarn(applicationAttemptId.getApplicationId())
+          .toString();
+    String jobhistoryDir =
+        JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf, jobId);
+    Path histDirPath = FileContext.getFileContext(conf).makeQualified(
+            new Path(jobhistoryDir));
+    FileContext fc = FileContext.getFileContext(histDirPath.toUri(), conf);
+    return fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(
+        histDirPath,jobId, (applicationAttemptId.getAttemptId() - 1)));
   }
 }

@@ -25,6 +25,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
@@ -35,6 +37,7 @@ import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.jobhistory.EventType;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus.State;
@@ -47,6 +50,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -57,6 +61,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobStartEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.InitTransition;
@@ -69,7 +74,6 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -133,7 +137,7 @@ public class TestJobImpl {
     JobImpl job = createStubbedJob(conf, dispatcher, 0);
     job.handle(new JobEvent(job.getID(), JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(job.getID(), JobEventType.JOB_START));
+    job.handle(new JobStartEvent(job.getID()));
     assertJobState(job, JobStateInternal.SUCCEEDED);
     dispatcher.stop();
     commitHandler.stop();
@@ -222,7 +226,7 @@ public class TestJobImpl {
     JobId jobId = job.getID();
     job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(jobId, JobEventType.JOB_START));
+    job.handle(new JobStartEvent(jobId));
     assertJobState(job, JobStateInternal.SETUP);
 
     job.handle(new JobEvent(job.getID(), JobEventType.JOB_AM_REBOOT));
@@ -284,7 +288,7 @@ public class TestJobImpl {
     JobId jobId = job.getID();
     job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(jobId, JobEventType.JOB_START));
+    job.handle(new JobStartEvent(jobId));
     assertJobState(job, JobStateInternal.SETUP);
 
     job.handle(new JobEvent(job.getID(), JobEventType.JOB_KILL));
@@ -351,7 +355,7 @@ public class TestJobImpl {
     JobId jobId = job.getID();
     job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(jobId, JobEventType.JOB_START));
+    job.handle(new JobStartEvent(jobId));
     assertJobState(job, JobStateInternal.FAIL_ABORT);
 
     job.handle(new JobEvent(jobId, JobEventType.JOB_KILL));
@@ -388,7 +392,7 @@ public class TestJobImpl {
     JobId jobId = job.getID();
     job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(jobId, JobEventType.JOB_START));
+    job.handle(new JobStartEvent(jobId));
     assertJobState(job, JobStateInternal.SETUP);
 
     job.handle(new JobEvent(jobId, JobEventType.JOB_KILL));
@@ -428,7 +432,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job1 = new JobImpl(jobId, null, conf1, null, null, null, null, null,
-        null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, null, 0, null, null, null, null);
     Assert.assertTrue(job1.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertFalse(job1.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -439,7 +443,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job2 = new JobImpl(jobId, null, conf2, null, null, null, null, null,
-        null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, null, 0, null, null, null, null);
     Assert.assertTrue(job2.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job2.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -450,7 +454,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job3 = new JobImpl(jobId, null, conf3, null, null, null, null, null,
-        null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, null, 0, null, null, null, null);
     Assert.assertTrue(job3.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job3.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -461,7 +465,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job4 = new JobImpl(jobId, null, conf4, null, null, null, null, null,
-        null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, null, 0, null, null, null, null);
     Assert.assertTrue(job4.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job4.checkAccess(ugi2, JobACL.VIEW_JOB));
 
@@ -472,7 +476,7 @@ public class TestJobImpl {
 
     // Verify access
     JobImpl job5 = new JobImpl(jobId, null, conf5, null, null, null, null, null,
-        null, null, true, null, 0, null, null, null, null);
+        null, null, null, true, null, 0, null, null, null, null);
     Assert.assertTrue(job5.checkAccess(ugi1, null));
     Assert.assertTrue(job5.checkAccess(ugi2, null));
   }
@@ -490,7 +494,7 @@ public class TestJobImpl {
         mock(EventHandler.class),
         null, mock(JobTokenSecretManager.class), null,
         new SystemClock(), null,
-        mrAppMetrics, true, null, 0, null, null, null, null);
+        mrAppMetrics, null, true, null, 0, null, null, null, null);
     job.handle(diagUpdateEvent);
     String diagnostics = job.getReport().getDiagnostics();
     Assert.assertNotNull(diagnostics);
@@ -501,7 +505,7 @@ public class TestJobImpl {
         mock(EventHandler.class),
         null, mock(JobTokenSecretManager.class), null,
         new SystemClock(), null,
-        mrAppMetrics, true, null, 0, null, null, null, null);
+        mrAppMetrics, null, true, null, 0, null, null, null, null);
     job.handle(new JobEvent(jobId, JobEventType.JOB_KILL));
     job.handle(diagUpdateEvent);
     diagnostics = job.getReport().getDiagnostics();
@@ -556,7 +560,7 @@ public class TestJobImpl {
     JobImpl job = new JobImpl(jobId, Records
         .newRecord(ApplicationAttemptId.class), conf, mock(EventHandler.class),
         null, new JobTokenSecretManager(), new Credentials(), null, null,
-        mrAppMetrics, true, null, 0, null, null, null, null);
+        mrAppMetrics, null, true, null, 0, null, null, null, null);
     InitTransition initTransition = getInitTransition(2);
     JobEvent mockJobEvent = mock(JobEvent.class);
     initTransition.transition(job, mockJobEvent);
@@ -597,7 +601,7 @@ public class TestJobImpl {
     JobId jobId = job.getID();
     job.handle(new JobEvent(jobId, JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(jobId, JobEventType.JOB_START));
+    job.handle(new JobStartEvent(jobId));
     assertJobState(job, JobStateInternal.FAILED);
 
     job.handle(new JobEvent(jobId, JobEventType.JOB_TASK_COMPLETED));
@@ -661,7 +665,7 @@ public class TestJobImpl {
     StubbedJob job = createStubbedJob(conf, dispatcher, numSplits);
     job.handle(new JobEvent(job.getID(), JobEventType.JOB_INIT));
     assertJobState(job, JobStateInternal.INITED);
-    job.handle(new JobEvent(job.getID(), JobEventType.JOB_START));
+    job.handle(new JobStartEvent(job.getID()));
     assertJobState(job, JobStateInternal.RUNNING);
     return job;
   }
@@ -741,7 +745,12 @@ public class TestJobImpl {
         setAssertValue(false);
         return;
       }
-      if (!workflowAdjacencies.equals(jsEvent.getWorkflowAdjacencies())) {
+     
+      String[] wrkflowAdj = workflowAdjacencies.split(" ");
+      String[] jswrkflowAdj = jsEvent.getWorkflowAdjacencies().split(" ");
+      Arrays.sort(wrkflowAdj);
+      Arrays.sort(jswrkflowAdj);
+      if (!Arrays.equals(wrkflowAdj, jswrkflowAdj)) {
         setAssertValue(false);
         return;
       }
@@ -785,9 +794,9 @@ public class TestJobImpl {
         boolean newApiCommitter, String user, int numSplits) {
       super(jobId, applicationAttemptId, conf, eventHandler,
           null, new JobTokenSecretManager(), new Credentials(),
-          new SystemClock(), null, MRAppMetrics.create(),
-          newApiCommitter, user, System.currentTimeMillis(), null, null, null,
-          null);
+          new SystemClock(), Collections.<TaskId, TaskInfo> emptyMap(),
+          MRAppMetrics.create(), null, newApiCommitter, user,
+          System.currentTimeMillis(), null, null, null, null);
 
       initTransition = getInitTransition(numSplits);
       localFactory = stateMachineFactory.addTransition(JobStateInternal.NEW,

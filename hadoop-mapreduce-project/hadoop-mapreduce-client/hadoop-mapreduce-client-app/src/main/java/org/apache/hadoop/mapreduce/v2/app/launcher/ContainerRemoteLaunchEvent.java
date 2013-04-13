@@ -23,24 +23,32 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.Resource;
 
 public class ContainerRemoteLaunchEvent extends ContainerLauncherEvent {
 
   private final ContainerLaunchContext container;
   private final Task task;
+  private final Resource resource;
 
   public ContainerRemoteLaunchEvent(TaskAttemptId taskAttemptID,
       ContainerId containerID, String containerMgrAddress,
       ContainerToken containerToken,
-      ContainerLaunchContext containerLaunchContext, Task remoteTask) {
+      ContainerLaunchContext containerLaunchContext, Resource resource,
+      Task remoteTask) {
     super(taskAttemptID, containerID, containerMgrAddress, containerToken,
         ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH);
     this.container = containerLaunchContext;
     this.task = remoteTask;
+    this.resource = resource;
   }
 
   public ContainerLaunchContext getContainer() {
     return this.container;
+  }
+
+  public Resource getResource() {
+    return this.resource;
   }
 
   public Task getRemoteTask() {

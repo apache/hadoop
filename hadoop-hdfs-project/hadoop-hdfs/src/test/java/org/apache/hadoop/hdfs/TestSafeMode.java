@@ -99,7 +99,7 @@ public class TestSafeMode {
    */
   @Test
   public void testManualSafeMode() throws IOException {      
-    fs = (DistributedFileSystem)cluster.getFileSystem();
+    fs = cluster.getFileSystem();
     Path file1 = new Path("/tmp/testManualSafeMode/file1");
     Path file2 = new Path("/tmp/testManualSafeMode/file2");
     
@@ -112,7 +112,7 @@ public class TestSafeMode {
     // now bring up just the NameNode.
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
     cluster.waitActive();
-    dfs = (DistributedFileSystem)cluster.getFileSystem();
+    dfs = cluster.getFileSystem();
     
     assertTrue("No datanode is started. Should be in SafeMode", 
                dfs.setSafeMode(SafeModeAction.SAFEMODE_GET));
@@ -322,11 +322,11 @@ public class TestSafeMode {
         fs.rename(file1, new Path("file2"));
       }});
 
-    try {
-      fs.setTimes(file1, 0, 0);
-    } catch (IOException ioe) {
-      fail("Set times failed while in SM");
-    }
+    runFsFun("Set time while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.setTimes(file1, 0, 0);
+      }});
 
     try {
       DFSTestUtil.readFile(fs, file1);
@@ -350,7 +350,7 @@ public class TestSafeMode {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
 
     cluster.restartNameNode();
-    fs = (DistributedFileSystem)cluster.getFileSystem();
+    fs = cluster.getFileSystem();
 
     String tipMsg = cluster.getNamesystem().getSafemode();
     assertTrue("Safemode tip message looks right: " + tipMsg,
@@ -375,7 +375,7 @@ public class TestSafeMode {
    * @throws IOException when there's an issue connecting to the test DFS.
    */
   public void testSafeModeUtils() throws IOException {
-    dfs = (DistributedFileSystem)cluster.getFileSystem();
+    dfs = cluster.getFileSystem();
 
     // Enter safemode.
     dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);

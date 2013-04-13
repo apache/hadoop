@@ -113,9 +113,9 @@ public class TestTaskAttemptContainerRequest {
     ContainerId containerId = BuilderUtils.newContainerId(1, 1, 1, 1);
 
     ContainerLaunchContext launchCtx =
-        TaskAttemptImpl.createContainerLaunchContext(acls, containerId,
+        TaskAttemptImpl.createContainerLaunchContext(acls,
             jobConf, jobToken, taImpl.createRemoteTask(),
-            TypeConverter.fromYarn(jobId), mock(Resource.class),
+            TypeConverter.fromYarn(jobId),
             mock(WrappedJvmID.class), taListener,
             credentials);
 

@@ -266,7 +266,7 @@ public class ClientRMService extends AbstractService implements
     ApplicationSubmissionContext submissionContext = request
         .getApplicationSubmissionContext();
     ApplicationId applicationId = submissionContext.getApplicationId();
-    String user = submissionContext.getUser();
+    String user = submissionContext.getAMContainerSpec().getUser();
     try {
       user = UserGroupInformation.getCurrentUser().getShortUserName();
       if (rmContext.getRMApps().get(applicationId) != null) {
@@ -275,13 +275,13 @@ public class ClientRMService extends AbstractService implements
       }
 
       // Safety 
-      submissionContext.setUser(user);
+      submissionContext.getAMContainerSpec().setUser(user);
 
       // Check whether AM resource requirements are within required limits
       if (!submissionContext.getUnmanagedAM()) {
         ResourceRequest amReq = BuilderUtils.newResourceRequest(
             RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-            submissionContext.getAMContainerSpec().getResource(), 1);
+            submissionContext.getResource(), 1);
         try {
           SchedulerUtils.validateResourceRequest(amReq,
               scheduler.getMaximumResourceCapability());

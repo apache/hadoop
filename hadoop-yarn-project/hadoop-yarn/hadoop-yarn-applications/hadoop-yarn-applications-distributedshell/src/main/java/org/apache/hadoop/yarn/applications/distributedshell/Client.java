@@ -548,7 +548,7 @@ public class Client extends YarnClientImpl {
     // For now, only memory is supported so we set memory requirements
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(amMemory);
-    amContainer.setResource(capability);
+    appContext.setResource(capability);
 
     // Service data is a binary blob that can be passed to the application
     // Not needed in this scenario
@@ -573,6 +573,7 @@ public class Client extends YarnClientImpl {
     // Ignore the response as either a valid response object is returned on success 
     // or an exception thrown to denote some form of a failure
     LOG.info("Submitting application to ASM");
+
     super.submitApplication(appContext);
 
     // TODO

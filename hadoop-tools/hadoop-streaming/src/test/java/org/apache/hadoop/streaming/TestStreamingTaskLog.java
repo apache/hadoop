@@ -83,7 +83,7 @@ public class TestStreamingTaskLog {
    *  (b) hadoop.tasklog.totalLogFileSize
    * for the children of java tasks in streaming jobs.
    */
-  @Test (timeout = 30000)
+  @Test (timeout = 120000)
   public void testStreamingTaskLogWithHadoopCmd() {
     try {
       final int numSlaves = 1;
@@ -95,13 +95,14 @@ public class TestStreamingTaskLog {
         fs.delete(testDir, true);
       }
       fs.mkdirs(testDir);
-      File scriptFile = createScript(
-          testDir.toString() + "/testTaskLog.sh");
+      File scriptFile = createScript(testDir.toString() +
+          (Shell.WINDOWS ? "/testTaskLog.cmd" : "/testTaskLog.sh"));
       conf.setBoolean(JTConfig.JT_PERSIST_JOBSTATUS, false);
       mr = new MiniMRCluster(numSlaves, fs.getUri().toString(), 1, null, null, conf);
 
       writeInputFile(fs, inputPath);
-      map = scriptFile.getAbsolutePath();
+      map = Shell.WINDOWS ? "cmd /c " + scriptFile.getAbsolutePath() :
+        scriptFile.getAbsolutePath();
       
       runStreamJobAndValidateEnv();
       
@@ -120,8 +121,12 @@ public class TestStreamingTaskLog {
     File scriptFile = new File(script);
     UtilTest.recursiveDelete(scriptFile);
     FileOutputStream in = new FileOutputStream(scriptFile);
-    in.write(("cat > /dev/null 2>&1\n" +
-              "echo $HADOOP_ROOT_LOGGER $HADOOP_CLIENT_OPTS").getBytes());
+    if (Shell.WINDOWS) {
+      in.write("@echo %HADOOP_ROOT_LOGGER% %HADOOP_CLIENT_OPTS%".getBytes());
+    } else {
+      in.write(("cat > /dev/null 2>&1\n" +
+                "echo $HADOOP_ROOT_LOGGER $HADOOP_CLIENT_OPTS").getBytes());
+    }
     in.close();
     
     Shell.execCommand(Shell.getSetPermissionCommand("+x", false,

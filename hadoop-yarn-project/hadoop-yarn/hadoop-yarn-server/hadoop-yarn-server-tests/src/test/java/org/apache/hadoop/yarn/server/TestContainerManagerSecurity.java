@@ -357,8 +357,13 @@ public class TestContainerManagerSecurity {
 
         LOG.info("Going to contact NM with expired token");
         ContainerLaunchContext context = createContainerLaunchContextForTest(newTokenId);
+        Container container =
+            BuilderUtils.newContainer(newTokenId.getContainerID(), null, null,
+                BuilderUtils.newResource(newTokenId.getResource().getMemory(),
+                    newTokenId.getResource().getVirtualCores()), null, null);
         StartContainerRequest request = Records.newRecord(StartContainerRequest.class);
         request.setContainerLaunchContext(context);
+        request.setContainer(container);
 
         //Calling startContainer with an expired token.
         try {
@@ -402,18 +407,19 @@ public class TestContainerManagerSecurity {
       Arrays.asList("ping", "-n", "100", "127.0.0.1", ">nul") :
       Arrays.asList("sleep", "100");
 
-    ContainerLaunchContext amContainer = BuilderUtils
-        .newContainerLaunchContext(null, "testUser", BuilderUtils
-            .newResource(1024, 1), Collections.<String, LocalResource>emptyMap(),
-            new HashMap<String, String>(), cmd,
-            new HashMap<String, ByteBuffer>(), null,
-            new HashMap<ApplicationAccessType, String>());
+    ContainerLaunchContext amContainer =
+        BuilderUtils.newContainerLaunchContext("testUser",
+                Collections.<String, LocalResource> emptyMap(),
+                new HashMap<String, String>(), cmd,
+                new HashMap<String, ByteBuffer>(), null,
+                new HashMap<ApplicationAccessType, String>());
 
     ApplicationSubmissionContext appSubmissionContext = recordFactory
         .newRecordInstance(ApplicationSubmissionContext.class);
     appSubmissionContext.setApplicationId(appID);
-    appSubmissionContext.setUser("testUser");
     appSubmissionContext.setAMContainerSpec(amContainer);
+    appSubmissionContext.getAMContainerSpec().setUser("testUser");
+    appSubmissionContext.setResource(BuilderUtils.newResource(1024, 1));
 
     SubmitApplicationRequest submitRequest = recordFactory
         .newRecordInstance(SubmitApplicationRequest.class);
@@ -539,8 +545,11 @@ public class TestContainerManagerSecurity {
     // Authenticated but unauthorized, due to wrong resource
     ContainerLaunchContext context =
         createContainerLaunchContextForTest(tokenId);
-    context.getResource().setMemory(2048); // Set a different resource size.
+    Container container =
+        BuilderUtils.newContainer(tokenId.getContainerID(), null, null,
+            BuilderUtils.newResource(2048, 1), null, null);
     request.setContainerLaunchContext(context);
+    request.setContainer(container);
     try {
       client.startContainer(request);
       fail("Connection initiation with unauthorized "
@@ -551,7 +560,7 @@ public class TestContainerManagerSecurity {
           "Unauthorized request to start container. "));
       Assert.assertTrue(e.getMessage().contains(
           "\nExpected resource " + tokenId.getResource().toString()
-              + " but found " + context.getResource().toString()));
+              + " but found " + container.getResource().toString()));
     }
   }
 
@@ -563,7 +572,12 @@ public class TestContainerManagerSecurity {
     ContainerLaunchContext context =
         createContainerLaunchContextForTest(tokenId);
     context.setUser("Saruman"); // Set a different user-name.
+    Container container =
+        BuilderUtils.newContainer(tokenId.getContainerID(), null, null,
+            BuilderUtils.newResource(tokenId.getResource().getMemory(), tokenId
+                .getResource().getVirtualCores()), null, null);
     request.setContainerLaunchContext(context);
+    request.setContainer(container);
     try {
       client.startContainer(request);
       fail("Connection initiation with unauthorized "
@@ -581,12 +595,8 @@ public class TestContainerManagerSecurity {
   private ContainerLaunchContext createContainerLaunchContextForTest(
       ContainerTokenIdentifier tokenId) {
     ContainerLaunchContext context =
-        BuilderUtils.newContainerLaunchContext(tokenId.getContainerID(),
-            "testUser",
-            BuilderUtils.newResource(
-                tokenId.getResource().getMemory(), 
-                tokenId.getResource().getVirtualCores()),
-            new HashMap<String, LocalResource>(),
+        BuilderUtils.newContainerLaunchContext(
+            "testUser", new HashMap<String, LocalResource>(),
             new HashMap<String, String>(), new ArrayList<String>(),
             new HashMap<String, ByteBuffer>(), null,
             new HashMap<ApplicationAccessType, String>());

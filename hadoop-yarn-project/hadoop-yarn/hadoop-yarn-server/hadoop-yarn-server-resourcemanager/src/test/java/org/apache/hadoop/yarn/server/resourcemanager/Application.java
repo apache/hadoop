@@ -130,7 +130,7 @@ public class Application {
   public synchronized void submit() throws IOException {
     ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(this.applicationId);
-    context.setUser(this.user);
+    context.getAMContainerSpec().setUser(this.user);
     context.setQueue(this.queue);
     SubmitApplicationRequest request = recordFactory
         .newRecordInstance(SubmitApplicationRequest.class);
@@ -340,7 +340,8 @@ public class Application {
 
             // Launch the container
             StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
-            startRequest.setContainerLaunchContext(createCLC(container));
+            startRequest.setContainerLaunchContext(createCLC());
+            startRequest.setContainer(container);
             nodeManager.startContainer(startRequest);
             break;
           }
@@ -396,11 +397,9 @@ public class Application {
     }
   }
 
-  private ContainerLaunchContext createCLC(Container container) {
+  private ContainerLaunchContext createCLC() {
     ContainerLaunchContext clc = recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    clc.setContainerId(container.getId());
     clc.setUser(this.user);
-    clc.setResource(container.getResource());
     return clc;
   }
 }

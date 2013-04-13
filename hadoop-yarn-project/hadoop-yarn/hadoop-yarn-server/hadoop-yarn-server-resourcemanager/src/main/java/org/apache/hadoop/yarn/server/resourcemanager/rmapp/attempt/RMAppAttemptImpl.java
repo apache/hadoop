@@ -690,7 +690,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.eventHandler.handle(
           new AppAddedSchedulerEvent(appAttempt.applicationAttemptId,
               appAttempt.submissionContext.getQueue(),
-              appAttempt.submissionContext.getUser()));
+              appAttempt.submissionContext.getAMContainerSpec().getUser()));
     }
   }
 
@@ -736,9 +736,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             RMAppEventType.APP_ACCEPTED));
 
         // Request a container for the AM.
-        ResourceRequest request = BuilderUtils.newResourceRequest(
-            AM_CONTAINER_PRIORITY, ResourceRequest.ANY, appAttempt.submissionContext
-                .getAMContainerSpec().getResource(), 1);
+        ResourceRequest request =
+            BuilderUtils.newResourceRequest(
+                AM_CONTAINER_PRIORITY, ResourceRequest.ANY, appAttempt
+                    .getSubmissionContext().getResource(), 1);
 
         // SchedulerUtils.validateResourceRequests is not necessary because
         // AM resource has been checked when submission
@@ -773,12 +774,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Set the masterContainer
       appAttempt.setMasterContainer(amContainerAllocation.getContainers().get(
                                                                            0));
-      // Updating CLC's resource is no longer necessary once YARN-486 is
-      // completed, because nothing from Container to CLC will be copied into
-      // CLC then.
-      appAttempt.getSubmissionContext().getAMContainerSpec().setResource(
+      appAttempt.getSubmissionContext().setResource(
           appAttempt.getMasterContainer().getResource());
-
       RMStateStore store = appAttempt.rmContext.getStateStore();
       appAttempt.storeAttempt(store);
     }

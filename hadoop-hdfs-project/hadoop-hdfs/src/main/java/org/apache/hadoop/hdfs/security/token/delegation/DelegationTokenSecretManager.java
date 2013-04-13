@@ -310,6 +310,23 @@ public class DelegationTokenSecretManager
       namesystem.logUpdateMasterKey(key);
     }
   }
+  
+  @Override //AbstractDelegationTokenManager
+  protected void logExpireToken(final DelegationTokenIdentifier dtId)
+      throws IOException {
+    synchronized (noInterruptsLock) {
+      // The edit logging code will fail catastrophically if it
+      // is interrupted during a logSync, since the interrupt
+      // closes the edit log files. Doing this inside the
+      // above lock and then checking interruption status
+      // prevents this bug.
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException(
+            "Interrupted before expiring delegation token");
+      }
+      namesystem.logExpireDelegationToken(dtId);
+    }
+  }
 
   /** A utility method for creating credentials. */
   public static Credentials createCredentials(final NameNode namenode,

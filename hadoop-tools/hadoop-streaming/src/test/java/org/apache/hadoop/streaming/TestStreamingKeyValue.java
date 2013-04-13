@@ -76,7 +76,7 @@ public class TestStreamingKeyValue
     return new String[] {
       "-input", INPUT_FILE.getAbsolutePath(),
       "-output", OUTPUT_DIR.getAbsolutePath(),
-      "-mapper", "cat",
+      "-mapper", TestStreaming.CAT,
       "-jobconf", MRJobConfig.PRESERVE_FAILED_TASK_FILES + "=true", 
       "-jobconf", "stream.non.zero.exit.is.failure=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),

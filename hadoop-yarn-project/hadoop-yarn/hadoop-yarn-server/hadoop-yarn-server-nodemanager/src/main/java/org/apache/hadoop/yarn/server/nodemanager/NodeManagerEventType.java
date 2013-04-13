@@ -18,5 +18,5 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 public enum NodeManagerEventType {
-  SHUTDOWN, REBOOT
+  SHUTDOWN, RESYNC
 }

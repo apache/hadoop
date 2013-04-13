@@ -161,7 +161,6 @@ public class MockRM extends ResourceManager {
         .newRecord(ApplicationSubmissionContext.class);
     sub.setApplicationId(appId);
     sub.setApplicationName(name);
-    sub.setUser(user);
     sub.setMaxAppAttempts(maxAppAttempts);
     if(unmanaged) {
       sub.setUnmanagedAM(true);
@@ -171,13 +170,13 @@ public class MockRM extends ResourceManager {
     }
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
-    Resource capability = Records.newRecord(Resource.class);
+    final Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(masterMemory);
-    clc.setResource(capability);
+    sub.setResource(capability);
     clc.setApplicationACLs(acls);
+    clc.setUser(user);
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
-
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
     PrivilegedAction<SubmitApplicationResponse> action =

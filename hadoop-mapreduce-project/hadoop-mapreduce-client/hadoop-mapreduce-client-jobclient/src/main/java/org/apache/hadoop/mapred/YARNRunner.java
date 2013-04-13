@@ -468,16 +468,14 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup ContainerLaunchContext for AM container
     ContainerLaunchContext amContainer = BuilderUtils
-        .newContainerLaunchContext(null, UserGroupInformation
-            .getCurrentUser().getShortUserName(), capability, localResources,
+        .newContainerLaunchContext(UserGroupInformation
+            .getCurrentUser().getShortUserName(), localResources,
             environment, vargsFinal, null, securityTokens, acls);
 
     // Set up the ApplicationSubmissionContext
     ApplicationSubmissionContext appContext =
         recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     appContext.setApplicationId(applicationId);                // ApplicationId
-    appContext.setUser(                                        // User name
-        UserGroupInformation.getCurrentUser().getShortUserName());
     appContext.setQueue(                                       // Queue name
         jobConf.get(JobContext.QUEUE_NAME,
         YarnConfiguration.DEFAULT_QUEUE_NAME));
@@ -490,7 +488,7 @@ public class YARNRunner implements ClientProtocol {
     appContext.setMaxAppAttempts(
         conf.getInt(MRJobConfig.MR_AM_MAX_ATTEMPTS,
             MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS));
-
+    appContext.setResource(capability);
     return appContext;
   }
 

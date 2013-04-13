@@ -617,6 +617,17 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9429. TestConfiguration fails with IBM JAVA. (Amir Sanjar via
     suresh)
 
+    HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
+    Bondarev via jlowe)
+
+    HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
+    tests (Vadim Bondarev via jlowe)
+
+    HADOOP-9211. Set default max heap size in HADOOP_CLIENT_OPTS to 512m
+    in order to avoid OOME. (Plamen Jeliazkov via shv)
+
+    HADOOP-9473. Typo in FileUtil copy() method. (Glen Mazza via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -642,6 +653,9 @@ Release 2.0.4-alpha - UNRELEASED
 
     HADOOP-9444. Modify hadoop-policy.xml to replace unexpanded variables to a
     default value of '*'. (Roman Shaposhnik via vinodkv)
+
+    HADOOP-9471. hadoop-client wrongfully excludes jetty-util JAR, 
+    breaking webhdfs. (tucu)
 
 Release 2.0.3-alpha - 2013-02-06 
 
@@ -1605,6 +1619,24 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
     bobby) 
+
+Release 0.23.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-9222. Cover package with org.apache.hadoop.io.lz4 unit tests (Vadim 
+    Bondarev via jlowe)
+
+    HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
+    tests (Vadim Bondarev via jlowe)
 
 Release 0.23.7 - UNRELEASED
 

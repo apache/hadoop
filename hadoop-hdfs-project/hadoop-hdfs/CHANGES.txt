@@ -187,6 +187,9 @@ Trunk (Unreleased)
     HDFS-4633 TestDFSClientExcludedNodes fails sporadically if excluded nodes
     cache expires too quickly  (Chris Nauroth via Sanjay)
 
+    HDFS-347. DFS read performance suboptimal when client co-located on nodes
+    with data. (Colin Patrick McCabe via todd and atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -355,6 +358,62 @@ Trunk (Unreleased)
     HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
     datanode data directory as URI. (Chris Nauroth via suresh)
 
+  BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
+
+    HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4354. Create DomainSocket and DomainPeer and associated unit tests.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4356. BlockReaderLocal should use passed file descriptors rather than paths.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4388. DomainSocket should throw AsynchronousCloseException when appropriate.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4390. Bypass UNIX domain socket unit tests when they cannot be run.
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4400. DFSInputStream#getBlockReader: last retries should ignore the cache
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4401. Fix bug in DomainSocket path validation
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4402. Some small DomainSocket fixes: avoid findbugs warning, change
+    log level, etc. (Colin Patrick McCabe via todd)
+    
+    HDFS-4418. increase default FileInputStreamCache size (todd)
+    
+    HDFS-4416. Rename dfs.datanode.domain.socket.path to dfs.domain.socket.path
+    (Colin Patrick McCabe via todd)
+    
+    HDFS-4417. Fix case where local reads get disabled incorrectly
+    (Colin Patrick McCabe and todd via todd)
+    
+    HDFS-4433. Make TestPeerCache not flaky (Colin Patrick McCabe via todd)
+    
+    HDFS-4438. TestDomainSocket fails when system umask is set to 0002. (Colin
+    Patrick McCabe via atm)
+    
+    HDFS-4440. Avoid annoying log message when dfs.domain.socket.path is not
+    set. (Colin Patrick McCabe via atm)
+    
+    HDFS-4473. Don't create domain socket unless we need it. (Colin Patrick McCabe via atm)
+    
+    HDFS-4485. DN should chmod socket path a+w. (Colin Patrick McCabe via atm)
+    
+    HDFS-4453. Make a simple doc to describe the usage and design of the
+    shortcircuit read feature. (Colin Patrick McCabe via atm)
+    
+    HDFS-4496. DFSClient: don't create a domain socket unless we need it (Colin
+    Patrick McCabe via todd)
+    
+    HDFS-347: style cleanups (Colin Patrick McCabe via atm)
+    
+    HDFS-4538. Allow use of legacy blockreader (Colin Patrick McCabe via todd)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -398,6 +457,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-3940. Add Gset#clear method and clear the block map when namenode is
     shutdown. (suresh)
+
+    HDFS-4679. Namenode operation checks should be done in a consistent
+    manner. (suresh)
 
   OPTIMIZATIONS
 
@@ -499,6 +561,9 @@ Release 2.0.5-beta - UNRELEASED
     suresh)
 
     HDFS-4643. Fix flakiness in TestQuorumJournalManager. (todd)
+
+    HDFS-4639. startFileInternal() should not increment generation stamp.
+    (Plamen Jeliazkov via shv)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -2472,6 +2537,20 @@ Release 2.0.0-alpha - 05-23-2012
     HDFS-3035. Fix failure of TestFileAppendRestart due to OP_UPDATE_BLOCKS (todd)
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
+
+Release 0.23.8 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-4477. Secondary namenode may retain old tokens (daryn via kihwal)
 
 Release 0.23.7 - UNRELEASED
 

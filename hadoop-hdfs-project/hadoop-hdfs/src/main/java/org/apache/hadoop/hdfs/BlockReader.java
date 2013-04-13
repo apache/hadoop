@@ -18,10 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.net.Socket;
 
 import org.apache.hadoop.fs.ByteBufferReadable;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 
 /**
  * A BlockReader is responsible for reading a single block
@@ -43,7 +41,29 @@ public interface BlockReader extends ByteBufferReadable {
    */
   long skip(long n) throws IOException;
 
-  void close() throws IOException;
+  /**
+   * Returns an estimate of the number of bytes that can be read
+   * (or skipped over) from this input stream without performing
+   * network I/O.
+   */
+  int available() throws IOException;
+
+  /**
+   * Close the block reader.
+   *
+   * @param peerCache      The PeerCache to put the Peer we're using back
+   *                       into, or null if we should simply close the Peer
+   *                       we're using (along with its Socket).
+   *                       Ignored by Readers that don't maintain Peers.
+   * @param fisCache       The FileInputStreamCache to put our FileInputStreams
+   *                       back into, or null if we should simply close them.
+   *                       Ignored by Readers that don't maintain
+   *                       FileInputStreams.
+   *
+   * @throws IOException
+   */
+  void close(PeerCache peerCache, FileInputStreamCache fisCache)
+      throws IOException;
 
   /**
    * Read exactly the given amount of data, throwing an exception
@@ -60,20 +80,4 @@ public interface BlockReader extends ByteBufferReadable {
    * filled or the next call will return EOF.
    */
   int readAll(byte[] buf, int offset, int len) throws IOException;
-
-  /**
-   * Take the socket used to talk to the DN.
-   */
-  Socket takeSocket();
-
-  /**
-   * Whether the BlockReader has reached the end of its input stream
-   * and successfully sent a status code back to the datanode.
-   */
-  boolean hasSentStatusCode();
-
-  /**
-   * @return a reference to the streams this block reader is using.
-   */
-  IOStreamPair getStreams();
 }

@@ -99,7 +99,6 @@ public class TestNodeStatusUpdater {
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private final Configuration conf = createNMConfig();
   private NodeManager nm;
-  protected NodeManager rebootedNodeManager;
   private boolean containerStatusBackupSuccessfully = true;
   private List<ContainerStatus> completedContainerStatusList = new ArrayList<ContainerStatus>();
 
@@ -177,6 +176,8 @@ public class TestNodeStatusUpdater {
       nodeStatus.setResponseId(heartBeatID++);
       Map<ApplicationId, List<ContainerStatus>> appToContainers =
           getAppToContainerStatusMap(nodeStatus.getContainersStatuses());
+      org.apache.hadoop.yarn.api.records.Container mockContainer =
+          mock(org.apache.hadoop.yarn.api.records.Container.class);
       if (heartBeatID == 1) {
         Assert.assertEquals(0, nodeStatus.getContainersStatuses().size());
 
@@ -187,11 +188,12 @@ public class TestNodeStatusUpdater {
         firstContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        launchContext.setContainerId(firstContainerID);
-        launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
-        launchContext.getResource().setMemory(2);
-        Container container = new ContainerImpl(conf , mockDispatcher,
-            launchContext, null, mockMetrics);
+        when(mockContainer.getId()).thenReturn(firstContainerID);
+        Resource resource = BuilderUtils.newResource(2, 1);
+        when(mockContainer.getResource()).thenReturn(resource);
+        Container container =
+            new ContainerImpl(conf, mockDispatcher, launchContext,
+                mockContainer, null, mockMetrics);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -212,11 +214,12 @@ public class TestNodeStatusUpdater {
         secondContainerID.setId(heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
-        launchContext.setContainerId(secondContainerID);
-        launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
-        launchContext.getResource().setMemory(3);
-        Container container = new ContainerImpl(conf, mockDispatcher,
-            launchContext, null, mockMetrics);
+        when(mockContainer.getId()).thenReturn(secondContainerID);
+        Resource resource = BuilderUtils.newResource(3, 1);
+        when(mockContainer.getResource()).thenReturn(resource);
+        Container container =
+            new ContainerImpl(conf, mockDispatcher, launchContext,
+                mockContainer, null, mockMetrics);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -663,8 +666,8 @@ public class TestNodeStatusUpdater {
       }
       
       @Override
-      protected void cleanupContainers() {
-        super.cleanupContainers();
+      protected void cleanupContainers(NodeManagerEventType eventType) {
+        super.cleanupContainers(NodeManagerEventType.SHUTDOWN);
         numCleanups.incrementAndGet();
       }
     };
@@ -717,50 +720,6 @@ public class TestNodeStatusUpdater {
     Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
   }
 
-  @Test
-  public void testNodeReboot() throws Exception {
-    nm = getNodeManager(NodeAction.REBOOT);
-    YarnConfiguration conf = createNMConfig();
-    nm.init(conf);
-    Assert.assertEquals(STATE.INITED, nm.getServiceState());
-    nm.start();
-
-    int waitCount = 0;
-    while (heartBeatID < 1 && waitCount++ != 20) {
-      Thread.sleep(500);
-    }
-    Assert.assertFalse(heartBeatID < 1);
-
-    // NM takes a while to reach the STOPPED state.
-    waitCount = 0;
-    while (nm.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
-      LOG.info("Waiting for NM to stop..");
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
-    
-    waitCount = 0;
-    while (null == rebootedNodeManager && waitCount++ != 20) {
-      LOG.info("Waiting for NM to reinitialize..");
-      Thread.sleep(1000);
-    }
-      
-    waitCount = 0;
-    while (rebootedNodeManager.getServiceState() != STATE.STARTED && waitCount++ != 20) {
-      LOG.info("Waiting for NM to start..");
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals(STATE.STARTED, rebootedNodeManager.getServiceState());
-
-    rebootedNodeManager.stop();
-    waitCount = 0;
-    while (rebootedNodeManager.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
-      LOG.info("Waiting for NM to stop..");
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals(STATE.STOPPED, rebootedNodeManager.getServiceState());
-  }
-  
   @Test
   public void testNMShutdownForRegistrationFailure() {
 
@@ -1107,12 +1066,6 @@ public class TestNodeStatusUpdater {
         myResourceTracker2.heartBeatNodeAction = nodeHeartBeatAction;
         myNodeStatusUpdater.resourceTracker = myResourceTracker2;
         return myNodeStatusUpdater;
-      }
-
-      @Override
-      NodeManager createNewNodeManager() {
-        rebootedNodeManager = getNodeManager(NodeAction.NORMAL);
-        return rebootedNodeManager;
       }
     };
   }

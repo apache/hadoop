@@ -99,7 +99,9 @@ public class TestNodeManagerReboot {
         Records.newRecord(ContainerLaunchContext.class);
     // Construct the Container-id
     ContainerId cId = createContainerId();
-    containerLaunchContext.setContainerId(cId);
+    org.apache.hadoop.yarn.api.records.Container mockContainer =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(mockContainer.getId()).thenReturn(cId);
 
     containerLaunchContext.setUser(user);
 
@@ -122,12 +124,13 @@ public class TestNodeManagerReboot {
     containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = new ArrayList<String>();
     containerLaunchContext.setCommands(commands);
-    containerLaunchContext.setResource(Records
-        .newRecord(Resource.class));
-    containerLaunchContext.getResource().setMemory(1024);
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(1024);
+    when(mockContainer.getResource()).thenReturn(resource);
     StartContainerRequest startRequest =
         Records.newRecord(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
+    startRequest.setContainer(mockContainer);
     containerManager.startContainer(startRequest);
 
     GetContainerStatusRequest request =
@@ -160,7 +163,10 @@ public class TestNodeManagerReboot {
         "container is launched", numOfLocalDirs(nmLocalDir.getAbsolutePath(),
         ResourceLocalizationService.NM_PRIVATE_DIR) > 0);
 
-    nm.handle(new NodeManagerEvent(NodeManagerEventType.REBOOT));
+    // restart the NodeManager
+    nm.stop();
+    nm = new MyNodeManager();
+    nm.start();    
 
     numTries = 0;
     while ((numOfLocalDirs(nmLocalDir.getAbsolutePath(), ContainerLocalizer
@@ -248,26 +254,6 @@ public class TestNodeManagerReboot {
     protected DeletionService createDeletionService(ContainerExecutor exec) {
       delService = spy(new DeletionService(exec));
       return delService;
-    }
-
-    // mimic part of reboot process
-    @Override
-    public void handle(NodeManagerEvent event) {
-      switch (event.getType()) {
-        case SHUTDOWN:
-          this.stop();
-          break;
-        case REBOOT:
-          this.stop();
-          this.createNewMyNodeManager().start();
-          break;
-        default:
-          LOG.warn("Invalid shutdown event " + event.getType() + ". Ignoring.");
-      }
-    }
-
-    private MyNodeManager createNewMyNodeManager() {
-      return new MyNodeManager();
     }
 
     private YarnConfiguration createNMConfig() {

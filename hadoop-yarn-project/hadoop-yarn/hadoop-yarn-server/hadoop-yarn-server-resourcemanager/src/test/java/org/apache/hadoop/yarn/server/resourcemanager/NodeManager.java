@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
@@ -162,11 +161,10 @@ public class NodeManager implements ContainerManager {
   synchronized public StartContainerResponse startContainer(
       StartContainerRequest request) 
   throws YarnRemoteException {
-    ContainerLaunchContext containerLaunchContext = 
-        request.getContainerLaunchContext();
-    
+    Container requestContainer = request.getContainer();
+
     ApplicationId applicationId = 
-        containerLaunchContext.getContainerId().getApplicationAttemptId().
+        requestContainer.getId().getApplicationAttemptId().
         getApplicationId();
 
     List<Container> applicationContainers = containers.get(applicationId);
@@ -177,18 +175,18 @@ public class NodeManager implements ContainerManager {
     
     // Sanity check
     for (Container container : applicationContainers) {
-      if (container.getId().compareTo(containerLaunchContext.getContainerId()) 
+      if (container.getId().compareTo(requestContainer.getId())
           == 0) {
         throw new IllegalStateException(
-            "Container " + containerLaunchContext.getContainerId() + 
+            "Container " + requestContainer.getId() +
             " already setup on node " + containerManagerAddress);
       }
     }
 
     Container container =
-        BuilderUtils.newContainer(containerLaunchContext.getContainerId(),
+        BuilderUtils.newContainer(requestContainer.getId(),
             this.nodeId, nodeHttpAddress,
-            containerLaunchContext.getResource(), 
+            requestContainer.getResource(),
             null, null                                 // DKDC - Doesn't matter
             );
 
@@ -197,8 +195,8 @@ public class NodeManager implements ContainerManager {
             "", -1000);
     applicationContainers.add(container);
     containerStatusMap.put(container, containerStatus);
-    Resources.subtractFrom(available, containerLaunchContext.getResource());
-    Resources.addTo(used, containerLaunchContext.getResource());
+    Resources.subtractFrom(available, requestContainer.getResource());
+    Resources.addTo(used, requestContainer.getResource());
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("startContainer:" + " node=" + containerManagerAddress
