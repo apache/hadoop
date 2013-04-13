@@ -263,7 +263,7 @@ public class FileUtil {
     // Check if dest is directory
     if (!dstFS.exists(dst)) {
       throw new IOException("`" + dst +"': specified destination directory " +
-                            "doest not exist");
+                            "does not exist");
     } else {
       FileStatus sdst = dstFS.getFileStatus(dst);
       if (!sdst.isDirectory()) 
