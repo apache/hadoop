@@ -231,3 +231,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4684. Use INode id for image serialization when writing INodeReference.
   (szetszwo)
+
+  HDFS-4675. Fix rename across snapshottable directories.  (Jing Zhao via
+  szetszwo)

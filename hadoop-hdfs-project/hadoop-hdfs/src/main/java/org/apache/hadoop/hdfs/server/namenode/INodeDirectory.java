@@ -224,16 +224,6 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     }
   }
 
-  INodeReference.WithCount replaceChild4Reference(INode oldChild) {
-    Preconditions.checkArgument(!oldChild.isReference());
-    final INodeReference.WithCount withCount
-        = new INodeReference.WithCount(null, oldChild);
-    final INodeReference ref = new INodeReference(this, withCount);
-    withCount.setParentReference(ref);
-    replaceChild(oldChild, ref);
-    return withCount;
-  }
-
   INodeReference.WithName replaceChild4ReferenceWithName(INode oldChild) {
     if (oldChild instanceof INodeReference.WithName) {
       return (INodeReference.WithName)oldChild;
@@ -241,12 +231,13 @@ public class INodeDirectory extends INodeWithAdditionalFields {
 
     final INodeReference.WithCount withCount;
     if (oldChild.isReference()) {
-      withCount = (INodeReference.WithCount) oldChild.asReference().getReferredINode();
+      withCount = (INodeReference.WithCount) oldChild.asReference()
+          .getReferredINode();
     } else {
       withCount = new INodeReference.WithCount(null, oldChild);
     }
-    final INodeReference.WithName ref = new INodeReference.WithName(
-        this, withCount, oldChild.getLocalNameBytes());
+    final INodeReference.WithName ref = new INodeReference.WithName(this,
+        withCount, oldChild.getLocalNameBytes());
     replaceChild(oldChild, ref);
     return ref;
   }
@@ -420,13 +411,43 @@ public class INodeDirectory extends INodeWithAdditionalFields {
       if (index >= 0) {
         existing.addNode(curNode);
       }
+      final boolean isRef = curNode.isReference();
       final boolean isDir = curNode.isDirectory();
       final INodeDirectory dir = isDir? curNode.asDirectory(): null;  
-      if (isDir && dir instanceof INodeDirectoryWithSnapshot) {
+      if (!isRef && isDir && dir instanceof INodeDirectoryWithSnapshot) {
         //if the path is a non-snapshot path, update the latest snapshot.
         if (!existing.isSnapshot()) {
           existing.updateLatestSnapshot(
               ((INodeDirectoryWithSnapshot)dir).getLastSnapshot());
+        }
+      } else if (isRef && isDir && !lastComp) {
+        // If the curNode is a reference node, need to check its dstSnapshot:
+        // 1. if the existing snapshot is no later than the dstSnapshot (which
+        // is the latest snapshot in dst before the rename), the changes 
+        // should be recorded in previous snapshots (belonging to src).
+        // 2. however, if the ref node is already the last component, we still 
+        // need to know the latest snapshot among the ref node's ancestors, 
+        // in case of processing a deletion operation. Thus we do not overwrite
+        // the latest snapshot if lastComp is true. In case of the operation is
+        // a modification operation, we do a similar check in corresponding 
+        // recordModification method.
+        if (!existing.isSnapshot()) {
+          int dstSnapshotId = curNode.asReference().getDstSnapshotId();
+          Snapshot latest = existing.getLatestSnapshot();
+          if (latest == null ||  // no snapshot in dst tree of rename
+              dstSnapshotId >= latest.getId()) { // the above scenario 
+            Snapshot lastSnapshot = null;
+            if (curNode.isDirectory()
+                && curNode.asDirectory() instanceof INodeDirectoryWithSnapshot) {
+              lastSnapshot = ((INodeDirectoryWithSnapshot) curNode
+                  .asDirectory()).getLastSnapshot();
+            } else if (curNode.isFile()
+                && curNode.asFile() instanceof INodeFileWithSnapshot) {
+              lastSnapshot = ((INodeFileWithSnapshot) curNode
+                  .asFile()).getDiffs().getLastSnapshot();
+            }
+            existing.setSnapshot(lastSnapshot);
+          }
         }
       }
       if (curNode.isSymlink() && (!lastComp || (lastComp && resolveLink))) {

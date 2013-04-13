@@ -132,6 +132,7 @@ abstract class AbstractINodeDiff<N extends INode,
   
   /**
    * Delete and clear self.
+   * @param currentINode The inode where the deletion happens.
    * @param collectedBlocks Used to collect blocks for deletion.
    * @return quota usage delta
    */

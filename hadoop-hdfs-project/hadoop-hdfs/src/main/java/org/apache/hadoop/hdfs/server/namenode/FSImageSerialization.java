@@ -44,6 +44,8 @@ import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Static utility functions for serializing various pieces of data in the correct
  * format for the FSImage file.
@@ -261,11 +263,19 @@ public class FSImageSerialization {
     out.writeLong(0);   // preferred block size
     out.writeInt(-3);   // # of blocks
 
-    out.writeBoolean(ref instanceof INodeReference.WithName);
-
+    final boolean isWithName = ref instanceof INodeReference.WithName;
+    out.writeBoolean(isWithName);
+    
+    if (!isWithName) {
+      Preconditions.checkState(ref instanceof INodeReference.DstReference);
+      // dst snapshot id
+      out.writeInt(((INodeReference.DstReference) ref).getDstSnapshotId());
+    }
+    
     final INodeReference.WithCount withCount
         = (INodeReference.WithCount)ref.getReferredINode();
-    referenceMap.writeINodeReferenceWithCount(withCount, out, writeUnderConstruction);
+    referenceMap.writeINodeReferenceWithCount(withCount, out,
+        writeUnderConstruction);
   }
 
   /**
@@ -275,7 +285,8 @@ public class FSImageSerialization {
       boolean writeUnderConstruction, ReferenceMap referenceMap)
       throws IOException {
     if (node.isReference()) {
-      writeINodeReference(node.asReference(), out, writeUnderConstruction, referenceMap);
+      writeINodeReference(node.asReference(), out, writeUnderConstruction,
+          referenceMap);
     } else if (node.isDirectory()) {
       writeINodeDirectory(node.asDirectory(), out);
     } else if (node.isSymlink()) {

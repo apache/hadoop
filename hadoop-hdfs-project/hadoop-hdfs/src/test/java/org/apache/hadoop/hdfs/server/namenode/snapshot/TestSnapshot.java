@@ -204,8 +204,8 @@ public class TestSnapshot {
     // dump the namespace loaded from fsimage
     SnapshotTestHelper.dumpTree2File(fsdir, fsnAfter);
     
-    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnMiddle);
-    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter);
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnMiddle, true);
+    SnapshotTestHelper.compareDumpedTreeInFile(fsnBefore, fsnAfter, true);
   }
   
   /**

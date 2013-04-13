@@ -187,17 +187,18 @@ public class SnapshotTestHelper {
    * </pre>
    * @see INode#dumpTreeRecursively()
    */
-  public static void compareDumpedTreeInFile(File file1, File file2)
-      throws IOException {
+  public static void compareDumpedTreeInFile(File file1, File file2,
+      boolean compareQuota) throws IOException {
     try {
-      compareDumpedTreeInFile(file1, file2, false);
+      compareDumpedTreeInFile(file1, file2, compareQuota, false);
     } catch(Throwable t) {
       LOG.info("FAILED compareDumpedTreeInFile(" + file1 + ", " + file2 + ")", t);
-      compareDumpedTreeInFile(file1, file2, true);
+      compareDumpedTreeInFile(file1, file2, compareQuota, true);
     }
   }
+
   private static void compareDumpedTreeInFile(File file1, File file2,
-      boolean print) throws IOException {
+      boolean compareQuota, boolean print) throws IOException {
     if (print) {
       printFile(file1);
       printFile(file2);
@@ -226,6 +227,11 @@ public class SnapshotTestHelper {
         // INodeFileUnderConstruction
         line1 = line1.replaceAll("replicas=\\[.*\\]", "replicas=[]");
         line2 = line2.replaceAll("replicas=\\[.*\\]", "replicas=[]");
+        
+        if (!compareQuota) {
+          line1 = line1.replaceAll("Quota\\[.*\\]", "Quota[]");
+          line2 = line2.replaceAll("Quota\\[.*\\]", "Quota[]");
+        }
         
         // skip the specific fields of BlockInfoUnderConstruction when the node
         // is an INodeFileSnapshot or an INodeFileUnderConstructionSnapshot

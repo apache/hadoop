@@ -109,13 +109,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     
     /** clear the deleted list */
     private Quota.Counts destroyDeletedList(
-        final BlocksMapUpdateInfo collectedBlocks) {
+        final BlocksMapUpdateInfo collectedBlocks, 
+        final List<INodeReference> refNodes) {
       Quota.Counts counts = Quota.Counts.newInstance();
       final List<INode> deletedList = getList(ListType.DELETED);
       for (INode d : deletedList) {
         if (INodeReference.tryRemoveReference(d) <= 0) {
           d.computeQuotaUsage(counts, false);
           d.destroyAndCollectBlocks(collectedBlocks);
+        } else {
+          refNodes.add(d.asReference());
         }
       }
       deletedList.clear();
@@ -269,6 +272,23 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
             if (INodeReference.tryRemoveReference(inode) <= 0) {
               inode.computeQuotaUsage(counts, false);
               inode.destroyAndCollectBlocks(collectedBlocks);
+            } else {
+              // if the node is a reference node, we should continue the 
+              // snapshot deletion process
+              try {
+                // use null as prior here because we are handling a reference
+                // node stored in the created list of a snapshot diff. This 
+                // snapshot diff must be associated with the latest snapshot of
+                // the dst tree before the rename operation. In this scenario,
+                // the prior snapshot should be the one created in the src tree,
+                // and it can be identified by the cleanSubtree since we call
+                // recordModification before the rename.
+                counts.add(inode.cleanSubtree(posterior.snapshot, null,
+                    collectedBlocks));
+              } catch (QuotaExceededException e) {
+                String error = "should not have QuotaExceededException while deleting snapshot";
+                LOG.error(error, e);
+              }
             }
           }
         }
@@ -367,7 +387,28 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         BlocksMapUpdateInfo collectedBlocks) {
       // this diff has been deleted
       Quota.Counts counts = Quota.Counts.newInstance();
-      counts.add(diff.destroyDeletedList(collectedBlocks));
+      List<INodeReference> refNodes = new ArrayList<INodeReference>();
+      counts.add(diff.destroyDeletedList(collectedBlocks, refNodes));
+      for (INodeReference ref : refNodes) {
+        // if the node is a reference node, we should continue the 
+        // snapshot deletion process
+        try {
+          // Use null as prior snapshot. We are handling a reference node stored
+          // in the delete list of this snapshot diff. We need to destroy this 
+          // snapshot diff because it is the very first one in history.
+          // If the ref node is a WithName instance acting as the src node of
+          // the rename operation, there will not be any snapshot before the
+          // snapshot to be deleted. If the ref node presents the dst node of a 
+          // rename operation, we can identify the corresponding prior snapshot 
+          // when we come into the subtree of the ref node.
+          counts.add(ref.cleanSubtree(this.snapshot, null, collectedBlocks));
+        } catch (QuotaExceededException e) {
+          String error = 
+              "should not have QuotaExceededException while deleting snapshot " 
+              + this.snapshot;
+          LOG.error(error, e);
+        }
+      }
       return counts;
     }
   }
@@ -511,8 +552,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   @Override
   public INodeDirectoryWithSnapshot recordModification(final Snapshot latest)
       throws QuotaExceededException {
-    return isInLatestSnapshot(latest)?
-        saveSelf2Snapshot(latest, null): this;
+    if (isInLatestSnapshot(latest) && !isInSrcSnapshot(latest)) {
+      return saveSelf2Snapshot(latest, null);
+    }
+    return this;
   }
 
   /** Save the snapshot copy to the latest snapshot. */
@@ -605,16 +648,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   /** The child just has been removed, replace it with a reference. */
-  public INodeReference.WithName replaceRemovedChild4Reference(
-      INode oldChild, INodeReference.WithCount newChild, byte[] childName) {
-    final INodeReference.WithName ref = new INodeReference.WithName(this,
-        newChild, childName);
-    newChild.incrementReferenceCount();
-    replaceRemovedChild(oldChild, ref);
-    return ref;
-  }
-
-  /** The child just has been removed, replace it with a reference. */
   public void replaceRemovedChild(INode oldChild, INode newChild) {
     // the old child must be in the deleted list
     Preconditions.checkState(
@@ -673,11 +706,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       }
     } else {
       // update prior
-      Snapshot s = getDiffs().getPrior(snapshot);
-      if (s != null && 
-          (prior == null || Snapshot.ID_COMPARATOR.compare(s, prior) > 0)) {
-        prior = s;
-      }
+      prior = getDiffs().updatePrior(snapshot, prior);
       counts.add(getDiffs().deleteSnapshotDiff(snapshot, prior, this, 
           collectedBlocks));
       if (prior != null) {

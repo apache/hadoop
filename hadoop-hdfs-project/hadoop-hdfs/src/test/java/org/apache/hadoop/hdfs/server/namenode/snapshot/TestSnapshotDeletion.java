@@ -140,8 +140,7 @@ public class TestSnapshotDeletion {
 
     // Deleting dir while its descedant subsub1 having snapshots should fail
     exception.expect(RemoteException.class);
-    String error = "The direcotry " + dir.toString()
-        + " cannot be deleted since " + subsub.toString()
+    String error = subsub.toString()
         + " is snapshottable and already has snapshots";
     exception.expectMessage(error);
     hdfs.delete(dir, true);

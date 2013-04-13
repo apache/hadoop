@@ -426,6 +426,12 @@ public class FSImageFormat {
       final INodeDirectory parent = INodeDirectory.valueOf(
           namesystem.dir.rootDir.getNode(parentPath, false), parentPath);
       
+      // Check if the whole subtree has been saved (for reference nodes)
+      boolean toLoadSubtree = referenceMap.toProcessSubtree(parent.getId());
+      if (!toLoadSubtree) {
+        return;
+      }
+      
       // Step 2. Load snapshots if parent is snapshottable
       int numSnapshots = in.readInt();
       if (numSnapshots >= 0) {
@@ -650,16 +656,20 @@ public class FSImageFormat {
           modificationTime, atime, symlink);
     } else if (numBlocks == -3) {
       //reference
-
+      
       final boolean isWithName = in.readBoolean();
-
+      int dstSnapshotId = Snapshot.INVALID_ID;
+      if (!isWithName) {
+        dstSnapshotId = in.readInt();
+      }
       final INodeReference.WithCount withCount
           = referenceMap.loadINodeReferenceWithCount(isSnapshotINode, in, this);
 
       if (isWithName) {
         return new INodeReference.WithName(null, withCount, localName);
       } else {
-        final INodeReference ref = new INodeReference(null, withCount);
+        final INodeReference ref = new INodeReference.DstReference(null,
+            withCount, dstSnapshotId);
         withCount.setParentReference(ref);
         return ref;
       }
@@ -830,9 +840,10 @@ public class FSImageFormat {
         byte[] byteStore = new byte[4*HdfsConstants.MAX_PATH_LENGTH];
         ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
         // save the root
-        FSImageSerialization.saveINode2Image(fsDir.rootDir, out, false, referenceMap);
+        FSImageSerialization.saveINode2Image(fsDir.rootDir, out, false,
+            referenceMap);
         // save the rest of the nodes
-        saveImage(strbuf, fsDir.rootDir, out, null);
+        saveImage(strbuf, fsDir.rootDir, out, null, true);
         // save files under construction
         sourceNamesystem.saveFilesUnderConstruction(out);
         context.checkCancelled();
@@ -918,19 +929,13 @@ public class FSImageFormat {
      * @param current The current node
      * @param out The DataoutputStream to write the image
      * @param snapshot The possible snapshot associated with the current node
+     * @param toSaveSubtree Whether or not to save the subtree to fsimage. For
+     *                      reference node, its subtree may already have been
+     *                      saved before.
      */
     private void saveImage(ByteBuffer currentDirName, INodeDirectory current,
-        DataOutputStream out, Snapshot snapshot)
+        DataOutputStream out, Snapshot snapshot, boolean toSaveSubtree)
         throws IOException {
-      final ReadOnlyList<INode> children = current.getChildrenList(null);
-      int dirNum = 0;
-      Map<Snapshot, List<INodeDirectory>> snapshotDirMap = null;
-      if (current instanceof INodeDirectoryWithSnapshot) {
-        snapshotDirMap = new HashMap<Snapshot, List<INodeDirectory>>();
-        dirNum += ((INodeDirectoryWithSnapshot) current).
-            getSnapshotDirectory(snapshotDirMap);
-      }
-      
       // 1. Print prefix (parent directory name)
       int prefixLen = currentDirName.position();
       if (snapshot == null) {
@@ -949,6 +954,19 @@ public class FSImageFormat {
         byte[] snapshotFullPathBytes = DFSUtil.string2Bytes(snapshotFullPath);
         out.writeShort(snapshotFullPathBytes.length);
         out.write(snapshotFullPathBytes);
+      }
+      
+      if (!toSaveSubtree) {
+        return;
+      }
+      
+      final ReadOnlyList<INode> children = current.getChildrenList(null);
+      int dirNum = 0;
+      Map<Snapshot, List<INodeDirectory>> snapshotDirMap = null;
+      if (current instanceof INodeDirectoryWithSnapshot) {
+        snapshotDirMap = new HashMap<Snapshot, List<INodeDirectory>>();
+        dirNum += ((INodeDirectoryWithSnapshot) current).
+            getSnapshotDirectory(snapshotDirMap);
       }
       
       // 2. Write INodeDirectorySnapshottable#snapshotsByNames to record all
@@ -971,18 +989,25 @@ public class FSImageFormat {
       // deleted sub-directories
       out.writeInt(dirNum); // the number of sub-directories
       for(INode child : children) {
-        if(!child.isDirectory())
+        if(!child.isDirectory()) {
           continue;
-        currentDirName.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
-        saveImage(currentDirName, child.asDirectory(), out, snapshot);
+        }
+        // make sure we only save the subtree under a reference node once
+        boolean toSave = child.isReference() ? 
+            referenceMap.toProcessSubtree(child.getId()) : true;
+        currentDirName.put(PATH_SEPARATOR).put(child.getLocalNameBytes()); 
+        saveImage(currentDirName, child.asDirectory(), out, snapshot, toSave);
         currentDirName.position(prefixLen);
       }
       if (snapshotDirMap != null) {
         for (Snapshot ss : snapshotDirMap.keySet()) {
           List<INodeDirectory> snapshotSubDirs = snapshotDirMap.get(ss);
           for (INodeDirectory subDir : snapshotSubDirs) {
+            // make sure we only save the subtree under a reference node once
+            boolean toSave = subDir.getParentReference() != null ? 
+                referenceMap.toProcessSubtree(subDir.getId()) : true;
             currentDirName.put(PATH_SEPARATOR).put(subDir.getLocalNameBytes());
-            saveImage(currentDirName, subDir, out, ss);
+            saveImage(currentDirName, subDir, out, ss, toSave);
             currentDirName.position(prefixLen);
           }
         }

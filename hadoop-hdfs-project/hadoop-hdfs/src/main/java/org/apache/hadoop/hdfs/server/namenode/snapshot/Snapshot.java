@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
 public class Snapshot implements Comparable<byte[]> {
+  public static final int INVALID_ID = -1;
+  
   /**
    * Compare snapshot IDs. Null indicates the current status thus is greater
    * than non-null snapshots.
@@ -69,12 +71,8 @@ public class Snapshot implements Comparable<byte[]> {
       if (inode.isDirectory()) {
         final INodeDirectory dir = inode.asDirectory();
         if (dir instanceof INodeDirectoryWithSnapshot) {
-          final Snapshot s = ((INodeDirectoryWithSnapshot)dir).getDiffs()
-              .getPrior(anchor);
-          if (latest == null
-              || (s != null && ID_COMPARATOR.compare(latest, s) < 0)) {
-            latest = s;
-          }
+          latest = ((INodeDirectoryWithSnapshot) dir).getDiffs().updatePrior(
+              anchor, latest);
         }
       }
     }

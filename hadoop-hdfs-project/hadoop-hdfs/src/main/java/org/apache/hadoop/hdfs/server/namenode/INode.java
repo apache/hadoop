@@ -162,6 +162,11 @@ public abstract class INode implements Diff.Element<byte[]> {
     if (latest == null) {
       return false;
     }
+    // if parent is a reference node, parent must be a renamed node. We can 
+    // stop the check at the reference node.
+    if (parent != null && parent.isReference()) {
+      return true;
+    }
     final INodeDirectory parentDir = getParent();
     if (parentDir == null) { // root
       return true;
@@ -177,6 +182,32 @@ public abstract class INode implements Diff.Element<byte[]> {
       return false;
     }
     return this == child.asReference().getReferredINode();
+  }
+  
+  /**
+   * Called by {@link INode#recordModification}. For a reference node and its
+   * subtree, the function tells which snapshot the modification should be
+   * associated with: the snapshot that belongs to the SRC tree of the rename
+   * operation, or the snapshot belonging to the DST tree.
+   * 
+   * @param latest
+   *          the latest snapshot in the DST tree above the reference node
+   * @return True: the modification should be recorded in the snapshot that
+   *         belongs to the SRC tree. False: the modification should be
+   *         recorded in the snapshot that belongs to the DST tree.
+   */
+  public final boolean isInSrcSnapshot(final Snapshot latest) {
+    if (latest == null) {
+      return true;
+    }
+    INodeReference withCount = getParentReference();
+    if (withCount != null) {
+      int dstSnapshotId = withCount.getParentReference().getDstSnapshotId();
+      if (dstSnapshotId >= latest.getId()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

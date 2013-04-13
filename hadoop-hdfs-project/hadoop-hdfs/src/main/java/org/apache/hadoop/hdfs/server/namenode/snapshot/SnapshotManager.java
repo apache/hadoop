@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -271,7 +272,16 @@ public class SnapshotManager implements SnapshotStats {
   public void removeSnapshottableDirs(
       List<INodeDirectorySnapshottable> toRemoveList) {
     if (toRemoveList != null) {
-      this.snapshottables.removeAll(toRemoveList);
+      Iterator<INodeDirectorySnapshottable> iter = snapshottables.iterator();
+      while (iter.hasNext()) {
+        INodeDirectorySnapshottable next = iter.next();
+        for (INodeDirectorySnapshottable toRemove : toRemoveList) {
+          if (next == toRemove) {
+            iter.remove();
+            break;
+          }
+        }
+      }
       // modify the numSnapshottableDirs metrics
       numSnapshottableDirs.addAndGet(-toRemoveList.size());
     }

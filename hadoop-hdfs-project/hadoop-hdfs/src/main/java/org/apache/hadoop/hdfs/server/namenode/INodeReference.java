@@ -54,7 +54,7 @@ import com.google.common.base.Preconditions;
  * Note 2: getParent() always returns the parent in the current state, e.g.
  *         inode(id=1000,name=bar).getParent() returns /xyz but not /abc.
  */
-public class INodeReference extends INode {
+public abstract class INodeReference extends INode {
   /**
    * Try to remove the given reference and then return the reference count.
    * If the given inode is not a reference, return -1;
@@ -75,6 +75,10 @@ public class INodeReference extends INode {
     if (!(referred instanceof WithCount)) {
       return -1;
     }
+    WithCount wc = (WithCount) referred;
+    if (ref == wc.getParentReference()) {
+      wc.setParent(null);
+    }
     return ((WithCount)referred).decrementReferenceCount();
   }
 
@@ -84,7 +88,6 @@ public class INodeReference extends INode {
     super(parent);
     this.referred = referred;
   }
-
 
   public final INode getReferredINode() {
     return referred;
@@ -276,6 +279,9 @@ public class INodeReference extends INode {
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final Snapshot snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
+    if (this instanceof DstReference) {
+      out.print(", dstSnapshotId=" + ((DstReference) this).dstSnapshotId);
+    }
     if (this instanceof WithCount) {
       out.print(", count=" + ((WithCount)this).getReferenceCount());
     }
@@ -287,6 +293,10 @@ public class INodeReference extends INode {
     }
     b.append("->");
     getReferredINode().dumpTreeRecursively(out, b, snapshot);
+  }
+  
+  public int getDstSnapshotId() {
+    return Snapshot.INVALID_ID;
   }
 
   /** An anonymous reference with reference count. */
@@ -334,6 +344,31 @@ public class INodeReference extends INode {
     public final void setLocalName(byte[] name) {
       throw new UnsupportedOperationException("Cannot set name: " + getClass()
           + " is immutable.");
+    }
+  }
+  
+  public static class DstReference extends INodeReference {
+    /**
+     * Record the latest snapshot of the dst subtree before the rename. For
+     * later operations on the moved/renamed files/directories, if the latest
+     * snapshot is after this dstSnapshot, changes will be recorded to the
+     * latest snapshot. Otherwise changes will be recorded to the snapshot
+     * belonging to the src of the rename.
+     * 
+     * {@link Snapshot#INVALID_ID} means no dstSnapshot (e.g., src of the
+     * first-time rename).
+     */
+    private final int dstSnapshotId;
+    
+    @Override
+    public final int getDstSnapshotId() {
+      return dstSnapshotId;
+    }
+    
+    public DstReference(INodeDirectory parent, WithCount referred,
+        final int dstSnapshotId) {
+      super(parent, referred);
+      this.dstSnapshotId = dstSnapshotId;
     }
   }
 }

@@ -136,7 +136,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** @return the last snapshot. */
-  final Snapshot getLastSnapshot() {
+  public final Snapshot getLastSnapshot() {
     final AbstractINodeDiff<N, D> last = getLast();
     return last == null? null: last.getSnapshot();
   }
@@ -147,7 +147,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    *               snapshot.
    * @return The latest snapshot before the given snapshot.
    */
-  final Snapshot getPrior(Snapshot anchor) {
+  private final Snapshot getPrior(Snapshot anchor) {
     if (anchor == null) {
       return getLastSnapshot();
     }
@@ -158,6 +158,18 @@ abstract class AbstractINodeDiffList<N extends INode,
       int priorIndex = i > 0 ? i - 1 : -i - 2;
       return diffs.get(priorIndex).getSnapshot();
     }
+  }
+  
+  /**
+   * Update the prior snapshot.
+   */
+  final Snapshot updatePrior(Snapshot snapshot, Snapshot prior) {
+    Snapshot s = getPrior(snapshot);
+    if (s != null && 
+        (prior == null || Snapshot.ID_COMPARATOR.compare(s, prior) > 0)) {
+      return s;
+    }
+    return prior;
   }
 
   /**
