@@ -557,6 +557,8 @@ Release 1.2.0 - unreleased
     HDFS-4413. Secondary namenode won't start if HDFS isn't the default
     file system. (Mostafa Elhemali via suresh)
 
+    HADOOP-9473. Typo in FileUtil copy() method. (Glen Mazza via suresh)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
