@@ -17,20 +17,31 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSClient.Conf;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 
 
@@ -40,74 +51,181 @@ import org.apache.hadoop.security.token.Token;
 @InterfaceAudience.Private
 public class BlockReaderFactory {
   /**
-   * @see #newBlockReader(Conf, Socket, String, ExtendedBlock, Token, long, long, int, boolean, String)
-   */
-  public static BlockReader newBlockReader(
-      Configuration conf,
-      Socket sock, String file,
-      ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
-      long startOffset, long len, DataEncryptionKey encryptionKey)
-          throws IOException {
-    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
-        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
-    return newBlockReader(new Conf(conf),
-        sock, file, block, blockToken, startOffset,
-        len, bufferSize, true, "", encryptionKey, null);
-  }
-
-  /**
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
    * 
    * @param conf the DFSClient configuration
-   * @param sock  An established Socket to the DN. The BlockReader will not close it normally
    * @param file  File location
    * @param block  The block object
    * @param blockToken  The block token for security
    * @param startOffset  The read offset, relative to block head
-   * @param len  The number of bytes to read
+   * @param len  The number of bytes to read, or -1 to read as many as
+   *             possible.
    * @param bufferSize  The IO buffer size (not the client buffer size)
+   *                    Ignored except on the legacy BlockReader.
    * @param verifyChecksum  Whether to verify checksum
-   * @param clientName  Client name
-   * @return New BlockReader instance, or null on error.
+   * @param clientName  Client name.  Used for log messages.
+   * @param peer  The peer
+   * @param datanodeID  The datanode that the Peer is connected to
+   * @param domainSocketFactory  The DomainSocketFactory to notify if the Peer
+   *                             is a DomainPeer which turns out to be faulty.
+   *                             If null, no factory will be notified in this
+   *                             case.
+   * @param allowShortCircuitLocalReads  True if short-circuit local reads
+   *                                     should be allowed.
+   * @return New BlockReader instance
    */
   @SuppressWarnings("deprecation")
   public static BlockReader newBlockReader(
-                                     Conf conf,
-                                     Socket sock, String file,
+                                     Configuration conf,
+                                     String file,
                                      ExtendedBlock block, 
                                      Token<BlockTokenIdentifier> blockToken,
                                      long startOffset, long len,
-                                     int bufferSize, boolean verifyChecksum,
+                                     boolean verifyChecksum,
                                      String clientName,
-                                     DataEncryptionKey encryptionKey,
-                                     IOStreamPair ioStreams)
-                                     throws IOException {
-    
-    if (conf.useLegacyBlockReader) {
-      if (encryptionKey != null) {
-        throw new RuntimeException("Encryption is not supported with the legacy block reader.");
-      }
-      return RemoteBlockReader.newBlockReader(
-          sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);
-    } else {
-      if (ioStreams == null) {
-        ioStreams = new IOStreamPair(NetUtils.getInputStream(sock),
-            NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT));
-        if (encryptionKey != null) {
-          IOStreamPair encryptedStreams =
-              DataTransferEncryptor.getEncryptedStreams(
-                  ioStreams.out, ioStreams.in, encryptionKey);
-          ioStreams = encryptedStreams;
+                                     Peer peer,
+                                     DatanodeID datanodeID,
+                                     DomainSocketFactory domSockFactory,
+                                     boolean allowShortCircuitLocalReads)
+  throws IOException {
+    peer.setReadTimeout(conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
+        HdfsServerConstants.READ_TIMEOUT));
+    peer.setWriteTimeout(HdfsServerConstants.WRITE_TIMEOUT);
+
+    if (peer.getDomainSocket() != null) {
+      if (allowShortCircuitLocalReads &&
+         (!conf.getBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
+            DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT))) {
+        // If this is a domain socket, and short-circuit local reads are 
+        // enabled, try to set up a BlockReaderLocal.
+        BlockReader reader = newShortCircuitBlockReader(conf, file,
+            block, blockToken, startOffset, len, peer, datanodeID,
+            domSockFactory, verifyChecksum);
+        if (reader != null) {
+          // One we've constructed the short-circuit block reader, we don't
+          // need the socket any more.  So let's return it to the cache.
+          PeerCache peerCache = PeerCache.getInstance(
+              conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 
+                DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT),
+              conf.getLong(DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY, 
+                DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT));
+          peerCache.put(datanodeID, peer);
+          return reader;
         }
       }
-      
+      // If this is a domain socket and we couldn't (or didn't want to) set
+      // up a BlockReaderLocal, check that we are allowed to pass data traffic
+      // over the socket before proceeding.
+      if (!conf.getBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+            DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT)) {
+        throw new IOException("Because we can't do short-circuit access, " +
+          "and data traffic over domain sockets is disabled, " +
+          "we cannot use this socket to talk to " + datanodeID);
+      }
+    }
+
+    if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER,
+        DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT)) {
+      return RemoteBlockReader.newBlockReader(file,
+          block, blockToken, startOffset, len,
+          conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
+              DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT),
+          verifyChecksum, clientName, peer, datanodeID);
+    } else {
       return RemoteBlockReader2.newBlockReader(
-          sock, file, block, blockToken, startOffset, len, bufferSize,
-          verifyChecksum, clientName, encryptionKey, ioStreams);
+          file, block, blockToken, startOffset, len,
+          verifyChecksum, clientName, peer, datanodeID);
     }
   }
-  
+
+  /**
+   * Create a new short-circuit BlockReader.
+   * 
+   * Here, we ask the DataNode to pass us file descriptors over our
+   * DomainSocket.  If the DataNode declines to do so, we'll return null here;
+   * otherwise, we'll return the BlockReaderLocal.  If the DataNode declines,
+   * this function will inform the DomainSocketFactory that short-circuit local
+   * reads are disabled for this DataNode, so that we don't ask again.
+   * 
+   * @param conf               the configuration.
+   * @param file               the file name. Used in log messages.
+   * @param block              The block object.
+   * @param blockToken         The block token for security.
+   * @param startOffset        The read offset, relative to block head.
+   * @param len                The number of bytes to read, or -1 to read 
+   *                           as many as possible.
+   * @param peer               The peer to use.
+   * @param datanodeID         The datanode that the Peer is connected to.
+   * @param domSockFactory     The DomainSocketFactory to notify if the Peer
+   *                           is a DomainPeer which turns out to be faulty.
+   *                           If null, no factory will be notified in this
+   *                           case.
+   * @param verifyChecksum     True if we should verify the checksums.
+   *                           Note: even if this is true, when
+   *                           DFS_CLIENT_READ_CHECKSUM_SKIP_CHECKSUM_KEY is
+   *                           set, we will skip checksums.
+   *
+   * @return                   The BlockReaderLocal, or null if the
+   *                           DataNode declined to provide short-circuit
+   *                           access.
+   * @throws IOException       If there was a communication error.
+   */
+  private static BlockReaderLocal newShortCircuitBlockReader(
+      Configuration conf, String file, ExtendedBlock block,
+      Token<BlockTokenIdentifier> blockToken, long startOffset,
+      long len, Peer peer, DatanodeID datanodeID,
+      DomainSocketFactory domSockFactory, boolean verifyChecksum)
+          throws IOException {
+    final DataOutputStream out =
+        new DataOutputStream(new BufferedOutputStream(
+          peer.getOutputStream()));
+    new Sender(out).requestShortCircuitFds(block, blockToken, 1);
+    DataInputStream in =
+        new DataInputStream(peer.getInputStream());
+    BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
+        PBHelper.vintPrefixed(in));
+    DomainSocket sock = peer.getDomainSocket();
+    switch (resp.getStatus()) {
+    case SUCCESS:
+      BlockReaderLocal reader = null;
+      byte buf[] = new byte[1];
+      FileInputStream fis[] = new FileInputStream[2];
+      sock.recvFileInputStreams(fis, buf, 0, buf.length);
+      try {
+        reader = new BlockReaderLocal(conf, file, block,
+            startOffset, len, fis[0], fis[1], datanodeID, verifyChecksum);
+      } finally {
+        if (reader == null) {
+          IOUtils.cleanup(DFSClient.LOG, fis[0], fis[1]);
+        }
+      }
+      return reader;
+    case ERROR_UNSUPPORTED:
+      if (!resp.hasShortCircuitAccessVersion()) {
+        DFSClient.LOG.warn("short-circuit read access is disabled for " +
+            "DataNode " + datanodeID + ".  reason: " + resp.getMessage());
+        domSockFactory.disableShortCircuitForPath(sock.getPath());
+      } else {
+        DFSClient.LOG.warn("short-circuit read access for the file " +
+            file + " is disabled for DataNode " + datanodeID +
+            ".  reason: " + resp.getMessage());
+      }
+      return null;
+    case ERROR_ACCESS_TOKEN:
+      String msg = "access control error while " +
+          "attempting to set up short-circuit access to " +
+          file + resp.getMessage();
+      DFSClient.LOG.debug(msg);
+      throw new InvalidBlockTokenException(msg);
+    default:
+      DFSClient.LOG.warn("error while attempting to set up short-circuit " +
+          "access to " + file + ": " + resp.getMessage());
+      domSockFactory.disableShortCircuitForPath(sock.getPath());
+      return null;
+    }
+  }
+
   /**
    * File name to print when accessing a block directly (from servlets)
    * @param s Address of the block location
@@ -118,5 +236,25 @@ public class BlockReaderFactory {
   public static String getFileName(final InetSocketAddress s,
       final String poolId, final long blockId) {
     return s.toString() + ":" + poolId + ":" + blockId;
+  }
+
+  /**
+   * Get {@link BlockReaderLocalLegacy} for short circuited local reads.
+   * This block reader implements the path-based style of local reads
+   * first introduced in HDFS-2246.
+   */
+  static BlockReader getLegacyBlockReaderLocal(UserGroupInformation ugi,
+      Configuration conf, String src, ExtendedBlock blk,
+      Token<BlockTokenIdentifier> accessToken, DatanodeInfo chosenNode,
+      int socketTimeout, long offsetIntoBlock,
+      boolean connectToDnViaHostname) throws InvalidToken, IOException {
+    try {
+      return BlockReaderLocalLegacy.newBlockReader(ugi, conf, src,
+          blk, accessToken, chosenNode, socketTimeout, offsetIntoBlock,
+          blk.getNumBytes() - offsetIntoBlock, connectToDnViaHostname);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(InvalidToken.class,
+          AccessControlException.class);
+    }
   }
 }

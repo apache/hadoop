@@ -17,53 +17,30 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
 
 public class TestParallelRead extends TestParallelReadUtil {
-
   @BeforeClass
   static public void setupCluster() throws Exception {
-    setupCluster(DEFAULT_REPLICATION_FACTOR, new HdfsConfiguration());
+    // This is a test of the normal (TCP) read path.  For this reason, we turn
+    // off both short-circuit local reads and UNIX domain socket data traffic.
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
+                    false);
+    // dfs.domain.socket.path should be ignored because the previous two keys
+    // were set to false.  This is a regression test for HDFS-4473.
+    conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY, "/will/not/be/created");
+
+    setupCluster(DEFAULT_REPLICATION_FACTOR, conf);
   }
 
   @AfterClass
   static public void teardownCluster() throws Exception {
     TestParallelReadUtil.teardownCluster();
   }
-
-  /**
-   * Do parallel read several times with different number of files and threads.
-   *
-   * Note that while this is the only "test" in a junit sense, we're actually
-   * dispatching a lot more. Failures in the other methods (and other threads)
-   * need to be manually collected, which is inconvenient.
-   */
-  @Test
-  public void testParallelReadCopying() throws IOException {
-    runTestWorkload(new CopyingReadWorkerHelper());
-  }
-
-  @Test
-  public void testParallelReadByteBuffer() throws IOException {
-    runTestWorkload(new DirectReadWorkerHelper());
-  }
-
-  @Test
-  public void testParallelReadMixed() throws IOException {
-    runTestWorkload(new MixedWorkloadHelper());
-  }
-  
-  @Test
-  public void testParallelNoChecksums() throws IOException {
-    verifyChecksums = false;
-    runTestWorkload(new MixedWorkloadHelper());
-  }
-
 }
