@@ -234,3 +234,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4675. Fix rename across snapshottable directories.  (Jing Zhao via
   szetszwo)
+
+  HDFS-4692. Use timestamp as default snapshot names.  (szetszwo)

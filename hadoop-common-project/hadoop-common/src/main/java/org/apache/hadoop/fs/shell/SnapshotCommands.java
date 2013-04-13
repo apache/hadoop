@@ -49,10 +49,10 @@ class SnapshotCommands extends FsCommand {
    */
   public static class CreateSnapshot extends FsCommand {
     public static final String NAME = CREATE_SNAPSHOT;
-    public static final String USAGE = "<snapshotDir> <snapshotName>";
+    public static final String USAGE = "<snapshotDir> [<snapshotName>]";
     public static final String DESCRIPTION = "Create a snapshot on a directory";
 
-    private String snapshotName;
+    private String snapshotName = null;
 
     @Override
     protected void processPath(PathData item) throws IOException {
@@ -63,12 +63,15 @@ class SnapshotCommands extends FsCommand {
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      if (args.size() != 2) {
-        throw new IOException("args number not 2:" + args.size());
+      if (args.size() == 0) {
+        throw new IllegalArgumentException("<snapshotDir> is missing.");
+      } 
+      if (args.size() > 2) {
+        throw new IllegalArgumentException("Too many arguements.");
       }
-      snapshotName = args.removeLast();
-      // TODO: name length check  
-
+      if (args.size() == 2) {
+        snapshotName = args.removeLast();
+      }
     }
 
     @Override
@@ -108,8 +111,6 @@ class SnapshotCommands extends FsCommand {
         throw new IOException("args number not 2: " + args.size());
       }
       snapshotName = args.removeLast();
-      // TODO: name length check
-
     }
 
     @Override
@@ -151,8 +152,6 @@ class SnapshotCommands extends FsCommand {
       }
       newName = args.removeLast();
       oldName = args.removeLast();
-      
-      // TODO: new name length check
     }
 
     @Override

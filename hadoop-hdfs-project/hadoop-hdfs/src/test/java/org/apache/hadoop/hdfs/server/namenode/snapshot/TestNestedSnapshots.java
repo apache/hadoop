@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnap
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -178,7 +179,19 @@ public class TestNestedSnapshots {
     final Path foo = new Path(dir, "foo");
     final Path f1 = new Path(foo, "f1");
     DFSTestUtil.createFile(hdfs, f1, BLOCKSIZE, REPLICATION, SEED);
-    hdfs.createSnapshot(dir, "s0");
+    {
+      //create a snapshot with default snapshot name
+      final Path snapshotPath = hdfs.createSnapshot(dir);
+
+      //check snapshot path and the default snapshot name
+      final String snapshotName = snapshotPath.getName(); 
+      Assert.assertTrue("snapshotName=" + snapshotName, Pattern.matches(
+          "s\\d\\d\\d\\d\\d\\d\\d\\d-\\d\\d\\d\\d\\d\\d\\.\\d\\d\\d",
+          snapshotName));
+      final Path parent = snapshotPath.getParent();
+      Assert.assertEquals(HdfsConstants.DOT_SNAPSHOT_DIR, parent.getName());
+      Assert.assertEquals(dir, parent.getParent());
+    }
     final Path f2 = new Path(foo, "f2");
     DFSTestUtil.createFile(hdfs, f2, BLOCKSIZE, REPLICATION, SEED);
     
@@ -193,7 +206,7 @@ public class TestNestedSnapshots {
 
     try {
       // createSnapshot should fail with quota
-      hdfs.createSnapshot(dir, "s1");
+      hdfs.createSnapshot(dir);
       Assert.fail();
     } catch(RemoteException re) {
       final IOException ioe = re.unwrapRemoteException();

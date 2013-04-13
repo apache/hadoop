@@ -1093,14 +1093,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public void createSnapshot(String snapshotRoot, String snapshotName)
+  public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     if (!checkPathLength(snapshotRoot)) {
       throw new IOException("createSnapshot: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     metrics.incrCreateSnapshotOps();
-    namesystem.createSnapshot(snapshotRoot, snapshotName);
+    return namesystem.createSnapshot(snapshotRoot, snapshotName);
   }
   
   @Override
@@ -1127,6 +1127,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
+    if (snapshotNewName == null || snapshotNewName.isEmpty()) {
+      throw new IOException("The new snapshot name is null or empty.");
+    }
     metrics.incrRenameSnapshotOps();
     namesystem.renameSnapshot(snapshotRoot, snapshotOldName, snapshotNewName);
   }

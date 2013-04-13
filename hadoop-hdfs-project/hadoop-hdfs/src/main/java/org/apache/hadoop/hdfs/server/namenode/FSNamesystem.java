@@ -5731,12 +5731,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         .shouldAvoidStaleDataNodesForWrite();
   }
   
-  public SnapshotManager getSnapshotManager() {
+  SnapshotManager getSnapshotManager() {
     return snapshotManager;
   }
   
   /** Allow snapshot on a directroy. */
-  public void allowSnapshot(String path) throws SafeModeException, IOException {
+  void allowSnapshot(String path) throws SafeModeException, IOException {
     final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
@@ -5762,8 +5762,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   /** Disallow snapshot on a directory. */
-  public void disallowSnapshot(String path)
-      throws SafeModeException, IOException {
+  void disallowSnapshot(String path) throws SafeModeException, IOException {
     final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
@@ -5793,10 +5792,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param snapshotRoot The directory path where the snapshot is taken
    * @param snapshotName The name of the snapshot
    */
-  public void createSnapshot(String snapshotRoot, String snapshotName)
+  String createSnapshot(String snapshotRoot, String snapshotName)
       throws SafeModeException, IOException {
     final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
+    final String snapshotPath;
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
@@ -5805,9 +5805,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       checkOwner(pc, snapshotRoot);
 
+      if (snapshotName == null || snapshotName.isEmpty()) {
+        snapshotName = Snapshot.generateDefaultSnapshotName();
+      }
+      dir.verifyMaxComponentLength(snapshotName, snapshotRoot, 0);
       dir.writeLock();
       try {
-        snapshotManager.createSnapshot(snapshotRoot, snapshotName);
+        snapshotPath = snapshotManager.createSnapshot(snapshotRoot, snapshotName);
       } finally {
         dir.writeUnlock();
       }
@@ -5818,11 +5822,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      Path rootPath = new Path(snapshotRoot, HdfsConstants.DOT_SNAPSHOT_DIR
-          + Path.SEPARATOR + snapshotName);
-      logAuditEvent(true, "createSnapshot", snapshotRoot, rootPath.toString(),
-          null);
+      logAuditEvent(true, "createSnapshot", snapshotRoot, snapshotPath, null);
     }
+    return snapshotPath;
   }
   
   /**
@@ -5833,7 +5835,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws SafeModeException
    * @throws IOException 
    */
-  public void renameSnapshot(String path, String snapshotOldName,
+  void renameSnapshot(String path, String snapshotOldName,
       String snapshotNewName) throws SafeModeException, IOException {
     final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
@@ -5844,8 +5846,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             safeMode);
       }
       checkOwner(pc, path);
-      // TODO: check if the new name is valid. May also need this for
-      // creationSnapshot
+      dir.verifyMaxComponentLength(snapshotNewName, path, 0);
       
       snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
       getEditLog().logRenameSnapshot(path, snapshotOldName, snapshotNewName);
@@ -5905,7 +5906,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *         and labeled as M/-/+/R respectively. 
    * @throws IOException
    */
-  public SnapshotDiffReport getSnapshotDiffReport(String path,
+  SnapshotDiffReport getSnapshotDiffReport(String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     SnapshotDiffInfo diffs = null;
     readLock();
@@ -5931,7 +5932,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws SafeModeException
    * @throws IOException
    */
-  public void deleteSnapshot(String snapshotRoot, String snapshotName)
+  void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws SafeModeException, IOException {
     final FSPermissionChecker pc = getPermissionChecker();
     writeLock();

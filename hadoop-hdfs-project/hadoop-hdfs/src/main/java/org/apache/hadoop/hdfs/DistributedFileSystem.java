@@ -932,9 +932,9 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   @Override
-  public void createSnapshot(Path path, String snapshotName) 
+  public Path createSnapshot(Path path, String snapshotName) 
       throws IOException {
-    dfs.createSnapshot(getPathName(path), snapshotName);
+    return new Path(dfs.createSnapshot(getPathName(path), snapshotName));
   }
   
   @Override

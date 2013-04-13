@@ -450,10 +450,11 @@ message GetDataEncryptionKeyResponseProto {
 
 message CreateSnapshotRequestProto {
   required string snapshotRoot = 1;
-  required string snapshotName = 2;
+  optional string snapshotName = 2;
 }
 
-message CreateSnapshotResponseProto { // void response
+message CreateSnapshotResponseProto {
+  required string snapshotPath = 1;
 }
 
 message RenameSnapshotRequestProto {

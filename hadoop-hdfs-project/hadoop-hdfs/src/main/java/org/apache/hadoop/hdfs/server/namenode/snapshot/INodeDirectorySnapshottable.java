@@ -288,7 +288,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     final int i = searchSnapshot(nameBytes);
     if (i >= 0) {
       throw new SnapshotException("Failed to add snapshot: there is already a "
-          + "snapshot with the same name \"" + name + "\".");
+          + "snapshot with the same name \"" + Snapshot.getSnapshotName(s) + "\".");
     }
 
     final DirectoryDiff d = getDiffs().addDiff(s, this);

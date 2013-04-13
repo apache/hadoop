@@ -1000,9 +1000,10 @@ public interface ClientProtocol {
    * Create a snapshot
    * @param snapshotRoot the path that is being snapshotted
    * @param snapshotName name of the snapshot created
+   * @return the snapshot path.
    * @throws IOException
    */
-  public void createSnapshot(String snapshotRoot, String snapshotName)
+  public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException;
 
   /**

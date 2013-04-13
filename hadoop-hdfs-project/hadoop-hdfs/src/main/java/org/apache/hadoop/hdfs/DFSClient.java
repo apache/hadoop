@@ -2021,12 +2021,13 @@ public class DFSClient implements java.io.Closeable {
    * 
    * @param snapshotRoot The directory where the snapshot is to be taken
    * @param snapshotName Name of the snapshot
+   * @return the snapshot path.
    * @see ClientProtocol#createSnapshot(String, String)
    */
-  public void createSnapshot(String snapshotRoot, String snapshotName)
+  public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkOpen();
-    namenode.createSnapshot(snapshotRoot, snapshotName);
+    return namenode.createSnapshot(snapshotRoot, snapshotName);
   }
   
   /**

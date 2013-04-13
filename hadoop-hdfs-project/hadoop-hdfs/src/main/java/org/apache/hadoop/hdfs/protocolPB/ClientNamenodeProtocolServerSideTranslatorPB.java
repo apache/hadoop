@@ -165,8 +165,6 @@ import com.google.protobuf.ServiceException;
 public class ClientNamenodeProtocolServerSideTranslatorPB implements
     ClientNamenodeProtocolPB {
   final private ClientProtocol server;
-  static final CreateSnapshotResponseProto VOID_CREATE_SNAPSHOT_RESPONSE =
-      CreateSnapshotResponseProto.newBuilder().build();
   static final DeleteSnapshotResponseProto VOID_DELETE_SNAPSHOT_RESPONSE =
       DeleteSnapshotResponseProto.newBuilder().build();
   static final RenameSnapshotResponseProto VOID_RENAME_SNAPSHOT_RESPONSE =
@@ -898,22 +896,26 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   @Override
   public CreateSnapshotResponseProto createSnapshot(RpcController controller,
-      CreateSnapshotRequestProto request) throws ServiceException {
+      CreateSnapshotRequestProto req) throws ServiceException {
     try {
-      server.createSnapshot(request.getSnapshotRoot(),
-          request.getSnapshotName());
+      final CreateSnapshotResponseProto.Builder builder
+          = CreateSnapshotResponseProto.newBuilder();
+      final String snapshotPath = server.createSnapshot(req.getSnapshotRoot(),
+          req.hasSnapshotName()? req.getSnapshotName(): null);
+      if (snapshotPath != null) {
+        builder.setSnapshotPath(snapshotPath);
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return VOID_CREATE_SNAPSHOT_RESPONSE;
   }
 
   @Override
   public DeleteSnapshotResponseProto deleteSnapshot(RpcController controller,
-      DeleteSnapshotRequestProto request) throws ServiceException {
+      DeleteSnapshotRequestProto req) throws ServiceException {
     try {
-      server
-          .deleteSnapshot(request.getSnapshotRoot(), request.getSnapshotName());
+      server.deleteSnapshot(req.getSnapshotRoot(), req.getSnapshotName());
       return VOID_DELETE_SNAPSHOT_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

@@ -2266,11 +2266,21 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Create a snapshot with a default name.
+   * @param path The directory where snapshots will be taken.
+   * @return the snapshot path.
+   */
+  public final Path createSnapshot(Path path) throws IOException {
+    return createSnapshot(path, null);
+  }
+
+  /**
    * Create a snapshot
    * @param path The directory where snapshots will be taken.
    * @param snapshotName The name of the snapshot
+   * @return the snapshot path.
    */
-  public void createSnapshot(Path path, String snapshotName)
+  public Path createSnapshot(Path path, String snapshotName)
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support createSnapshot");
