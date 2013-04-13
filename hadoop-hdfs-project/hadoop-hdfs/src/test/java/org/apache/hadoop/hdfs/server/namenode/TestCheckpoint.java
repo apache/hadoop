@@ -28,7 +28,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
@@ -1136,7 +1135,7 @@ public class TestCheckpoint {
         throw new IOException(e);
       }
       
-      final int EXPECTED_TXNS_FIRST_SEG = 12;
+      final int EXPECTED_TXNS_FIRST_SEG = 11;
       
       // the following steps should have happened:
       //   edits_inprogress_1 -> edits_1-12  (finalized)
