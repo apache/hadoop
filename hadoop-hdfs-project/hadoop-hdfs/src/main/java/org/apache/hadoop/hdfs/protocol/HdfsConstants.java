@@ -18,7 +18,9 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /************************************
@@ -107,4 +109,10 @@ public class HdfsConstants {
    * A special path component contained in the path for a snapshot file/dir
    */
   public static final String DOT_SNAPSHOT_DIR = ".snapshot";
+
+  public static final byte[] DOT_SNAPSHOT_DIR_BYTES
+      = DFSUtil.string2Bytes(DOT_SNAPSHOT_DIR);
+  
+  public static final String SEPARATOR_DOT_SNAPSHOT_DIR
+      = Path.SEPARATOR + DOT_SNAPSHOT_DIR; 
 }

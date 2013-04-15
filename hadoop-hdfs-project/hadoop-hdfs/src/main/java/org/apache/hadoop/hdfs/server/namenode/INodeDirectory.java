@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -511,8 +512,8 @@ public class INodeDirectory extends INodeWithAdditionalFields {
    * @return true if path component is {@link HdfsConstants#DOT_SNAPSHOT_DIR}
    */
   private static boolean isDotSnapshotDir(byte[] pathComponent) {
-    return pathComponent == null ? false : HdfsConstants.DOT_SNAPSHOT_DIR
-        .equalsIgnoreCase(DFSUtil.bytes2String(pathComponent));
+    return pathComponent == null ? false
+        : Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
   }
 
   /**

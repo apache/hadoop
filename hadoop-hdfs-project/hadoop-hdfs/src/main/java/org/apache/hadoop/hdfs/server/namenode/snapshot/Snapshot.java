@@ -49,9 +49,16 @@ public class Snapshot implements Comparable<byte[]> {
     return new SimpleDateFormat(DEFAULT_SNAPSHOT_NAME_PATTERN).format(new Date());
   }
 
-  static String getSnapshotPath(String snapshottableDir, String snapshotName) {
-    return new Path(snapshottableDir, HdfsConstants.DOT_SNAPSHOT_DIR
-        + Path.SEPARATOR + snapshotName).toString();
+  public static String getSnapshotPath(String snapshottableDir,
+      String snapshotRelativePath) {
+    final StringBuilder b = new StringBuilder(snapshottableDir);
+    if (b.charAt(b.length() - 1) != Path.SEPARATOR_CHAR) {
+      b.append(Path.SEPARATOR);
+    }
+    return b.append(HdfsConstants.DOT_SNAPSHOT_DIR)
+        .append(Path.SEPARATOR)
+        .append(snapshotRelativePath)
+        .toString();
   }
   
   /** 
@@ -123,9 +130,7 @@ public class Snapshot implements Comparable<byte[]> {
     
     @Override
     public String getFullPathName() {
-      return getParent().getFullPathName() + Path.SEPARATOR
-          + HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR
-          + this.getLocalName();
+      return getSnapshotPath(getParent().getFullPathName(), getLocalName());
     }
   }
 

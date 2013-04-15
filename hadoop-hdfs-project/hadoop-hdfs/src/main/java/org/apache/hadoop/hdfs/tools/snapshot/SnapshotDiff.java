@@ -43,14 +43,18 @@ public class SnapshotDiff {
     if (Path.CUR_DIR.equals(name)) { // current directory
       return "";
     }
-    if (name.startsWith(HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR)
-        || name.startsWith(Path.SEPARATOR + HdfsConstants.DOT_SNAPSHOT_DIR
-            + Path.SEPARATOR)) {
-      // get the snapshot name
-      int i = name.indexOf(HdfsConstants.DOT_SNAPSHOT_DIR);
-      return name.substring(i + HdfsConstants.DOT_SNAPSHOT_DIR.length() + 1);
+    final int i;
+    if (name.startsWith(HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR)) {
+      i = 0;
+    } else if (name.startsWith(
+        HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR + Path.SEPARATOR)) {
+      i = 1;
+    } else {
+      return name;
     }
-    return name;
+
+    // get the snapshot name
+    return name.substring(i + HdfsConstants.DOT_SNAPSHOT_DIR.length() + 1);
   }
   
   public static void main(String[] argv) throws IOException {

@@ -565,6 +565,10 @@ public class FSImageFormat {
   INode loadINode(final byte[] localName, boolean isSnapshotINode,
       DataInput in) throws IOException {
     final int imgVersion = getLayoutVersion();
+    if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
+      namesystem.getFSDirectory().verifyINodeName(localName);
+    }
+
     long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? 
            in.readLong() : namesystem.allocateNewInodeId();
     
@@ -903,7 +907,7 @@ public class FSImageFormat {
      *                 actually leads to.
      * @return The snapshot path.                
      */
-    private String computeSnapshotPath(String nonSnapshotPath, 
+    private static String computeSnapshotPath(String nonSnapshotPath, 
         Snapshot snapshot) {
       String snapshotParentFullPath = snapshot.getRoot().getParent()
           .getFullPathName();
@@ -911,10 +915,8 @@ public class FSImageFormat {
       String relativePath = nonSnapshotPath.equals(snapshotParentFullPath) ? 
           Path.SEPARATOR : nonSnapshotPath.substring(
                snapshotParentFullPath.length());
-      String snapshotFullPath = snapshotParentFullPath + Path.SEPARATOR
-          + HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + snapshotName
-          + relativePath;
-      return snapshotFullPath;
+      return Snapshot.getSnapshotPath(snapshotParentFullPath,
+          snapshotName + relativePath);
     }
     
     /**

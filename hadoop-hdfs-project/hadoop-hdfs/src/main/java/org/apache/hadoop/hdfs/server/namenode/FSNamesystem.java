@@ -5806,7 +5806,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (snapshotName == null || snapshotName.isEmpty()) {
         snapshotName = Snapshot.generateDefaultSnapshotName();
       }
-      dir.verifyMaxComponentLength(snapshotName, snapshotRoot, 0);
+      dir.verifySnapshotName(snapshotName, snapshotRoot);
       dir.writeLock();
       try {
         snapshotPath = snapshotManager.createSnapshot(snapshotRoot, snapshotName);
@@ -5844,7 +5844,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             safeMode);
       }
       checkOwner(pc, path);
-      dir.verifyMaxComponentLength(snapshotNewName, path, 0);
+      dir.verifySnapshotName(snapshotNewName, path);
       
       snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
       getEditLog().logRenameSnapshot(path, snapshotOldName, snapshotNewName);
@@ -5854,12 +5854,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      Path oldSnapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR
-          + "/" + snapshotOldName);
-      Path newSnapshotRoot = new Path(path, HdfsConstants.DOT_SNAPSHOT_DIR
-          + "/" + snapshotNewName);
-      logAuditEvent(true, "renameSnapshot", oldSnapshotRoot.toString(),
-          newSnapshotRoot.toString(), null);
+      String oldSnapshotRoot = Snapshot.getSnapshotPath(path, snapshotOldName);
+      String newSnapshotRoot = Snapshot.getSnapshotPath(path, snapshotNewName);
+      logAuditEvent(true, "renameSnapshot", oldSnapshotRoot, newSnapshotRoot, null);
     }
   }
   
@@ -5959,9 +5956,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      Path rootPath = new Path(snapshotRoot, HdfsConstants.DOT_SNAPSHOT_DIR
-          + Path.SEPARATOR + snapshotName);
-      logAuditEvent(true, "deleteSnapshot", rootPath.toString(), null, null);
+      String rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
+      logAuditEvent(true, "deleteSnapshot", rootPath, null, null);
     }
   }
 

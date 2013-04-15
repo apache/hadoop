@@ -236,3 +236,8 @@ Branch-2802 Snapshot (Unreleased)
   szetszwo)
 
   HDFS-4692. Use timestamp as default snapshot names.  (szetszwo)
+
+  HDFS-4666. Define ".snapshot" as a reserved inode name so that users cannot
+  create a file/directory with ".snapshot" as the name.  If ".snapshot" is used
+  in a previous version of HDFS, it must be renamed before upgrade; otherwise,
+  upgrade will fail.  (szetszwo)

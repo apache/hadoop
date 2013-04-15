@@ -33,8 +33,10 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.FSLimitException.IllegalNameException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.junit.Before;
 import org.junit.Test;
@@ -104,6 +106,7 @@ public class TestFsLimits {
     addChildWithName("333", null);
     addChildWithName("4444", null);
     addChildWithName("55555", null);
+    addChildWithName(HdfsConstants.DOT_SNAPSHOT_DIR, IllegalNameException.class);
   }
 
   @Test
@@ -143,6 +146,7 @@ public class TestFsLimits {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 2);
     fsIsReady = false;
     
+    addChildWithName(HdfsConstants.DOT_SNAPSHOT_DIR, IllegalNameException.class);
     addChildWithName("1", null);
     addChildWithName("22", null);
     addChildWithName("333", null);
@@ -159,7 +163,10 @@ public class TestFsLimits {
     
     Class<?> generated = null;
     try {
-      fs.verifyFsLimits(inodes, 1, child);
+      fs.verifyMaxComponentLength(child.getLocalNameBytes(), inodes, 1);
+      fs.verifyMaxDirItems(inodes, 1);
+      fs.verifyINodeName(child.getLocalNameBytes());
+
       rootInode.addChild(child);
     } catch (QuotaExceededException e) {
       generated = e.getClass();
