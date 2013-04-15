@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -63,8 +64,9 @@ public class ContainerInfo {
     this.nodeId = nmContext.getNodeId().toString();
     ContainerStatus containerData = container.cloneAndGetContainerStatus();
     this.exitCode = containerData.getExitStatus();
-    this.exitStatus = (this.exitCode == YarnConfiguration.INVALID_CONTAINER_EXIT_STATUS) ? "N/A"
-        : String.valueOf(exitCode);
+    this.exitStatus =
+        (this.exitCode == ContainerExitStatus.INVALID) ?
+            "N/A" : String.valueOf(exitCode);
     this.state = container.getContainerState().toString();
     this.diagnostics = containerData.getDiagnostics();
     if (this.diagnostics == null || this.diagnostics.isEmpty()) {

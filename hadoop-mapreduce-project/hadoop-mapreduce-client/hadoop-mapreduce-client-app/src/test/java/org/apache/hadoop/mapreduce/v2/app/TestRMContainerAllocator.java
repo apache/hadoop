@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -83,7 +84,6 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -1660,7 +1660,7 @@ public class TestRMContainerAllocator {
 
     ContainerStatus abortedStatus = BuilderUtils.newContainerStatus(
         containerId, ContainerState.RUNNING, "",
-        YarnConfiguration.ABORTED_CONTAINER_EXIT_STATUS);
+        ContainerExitStatus.ABORTED);
     
     TaskAttemptEvent event = allocator.createContainerFinishedEvent(status,
         attemptId);

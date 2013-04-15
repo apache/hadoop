@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -78,7 +79,7 @@ public class ContainerImpl implements Container {
   private final NodeManagerMetrics metrics;
   private final ContainerLaunchContext launchContext;
   private final org.apache.hadoop.yarn.api.records.Container container;
-  private int exitCode = YarnConfiguration.INVALID_CONTAINER_EXIT_STATUS;
+  private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
 
   /** The NM-wide configuration - not specific to this container */
