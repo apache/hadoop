@@ -280,7 +280,12 @@ message ContainerStatusProto {
   optional int32 exit_status = 4 [default = -1000];
 }
 
-
+enum ContainerExitStatusProto {
+  SUCCESS = 0;
+  INVALID = -1000;
+  ABORTED = -100;
+  DISKS_FAILED = -101;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From common//////////////////////////////////////////////////////

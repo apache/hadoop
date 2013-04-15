@@ -302,6 +302,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5139. Update MR AM to use the modified startContainer API after
     YARN-486. (Xuan Gong via vinodkv)
 
+    MAPREDUCE-5151. Update MR AM to use standard exit codes from the API after
+    YARN-444. (Sandy Ryza via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

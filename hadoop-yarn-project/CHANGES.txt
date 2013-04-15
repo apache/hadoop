@@ -82,6 +82,9 @@ Release 2.0.5-beta - UNRELEASED
     RM as a direct parameter instead of as part of the ContainerLaunchContext
     record. (Xuan Gong via vinodkv)
 
+    YARN-444. Moved special container exit codes from YarnConfiguration to API
+    where they belong. (Sandy Ryza via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS
