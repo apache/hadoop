@@ -200,6 +200,9 @@ Release 2.0.5-beta - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
+    (Gelesh via bobby)
+
   BUG FIXES
 
     MAPREDUCE-4671. AM does not tell the RM about container requests which are
