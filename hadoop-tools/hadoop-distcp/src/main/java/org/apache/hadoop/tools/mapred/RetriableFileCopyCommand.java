@@ -41,6 +41,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
   private static Log LOG = LogFactory.getLog(RetriableFileCopyCommand.class);
   private static int BUFFER_SIZE = 8 * 1024;
+  private boolean skipCrc = false;
 
   /**
    * Constructor, taking a description of the action.
@@ -48,6 +49,17 @@ public class RetriableFileCopyCommand extends RetriableCommand {
    */
   public RetriableFileCopyCommand(String description) {
     super(description);
+  }
+
+  /**
+   * Create a RetriableFileCopyCommand.
+   *
+   * @param skipCrc Whether to skip the crc check.
+   * @param description A verbose description of the copy operation.
+   */
+  public RetriableFileCopyCommand(boolean skipCrc, String description) {
+    this(description);
+    this.skipCrc = skipCrc;
   }
 
   /**
@@ -92,7 +104,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
       compareFileLengths(sourceFileStatus, tmpTargetPath, configuration, bytesRead);
       //At this point, src&dest lengths are same. if length==0, we skip checksum
-      if (bytesRead != 0) { 
+      if (bytesRead != 0 && !skipCrc) {
         compareCheckSums(sourceFS, sourceFileStatus.getPath(), targetFS, tmpTargetPath);
       }
       promoteTmpToTarget(tmpTargetPath, target, targetFS);
@@ -128,10 +140,17 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private void compareCheckSums(FileSystem sourceFS, Path source,
                                 FileSystem targetFS, Path target)
                                 throws IOException {
-    if (!DistCpUtils.checksumsAreEqual(sourceFS, source, targetFS, target))
-      throw new IOException("Check-sum mismatch between "
-                              + source + " and " + target);
-
+    if (!DistCpUtils.checksumsAreEqual(sourceFS, source, targetFS, target)) {
+      StringBuilder errorMessage = new StringBuilder("Check-sum mismatch between ")
+                                        .append(source).append(" and ").append(target).append(".");
+      if (sourceFS.getFileStatus(source).getBlockSize() != targetFS.getFileStatus(target).getBlockSize()) {
+        errorMessage.append(" Source and target differ in block-size.")
+                    .append(" Use -pb to preserve block-sizes during copy.")
+                    .append(" Alternatively, skip checksum-checks altogether, using -skipCrc.")
+                    .append(" (NOTE: By skipping checksums, one runs the risk of masking data-corruption during file-transfer.)");
+      }
+      throw new IOException(errorMessage.toString());
+    }
   }
 
   //If target file exists and unable to delete target - fail
