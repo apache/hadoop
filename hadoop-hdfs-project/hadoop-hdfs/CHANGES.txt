@@ -461,6 +461,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4679. Namenode operation checks should be done in a consistent
     manner. (suresh)
 
+    HDFS-4693. Some test cases in TestCheckpoint do not clean up after 
+    themselves. (Arpit Agarwal, suresh via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
