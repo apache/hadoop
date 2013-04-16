@@ -712,6 +712,9 @@ Release 0.23.8 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5015. Coverage fix for org.apache.hadoop.mapreduce.tools.CLI
+    (Aleksey Gorshkov via tgraves)
+
 Release 0.23.7 - UNRELEASED
 
   INCOMPATIBLE CHANGES

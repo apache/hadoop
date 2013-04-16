@@ -118,6 +118,16 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/test/java/org/apache/hadoop/cli/data60bytes</exclude>
+            <exclude>src/test/resources/job_1329348432655_0001-10.jhist</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
@@ -146,15 +156,6 @@
             <!-- workaround for JobConf#setJarByClass -->
             <additionalClasspathElement>${project.build.directory}/${project.artifactId}-${project.version}-tests.jar</additionalClasspathElement>
           </additionalClasspathElements>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>src/test/java/org/apache/hadoop/cli/data60bytes</exclude>
-          </excludes>
         </configuration>
       </plugin>
     </plugins>
