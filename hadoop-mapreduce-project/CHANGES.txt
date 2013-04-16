@@ -708,6 +708,9 @@ Release 0.23.8 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5065. DistCp should skip checksum comparisons if block-sizes 
+    are different on source/target (Mithun Radhakrishnan via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
