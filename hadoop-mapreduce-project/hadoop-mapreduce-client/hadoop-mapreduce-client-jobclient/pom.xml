@@ -154,6 +154,7 @@
         <configuration>
           <excludes>
             <exclude>src/test/java/org/apache/hadoop/cli/data60bytes</exclude>
+            <exclude>src/test/resources/job_1329348432655_0001-10.jhist</exclude>
           </excludes>
         </configuration>
       </plugin>
