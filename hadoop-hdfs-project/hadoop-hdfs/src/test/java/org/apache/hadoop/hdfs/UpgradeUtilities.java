@@ -109,6 +109,7 @@ public class UpgradeUtilities {
     config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeStorage.toString());
     config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, datanodeStorage.toString());
     MiniDFSCluster cluster = null;
+    String bpid = null;
     try {
       // format data-node
       createEmptyDirs(new String[] {datanodeStorage.toString()});
@@ -149,6 +150,7 @@ public class UpgradeUtilities {
       // write more files
       writeFile(fs, new Path(baseDir, "file3"), buffer, bufferSize);
       writeFile(fs, new Path(baseDir, "file4"), buffer, bufferSize);
+      bpid = cluster.getNamesystem(0).getBlockPoolId();
     } finally {
       // shutdown
       if (cluster != null) cluster.shutdown();
@@ -160,7 +162,6 @@ public class UpgradeUtilities {
     File dnCurDir = new File(datanodeStorage, "current");
     datanodeStorageChecksum = checksumContents(DATA_NODE, dnCurDir);
     
-    String bpid = cluster.getNamesystem(0).getBlockPoolId();
     File bpCurDir = new File(BlockPoolSliceStorage.getBpRoot(bpid, dnCurDir),
         "current");
     blockPoolStorageChecksum = checksumContents(DATA_NODE, bpCurDir);

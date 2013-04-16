@@ -290,6 +290,7 @@ public class SecondaryNameNode implements Runnable {
     try {
       infoServer.join();
     } catch (InterruptedException ie) {
+      LOG.debug("Exception ", ie);
     }
   }
 
@@ -309,14 +310,24 @@ public class SecondaryNameNode implements Runnable {
       }
     }
     try {
-      if (infoServer != null) infoServer.stop();
+      if (infoServer != null) {
+        infoServer.stop();
+        infoServer = null;
+      }
     } catch (Exception e) {
       LOG.warn("Exception shutting down SecondaryNameNode", e);
     }
     try {
-      if (checkpointImage != null) checkpointImage.close();
+      if (checkpointImage != null) {
+        checkpointImage.close();
+        checkpointImage = null;
+      }
     } catch(IOException e) {
       LOG.warn("Exception while closing CheckpointStorage", e);
+    }
+    if (namesystem != null) {
+      namesystem.shutdown();
+      namesystem = null;
     }
   }
 
