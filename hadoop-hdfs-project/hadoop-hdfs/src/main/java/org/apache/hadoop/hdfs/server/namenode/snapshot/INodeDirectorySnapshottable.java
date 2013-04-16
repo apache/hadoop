@@ -325,7 +325,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
         INodeDirectory parent = getParent();
         if (parent != null) {
           parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-              -counts.get(Quota.DISKSPACE));
+              -counts.get(Quota.DISKSPACE), true);
         }
       } catch(QuotaExceededException e) {
         LOG.error("BUG: removeSnapshot increases namespace usage.", e);

@@ -81,16 +81,16 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       return true;
     }
 
-    private final boolean removeCreatedChild(final int c, final INode child) {
-      final List<INode> created = getList(ListType.CREATED);
-      if (created.get(c) == child) {
-        final INode removed = created.remove(c);
-        Preconditions.checkState(removed == child);
+    private final boolean removeChild(ListType type, final INode child) {
+      final List<INode> list = getList(type);
+      final int i = searchIndex(type, child.getLocalNameBytes());
+      if (i >= 0 && list.get(i) == child) {
+        list.remove(i);
         return true;
       }
       return false;
     }
-
+    
     /** clear the created list */
     private Quota.Counts destroyCreatedList(
         final INodeDirectoryWithSnapshot currentINode,
@@ -452,6 +452,18 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       }
       return false;
     }
+    
+    /** Remove the given child in the created/deleted list, if there is any. */
+    private boolean removeChild(final ListType type, final INode child) {
+      final List<DirectoryDiff> diffList = asList();
+      for(int i = diffList.size() - 1; i >= 0; i--) {
+        final ChildrenDiff diff = diffList.get(i).diff;
+        if (diff.removeChild(type, child)) {
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
   /**
@@ -627,15 +639,11 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     // remove same child from the created list, if there is any.
-    final byte[] name = child.getLocalNameBytes();
     final List<DirectoryDiff> diffList = diffs.asList();
     for(int i = diffList.size() - 1; i >= 0; i--) {
       final ChildrenDiff diff = diffList.get(i).diff;
-      final int c = diff.searchIndex(ListType.CREATED, name);
-      if (c >= 0) {
-        if (diff.removeCreatedChild(c, child)) {
-          return true;
-        }
+      if (diff.removeChild(ListType.CREATED, child)) {
+        return true;
       }
     }
     return true;
@@ -646,12 +654,65 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     super.replaceChild(oldChild, newChild);
     diffs.replaceChild(ListType.CREATED, oldChild, newChild);
   }
-
-  /** The child just has been removed, replace it with a reference. */
-  public void replaceRemovedChild(INode oldChild, INode newChild) {
-    // the old child must be in the deleted list
-    Preconditions.checkState(
-        diffs.replaceChild(ListType.DELETED, oldChild, newChild));
+  
+  /**
+   * This method is usually called by the undo section of rename.
+   * 
+   * Before calling this function, in the rename operation, we replace the
+   * original src node (of the rename operation) with a reference node (WithName
+   * instance) in both the children list and a created list, delete the
+   * reference node from the children list, and add it to the corresponding
+   * deleted list.
+   * 
+   * To undo the above operations, we have the following steps in particular:
+   * 
+   * <pre>
+   * 1) remove the WithName node from the deleted list (if it exists) 
+   * 2) replace the WithName node in the created list with srcChild 
+   * 3) add srcChild back as a child of srcParent. Note that we already add 
+   * the node into the created list of a snapshot diff in step 2, we do not need
+   * to add srcChild to the created list of the latest snapshot.
+   * </pre>
+   * 
+   * We do not need to update quota usage because the old child is in the 
+   * deleted list before. 
+   * 
+   * @param oldChild
+   *          The reference node to be removed/replaced
+   * @param newChild
+   *          The node to be added back
+   * @param latestSnapshot
+   *          The latest snapshot. Note this may not be the last snapshot in the
+   *          {@link #diffs}, since the src tree of the current rename operation
+   *          may be the dst tree of a previous rename.
+   * @throws QuotaExceededException should not throw this exception
+   */
+  public void undoRename4ScrParent(final INodeReference oldChild,
+      final INode newChild, Snapshot latestSnapshot)
+      throws QuotaExceededException {
+    diffs.removeChild(ListType.DELETED, oldChild);
+    diffs.replaceChild(ListType.CREATED, oldChild, newChild);
+    addChild(newChild, true, null);
+  }
+  
+  /**
+   * Undo the rename operation for the dst tree, i.e., if the rename operation
+   * (with OVERWRITE option) removes a file/dir from the dst tree, add it back
+   * and delete possible record in the deleted list.  
+   */
+  public void undoRename4DstParent(final INode deletedChild,
+      Snapshot latestSnapshot) throws QuotaExceededException {
+    boolean removeDeletedChild = diffs.removeChild(ListType.DELETED,
+        deletedChild);
+    final boolean added = addChild(deletedChild, true, removeDeletedChild ? null
+        : latestSnapshot);
+    // update quota usage if adding is successfully and the old child has not
+    // been stored in deleted list before
+    if (added && !removeDeletedChild) {
+      final Quota.Counts counts = deletedChild.computeQuotaUsage();
+      addSpaceConsumed(counts.get(Quota.NAMESPACE),
+          counts.get(Quota.DISKSPACE), false);
+    }
   }
 
   @Override

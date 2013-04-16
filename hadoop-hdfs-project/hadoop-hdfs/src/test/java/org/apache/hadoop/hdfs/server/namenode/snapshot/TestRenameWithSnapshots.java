@@ -21,6 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +52,10 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.ChildrenDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
+import org.apache.hadoop.hdfs.util.Diff.ListType;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -1158,5 +1165,225 @@ public class TestRenameWithSnapshots {
     restartClusterAndCheckImage();
     hdfs.deleteSnapshot(sdir1, "s1");
     restartClusterAndCheckImage();
+  }
+  
+  /**
+   * Test the undo section of rename. Before the rename, we create the renamed 
+   * file/dir before taking the snapshot.
+   */
+  @Test
+  public void testRenameUndo() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    hdfs.mkdirs(sdir1);
+    hdfs.mkdirs(sdir2);
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    final Path dir2file = new Path(sdir2, "file");
+    DFSTestUtil.createFile(hdfs, dir2file, BLOCKSIZE, REPL, SEED);
+    
+    SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s1");
+    
+    INodeDirectory dir2 = fsdir.getINode4Write(sdir2.toString()).asDirectory();
+    INodeDirectory mockDir2 = spy(dir2);
+    doReturn(false).when(mockDir2).addChild((INode) anyObject(), anyBoolean(),
+            (Snapshot) anyObject());
+    INodeDirectory root = fsdir.getINode4Write("/").asDirectory();
+    root.replaceChild(dir2, mockDir2);
+    
+    final Path newfoo = new Path(sdir2, "foo");
+    boolean result = hdfs.rename(foo, newfoo);
+    assertFalse(result);
+    
+    // check the current internal details
+    INodeDirectorySnapshottable dir1Node = (INodeDirectorySnapshottable) fsdir
+        .getINode4Write(sdir1.toString());
+    ReadOnlyList<INode> dir1Children = dir1Node.getChildrenList(null);
+    assertEquals(1, dir1Children.size());
+    assertEquals(foo.getName(), dir1Children.get(0).getLocalName());
+    List<DirectoryDiff> dir1Diffs = dir1Node.getDiffs().asList();
+    assertEquals(1, dir1Diffs.size());
+    assertEquals("s1", dir1Diffs.get(0).snapshot.getRoot().getLocalName());
+    
+    // after the undo of rename, both the created and deleted list of sdir1
+    // should be empty
+    ChildrenDiff childrenDiff = dir1Diffs.get(0).getChildrenDiff();
+    assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
+    assertEquals(0, childrenDiff.getList(ListType.CREATED).size());
+    
+    INode fooNode = fsdir.getINode4Write(foo.toString());
+    assertTrue(fooNode instanceof INodeDirectoryWithSnapshot);
+    List<DirectoryDiff> fooDiffs = ((INodeDirectoryWithSnapshot) fooNode)
+        .getDiffs().asList();
+    assertEquals(1, fooDiffs.size());
+    assertEquals("s1", fooDiffs.get(0).snapshot.getRoot().getLocalName());
+    
+    final Path foo_s1 = SnapshotTestHelper.getSnapshotPath(sdir1, "s1", "foo");
+    INode fooNode_s1 = fsdir.getINode(foo_s1.toString());
+    assertTrue(fooNode_s1 == fooNode);
+    
+    // check sdir2
+    assertFalse(hdfs.exists(newfoo));
+    INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
+        .asDirectory();
+    assertFalse(dir2Node instanceof INodeDirectoryWithSnapshot);
+    ReadOnlyList<INode> dir2Children = dir2Node.getChildrenList(null);
+    assertEquals(1, dir2Children.size());
+    assertEquals(dir2file.getName(), dir2Children.get(0).getLocalName());
+  }
+
+  /**
+   * Test the undo section of rename. Before the rename, we create the renamed 
+   * file/dir after taking the snapshot.
+   */
+  @Test
+  public void testRenameUndo_2() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    hdfs.mkdirs(sdir1);
+    hdfs.mkdirs(sdir2);
+    final Path dir2file = new Path(sdir2, "file");
+    DFSTestUtil.createFile(hdfs, dir2file, BLOCKSIZE, REPL, SEED);
+    
+    SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s1");
+    
+    // create foo after taking snapshot
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    
+    INodeDirectory dir2 = fsdir.getINode4Write(sdir2.toString()).asDirectory();
+    INodeDirectory mockDir2 = spy(dir2);
+    doReturn(false).when(mockDir2).addChild((INode) anyObject(), anyBoolean(),
+            (Snapshot) anyObject());
+    INodeDirectory root = fsdir.getINode4Write("/").asDirectory();
+    root.replaceChild(dir2, mockDir2);
+    
+    final Path newfoo = new Path(sdir2, "foo");
+    boolean result = hdfs.rename(foo, newfoo);
+    assertFalse(result);
+    
+    // check the current internal details
+    INodeDirectorySnapshottable dir1Node = (INodeDirectorySnapshottable) fsdir
+        .getINode4Write(sdir1.toString());
+    ReadOnlyList<INode> dir1Children = dir1Node.getChildrenList(null);
+    assertEquals(1, dir1Children.size());
+    assertEquals(foo.getName(), dir1Children.get(0).getLocalName());
+    List<DirectoryDiff> dir1Diffs = dir1Node.getDiffs().asList();
+    assertEquals(1, dir1Diffs.size());
+    assertEquals("s1", dir1Diffs.get(0).snapshot.getRoot().getLocalName());
+    
+    // after the undo of rename, the created list of sdir1 should contain 
+    // 1 element
+    ChildrenDiff childrenDiff = dir1Diffs.get(0).getChildrenDiff();
+    assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
+    assertEquals(1, childrenDiff.getList(ListType.CREATED).size());
+    
+    INode fooNode = fsdir.getINode4Write(foo.toString());
+    assertTrue(fooNode instanceof INodeDirectory);
+    assertTrue(childrenDiff.getList(ListType.CREATED).get(0) == fooNode);
+    
+    final Path foo_s1 = SnapshotTestHelper.getSnapshotPath(sdir1, "s1", "foo");
+    assertFalse(hdfs.exists(foo_s1));
+    
+    // check sdir2
+    assertFalse(hdfs.exists(newfoo));
+    INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
+        .asDirectory();
+    assertFalse(dir2Node instanceof INodeDirectoryWithSnapshot);
+    ReadOnlyList<INode> dir2Children = dir2Node.getChildrenList(null);
+    assertEquals(1, dir2Children.size());
+    assertEquals(dir2file.getName(), dir2Children.get(0).getLocalName());
+  }
+  
+  /**
+   * Test the undo section of the second-time rename.
+   */
+  @Test
+  public void testRenameUndo_3() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    final Path sdir3 = new Path("/dir3");
+    hdfs.mkdirs(sdir1);
+    hdfs.mkdirs(sdir2);
+    hdfs.mkdirs(sdir3);
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    
+    SnapshotTestHelper.createSnapshot(hdfs, sdir1, "s1");
+    SnapshotTestHelper.createSnapshot(hdfs, sdir2, "s2");
+    
+    INodeDirectory dir3 = fsdir.getINode4Write(sdir3.toString()).asDirectory();
+    INodeDirectory mockDir3 = spy(dir3);
+    doReturn(false).when(mockDir3).addChild((INode) anyObject(), anyBoolean(),
+            (Snapshot) anyObject());
+    INodeDirectory root = fsdir.getINode4Write("/").asDirectory();
+    root.replaceChild(dir3, mockDir3);
+    
+    final Path foo_dir2 = new Path(sdir2, "foo");
+    final Path foo_dir3 = new Path(sdir3, "foo");
+    hdfs.rename(foo, foo_dir2);
+    boolean result = hdfs.rename(foo_dir2, foo_dir3);
+    assertFalse(result);
+    
+    // check the current internal details
+    INodeDirectorySnapshottable dir2Node = (INodeDirectorySnapshottable) fsdir
+        .getINode4Write(sdir2.toString());
+    ReadOnlyList<INode> dir2Children = dir2Node.getChildrenList(null);
+    assertEquals(1, dir2Children.size());
+    List<DirectoryDiff> dir2Diffs = dir2Node.getDiffs().asList();
+    assertEquals(1, dir2Diffs.size());
+    assertEquals("s2", Snapshot.getSnapshotName(dir2Diffs.get(0).snapshot));
+    ChildrenDiff childrenDiff = dir2Diffs.get(0).getChildrenDiff();
+    assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
+    assertEquals(1, childrenDiff.getList(ListType.CREATED).size());
+    final Path foo_s2 = SnapshotTestHelper.getSnapshotPath(sdir2, "s2", "foo");
+    assertFalse(hdfs.exists(foo_s2));
+    
+    INode fooNode = fsdir.getINode4Write(foo_dir2.toString());
+    assertTrue(childrenDiff.getList(ListType.CREATED).get(0) == fooNode);
+    assertTrue(fooNode instanceof INodeReference.DstReference);
+    List<DirectoryDiff> fooDiffs = ((INodeDirectoryWithSnapshot) fooNode
+        .asDirectory()).getDiffs().asList();
+    assertEquals(1, fooDiffs.size());
+    assertEquals("s1", fooDiffs.get(0).snapshot.getRoot().getLocalName());
+    
+    // create snapshot on sdir2 and rename again
+    hdfs.createSnapshot(sdir2, "s3");
+    result = hdfs.rename(foo_dir2, foo_dir3);
+    assertFalse(result);
+
+    // check internal details again
+    dir2Node = (INodeDirectorySnapshottable) fsdir.getINode4Write(sdir2
+        .toString());
+    fooNode = fsdir.getINode4Write(foo_dir2.toString());
+    dir2Children = dir2Node.getChildrenList(null);
+    assertEquals(1, dir2Children.size());
+    dir2Diffs = dir2Node.getDiffs().asList();
+    assertEquals(2, dir2Diffs.size());
+    assertEquals("s2", Snapshot.getSnapshotName(dir2Diffs.get(0).snapshot));
+    assertEquals("s3", Snapshot.getSnapshotName(dir2Diffs.get(1).snapshot));
+    
+    childrenDiff = dir2Diffs.get(0).getChildrenDiff();
+    assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
+    assertEquals(1, childrenDiff.getList(ListType.CREATED).size());
+    assertTrue(childrenDiff.getList(ListType.CREATED).get(0) == fooNode);
+    
+    childrenDiff = dir2Diffs.get(1).getChildrenDiff();
+    assertEquals(0, childrenDiff.getList(ListType.DELETED).size());
+    assertEquals(0, childrenDiff.getList(ListType.CREATED).size());
+    
+    final Path foo_s3 = SnapshotTestHelper.getSnapshotPath(sdir2, "s3", "foo");
+    assertFalse(hdfs.exists(foo_s2));
+    assertTrue(hdfs.exists(foo_s3));
+    
+    assertTrue(fooNode instanceof INodeReference.DstReference);
+    fooDiffs = ((INodeDirectoryWithSnapshot) fooNode.asDirectory()).getDiffs()
+        .asList();
+    assertEquals(2, fooDiffs.size());
+    assertEquals("s1", fooDiffs.get(0).snapshot.getRoot().getLocalName());
+    assertEquals("s3", fooDiffs.get(1).snapshot.getRoot().getLocalName());
   }
 }

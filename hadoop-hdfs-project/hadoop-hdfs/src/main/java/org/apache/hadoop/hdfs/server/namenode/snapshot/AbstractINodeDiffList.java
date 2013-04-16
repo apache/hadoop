@@ -108,7 +108,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
   final D addDiff(Snapshot latest, N currentINode)
       throws QuotaExceededException {
-    currentINode.addSpaceConsumed(1, 0);
+    currentINode.addSpaceConsumed(1, 0, true);
     return addLast(factory.createDiff(latest, currentINode));
   }
 

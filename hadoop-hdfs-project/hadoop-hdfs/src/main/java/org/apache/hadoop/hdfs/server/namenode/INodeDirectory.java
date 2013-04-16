@@ -216,6 +216,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     Preconditions.checkState(i >= 0);
     Preconditions.checkState(oldChild == children.get(i));
     
+    // TODO: the first case may never be hit
     if (oldChild.isReference() && !newChild.isReference()) {
       final INode withCount = oldChild.asReference().getReferredINode();
       withCount.asReference().setReferredINode(newChild);

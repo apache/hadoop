@@ -254,9 +254,9 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public final void addSpaceConsumed(long nsDelta, long dsDelta
-      ) throws QuotaExceededException {
-    referred.addSpaceConsumed(nsDelta, dsDelta);
+  public final void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify)
+      throws QuotaExceededException {
+    referred.addSpaceConsumed(nsDelta, dsDelta, verify);
   }
 
   @Override

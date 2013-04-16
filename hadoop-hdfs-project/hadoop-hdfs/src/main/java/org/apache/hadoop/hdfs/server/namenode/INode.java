@@ -376,11 +376,11 @@ public abstract class INode implements Diff.Element<byte[]> {
    * Check and add namespace/diskspace consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
-  public void addSpaceConsumed(long nsDelta, long dsDelta)
+  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify)
       throws QuotaExceededException {
     final INodeDirectory parentDir = getParent();
     if (parentDir != null) {
-      parentDir.addSpaceConsumed(nsDelta, dsDelta);
+      parentDir.addSpaceConsumed(nsDelta, dsDelta, verify);
     }
   }
 
@@ -403,7 +403,7 @@ public abstract class INode implements Diff.Element<byte[]> {
   /**
    * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
    */
-  final Quota.Counts computeQuotaUsage() {
+  public final Quota.Counts computeQuotaUsage() {
     return computeQuotaUsage(new Quota.Counts(), true);
   }
 
