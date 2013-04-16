@@ -194,6 +194,11 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      <b>Allow setting of end-of-record delimiter for TextInputFormat</b><br>
      <blockquote>The patch for https://issues.apache.org/jira/browse/MAPREDUCE-2254 required minor changes to the LineReader class to allow extensions (see attached 2.patch). Description copied below:<br><br>It will be useful to allow setting the end-of-record delimiter for TextInputFormat. The current implementation hardcodes &apos;\n&apos;, &apos;\r&apos; or &apos;\r\n&apos; as the only possible record delimiters. This is a problem if users have embedded newlines in their data fields (which is pretty common). This is also a problem for other ...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7101">HADOOP-7101</a>.
+     Blocker bug reported by tlipcon and fixed by tlipcon (security)<br>
+     <b>UserGroupInformation.getCurrentUser() fails when called from non-Hadoop JAAS context</b><br>
+     <blockquote>If a Hadoop client is run from inside a container like Tomcat, and the current AccessControlContext has a Subject associated with it that is not created by Hadoop, then UserGroupInformation.getCurrentUser() will throw NoSuchElementException, since it assumes that any Subject will have a hadoop User principal.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7688">HADOOP-7688</a>.
      Major improvement reported by szetszwo and fixed by umamaheswararao <br>
      <b>When a servlet filter throws an exception in init(..), the Jetty server failed silently. </b><br>
@@ -369,6 +374,11 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      <b>TestSinkQueue.testConcurrentConsumers fails intermittently (Backports HADOOP-7292)</b><br>
      <blockquote>org.apache.hadoop.metrics2.impl.TestSinkQueue.testConcurrentConsumers<br> <br><br>Error Message<br><br>should&apos;ve thrown<br>Stacktrace<br><br>junit.framework.AssertionFailedError: should&apos;ve thrown<br>	at org.apache.hadoop.metrics2.impl.TestSinkQueue.shouldThrowCME(TestSinkQueue.java:229)<br>	at org.apache.hadoop.metrics2.impl.TestSinkQueue.testConcurrentConsumers(TestSinkQueue.java:195)<br>Standard Output<br><br>2012-10-03 16:51:31,694 INFO  impl.TestSinkQueue (TestSinkQueue.java:consume(243)) - sleeping<br></blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9071">HADOOP-9071</a>.
+     Major improvement reported by gkesavan and fixed by gkesavan (build)<br>
+     <b>configure ivy log levels for resolve/retrieve</b><br>
+     <blockquote></blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9090">HADOOP-9090</a>.
      Minor new feature reported by mostafae and fixed by mostafae (metrics)<br>
      <b>Support on-demand publish of metrics</b><br>
@@ -438,6 +448,31 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Trivial bug reported by teledriver and fixed by sureshms (test)<br>
      <b>Port HADOOP-7290 to branch-1 to fix TestUserGroupInformation failure</b><br>
      <blockquote>Unit test failure in TestUserGroupInformation.testGetServerSideGroups. port HADOOP-7290 to branch-1.1 </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9379">HADOOP-9379</a>.
+     Trivial improvement reported by arpitgupta and fixed by arpitgupta <br>
+     <b>capture the ulimit info after printing the log to the console</b><br>
+     <blockquote>Based on the discussions in HADOOP-9253 people prefer if we dont print the ulimit info to the console but still have it in the logs.<br><br>Just need to move the head statement to before the capture of ulimit code.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9434">HADOOP-9434</a>.
+     Minor improvement reported by carp84 and fixed by carp84 (bin)<br>
+     <b>Backport HADOOP-9267 to branch-1</b><br>
+     <blockquote>Currently in hadoop 1.1.2, if user issue &quot;bin/hadoop help&quot; in command line, it will throw below exception. We can improve this to print the usage message.<br>===============================================<br>Exception in thread &quot;main&quot; java.lang.NoClassDefFoundError: help<br>===============================================<br><br>This issue is already resolved in HADOOP-9267 in trunk, so we only need to backport it into branch-1</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9451">HADOOP-9451</a>.
+     Major bug reported by djp and fixed by djp (net)<br>
+     <b>Node with one topology layer should be handled as fault topology when NodeGroup layer is enabled</b><br>
+     <blockquote>Currently, nodes with one layer topology are allowed to join in the cluster that with enabling NodeGroup layer which cause some exception cases. <br>When NodeGroup layer is enabled, the cluster should assumes that at least two layer (Rack/NodeGroup) is valid topology for each nodes, so should throw exceptions for one layer node in joining.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9467">HADOOP-9467</a>.
+     Major bug reported by cnauroth and fixed by cnauroth (metrics)<br>
+     <b>Metrics2 record filtering (.record.filter.include/exclude) does not filter by name</b><br>
+     <blockquote>Filtering by record considers only the record&apos;s tag for filtering and not the record&apos;s name.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9473">HADOOP-9473</a>.
+     Trivial bug reported by gmazza and fixed by  (fs)<br>
+     <b>typo in FileUtil copy() method</b><br>
+     <blockquote>typo:<br>{code}<br>Index: src/core/org/apache/hadoop/fs/FileUtil.java<br>===================================================================<br>--- src/core/org/apache/hadoop/fs/FileUtil.java	(revision 1467295)<br>+++ src/core/org/apache/hadoop/fs/FileUtil.java	(working copy)<br>@@ -178,7 +178,7 @@<br>     // Check if dest is directory<br>     if (!dstFS.exists(dst)) {<br>       throw new IOException(&quot;`&quot; + dst +&quot;&apos;: specified destination directory &quot; +<br>-                            &quot;doest not exist&quot;);<br>+                   ...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1957">HDFS-1957</a>.
      Minor improvement reported by asrabkin and fixed by asrabkin (documentation)<br>
@@ -606,7 +641,7 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4222">HDFS-4222</a>.
      Minor bug reported by teledriver and fixed by teledriver (namenode)<br>
-     <b>NN is unresponsive and lose heartbeats of DNs when Hadoop is configured to use LDAP and LDAP has issues</b><br>
+     <b>NN is unresponsive and loses heartbeats of DNs when Hadoop is configured to use LDAP and LDAP has issues</b><br>
      <blockquote>For Hadoop clusters configured to access directory information by LDAP, the FSNamesystem calls on behave of DFS clients might hang due to LDAP issues (including LDAP access issues caused by networking issues) while holding the single lock of FSNamesystem. That will result in the NN unresponsive and loss of the heartbeats from DNs.<br><br>The places LDAP got accessed by FSNamesystem calls are the instantiation of FSPermissionChecker, which could be moved out of the lock scope since the instantiation...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4256">HDFS-4256</a>.
@@ -629,6 +664,11 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      <b>TestCheckpoint failure with JDK7</b><br>
      <blockquote>testMultipleSecondaryNameNodes doesn&apos;t shutdown the SecondaryNameNode which causes testCheckpoint to fail.<br><br>Testcase: testCheckpoint took 2.736 sec<br>	Caused an ERROR<br>Cannot lock storage C:\hdp1-2\build\test\data\dfs\namesecondary1. The directory is already locked.<br>java.io.IOException: Cannot lock storage C:\hdp1-2\build\test\data\dfs\namesecondary1. The directory is already locked.<br>	at org.apache.hadoop.hdfs.server.common.Storage$StorageDirectory.lock(Storage.java:602)<br>	at org.apache.hadoop.hd...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4413">HDFS-4413</a>.
+     Major bug reported by mostafae and fixed by mostafae (namenode)<br>
+     <b>Secondary namenode won&apos;t start if HDFS isn&apos;t the default file system</b><br>
+     <blockquote>If HDFS is not the default file system (fs.default.name is something other than hdfs://...), then secondary namenode throws early on in its initialization. This is a needless check as far as I can tell, and blocks scenarios where HDFS services are up but HDFS is not the default file system.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4444">HDFS-4444</a>.
      Trivial bug reported by schu and fixed by schu <br>
      <b>Add space between total transaction time and number of transactions in FSEditLog#printStatistics</b><br>
@@ -642,7 +682,7 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4479">HDFS-4479</a>.
      Major bug reported by jingzhao and fixed by jingzhao <br>
      <b>logSync() with the FSNamesystem lock held in commitBlockSynchronization</b><br>
-     <blockquote>In FSNamesystem#commitBlockSynchronization of branch-1, logSync() may be called when the FSNamesystem lock is held. Similar with HDFS-4186, this may cause some performance issue.<br><br>Since logSync is called right after the synchronization section, we can simply remove the logSync call.</blockquote></li>
+     <blockquote>In FSNamesystem#commitBlockSynchronization of branch-1, logSync() may be called when the FSNamesystem lock is held. Similar to HDFS-4186, this may cause some performance issue.<br><br>The following issue was observed in a cluster that was running a Hive job and was writing to 100,000 temporary files (each task is writing to 1000s of files). When this job is killed, a large number of files are left open for write. Eventually when the lease for open files expires, lease recovery is started for all th...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-4518">HDFS-4518</a>.
      Major bug reported by arpitagarwal and fixed by arpitagarwal <br>
@@ -663,6 +703,16 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Critical bug reported by gujilangzi and fixed by djp (balancer)<br>
      <b>start balancer failed with NPE</b><br>
      <blockquote>start balancer failed with NPE<br> File this issue to track for QE and dev take a look<br><br>balancer.log:<br> 2013-03-06 00:19:55,174 ERROR org.apache.hadoop.hdfs.server.balancer.Balancer: java.lang.NullPointerException<br> at org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicy.getInstance(BlockPlacementPolicy.java:165)<br> at org.apache.hadoop.hdfs.server.balancer.Balancer.checkReplicationPolicyCompatibility(Balancer.java:799)<br> at org.apache.hadoop.hdfs.server.balancer.Balancer.&lt;init&gt;(Balancer.java:...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4597">HDFS-4597</a>.
+     Major new feature reported by szetszwo and fixed by szetszwo (webhdfs)<br>
+     <b>Backport WebHDFS concat to branch-1</b><br>
+     <blockquote>HDFS-3598 adds cancat to WebHDFS.  Let&apos;s also add it to branch-1.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4651">HDFS-4651</a>.
+     Major improvement reported by cnauroth and fixed by cnauroth (tools)<br>
+     <b>Offline Image Viewer backport to branch-1</b><br>
+     <blockquote>This issue tracks backporting the Offline Image Viewer tool to branch-1.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-461">MAPREDUCE-461</a>.
      Minor new feature reported by fhedberg and fixed by fhedberg <br>
@@ -769,6 +819,11 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      <b>Backport MR-2779 (JobSplitWriter.java can&apos;t handle large job.split file) to branch-1</b><br>
      <blockquote></blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4463">MAPREDUCE-4463</a>.
+     Blocker bug reported by tomwhite and fixed by tomwhite (mrv1)<br>
+     <b>JobTracker recovery fails with HDFS permission issue</b><br>
+     <blockquote>Recovery fails when the job user is different to the JT owner (i.e. on anything bigger than a pseudo-distributed cluster).</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4464">MAPREDUCE-4464</a>.
      Minor improvement reported by heathcd and fixed by heathcd (task)<br>
      <b>Reduce tasks failing with NullPointerException in ConcurrentHashMap.get()</b><br>
@@ -848,6 +903,11 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      Major bug reported by kkambatl and fixed by kkambatl (mrv1)<br>
      <b>Cleanup: Some (5) private methods in JobTracker.RecoveryManager are not used anymore after MAPREDUCE-3837</b><br>
      <blockquote>MAPREDUCE-3837 re-organized the job recovery code, moving out the code that was using the methods in RecoveryManager.<br><br>Now, the following methods in {{JobTracker.RecoveryManager}}seem to be unused:<br># {{updateJob()}}<br># {{updateTip()}}<br># {{createTaskAttempt()}}<br># {{addSuccessfulAttempt()}}<br># {{addUnsuccessfulAttempt()}}</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4824">MAPREDUCE-4824</a>.
+     Major new feature reported by tomwhite and fixed by tomwhite (mrv1)<br>
+     <b>Provide a mechanism for jobs to indicate they should not be recovered on restart</b><br>
+     <blockquote>Some jobs (like Sqoop or HBase jobs) are not idempotent, so should not be recovered on jobtracker restart. MAPREDUCE-2702 solves this problem for MR2, however the approach there is not applicable for MR1, since even if we only use the job-level part of the patch and add a isRecoverySupported method to OutputCommitter, there is no way to use that information from the JT (which initiates recovery), since the JT does not instantiate OutputCommitters - and it shouldn&apos;t since they are user-level c...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4837">MAPREDUCE-4837</a>.
      Major improvement reported by acmurthy and fixed by acmurthy <br>
@@ -974,15 +1034,25 @@ To run secure Datanodes users must install jsvc for their platform and set JSVC_
      <b>Update MR1 memory configuration docs</b><br>
      <blockquote>The pmem/vmem settings in the docs (http://hadoop.apache.org/docs/r1.1.1/cluster_setup.html#Memory+monitoring) have not been supported for a long time. The docs should be updated to reflect the new settings (mapred.cluster.map.memory.mb etc).</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5038">MAPREDUCE-5038</a>.
-     Major bug reported by sandyr and fixed by sandyr <br>
-     <b>old API CombineFileInputFormat missing fixes that are in new API </b><br>
-     <blockquote>The following changes patched the CombineFileInputFormat in mapreduce, but neglected the one in mapred<br>MAPREDUCE-1597 enabled the CombineFileInputFormat to work on splittable files<br>MAPREDUCE-2021 solved returning duplicate hostnames in split locations<br>MAPREDUCE-1806 CombineFileInputFormat does not work with paths not on default FS<br><br>In trunk this is not an issue as the one in mapred extends the one in mapreduce.</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5049">MAPREDUCE-5049</a>.
      Major bug reported by sandyr and fixed by sandyr <br>
      <b>CombineFileInputFormat counts all compressed files non-splitable</b><br>
      <blockquote>In branch-1, CombineFileInputFormat doesn&apos;t take SplittableCompressionCodec into account and thinks that all compressible input files aren&apos;t splittable.  This is a regression from when handling for non-splitable compression codecs was originally added in MAPREDUCE-1597, and seems to have somehow gotten in when the code was pulled from 0.22 to branch-1.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5081">MAPREDUCE-5081</a>.
+     Major new feature reported by szetszwo and fixed by szetszwo (distcp)<br>
+     <b>Backport DistCpV2 and the related JIRAs to branch-1</b><br>
+     <blockquote>Here is a list of DistCpV2 JIRAs:<br>- MAPREDUCE-2765: DistCpV2 main jira<br>- HADOOP-8703: turn CRC checking off for 0 byte size <br>- HDFS-3054: distcp -skipcrccheck has no effect.<br>- HADOOP-8431: Running distcp without args throws IllegalArgumentException<br>- HADOOP-8775: non-positive value to -bandwidth<br>- MAPREDUCE-4654: TestDistCp is ignored<br>- HADOOP-9022: distcp fails to copy file if -m 0 specified<br>- HADOOP-9025: TestCopyListing failing<br>- MAPREDUCE-5075: DistCp leaks input file handles<br>- distcp par...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5129">MAPREDUCE-5129</a>.
+     Minor new feature reported by billie.rinaldi and fixed by billie.rinaldi <br>
+     <b>Add tag info to JH files</b><br>
+     <blockquote>It will be useful to add tags to the existing workflow info logged by JH.  This will allow jobs to be filtered/grouped for analysis more easily.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5131">MAPREDUCE-5131</a>.
+     Major bug reported by acmurthy and fixed by acmurthy <br>
+     <b>Provide better handling of job status related apis during JT restart</b><br>
+     <blockquote>I&apos;ve seen pig/hive applications bork during JT restart since they get NPEs - this is due to fact that jobs are not really inited, but are submitted.</blockquote></li>
 
 
 </ul>
