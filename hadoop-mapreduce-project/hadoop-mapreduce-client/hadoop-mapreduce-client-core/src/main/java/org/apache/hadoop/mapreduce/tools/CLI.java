@@ -46,6 +46,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryViewer;
 import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.logaggregation.LogDumper;
@@ -307,6 +308,7 @@ public class CLI extends Configured implements Tool {
         exitCode = 0;
       } else if (displayTasks) {
         displayTasks(cluster.getJob(JobID.forName(jobid)), taskType, taskState);
+        exitCode = 0;
       } else if(killTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
         Job job = cluster.getJob(taskID.getJobID());
@@ -603,6 +605,6 @@ public class CLI extends Configured implements Tool {
   
   public static void main(String[] argv) throws Exception {
     int res = ToolRunner.run(new CLI(), argv);
-    System.exit(res);
+    ExitUtil.terminate(res);
   }
 }
