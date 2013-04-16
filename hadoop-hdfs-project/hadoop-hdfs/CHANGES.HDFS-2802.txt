@@ -244,3 +244,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4700. Fix the undo section of rename with snapshots.  (Jing Zhao via
   szetszwo)
+
+  HDFS-4529. Disallow concat when one of the src files is in some snapshot.
+  (szetszwo)

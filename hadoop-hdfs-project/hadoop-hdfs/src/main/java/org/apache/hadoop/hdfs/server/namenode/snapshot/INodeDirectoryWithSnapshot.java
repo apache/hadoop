@@ -564,7 +564,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   @Override
   public INodeDirectoryWithSnapshot recordModification(final Snapshot latest)
       throws QuotaExceededException {
-    if (isInLatestSnapshot(latest) && !isInSrcSnapshot(latest)) {
+    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
       return saveSelf2Snapshot(latest, null);
     }
     return this;

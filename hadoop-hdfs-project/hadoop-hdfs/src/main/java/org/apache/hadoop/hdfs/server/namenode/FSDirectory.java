@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapsho
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotException;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -1099,9 +1100,9 @@ public class FSDirectory implements Closeable {
   /**
    * Concat all the blocks from srcs to trg and delete the srcs files
    */
-  public void concat(String target, String [] srcs) 
+  void concat(String target, String [] srcs) 
       throws UnresolvedLinkException, QuotaExceededException,
-      SnapshotAccessControlException {
+      SnapshotAccessControlException, SnapshotException {
     writeLock();
     try {
       // actual move
@@ -1122,7 +1123,7 @@ public class FSDirectory implements Closeable {
    */
   void unprotectedConcat(String target, String [] srcs, long timestamp) 
       throws UnresolvedLinkException, QuotaExceededException,
-      SnapshotAccessControlException {
+      SnapshotAccessControlException, SnapshotException {
     assert hasWriteLock();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
@@ -1137,7 +1138,24 @@ public class FSDirectory implements Closeable {
     
     final INodeFile [] allSrcInodes = new INodeFile[srcs.length];
     for(int i = 0; i < srcs.length; i++) {
-      allSrcInodes[i] = getINode4Write(srcs[i]).asFile();
+      final INodesInPath iip = getINodesInPath4Write(srcs[i]);
+      final Snapshot latest = iip.getLatestSnapshot();
+      final INode inode = iip.getLastINode();
+
+      // check if the file in the latest snapshot
+      if (inode.isInLatestSnapshot(latest)) {
+        throw new SnapshotException("Concat: the source file " + srcs[i]
+            + " is in snapshot " + latest);
+      }
+
+      // check if the file has other references.
+      if (inode.isReference() && ((INodeReference.WithCount)
+          inode.asReference().getReferredINode()).getReferenceCount() > 1) {
+        throw new SnapshotException("Concat: the source file " + srcs[i]
+            + " is referred by some other reference in some snapshot.");
+      }
+
+      allSrcInodes[i] = inode.asFile();
     }
     trgInode.concatBlocks(allSrcInodes);
     

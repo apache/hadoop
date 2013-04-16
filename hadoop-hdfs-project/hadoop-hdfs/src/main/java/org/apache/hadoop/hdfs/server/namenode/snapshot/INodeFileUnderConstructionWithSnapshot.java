@@ -95,7 +95,7 @@ public class INodeFileUnderConstructionWithSnapshot
   @Override
   public INodeFileUnderConstructionWithSnapshot recordModification(
       final Snapshot latest) throws QuotaExceededException {
-    if (isInLatestSnapshot(latest) && !isInSrcSnapshot(latest)) {
+    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
       diffs.saveSelf2Snapshot(latest, this, null);
     }
     return this;

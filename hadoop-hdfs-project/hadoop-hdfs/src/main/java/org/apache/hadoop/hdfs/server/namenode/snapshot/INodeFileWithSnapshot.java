@@ -66,7 +66,7 @@ public class INodeFileWithSnapshot extends INodeFile
   @Override
   public INodeFileWithSnapshot recordModification(final Snapshot latest)
       throws QuotaExceededException {
-    if (isInLatestSnapshot(latest) && !isInSrcSnapshot(latest)) {
+    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
       diffs.saveSelf2Snapshot(latest, this, null);
     }
     return this;

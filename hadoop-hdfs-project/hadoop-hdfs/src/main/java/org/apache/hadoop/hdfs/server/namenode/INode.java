@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.SignedBytes;
 
 /**
@@ -185,25 +186,27 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
   
   /**
-   * Called by {@link INode#recordModification}. For a reference node and its
-   * subtree, the function tells which snapshot the modification should be
+   * When {@link #recordModification} is called on a referred node,
+   * this method tells which snapshot the modification should be
    * associated with: the snapshot that belongs to the SRC tree of the rename
    * operation, or the snapshot belonging to the DST tree.
    * 
-   * @param latest
+   * @param latestInDst
    *          the latest snapshot in the DST tree above the reference node
    * @return True: the modification should be recorded in the snapshot that
    *         belongs to the SRC tree. False: the modification should be
    *         recorded in the snapshot that belongs to the DST tree.
    */
-  public final boolean isInSrcSnapshot(final Snapshot latest) {
-    if (latest == null) {
+  public final boolean shouldRecordInSrcSnapshot(final Snapshot latestInDst) {
+    Preconditions.checkState(!isReference());
+
+    if (latestInDst == null) {
       return true;
     }
     INodeReference withCount = getParentReference();
     if (withCount != null) {
       int dstSnapshotId = withCount.getParentReference().getDstSnapshotId();
-      if (dstSnapshotId >= latest.getId()) {
+      if (dstSnapshotId >= latestInDst.getId()) {
         return true;
       }
     }

@@ -23,11 +23,11 @@ import java.io.IOException;
 public class SnapshotException extends IOException {
   private static final long serialVersionUID = 1L;
 
-  SnapshotException(final String message) {
+  public SnapshotException(final String message) {
     super(message);
   }
 
-  SnapshotException(final Throwable cause) {
+  public SnapshotException(final Throwable cause) {
     super(cause);
   }
 }
