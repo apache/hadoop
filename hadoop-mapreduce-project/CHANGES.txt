@@ -305,6 +305,8 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5151. Update MR AM to use standard exit codes from the API after
     YARN-444. (Sandy Ryza via vinodkv)
 
+    MAPREDUCE-5140. MR part of YARN-514 (Zhijie Shen via bikas)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -234,6 +234,8 @@ public class ClientServiceDelegate {
       throw RPCUtil.getRemoteException("User is not set in the application report");
     }
     if (application.getYarnApplicationState() == YarnApplicationState.NEW
+        || application.getYarnApplicationState() ==
+            YarnApplicationState.NEW_SAVING
         || application.getYarnApplicationState() == YarnApplicationState.SUBMITTED
         || application.getYarnApplicationState() == YarnApplicationState.ACCEPTED) {
       realProxy = null;
