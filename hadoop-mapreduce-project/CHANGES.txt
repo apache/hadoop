@@ -152,6 +152,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5140. MR part of YARN-514 (Zhijie Shen via bikas)
 
+    MAPREDUCE-5128. mapred-default.xml is missing a bunch of history server 
+    configs. (sandyr via tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
