@@ -63,6 +63,7 @@ public class RmController extends Controller {
     // limit applications to those in states relevant to scheduling
     set(YarnWebParams.APP_STATE, StringHelper.cjoin(
         RMAppState.NEW.toString(),
+        RMAppState.NEW_SAVING.toString(),
         RMAppState.SUBMITTED.toString(),
         RMAppState.ACCEPTED.toString(),
         RMAppState.RUNNING.toString(),

@@ -16,16 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMAppState {
-  NEW,
-  NEW_SAVING,
-  SUBMITTED,
-  ACCEPTED,
-  RUNNING,
-  FINISHING,
-  FINISHED,
-  FAILED,
-  KILLED
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+
+public class RMStateStoreAppEvent extends RMStateStoreEvent {
+
+  private final ApplicationState appState;
+
+  public RMStateStoreAppEvent(ApplicationState appState) {
+    super(RMStateStoreEventType.STORE_APP);
+    this.appState = appState;
+  }
+
+  public ApplicationState getAppState() {
+    return appState;
+  }
 }

@@ -18,14 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-public enum RMAppState {
-  NEW,
-  NEW_SAVING,
-  SUBMITTED,
-  ACCEPTED,
-  RUNNING,
-  FINISHING,
-  FINISHED,
-  FAILED,
-  KILLED
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+
+public class RMAppStoredEvent extends RMAppEvent {
+
+  private final Exception storedException;
+
+  public RMAppStoredEvent(ApplicationId appId, Exception storedException) {
+    super(appId, RMAppEventType.APP_SAVED);
+    this.storedException = storedException;
+  }
+
+  public Exception getStoredException() {
+    return storedException;
+  }
+
 }

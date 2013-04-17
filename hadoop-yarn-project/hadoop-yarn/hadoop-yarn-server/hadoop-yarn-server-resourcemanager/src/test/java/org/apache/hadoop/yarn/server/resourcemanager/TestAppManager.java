@@ -164,7 +164,8 @@ public class TestAppManager{
     }
     public void submitApplication(
         ApplicationSubmissionContext submissionContext) {
-      super.submitApplication(submissionContext, System.currentTimeMillis());
+      super.submitApplication(
+          submissionContext, System.currentTimeMillis(), false);
     }
   }
 

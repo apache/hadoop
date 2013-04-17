@@ -81,6 +81,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-495. Changed NM reboot behaviour to be a simple resync - kill all
     containers  and re-register with RM. (Jian He via vinodkv)
 
+    YARN-514. Delayed store operations should not result in RM unavailability
+    for app submission (Zhijie Shen via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES

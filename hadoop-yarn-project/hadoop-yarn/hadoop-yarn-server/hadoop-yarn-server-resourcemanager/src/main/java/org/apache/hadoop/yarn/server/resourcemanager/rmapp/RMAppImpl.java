@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -118,11 +119,23 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from NEW state
     .addTransition(RMAppState.NEW, RMAppState.NEW,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,
+        RMAppEventType.START, new RMAppSavingTransition())
     .addTransition(RMAppState.NEW, RMAppState.SUBMITTED,
-        RMAppEventType.START, new StartAppAttemptTransition())
+        RMAppEventType.RECOVER, new StartAppAttemptTransition())
     .addTransition(RMAppState.NEW, RMAppState.KILLED, RMAppEventType.KILL,
         new AppKilledTransition())
     .addTransition(RMAppState.NEW, RMAppState.FAILED,
+        RMAppEventType.APP_REJECTED, new AppRejectedTransition())
+
+    // Transitions from NEW_SAVING state
+    .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
+        RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.NEW_SAVING, RMAppState.SUBMITTED,
+        RMAppEventType.APP_SAVED, new StartAppAttemptTransition())
+    .addTransition(RMAppState.NEW_SAVING, RMAppState.KILLED,
+        RMAppEventType.KILL, new AppKilledTransition())
+    .addTransition(RMAppState.NEW_SAVING, RMAppState.FAILED,
         RMAppEventType.APP_REJECTED, new AppRejectedTransition())
 
      // Transitions from SUBMITTED state
@@ -182,7 +195,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
      // Transitions from FAILED state
     .addTransition(RMAppState.FAILED, RMAppState.FAILED,
-        RMAppEventType.KILL)
+        EnumSet.of(RMAppEventType.KILL, RMAppEventType.APP_SAVED))
      // ignorable transitions
     .addTransition(RMAppState.FAILED, RMAppState.FAILED, 
         RMAppEventType.NODE_UPDATE)
@@ -194,7 +207,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         EnumSet.of(RMAppEventType.APP_ACCEPTED,
             RMAppEventType.APP_REJECTED, RMAppEventType.KILL,
             RMAppEventType.ATTEMPT_FINISHED, RMAppEventType.ATTEMPT_FAILED,
-            RMAppEventType.ATTEMPT_KILLED))
+            RMAppEventType.ATTEMPT_KILLED, RMAppEventType.APP_SAVED))
      // ignorable transitions
     .addTransition(RMAppState.KILLED, RMAppState.KILLED,
         RMAppEventType.NODE_UPDATE)
@@ -358,6 +371,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     switch(rmAppState) {
     case NEW:
       return YarnApplicationState.NEW;
+    case NEW_SAVING:
+      return YarnApplicationState.NEW_SAVING;
     case SUBMITTED:
       return YarnApplicationState.SUBMITTED;
     case ACCEPTED:
@@ -378,6 +393,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private FinalApplicationStatus createFinalApplicationStatus(RMAppState state) {
     switch(state) {
     case NEW:
+    case NEW_SAVING:
     case SUBMITTED:
     case ACCEPTED:
     case RUNNING:
@@ -591,6 +607,19 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   private static final class StartAppAttemptTransition extends RMAppTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
+      if (event.getType().equals(RMAppEventType.APP_SAVED)) {
+        assert app.getState().equals(RMAppState.NEW_SAVING);
+        RMAppStoredEvent storeEvent = (RMAppStoredEvent) event;
+        if(storeEvent.getStoredException() != null) {
+          // For HA this exception needs to be handled by giving up
+          // master status if we got fenced
+          LOG.error("Failed to store application: "
+              + storeEvent.getApplicationId(),
+              storeEvent.getStoredException());
+          ExitUtil.terminate(1, storeEvent.getStoredException());
+        }
+      }
+
       app.createNewAttempt(true);
     };
   }
@@ -600,6 +629,18 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.finishTime = System.currentTimeMillis();
+    }
+  }
+
+  private static final class RMAppSavingTransition extends RMAppTransition {
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      // If recovery is enabled then store the application information in a
+      // non-blocking call so make sure that RM has stored the information
+      // needed to restart the AM after RM restart without further client
+      // communication
+      LOG.info("Storing application with id " + app.applicationId);
+      app.rmContext.getStateStore().storeApplication(app);
     }
   }
 

@@ -83,7 +83,9 @@ public class AppInfo {
       String trackingUrl = app.getTrackingUrl();
       this.state = app.getState();
       this.trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty()
-          || RMAppState.NEW == this.state || RMAppState.SUBMITTED == this.state
+          || RMAppState.NEW == this.state
+          || RMAppState.NEW_SAVING == this.state
+          || RMAppState.SUBMITTED == this.state
           || RMAppState.ACCEPTED == this.state;
       this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED" : (app
           .getFinishTime() == 0 ? "ApplicationMaster" : "History");
