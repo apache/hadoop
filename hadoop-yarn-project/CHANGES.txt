@@ -244,6 +244,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-500. Fixed YARN webapps to not roll-over ports when explicitly asked
     to use non-ephemeral ports. (Kenji Kikushima via vinodkv)
 
+    YARN-518. Fair Scheduler's document link could be added to the hadoop 2.x 
+    main doc page. (sandyr via tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
