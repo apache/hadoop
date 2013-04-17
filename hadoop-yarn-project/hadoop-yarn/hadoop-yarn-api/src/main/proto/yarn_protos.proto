@@ -72,12 +72,13 @@ message ContainerProto {
 
 enum YarnApplicationStateProto {
   NEW = 1;
-  SUBMITTED = 2;
-  RUNNING = 3;
-  FINISHED = 4;
-  FAILED = 5;
-  KILLED = 6;
-  ACCEPTED = 7;
+  NEW_SAVING = 2;
+  SUBMITTED = 3;
+  ACCEPTED = 4;
+  RUNNING = 5;
+  FINISHED = 6;
+  FAILED = 7;
+  KILLED = 8;
 }
 
 enum FinalApplicationStatusProto {

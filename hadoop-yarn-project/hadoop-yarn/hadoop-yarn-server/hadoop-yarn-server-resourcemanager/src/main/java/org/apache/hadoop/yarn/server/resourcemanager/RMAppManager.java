@@ -232,7 +232,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   @SuppressWarnings("unchecked")
   protected void submitApplication(
-      ApplicationSubmissionContext submissionContext, long submitTime) {
+      ApplicationSubmissionContext submissionContext, long submitTime,
+      boolean isRecovered) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
@@ -278,7 +279,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       
       // All done, start the RMApp
       this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppEvent(applicationId, RMAppEventType.START));
+          new RMAppEvent(applicationId, isRecovered ? RMAppEventType.RECOVER:
+            RMAppEventType.START));
     } catch (IOException ie) {
         LOG.info("RMAppManager submit application exception", ie);
         if (application != null) {
@@ -347,7 +349,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if(shouldRecover) {
         LOG.info("Recovering application " + appState.getAppId());
         submitApplication(appState.getApplicationSubmissionContext(), 
-                        appState.getSubmitTime());
+                        appState.getSubmitTime(), true);
         // re-populate attempt information in application
         RMAppImpl appImpl = (RMAppImpl) rmContext.getRMApps().get(
                                                         appState.getAppId());
@@ -378,7 +380,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         ApplicationSubmissionContext submissionContext = 
             ((RMAppManagerSubmitEvent)event).getSubmissionContext();
         long submitTime = ((RMAppManagerSubmitEvent)event).getSubmitTime();
-        submitApplication(submissionContext, submitTime);
+        submitApplication(submissionContext, submitTime, false);
       }
       break;
       default:

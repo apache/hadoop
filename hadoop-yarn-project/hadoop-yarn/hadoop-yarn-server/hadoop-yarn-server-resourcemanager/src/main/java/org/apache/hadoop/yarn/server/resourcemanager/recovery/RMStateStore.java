@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppStoredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStoredEvent;
 
@@ -166,21 +167,19 @@ public abstract class RMStateStore {
   public abstract RMState loadState() throws Exception;
   
   /**
-   * Blocking API
+   * Non-Blocking API
    * ResourceManager services use this to store the application's state
-   * This must not be called on the dispatcher thread
+   * This does not block the dispatcher threads
+   * RMAppStoredEvent will be sent on completion to notify the RMApp
    */
-  public synchronized void storeApplication(RMApp app) throws Exception {
+  @SuppressWarnings("unchecked")
+  public synchronized void storeApplication(RMApp app) {
     ApplicationSubmissionContext context = app
                                             .getApplicationSubmissionContext();
     assert context instanceof ApplicationSubmissionContextPBImpl;
-
-    ApplicationStateDataPBImpl appStateData = new ApplicationStateDataPBImpl();
-    appStateData.setSubmitTime(app.getSubmitTime());
-    appStateData.setApplicationSubmissionContext(context);
-
-    LOG.info("Storing info for app: " + context.getApplicationId());
-    storeApplicationState(app.getApplicationId().toString(), appStateData);
+    ApplicationState appState = new ApplicationState(
+        app.getSubmitTime(), context);
+    dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
     
   /**
@@ -255,6 +254,30 @@ public abstract class RMStateStore {
   
   private synchronized void handleStoreEvent(RMStateStoreEvent event) {
     switch(event.getType()) {
+      case STORE_APP:
+        {
+          ApplicationState apptState =
+              ((RMStateStoreAppEvent) event).getAppState();
+          Exception storedException = null;
+          ApplicationStateDataPBImpl appStateData =
+              new ApplicationStateDataPBImpl();
+          appStateData.setSubmitTime(apptState.getSubmitTime());
+          appStateData.setApplicationSubmissionContext(
+              apptState.getApplicationSubmissionContext());
+          ApplicationId appId =
+              apptState.getApplicationSubmissionContext().getApplicationId();
+
+          LOG.info("Storing info for app: " + appId);
+          try {
+            storeApplicationState(appId.toString(), appStateData);
+          } catch (Exception e) {
+            LOG.error("Error storing app: " + appId, e);
+            storedException = e;
+          } finally {
+            notifyDoneStoringApplication(appId, storedException);
+          }
+        }
+        break;
       case STORE_APP_ATTEMPT:
         {
           ApplicationAttemptState attemptState = 
@@ -297,11 +320,25 @@ public abstract class RMStateStore {
         LOG.error("Unknown RMStateStoreEvent type: " + event.getType());
     }
   }
+
+  @SuppressWarnings("unchecked")
+  /**
+   * In (@link handleStoreEvent}, this method is called to notify the
+   * application about operation completion
+   * @param appId id of the application that has been saved
+   * @param storedException the exception that is thrown when storing the
+   * application
+   */
+  private void notifyDoneStoringApplication(ApplicationId appId,
+                                                  Exception storedException) {
+    rmDispatcher.getEventHandler().handle(
+        new RMAppStoredEvent(appId, storedException));
+  }
   
   @SuppressWarnings("unchecked")
   /**
-   * In (@link storeApplicationAttempt}, derived class can call this method to
-   * notify the application attempt about operation completion 
+   * In (@link handleStoreEvent}, this method is called to notify the
+   * application attempt about operation completion
    * @param appAttempt attempt that has been saved
    */
   private void notifyDoneStoringApplicationAttempt(ApplicationAttemptId attemptId,
