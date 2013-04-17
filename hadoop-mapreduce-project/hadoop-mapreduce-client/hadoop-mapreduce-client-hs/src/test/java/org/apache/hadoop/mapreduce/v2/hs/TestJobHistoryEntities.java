@@ -94,11 +94,11 @@ public class TestJobHistoryEntities {
     assertEquals(1, completedJob.getAMInfos().size());
     assertEquals(10, completedJob.getCompletedMaps());
     assertEquals(1, completedJob.getCompletedReduces());
-    assertEquals(11, completedJob.getTasks().size());
+    assertEquals(12, completedJob.getTasks().size());
     //Verify tasks loaded at this point.
     assertEquals(true, completedJob.tasksLoaded.get());
     assertEquals(10, completedJob.getTasks(TaskType.MAP).size());
-    assertEquals(1, completedJob.getTasks(TaskType.REDUCE).size());
+    assertEquals(2, completedJob.getTasks(TaskType.REDUCE).size());
     assertEquals("user", completedJob.getUserName());
     assertEquals(JobState.SUCCEEDED, completedJob.getState());
     JobReport jobReport = completedJob.getReport();
@@ -119,7 +119,7 @@ public class TestJobHistoryEntities {
     Map<TaskId, Task> mapTasks = completedJob.getTasks(TaskType.MAP);
     Map<TaskId, Task> reduceTasks = completedJob.getTasks(TaskType.REDUCE);
     assertEquals(10, mapTasks.size());
-    assertEquals(1, reduceTasks.size());
+    assertEquals(2, reduceTasks.size());
     
     Task mt1 = mapTasks.get(mt1Id);
     assertEquals(1, mt1.getAttempts().size());
@@ -134,7 +134,7 @@ public class TestJobHistoryEntities {
     assertEquals(TaskState.SUCCEEDED, rt1Report.getTaskState());
     assertEquals(rt1Id, rt1Report.getTaskId());
   }
-  
+
   @Test (timeout=10000)
   public void testCompletedTaskAttempt() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
@@ -196,12 +196,12 @@ public class TestJobHistoryEntities {
     assertEquals("default",completedJob.getQueueName());
     // progress
     assertEquals(1.0, completedJob.getProgress(),0.001);
-    // 11 rows in answer
-    assertEquals(11,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
+    // 12 rows in answer
+    assertEquals(12,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
     // select first 10 rows
     assertEquals(10,completedJob.getTaskAttemptCompletionEvents(0,10).length);
     // select 5-10 rows include 5th
-    assertEquals(6,completedJob.getTaskAttemptCompletionEvents(5,10).length);
+    assertEquals(7,completedJob.getTaskAttemptCompletionEvents(5,10).length);
 
     // without errors
     assertEquals(1,completedJob.getDiagnostics().size());
