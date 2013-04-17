@@ -155,6 +155,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4639. startFileInternal() should not increment generation stamp.
     (Plamen Jeliazkov via shv)
 
+    HDFS-4695. TestEditLog leaks open file handles between tests.
+    (Ivan Mitic via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

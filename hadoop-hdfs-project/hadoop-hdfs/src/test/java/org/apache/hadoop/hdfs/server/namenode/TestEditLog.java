@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -627,6 +628,7 @@ public class TestEditLog {
         
         // Now restore the backup
         FileUtil.fullyDeleteContents(dfsDir);
+        dfsDir.delete();
         backupDir.renameTo(dfsDir);
         
         // Directory layout looks like:
@@ -753,19 +755,24 @@ public class TestEditLog {
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));
 
-      new EditLogFileOutputStream(log, 1024).create();
-      if (!inBothDirs) {
-        break;
+      EditLogFileOutputStream stream = new EditLogFileOutputStream(log, 1024);
+      try {
+        stream.create();
+        if (!inBothDirs) {
+          break;
+        }
+        
+        NNStorage storage = new NNStorage(conf, 
+            Collections.<URI>emptyList(),
+            Lists.newArrayList(uri));
+        
+        if (updateTransactionIdFile) {
+          storage.writeTransactionIdFileToStorage(3);
+        }
+        storage.close();
+      } finally {
+        stream.close();
       }
-      
-      NNStorage storage = new NNStorage(conf, 
-          Collections.<URI>emptyList(),
-          Lists.newArrayList(uri));
-      
-      if (updateTransactionIdFile) {
-        storage.writeTransactionIdFileToStorage(3);
-      }
-      storage.close();
     }
     
     try {
@@ -1327,12 +1334,15 @@ public class TestEditLog {
     FSEditLog editlog = getFSEditLog(storage);
     editlog.initJournalsForWrite();
     long startTxId = 1;
+    Collection<EditLogInputStream> streams = null;
     try {
-      readAllEdits(editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL),
-          startTxId);
+      streams = editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
+      readAllEdits(streams, startTxId);
     } catch (IOException e) {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
+    } finally {
+      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
     }
   }
 
@@ -1373,12 +1383,15 @@ public class TestEditLog {
     FSEditLog editlog = getFSEditLog(storage);
     editlog.initJournalsForWrite();
     long startTxId = 1;
+    Collection<EditLogInputStream> streams = null;
     try {
-      readAllEdits(editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL),
-          startTxId);
+      streams = editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
+      readAllEdits(streams, startTxId);
     } catch (IOException e) {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
+    } finally {
+      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
     }
   }
 
