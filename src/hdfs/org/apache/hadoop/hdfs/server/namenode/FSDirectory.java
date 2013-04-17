@@ -1500,4 +1500,8 @@ class FSDirectory implements FSConstants, Closeable {
       inode.setLocalName(name.getBytes());
     }
   }
+  
+  void shutdown() {
+    nameCache.reset();
+  }
 }

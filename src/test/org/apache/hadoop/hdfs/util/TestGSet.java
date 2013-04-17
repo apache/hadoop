@@ -386,6 +386,11 @@ public class TestGSet {
       return String.format(" iterate=%5d, contain=%5d, time elapsed=%5d.%03ds",
           iterate_count, contain_count, t/1000, t%1000);
     }
+
+    @Override
+    public void clear() {
+      gset.clear();
+    }
   }
 
   /** Test data set */
