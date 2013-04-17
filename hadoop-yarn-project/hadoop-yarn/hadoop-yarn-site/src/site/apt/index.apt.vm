@@ -47,6 +47,8 @@ MapReduce NextGen aka YARN aka MRv2
 
   * {{{./CapacityScheduler.html}Capacity Scheduler}}
 
+  * {{{./FairScheduler.html}Fair Scheduler}}
+
   * {{{./WebApplicationProxy.html}Web Application Proxy}}
 
   * {{{../../hadoop-project-dist/hadoop-common/CLIMiniCluster.html}CLI MiniCluster}}
