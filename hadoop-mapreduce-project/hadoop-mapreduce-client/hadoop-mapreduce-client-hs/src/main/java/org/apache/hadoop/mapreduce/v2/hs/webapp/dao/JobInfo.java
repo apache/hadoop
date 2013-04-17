@@ -287,7 +287,7 @@ public class JobInfo {
             avgShuffleTime += (attempt.getShuffleFinishTime() - attempt
                 .getLaunchTime());
             avgMergeTime += attempt.getSortFinishTime()
-                - attempt.getShuffleFinishTime();
+                - attempt.getLaunchTime();
             avgReduceTime += (attempt.getFinishTime() - attempt
                 .getShuffleFinishTime());
           }

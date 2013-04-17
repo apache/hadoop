@@ -176,7 +176,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-412. Fixed FifoScheduler to check hostname of a NodeManager rather
     than its host:port during scheduling which caused incorrect locality for
     containers. (Roger Hoover via acmurthy)
-    
+
+    YARN-500. Fixed YARN webapps to not roll-over ports when explicitly asked
+    to use non-ephemeral ports. (Kenji Kikushima via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
