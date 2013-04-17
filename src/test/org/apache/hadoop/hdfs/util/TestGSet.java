@@ -451,4 +451,81 @@ public class TestGSet {
       next = e;
     }
   }
+  
+  /** 
+   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
+   * with invalid percent less than 0.
+   */
+  @Test(expected=IllegalArgumentException.class)
+  public void testComputeCapacityNegativePercent() {
+    LightWeightGSet.computeCapacity(1024, -1.0, "testMap");
+  }
+  
+  /** 
+   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
+   * with invalid percent greater than 100.
+   */
+  @Test(expected=IllegalArgumentException.class)
+  public void testComputeCapacityInvalidPercent() {
+    LightWeightGSet.computeCapacity(1024, 101.0, "testMap");
+  }
+  
+  /** 
+   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
+   * with invalid negative max memory
+   */
+  @Test(expected=IllegalArgumentException.class)
+  public void testComputeCapacityInvalidMemory() {
+    LightWeightGSet.computeCapacity(-1, 50.0, "testMap");
+  }
+  
+  private static boolean isPowerOfTwo(int num) {
+    return num == 0 || (num > 0 && Integer.bitCount(num) == 1);
+  }
+  
+  /** Return capacity as percentage of total memory */
+  private static int getPercent(long total, int capacity) {
+    // Reference size in bytes
+    double referenceSize = 
+        System.getProperty("sun.arch.data.model").equals("32") ? 4.0 : 8.0;
+    return (int)(((capacity * referenceSize)/total) * 100.0);
+  }
+  
+  /** Return capacity as percentage of total memory */
+  private static void testCapacity(long maxMemory, double percent) {
+    int capacity = LightWeightGSet.computeCapacity(maxMemory, percent, "map");
+    LightWeightGSet.LOG.info("Validating - total memory " + maxMemory + " percent "
+        + percent + " returned capacity " + capacity);
+    // Returned capacity is zero or power of two
+    Assert.assertTrue(isPowerOfTwo(capacity));
+
+    // Ensure the capacity returned is the nearest to the asked perecentage
+    int capacityPercent = getPercent(maxMemory, capacity);
+    if (capacityPercent == percent) {
+      return;
+    } else if (capacityPercent > percent) {
+      Assert.assertTrue(getPercent(maxMemory, capacity * 2) > percent);
+    } else {
+      Assert.assertTrue(getPercent(maxMemory, capacity / 2) < percent);
+    }
+  }
+  
+  /** 
+   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
+   */
+  @Test
+  public void testComputeCapacity() {
+    // Tests for boundary conditions where percent or memory are zero
+    testCapacity(0, 0.0);
+    testCapacity(100, 0.0);
+    testCapacity(0, 100.0);
+    
+    // Compute capacity for some 100 random max memory and percentage
+    Random r = new Random();
+    for (int i = 0; i < 100; i++) {
+      long maxMemory = r.nextInt(Integer.MAX_VALUE);
+      double percent = r.nextInt(101);
+      testCapacity(maxMemory, percent);
+    }
+  }
 }

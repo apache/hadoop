@@ -236,6 +236,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5129. Allow tags to JobHistory for deeper analytics. (billie via
     acmurthy)
 
+    HDFS-4635. Move BlockManager#computeCapacity to LightWeightGSet.
+    (suresh)
+
   BUG FIXES
 
     HADOOP-9467. Metrics2 record filter should check name as well as tags.
