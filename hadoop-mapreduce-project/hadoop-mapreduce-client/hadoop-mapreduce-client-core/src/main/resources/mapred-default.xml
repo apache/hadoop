@@ -330,6 +330,14 @@
   <description>The max percent (0-1) of running tasks that
   can be speculatively re-executed at any time.</description>
 </property>
+
+<property>
+  <name>mapreduce.job.map.output.collector.class</name>
+  <value>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</value>
+  <description>
+    It defines the MapOutputCollector implementation to use.
+  </description>
+</property>
  
 <property>
   <name>mapreduce.job.speculative.slowtaskthreshold</name>
@@ -1037,11 +1045,89 @@
 </property>
 
 <property>
-  <name>mapreduce.job.map.output.collector.class</name>
-  <value>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</value>
-  <description>
-    It defines the MapOutputCollector implementation to use.
+  <name>mapreduce.jobhistory.intermediate-done-dir</name>
+  <value>${yarn.app.mapreduce.am.staging-dir}/history/done_intermediate</value>
+  <description></description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.done-dir</name>
+  <value>${yarn.app.mapreduce.am.staging-dir}/history/done</value>
+  <description></description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.cleaner.enable</name>
+  <value>true</value>
+  <description></description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.cleaner.interval-ms</name>
+  <value>86400000</value>
+  <description> How often the job history cleaner checks for files to delete, 
+  in milliseconds. Defaults to 86400000 (one day). Files are only deleted if
+  they are older than mapreduce.jobhistory.max-age-ms.
   </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.max-age-ms</name>
+  <value>604800000</value>
+  <description> Job history files older than this many milliseconds will
+  be deleted when the history cleaner runs. Defaults to 604800000 (1 week).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.client.thread-count</name>
+  <value>10</value>
+  <description>The number of threads to handle client API requests</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.datestring.cache.size</name>
+  <value>200000</value>
+  <description>Size of the date string cache. Effects the number of directories
+  which will be scanned to find a job.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.joblist.cache.size</name>
+  <value>20000</value>
+  <description>Size of the job list cache</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.loadedjobs.cache.size</name>
+  <value>5</value>
+  <description>Size of the loaded job cache</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.move.interval-ms</name>
+  <value>180000</value>
+  <description>Scan for history files to more from intermediate done dir to done
+  dir at this frequency.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.move.thread-count</name>
+  <value>3</value>
+  <description>The number of threads used to move files.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.store.class</name>
+  <value></value>
+  <description>The HistoryStorage class to use to cache history data.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.minicluster.fixed.ports</name>
+  <value>false</value>
+  <description>Whether to use fixed ports with the minicluster</description>
 </property>
 
 </configuration>
