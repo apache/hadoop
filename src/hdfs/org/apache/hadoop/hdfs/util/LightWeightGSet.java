@@ -321,12 +321,17 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
     final int exponent = e2 < 0? 0: e2 > 30? 30: e2;
     final int c = 1 << exponent;
 
-    if (LightWeightGSet.LOG.isDebugEnabled()) {
-      LOG.debug("Computing capacity for map " + mapName);
-      LOG.debug("VM type       = " + vmBit + "-bit");
-      LOG.debug(percentage + "% max memory = " + maxMemory);
-      LOG.debug("capacity      = 2^" + exponent + " = " + c + " entries");
-    }
+    LOG.info("Computing capacity for map " + mapName);
+    LOG.info("VM type       = " + vmBit + "-bit");
+    LOG.info(percentage + "% max memory = " + maxMemory);
+    LOG.info("capacity      = 2^" + exponent + " = " + c + " entries");
     return c;
+  }
+  
+  public void clear() {
+    for (int i = 0; i < entries.length; i++) {
+      entries[i] = null;
+    }
+    size = 0;
   }
 }

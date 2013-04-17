@@ -205,6 +205,9 @@ Release 1.2.0 - 2013.04.16
     HDFS-4635. Move BlockManager#computeCapacity to LightWeightGSet.
     (suresh)
 
+    HDFS-3940. Add Gset#clear method and clear the block map when 
+    namenode is shutdown. (suresh)
+
   BUG FIXES
 
     HADOOP-9467. Metrics2 record filter should check name as well as tags.

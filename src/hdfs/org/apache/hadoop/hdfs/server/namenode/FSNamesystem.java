@@ -5827,10 +5827,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * shutdown FSNamesystem
    */
   public void shutdown() {
-    if (mbeanName != null)
+    if (mbeanName != null) {
       MBeans.unregister(mbeanName);
-    if (mxBean != null)
+    }
+    if (mxBean != null) {
       MBeans.unregister(mxBean);
+    }
+    if (dir != null) {
+      dir.shutdown();
+    }
   }
   
 

@@ -321,7 +321,7 @@ class BlocksMap {
   }
 
   void close() {
-    blocks = null;
+    blocks.clear();
   }
 
   /**
