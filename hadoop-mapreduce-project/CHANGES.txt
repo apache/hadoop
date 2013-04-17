@@ -200,6 +200,9 @@ Release 2.0.5-beta - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
+    (Gelesh via bobby)
+
   BUG FIXES
 
     MAPREDUCE-4671. AM does not tell the RM about container requests which are
@@ -298,6 +301,9 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5139. Update MR AM to use the modified startContainer API after
     YARN-486. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5151. Update MR AM to use standard exit codes from the API after
+    YARN-444. (Sandy Ryza via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 
@@ -851,9 +857,15 @@ Release 0.23.8 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5065. DistCp should skip checksum comparisons if block-sizes 
+    are different on source/target (Mithun Radhakrishnan via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-5015. Coverage fix for org.apache.hadoop.mapreduce.tools.CLI
+    (Aleksey Gorshkov via tgraves)
 
 Release 0.23.7 - UNRELEASED
 

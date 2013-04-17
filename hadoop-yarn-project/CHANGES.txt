@@ -82,6 +82,9 @@ Release 2.0.5-beta - UNRELEASED
     RM as a direct parameter instead of as part of the ContainerLaunchContext
     record. (Xuan Gong via vinodkv)
 
+    YARN-444. Moved special container exit codes from YarnConfiguration to API
+    where they belong. (Sandy Ryza via vinodkv)
+
   NEW FEATURES
 
   IMPROVEMENTS
@@ -234,7 +237,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-412. Fixed FifoScheduler to check hostname of a NodeManager rather
     than its host:port during scheduling which caused incorrect locality for
     containers. (Roger Hoover via acmurthy)
-    
+
+    YARN-500. Fixed YARN webapps to not roll-over ports when explicitly asked
+    to use non-ephemeral ports. (Kenji Kikushima via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

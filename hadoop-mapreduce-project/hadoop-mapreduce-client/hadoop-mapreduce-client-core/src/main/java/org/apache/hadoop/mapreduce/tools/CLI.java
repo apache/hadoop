@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryViewer;
 import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.logaggregation.LogDumper;
@@ -64,8 +65,6 @@ import com.google.common.base.Charsets;
 public class CLI extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CLI.class);
   protected Cluster cluster;
-  private final Set<String> taskTypes = new HashSet<String>(
-              Arrays.asList("map", "reduce", "setup", "cleanup"));
   private final Set<String> taskStates = new HashSet<String>(
               Arrays.asList("pending", "running", "completed", "failed", "killed"));
 
@@ -317,6 +316,7 @@ public class CLI extends Configured implements Tool {
         exitCode = 0;
       } else if (displayTasks) {
         displayTasks(cluster.getJob(JobID.forName(jobid)), taskType, taskState);
+        exitCode = 0;
       } else if(killTask) {
         TaskAttemptID taskID = TaskAttemptID.forName(taskid);
         Job job = cluster.getJob(taskID.getJobID());
@@ -563,16 +563,18 @@ public class CLI extends Configured implements Tool {
    */
   protected void displayTasks(Job job, String type, String state) 
   throws IOException, InterruptedException {
-    if (!taskTypes.contains(type)) {
-      throw new IllegalArgumentException("Invalid type: " + type + 
-          ". Valid types for task are: map, reduce, setup, cleanup.");
-    }
+
     if (!taskStates.contains(state)) {
       throw new java.lang.IllegalArgumentException("Invalid state: " + state + 
           ". Valid states for task are: pending, running, completed, failed, killed.");
     }
-
-    TaskReport[] reports = job.getTaskReports(TaskType.valueOf(type));
+    TaskReport[] reports=null;
+    try{
+      reports = job.getTaskReports(TaskType.valueOf(type));
+    }catch(IllegalArgumentException e){
+      throw new IllegalArgumentException("Invalid type: " + type + 
+          ". Valid types for task are: MAP, REDUCE, JOB_SETUP, JOB_CLEANUP, TASK_CLEANUP.");
+    }
     for (TaskReport report : reports) {
       TIPStatus status = report.getCurrentStatus();
       if ((state.equals("pending") && status ==TIPStatus.PENDING) ||
@@ -626,6 +628,6 @@ public class CLI extends Configured implements Tool {
   
   public static void main(String[] argv) throws Exception {
     int res = ToolRunner.run(new CLI(), argv);
-    System.exit(res);
+    ExitUtil.terminate(res);
   }
 }
