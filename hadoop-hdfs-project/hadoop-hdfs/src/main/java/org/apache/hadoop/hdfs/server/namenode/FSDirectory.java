@@ -61,7 +61,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
@@ -1536,7 +1535,7 @@ public class FSDirectory implements Closeable {
 
   INodesInPath getExistingPathINodes(byte[][] components)
       throws UnresolvedLinkException {
-    return rootDir.getExistingPathINodes(components, components.length, false);
+    return INodesInPath.resolve(rootDir, components);
   }
 
   /**

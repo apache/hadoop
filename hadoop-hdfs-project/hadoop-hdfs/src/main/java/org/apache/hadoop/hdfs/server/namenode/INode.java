@@ -600,24 +600,6 @@ public abstract class INode implements Diff.Element<byte[]> {
     return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
-  /**
-   * Given some components, create a path name.
-   * @param components The path components
-   * @param start index
-   * @param end index
-   * @return concatenated path
-   */
-  static String constructPath(byte[][] components, int start, int end) {
-    StringBuilder buf = new StringBuilder();
-    for (int i = start; i < end; i++) {
-      buf.append(DFSUtil.bytes2String(components[i]));
-      if (i < end - 1) {
-        buf.append(Path.SEPARATOR);
-      }
-    }
-    return buf.toString();
-  }
-
   @Override
   public final int compareTo(byte[] bytes) {
     final byte[] name = getLocalNameBytes();

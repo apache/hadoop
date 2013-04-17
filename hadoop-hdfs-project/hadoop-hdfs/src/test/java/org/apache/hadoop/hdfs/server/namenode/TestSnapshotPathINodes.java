@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
@@ -139,8 +138,7 @@ public class TestSnapshotPathINodes {
     // Get the inodes by resolving the path of a normal file
     String[] names = INode.getPathNames(file1.toString());
     byte[][] components = INode.getPathComponents(names);
-    INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-        components.length, false);
+    INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     INode[] inodes = nodesInPath.getINodes();
     // The number of inodes should be equal to components.length
     assertEquals(inodes.length, components.length);
@@ -159,7 +157,7 @@ public class TestSnapshotPathINodes {
     
     // Call getExistingPathINodes and request only one INode. This is used
     // when identifying the INode for a given path.
-    nodesInPath = fsdir.rootDir.getExistingPathINodes(components, 1, false);
+    nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 1, false);
     inodes = nodesInPath.getINodes();
     assertEquals(inodes.length, 1);
     assertSnapshot(nodesInPath, false, null, -1);
@@ -167,7 +165,7 @@ public class TestSnapshotPathINodes {
     
     // Call getExistingPathINodes and request 2 INodes. This is usually used
     // when identifying the parent INode of a given path.
-    nodesInPath = fsdir.rootDir.getExistingPathINodes(components, 2, false);
+    nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 2, false);
     inodes = nodesInPath.getINodes();
     assertEquals(inodes.length, 2);
     assertSnapshot(nodesInPath, false, null, -1);
@@ -190,8 +188,7 @@ public class TestSnapshotPathINodes {
     String snapshotPath = sub1.toString() + "/.snapshot/s1/file1";
     String[] names = INode.getPathNames(snapshotPath);
     byte[][] components = INode.getPathComponents(names);
-    INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-        components.length, false);
+    INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     INode[] inodes = nodesInPath.getINodes();
     // Length of inodes should be (components.length - 1), since we will ignore
     // ".snapshot" 
@@ -206,7 +203,7 @@ public class TestSnapshotPathINodes {
         INodeDirectoryWithSnapshot);
     
     // Call getExistingPathINodes and request only one INode.
-    nodesInPath = fsdir.rootDir.getExistingPathINodes(components, 1, false);
+    nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 1, false);
     inodes = nodesInPath.getINodes();
     assertEquals(inodes.length, 1);
     // The snapshotroot (s1) is not included in inodes. Thus the
@@ -216,7 +213,7 @@ public class TestSnapshotPathINodes {
     assertINodeFile(nodesInPath.getLastINode(), file1);
     
     // Call getExistingPathINodes and request 2 INodes.
-    nodesInPath = fsdir.rootDir.getExistingPathINodes(components, 2, false);
+    nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 2, false);
     inodes = nodesInPath.getINodes();
     assertEquals(inodes.length, 2);
     // There should be two INodes in inodes: s1 and snapshot of file1. Thus the
@@ -228,8 +225,7 @@ public class TestSnapshotPathINodes {
     String dotSnapshotPath = sub1.toString() + "/.snapshot";
     names = INode.getPathNames(dotSnapshotPath);
     components = INode.getPathComponents(names);
-    nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-        components.length, false);
+    nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     inodes = nodesInPath.getINodes();
     // The number of INodes returned should be components.length - 1 since we
     // will ignore ".snapshot"
@@ -264,8 +260,7 @@ public class TestSnapshotPathINodes {
       String snapshotPath = sub1.toString() + "/.snapshot/s2/file1";
       String[] names = INode.getPathNames(snapshotPath);
       byte[][] components = INode.getPathComponents(names);
-      INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-          components.length, false);
+      INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
       INode[] inodes = nodesInPath.getINodes();
       // Length of inodes should be (components.length - 1), since we will ignore
       // ".snapshot" 
@@ -283,8 +278,7 @@ public class TestSnapshotPathINodes {
     // Check the INodes for path /TestSnapshot/sub1/file1
     String[] names = INode.getPathNames(file1.toString());
     byte[][] components = INode.getPathComponents(names);
-    INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-        components.length, false);
+    INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     INode[] inodes = nodesInPath.getINodes();
     // The length of inodes should be equal to components.length
     assertEquals(inodes.length, components.length);
@@ -324,8 +318,7 @@ public class TestSnapshotPathINodes {
       String snapshotPath = sub1.toString() + "/.snapshot/s4/file3";
       String[] names = INode.getPathNames(snapshotPath);
       byte[][] components = INode.getPathComponents(names);
-      INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-          components.length, false);
+      INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
       INode[] inodes = nodesInPath.getINodes();
       // Length of inodes should be (components.length - 1), since we will ignore
       // ".snapshot" 
@@ -345,8 +338,7 @@ public class TestSnapshotPathINodes {
     // Check the inodes for /TestSnapshot/sub1/file3
     String[] names = INode.getPathNames(file3.toString());
     byte[][] components = INode.getPathComponents(names);
-    INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-        components.length, false);
+    INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     INode[] inodes = nodesInPath.getINodes();
     // The number of inodes should be equal to components.length
     assertEquals(inodes.length, components.length);
@@ -375,8 +367,7 @@ public class TestSnapshotPathINodes {
     // First check the INode for /TestSnapshot/sub1/file1
     String[] names = INode.getPathNames(file1.toString());
     byte[][] components = INode.getPathComponents(names);
-    INodesInPath nodesInPath = fsdir.rootDir.getExistingPathINodes(components,
-        components.length, false);
+    INodesInPath nodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     INode[] inodes = nodesInPath.getINodes();
     // The number of inodes should be equal to components.length
     assertEquals(inodes.length, components.length);
@@ -398,8 +389,7 @@ public class TestSnapshotPathINodes {
     String snapshotPath = sub1.toString() + "/.snapshot/s3/file1";
     names = INode.getPathNames(snapshotPath);
     components = INode.getPathComponents(names);
-    INodesInPath ssNodesInPath = fsdir.rootDir.getExistingPathINodes(
-        components, components.length, false);
+    INodesInPath ssNodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     INode[] ssInodes = ssNodesInPath.getINodes();
     // Length of ssInodes should be (components.length - 1), since we will
     // ignore ".snapshot" 
@@ -418,8 +408,7 @@ public class TestSnapshotPathINodes {
     // Check the INode for /TestSnapshot/sub1/file1 again
     names = INode.getPathNames(file1.toString());
     components = INode.getPathComponents(names);
-    INodesInPath newNodesInPath = fsdir.rootDir
-        .getExistingPathINodes(components, components.length, false);
+    INodesInPath newNodesInPath = INodesInPath.resolve(fsdir.rootDir, components);
     assertSnapshot(newNodesInPath, false, s3, -1);
     INode[] newInodes = newNodesInPath.getINodes();
     // The number of inodes should be equal to components.length

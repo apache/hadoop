@@ -247,3 +247,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4529. Disallow concat when one of the src files is in some snapshot.
   (szetszwo)
+
+  HDFS-4550. Refactor INodeDirectory.INodesInPath to a standalone class.
+  (szetszwo)
