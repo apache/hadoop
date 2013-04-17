@@ -288,10 +288,18 @@ public class TestSubmitJob extends TestCase {
           reduceSignalFile.toString());
       // wait for job to be done
       UtilsForTests.waitTillDone(jClient);
-
-      // check if the staging area is cleaned up
-      LOG.info("Check if job submit dir is cleanup or not");
-      assertFalse(fs.exists(jobSubmitDirpath));
+      
+      // Check that the job submit directory is cleaned up
+      int maxChecks = 20;
+      int sleepMs = 100;
+      for (int i = 0; fs.exists(jobSubmitDirpath) && i < maxChecks; i++) {
+        try {
+          Thread.sleep(sleepMs);
+        } catch (InterruptedException ex) {}
+      }
+      
+      assertFalse("Job submit dir was not cleaned up after " +
+          maxChecks * sleepMs + " ms", fs.exists(jobSubmitDirpath));
     } finally {
       if (mr != null) {
         mr.shutdown();

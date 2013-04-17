@@ -34,6 +34,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-2817. MiniRMCluster hardcodes 'mapred.local.dir' configuration 
     to 'build/test/mapred/local'. (rkanter via tucu)
 
+    MAPREDUCE-5133. TestSubmitJob.testSecureJobExecution is flaky due to job 
+    dir deletion race. (sandyr via tucu)
+
 Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES
