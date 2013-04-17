@@ -23,6 +23,7 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -48,6 +49,9 @@ public class TestTypeConverter {
     for (YarnApplicationState applicationState : YarnApplicationState.values()) {
       TypeConverter.fromYarn(applicationState, FinalApplicationStatus.FAILED);
     }
+    // ad hoc test of NEW_SAVING, which is newly added
+    Assert.assertEquals(State.PREP, TypeConverter.fromYarn(
+        YarnApplicationState.NEW_SAVING, FinalApplicationStatus.FAILED));
     
     for (TaskType taskType : TaskType.values()) {
       TypeConverter.fromYarn(taskType);
