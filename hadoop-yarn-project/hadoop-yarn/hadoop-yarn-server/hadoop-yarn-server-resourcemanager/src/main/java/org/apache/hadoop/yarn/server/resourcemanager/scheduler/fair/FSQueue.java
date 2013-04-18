@@ -45,6 +45,8 @@ public abstract class FSQueue extends Schedulable implements Queue {
   protected final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   
+  protected SchedulingPolicy policy = SchedulingPolicy.getDefault();
+
   public FSQueue(String name, QueueManager queueMgr, 
       FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
@@ -63,6 +65,19 @@ public abstract class FSQueue extends Schedulable implements Queue {
     return name;
   }
   
+  public SchedulingPolicy getPolicy() {
+    return policy;
+  }
+
+  protected void throwPolicyDoesnotApplyException(SchedulingPolicy policy)
+      throws AllocationConfigurationException {
+    throw new AllocationConfigurationException("SchedulingPolicy " + policy
+        + " does not apply to queue " + getName());
+  }
+
+  public abstract void setPolicy(SchedulingPolicy policy)
+      throws AllocationConfigurationException;
+
   @Override
   public double getWeight() {
     return queueMgr.getQueueWeight(getName());
@@ -130,13 +145,27 @@ public abstract class FSQueue extends Schedulable implements Queue {
   }
   
   /**
-   * Recomputes the fair shares for all queues and applications
-   * under this queue.
+   * Recomputes the shares for all child queues and applications based on this
+   * queue's current share
    */
-  public abstract void recomputeFairShares();
+  public abstract void recomputeShares();
   
   /**
    * Gets the children of this queue, if any.
    */
   public abstract Collection<FSQueue> getChildQueues();
+
+  /**
+   * Helper method to check if the queue should attempt assigning resources
+   * 
+   * @return true if check passes (can assign) or false otherwise
+   */
+  protected boolean assignContainerPreCheck(FSSchedulerNode node) {
+    if (Resources.greaterThan(getResourceUsage(),
+        queueMgr.getMaxResources(getName()))
+        || node.getReservedContainer() != null) {
+      return false;
+    }
+    return true;
+  }
 }

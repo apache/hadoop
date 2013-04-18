@@ -161,7 +161,7 @@ public class FairScheduler implements ResourceScheduler {
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
   protected int maxAssign; // Max containers to assign per heartbeat
-  
+
   public FairScheduler() {
     clock = new SystemClock();
     queueMgr = new QueueManager(this);
@@ -217,7 +217,7 @@ public class FairScheduler implements ResourceScheduler {
     rootQueue.setFairShare(clusterCapacity);
     // Recursively compute fair shares for all queues
     // and update metrics
-    rootQueue.recomputeFairShares();
+    rootQueue.recomputeShares();
 
     // Update recorded capacity of root queue (child queues are updated
     // when fair share is calculated).
@@ -786,39 +786,24 @@ public class FairScheduler implements ResourceScheduler {
     // 1. Check for reserved applications
     // 2. Schedule if there are no reservations
 
-    // If we have have an application that has reserved a resource on this node
-    // already, we try to complete the reservation.
-    RMContainer reservedContainer = node.getReservedContainer();
-    if (reservedContainer != null) {
-      FSSchedulerApp reservedApplication =
-          applications.get(reservedContainer.getApplicationAttemptId());
+    AppSchedulable reservedAppSchedulable = node.getReservedAppSchedulable();
+    if (reservedAppSchedulable != null) {
+      // Reservation exists; try to fulfill the reservation
+      LOG.info("Trying to fulfill reservation for application "
+          + reservedAppSchedulable.getApp().getApplicationAttemptId()
+          + " on node: " + nm);
 
-      // Try to fulfill the reservation
-      LOG.info("Trying to fulfill reservation for application " +
-          reservedApplication.getApplicationId() + " on node: " + nm);
-
-      FSLeafQueue queue = queueMgr.getLeafQueue(reservedApplication.getQueueName());
-      queue.assignContainer(node, true);
+      node.getReservedAppSchedulable().assignReservedContainer(node);
     }
-
-    // Otherwise, schedule at queue which is furthest below fair share
     else {
+      // No reservation, schedule at queue which is farthest below fair share
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
-        // At most one task is scheduled each iteration of this loop
-        List<FSLeafQueue> scheds = new ArrayList<FSLeafQueue>(
-            queueMgr.getLeafQueues());
-        Collections.sort(scheds, SchedulingMode.getDefault().getComparator());
         boolean assignedContainer = false;
-        for (FSLeafQueue sched : scheds) {
-          Resource assigned = sched.assignContainer(node, false);
-          if (Resources.greaterThan(assigned, Resources.none()) ||
-              node.getReservedContainer() != null) {
-            eventLog.log("ASSIGN", nm.getHostName(), assigned);
-            assignedContainers++;
-            assignedContainer = true;
-            break;
-          }
+        if (Resources.greaterThan(
+            queueMgr.getRootQueue().assignContainer(node),
+            Resources.none())) {
+          assignedContainer = true;
         }
         if (!assignedContainer) { break; }
         if (!assignMultiple) { break; }
