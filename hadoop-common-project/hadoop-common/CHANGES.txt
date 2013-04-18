@@ -36,6 +36,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9401. CodecPool: Add counters for number of (de)compressors 
     leased out. (kkambatl via tucu)
 
+    HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH
+    is PREpended instead of APpended. (Chris Nauroth and harsh via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
