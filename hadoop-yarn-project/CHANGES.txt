@@ -250,6 +250,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-476. ProcfsBasedProcessTree info message confuses users. 
     (sandyr via tucu)
 
+    YARN-585. Fix failure in TestFairScheduler#testNotAllowSubmitApplication
+    caused by YARN-514. (Zhijie Shen via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

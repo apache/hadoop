@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -1411,6 +1412,7 @@ public class TestFairScheduler {
     ContainerLaunchContext clc =
         BuilderUtils.newContainerLaunchContext(user, null, null, null, null,
             null, null);
+    submissionContext.setApplicationId(applicationId);
     submissionContext.setAMContainerSpec(clc);
     RMApp application =
         new RMAppImpl(applicationId, resourceManager.getRMContext(), conf, name, user, 
@@ -1419,13 +1421,24 @@ public class TestFairScheduler {
     resourceManager.getRMContext().getRMApps().putIfAbsent(applicationId, application);
     application.handle(new RMAppEvent(applicationId, RMAppEventType.START));
 
+    final int MAX_TRIES=20;
+    int numTries = 0;
+    while (!application.getState().equals(RMAppState.SUBMITTED) &&
+        numTries < MAX_TRIES) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ex) {ex.printStackTrace();}
+      numTries++;
+    }
+    assertEquals("The application doesn't reach SUBMITTED.",
+        RMAppState.SUBMITTED, application.getState());
+
     ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
     attId.setAttemptId(this.ATTEMPT_ID++);
     attId.setApplicationId(applicationId);
     scheduler.addApplication(attId, queue, user);
-    
-    final int MAX_TRIES=20;
-    int numTries = 0;
+
+    numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
       try {
         Thread.sleep(100);
