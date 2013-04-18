@@ -462,4 +462,22 @@ public class FilterFileSystem extends FileSystem {
   public FileSystem[] getChildFileSystems() {
     return new FileSystem[]{fs};
   }
+
+  @Override // FileSystem
+  public Path createSnapshot(Path path, String snapshotName)
+      throws IOException {
+    return fs.createSnapshot(path, snapshotName);
+  }
+  
+  @Override // FileSystem
+  public void renameSnapshot(Path path, String snapshotOldName,
+      String snapshotNewName) throws IOException {
+    fs.renameSnapshot(path, snapshotOldName, snapshotNewName);
+  }
+  
+  @Override // FileSystem
+  public void deleteSnapshot(Path path, String snapshotName)
+      throws IOException {
+    fs.deleteSnapshot(path, snapshotName);
+  }
 }

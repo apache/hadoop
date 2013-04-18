@@ -250,3 +250,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4550. Refactor INodeDirectory.INodesInPath to a standalone class.
   (szetszwo)
+
+  HDFS-4707. Add snapshot methods to FilterFileSystem and fix findbugs warnings.
+  (szetszwo)

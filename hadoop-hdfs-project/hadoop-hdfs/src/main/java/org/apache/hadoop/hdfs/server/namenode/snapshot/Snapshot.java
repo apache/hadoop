@@ -113,7 +113,7 @@ public class Snapshot implements Comparable<byte[]> {
   }
 
   /** The root directory of the snapshot. */
-  public class Root extends INodeDirectory {
+  static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
       super(other, false);
     }

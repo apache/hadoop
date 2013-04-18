@@ -238,7 +238,7 @@ public class SnapshotFSImageFormat {
   public static void loadDirectoryDiffList(INodeDirectory dir,
       DataInput in, FSImageFormat.Loader loader) throws IOException {
     final int size = in.readInt();
-    if (size != -1) {
+    if (dir instanceof INodeDirectoryWithSnapshot) {
       INodeDirectoryWithSnapshot withSnapshot = (INodeDirectoryWithSnapshot)dir;
       DirectoryDiffList diffs = withSnapshot.getDiffs();
       for (int i = 0; i < size; i++) {

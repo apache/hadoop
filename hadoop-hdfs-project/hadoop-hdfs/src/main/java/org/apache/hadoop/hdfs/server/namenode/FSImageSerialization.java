@@ -192,7 +192,7 @@ public class FSImageSerialization {
     SnapshotFSImageFormat.saveFileDiffList(file, out);
 
     if (writeUnderConstruction) {
-      if (file.isUnderConstruction()) {
+      if (file instanceof INodeFileUnderConstruction) {
         out.writeBoolean(true);
         final INodeFileUnderConstruction uc = (INodeFileUnderConstruction)file;
         writeString(uc.getClientName(), out);

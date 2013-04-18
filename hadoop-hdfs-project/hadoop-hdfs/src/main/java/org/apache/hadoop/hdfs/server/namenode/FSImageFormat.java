@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1001,14 +1002,13 @@ public class FSImageFormat {
         currentDirName.position(prefixLen);
       }
       if (snapshotDirMap != null) {
-        for (Snapshot ss : snapshotDirMap.keySet()) {
-          List<INodeDirectory> snapshotSubDirs = snapshotDirMap.get(ss);
-          for (INodeDirectory subDir : snapshotSubDirs) {
+        for (Entry<Snapshot, List<INodeDirectory>> e : snapshotDirMap.entrySet()) {
+          for (INodeDirectory subDir : e.getValue()) {
             // make sure we only save the subtree under a reference node once
             boolean toSave = subDir.getParentReference() != null ? 
                 referenceMap.toProcessSubtree(subDir.getId()) : true;
             currentDirName.put(PATH_SEPARATOR).put(subDir.getLocalNameBytes());
-            saveImage(currentDirName, subDir, out, ss, toSave);
+            saveImage(currentDirName, subDir, out, e.getKey(), toSave);
             currentDirName.position(prefixLen);
           }
         }
