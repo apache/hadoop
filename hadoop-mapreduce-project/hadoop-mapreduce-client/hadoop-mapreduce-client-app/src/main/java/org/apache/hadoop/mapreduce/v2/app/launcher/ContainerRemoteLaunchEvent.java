@@ -20,35 +20,34 @@ package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerToken;
-import org.apache.hadoop.yarn.api.records.Resource;
 
 public class ContainerRemoteLaunchEvent extends ContainerLauncherEvent {
 
-  private final ContainerLaunchContext container;
+  private final Container allocatedContainer;
+  private final ContainerLaunchContext containerLaunchContext;
   private final Task task;
-  private final Resource resource;
 
   public ContainerRemoteLaunchEvent(TaskAttemptId taskAttemptID,
-      ContainerId containerID, String containerMgrAddress,
-      ContainerToken containerToken,
-      ContainerLaunchContext containerLaunchContext, Resource resource,
-      Task remoteTask) {
-    super(taskAttemptID, containerID, containerMgrAddress, containerToken,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH);
-    this.container = containerLaunchContext;
+      ContainerLaunchContext containerLaunchContext,
+      Container allocatedContainer, Task remoteTask) {
+    super(taskAttemptID, allocatedContainer.getId(), StringInterner
+      .weakIntern(allocatedContainer.getNodeId().toString()),
+      allocatedContainer.getContainerToken(),
+      ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH);
+    this.allocatedContainer = allocatedContainer;
+    this.containerLaunchContext = containerLaunchContext;
     this.task = remoteTask;
-    this.resource = resource;
   }
 
-  public ContainerLaunchContext getContainer() {
-    return this.container;
+  public ContainerLaunchContext getContainerLaunchContext() {
+    return this.containerLaunchContext;
   }
 
-  public Resource getResource() {
-    return this.resource;
+  public Container getAllocatedContainer() {
+    return this.allocatedContainer;
   }
 
   public Task getRemoteTask() {
