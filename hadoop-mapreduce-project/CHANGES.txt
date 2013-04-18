@@ -310,6 +310,8 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5128. mapred-default.xml is missing a bunch of history server 
     configs. (sandyr via tucu)
 
+    MAPREDUCE-4898. FileOutputFormat.checkOutputSpecs and FileOutputFormat.setOutputPath incompatible with MR1. (rkanter via tucu)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
