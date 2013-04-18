@@ -149,19 +149,6 @@ for %%i in (%HADOOP_CORE_HOME%\lib\jsp-2.1\*.jar) do (
   set CLASSPATH=!CLASSPATH!;%%i
 )
 
-@rem
-@rem add user-specified CLASSPATH last
-@rem
-
-if defined HADOOP_CLASSPATH (
-  if defined HADOOP_USER_CLASSPATH_FIRST (
-    set CLASSPATH=%HADOOP_CLASSPATH%;%CLASSPATH%;
-  )
-  if not defined HADOOP_USER_CLASSPATH_FIRST (
-    set CLASSPATH=%CLASSPATH%;%HADOOP_CLASSPATH%;
-  )
-)
-
 if not defined HADOOP_LOG_DIR (
   set HADOOP_LOG_DIR=%HADOOP_HOME%\logs
 )
@@ -272,6 +259,19 @@ if defined HADOOP_MAPRED_HOME (
 
   for %%i in (%HADOOP_MAPRED_HOME%\build\hadoop-mapred-tools-*.jar) do (
     set TOOL_PATH=!TOOL_PATH!;%%i
+  )
+)
+
+@rem
+@rem add user-specified CLASSPATH last
+@rem
+
+if defined HADOOP_CLASSPATH (
+  if defined HADOOP_USER_CLASSPATH_FIRST (
+    set CLASSPATH=%HADOOP_CLASSPATH%;%CLASSPATH%;
+  )
+  if not defined HADOOP_USER_CLASSPATH_FIRST (
+    set CLASSPATH=%CLASSPATH%;%HADOOP_CLASSPATH%;
   )
 )
 
