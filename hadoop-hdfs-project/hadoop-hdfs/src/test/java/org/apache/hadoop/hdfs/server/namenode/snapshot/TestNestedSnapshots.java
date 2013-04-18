@@ -106,6 +106,17 @@ public class TestNestedSnapshots {
     
     assertFile(s1path, s2path, file1, true, true, true);
     assertFile(s1path, s2path, file2, true, false, false);
+
+    final String rootStr = "/";
+    final Path rootPath = new Path(rootStr);
+    hdfs.allowSnapshot(rootStr);
+    print("allow snapshot " + rootStr);
+    final Path rootSnapshot = hdfs.createSnapshot(rootPath);
+    print("create snapshot " + rootSnapshot);
+    hdfs.deleteSnapshot(rootPath, rootSnapshot.getName());
+    print("delete snapshot " + rootSnapshot);
+    hdfs.disallowSnapshot(rootStr);
+    print("disallow snapshot " + rootStr);
   }
 
   private static void print(String message) throws UnresolvedLinkException {

@@ -85,6 +85,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.SignedBytes;
 import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
@@ -92,7 +93,18 @@ public class DFSUtil {
   public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
   
   public static final byte[] EMPTY_BYTES = {};
-  
+
+  /** Compare two byte arrays by lexicographical order. */
+  public static int compareBytes(byte[] left, byte[] right) {
+    if (left == null) {
+      left = EMPTY_BYTES;
+    }
+    if (right == null) {
+      right = EMPTY_BYTES;
+    }
+    return SignedBytes.lexicographicalComparator().compare(left, right);
+  }
+
   private DFSUtil() { /* Hidden constructor */ }
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
     @Override

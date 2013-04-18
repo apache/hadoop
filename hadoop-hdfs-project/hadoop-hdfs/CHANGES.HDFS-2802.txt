@@ -253,3 +253,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4707. Add snapshot methods to FilterFileSystem and fix findbugs warnings.
   (szetszwo)
+
+  HDFS-4706. Do not replace root inode for disallowSnapshot.  (szetszwo)

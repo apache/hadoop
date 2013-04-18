@@ -3764,12 +3764,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   @Metric({ "SnapshottableDirectories", "Number of snapshottable directories" })
-  public long getNumSnapshottableDirs() {
+  public int getNumSnapshottableDirs() {
     return this.snapshotManager.getNumSnapshottableDirs();
   }
 
   @Metric({ "Snapshots", "The number of snapshots" })
-  public long getNumSnapshots() {
+  public int getNumSnapshots() {
     return this.snapshotManager.getNumSnapshots();
   }
 
@@ -5966,7 +5966,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void removeSnapshottableDirs(List<INodeDirectorySnapshottable> toRemove) {
     if (snapshotManager != null) {
-      snapshotManager.removeSnapshottableDirs(toRemove);
+      snapshotManager.removeSnapshottable(toRemove);
     }
   }
 

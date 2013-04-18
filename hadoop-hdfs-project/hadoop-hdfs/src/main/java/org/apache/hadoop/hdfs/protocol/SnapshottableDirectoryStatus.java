@@ -28,7 +28,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 /**
  * Metadata about a snapshottable directory
  */
-public class SnapshottableDirectoryStatus {
+public class SnapshottableDirectoryStatus
+    implements Comparable<SnapshottableDirectoryStatus> {
   /** Basic information of the snapshottable directory */
   private HdfsFileStatus dirStatus;
   
@@ -143,5 +144,13 @@ public class SnapshottableDirectoryStatus {
 
   private static int maxLength(int n, Object value) {
     return Math.max(n, String.valueOf(value).length());
+  }
+
+  @Override
+  public int compareTo(SnapshottableDirectoryStatus that) {
+    int d = DFSUtil.compareBytes(this.parentFullPath, that.parentFullPath);
+    return d != 0? d
+        : DFSUtil.compareBytes(this.dirStatus.getLocalNameInBytes(),
+            that.dirStatus.getLocalNameInBytes());
   }
 }

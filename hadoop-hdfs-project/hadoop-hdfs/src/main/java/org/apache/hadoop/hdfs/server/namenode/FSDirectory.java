@@ -172,6 +172,11 @@ public class FSDirectory implements Closeable {
     return getFSNamesystem().getBlockManager();
   }
 
+  /** @return the root directory inode. */
+  public INodeDirectoryWithQuota getRoot() {
+    return rootDir;
+  }
+
   /**
    * Notify that loading of this FSDirectory is complete, and
    * it is ready for use 

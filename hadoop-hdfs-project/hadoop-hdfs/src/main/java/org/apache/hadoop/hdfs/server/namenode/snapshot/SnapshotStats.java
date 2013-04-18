@@ -26,11 +26,11 @@ public interface SnapshotStats {
   /**
    * @return The number of snapshottale directories in the system 
    */
-  public long getNumSnapshottableDirs();
+  public int getNumSnapshottableDirs();
   
   /**
    * @return The number of directories that have been snapshotted
    */
-  public long getNumSnapshots();
+  public int getNumSnapshots();
   
 }

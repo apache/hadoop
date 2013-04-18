@@ -43,7 +43,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.SignedBytes;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -602,10 +601,7 @@ public abstract class INode implements Diff.Element<byte[]> {
 
   @Override
   public final int compareTo(byte[] bytes) {
-    final byte[] name = getLocalNameBytes();
-    final byte[] left = name == null? DFSUtil.EMPTY_BYTES: name;
-    final byte[] right = bytes == null? DFSUtil.EMPTY_BYTES: bytes;
-    return SignedBytes.lexicographicalComparator().compare(left, right);
+    return DFSUtil.compareBytes(getLocalNameBytes(), bytes);
   }
 
   @Override
@@ -650,7 +646,8 @@ public abstract class INode implements Diff.Element<byte[]> {
       Snapshot snapshot) {
     out.print(prefix);
     out.print(" ");
-    out.print(getLocalName());
+    final String name = getLocalName();
+    out.print(name.isEmpty()? "/": name);
     out.print("   (");
     out.print(getObjectString());
     out.print("), ");
