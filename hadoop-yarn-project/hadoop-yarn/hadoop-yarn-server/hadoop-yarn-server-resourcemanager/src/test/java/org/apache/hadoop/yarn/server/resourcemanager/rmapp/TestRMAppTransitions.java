@@ -178,6 +178,9 @@ public class TestRMAppTransitions {
     if(submissionContext == null) {
       submissionContext = new ApplicationSubmissionContextPBImpl();
     }
+    // applicationId will not be used because RMStateStore is mocked,
+    // but applicationId is still set for safety
+    submissionContext.setApplicationId(applicationId);
 
     RMApp application =
         new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
