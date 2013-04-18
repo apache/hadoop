@@ -43,6 +43,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4985. Add compression option to TestDFSIO usage.
     (Plamen Jeliazkov via shv)
 
+    MAPREDUCE-5152. Make MR App to simply pass through the container from RM
+    instead of extracting and populating information itself to start any
+    container. (vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
