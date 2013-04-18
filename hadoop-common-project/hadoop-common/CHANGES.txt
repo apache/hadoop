@@ -1180,6 +1180,11 @@ Release 0.23.7 - UNRELEASED
 
     HADOOP-9374. Add tokens from -tokenCacheFile into UGI (daryn)
 
+    HADOOP-8711. IPC Server supports adding exceptions for which
+    the message is printed and the stack trace is not printed to avoid chatter.
+    (Brandon Li via Suresh)
+
+
   OPTIMIZATIONS
 
     HADOOP-8462. Native-code implementation of bzip2 codec. (Govind Kamat via

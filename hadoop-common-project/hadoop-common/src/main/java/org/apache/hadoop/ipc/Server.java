@@ -48,11 +48,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -113,6 +115,42 @@ import com.google.common.annotations.VisibleForTesting;
 public abstract class Server {
   private final boolean authorize;
   private EnumSet<AuthMethod> enabledAuthMethods;
+  private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
+  
+  public void addTerseExceptions(Class<?>... exceptionClass) {
+    exceptionsHandler.addTerseExceptions(exceptionClass);
+  }
+
+  /**
+   * ExceptionsHandler manages Exception groups for special handling
+   * e.g., terse exception group for concise logging messages
+   */
+  static class ExceptionsHandler {
+    private volatile Set<String> terseExceptions = new HashSet<String>();
+
+    /**
+     * Add exception class so server won't log its stack trace.
+     * Modifying the terseException through this method is thread safe.
+     *
+     * @param exceptionClass exception classes 
+     */
+    void addTerseExceptions(Class<?>... exceptionClass) {
+
+      // Make a copy of terseException for performing modification
+      final HashSet<String> newSet = new HashSet<String>(terseExceptions);
+
+      // Add all class names into the HashSet
+      for (Class<?> name : exceptionClass) {
+        newSet.add(name.toString());
+      }
+      // Replace terseException set
+      terseExceptions = Collections.unmodifiableSet(newSet);
+    }
+
+    boolean isTerse(Class<?> t) {
+      return terseExceptions.contains(t.toString());
+    }
+  }
   
   /**
    * The first four bytes of Hadoop RPC connections
@@ -1756,8 +1794,8 @@ public abstract class Server {
               // on the server side, as opposed to just a normal exceptional
               // result.
               LOG.warn(logMsg, e);
-            } else if (e instanceof StandbyException) {
-              // Don't log the whole stack trace of these exceptions.
+            } else if (exceptionsHandler.isTerse(e.getClass())) {
+             // Don't log the whole stack trace of these exceptions.
               // Way too noisy!
               LOG.info(logMsg);
             } else {
@@ -1898,6 +1936,8 @@ public abstract class Server {
     if (secretManager != null) {
       SaslRpcServer.init(conf);
     }
+    
+    this.exceptionsHandler.addTerseExceptions(StandbyException.class);
   }
 
   // get the security type from the conf. implicitly include token support
