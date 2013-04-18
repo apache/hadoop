@@ -659,8 +659,24 @@ public class Job extends JobContextImpl implements JobContext {
             startFrom, numEvents); 
       }
     });
+  }
+
+  /**
+   * Get events indicating completion (success/failure) of component tasks.
+   *  
+   * @param startFrom index to start fetching events from
+   * @return an array of {@link TaskCompletionEvent}s
+   * @throws IOException
+   */
+  public TaskCompletionEvent[] getTaskCompletionEvents(final int startFrom) 
+      throws IOException {
+    try {
+      return getTaskCompletionEvents(startFrom, 10);
+    } catch (InterruptedException ie) {
+      throw new RuntimeException(ie);
     }
-  
+  }
+
   /**
    * Kill indicated task attempt.
    * 
