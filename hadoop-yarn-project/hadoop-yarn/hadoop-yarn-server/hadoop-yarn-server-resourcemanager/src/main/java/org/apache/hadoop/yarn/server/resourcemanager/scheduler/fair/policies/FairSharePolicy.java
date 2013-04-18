@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.modes;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -24,13 +24,13 @@ import java.util.Comparator;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class FairSchedulingMode extends SchedulingMode {
+public class FairSharePolicy extends SchedulingPolicy {
   @VisibleForTesting
-  public static final String NAME = "FairShare";
+  public static final String NAME = "Fairshare";
   private FairShareComparator comparator = new FairShareComparator();
 
   @Override
@@ -210,5 +210,10 @@ public class FairSchedulingMode extends SchedulingMode {
     share = Math.max(share, sched.getMinShare().getMemory());
     share = Math.min(share, sched.getDemand().getMemory());
     return Resources.createResource((int) share);
+  }
+
+  @Override
+  public byte getApplicableDepth() {
+    return SchedulingPolicy.DEPTH_ANY;
   }
 }

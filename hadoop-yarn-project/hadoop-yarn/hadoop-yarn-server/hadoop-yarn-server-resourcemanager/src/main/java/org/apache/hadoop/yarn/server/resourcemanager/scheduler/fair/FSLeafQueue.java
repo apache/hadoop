@@ -40,9 +40,6 @@ public class FSLeafQueue extends FSQueue {
     
   private final List<AppSchedulable> appScheds = 
       new ArrayList<AppSchedulable>();
-
-  /** Scheduling mode for jobs inside the queue (fair or FIFO) */
-  private SchedulingMode schedulingMode;
   
   private final FairScheduler scheduler;
   private final QueueManager queueMgr;
@@ -86,13 +83,18 @@ public class FSLeafQueue extends FSQueue {
     return appScheds;
   }
 
-  public void setSchedulingMode(SchedulingMode mode) {
-    this.schedulingMode = mode;
+  @Override
+  public void setPolicy(SchedulingPolicy policy)
+      throws AllocationConfigurationException {
+    if (!SchedulingPolicy.isApplicableTo(policy, SchedulingPolicy.DEPTH_LEAF)) {
+      throwPolicyDoesnotApplyException(policy);
+    }
+    super.policy = policy;
   }
   
   @Override
-  public void recomputeFairShares() {
-    schedulingMode.computeShares(getAppSchedulables(), getFairShare());
+  public void recomputeShares() {
+    policy.computeShares(getAppSchedulables(), getFairShare());
   }
 
   @Override
@@ -136,42 +138,27 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
-    LOG.debug("Node offered to queue: " + getName() + " reserved: " + reserved);
-    // If this queue is over its limit, reject
-    if (Resources.greaterThan(getResourceUsage(),
-        queueMgr.getMaxResources(getName()))) {
-      return Resources.none();
+  public Resource assignContainer(FSSchedulerNode node) {
+    Resource assigned = Resources.none();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node offered to queue: " + getName());
     }
 
-    // If this node already has reserved resources for an app, first try to
-    // finish allocating resources for that app.
-    if (reserved) {
-      for (AppSchedulable sched : appScheds) {
-        if (sched.getApp().getApplicationAttemptId() ==
-            node.getReservedContainer().getApplicationAttemptId()) {
-          return sched.assignContainer(node, reserved);
+    if (!assignContainerPreCheck(node)) {
+      return assigned;
+    }
+
+    Comparator<Schedulable> comparator = policy.getComparator();
+    Collections.sort(appScheds, comparator);
+    for (AppSchedulable sched : appScheds) {
+      if (sched.getRunnable()) {
+        assigned = sched.assignContainer(node);
+        if (Resources.greaterThan(assigned, Resources.none())) {
+          break;
         }
       }
-      return Resources.none(); // We should never get here
     }
-
-    // Otherwise, chose app to schedule based on given policy.
-    else {
-      Comparator<Schedulable> comparator = schedulingMode.getComparator();
-
-      Collections.sort(appScheds, comparator);
-      for (AppSchedulable sched: appScheds) {
-        if (sched.getRunnable()) {
-          Resource assignedResource = sched.assignContainer(node, reserved);
-          if (!assignedResource.equals(Resources.none())) {
-            return assignedResource;
-          }
-        }
-      }
-
-      return Resources.none();
-    }
+    return assigned;
   }
 
   @Override

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -32,7 +33,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public class FSParentQueue extends FSQueue {
   private static final Log LOG = LogFactory.getLog(
       FSParentQueue.class.getName());
-
 
   private final List<FSQueue> childQueues = 
       new ArrayList<FSQueue>();
@@ -50,11 +50,11 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void recomputeFairShares() {
-    SchedulingMode.getDefault().computeShares(childQueues, getFairShare());
+  public void recomputeShares() {
+    policy.computeShares(childQueues, getFairShare());
     for (FSQueue childQueue : childQueues) {
       childQueue.getMetrics().setAvailableResourcesToQueue(childQueue.getFairShare());
-      childQueue.recomputeFairShares();
+      childQueue.recomputeShares();
     }
   }
 
@@ -131,13 +131,41 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
-    throw new IllegalStateException(
-        "Parent queue should not be assigned container");
+  public Resource assignContainer(FSSchedulerNode node) {
+    Resource assigned = Resources.none();
+
+    // If this queue is over its limit, reject
+    if (Resources.greaterThan(getResourceUsage(),
+        queueMgr.getMaxResources(getName()))) {
+      return assigned;
+    }
+
+    Collections.sort(childQueues, policy.getComparator());
+    for (FSQueue child : childQueues) {
+      assigned = child.assignContainer(node);
+      if (node.getReservedContainer() != null
+          || Resources.greaterThan(assigned, Resources.none())) {
+        break;
+      }
+    }
+    return assigned;
   }
 
   @Override
   public Collection<FSQueue> getChildQueues() {
     return childQueues;
+  }
+
+  @Override
+  public void setPolicy(SchedulingPolicy policy)
+      throws AllocationConfigurationException {
+    boolean allowed =
+        SchedulingPolicy.isApplicableTo(policy, (this == queueMgr
+            .getRootQueue()) ? SchedulingPolicy.DEPTH_ROOT
+            : SchedulingPolicy.DEPTH_INTERMEDIATE);
+    if (!allowed) {
+      throwPolicyDoesnotApplyException(policy);
+    }
+    super.policy = policy;
   }
 }

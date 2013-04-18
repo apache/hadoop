@@ -93,11 +93,9 @@ public abstract class Schedulable {
 
   /**
    * Assign a container on this node if possible, and return the amount of
-   * resources assigned. If {@code reserved} is true, it means a reservation
-   * already exists on this node, and the schedulable should fulfill that
-   * reservation if possible.
+   * resources assigned.
    */
-  public abstract Resource assignContainer(FSSchedulerNode node, boolean reserved);
+  public abstract Resource assignContainer(FSSchedulerNode node);
 
   /** Assign a fair share to this Schedulable. */
   public void setFairShare(Resource fairShare) {

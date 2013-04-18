@@ -87,6 +87,9 @@ Release 2.0.5-beta - UNRELEASED
 
   NEW FEATURES
 
+    YARN-482. FS: Extend SchedulingMode to intermediate queues. 
+    (kkambatl via tucu)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event
