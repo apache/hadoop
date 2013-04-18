@@ -12,6 +12,9 @@ Release 0.23.8 - UNRELEASED
  
   BUG FIXES
 
+    YARN-476. ProcfsBasedProcessTree info message confuses users. 
+    (sandyr via tucu)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
