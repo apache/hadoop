@@ -117,7 +117,7 @@ public class TestLocalizedResource {
       local.handle(new ResourceReleaseEvent(rsrcA, container1));
       dispatcher.await();
       verify(containerBus, never()).handle(isA(ContainerEvent.class));
-      assertEquals(ResourceState.INIT, local.getState());
+      assertEquals(ResourceState.DOWNLOADING, local.getState());
 
       // Register C2, C3
       final ContainerId container2 = getMockContainer(2);
@@ -170,24 +170,6 @@ public class TestLocalizedResource {
         new ContainerEventMatcher(container4,
             ContainerEventType.RESOURCE_LOCALIZED);
       verify(containerBus).handle(argThat(matchesC4Localized));
-      assertEquals(ResourceState.LOCALIZED, local.getState());
-    } finally {
-      dispatcher.stop();
-    }
-  }
-
-  @Test
-  public void testDirectLocalization() throws Exception {
-    DrainDispatcher dispatcher = new DrainDispatcher();
-    dispatcher.init(new Configuration());
-    try {
-      dispatcher.start();
-      LocalResource apiRsrc = createMockResource();
-      LocalResourceRequest rsrcA = new LocalResourceRequest(apiRsrc);
-      LocalizedResource local = new LocalizedResource(rsrcA, dispatcher);
-      Path p = new Path("file:///cache/rsrcA");
-      local.handle(new ResourceLocalizedEvent(rsrcA, p, 10));
-      dispatcher.await();
       assertEquals(ResourceState.LOCALIZED, local.getState());
     } finally {
       dispatcher.stop();
