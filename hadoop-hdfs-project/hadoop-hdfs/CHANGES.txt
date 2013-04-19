@@ -14,6 +14,9 @@ Release 0.23.8 - UNRELEASED
     HDFS-4690. Namenode exits if entering safemode while secret manager is 
     edit logging (daryn via kihwal)
 
+    HDFS-4699. TestPipelinesFailover#testPipelineRecoveryStress fails
+    sporadically (Chris Nauroth via kihwal)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
