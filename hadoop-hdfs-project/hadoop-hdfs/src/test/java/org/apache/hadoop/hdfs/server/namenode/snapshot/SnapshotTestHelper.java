@@ -130,7 +130,7 @@ public class SnapshotTestHelper {
       Path snapshotRoot, String snapshotName) throws Exception {
     LOG.info("createSnapshot " + snapshotName + " for " + snapshotRoot);
     assertTrue(hdfs.exists(snapshotRoot));
-    hdfs.allowSnapshot(snapshotRoot.toString());
+    hdfs.allowSnapshot(snapshotRoot);
     hdfs.createSnapshot(snapshotRoot, snapshotName);
     // set quota to a large value for testing counts
     hdfs.setQuota(snapshotRoot, Long.MAX_VALUE-1, Long.MAX_VALUE-1);

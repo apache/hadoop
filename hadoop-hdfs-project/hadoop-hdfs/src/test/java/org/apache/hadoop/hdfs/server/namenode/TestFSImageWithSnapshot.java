@@ -282,7 +282,7 @@ public class TestFSImageWithSnapshot {
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, REPLICATION, seed);
     
     // 1. create snapshot s0
-    hdfs.allowSnapshot(dir.toString());
+    hdfs.allowSnapshot(dir);
     hdfs.createSnapshot(dir, "s0");
     
     // 2. create snapshot s1 before appending sub1file1 finishes
@@ -337,7 +337,7 @@ public class TestFSImageWithSnapshot {
     DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, REPLICATION, seed);
     
-    hdfs.allowSnapshot(dir.toString());
+    hdfs.allowSnapshot(dir);
     hdfs.createSnapshot(dir, "s0");
     
     HdfsDataOutputStream out = appendFileWithoutClosing(sub1file1, BLOCKSIZE);

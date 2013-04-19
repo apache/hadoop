@@ -921,14 +921,14 @@ public class DistributedFileSystem extends FileSystem {
     return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
 
-  /** @see HdfsAdmin#allowSnapshot(String) */
-  public void allowSnapshot(String path) throws IOException {
-    dfs.allowSnapshot(path);
+  /** @see HdfsAdmin#allowSnapshot(Path) */
+  public void allowSnapshot(Path path) throws IOException {
+    dfs.allowSnapshot(getPathName(path));
   }
   
-  /** @see HdfsAdmin#disallowSnapshot(String) */
-  public void disallowSnapshot(String path) throws IOException {
-    dfs.disallowSnapshot(path);
+  /** @see HdfsAdmin#disallowSnapshot(Path) */
+  public void disallowSnapshot(Path path) throws IOException {
+    dfs.disallowSnapshot(getPathName(path));
   }
   
   @Override

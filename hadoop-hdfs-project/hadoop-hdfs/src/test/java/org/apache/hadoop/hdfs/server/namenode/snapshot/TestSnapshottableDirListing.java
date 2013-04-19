@@ -80,7 +80,7 @@ public class TestSnapshottableDirListing {
     assertNull(dirs);
     
     // Make dir1 as snapshottable
-    hdfs.allowSnapshot(dir1.toString());
+    hdfs.allowSnapshot(dir1);
     dirs = hdfs.getSnapshottableDirListing();
     assertEquals(1, dirs.length);
     assertEquals(dir1.getName(), dirs[0].getDirStatus().getLocalName());
@@ -89,7 +89,7 @@ public class TestSnapshottableDirListing {
     assertEquals(0, dirs[0].getSnapshotNumber());
     
     // Make dir2 as snapshottable
-    hdfs.allowSnapshot(dir2.toString());
+    hdfs.allowSnapshot(dir2);
     dirs = hdfs.getSnapshottableDirListing();
     assertEquals(2, dirs.length);
     assertEquals(dir1.getName(), dirs[0].getDirStatus().getLocalName());
@@ -110,7 +110,7 @@ public class TestSnapshottableDirListing {
     assertEquals(dir1, dirs[0].getFullPath());
     
     // Make dir2 snapshottable again
-    hdfs.allowSnapshot(dir2.toString());
+    hdfs.allowSnapshot(dir2);
     // Create a snapshot for dir2
     hdfs.createSnapshot(dir2, "s1");
     hdfs.createSnapshot(dir2, "s2");
@@ -127,8 +127,8 @@ public class TestSnapshottableDirListing {
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, file2, BLOCKSIZE, REPLICATION, seed);
     // Make sub1 and sub2 snapshottable
-    hdfs.allowSnapshot(sub1.toString());
-    hdfs.allowSnapshot(sub2.toString());
+    hdfs.allowSnapshot(sub1);
+    hdfs.allowSnapshot(sub2);
     dirs = hdfs.getSnapshottableDirListing();
     assertEquals(4, dirs.length);
     assertEquals(dir1, dirs[0].getFullPath());
@@ -137,7 +137,7 @@ public class TestSnapshottableDirListing {
     assertEquals(sub2, dirs[3].getFullPath());
     
     // reset sub1
-    hdfs.disallowSnapshot(sub1.toString());
+    hdfs.disallowSnapshot(sub1);
     dirs = hdfs.getSnapshottableDirListing();
     assertEquals(3, dirs.length);
     assertEquals(dir1, dirs[0].getFullPath());
@@ -159,8 +159,8 @@ public class TestSnapshottableDirListing {
   @Test (timeout=60000)
   public void testListWithDifferentUser() throws Exception {
     // first make dir1 and dir2 snapshottable
-    hdfs.allowSnapshot(dir1.toString());
-    hdfs.allowSnapshot(dir2.toString());
+    hdfs.allowSnapshot(dir1);
+    hdfs.allowSnapshot(dir2);
     hdfs.setPermission(root, FsPermission.valueOf("-rwxrwxrwx"));
     
     // create two dirs and make them snapshottable under the name of user1
@@ -172,8 +172,8 @@ public class TestSnapshottableDirListing {
     Path dir2_user1 = new Path("/dir2_user1");
     fs1.mkdirs(dir1_user1);
     fs1.mkdirs(dir2_user1);
-    fs1.allowSnapshot(dir1_user1.toString());
-    fs1.allowSnapshot(dir2_user1.toString());
+    fs1.allowSnapshot(dir1_user1);
+    fs1.allowSnapshot(dir2_user1);
     
     // user2
     UserGroupInformation ugi2 = UserGroupInformation.createUserForTesting(
@@ -184,8 +184,8 @@ public class TestSnapshottableDirListing {
     Path subdir_user2 = new Path(dir_user2, "subdir");
     fs2.mkdirs(dir_user2);
     fs2.mkdirs(subdir_user2);
-    fs2.allowSnapshot(dir_user2.toString());
-    fs2.allowSnapshot(subdir_user2.toString());
+    fs2.allowSnapshot(dir_user2);
+    fs2.allowSnapshot(subdir_user2);
     
     // super user
     String supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY,

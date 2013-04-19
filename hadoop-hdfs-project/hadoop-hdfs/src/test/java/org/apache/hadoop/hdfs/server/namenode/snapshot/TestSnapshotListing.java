@@ -87,7 +87,7 @@ public class TestSnapshotListing {
     }
     
     // list before creating snapshots
-    hdfs.allowSnapshot(dir.toString());
+    hdfs.allowSnapshot(dir);
     stats = hdfs.listStatus(snapshotsPath);
     assertEquals(0, stats.length);
     

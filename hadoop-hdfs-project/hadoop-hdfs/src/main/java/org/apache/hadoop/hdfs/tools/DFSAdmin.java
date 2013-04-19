@@ -414,7 +414,7 @@ public class DFSAdmin extends FsShell {
    */
   public void allowSnapshot(String[] argv) throws IOException {   
     DistributedFileSystem dfs = getDFS();
-    dfs.allowSnapshot(argv[1]);
+    dfs.allowSnapshot(new Path(argv[1]));
     System.out.println("Allowing snaphot on " + argv[1] + " succeeded");
   }
   
@@ -426,7 +426,7 @@ public class DFSAdmin extends FsShell {
    */
   public void disallowSnapshot(String[] argv) throws IOException {  
     DistributedFileSystem dfs = getDFS();
-    dfs.disallowSnapshot(argv[1]);
+    dfs.disallowSnapshot(new Path(argv[1]));
     System.out.println("Disallowing snaphot on " + argv[1] + " succeeded");
   }
   

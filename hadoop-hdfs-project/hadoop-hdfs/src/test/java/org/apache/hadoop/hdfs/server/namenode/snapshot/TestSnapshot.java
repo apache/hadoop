@@ -277,7 +277,7 @@ public class TestSnapshot {
 
     FileStatus oldStatus = hdfs.getFileStatus(sub);
 
-    hdfs.allowSnapshot(dir.toString());
+    hdfs.allowSnapshot(dir);
     hdfs.createSnapshot(dir, "s1");
     hdfs.setTimes(sub, 100L, 100L);
 

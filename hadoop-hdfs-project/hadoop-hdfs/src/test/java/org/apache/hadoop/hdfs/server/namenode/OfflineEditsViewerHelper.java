@@ -156,12 +156,12 @@ public class OfflineEditsViewerHelper {
     Path pathDirectoryMkdir = new Path("/directory_mkdir");
     dfs.mkdirs(pathDirectoryMkdir);
     // OP_ALLOW_SNAPSHOT 29
-    dfs.allowSnapshot(pathDirectoryMkdir.toString());
+    dfs.allowSnapshot(pathDirectoryMkdir);
     // OP_DISALLOW_SNAPSHOT 30
-    dfs.disallowSnapshot(pathDirectoryMkdir.toString());
+    dfs.disallowSnapshot(pathDirectoryMkdir);
     // OP_CREATE_SNAPSHOT 26
     String ssName = "snapshot1";
-    dfs.allowSnapshot(pathDirectoryMkdir.toString());
+    dfs.allowSnapshot(pathDirectoryMkdir);
     dfs.createSnapshot(pathDirectoryMkdir, ssName);
     // OP_RENAME_SNAPSHOT 28
     String ssNewName = "snapshot2";

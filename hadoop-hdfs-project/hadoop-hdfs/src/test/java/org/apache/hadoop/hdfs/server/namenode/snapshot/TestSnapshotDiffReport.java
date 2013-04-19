@@ -100,7 +100,7 @@ public class TestSnapshotDiffReport {
     DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, REPLICATION_1, seed);
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
-      hdfs.allowSnapshot(snapshotDir.toString());
+      hdfs.allowSnapshot(snapshotDir);
       hdfs.createSnapshot(snapshotDir, genSnapshotName(snapshotDir));
     }
     

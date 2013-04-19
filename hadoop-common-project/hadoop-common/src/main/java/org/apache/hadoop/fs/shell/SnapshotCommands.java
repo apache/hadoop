@@ -23,6 +23,7 @@ import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 
 import com.google.common.base.Preconditions;
@@ -83,7 +84,8 @@ class SnapshotCommands extends FsCommand {
       }
       assert(items.size() == 1);
       PathData sroot = items.getFirst();
-      sroot.fs.createSnapshot(sroot.path, snapshotName);
+      Path snapshotPath = sroot.fs.createSnapshot(sroot.path, snapshotName);
+      out.println("Created snapshot " + snapshotPath);
     }    
   }
 

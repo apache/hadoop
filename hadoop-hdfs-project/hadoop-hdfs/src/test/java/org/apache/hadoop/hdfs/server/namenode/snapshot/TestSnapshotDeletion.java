@@ -107,7 +107,7 @@ public class TestSnapshotDeletion {
     DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, seed);
 
     // Allow snapshot for sub1, and create snapshot for it
-    hdfs.allowSnapshot(sub.toString());
+    hdfs.allowSnapshot(sub);
     hdfs.createSnapshot(sub, "s1");
 
     // Deleting a snapshottable dir with snapshots should fail
@@ -135,7 +135,7 @@ public class TestSnapshotDeletion {
     DFSTestUtil.createFile(hdfs, subfile2, BLOCKSIZE, REPLICATION, seed);
 
     // Allow snapshot for subsub1, and create snapshot for it
-    hdfs.allowSnapshot(subsub.toString());
+    hdfs.allowSnapshot(subsub);
     hdfs.createSnapshot(subsub, "s1");
 
     // Deleting dir while its descedant subsub1 having snapshots should fail
@@ -356,7 +356,7 @@ public class TestSnapshotDeletion {
     }
     
     // make sub snapshottable
-    hdfs.allowSnapshot(sub.toString());
+    hdfs.allowSnapshot(sub);
     try {
       hdfs.deleteSnapshot(sub, snapshotName);
       fail("SnapshotException expected: snapshot " + snapshotName

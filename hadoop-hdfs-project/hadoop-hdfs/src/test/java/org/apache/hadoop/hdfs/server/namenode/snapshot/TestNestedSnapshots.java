@@ -88,14 +88,14 @@ public class TestNestedSnapshots {
 
     final String s1name = "foo-s1";
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, s1name); 
-    hdfs.allowSnapshot(foo.toString());
+    hdfs.allowSnapshot(foo);
     print("allow snapshot " + foo);
     hdfs.createSnapshot(foo, s1name);
     print("create snapshot " + s1name);
 
     final String s2name = "bar-s2";
     final Path s2path = SnapshotTestHelper.getSnapshotRoot(bar, s2name); 
-    hdfs.allowSnapshot(bar.toString());
+    hdfs.allowSnapshot(bar);
     print("allow snapshot " + bar);
     hdfs.createSnapshot(bar, s2name);
     print("create snapshot " + s2name);
@@ -109,13 +109,13 @@ public class TestNestedSnapshots {
 
     final String rootStr = "/";
     final Path rootPath = new Path(rootStr);
-    hdfs.allowSnapshot(rootStr);
+    hdfs.allowSnapshot(rootPath);
     print("allow snapshot " + rootStr);
     final Path rootSnapshot = hdfs.createSnapshot(rootPath);
     print("create snapshot " + rootSnapshot);
     hdfs.deleteSnapshot(rootPath, rootSnapshot.getName());
     print("delete snapshot " + rootSnapshot);
-    hdfs.disallowSnapshot(rootStr);
+    hdfs.disallowSnapshot(rootPath);
     print("disallow snapshot " + rootStr);
   }
 
@@ -143,7 +143,7 @@ public class TestNestedSnapshots {
     final String dirStr = "/testSnapshotLimit/dir";
     final Path dir = new Path(dirStr);
     hdfs.mkdirs(dir, new FsPermission((short)0777));
-    hdfs.allowSnapshot(dirStr);
+    hdfs.allowSnapshot(dir);
 
     int s = 0;
     for(; s < SNAPSHOT_LIMIT; s++) {
@@ -180,7 +180,7 @@ public class TestNestedSnapshots {
     final String dirStr = "/testSnapshotWithQuota/dir";
     final Path dir = new Path(dirStr);
     hdfs.mkdirs(dir, new FsPermission((short)0777));
-    hdfs.allowSnapshot(dirStr);
+    hdfs.allowSnapshot(dir);
 
     // set namespace quota
     final int NS_QUOTA = 6;
