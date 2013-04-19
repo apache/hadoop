@@ -30,9 +30,15 @@ public enum YarnApplicationState {
   /** Application which was just created. */
   NEW,
 
+  /** Application which is being saved. */
+  NEW_SAVING,
+
   /** Application which has been submitted. */
   SUBMITTED,
-  
+
+  /** Application has been accepted by the scheduler */
+  ACCEPTED,
+
   /** Application which is currently running. */
   RUNNING,
 
@@ -43,8 +49,5 @@ public enum YarnApplicationState {
   FAILED,
 
   /** Application which was terminated by a user or admin. */
-  KILLED,
-
-  /** Application has been accepted by the scheduler */
-  ACCEPTED
+  KILLED
 }

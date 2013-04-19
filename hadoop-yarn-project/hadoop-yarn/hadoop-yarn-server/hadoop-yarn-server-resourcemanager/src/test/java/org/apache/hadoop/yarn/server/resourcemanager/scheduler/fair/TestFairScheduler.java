@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -72,7 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.modes.FifoSchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -283,7 +284,7 @@ public class TestFairScheduler {
     assertEquals(capacity / 4, queue2.getFairShare().getMemory());
     assertEquals(capacity / 4, queue3.getFairShare().getMemory());
   }
-  
+
   @Test
   public void testHierarchicalQueuesSimilarParents() {
     QueueManager queueManager = scheduler.getQueueManager();
@@ -1358,7 +1359,7 @@ public class TestFairScheduler {
     FSSchedulerApp app2 = scheduler.applications.get(attId2);
     
     FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1");
-    queue1.setSchedulingMode(new FifoSchedulingMode());
+    queue1.setPolicy(new FifoPolicy());
     
     scheduler.update();
 
@@ -1380,7 +1381,80 @@ public class TestFairScheduler {
     assertEquals(2, app1.getLiveContainers().size());
     assertEquals(1, app2.getLiveContainers().size());
   }
-  
+
+  /**
+   * Test to verify the behavior of
+   * {@link FSQueue#assignContainer(FSSchedulerNode)})
+   * 
+   * Create two queues under root (fifoQueue and fairParent), and two queues
+   * under fairParent (fairChild1 and fairChild2). Submit two apps to the
+   * fifoQueue and one each to the fairChild* queues, all apps requiring 4
+   * containers each of the total 16 container capacity
+   * 
+   * Assert the number of containers for each app after 4, 8, 12 and 16 updates.
+   * 
+   * @throws Exception
+   */
+  @Test(timeout = 5000)
+  public void testAssignContainer() throws Exception {
+    final String user = "user1";
+    final String fifoQueue = "fifo";
+    final String fairParent = "fairParent";
+    final String fairChild1 = fairParent + ".fairChild1";
+    final String fairChild2 = fairParent + ".fairChild2";
+
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(8192));
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(8192));
+
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+
+    scheduler.handle(nodeEvent1);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId attId1 =
+        createSchedulingRequest(1024, fifoQueue, user, 4);
+    ApplicationAttemptId attId2 =
+        createSchedulingRequest(1024, fairChild1, user, 4);
+    ApplicationAttemptId attId3 =
+        createSchedulingRequest(1024, fairChild2, user, 4);
+    ApplicationAttemptId attId4 =
+        createSchedulingRequest(1024, fifoQueue, user, 4);
+
+    FSSchedulerApp app1 = scheduler.applications.get(attId1);
+    FSSchedulerApp app2 = scheduler.applications.get(attId2);
+    FSSchedulerApp app3 = scheduler.applications.get(attId3);
+    FSSchedulerApp app4 = scheduler.applications.get(attId4);
+
+    scheduler.getQueueManager().getLeafQueue(fifoQueue)
+        .setPolicy(SchedulingPolicy.parse("fifo"));
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1);
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
+
+    for (int i = 0; i < 8; i++) {
+      scheduler.handle(updateEvent1);
+      scheduler.handle(updateEvent2);
+      if ((i + 1) % 2 == 0) {
+        // 4 node updates: fifoQueue should have received 2, and fairChild*
+        // should have received one each
+        String ERR =
+            "Wrong number of assigned containers after " + (i + 1) + " updates";
+        if (i < 4) {
+          // app1 req still not met
+          assertEquals(ERR, (i + 1), app1.getLiveContainers().size());
+          assertEquals(ERR, 0, app4.getLiveContainers().size());
+        } else {
+          // app1 req has been met, app4 should be served now
+          assertEquals(ERR, 4, app1.getLiveContainers().size());
+          assertEquals(ERR, (i - 3), app4.getLiveContainers().size());
+        }
+        assertEquals(ERR, (i + 1) / 2, app2.getLiveContainers().size());
+        assertEquals(ERR, (i + 1) / 2, app3.getLiveContainers().size());
+      }
+    }
+  }
   
   @SuppressWarnings("unchecked")
   @Test
@@ -1411,6 +1485,7 @@ public class TestFairScheduler {
     ContainerLaunchContext clc =
         BuilderUtils.newContainerLaunchContext(user, null, null, null, null,
             null, null);
+    submissionContext.setApplicationId(applicationId);
     submissionContext.setAMContainerSpec(clc);
     RMApp application =
         new RMAppImpl(applicationId, resourceManager.getRMContext(), conf, name, user, 
@@ -1419,13 +1494,24 @@ public class TestFairScheduler {
     resourceManager.getRMContext().getRMApps().putIfAbsent(applicationId, application);
     application.handle(new RMAppEvent(applicationId, RMAppEventType.START));
 
+    final int MAX_TRIES=20;
+    int numTries = 0;
+    while (!application.getState().equals(RMAppState.SUBMITTED) &&
+        numTries < MAX_TRIES) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ex) {ex.printStackTrace();}
+      numTries++;
+    }
+    assertEquals("The application doesn't reach SUBMITTED.",
+        RMAppState.SUBMITTED, application.getState());
+
     ApplicationAttemptId attId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
     attId.setAttemptId(this.ATTEMPT_ID++);
     attId.setApplicationId(applicationId);
     scheduler.addApplication(attId, queue, user);
-    
-    final int MAX_TRIES=20;
-    int numTries = 0;
+
+    numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
       try {
         Thread.sleep(100);

@@ -278,9 +278,7 @@ public class AppSchedulable extends Schedulable {
     }
   }
 
-
-  @Override
-  public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
+  private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
     LOG.info("Node offered to app: " + getName() + " reserved: " + reserved);
 
     if (reserved) {
@@ -344,5 +342,14 @@ public class AppSchedulable extends Schedulable {
       }
     }
     return Resources.none();
+  }
+
+  public Resource assignReservedContainer(FSSchedulerNode node) {
+    return assignContainer(node, true);
+  }
+
+  @Override
+  public Resource assignContainer(FSSchedulerNode node) {
+    return assignContainer(node, false);
   }
 }

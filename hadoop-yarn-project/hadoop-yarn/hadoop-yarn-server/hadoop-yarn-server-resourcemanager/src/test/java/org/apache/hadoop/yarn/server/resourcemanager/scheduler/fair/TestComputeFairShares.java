@@ -24,7 +24,7 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.modes.FairSchedulingMode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,12 +33,12 @@ import org.junit.Test;
  */
 public class TestComputeFairShares {
   private List<Schedulable> scheds;
-  private SchedulingMode schedulingMode;
+  private SchedulingPolicy schedulingMode;
   
   @Before
   public void setUp() throws Exception {
     scheds = new ArrayList<Schedulable>();
-    schedulingMode = new FairSchedulingMode();
+    schedulingMode = new FairSharePolicy();
   }
   
   /** 

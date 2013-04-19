@@ -21,11 +21,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 public enum RMAppEventType {
   // Source: ClientRMService
   START,
+  RECOVER,
   KILL,
 
   // Source: RMAppAttempt
   APP_REJECTED,
   APP_ACCEPTED,
+  APP_SAVED,
   ATTEMPT_REGISTERED,
   ATTEMPT_FINISHING,
   ATTEMPT_FINISHED, // Will send the final state

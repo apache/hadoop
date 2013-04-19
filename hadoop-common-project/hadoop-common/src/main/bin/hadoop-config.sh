@@ -158,10 +158,6 @@ fi
 # CLASSPATH initially contains $HADOOP_CONF_DIR
 CLASSPATH="${HADOOP_CONF_DIR}"
 
-if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ] && [ "$HADOOP_CLASSPATH" != "" ] ; then
-  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
-fi
-
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
@@ -181,11 +177,6 @@ if [ -d "$HADOOP_COMMON_HOME/$HADOOP_COMMON_LIB_JARS_DIR" ]; then
 fi
 
 CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/$HADOOP_COMMON_DIR'/*'
-
-# add user-specified CLASSPATH last
-if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; then
-  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
-fi
 
 # default log directory & file
 if [ "$HADOOP_LOG_DIR" = "" ]; then
@@ -284,4 +275,16 @@ if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$HADOOP_YARN_HOME/$YARN_DIR" ] ; then
   fi
 
   CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR'/*'
+fi
+
+# Add the user-specified CLASSPATH via HADOOP_CLASSPATH
+# Add it first or last depending on if user has
+# set env-var HADOOP_USER_CLASSPATH_FIRST
+if [ "$HADOOP_CLASSPATH" != "" ]; then
+  # Prefix it if its to be preceded
+  if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ]; then
+    CLASSPATH=${HADOOP_CLASSPATH}:${CLASSPATH}
+  else
+    CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
+  fi
 fi

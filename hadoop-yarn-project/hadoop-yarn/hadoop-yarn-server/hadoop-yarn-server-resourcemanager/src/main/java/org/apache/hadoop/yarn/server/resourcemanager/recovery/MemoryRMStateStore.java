@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -63,6 +65,11 @@ public class MemoryRMStateStore extends RMStateStore {
     ApplicationState appState = new ApplicationState(
                          appStateData.getSubmitTime(), 
                          appStateData.getApplicationSubmissionContext());
+    if (state.appState.containsKey(appState.getAppId())) {
+      Exception e = new IOException("App: " + appId + " is already stored.");
+      LOG.info("Error storing info for app: " + appId, e);
+      throw e;
+    }
     state.appState.put(appState.getAppId(), appState);
   }
 
@@ -79,6 +86,13 @@ public class MemoryRMStateStore extends RMStateStore {
         attemptState.getAttemptId().getApplicationId());
     assert appState != null;
 
+    if (appState.attempts.containsKey(attemptState.getAttemptId())) {
+      Exception e = new IOException("Attempt: " +
+          attemptState.getAttemptId() + " is already stored.");
+      LOG.info("Error storing info for attempt: " +
+          attemptState.getAttemptId(), e);
+      throw e;
+    }
     appState.attempts.put(attemptState.getAttemptId(), attemptState);
   }
 

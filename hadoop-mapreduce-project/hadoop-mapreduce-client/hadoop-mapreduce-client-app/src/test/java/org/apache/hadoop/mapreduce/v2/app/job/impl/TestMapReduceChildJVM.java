@@ -79,7 +79,8 @@ public class TestMapReduceChildJVM {
         public void handle(ContainerLauncherEvent event) {
           if (event.getType() == EventType.CONTAINER_REMOTE_LAUNCH) {
             ContainerRemoteLaunchEvent launchEvent = (ContainerRemoteLaunchEvent) event;
-            ContainerLaunchContext launchContext = launchEvent.getContainer();
+            ContainerLaunchContext launchContext =
+                launchEvent.getContainerLaunchContext();
             String cmdString = launchContext.getCommands().toString();
             LOG.info("launchContext " + cmdString);
             myCommandLine = cmdString;

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -138,8 +139,9 @@ public class TestRMAppTransitions {
         mock(ContainerAllocationExpirer.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
+    RMStateStore store = mock(RMStateStore.class);
     this.rmContext =
-        new RMContextImpl(rmDispatcher,
+        new RMContextImpl(rmDispatcher, store,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new ApplicationTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
@@ -176,6 +178,9 @@ public class TestRMAppTransitions {
     if(submissionContext == null) {
       submissionContext = new ApplicationSubmissionContextPBImpl();
     }
+    // applicationId will not be used because RMStateStore is mocked,
+    // but applicationId is still set for safety
+    submissionContext.setApplicationId(applicationId);
 
     RMApp application =
         new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
@@ -264,12 +269,36 @@ public class TestRMAppTransitions {
         diag.toString().matches(regex));
   }
 
-  protected RMApp testCreateAppSubmitted(
+  protected RMApp testCreateAppNewSaving(
       ApplicationSubmissionContext submissionContext) throws IOException {
   RMApp application = createNewTestApp(submissionContext);
-    // NEW => SUBMITTED event RMAppEventType.START
+    // NEW => NEW_SAVING event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
+    application.handle(event);
+    assertStartTimeSet(application);
+    assertAppState(RMAppState.NEW_SAVING, application);
+    return application;
+  }
+
+  protected RMApp testCreateAppSubmittedNoRecovery(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+  RMApp application = testCreateAppNewSaving(submissionContext);
+    // NEW_SAVING => SUBMITTED event RMAppEventType.APP_SAVED
+    RMAppEvent event =
+        new RMAppStoredEvent(application.getApplicationId(), null);
+    application.handle(event);
+    assertStartTimeSet(application);
+    assertAppState(RMAppState.SUBMITTED, application);
+    return application;
+  }
+
+  protected RMApp testCreateAppSubmittedRecovery(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+    RMApp application = createNewTestApp(submissionContext);
+    // NEW => SUBMITTED event RMAppEventType.RECOVER
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.RECOVER);
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
@@ -278,7 +307,7 @@ public class TestRMAppTransitions {
 
   protected RMApp testCreateAppAccepted(
       ApplicationSubmissionContext submissionContext) throws IOException {
-    RMApp application = testCreateAppSubmitted(submissionContext);
+    RMApp application = testCreateAppSubmittedNoRecovery(submissionContext);
   // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
@@ -375,7 +404,13 @@ public class TestRMAppTransitions {
         application.getDiagnostics().indexOf(diagMsg) != -1);
   }
 
-  @Test
+  @Test (timeout = 30000)
+  public void testAppRecoverPath() throws IOException {
+    LOG.info("--- START: testAppRecoverPath ---");
+    testCreateAppSubmittedRecovery(null);
+  }
+
+  @Test (timeout = 30000)
   public void testAppNewKill() throws IOException {
     LOG.info("--- START: testAppNewKill ---");
 
@@ -402,11 +437,38 @@ public class TestRMAppTransitions {
     assertFailed(application, rejectedText);
   }
 
-  @Test
+  @Test (timeout = 30000)
+  public void testAppNewSavingKill() throws IOException {
+    LOG.info("--- START: testAppNewSavingKill ---");
+
+    RMApp application = testCreateAppNewSaving(null);
+    // NEW_SAVING => KILLED event RMAppEventType.KILL
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    application.handle(event);
+    rmDispatcher.await();
+    assertKilled(application);
+  }
+
+  @Test (timeout = 30000)
+  public void testAppNewSavingReject() throws IOException {
+    LOG.info("--- START: testAppNewSavingReject ---");
+
+    RMApp application = testCreateAppNewSaving(null);
+    // NEW_SAVING => FAILED event RMAppEventType.APP_REJECTED
+    String rejectedText = "Test Application Rejected";
+    RMAppEvent event =
+        new RMAppRejectedEvent(application.getApplicationId(), rejectedText);
+    application.handle(event);
+    rmDispatcher.await();
+    assertFailed(application, rejectedText);
+  }
+
+  @Test (timeout = 30000)
   public void testAppSubmittedRejected() throws IOException {
     LOG.info("--- START: testAppSubmittedRejected ---");
 
-    RMApp application = testCreateAppSubmitted(null);
+    RMApp application = testCreateAppSubmittedNoRecovery(null);
     // SUBMITTED => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "app rejected";
     RMAppEvent event = 
@@ -419,7 +481,7 @@ public class TestRMAppTransitions {
   @Test
   public void testAppSubmittedKill() throws IOException, InterruptedException {
     LOG.info("--- START: testAppSubmittedKill---");
-    RMApp application = testCreateAppSubmitted(null);
+    RMApp application = testCreateAppSubmittedNoRecovery(null);
     // SUBMITTED => KILLED event RMAppEventType.KILL
     RMAppEvent event = new RMAppEvent(application.getApplicationId(),
         RMAppEventType.KILL);
@@ -570,7 +632,37 @@ public class TestRMAppTransitions {
         "", diag.toString());
   }
 
-  @Test
+  @Test (timeout = 30000)
+  public void testAppFailedFailed() throws IOException {
+    LOG.info("--- START: testAppFailedFailed ---");
+
+    RMApp application = testCreateAppNewSaving(null);
+
+    // NEW_SAVING => FAILED event RMAppEventType.APP_REJECTED
+    RMAppEvent event =
+        new RMAppRejectedEvent(application.getApplicationId(), "");
+    application.handle(event);
+    rmDispatcher.await();
+    assertTimesAtFinish(application);
+    assertAppState(RMAppState.FAILED, application);
+
+    // FAILED => FAILED event RMAppEventType.KILL
+    event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    application.handle(event);
+    rmDispatcher.await();
+    assertTimesAtFinish(application);
+    assertAppState(RMAppState.FAILED, application);
+
+    // FAILED => FAILED event RMAppEventType.APP_SAVED
+    event = new RMAppStoredEvent(application.getApplicationId(), null);
+    application.handle(event);
+    rmDispatcher.await();
+    assertTimesAtFinish(application);
+    assertAppState(RMAppState.FAILED, application);
+  }
+
+  @Test (timeout = 30000)
   public void testAppKilledKilled() throws IOException {
     LOG.info("--- START: testAppKilledKilled ---");
 
@@ -612,6 +704,13 @@ public class TestRMAppTransitions {
 
     // KILLED => KILLED event RMAppEventType.KILL
     event = new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    application.handle(event);
+    rmDispatcher.await();
+    assertTimesAtFinish(application);
+    assertAppState(RMAppState.KILLED, application);
+
+    // KILLED => KILLED event RMAppEventType.APP_SAVED
+    event = new RMAppStoredEvent(application.getApplicationId(), null);
     application.handle(event);
     rmDispatcher.await();
     assertTimesAtFinish(application);

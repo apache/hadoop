@@ -382,8 +382,6 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
-      LOG.info("The process " + pinfo.getPid()
-          + " may have finished in the interim.");
       return ret;
     }
 

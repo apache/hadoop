@@ -87,6 +87,9 @@ Release 2.0.5-beta - UNRELEASED
 
   NEW FEATURES
 
+    YARN-482. FS: Extend SchedulingMode to intermediate queues. 
+    (kkambatl via tucu)
+
   IMPROVEMENTS
 
     YARN-365. Change NM heartbeat handling to not generate a scheduler event
@@ -144,6 +147,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-495. Changed NM reboot behaviour to be a simple resync - kill all
     containers  and re-register with RM. (Jian He via vinodkv)
+
+    YARN-514. Delayed store operations should not result in RM unavailability
+    for app submission (Zhijie Shen via bikas)
 
   OPTIMIZATIONS
 
@@ -240,6 +246,15 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-500. Fixed YARN webapps to not roll-over ports when explicitly asked
     to use non-ephemeral ports. (Kenji Kikushima via vinodkv)
+
+    YARN-518. Fair Scheduler's document link could be added to the hadoop 2.x 
+    main doc page. (sandyr via tucu)
+
+    YARN-476. ProcfsBasedProcessTree info message confuses users. 
+    (sandyr via tucu)
+
+    YARN-585. Fix failure in TestFairScheduler#testNotAllowSubmitApplication
+    caused by YARN-514. (Zhijie Shen via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 

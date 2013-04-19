@@ -23,6 +23,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 
 import junit.framework.Assert;
@@ -46,6 +47,11 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl;
+import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
+import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
+import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -411,7 +417,40 @@ public class TestMRApp {
       TypeConverter.fromYarn(state);
     }
   }
-  
+
+  private Container containerObtainedByContainerLauncher;
+  @Test
+  public void testContainerPassThrough() throws Exception {
+    MRApp app = new MRApp(0, 1, true, this.getClass().getName(), true) {
+      @Override
+      protected ContainerLauncher createContainerLauncher(AppContext context) {
+        return new MockContainerLauncher() {
+          @Override
+          public void handle(ContainerLauncherEvent event) {
+            if (event instanceof ContainerRemoteLaunchEvent) {
+              containerObtainedByContainerLauncher =
+                  ((ContainerRemoteLaunchEvent) event).getAllocatedContainer();
+            }
+            super.handle(event);
+          }
+        };
+      };
+    };
+    Job job = app.submit(new Configuration());
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+
+    Collection<Task> tasks = job.getTasks().values();
+    Collection<TaskAttempt> taskAttempts =
+        tasks.iterator().next().getAttempts().values();
+    TaskAttemptImpl taskAttempt =
+        (TaskAttemptImpl) taskAttempts.iterator().next();
+    // Container from RM should pass through to the launcher. Container object
+    // should be the same.
+   Assert.assertTrue(taskAttempt.container 
+     == containerObtainedByContainerLauncher);
+  }
+
   private final class MRAppWithHistory extends MRApp {
     public MRAppWithHistory(int maps, int reduces, boolean autoComplete,
         String testName, boolean cleanOnStart, int startCount) {

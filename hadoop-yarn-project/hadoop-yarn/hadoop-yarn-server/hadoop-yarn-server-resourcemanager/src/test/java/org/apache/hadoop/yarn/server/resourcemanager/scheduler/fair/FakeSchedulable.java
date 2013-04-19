@@ -68,7 +68,7 @@ public class FakeSchedulable extends Schedulable {
   }
   
   @Override
-  public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
+  public Resource assignContainer(FSSchedulerNode node) {
     return null;
   }
 

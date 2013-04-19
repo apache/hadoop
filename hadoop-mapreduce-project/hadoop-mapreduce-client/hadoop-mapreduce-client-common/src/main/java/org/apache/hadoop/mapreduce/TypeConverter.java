@@ -392,6 +392,7 @@ public class TypeConverter {
       FinalApplicationStatus finalApplicationStatus) {
     switch (yarnApplicationState) {
     case NEW:
+    case NEW_SAVING:
     case SUBMITTED:
     case ACCEPTED:
       return State.PREP;
