@@ -78,27 +78,20 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
     // From INIT (ref == 0, awaiting req)
     .addTransition(ResourceState.INIT, ResourceState.DOWNLOADING,
         ResourceEventType.REQUEST, new FetchResourceTransition())
-    .addTransition(ResourceState.INIT, ResourceState.LOCALIZED,
-        ResourceEventType.LOCALIZED, new FetchDirectTransition())
-    .addTransition(ResourceState.INIT, ResourceState.INIT,
-        ResourceEventType.RELEASE, new ReleaseTransition())
 
     // From DOWNLOADING (ref > 0, may be localizing)
     .addTransition(ResourceState.DOWNLOADING, ResourceState.DOWNLOADING,
         ResourceEventType.REQUEST, new FetchResourceTransition()) // TODO: Duplicate addition!!
     .addTransition(ResourceState.DOWNLOADING, ResourceState.LOCALIZED,
         ResourceEventType.LOCALIZED, new FetchSuccessTransition())
-    .addTransition(ResourceState.DOWNLOADING,
-        EnumSet.of(ResourceState.DOWNLOADING, ResourceState.INIT),
-        ResourceEventType.RELEASE, new ReleasePendingTransition())
+    .addTransition(ResourceState.DOWNLOADING,ResourceState.DOWNLOADING,
+        ResourceEventType.RELEASE, new ReleaseTransition())
     .addTransition(ResourceState.DOWNLOADING, ResourceState.FAILED,
         ResourceEventType.LOCALIZATION_FAILED, new FetchFailedTransition())
 
     // From LOCALIZED (ref >= 0, on disk)
     .addTransition(ResourceState.LOCALIZED, ResourceState.LOCALIZED,
         ResourceEventType.REQUEST, new LocalizedResourceTransition())
-    .addTransition(ResourceState.LOCALIZED, ResourceState.LOCALIZED,
-        ResourceEventType.LOCALIZED)
     .addTransition(ResourceState.LOCALIZED, ResourceState.LOCALIZED,
         ResourceEventType.RELEASE, new ReleaseTransition())
     .installTopology();
@@ -230,14 +223,6 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
     }
   }
 
-  private static class FetchDirectTransition extends FetchSuccessTransition {
-    @Override
-    public void transition(LocalizedResource rsrc, ResourceEvent event) {
-      LOG.warn("Resource " + rsrc + " localized without listening container");
-      super.transition(rsrc, event);
-    }
-  }
-
   /**
    * Resource localized, notify waiting containers.
    */
@@ -302,19 +287,6 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       // Note: assumes that localizing container must succeed or fail
       ResourceReleaseEvent relEvent = (ResourceReleaseEvent) event;
       rsrc.release(relEvent.getContainer());
-    }
-  }
-
-  private static class ReleasePendingTransition implements
-      MultipleArcTransition<LocalizedResource,ResourceEvent,ResourceState> {
-    @Override
-    public ResourceState transition(LocalizedResource rsrc,
-        ResourceEvent event) {
-      ResourceReleaseEvent relEvent = (ResourceReleaseEvent) event;
-      rsrc.release(relEvent.getContainer());
-      return rsrc.ref.isEmpty()
-        ? ResourceState.INIT
-        : ResourceState.DOWNLOADING;
     }
   }
 }

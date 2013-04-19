@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -34,6 +35,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -306,5 +309,12 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   @Override
   public long nextUniqueNumber() {
     return uniqueNumberGenerator.incrementAndGet();
+  }
+
+  @VisibleForTesting
+  @Private
+  @Override
+  public LocalizedResource getLocalizedResource(LocalResourceRequest request) {
+    return localrsrc.get(request);
   }
 }
