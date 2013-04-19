@@ -90,6 +90,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-514. Delayed store operations should not result in RM unavailability
     for app submission (Zhijie Shen via bikas)
 
+    YARN-586. Fixed a typo in ApplicationSubmissionContext#setApplicationId.
+    (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
