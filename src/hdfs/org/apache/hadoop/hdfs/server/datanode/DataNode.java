@@ -929,7 +929,10 @@ public class DataNode extends Configured
     LOG.warn("checkDiskError: exception: ", e);  
     if (e instanceof SocketException || e instanceof SocketTimeoutException
     	  || e instanceof ClosedByInterruptException 
-    	  || e.getMessage().startsWith("Broken pipe")) {
+    	  || e.getMessage().startsWith("An established connection was aborted")
+    	  || e.getMessage().startsWith("Broken pipe")
+    	  || e.getMessage().startsWith("Connection reset")
+    	  || e.getMessage().contains("java.nio.channels.SocketChannel")) {
       LOG.info("Not checking disk as checkDiskError was called on a network" +
         " related exception");	
       return;
