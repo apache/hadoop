@@ -18,6 +18,9 @@ Release 0.23.8 - UNRELEASED
     HADOOP-9233. Cover package org.apache.hadoop.io.compress.zlib with unit
     tests (Vadim Bondarev via jlowe)
 
+    HADOOP-9469. mapreduce/yarn source jars not included in dist tarball
+    (Robert Parker via tgraves)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
