@@ -273,7 +273,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
     minimumDataNodeVersion = conf.get(
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY,
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_DEFAULT);
-  }
+
+    // Set terse exception whose stack trace won't be logged
+    this.clientRpcServer.addTerseExceptions(SafeModeException.class);
+ }
   
   /**
    * Start client and service RPC servers.
