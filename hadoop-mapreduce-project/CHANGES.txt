@@ -21,6 +21,9 @@ Release 0.23.8 - UNRELEASED
     MAPREDUCE-4383. HadoopPipes.cc needs to include unistd.h.
     (Andy Isaacson via tgraves)
 
+    MAPREDUCE-5147. Maven build should create 
+    hadoop-mapreduce-client-app-VERSION.jar directly (Robert Parker via tgraves)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
