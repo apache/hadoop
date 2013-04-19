@@ -165,6 +165,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-4932. mapreduce.job#getTaskCompletionEvents incompatible with 
     Hadoop 1. (rkanter via tucu)
 
+    MAPREDUCE-5163. Update MR App to not use API utility methods for collections
+    after YARN-441. (Xuan Gong via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

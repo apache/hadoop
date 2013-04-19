@@ -491,7 +491,7 @@ public class TestContainerManagerSecurity {
         .getAllocatedContainers();
 
     // Modify ask to request no more.
-    allocateRequest.clearAsks();
+    allocateRequest.setAskList(new ArrayList<ResourceRequest>());
 
     int waitCounter = 0;
     while ((allocatedContainers == null || allocatedContainers.size() == 0)

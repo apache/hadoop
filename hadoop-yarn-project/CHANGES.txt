@@ -21,6 +21,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-444. Moved special container exit codes from YarnConfiguration to API
     where they belong. (Sandy Ryza via vinodkv)
 
+    YARN-441. Removed unused utility methods for collections from two API
+    records. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
