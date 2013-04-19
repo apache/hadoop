@@ -15,6 +15,9 @@ Release 0.23.8 - UNRELEASED
     YARN-476. ProcfsBasedProcessTree info message confuses users. 
     (sandyr via tucu)
 
+    YARN-71. Fix the NodeManager to clean up local-dirs on restart.
+    (Xuan Gong via sseth)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
