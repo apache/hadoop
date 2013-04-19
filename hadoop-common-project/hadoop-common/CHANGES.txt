@@ -161,7 +161,10 @@ Trunk (Unreleased)
 
     HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
 
-	HADOOP-9258 Add stricter tests to FileSystemContractTestBase (stevel)
+    HADOOP-9258 Add stricter tests to FileSystemContractTestBase (stevel)
+
+    HADOOP-9486. Promoted Windows and Shell related utils from YARN to Hadoop
+    Common. (Chris Nauroth via vinodkv)
 
   BUG FIXES
 
