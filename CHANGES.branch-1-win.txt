@@ -368,3 +368,7 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH
     is PREpended instead of APpended. (Chris Nauroth and harsh via harsh)
+
+    MAPREDUCE-5161. Merge MAPREDUCE-1806 from branch-1 to branch-1-win.
+    CombineFileInputFormat fix for paths not on default FS (Chris Nauroth via
+    bikas)

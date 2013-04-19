@@ -194,7 +194,7 @@ public abstract class CombineFileInputFormat<K, V>
           continue;
         }
         FileSystem fs = paths[i].getFileSystem(job);
-        Path p = new Path(paths[i].toUri().getPath());
+        Path p = fs.makeQualified(paths[i]);
         if (onepool.accept(p)) {
           myPaths.add(paths[i]); // add it to my output set
           paths[i] = null;       // already processed
