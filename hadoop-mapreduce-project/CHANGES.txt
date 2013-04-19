@@ -134,6 +134,10 @@ Trunk (Unreleased)
     MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
     Nauroth via bikas)
 
+    MAPREDUCE-4987. TestMRJobs#testDistributedCache fails on Windows due to
+    classpath problems and unexpected behavior of symlinks (Chris Nauroth via
+    bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     MAPREDUCE-4739. Some MapReduce tests fail to find winutils.
