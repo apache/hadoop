@@ -6,6 +6,8 @@ Trunk (Unreleased)
 
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
+    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
