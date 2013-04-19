@@ -45,43 +45,11 @@ public interface StartContainerResponse {
   Map<String, ByteBuffer> getAllServiceResponse();
 
   /**
-   * Get the response from a single auxiliary service running on the
-   * <code>NodeManager</code>
-   * 
-   * @param key The auxiliary service name whose response is desired.
-   * @return The opaque blob <code>ByteBuffer</code> returned by the auxiliary
-   * service.
-   */
-  ByteBuffer getServiceResponse(String key);
-
-  /**
-   * Add to the list of auxiliary services which have been started on the
+   * Set to the list of auxiliary services which have been started on the
    * <code>NodeManager</code>. This is done only once when the
    * <code>NodeManager</code> starts up
-   * @param serviceResponse A map from auxiliary service names to the opaque
+   * @param serviceResponses A map from auxiliary service names to the opaque
    * blob <code>ByteBuffer</code>s for that auxiliary service
    */
-  void addAllServiceResponse(Map<String, ByteBuffer> serviceResponse);
-
-  /**
-   * Add to the list of auxiliary services which have been started on the
-   * <code>NodeManager</code>. This is done only once when the
-   * <code>NodeManager</code> starts up
-   * 
-   * @param key The auxiliary service name
-   * @param value The opaque blob <code>ByteBuffer</code> managed by the
-   * auxiliary service
-   */
-  void setServiceResponse(String key, ByteBuffer value);
-
-  /**
-   * Remove a single auxiliary service from the StartContainerResponse object
-   * @param key The auxiliary service to remove
-   */
-  void removeServiceResponse(String key);
-  
-  /**
-   * Remove all the auxiliary services from the StartContainerResponse object
-   */
-  void clearServiceResponse();
+  void setAllServiceResponse(Map<String, ByteBuffer> serviceResponses);
 }

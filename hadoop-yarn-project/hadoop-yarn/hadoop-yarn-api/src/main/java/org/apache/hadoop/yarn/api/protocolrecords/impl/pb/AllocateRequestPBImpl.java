@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -144,14 +143,13 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     return this.ask;
   }
   @Override
-  public ResourceRequest getAsk(int index) {
+  public void setAskList(final List<ResourceRequest> resourceRequests) {
+    if(resourceRequests == null) {
+      return;
+    }
     initAsks();
-    return this.ask.get(index);
-  }
-  @Override
-  public int getAskCount() {
-    initAsks();
-    return this.ask.size();
+    this.ask.clear();
+    this.ask.addAll(resourceRequests);
   }
   
   private void initAsks() {
@@ -165,14 +163,6 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     for (ResourceRequestProto c : list) {
       this.ask.add(convertFromProtoFormat(c));
     }
-  }
-  
-  @Override
-  public void addAllAsks(final List<ResourceRequest> ask) {
-    if (ask == null)
-      return;
-    initAsks();
-    this.ask.addAll(ask);
   }
   
   private void addAsksToProto() {
@@ -209,34 +199,18 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     builder.addAllAsk(iterable);
   }
   @Override
-  public void addAsk(ResourceRequest ask) {
-    initAsks();
-    this.ask.add(ask);
-  }
-  @Override
-  public void removeAsk(int index) {
-    initAsks();
-    this.ask.remove(index);
-  }
-  @Override
-  public void clearAsks() {
-    initAsks();
-    this.ask.clear();
-  }
-  @Override
   public List<ContainerId> getReleaseList() {
     initReleases();
     return this.release;
   }
   @Override
-  public ContainerId getRelease(int index) {
+  public void setReleaseList(List<ContainerId> releaseContainers) {
+    if(releaseContainers == null) {
+      return;
+    }
     initReleases();
-    return this.release.get(index);
-  }
-  @Override
-  public int getReleaseCount() {
-    initReleases();
-    return this.release.size();
+    this.release.clear();
+    this.release.addAll(releaseContainers);
   }
   
   private void initReleases() {
@@ -250,14 +224,6 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
     for (ContainerIdProto c : list) {
       this.release.add(convertFromProtoFormat(c));
     }
-  }
-  
-  @Override
-  public void addAllReleases(final List<ContainerId> release) {
-    if (release == null)
-      return;
-    initReleases();
-    this.release.addAll(release);
   }
   
   private void addReleasesToProto() {
@@ -292,21 +258,6 @@ public class AllocateRequestPBImpl extends ProtoBase<AllocateRequestProto> imple
       }
     };
     builder.addAllRelease(iterable);
-  }
-  @Override
-  public void addRelease(ContainerId release) {
-    initReleases();
-    this.release.add(release);
-  }
-  @Override
-  public void removeRelease(int index) {
-    initReleases();
-    this.release.remove(index);
-  }
-  @Override
-  public void clearReleases() {
-    initReleases();
-    this.release.clear();
   }
 
   private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
