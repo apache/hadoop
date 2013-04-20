@@ -372,3 +372,7 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     MAPREDUCE-5161. Merge MAPREDUCE-1806 from branch-1 to branch-1-win.
     CombineFileInputFormat fix for paths not on default FS (Chris Nauroth via
     bikas)
+
+    MAPREDUCE-5066. Added a timeout for the job.end.notification.url.
+    (Ivan Mitic via acmurthy)
+
