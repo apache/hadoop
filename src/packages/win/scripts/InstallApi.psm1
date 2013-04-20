@@ -632,7 +632,9 @@ function UpdateXmlConfig(
     [parameter( Position=1 )]
     $config = @{} )
 {
-    $xml = [xml] (Get-Content $fileName)
+    $xml = New-Object System.Xml.XmlDocument
+    $xml.PreserveWhitespace = $true
+    $xml.Load($fileName)
 
     foreach( $key in empty-null $config.Keys )
     {
@@ -641,12 +643,17 @@ function UpdateXmlConfig(
         $xml.SelectNodes('/configuration/property') | ? { $_.name -eq $key } | % { $_.value = $value; $found = $True }
         if ( -not $found )
         {
+            $xml["configuration"].AppendChild($xml.CreateWhitespace("`r`n  ")) | Out-Null
             $newItem = $xml.CreateElement("property")
+            $newItem.AppendChild($xml.CreateWhitespace("`r`n    ")) | Out-Null
             $newItem.AppendChild($xml.CreateElement("name")) | Out-Null
+            $newItem.AppendChild($xml.CreateWhitespace("`r`n    ")) | Out-Null
             $newItem.AppendChild($xml.CreateElement("value")) | Out-Null
+            $newItem.AppendChild($xml.CreateWhitespace("`r`n  ")) | Out-Null
             $newItem.name = $key
             $newItem.value = $value
             $xml["configuration"].AppendChild($newItem) | Out-Null
+            $xml["configuration"].AppendChild($xml.CreateWhitespace("`r`n")) | Out-Null
         }
     }
     
@@ -682,17 +689,24 @@ function AclFoldersForUser(
             throw "AclFoldersForUser: Trying to ACLs the folder $key which is not defined in $xmlFileName"
         }
         
-        ### TODO: Support for JBOD and NN Replication
-        $folderParent = Split-Path $folderName -parent
-
-        if( -not (Test-Path $folderParent))
+        try
         {
-            Write-Log "AclFoldersForUser: Creating Directory `"$folderParent`" for ACLing"
-            mkdir $folderParent
+            ### TODO: Support for JBOD and NN Replication
+            $folderParent = Split-Path $folderName -parent
+
+            if( -not (Test-Path $folderParent))
+            {
+                Write-Log "AclFoldersForUser: Creating Directory `"$folderParent`" for ACLing"
+                mkdir $folderParent
             
-            ### TODO: ACL only if the folder does not exist. Otherwise, assume that
-            ### it is ACLed properly.
-            GiveFullPermissions $folderParent $username
+                ### TODO: ACL only if the folder does not exist. Otherwise, assume that
+                ### it is ACLed properly.
+                GiveFullPermissions $folderParent $username
+            }
+        }
+        catch
+        {
+            Write-Log "AclFoldersForUser: Skipped folder `"$folderName`", with exception: $_.Exception.ToString()"
         }
     }
     

@@ -146,7 +146,8 @@ function Main( $scriptDir )
     ###
     Install "MapReduce" $NodeInstallRoot $serviceCredential $mapRedRoles
     Configure "MapReduce" $NodeInstallRoot $serviceCredential @{
-        "mapred.local.dir" = "$ENV:HDFS_DATA_DIR\mapred\local"}
+        "mapred.local.dir" = "$ENV:HDFS_DATA_DIR\mapred\local";
+        "mapred.job.tracker.history.completed.location" = "/mapred/history/done"}
 
     Write-Log "Install of Hadoop Core, HDFS, MapRed completed successfully"
 }

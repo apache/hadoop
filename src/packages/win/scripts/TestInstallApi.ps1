@@ -282,8 +282,8 @@ function ValidateXmlConfigValue($xmlFileName, $key, $expectedValue)
 function TestUpdateXmlConfig()
 {
     $xmlTemplate = "<?xml version=`"1.0`"?>`
-    <configuration>`
-    </configuration>"
+<configuration>`
+</configuration>"
     $testFile = Join-Path $ScriptDir "testFile.xml"
     write-output $xmlTemplate | out-file -encoding ascii $testFile
     
@@ -306,6 +306,27 @@ function TestUpdateXmlConfig()
     ValidateXmlConfigValue $testFile "key3" "value3"
 }
 
+function TestUpdateXmlConfigPreserveSpace()
+{
+    $xmlTemplate = "<?xml version=`"1.0`"?>`
+<configuration>`
+  <property>`
+    <name>test</name>`
+    <value> </value>`
+  </property>`
+</configuration>"
+    $testFile = Join-Path $ScriptDir "testFile.xml"
+    write-output $xmlTemplate | out-file -encoding ascii $testFile
+    [string]$original = Get-Content $testFile
+    
+    ### Run xml thru UpdateXmlConfig
+    UpdateXmlConfig $testFile
+    
+    ### Verify that the spaces are preserved
+    [string]$new = Get-Content $testFile
+    Assert "TestUpdateXmlConfigPreserveSpace: Spaces should be preserved" ( $original -eq $new )
+}
+
 function CoreConfigureTestBasic()
 {
     Install "Core" $NodeInstallRoot $ServiceCredential ""
@@ -318,12 +339,12 @@ function CoreConfigureTestBasic()
     
     ### Change Hadoop core configuration
     Configure "Core" $NodeInstallRoot $ServiceCredential @{
-        "fs.checkpoint.dir" = "$NodeInstallRoot\hdfs\2nn";
+        "fs.checkpoint.dir" = "x:\hdfs\2nn"; ### should pass for a drive that does not exist
         "fs.checkpoint.edits.dir" = "$NodeInstallRoot\hdfs\2nn";
         "fs.default.name" = "asv://host:8000"}
     
     ### Verify that the update took place
-    ValidateXmlConfigValue $coreSiteXml "fs.checkpoint.dir" "$NodeInstallRoot\hdfs\2nn"
+    ValidateXmlConfigValue $coreSiteXml "fs.checkpoint.dir" "x:\hdfs\2nn"
     ValidateXmlConfigValue $coreSiteXml "fs.checkpoint.edits.dir" "$NodeInstallRoot\hdfs\2nn"
     ValidateXmlConfigValue $coreSiteXml "fs.default.name" "asv://host:8000"
     
@@ -536,6 +557,7 @@ try
     ###
     ### Test methods
     ###
+
     CoreInstallTestBasic
     CoreInstallTestIdempotent
     HdfsInstallTestBasic
@@ -549,6 +571,7 @@ try
     InstallAllTestBasic
     InstallAllTestIdempotent
     TestUpdateXmlConfig
+    TestUpdateXmlConfigPreserveSpace
     CoreConfigureTestBasic
     CoreConfigureWithFileTestBasic
     InstallAndConfigAllTestBasic

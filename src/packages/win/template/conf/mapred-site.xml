@@ -39,12 +39,6 @@
   </property>
 
   <property>
-    <name>mapred.job.tracker.history.completed.location</name>
-    <value>/mapred/history/done</value>
-    <description>No description</description>
-  </property>
-
-  <property>
     <name>mapreduce.history.server.embedded</name>
     <value>false</value>
     <description>Should job history server be embedded within Job tracker process</description>
