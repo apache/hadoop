@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -73,8 +72,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
 
-  public static final String CONTAINER_SCRIPT =
-    Shell.appendScriptExtension("launch_container");
+  public static final String CONTAINER_SCRIPT = Shell.WINDOWS ?
+    "launch_container.cmd" : "launch_container.sh";
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
 
   private static final String PID_FILE_NAME_FMT = "%s.pid";
@@ -212,7 +211,7 @@ public class ContainerLaunch implements Callable<Integer> {
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
 
         // Sanitize the container's environment
-        sanitizeEnv(environment, containerWorkDir, appDirs, localResources);
+        sanitizeEnv(environment, containerWorkDir, appDirs);
         
         // Write out the environment
         writeLaunchEnv(containerScriptOutStream, environment, localResources,
@@ -507,17 +506,9 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     protected void link(Path src, Path dst) throws IOException {
-      File srcFile = new File(src.toUri().getPath());
-      String srcFileStr = srcFile.getPath();
-      String dstFileStr = new File(dst.toString()).getPath();
-      // If not on Java7+ on Windows, then copy file instead of symlinking.
-      // See also FileUtil#symLink for full explanation.
-      if (!Shell.isJava7OrAbove() && srcFile.isFile()) {
-        line(String.format("@copy \"%s\" \"%s\"", srcFileStr, dstFileStr));
-      } else {
-        line(String.format("@%s symlink \"%s\" \"%s\"", Shell.WINUTILS,
-          dstFileStr, srcFileStr));
-      }
+      line(String.format("@%s symlink \"%s\" \"%s\"", Shell.WINUTILS,
+        new File(dst.toString()).getPath(),
+        new File(src.toUri().getPath()).getPath()));
     }
 
     @Override
@@ -541,8 +532,7 @@ public class ContainerLaunch implements Callable<Integer> {
   }
   
   public void sanitizeEnv(Map<String, String> environment, 
-      Path pwd, List<Path> appDirs, Map<Path, List<String>> resources)
-      throws IOException {
+      Path pwd, List<Path> appDirs) throws IOException {
     /**
      * Non-modifiable environment variables
      */
@@ -576,6 +566,16 @@ public class ContainerLaunch implements Callable<Integer> {
       environment.put("JVM_PID", "$$");
     }
 
+    // TODO: Remove Windows check and use this approach on all platforms after
+    // additional testing.  See YARN-358.
+    if (Shell.WINDOWS) {
+      String inputClassPath = environment.get(Environment.CLASSPATH.name());
+      if (inputClassPath != null && !inputClassPath.isEmpty()) {
+        environment.put(Environment.CLASSPATH.name(),
+            FileUtil.createJarWithClassPath(inputClassPath, pwd));
+      }
+    }
+
     /**
      * Modifiable environment variables
      */
@@ -594,57 +594,6 @@ public class ContainerLaunch implements Callable<Integer> {
         YarnConfiguration.NM_ADMIN_USER_ENV,
         YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV)
     );
-
-    // TODO: Remove Windows check and use this approach on all platforms after
-    // additional testing.  See YARN-358.
-    if (Shell.WINDOWS) {
-      String inputClassPath = environment.get(Environment.CLASSPATH.name());
-      if (inputClassPath != null && !inputClassPath.isEmpty()) {
-        StringBuilder newClassPath = new StringBuilder(inputClassPath);
-
-        // Localized resources do not exist at the desired paths yet, because the
-        // container launch script has not run to create symlinks yet.  This
-        // means that FileUtil.createJarWithClassPath can't automatically expand
-        // wildcards to separate classpath entries for each file in the manifest.
-        // To resolve this, append classpath entries explicitly for each
-        // resource.
-        for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
-          boolean targetIsDirectory = new File(entry.getKey().toUri().getPath())
-            .isDirectory();
-
-          for (String linkName : entry.getValue()) {
-            // Append resource.
-            newClassPath.append(File.pathSeparator).append(pwd.toString())
-              .append(Path.SEPARATOR).append(linkName);
-
-            // FileUtil.createJarWithClassPath must use File.toURI to convert
-            // each file to a URI to write into the manifest's classpath.  For
-            // directories, the classpath must have a trailing '/', but
-            // File.toURI only appends the trailing '/' if it is a directory that
-            // already exists.  To resolve this, add the classpath entries with
-            // explicit trailing '/' here for any localized resource that targets
-            // a directory.  Then, FileUtil.createJarWithClassPath will guarantee
-            // that the resulting entry in the manifest's classpath will have a
-            // trailing '/', and thus refer to a directory instead of a file.
-            if (targetIsDirectory) {
-              newClassPath.append(Path.SEPARATOR);
-            }
-          }
-        }
-
-        // When the container launches, it takes the parent process's environment
-        // and then adds/overwrites with the entries from the container launch
-        // context.  Do the same thing here for correct substitution of
-        // environment variables in the classpath jar manifest.
-        Map<String, String> mergedEnv = new HashMap<String, String>(
-          System.getenv());
-        mergedEnv.putAll(environment);
-
-        String classPathJar = FileUtil.createJarWithClassPath(
-          newClassPath.toString(), pwd, mergedEnv);
-        environment.put(Environment.CLASSPATH.name(), classPathJar);
-      }
-    }
   }
     
   static void writeLaunchEnv(OutputStream out,

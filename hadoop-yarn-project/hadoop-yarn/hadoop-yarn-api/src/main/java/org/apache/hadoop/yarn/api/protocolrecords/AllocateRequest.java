@@ -20,8 +20,10 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -118,16 +120,36 @@ public interface AllocateRequest {
   @Stable
   List<ResourceRequest> getAskList();
   
+  @Private
+  @Unstable
+  ResourceRequest getAsk(int index);
+  
+  @Private
+  @Unstable
+  int getAskCount();
+  
   /**
-   * Set list of <code>ResourceRequest</code> to update the
+   * Add list of <code>ResourceRequest</code> to update the 
    * <code>ResourceManager</code> about the application's resource requirements.
-   * @param resourceRequests list of <code>ResourceRequest</code> to update the 
+   * @param resourceRequest list of <code>ResourceRequest</code> to update the 
    *                        <code>ResourceManager</code> about the application's 
    *                        resource requirements
    */
   @Public
   @Stable
-  void setAskList(List<ResourceRequest> resourceRequests);
+  void addAllAsks(List<ResourceRequest> resourceRequest);
+
+  @Private
+  @Unstable
+  void addAsk(ResourceRequest request);
+
+  @Private
+  @Unstable
+  void removeAsk(int index);
+
+  @Private
+  @Unstable
+  void clearAsks();
 
   /**
    * Get the list of <code>ContainerId</code> of containers being 
@@ -138,9 +160,17 @@ public interface AllocateRequest {
   @Public
   @Stable
   List<ContainerId> getReleaseList();
+  
+  @Private
+  @Unstable
+  ContainerId getRelease(int index);
+  
+  @Private
+  @Unstable
+  int getReleaseCount();
 
   /**
-   * Set the list of <code>ContainerId</code> of containers being
+   * Add the list of <code>ContainerId</code> of containers being 
    * released by the <code>ApplicationMaster</code>
    * @param releaseContainers list of <code>ContainerId</code> of 
    *                          containers being released by the <
@@ -148,5 +178,17 @@ public interface AllocateRequest {
    */
   @Public
   @Stable
-  void setReleaseList(List<ContainerId> releaseContainers);
+  void addAllReleases(List<ContainerId> releaseContainers);
+  
+  @Private
+  @Unstable
+  void addRelease(ContainerId container);
+  
+  @Private
+  @Unstable
+  void removeRelease(int index);
+  
+  @Private
+  @Unstable
+  void clearReleases();
 }

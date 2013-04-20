@@ -474,10 +474,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
 
   /** Set the children list to null. */
   public void clearChildren() {
-    if (children != null) {
-      this.children.clear();
-      this.children = null;
-    }
+    this.children = null;
   }
 
   @Override

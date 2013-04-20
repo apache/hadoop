@@ -393,8 +393,8 @@ public class BuilderUtils {
     allocateRequest.setApplicationAttemptId(applicationAttemptId);
     allocateRequest.setResponseId(responseID);
     allocateRequest.setProgress(appProgress);
-    allocateRequest.setAskList(resourceAsk);
-    allocateRequest.setReleaseList(containersToBeReleased);
+    allocateRequest.addAllAsks(resourceAsk);
+    allocateRequest.addAllReleases(containersToBeReleased);
     return allocateRequest;
   }
   

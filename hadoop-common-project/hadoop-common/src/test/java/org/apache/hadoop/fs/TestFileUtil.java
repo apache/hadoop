@@ -755,13 +755,11 @@ public class TestFileUtil {
 
     // create classpath jar
     String wildcardPath = tmp.getCanonicalPath() + File.separator + "*";
-    String nonExistentSubdir = tmp.getCanonicalPath() + Path.SEPARATOR + "subdir"
-      + Path.SEPARATOR;
     List<String> classPaths = Arrays.asList("cp1.jar", "cp2.jar", wildcardPath,
-      "cp3.jar", nonExistentSubdir);
+      "cp3.jar");
     String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
     String classPathJar = FileUtil.createJarWithClassPath(inputClassPath,
-      new Path(tmp.getCanonicalPath()), System.getenv());
+      new Path(tmp.getCanonicalPath()));
 
     // verify classpath by reading manifest from jar file
     JarFile jarFile = null;
@@ -776,20 +774,15 @@ public class TestFileUtil {
       Assert.assertNotNull(classPathAttr);
       List<String> expectedClassPaths = new ArrayList<String>();
       for (String classPath: classPaths) {
-        if (wildcardPath.equals(classPath)) {
+        if (!wildcardPath.equals(classPath)) {
+          expectedClassPaths.add(new File(classPath).toURI().toURL()
+            .toExternalForm());
+        } else {
           // add wildcard matches
           for (File wildcardMatch: wildcardMatches) {
             expectedClassPaths.add(wildcardMatch.toURI().toURL()
               .toExternalForm());
           }
-        } else if (nonExistentSubdir.equals(classPath)) {
-          // expect to maintain trailing path separator if present in input, even
-          // if directory doesn't exist yet
-          expectedClassPaths.add(new File(classPath).toURI().toURL()
-            .toExternalForm() + Path.SEPARATOR);
-        } else {
-          expectedClassPaths.add(new File(classPath).toURI().toURL()
-            .toExternalForm());
         }
       }
       List<String> actualClassPaths = Arrays.asList(classPathAttr.split(" "));

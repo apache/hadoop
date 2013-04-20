@@ -912,7 +912,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
-  @Override
+  
   public void checkOperation(OperationCategory op) throws StandbyException {
     if (haContext != null) {
       // null in some unit tests
@@ -1217,14 +1217,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot set permission for " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       dir.setPermission(src, permission);
       resultingStat = getAuditFileInfo(src, false);
@@ -1256,14 +1254,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot set owner for " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
@@ -1359,7 +1355,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws FileNotFoundException,
       UnresolvedLinkException, IOException {
     FSPermissionChecker pc = getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     for (int attempt = 0; attempt < 2; attempt++) {
       boolean isReadOp = (attempt == 0);
       if (isReadOp) { // first attempt is with readlock
@@ -1369,7 +1364,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkOperation(OperationCategory.WRITE);
         writeLock(); // writelock is needed to set accesstime
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       try {
         if (isReadOp) {
           checkOperation(OperationCategory.READ);
@@ -1419,8 +1413,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Moves all the blocks from srcs and appends them to trg
    * To avoid rollbacks we will verify validitity of ALL of the args
    * before we start actual move.
-   * 
-   * This does not support ".inodes" relative path
    * @param target
    * @param srcs
    * @throws IOException
@@ -1611,14 +1603,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot set times " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
 
       // Write access is required to set access and modification times
       if (isPermissionEnabled) {
@@ -1645,10 +1635,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       PermissionStatus dirPerms, boolean createParent) 
       throws IOException, UnresolvedLinkException {
     if (!DFSUtil.isValidName(link)) {
-      throw new InvalidPathException("Invalid link name: " + link);
-    }
-    if (FSDirectory.isReservedName(target)) {
-      throw new InvalidPathException("Invalid target name: " + target);
+      throw new InvalidPathException("Invalid file name: " + link);
     }
     try {
       createSymlinkInt(target, link, dirPerms, createParent);
@@ -1668,14 +1655,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(link);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot create symlink " + link, safeMode);
       }
-      link = FSDirectory.resolvePath(link, pathComponents, dir);
       if (!createParent) {
         verifyParentDir(link);
       }
@@ -1722,20 +1707,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private boolean setReplicationInt(String src, final short replication)
+  private boolean setReplicationInt(final String src, final short replication)
       throws IOException {
     blockManager.verifyReplication(src, replication, null);
     final boolean isFile;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot set replication for " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       if (isPermissionEnabled) {
         checkPathAccess(pc, src, FsAction.WRITE);
       }
@@ -1761,11 +1744,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(filename);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      filename = FSDirectory.resolvePath(filename, pathComponents, dir);
       if (isPermissionEnabled) {
         checkTraverse(pc, filename);
       }
@@ -1838,14 +1819,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final HdfsFileStatus stat;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot create file" + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       startFileInternal(pc, src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize);
       stat = dir.getFileInfo(src, false);
@@ -1888,6 +1863,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       AccessControlException, UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
     assert hasWriteLock();
+    checkOperation(OperationCategory.WRITE);
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot create file" + src, safeMode);
+    }
     // Verify that the destination does not exist as a directory already.
     final INodesInPath iip = dir.getINodesInPath4Write(src);
     final INode inode = iip.getLastINode();
@@ -2024,7 +2003,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean skipSync = false;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2032,7 +2010,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException(
             "Cannot recover the lease of " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
       if (!inode.isUnderConstruction()) {
         return true;
@@ -2150,11 +2127,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: src=" + src
-          + ", holder=" + holder
-          + ", clientMachine=" + clientMachine);
-    }
     boolean skipSync = false;
     if (!supportAppends) {
       throw new UnsupportedOperationException(
@@ -2173,14 +2145,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LocatedBlock lb = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot append to file" + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       lb = startFileInternal(pc, src, null, holder, clientMachine, 
                         EnumSet.of(CreateFlag.APPEND), 
                         false, blockManager.maxReplication, 0);
@@ -2244,11 +2210,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // Part I. Analyze the state of the file with respect to the input data.
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       final INode[] inodes = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock).getINodes();
@@ -2420,7 +2384,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /** @see NameNode#getAdditionalDatanode(String, ExtendedBlock, DatanodeInfo[], DatanodeInfo[], int, String) */
-  LocatedBlock getAdditionalDatanode(String src, final ExtendedBlock blk,
+  LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
       final DatanodeInfo[] existings,  final HashMap<Node, Node> excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
@@ -2431,7 +2395,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final long preferredblocksize;
     final List<DatanodeDescriptor> chosen;
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2440,7 +2403,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot add datanode; src=" + src
             + ", blk=" + blk, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
 
       //check lease
       final INodeFileUnderConstruction file = checkLease(src, clientName);
@@ -2480,7 +2442,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + "of file " + src);
     }
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2488,8 +2449,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot abandon block " + b +
                                     " for fle" + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-
       //
       // Remove the block from the pending creates list
       //
@@ -2561,16 +2520,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkBlock(last);
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot complete file " + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-      success = completeFileInternal(src, holder, 
-        ExtendedBlock.getLocalBlock(last));
+      success = completeFileInternal(src, holder,
+          ExtendedBlock.getLocalBlock(last));
     } finally {
       writeUnlock();
     }
@@ -2584,6 +2537,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String holder, Block last) throws SafeModeException,
       UnresolvedLinkException, IOException {
     assert hasWriteLock();
+    checkOperation(OperationCategory.WRITE);
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot complete file " + src, safeMode);
+    }
+
     final INodesInPath iip = dir.getLastINodeInPath(src);
     final INodeFileUnderConstruction pendingFile;
     try {
@@ -2729,19 +2687,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     boolean status = false;
     HdfsFileStatus resultingStat = null;
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot rename " + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, srcComponents, dir);
-      dst = FSDirectory.resolvePath(dst, dstComponents, dir);
-      checkOperation(OperationCategory.WRITE);
       status = renameToInternal(pc, src, dst);
       if (status) {
         resultingStat = getAuditFileInfo(dst, false);
@@ -2761,6 +2710,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private boolean renameToInternal(FSPermissionChecker pc, String src, String dst)
     throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
+      checkOperation(OperationCategory.WRITE);
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot rename " + src, safeMode);
+    }
     if (isPermissionEnabled) {
       //We should not be doing this.  This is move() not renameTo().
       //but for now,
@@ -2791,17 +2744,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     HdfsFileStatus resultingStat = null;
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot rename " + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, srcComponents, dir);
-      dst = FSDirectory.resolvePath(dst, dstComponents, dir);
       renameToInternal(pc, src, dst, options);
       resultingStat = getAuditFileInfo(dst, false);
     } finally {
@@ -2820,6 +2765,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void renameToInternal(FSPermissionChecker pc, String src, String dst,
       Options.Rename... options) throws IOException {
     assert hasWriteLock();
+    checkOperation(OperationCategory.WRITE);
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot rename " + src, safeMode);
+    }
     if (isPermissionEnabled) {
       checkParentAccess(pc, src, FsAction.WRITE);
       checkAncestorAccess(pc, dst, FsAction.WRITE);
@@ -2880,14 +2829,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot delete " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       if (!recursive && dir.isNonEmptyDirectory(src)) {
         throw new IOException(src + " is non empty");
       }
@@ -3014,14 +2961,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     HdfsFileStatus stat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
-    if (!DFSUtil.isValidName(src)) {
-      throw new InvalidPathException("Invalid file name: " + src);
-    }
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       if (isPermissionEnabled) {
         checkTraverse(pc, src);
       }
@@ -3086,16 +3028,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     HdfsFileStatus resultingStat = null;
     boolean status = false;
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);   
-      if (isInSafeMode()) {
-        throw new SafeModeException("Cannot create directory " + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       status = mkdirsInternal(pc, src, permissions, createParent);
       if (status) {
         resultingStat = dir.getFileInfo(src, false);
@@ -3117,6 +3053,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       PermissionStatus permissions, boolean createParent) 
       throws IOException, UnresolvedLinkException {
     assert hasWriteLock();
+    checkOperation(OperationCategory.WRITE);   
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot create directory " + src, safeMode);
+    }
     if (isPermissionEnabled) {
       checkTraverse(pc, src);
     }
@@ -3147,11 +3087,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       FileNotFoundException, UnresolvedLinkException, StandbyException {
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, FsAction.READ_EXECUTE);
       }
@@ -3165,8 +3103,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Set the namespace quota and diskspace quota for a directory.
    * See {@link ClientProtocol#setQuota(String, long, long)} for the 
    * contract.
-   * 
-   * Note: This does not support ".inodes" relative path.
    */
   void setQuota(String path, long nsQuota, long dsQuota) 
       throws IOException, UnresolvedLinkException {
@@ -3196,14 +3132,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot fsync file " + src, safeMode);
       }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
       if (lastBlockLength > 0) {
         pendingFile.updateLengthOfLastBlock(lastBlockLength);
@@ -3554,11 +3488,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     DirectoryListing dl;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
 
       if (isPermissionEnabled) {
         if (dir.isDir(src)) {

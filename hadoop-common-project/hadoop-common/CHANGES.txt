@@ -161,10 +161,7 @@ Trunk (Unreleased)
 
     HADOOP-9218 Document the Rpc-wrappers used internally (sanjay Radia)
 
-    HADOOP-9258 Add stricter tests to FileSystemContractTestBase (stevel)
-
-    HADOOP-9486. Promoted Windows and Shell related utils from YARN to Hadoop
-    Common. (Chris Nauroth via vinodkv)
+	HADOOP-9258 Add stricter tests to FileSystemContractTestBase (stevel)
 
   BUG FIXES
 
@@ -369,10 +366,6 @@ Trunk (Unreleased)
 
     HADOOP-9433 TestLocalFileSystem#testHasFileDescriptor leaks file handle
     (Chris Nauroth via sanjay)
-
-    HADOOP-9488. FileUtil#createJarWithClassPath only substitutes environment
-    variables from current process environment/does not support overriding
-    when launching new process (Chris Nauroth via bikas)
 
   OPTIMIZATIONS
 

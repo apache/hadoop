@@ -76,15 +76,15 @@ public abstract class BaseContainerManagerTest {
   public BaseContainerManagerTest() throws UnsupportedFileSystemException {
     localFS = FileContext.getLocalFSFileContext();
     localDir =
-        new File("target", this.getClass().getSimpleName() + "-localDir")
+        new File("target", this.getClass().getName() + "-localDir")
             .getAbsoluteFile();
     localLogDir =
-        new File("target", this.getClass().getSimpleName() + "-localLogDir")
+        new File("target", this.getClass().getName() + "-localLogDir")
             .getAbsoluteFile();
     remoteLogDir =
-      new File("target", this.getClass().getSimpleName() + "-remoteLogDir")
+      new File("target", this.getClass().getName() + "-remoteLogDir")
           .getAbsoluteFile();
-    tmpDir = new File("target", this.getClass().getSimpleName() + "-tmpDir");
+    tmpDir = new File("target", this.getClass().getName() + "-tmpDir");
   }
 
   protected static Log LOG = LogFactory

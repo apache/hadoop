@@ -84,14 +84,9 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     return this.serviceResponse;
   }
   @Override
-  public synchronized void setAllServiceResponse(
-      Map<String, ByteBuffer> serviceResponses) {
-    if(serviceResponses == null) {
-      return;
-    }
+  public synchronized ByteBuffer getServiceResponse(String key) {
     initServiceResponse();
-    this.serviceResponse.clear();
-    this.serviceResponse.putAll(serviceResponses);
+    return this.serviceResponse.get(key);
   }
   
   private synchronized void initServiceResponse() {
@@ -105,6 +100,14 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
     for (StringBytesMapProto c : list) {
       this.serviceResponse.put(c.getKey(), convertFromProtoFormat(c.getValue()));
     }
+  }
+  
+  @Override
+  public synchronized void addAllServiceResponse(final Map<String, ByteBuffer> serviceResponse) {
+    if (serviceResponse == null)
+      return;
+    initServiceResponse();
+    this.serviceResponse.putAll(serviceResponse);
   }
   
   private synchronized void addServiceResponseToProto() {
@@ -139,5 +142,20 @@ public class StartContainerResponsePBImpl extends ProtoBase<StartContainerRespon
       }
     };
     builder.addAllServiceResponse(iterable);
+  }
+  @Override
+  public synchronized void setServiceResponse(String key, ByteBuffer val) {
+    initServiceResponse();
+    this.serviceResponse.put(key, val);
+  }
+  @Override
+  public synchronized void removeServiceResponse(String key) {
+    initServiceResponse();
+    this.serviceResponse.remove(key);
+  }
+  @Override
+  public synchronized void clearServiceResponse() {
+    initServiceResponse();
+    this.serviceResponse.clear();
   }
 }  
