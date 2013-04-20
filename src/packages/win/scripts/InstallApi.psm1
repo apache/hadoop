@@ -193,7 +193,7 @@ function InstallCore(
     $xcopy_cmd = "xcopy /EIYF `"$HDP_INSTALL_PATH\..\template\conf\*.xml`" `"$hadoopInstallToDir\conf`""
     Invoke-CmdChk $xcopy_cmd
 
-    $xcopy_cmd = "xcopy /EIYF `"$HDP_INSTALL_PATH\..\template\conf\*.properties`" `"$hadoopInstallToDir\bin`""
+    $xcopy_cmd = "xcopy /EIYF `"$HDP_INSTALL_PATH\..\template\conf\*.properties`" `"$hadoopInstallToDir\conf`""
     Invoke-CmdChk $xcopy_cmd
 
     $xcopy_cmd = "xcopy /EIYF `"$HDP_INSTALL_PATH\..\template\bin`" `"$hadoopInstallToDir\bin`""
