@@ -186,7 +186,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String RM_AM_MAX_ATTEMPTS =
     RM_PREFIX + "am.max-attempts";
-  public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 1;
+  public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 2;
   
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 

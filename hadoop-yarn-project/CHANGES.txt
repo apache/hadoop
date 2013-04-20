@@ -93,6 +93,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-586. Fixed a typo in ApplicationSubmissionContext#setApplicationId.
     (Zhijie Shen via vinodkv)
 
+    YARN-542. Changed the default global AM max-attempts value to be not one.
+    (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
