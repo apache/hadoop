@@ -226,7 +226,6 @@ ConvertToLongPathExit:
   if (dwErrorCode != ERROR_SUCCESS)
   {
     LocalFree(newPathValue);
-    *newPath = NULL;
   }
 
   return dwErrorCode;
@@ -398,7 +397,7 @@ DWORD JunctionPointCheck(__in LPCWSTR pathName, __out PBOOL res)
 // Notes:
 //	Caller needs to destroy the memory of Sid by calling LocalFree()
 //
-DWORD GetSidFromAcctNameW(LPCWSTR acctName, PSID *ppSid)
+DWORD GetSidFromAcctNameW(__in PCWSTR acctName, __out PSID *ppSid)
 {
   DWORD dwSidSize = 0;
   DWORD cchDomainName = 0;
@@ -545,7 +544,7 @@ static DWORD GetAccess(AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClient,
   {
     return GetLastError();
   }
-  *pAccessRights = (*(PACCESS_MASK)(AccessReply.GrantedAccessMask));
+  *pAccessRights = (*(const ACCESS_MASK *)(AccessReply.GrantedAccessMask));
   return ERROR_SUCCESS;
 }
 
@@ -1088,6 +1087,7 @@ DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode)
   DWORD revision = 0;
 
   PSECURITY_DESCRIPTOR pAbsSD = NULL;
+  PSECURITY_DESCRIPTOR pNonNullSD = NULL;
   PACL pAbsDacl = NULL;
   PACL pAbsSacl = NULL;
   PSID pAbsOwner = NULL;
@@ -1200,7 +1200,8 @@ DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode)
   // present in the security descriptor, the DACL is replaced. The security
   // descriptor is then used to set the security of a file or directory.
   //
-  if (!SetSecurityDescriptorDacl(pAbsSD, TRUE, pNewDACL, FALSE))
+  pNonNullSD = (pAbsSD != NULL) ? pAbsSD : pSD;
+  if (!SetSecurityDescriptorDacl(pNonNullSD, TRUE, pNewDACL, FALSE))
   {
     ret = GetLastError();
     goto ChangeFileModeByMaskEnd;
@@ -1220,13 +1221,14 @@ DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode)
   // its parent, and the child objects will not lose their inherited permissions
   // from the current object.
   //
-  if (!SetFileSecurity(longPathName, DACL_SECURITY_INFORMATION, pAbsSD))
+  if (!SetFileSecurity(longPathName, DACL_SECURITY_INFORMATION, pNonNullSD))
   {
     ret = GetLastError();
     goto ChangeFileModeByMaskEnd;
   }
 
 ChangeFileModeByMaskEnd:
+  pNonNullSD = NULL;
   LocalFree(longPathName);
   LocalFree(pSD);
   LocalFree(pNewDACL);
@@ -1252,7 +1254,7 @@ ChangeFileModeByMaskEnd:
 // Notes:
 //	Caller needs to destroy the memory of account name by calling LocalFree()
 //
-DWORD GetAccntNameFromSid(PSID pSid, LPWSTR *ppAcctName)
+DWORD GetAccntNameFromSid(__in PSID pSid, __out PWSTR *ppAcctName)
 {
   LPWSTR lpName = NULL;
   DWORD cchName = 0;

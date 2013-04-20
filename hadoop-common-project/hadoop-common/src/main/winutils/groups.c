@@ -32,12 +32,12 @@
 //   otherwise, space.
 //
 static BOOL PrintGroups(
-  LPLOCALGROUP_USERS_INFO_0 groups,
+  LOCALGROUP_USERS_INFO_0 const *groups,
   DWORD entries,
   BOOL formatOutput)
 {
   BOOL ret = TRUE;
-  LPLOCALGROUP_USERS_INFO_0 pTmpBuf = groups;
+  LOCALGROUP_USERS_INFO_0 const *pTmpBuf = groups;
   DWORD i;
 
   for (i = 0; i < entries; i++)
@@ -80,7 +80,10 @@ static BOOL PrintGroups(
 //   TRUE on the valid command line, FALSE otherwise
 //
 static BOOL ParseCommandLine(
-  int argc, wchar_t *argv[], wchar_t **user, BOOL *formatOutput)
+  __in int argc,
+  __in_ecount(argc) wchar_t *argv[],
+  __out PWSTR *user,
+  __out BOOL *formatOutput)
 {
   *formatOutput = FALSE;
 
@@ -132,7 +135,7 @@ static BOOL ParseCommandLine(
 // Notes:
 //
 //
-int Groups(int argc, wchar_t *argv[])
+int Groups(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   LPWSTR input = NULL;
 

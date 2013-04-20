@@ -28,7 +28,7 @@
 //
 // Notes:
 //
-int Symlink(int argc, wchar_t *argv[])
+int Symlink(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   PWSTR longLinkName = NULL;
   PWSTR longFileName = NULL;

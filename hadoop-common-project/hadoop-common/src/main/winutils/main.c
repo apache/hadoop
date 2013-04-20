@@ -19,7 +19,7 @@
 
 static void Usage(LPCWSTR program);
 
-int wmain(int argc, wchar_t* argv[])
+int wmain(__in int argc, __in_ecount(argc) wchar_t* argv[])
 {
   LPCWSTR cmd = NULL;
 
