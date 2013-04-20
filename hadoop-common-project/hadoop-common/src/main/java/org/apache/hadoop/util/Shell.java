@@ -123,6 +123,56 @@ abstract public class Shell {
                    : new String[] { "ln", "-s", target, link };
   }
 
+  /** Return a command for determining if process with specified pid is alive. */
+  public static String[] getCheckProcessIsAliveCommand(String pid) {
+    return Shell.WINDOWS ?
+      new String[] { Shell.WINUTILS, "task", "isAlive", pid } :
+      new String[] { "kill", "-0", isSetsidAvailable ? "-" + pid : pid };
+  }
+
+  /** Return a command to send a signal to a given pid */
+  public static String[] getSignalKillCommand(int code, String pid) {
+    return Shell.WINDOWS ? new String[] { Shell.WINUTILS, "task", "kill", pid } :
+      new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
+  }
+
+  /**
+   * Returns a File referencing a script with the given basename, inside the
+   * given parent directory.  The file extension is inferred by platform: ".cmd"
+   * on Windows, or ".sh" otherwise.
+   * 
+   * @param parent File parent directory
+   * @param basename String script file basename
+   * @return File referencing the script in the directory
+   */
+  public static File appendScriptExtension(File parent, String basename) {
+    return new File(parent, appendScriptExtension(basename));
+  }
+
+  /**
+   * Returns a script file name with the given basename.  The file extension is
+   * inferred by platform: ".cmd" on Windows, or ".sh" otherwise.
+   * 
+   * @param basename String script file basename
+   * @return String script file name
+   */
+  public static String appendScriptExtension(String basename) {
+    return basename + (WINDOWS ? ".cmd" : ".sh");
+  }
+
+  /**
+   * Returns a command to run the given script.  The script interpreter is
+   * inferred by platform: cmd on Windows or bash otherwise.
+   * 
+   * @param script File script to run
+   * @return String[] command to run the script
+   */
+  public static String[] getRunScriptCommand(File script) {
+    String absolutePath = script.getAbsolutePath();
+    return WINDOWS ? new String[] { "cmd", "/c", absolutePath } :
+      new String[] { "/bin/bash", absolutePath };
+  }
+
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
   /** a Unix command to set owner */
@@ -241,6 +291,26 @@ abstract public class Shell {
     }
 
     return winUtilsPath;
+  }
+
+  public static final boolean isSetsidAvailable = isSetsidSupported();
+  private static boolean isSetsidSupported() {
+    if (Shell.WINDOWS) {
+      return false;
+    }
+    ShellCommandExecutor shexec = null;
+    boolean setsidSupported = true;
+    try {
+      String[] args = {"setsid", "bash", "-c", "echo $$"};
+      shexec = new ShellCommandExecutor(args);
+      shexec.execute();
+    } catch (IOException ioe) {
+      LOG.warn("setsid is not available on this machine. So not using it.");
+      setsidSupported = false;
+    } finally { // handle the exit code
+      LOG.info("setsid exited with exit code " + shexec.getExitCode());
+    }
+    return setsidSupported;
   }
 
   /** Token separator regex used to parse Shell tool outputs */

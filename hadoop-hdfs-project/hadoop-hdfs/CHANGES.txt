@@ -6,6 +6,8 @@ Trunk (Unreleased)
 
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
+    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
@@ -2557,6 +2559,9 @@ Release 0.23.8 - UNRELEASED
   BUG FIXES
 
     HDFS-4477. Secondary namenode may retain old tokens (daryn via kihwal)
+
+    HDFS-4699. TestPipelinesFailover#testPipelineRecoveryStress fails
+    sporadically (Chris Nauroth via kihwal)
 
 Release 0.23.7 - UNRELEASED
 

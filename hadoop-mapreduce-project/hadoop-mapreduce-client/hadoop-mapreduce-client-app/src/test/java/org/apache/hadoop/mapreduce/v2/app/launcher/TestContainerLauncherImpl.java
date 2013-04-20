@@ -26,7 +26,11 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.atLeast;
 import org.mockito.ArgumentCaptor;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
@@ -58,6 +62,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestContainerLauncherImpl {
@@ -65,6 +70,15 @@ public class TestContainerLauncherImpl {
   private static final RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
 
+  private Map<String, ByteBuffer> serviceResponse =
+      new HashMap<String, ByteBuffer>();
+
+  @Before
+  public void setup() throws IOException {
+    serviceResponse.clear();
+    serviceResponse.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
+        ShuffleHandler.serializeMetaData(80));
+  }
   
   private static class ContainerLauncherImplUnderTest extends 
     ContainerLauncherImpl {
@@ -145,8 +159,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp = 
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID, 
-          ShuffleHandler.serializeMetaData(80));
+      startResp.setAllServiceResponse(serviceResponse);
       
 
       LOG.info("inserting launch event");
@@ -210,8 +223,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp = 
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID, 
-          ShuffleHandler.serializeMetaData(80));
+      startResp.setAllServiceResponse(serviceResponse);
 
       LOG.info("inserting cleanup event");
       ContainerLauncherEvent mockCleanupEvent = 
@@ -275,8 +287,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp =
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
-          ShuffleHandler.serializeMetaData(80));
+      startResp.setAllServiceResponse(serviceResponse);
 
       LOG.info("inserting launch event");
       ContainerRemoteLaunchEvent mockLaunchEvent =
@@ -333,8 +344,7 @@ public class TestContainerLauncherImpl {
       String cmAddress = "127.0.0.1:8000";
       StartContainerResponse startResp = 
         recordFactory.newRecordInstance(StartContainerResponse.class);
-      startResp.setServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID, 
-          ShuffleHandler.serializeMetaData(80));
+      startResp.setAllServiceResponse(serviceResponse);
       
      
       LOG.info("inserting launch event");

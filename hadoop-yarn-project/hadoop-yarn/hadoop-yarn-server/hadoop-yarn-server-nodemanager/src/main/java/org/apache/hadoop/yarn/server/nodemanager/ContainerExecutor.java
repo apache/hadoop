@@ -222,19 +222,6 @@ public abstract class ContainerExecutor implements Configurable {
 
   }
 
-  /** Return a command for determining if process with specified pid is alive. */
-  protected static String[] getCheckProcessIsAliveCommand(String pid) {
-    return Shell.WINDOWS ?
-      new String[] { Shell.WINUTILS, "task", "isAlive", pid } :
-      new String[] { "kill", "-0", pid };
-  }
-
-  /** Return a command to send a signal to a given pid */
-  protected static String[] getSignalKillCommand(int code, String pid) {
-    return Shell.WINDOWS ? new String[] { Shell.WINUTILS, "task", "kill", pid } :
-      new String[] { "kill", "-" + code, pid };
-  }
-
   /**
    * Is the container still active?
    * @param containerId
@@ -301,26 +288,6 @@ public abstract class ContainerExecutor implements Configurable {
       LOG.error("Got exception reading pid from pid-file " + pidFile, e);
     }
     return pid;
-  }
-
-  public static final boolean isSetsidAvailable = isSetsidSupported();
-  private static boolean isSetsidSupported() {
-    if (Shell.WINDOWS) {
-      return true;
-    }
-    ShellCommandExecutor shexec = null;
-    boolean setsidSupported = true;
-    try {
-      String[] args = {"setsid", "bash", "-c", "echo $$"};
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("setsid is not available on this machine. So not using it.");
-      setsidSupported = false;
-    } finally { // handle the exit code
-      LOG.info("setsid exited with exit code " + shexec.getExitCode());
-    }
-    return setsidSupported;
   }
 
   public static class DelayedProcessKiller extends Thread {

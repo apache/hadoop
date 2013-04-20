@@ -735,7 +735,7 @@ public class FSImage implements Closeable {
     } finally {
       FSEditLog.closeAllStreams(editStreams);
       // update the counts
-      updateCountForQuota(target.dir.rootDir);   
+      updateCountForQuota(target.dir, target.dir.rootDir);   
     }
     return lastAppliedTxId - prevLastAppliedTxId;
   }
@@ -748,20 +748,22 @@ public class FSImage implements Closeable {
    * This is an update of existing state of the filesystem and does not
    * throw QuotaExceededException.
    */
-  static void updateCountForQuota(INodeDirectoryWithQuota root) {
-    updateCountForQuotaRecursively(root, new Quota.Counts());
+  static void updateCountForQuota(FSDirectory fsd, 
+      INodeDirectoryWithQuota root) {
+    updateCountForQuotaRecursively(fsd, root, new Quota.Counts());
   }
   
-  private static void updateCountForQuotaRecursively(INodeDirectory dir,
-      Quota.Counts counts) {
+  private static void updateCountForQuotaRecursively(FSDirectory fsd,
+      INodeDirectory dir, Quota.Counts counts) {
     final long parentNamespace = counts.get(Quota.NAMESPACE);
     final long parentDiskspace = counts.get(Quota.DISKSPACE);
     
     dir.computeQuotaUsage4CurrentDirectory(counts);
 
     for (INode child : dir.getChildrenList(null)) {
+      fsd.addToInodeMapUnprotected(child);
       if (child.isDirectory()) {
-        updateCountForQuotaRecursively(child.asDirectory(), counts);
+        updateCountForQuotaRecursively(fsd, child.asDirectory(), counts);
       } else {
         // file or symlink: count here to reduce recursive calls.
         child.computeQuotaUsage(counts, false);
