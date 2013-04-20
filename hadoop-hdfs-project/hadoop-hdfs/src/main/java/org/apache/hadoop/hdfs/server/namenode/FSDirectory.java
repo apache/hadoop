@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -60,8 +61,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
+import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -70,6 +73,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotAccessControlExce
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotException;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.hdfs.util.GSet;
+import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -86,7 +91,7 @@ import com.google.common.base.Preconditions;
 public class FSDirectory implements Closeable {
   private static INodeDirectoryWithQuota createRoot(FSNamesystem namesystem) {
     final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
-        namesystem.allocateNewInodeId(),
+        INodeId.ROOT_INODE_ID,
         INodeDirectory.ROOT_NAME,
         namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)));
     final INodeDirectorySnapshottable s = new INodeDirectorySnapshottable(r);
@@ -94,6 +99,16 @@ public class FSDirectory implements Closeable {
     return s;
   }
 
+  @VisibleForTesting
+  static boolean CHECK_RESERVED_FILE_NAMES = true;
+  public final static String DOT_RESERVED_STRING = ".reserved";
+  public final static String DOT_RESERVED_PATH_PREFIX = Path.SEPARATOR
+      + DOT_RESERVED_STRING;
+  public final static byte[] DOT_RESERVED = 
+      DFSUtil.string2Bytes(DOT_RESERVED_STRING);
+  public final static String DOT_INODES_STRING = ".inodes";
+  public final static byte[] DOT_INODES = 
+      DFSUtil.string2Bytes(DOT_INODES_STRING);
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   private final FSNamesystem namesystem;
@@ -101,6 +116,7 @@ public class FSDirectory implements Closeable {
   private final int maxComponentLength;
   private final int maxDirItems;
   private final int lsLimit;  // max list limit
+  private GSet<INode, INode> inodeMap; // Synchronized by dirLock
 
   // lock to protect the directory and BlockMap
   private ReentrantReadWriteLock dirLock;
@@ -141,6 +157,7 @@ public class FSDirectory implements Closeable {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.cond = dirLock.writeLock().newCondition();
     rootDir = createRoot(ns);
+    inodeMap = initInodeMap(rootDir);
     this.fsImage = fsImage;
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
@@ -162,6 +179,16 @@ public class FSDirectory implements Closeable {
         + " times");
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
+  }
+  
+  @VisibleForTesting
+  static LightWeightGSet<INode, INode> initInodeMap(INodeDirectory rootDir) {
+    // Compute the map capacity by allocating 1% of total memory
+    int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
+    LightWeightGSet<INode, INode> map = new LightWeightGSet<INode, INode>(
+        capacity);
+    map.put(rootDir);
+    return map;
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -272,9 +299,8 @@ public class FSDirectory implements Closeable {
     if (!mkdirs(parent.toString(), permissions, true, modTime)) {
       return null;
     }
-    long id = namesystem.allocateNewInodeId();
     INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(
-                                 id,
+                                 namesystem.allocateNewInodeId(),
                                  permissions,replication,
                                  preferredBlockSize, modTime, clientName, 
                                  clientMachine, clientNode);
@@ -1329,6 +1355,7 @@ public class FSDirectory implements Closeable {
     // collect block
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
       targetNode.destroyAndCollectBlocks(collectedBlocks);
+      remvoedAllFromInodesFromMap(targetNode);
     } else {
       Quota.Counts counts = targetNode.cleanSubtree(null, latestSnapshot,
           collectedBlocks);
@@ -1393,6 +1420,7 @@ public class FSDirectory implements Closeable {
     Preconditions.checkState(hasWriteLock());
 
     oldnode.getParent().replaceChild(oldnode, newnode);
+    inodeMap.put(newnode);
     oldnode.clear();
 
     /* Currently oldnode and newnode are assumed to contain the same
@@ -1909,6 +1937,15 @@ public class FSDirectory implements Closeable {
     }
   }
   
+  private INode getFromINodeMap(INode inode) {
+    readLock();
+    try {
+      return inodeMap.get(inode);
+    } finally {
+      readUnlock();
+    }
+  }
+  
   /**
    * Add the given child to the namespace.
    * @param src The full path name of the child node.
@@ -2082,6 +2119,17 @@ public class FSDirectory implements Closeable {
   private boolean addChild(INodesInPath iip, int pos,
       INode child, boolean checkQuota) throws QuotaExceededException {
     final INode[] inodes = iip.getINodes();
+    // Disallow creation of /.reserved. This may be created when loading
+    // editlog/fsimage during upgrade since /.reserved was a valid name in older
+    // release. This may also be called when a user tries to create a file
+    // or directory /.reserved.
+    if (pos == 1 && inodes[0] == rootDir && isReservedName(child)) {
+      throw new HadoopIllegalArgumentException(
+          "File name \"" + child.getLocalName() + "\" is reserved and cannot "
+              + "be created. If this is during upgrade change the name of the "
+              + "existing file or directory to another name before upgrading "
+              + "to the new release.");
+    }
     // The filesystem limits are not really quotas, so this check may appear
     // odd. It's because a rename operation deletes the src, tries to add
     // to the dest, if that fails, re-adds the src from whence it came.
@@ -2106,6 +2154,7 @@ public class FSDirectory implements Closeable {
     } else {
       // update parent node
       iip.setINode(pos - 1, child.getParent());
+      inodeMap.put(child);
     }
     return added;
   }
@@ -2135,9 +2184,10 @@ public class FSDirectory implements Closeable {
     if (!parent.removeChild(last, latestSnapshot)) {
       return -1;
     }
-
+    inodeMap.remove(last);
     if (parent != last.getParent()) {
       // parent is changed
+      inodeMap.put(last.getParent());
       iip.setINode(-2, last.getParent());
     }
     
@@ -2179,6 +2229,29 @@ public class FSDirectory implements Closeable {
     } finally {
       readUnlock();
     }
+  }
+
+  /** This method is always called with writeLock held */
+  final void addToInodeMapUnprotected(INode inode) {
+    inodeMap.put(inode);
+  }
+  
+  /* This method is always called with writeLock held */
+  private final void removeFromInodeMap(INode inode) {
+    inodeMap.remove(inode);
+  }
+  
+  /** Remove all the inodes under given inode from the map */
+  private void remvoedAllFromInodesFromMap(INode inode) {
+    removeFromInodeMap(inode);
+    if (!inode.isDirectory()) {
+      return;
+    }
+    INodeDirectory dir = (INodeDirectory) inode;
+    for (INode child : dir.getChildrenList(null)) {
+      remvoedAllFromInodesFromMap(child);
+    }
+    dir.clearChildren();
   }
   
   /**
@@ -2286,7 +2359,7 @@ public class FSDirectory implements Closeable {
     boolean status = false;
     writeLock();
     try {
-      status = unprotectedSetTimes(src, inode, mtime, atime, force, latest);
+      status = unprotectedSetTimes(inode, mtime, atime, force, latest);
     } finally {
       writeUnlock();
     }
@@ -2299,11 +2372,11 @@ public class FSDirectory implements Closeable {
       throws UnresolvedLinkException, QuotaExceededException {
     assert hasWriteLock();
     final INodesInPath i = getLastINodeInPath(src); 
-    return unprotectedSetTimes(src, i.getLastINode(), mtime, atime, force,
+    return unprotectedSetTimes(i.getLastINode(), mtime, atime, force,
         i.getLatestSnapshot());
   }
 
-  private boolean unprotectedSetTimes(String src, INode inode, long mtime,
+  private boolean unprotectedSetTimes(INode inode, long mtime,
       long atime, boolean force, Snapshot latest) throws QuotaExceededException {
     assert hasWriteLock();
     boolean status = false;
@@ -2496,5 +2569,128 @@ public class FSDirectory implements Closeable {
   
   void shutdown() {
     nameCache.reset();
+    inodeMap.clear();
+    inodeMap = null;
+  }
+  
+  @VisibleForTesting
+  INode getInode(long id) {
+    INode inode = new INodeWithAdditionalFields(id, null, new PermissionStatus(
+        "", "", new FsPermission((short) 0)), 0, 0) {
+      
+      @Override
+      INode recordModification(Snapshot latest) throws QuotaExceededException {
+        return null;
+      }
+      
+      @Override
+      public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks) {
+        // Nothing to do
+      }
+      
+      @Override
+      public Counts computeQuotaUsage(Counts counts, boolean useCache) {
+        return null;
+      }
+      
+      @Override
+      public Content.Counts computeContentSummary(Content.Counts counts) {
+        return null;
+      }
+      
+      @Override
+      public CountsMap computeContentSummary(CountsMap countsMap) {
+        return null;
+      }
+      
+      @Override
+      public Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
+          BlocksMapUpdateInfo collectedBlocks) throws QuotaExceededException {
+        return null;
+      }
+    };
+      
+    return getFromINodeMap(inode);
+  }
+  
+  /**
+   * Given an INode get all the path complents leading to it from the root.
+   * If an Inode corresponding to C is given in /A/B/C, the returned
+   * patch components will be {root, A, B, C}
+   */
+  static byte[][] getPathComponents(INode inode) {
+    List<byte[]> components = new ArrayList<byte[]>();
+    components.add(0, inode.getLocalNameBytes());
+    while(inode.getParent() != null) {
+      components.add(0, inode.getParent().getLocalNameBytes());
+      inode = inode.getParent();
+    }
+    return components.toArray(new byte[components.size()][]);
+  }
+  
+  /**
+   * @return path components for reserved path, else null.
+   */
+  static byte[][] getPathComponentsForReservedPath(String src) {
+    return !isReservedName(src) ? null : INode.getPathComponents(src);
+  }
+  
+  /**
+   * Resolve the path of /.reserved/.inodes/<inodeid>/... to a regular path
+   * 
+   * @param src path that is being processed
+   * @param pathComponents path components corresponding to the path
+   * @param fsd FSDirectory
+   * @return if the path indicates an inode, return path after replacing upto
+   *         <inodeid> with the corresponding path of the inode, else the path
+   *         in {@code src} as is.
+   * @throws FileNotFoundException if inodeid is invalid
+   */
+  static String resolvePath(String src, byte[][] pathComponents, FSDirectory fsd)
+      throws FileNotFoundException {
+    if (pathComponents == null || pathComponents.length <= 3) {
+      return src;
+    }
+    // Not /.reserved/.inodes
+    if (!Arrays.equals(DOT_RESERVED, pathComponents[1])
+        || !Arrays.equals(DOT_INODES, pathComponents[2])) { // Not .inodes path
+      return src;
+    }
+    final String inodeId = DFSUtil.bytes2String(pathComponents[3]);
+    long id = 0;
+    try {
+      id = Long.valueOf(inodeId);
+    } catch (NumberFormatException e) {
+      throw new FileNotFoundException(
+          "File for given inode path does not exist: " + src);
+    }
+    if (id == INodeId.ROOT_INODE_ID && pathComponents.length == 4) {
+      return Path.SEPARATOR;
+    }
+    StringBuilder path = id == INodeId.ROOT_INODE_ID ? new StringBuilder()
+        : new StringBuilder(fsd.getInode(id).getFullPathName());
+    for (int i = 4; i < pathComponents.length; i++) {
+      path.append(Path.SEPARATOR).append(DFSUtil.bytes2String(pathComponents[i]));
+    }
+    if (NameNode.LOG.isDebugEnabled()) {
+      NameNode.LOG.debug("Resolved path is " + path);
+    }
+    return path.toString();
+  }
+  
+  @VisibleForTesting
+  int getInodeMapSize() {
+    return inodeMap.size();
+  }
+  
+  /** Check if a given inode name is reserved */
+  public static boolean isReservedName(INode inode) {
+    return CHECK_RESERVED_FILE_NAMES
+        && Arrays.equals(inode.getLocalNameBytes(), DOT_RESERVED);
+  }
+  
+  /** Check if a given path is reserved */
+  public static boolean isReservedName(String src) {
+    return src.startsWith(DOT_RESERVED_PATH_PREFIX);
   }
 }

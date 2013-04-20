@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -526,6 +527,13 @@ public class FSImageFormat {
    * modification time update and space count update are not needed.
    */
   private void addToParent(INodeDirectory parent, INode child) {
+    FSDirectory fsDir = namesystem.dir;
+    if (parent == fsDir.rootDir && FSDirectory.isReservedName(child)) {
+        throw new HadoopIllegalArgumentException("File name \""
+            + child.getLocalName() + "\" is reserved. Please "
+            + " change the name of the existing file or directory to another "
+            + "name before upgrading to this release.");
+    }
     // NOTE: This does not update space counts for parents
     if (!parent.addChild(child)) {
       return;

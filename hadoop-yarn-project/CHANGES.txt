@@ -34,6 +34,13 @@ Trunk - Unreleased
     YARN-487. Modify path manipulation in LocalDirsHandlerService to let
     TestDiskFailures pass on Windows. (Chris Nauroth via vinodkv)
 
+    YARN-493. Fixed some shell related flaws in YARN on Windows. (Chris Nauroth
+    via vinodkv)
+
+    YARN-593. container launch on Windows does not correctly populate
+    classpath with new process's environment variables and localized resources
+    (Chris Nauroth via bikas)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS
 
     YARN-158. Yarn creating package-info.java must not depend on sh.
@@ -84,6 +91,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-444. Moved special container exit codes from YarnConfiguration to API
     where they belong. (Sandy Ryza via vinodkv)
+
+    YARN-441. Removed unused utility methods for collections from two API
+    records. (Xuan Gong via vinodkv)
 
   NEW FEATURES
 
@@ -150,6 +160,12 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-514. Delayed store operations should not result in RM unavailability
     for app submission (Zhijie Shen via bikas)
+
+    YARN-586. Fixed a typo in ApplicationSubmissionContext#setApplicationId.
+    (Zhijie Shen via vinodkv)
+
+    YARN-542. Changed the default global AM max-attempts value to be not one.
+    (Zhijie Shen via vinodkv)
 
   OPTIMIZATIONS
 
@@ -255,6 +271,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-585. Fix failure in TestFairScheduler#testNotAllowSubmitApplication
     caused by YARN-514. (Zhijie Shen via vinodkv)
+
+    YARN-547. Fixed race conditions in public and private resource localization
+    which used to cause duplicate downloads. (Omkar Vinit Joshi via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 

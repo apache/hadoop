@@ -21,7 +21,6 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.Diff;
+import org.apache.hadoop.hdfs.util.LightWeightGSet.LinkedElement;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -50,7 +50,7 @@ import com.google.common.base.Preconditions;
  * directory inodes.
  */
 @InterfaceAudience.Private
-public abstract class INode implements Diff.Element<byte[]> {
+public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
   public static final Log LOG = LogFactory.getLog(INode.class);
 
   /** parent is either an {@link INodeDirectory} or an {@link INodeReference}.*/
@@ -108,6 +108,7 @@ public abstract class INode implements Diff.Element<byte[]> {
    * @return group name
    */
   abstract String getGroupName(Snapshot snapshot);
+  protected LinkedElement next = null;
 
   /** The same as getGroupName(null). */
   public final String getGroupName() {
@@ -612,13 +613,13 @@ public abstract class INode implements Diff.Element<byte[]> {
     if (that == null || !(that instanceof INode)) {
       return false;
     }
-    return Arrays.equals(this.getLocalNameBytes(),
-        ((INode)that).getLocalNameBytes());
+    return getId() == ((INode) that).getId();
   }
 
   @Override
   public final int hashCode() {
-    return Arrays.hashCode(getLocalNameBytes());
+    long id = getId();
+    return (int)(id^(id>>>32));  
   }
   
   /**
@@ -697,5 +698,15 @@ public abstract class INode implements Diff.Element<byte[]> {
     public void clear() {
       toDeleteList.clear();
     }
+  }
+  
+  @Override
+  public void setNext(LinkedElement next) {
+    this.next = next;
+  }
+  
+  @Override
+  public LinkedElement getNext() {
+    return next;
   }
 }

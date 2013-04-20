@@ -58,12 +58,12 @@ public interface ApplicationSubmissionContext {
   
   /**
    * Set the <code>ApplicationId</code> of the submitted application.
-   * @param appplicationId <code>ApplicationId</code> of the submitted 
-   *                       application
+   * @param applicationId <code>ApplicationId</code> of the submitted
+   *                      application
    */
   @Public
   @Stable
-  public void setApplicationId(ApplicationId appplicationId);
+  public void setApplicationId(ApplicationId applicationId);
 
   /**
    * Get the application <em>name</em>.

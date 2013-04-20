@@ -64,7 +64,9 @@ public class TestRMRestart {
     "org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore");
     conf.set(YarnConfiguration.RM_SCHEDULER, 
     "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler");
-    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 5);
+    Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
 
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
@@ -321,7 +323,9 @@ public class TestRMRestart {
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
     conf.set(YarnConfiguration.RM_STORE, 
     "org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore");
-    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
 
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
