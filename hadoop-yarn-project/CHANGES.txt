@@ -275,6 +275,8 @@ Release 2.0.5-beta - UNRELEASED
     YARN-547. Fixed race conditions in public and private resource localization
     which used to cause duplicate downloads. (Omkar Vinit Joshi via vinodkv)
 
+    YARN-594. Update test and add comments in YARN-534 (Jian He via bikas)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
