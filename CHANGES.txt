@@ -608,6 +608,9 @@ Release 1.2.0 - unreleased
 
     HADOOP-9473. Typo in FileUtil copy() method. (Glen Mazza via suresh)
 
+    MAPREDUCE-5066. Added a timeout for the job.end.notification.url. (Ivan
+    Mitic via acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
