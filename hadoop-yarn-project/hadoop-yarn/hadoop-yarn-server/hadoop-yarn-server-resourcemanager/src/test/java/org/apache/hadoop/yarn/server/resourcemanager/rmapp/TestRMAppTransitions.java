@@ -62,7 +62,8 @@ public class TestRMAppTransitions {
   static final Log LOG = LogFactory.getLog(TestRMAppTransitions.class);
 
   private RMContext rmContext;
-  private static int maxAppAttempts = 4;
+  private static int maxAppAttempts =
+      YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS;
   private static int appId = 1;
   private DrainDispatcher rmDispatcher;
 
@@ -499,6 +500,7 @@ public class TestRMAppTransitions {
 
     RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => ACCEPTED event RMAppEventType.RMAppEventType.ATTEMPT_FAILED
+    Assert.assertTrue(maxAppAttempts > 1);
     for (int i=1; i < maxAppAttempts; i++) {
       RMAppEvent event = 
           new RMAppFailedAttemptEvent(application.getApplicationId(), 
@@ -562,6 +564,7 @@ public class TestRMAppTransitions {
     Assert.assertEquals(expectedAttemptId, 
         appAttempt.getAppAttemptId().getAttemptId());
     // RUNNING => FAILED/RESTARTING event RMAppEventType.ATTEMPT_FAILED
+    Assert.assertTrue(maxAppAttempts > 1);
     for (int i=1; i<maxAppAttempts; i++) {
       RMAppEvent event = 
           new RMAppFailedAttemptEvent(application.getApplicationId(), 

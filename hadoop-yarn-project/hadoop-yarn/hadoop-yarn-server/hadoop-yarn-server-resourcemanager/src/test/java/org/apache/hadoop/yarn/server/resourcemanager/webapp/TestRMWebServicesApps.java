@@ -83,7 +83,8 @@ public class TestRMWebServicesApps extends JerseyTest {
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
       Configuration conf = new Configuration();
-      conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+      conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
           ResourceScheduler.class);
       rm = new MockRM(conf);
@@ -871,8 +872,10 @@ public class TestRMWebServicesApps extends JerseyTest {
     MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
     RMApp app1 = rm.submitApp(1024, "testwordcount", "user1");
     amNodeManager.nodeHeartbeat(true);
-    int maxAppAttempts = rm.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+    int maxAppAttempts = rm.getConfig().getInt(
+        YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    assertTrue(maxAppAttempts > 1);
     int retriesLeft = maxAppAttempts;
     while (--retriesLeft > 0) {
       RMAppEvent event =
