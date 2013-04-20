@@ -73,6 +73,13 @@ public class TestJobEndNotifier extends JobEndNotifier {
       + waitInterval, waitInterval == 5000);
   }
 
+  private void testTimeout(Configuration conf) {
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_TIMEOUT, "1000");
+    setConf(conf);
+    Assert.assertTrue("Expected timeout to be 1000, but was "
+      + timeout, timeout == 1000);
+  }
+
   private void testProxyConfiguration(Configuration conf) {
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost");
     setConf(conf);
@@ -109,6 +116,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     Configuration conf = new Configuration();
     testNumRetries(conf);
     testWaitInterval(conf);
+    testTimeout(conf);
     testProxyConfiguration(conf);
   }
 
