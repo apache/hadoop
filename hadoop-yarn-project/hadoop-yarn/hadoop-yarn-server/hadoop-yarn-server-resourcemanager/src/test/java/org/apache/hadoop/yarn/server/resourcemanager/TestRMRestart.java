@@ -364,7 +364,6 @@ public class TestRMRestart {
     Assert.assertNotNull(attemptState);
     Assert.assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
                         attemptState.getMasterContainer().getId());
-    rm1.stop();
 
     // start new RM   
     MockRM rm2 = new MockRM(conf, memStore);
@@ -382,7 +381,12 @@ public class TestRMRestart {
     Assert.assertNull(rm2.getRMContext().getRMApps()
         .get(app1.getApplicationId()));
 
-    // stop the RM
+    // verify that app2 is stored, app1 is removed
+    Assert.assertNotNull(rmAppState.get(app2.getApplicationId()));
+    Assert.assertNull(rmAppState.get(app1.getApplicationId()));
+
+    // stop the RM  
+    rm1.stop();
     rm2.stop();
   }
 }

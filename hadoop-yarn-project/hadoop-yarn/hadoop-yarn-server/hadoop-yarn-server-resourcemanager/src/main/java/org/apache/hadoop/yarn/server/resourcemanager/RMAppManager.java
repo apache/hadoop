@@ -340,6 +340,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       } else {
         maxAppAttempts = individualMaxAppAttempts;
       }
+      // In work-preserve restart, if attemptCount == maxAttempts, the job still
+      // needs to be recovered because the last attempt may still be running.
       if(appState.getAttemptCount() >= maxAppAttempts) {
         LOG.info("Not recovering application " + appState.getAppId() +
             " due to recovering attempt is beyond maxAppAttempt limit");
