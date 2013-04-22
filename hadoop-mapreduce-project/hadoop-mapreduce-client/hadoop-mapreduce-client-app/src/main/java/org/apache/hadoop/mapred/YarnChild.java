@@ -20,10 +20,8 @@ package org.apache.hadoop.mapred;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -148,6 +146,9 @@ class YarnChild {
       // Add tokens to new user so that it may execute its task correctly.
       childUGI.addCredentials(credentials);
 
+      // set job classloader if configured before invoking the task
+      MRApps.setJobClassLoader(job);
+
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
       childUGI.doAs(new PrivilegedExceptionAction<Object>() {
@@ -254,9 +255,6 @@ class YarnChild {
       Token<JobTokenIdentifier> jt) throws IOException {
     final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
     job.setCredentials(credentials);
-
-    // set job classloader if configured
-    MRApps.setJobClassLoader(job);
 
     String appAttemptIdEnv = System
         .getenv(MRJobConfig.APPLICATION_ATTEMPT_ID_ENV);
