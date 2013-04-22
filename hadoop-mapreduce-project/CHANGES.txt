@@ -330,6 +330,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5066. Added a timeout for the job.end.notification.url. (Ivan
     Mitic via acmurthy)
 
+    MAPREDUCE-5146. application classloader may be used too early to load
+    classes. (Sangjin Lee via tomwhite)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
