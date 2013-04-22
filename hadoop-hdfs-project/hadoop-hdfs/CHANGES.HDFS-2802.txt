@@ -258,3 +258,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4717. Change the path parameter type of the snapshot methods in
   HdfsAdmin from String to Path.  (szetszwo)
+
+  HDFS-4708. Add snapshot user documentation.  (szetszwo)

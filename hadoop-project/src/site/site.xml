@@ -64,6 +64,7 @@
       <item name="High Availability With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
       <item name="High Availability With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
+      <item name="HDFS Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>
       <item name="HDFS Architecture" href="hadoop-project-dist/hadoop-hdfs/HdfsDesign.html"/>
       <item name="Edits Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsEditsViewer.html"/>
       <item name="Image Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsImageViewer.html"/>
