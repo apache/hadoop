@@ -200,10 +200,14 @@ public class TestINodeFile {
       // Check the full path name of the INode associating with the file
       INode fnode = fsdir.getINode(file.toString());
       assertEquals(file.toString(), fnode.getFullPathName());
-
+      
       // Call FSDirectory#unprotectedSetQuota which calls
       // INodeDirectory#replaceChild
       dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
+      INode dirNode = fsdir.getINode(dir.toString());
+      assertEquals(dir.toString(), dirNode.getFullPathName());
+      assertTrue(dirNode instanceof INodeDirectoryWithQuota);
+      
       final Path newDir = new Path("/newdir");
       final Path newFile = new Path(newDir, "file");
       // Also rename dir
@@ -771,7 +775,7 @@ public class TestINodeFile {
     PermissionStatus permstatus = PermissionStatus.createImmutable("", "", perm);
     
     long id = 0;
-    INodeDirectory prev = new INodeDirectory(++id, null, permstatus, 0);
+    INodeDirectory prev = new INodeDirectory(++id, new byte[0], permstatus, 0);
     INodeDirectory dir = null;
     for (byte[] component : components) {
       if (component.length == 0) {

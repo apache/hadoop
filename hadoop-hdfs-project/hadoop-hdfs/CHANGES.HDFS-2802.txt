@@ -260,3 +260,6 @@ Branch-2802 Snapshot (Unreleased)
   HdfsAdmin from String to Path.  (szetszwo)
 
   HDFS-4708. Add snapshot user documentation.  (szetszwo)
+
+  HDFS-4726. Fix test failures after merging the INodeId-INode mapping 
+  from trunk.  (Jing Zhao via szetszwo)

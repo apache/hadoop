@@ -474,10 +474,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
 
   /** Set the children list to null. */
   public void clearChildren() {
-    if (children != null) {
-      this.children.clear();
-      this.children = null;
-    }
+    this.children = null;
   }
 
   @Override
@@ -514,6 +511,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     for (INode child : getChildrenList(null)) {
       child.destroyAndCollectBlocks(collectedBlocks);
     }
+    // TODO: Need to update the cleanSubtree/destroy methods to clean inode map
     clear();
   }
   

@@ -185,7 +185,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       for (; c < created.size() && d < deleted.size(); ) {
         INode cnode = created.get(c);
         INode dnode = deleted.get(d);
-        if (cnode.equals(dnode)) {
+        if (cnode.compareTo(dnode.getLocalNameBytes()) == 0) {
           fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
           if (cnode.isSymlink() && dnode.isSymlink()) {
             dList.add(new DiffReportEntry(DiffType.MODIFY, fullPath));

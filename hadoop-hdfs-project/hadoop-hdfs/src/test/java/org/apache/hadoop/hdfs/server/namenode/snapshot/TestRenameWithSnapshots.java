@@ -192,7 +192,7 @@ public class TestRenameWithSnapshots {
    * Rename a file under a snapshottable directory, file exists
    * in a snapshot.
    */
-  @Test (timeout=60000)
+  @Test
   public void testRenameFileInSnapshot() throws Exception {
     hdfs.mkdirs(sub1);
     hdfs.allowSnapshot(sub1);

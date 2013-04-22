@@ -261,7 +261,7 @@ public class Diff<K, E extends Diff.Element<K>> {
   public UndoInfo<E> modify(final E oldElement, final E newElement) {
     Preconditions.checkArgument(oldElement != newElement,
         "They are the same object: oldElement == newElement = %s", newElement);
-    Preconditions.checkArgument(oldElement.equals(newElement),
+    Preconditions.checkArgument(oldElement.compareTo(newElement.getKey()) == 0,
         "The names do not match: oldElement=%s, newElement=%s",
         oldElement, newElement);
     final int c = search(created, newElement.getKey());
