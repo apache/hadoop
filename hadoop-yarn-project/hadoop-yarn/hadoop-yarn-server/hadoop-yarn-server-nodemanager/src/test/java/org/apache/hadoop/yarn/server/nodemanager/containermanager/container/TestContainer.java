@@ -376,7 +376,7 @@ public class TestContainer {
           public boolean matches(Object o) {
             ContainersLauncherEvent evt = (ContainersLauncherEvent) o;
             return evt.getType() == ContainersLauncherEventType.LAUNCH_CONTAINER
-              && wcf.cId == evt.getContainer().getContainerID();
+              && wcf.cId == evt.getContainer().getContainer().getId();
           }
         };
       verify(wc.launcherBus).handle(argThat(matchesLaunchReq));
@@ -639,7 +639,7 @@ public class TestContainer {
         Path p = new Path(cache, rsrc.getKey());
         localPaths.put(p, Arrays.asList(rsrc.getKey()));
         // rsrc copied to p
-        c.handle(new ContainerResourceLocalizedEvent(c.getContainerID(), 
+        c.handle(new ContainerResourceLocalizedEvent(c.getContainer().getId(),
                  req, p));
       }
       drainDispatcherEvents();
@@ -662,7 +662,8 @@ public class TestContainer {
       LocalResource rsrc = localResources.get(rsrcKey);
       LocalResourceRequest req = new LocalResourceRequest(rsrc);
       Exception e = new Exception("Fake localization error");
-      c.handle(new ContainerResourceFailedEvent(c.getContainerID(), req, e));
+      c.handle(new ContainerResourceFailedEvent(c.getContainer()
+          .getId(), req, e));
       drainDispatcherEvents();
     }
 
@@ -677,7 +678,7 @@ public class TestContainer {
         ++counter;
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Exception e = new Exception("Fake localization error");
-        c.handle(new ContainerResourceFailedEvent(c.getContainerID(), 
+        c.handle(new ContainerResourceFailedEvent(c.getContainer().getId(),
                  req, e));
       }
       drainDispatcherEvents();     

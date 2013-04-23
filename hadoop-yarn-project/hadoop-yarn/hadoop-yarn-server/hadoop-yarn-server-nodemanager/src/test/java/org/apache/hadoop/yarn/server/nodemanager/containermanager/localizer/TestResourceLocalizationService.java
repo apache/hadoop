@@ -494,7 +494,7 @@ public class TestResourceLocalizationService {
       Thread.sleep(1000);
       dispatcher.await();
       String appStr = ConverterUtils.toString(appId);
-      String ctnrStr = c.getContainerID().toString();
+      String ctnrStr = c.getContainer().getId().toString();
       ArgumentCaptor<Path> tokenPathCaptor = ArgumentCaptor.forClass(Path.class);
       verify(exec).startLocalizer(tokenPathCaptor.capture(),
           isA(InetSocketAddress.class), eq("user0"), eq(appStr), eq(ctnrStr),
@@ -570,7 +570,7 @@ public class TestResourceLocalizationService {
           public boolean matches(Object o) {
             ContainerEvent evt = (ContainerEvent) o;
             return evt.getType() == ContainerEventType.RESOURCE_LOCALIZED
-              && c.getContainerID() == evt.getContainerID();
+              && c.getContainer().getId() == evt.getContainerID();
           }
         };
       // total 2 resource localzation calls. one for each resource.
@@ -759,11 +759,11 @@ public class TestResourceLocalizationService {
 
       // Container - 1
       ContainerImpl container1 = createMockContainer(user, 1);
-      String localizerId1 = container1.getContainerID().toString();
+      String localizerId1 = container1.getContainer().getId().toString();
       rls.getPrivateLocalizers().put(
         localizerId1,
         rls.new LocalizerRunner(new LocalizerContext(user, container1
-          .getContainerID(), null), localizerId1));
+          .getContainer().getId(), null), localizerId1));
       LocalizerRunner localizerRunner1 = rls.getLocalizerRunner(localizerId1);
 
       dispatcher1.getEventHandler().handle(
@@ -774,11 +774,11 @@ public class TestResourceLocalizationService {
 
       // Container - 2 now makes the request.
       ContainerImpl container2 = createMockContainer(user, 2);
-      String localizerId2 = container2.getContainerID().toString();
+      String localizerId2 = container2.getContainer().getId().toString();
       rls.getPrivateLocalizers().put(
         localizerId2,
         rls.new LocalizerRunner(new LocalizerContext(user, container2
-          .getContainerID(), null), localizerId2));
+          .getContainer().getId(), null), localizerId2));
       LocalizerRunner localizerRunner2 = rls.getLocalizerRunner(localizerId2);
       dispatcher1.getEventHandler().handle(
         createContainerLocalizationEvent(container2,
@@ -919,11 +919,11 @@ public class TestResourceLocalizationService {
 
       // Container - 1
       Container container1 = createMockContainer(user, 1);
-      String localizerId1 = container1.getContainerID().toString();
+      String localizerId1 = container1.getContainer().getId().toString();
       rls.getPrivateLocalizers().put(
         localizerId1,
         rls.new LocalizerRunner(new LocalizerContext(user, container1
-          .getContainerID(), null), localizerId1));
+          .getContainer().getId(), null), localizerId1));
 
       // Creating two requests for container
       // 1) Private resource
@@ -1314,7 +1314,10 @@ public class TestResourceLocalizationService {
 
   private ContainerImpl createMockContainer(String user, int containerId) {
     ContainerImpl container = mock(ContainerImpl.class);
-    when(container.getContainerID()).thenReturn(
+    org.apache.hadoop.yarn.api.records.Container c =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(container.getContainer()).thenReturn(c);
+    when(container.getContainer().getId()).thenReturn(
       BuilderUtils.newContainerId(1, 1, 1, containerId));
     when(container.getUser()).thenReturn(user);
     Credentials mockCredentials = mock(Credentials.class);
@@ -1354,8 +1357,11 @@ public class TestResourceLocalizationService {
     ApplicationAttemptId appAttemptId =
         BuilderUtils.newApplicationAttemptId(appId, 1);
     ContainerId cId = BuilderUtils.newContainerId(appAttemptId, id);
+    org.apache.hadoop.yarn.api.records.Container containerAPI =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(c.getContainer()).thenReturn(containerAPI);
     when(c.getUser()).thenReturn("user0");
-    when(c.getContainerID()).thenReturn(cId);
+    when(c.getContainer().getId()).thenReturn(cId);
     Credentials creds = new Credentials();
     creds.addToken(new Text("tok" + id), getToken(id));
     when(c.getCredentials()).thenReturn(creds);

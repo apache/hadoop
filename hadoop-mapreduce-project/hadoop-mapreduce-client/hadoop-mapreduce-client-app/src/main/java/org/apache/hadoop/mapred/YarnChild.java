@@ -57,6 +57,9 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.LogManager;
 
 /**
@@ -216,7 +219,7 @@ class YarnChild {
    */
   private static void configureLocalDirs(Task task, JobConf job) throws IOException {
     String[] localSysDirs = StringUtils.getTrimmedStrings(
-        System.getenv(ApplicationConstants.LOCAL_DIR_ENV));
+        System.getenv(Environment.LOCAL_DIRS.name()));
     job.setStrings(MRConfig.LOCAL_DIR, localSysDirs);
     LOG.info(MRConfig.LOCAL_DIR + " for child: " + job.get(MRConfig.LOCAL_DIR));
     LocalDirAllocator lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
@@ -256,12 +259,14 @@ class YarnChild {
     final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
     job.setCredentials(credentials);
 
-    String appAttemptIdEnv = System
-        .getenv(MRJobConfig.APPLICATION_ATTEMPT_ID_ENV);
-    LOG.debug("APPLICATION_ATTEMPT_ID: " + appAttemptIdEnv);
+    ApplicationAttemptId appAttemptId =
+        ConverterUtils.toContainerId(
+            System.getenv(Environment.CONTAINER_ID.name()))
+            .getApplicationAttemptId();
+    LOG.debug("APPLICATION_ATTEMPT_ID: " + appAttemptId);
     // Set it in conf, so as to be able to be used the the OutputCommitter.
-    job.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, Integer
-        .parseInt(appAttemptIdEnv));
+    job.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID,
+        appAttemptId.getAttemptId());
 
     // set tcp nodelay
     job.setBoolean("ipc.client.tcpnodelay", true);

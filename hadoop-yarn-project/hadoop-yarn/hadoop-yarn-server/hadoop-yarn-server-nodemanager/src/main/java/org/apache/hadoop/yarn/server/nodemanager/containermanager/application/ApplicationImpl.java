@@ -274,14 +274,14 @@ public class ApplicationImpl implements Application {
       ApplicationContainerInitEvent initEvent =
         (ApplicationContainerInitEvent) event;
       Container container = initEvent.getContainer();
-      app.containers.put(container.getContainerID(), container);
-      LOG.info("Adding " + container.getContainerID()
+      app.containers.put(container.getContainer().getId(), container);
+      LOG.info("Adding " + container.getContainer().getId()
           + " to application " + app.toString());
       
       switch (app.getApplicationState()) {
       case RUNNING:
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
-            container.getContainerID()));
+            container.getContainer().getId()));
         break;
       case INITING:
       case NEW:
@@ -302,7 +302,7 @@ public class ApplicationImpl implements Application {
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
-              container.getContainerID()));
+              container.getContainer().getId()));
       }
     }
   }
