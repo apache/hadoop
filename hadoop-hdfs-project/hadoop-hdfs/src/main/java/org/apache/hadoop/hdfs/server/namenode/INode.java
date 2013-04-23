@@ -329,24 +329,31 @@ public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
    * @param collectedBlocks
    *          blocks collected from the descents for further block
    *          deletion/update will be added to the given map.
+   * @param removedINodes
+   *          INodes collected from the descents for further cleaning up of 
+   *          inodeMap         
    * @return quota usage delta when deleting a snapshot
    */
   public abstract Quota.Counts cleanSubtree(final Snapshot snapshot,
-      Snapshot prior, BlocksMapUpdateInfo collectedBlocks)
-      throws QuotaExceededException;
+      Snapshot prior, BlocksMapUpdateInfo collectedBlocks,
+      List<INode> removedINodes) throws QuotaExceededException;
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
-   * collects its blocks for further block deletion. If the INode is a 
-   * directory, the method goes down the subtree and collects blocks from the 
-   * descents, and clears its parent/children references as well. The method 
+   * collects its blocks for further block deletion. If the INode is a
+   * directory, the method goes down the subtree and collects blocks from the
+   * descents, and clears its parent/children references as well. The method
    * also clears the diff list if the INode contains snapshot diff list.
    * 
-   * @param collectedBlocks blocks collected from the descents for further block
-   *                        deletion/update will be added to this map.
+   * @param collectedBlocks
+   *          blocks collected from the descents for further block
+   *          deletion/update will be added to this map.
+   * @param removedINodes
+   *          INodes collected from the descents for further cleaning up of
+   *          inodeMap
    */
   public abstract void destroyAndCollectBlocks(
-      BlocksMapUpdateInfo collectedBlocks);
+      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes);
 
   /** Compute {@link ContentSummary}. */
   public final ContentSummary computeContentSummary() {

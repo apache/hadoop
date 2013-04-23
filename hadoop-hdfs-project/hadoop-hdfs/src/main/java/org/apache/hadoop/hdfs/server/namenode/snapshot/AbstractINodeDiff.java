@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -128,7 +129,8 @@ abstract class AbstractINodeDiff<N extends INode,
 
   /** Combine the posterior diff and collect blocks for deletion. */
   abstract Quota.Counts combinePosteriorAndCollectBlocks(final N currentINode,
-      final D posterior, final BlocksMapUpdateInfo collectedBlocks);
+      final D posterior, final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes);
   
   /**
    * Delete and clear self.
@@ -137,7 +139,7 @@ abstract class AbstractINodeDiff<N extends INode,
    * @return quota usage delta
    */
   abstract Quota.Counts destroyDiffAndCollectBlocks(final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks);
+      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes);
 
   @Override
   public String toString() {

@@ -68,7 +68,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    */
   final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
       Snapshot prior, final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks) {
+      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     
     Quota.Counts counts = Quota.Counts.newInstance();
@@ -81,7 +81,7 @@ abstract class AbstractINodeDiffList<N extends INode,
         removed = diffs.remove(0);
         counts.add(Quota.NAMESPACE, 1);
         counts.add(removed.destroyDiffAndCollectBlocks(currentINode,
-            collectedBlocks));
+            collectedBlocks, removedINodes));
       }
     } else if (snapshotIndex > 0) {
       final AbstractINodeDiff<N, D> previous = diffs.get(snapshotIndex - 1);
@@ -97,7 +97,7 @@ abstract class AbstractINodeDiffList<N extends INode,
           removed.snapshotINode.clear();
         }
         counts.add(previous.combinePosteriorAndCollectBlocks(
-            currentINode, removed, collectedBlocks));
+            currentINode, removed, collectedBlocks, removedINodes));
         previous.setPosterior(removed.getPosterior());
         removed.setPosterior(null);
       }

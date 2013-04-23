@@ -2878,6 +2878,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws AccessControlException, SafeModeException, UnresolvedLinkException,
              IOException {
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+    List<INode> removedINodes = new ArrayList<INode>();
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -2895,7 +2896,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkPermission(pc, src, false, null, FsAction.WRITE, null, FsAction.ALL);
       }
       // Unlink the target directory from directory tree
-      if (!dir.delete(src, collectedBlocks)) {
+      if (!dir.delete(src, collectedBlocks, removedINodes)) {
         return false;
       }
     } finally {
@@ -2904,6 +2905,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync(); 
     removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
+    dir.removeFromInodeMap(removedINodes);
+    removedINodes.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "
         + src +" is removed");
@@ -2940,13 +2943,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   /**
-   * Remove leases and blocks related to a given path
+   * Remove leases, inodes and blocks related to a given path
    * @param src The given path
    * @param blocks Containing the list of blocks to be deleted from blocksMap
+   * @param removedINodes Containing the list of inodes to be removed from 
+   *                      inodesMap
    */
-  void removePathAndBlocks(String src, BlocksMapUpdateInfo blocks) {
+  void removePathAndBlocks(String src, BlocksMapUpdateInfo blocks,
+      List<INode> removedINodes) {
     assert hasWriteLock();
     leaseManager.removeLeaseWithPrefixPath(src);
+    // remove inodes from inodesMap
+    if (removedINodes != null) {
+      dir.removeFromInodeMap(removedINodes);
+      removedINodes.clear();
+    }
     if (blocks == null) {
       return;
     }
@@ -6007,13 +6018,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOwner(pc, snapshotRoot);
 
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+      List<INode> removedINodes = new ArrayList<INode>();
       dir.writeLock();
       try {
         snapshotManager.deleteSnapshot(snapshotRoot, snapshotName,
-            collectedBlocks);
+            collectedBlocks, removedINodes);
+        dir.removeFromInodeMap(removedINodes);
       } finally {
         dir.writeUnlock();
       }
+      removedINodes.clear();
       this.removeBlocks(collectedBlocks);
       collectedBlocks.clear();
       getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName);

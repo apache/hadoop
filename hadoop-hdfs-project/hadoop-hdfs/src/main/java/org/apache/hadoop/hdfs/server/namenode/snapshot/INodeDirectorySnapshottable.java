@@ -311,7 +311,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    *         exists.
    */
   Snapshot removeSnapshot(String snapshotName,
-      BlocksMapUpdateInfo collectedBlocks) throws SnapshotException {
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+      throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
@@ -321,7 +322,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       final Snapshot snapshot = snapshotsByNames.remove(i);
       Snapshot prior = Snapshot.findLatestSnapshot(this, snapshot);
       try {
-        Quota.Counts counts = cleanSubtree(snapshot, prior, collectedBlocks);
+        Quota.Counts counts = cleanSubtree(snapshot, prior, collectedBlocks,
+            removedINodes);
         INodeDirectory parent = getParent();
         if (parent != null) {
           parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),

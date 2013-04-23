@@ -488,8 +488,8 @@ public class INodeDirectory extends INodeWithAdditionalFields {
    * recursively down the subtree.
    */
   public Quota.Counts cleanSubtreeRecursively(final Snapshot snapshot,
-      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks)
-      throws QuotaExceededException {
+      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes) throws QuotaExceededException {
     Quota.Counts counts = Quota.Counts.newInstance();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
@@ -499,36 +499,36 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     Snapshot s = snapshot != null && prior != null ? prior : snapshot;
     for (INode child : getChildrenList(s)) {
       Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
-          collectedBlocks);
+          collectedBlocks, removedINodes);
       counts.add(childCounts);
     }
     return counts;
   }
 
   @Override
-  public void destroyAndCollectBlocks(
-      final BlocksMapUpdateInfo collectedBlocks) {
+  public void destroyAndCollectBlocks(final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes) {
     for (INode child : getChildrenList(null)) {
-      child.destroyAndCollectBlocks(collectedBlocks);
+      child.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     }
-    // TODO: Need to update the cleanSubtree/destroy methods to clean inode map
     clear();
+    removedINodes.add(this);
   }
   
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks)
-      throws QuotaExceededException {
+      final BlocksMapUpdateInfo collectedBlocks, 
+      final List<INode> removedINodes) throws QuotaExceededException {
     if (prior == null && snapshot == null) {
       // destroy the whole subtree and collect blocks that should be deleted
       Quota.Counts counts = Quota.Counts.newInstance();
       this.computeQuotaUsage(counts, true);
-      destroyAndCollectBlocks(collectedBlocks);
+      destroyAndCollectBlocks(collectedBlocks, removedINodes);
       return counts; 
     } else {
       // process recursively down the subtree
       Quota.Counts counts = cleanSubtreeRecursively(snapshot, prior,
-          collectedBlocks);
+          collectedBlocks, removedINodes);
       if (isQuotaSet()) {
         ((INodeDirectoryWithQuota) this).addSpaceConsumed2Cache(
             -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));

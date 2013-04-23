@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
@@ -162,7 +163,8 @@ public class SnapshotManager implements SnapshotStats {
    * @throws IOException
    */
   public void deleteSnapshot(final String path, final String snapshotName,
-      BlocksMapUpdateInfo collectedBlocks) throws IOException {
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+      throws IOException {
     // parse the path, and check if the path is a snapshot path
     INodesInPath inodesInPath = fsdir.getINodesInPath4Write(path.toString());
     // transfer the inode for path to an INodeDirectorySnapshottable.
@@ -171,7 +173,7 @@ public class SnapshotManager implements SnapshotStats {
     INodeDirectorySnapshottable dir = INodeDirectorySnapshottable.valueOf(
         inodesInPath.getLastINode(), path.toString());
     
-    dir.removeSnapshot(snapshotName, collectedBlocks);
+    dir.removeSnapshot(snapshotName, collectedBlocks, removedINodes);
     numSnapshots.getAndDecrement();
   }
 

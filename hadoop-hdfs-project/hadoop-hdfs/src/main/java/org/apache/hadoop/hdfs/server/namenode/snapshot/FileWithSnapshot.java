@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -61,7 +63,7 @@ public interface FileWithSnapshot {
 
     private static Quota.Counts updateQuotaAndCollectBlocks(
         INodeFile currentINode, FileDiff removed,
-        BlocksMapUpdateInfo collectedBlocks) {
+        BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       FileWithSnapshot sFile = (FileWithSnapshot) currentINode;
       long oldDiskspace = currentINode.diskspaceConsumed();
       if (removed.snapshotINode != null) {
@@ -72,7 +74,7 @@ public interface FileWithSnapshot {
         }
       }
       
-      Util.collectBlocksAndClear(sFile, collectedBlocks);
+      Util.collectBlocksAndClear(sFile, collectedBlocks, removedINodes);
       
       long dsDelta = oldDiskspace - currentINode.diskspaceConsumed();
       return Quota.Counts.newInstance(0, dsDelta);
@@ -80,9 +82,10 @@ public interface FileWithSnapshot {
     
     @Override
     Quota.Counts combinePosteriorAndCollectBlocks(INodeFile currentINode,
-        FileDiff posterior, BlocksMapUpdateInfo collectedBlocks) {
+        FileDiff posterior, BlocksMapUpdateInfo collectedBlocks,
+        final List<INode> removedINodes) {
       return updateQuotaAndCollectBlocks(currentINode, posterior,
-          collectedBlocks);
+          collectedBlocks, removedINodes);
     }
     
     @Override
@@ -107,9 +110,9 @@ public interface FileWithSnapshot {
 
     @Override
     Quota.Counts destroyDiffAndCollectBlocks(INodeFile currentINode,
-        BlocksMapUpdateInfo collectedBlocks) {
+        BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       return updateQuotaAndCollectBlocks(currentINode, this,
-          collectedBlocks);
+          collectedBlocks, removedINodes);
     }
   }
 
@@ -171,11 +174,11 @@ public interface FileWithSnapshot {
      * any inode, collect them and update the block list.
      */
     static void collectBlocksAndClear(final FileWithSnapshot file,
-        final BlocksMapUpdateInfo info) {
+        final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
       // check if everything is deleted.
       if (file.isCurrentFileDeleted()
           && file.getDiffs().asList().isEmpty()) {
-        file.asINodeFile().destroyAndCollectBlocks(info);
+        file.asINodeFile().destroyAndCollectBlocks(info, removedINodes);
         return;
       }
 

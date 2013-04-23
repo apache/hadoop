@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.PrintWriter;
+import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -222,14 +223,17 @@ public abstract class INodeReference extends INode {
 
   @Override
   public final Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
-      BlocksMapUpdateInfo collectedBlocks) throws QuotaExceededException {
-    return referred.cleanSubtree(snapshot, prior, collectedBlocks);
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+      throws QuotaExceededException {
+    return referred.cleanSubtree(snapshot, prior, collectedBlocks,
+        removedINodes);
   }
 
   @Override
-  public final void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks) {
+  public final void destroyAndCollectBlocks(
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
     if (removeReference(this) <= 0) {
-      referred.destroyAndCollectBlocks(collectedBlocks);
+      referred.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     }
   }
 

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.PrintWriter;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -73,14 +74,17 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks) {
+      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+    if (snapshot == null && prior == null) {
+      destroyAndCollectBlocks(collectedBlocks, removedINodes);
+    }
     return Quota.Counts.newInstance(1, 0);
   }
   
   @Override
-  public void destroyAndCollectBlocks(
-      final BlocksMapUpdateInfo collectedBlocks) {
-    // do nothing
+  public void destroyAndCollectBlocks(final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes) {
+    removedINodes.add(this);
   }
 
   @Override

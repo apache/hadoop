@@ -928,9 +928,12 @@ public class FSDirectory implements Closeable {
         if (removedDst != null) {
           undoRemoveDst = false;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+          List<INode> removedINodes = new ArrayList<INode>();
           filesDeleted = removedDst.cleanSubtree(null,
-              dstIIP.getLatestSnapshot(), collectedBlocks).get(Quota.NAMESPACE);
-          getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+              dstIIP.getLatestSnapshot(), collectedBlocks, removedINodes).get(
+              Quota.NAMESPACE);
+          getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
+              removedINodes);
         }
 
         if (snapshottableDirs.size() > 0) {
@@ -1210,10 +1213,11 @@ public class FSDirectory implements Closeable {
    * 
    * @param src Path of a directory to delete
    * @param collectedBlocks Blocks under the deleted directory
+   * @param removedINodes INodes that should be removed from {@link #inodeMap}
    * @return true on successful deletion; else false
    */
-  boolean delete(String src, BlocksMapUpdateInfo collectedBlocks) 
-    throws IOException {
+  boolean delete(String src, BlocksMapUpdateInfo collectedBlocks,
+      List<INode> removedINodes) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
@@ -1234,7 +1238,8 @@ public class FSDirectory implements Closeable {
         List<INodeDirectorySnapshottable> snapshottableDirs = 
             new ArrayList<INodeDirectorySnapshottable>();
         checkSnapshot(targetNode, snapshottableDirs);
-        filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks, now);
+        filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
+            removedINodes, now);
         if (snapshottableDirs.size() > 0) {
           // There are some snapshottable directories without snapshots to be
           // deleted. Need to update the SnapshotManager.
@@ -1249,8 +1254,8 @@ public class FSDirectory implements Closeable {
     }
     fsImage.getEditLog().logDelete(src, now);
     incrDeletedFileCount(filesRemoved);
-    // Blocks will be deleted later by the caller of this method
-    getFSNamesystem().removePathAndBlocks(src, null);
+    // Blocks/INodes will be handled later by the caller of this method
+    getFSNamesystem().removePathAndBlocks(src, null, null);
     return true;
   }
   
@@ -1306,13 +1311,16 @@ public class FSDirectory implements Closeable {
       QuotaExceededException, SnapshotAccessControlException {
     assert hasWriteLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+    List<INode> removedINodes = new ArrayList<INode>();
 
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
         normalizePath(src), false);
-    final long filesRemoved = deleteAllowed(inodesInPath, src)?
-        unprotectedDelete(inodesInPath, collectedBlocks, mtime): -1;
+    final long filesRemoved = deleteAllowed(inodesInPath, src) ? 
+        unprotectedDelete(inodesInPath, collectedBlocks, 
+            removedINodes, mtime) : -1;
     if (filesRemoved >= 0) {
-      getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+      getFSNamesystem().removePathAndBlocks(src, collectedBlocks, 
+          removedINodes);
     }
   }
   
@@ -1321,11 +1329,12 @@ public class FSDirectory implements Closeable {
    * Update the count at each ancestor directory with quota
    * @param iip the inodes resolved from the path
    * @param collectedBlocks blocks collected from the deleted path
+   * @param removedINodes inodes that should be removed from {@link #inodeMap}
    * @param mtime the time the inode is removed
    * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
   long unprotectedDelete(INodesInPath iip, BlocksMapUpdateInfo collectedBlocks,
-      long mtime) throws QuotaExceededException {
+      List<INode> removedINodes, long mtime) throws QuotaExceededException {
     assert hasWriteLock();
 
     // check if target node exists
@@ -1354,11 +1363,10 @@ public class FSDirectory implements Closeable {
     
     // collect block
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
-      targetNode.destroyAndCollectBlocks(collectedBlocks);
-      remvoedAllFromInodesFromMap(targetNode);
+      targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     } else {
       Quota.Counts counts = targetNode.cleanSubtree(null, latestSnapshot,
-          collectedBlocks);
+          collectedBlocks, removedINodes);
       parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
           -counts.get(Quota.DISKSPACE), true);
       removed = counts.get(Quota.NAMESPACE);
@@ -2184,7 +2192,6 @@ public class FSDirectory implements Closeable {
     if (!parent.removeChild(last, latestSnapshot)) {
       return -1;
     }
-    inodeMap.remove(last);
     if (parent != last.getParent()) {
       // parent is changed
       inodeMap.put(last.getParent());
@@ -2237,21 +2244,12 @@ public class FSDirectory implements Closeable {
   }
   
   /* This method is always called with writeLock held */
-  private final void removeFromInodeMap(INode inode) {
-    inodeMap.remove(inode);
-  }
-  
-  /** Remove all the inodes under given inode from the map */
-  private void remvoedAllFromInodesFromMap(INode inode) {
-    removeFromInodeMap(inode);
-    if (!inode.isDirectory()) {
-      return;
+  final void removeFromInodeMap(List<INode> inodes) {
+    if (inodes != null) {
+      for (INode inode : inodes) {
+        inodeMap.remove(inode);
+      }
     }
-    INodeDirectory dir = (INodeDirectory) inode;
-    for (INode child : dir.getChildrenList(null)) {
-      remvoedAllFromInodesFromMap(child);
-    }
-    dir.clearChildren();
   }
   
   /**
@@ -2584,7 +2582,8 @@ public class FSDirectory implements Closeable {
       }
       
       @Override
-      public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks) {
+      public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
+          List<INode> removedINodes) {
         // Nothing to do
       }
       
@@ -2605,7 +2604,8 @@ public class FSDirectory implements Closeable {
       
       @Override
       public Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
-          BlocksMapUpdateInfo collectedBlocks) throws QuotaExceededException {
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes)
+          throws QuotaExceededException {
         return null;
       }
     };

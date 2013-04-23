@@ -94,12 +94,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     /** clear the created list */
     private Quota.Counts destroyCreatedList(
         final INodeDirectoryWithSnapshot currentINode,
-        final BlocksMapUpdateInfo collectedBlocks) {
+        final BlocksMapUpdateInfo collectedBlocks,
+        final List<INode> removedINodes) {
       Quota.Counts counts = Quota.Counts.newInstance();
       final List<INode> createdList = getList(ListType.CREATED);
       for (INode c : createdList) {
         c.computeQuotaUsage(counts, true);
-        c.destroyAndCollectBlocks(collectedBlocks);
+        c.destroyAndCollectBlocks(collectedBlocks, removedINodes);
         // c should be contained in the children list, remove it
         currentINode.removeChild(c);
       }
@@ -110,13 +111,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     /** clear the deleted list */
     private Quota.Counts destroyDeletedList(
         final BlocksMapUpdateInfo collectedBlocks, 
-        final List<INodeReference> refNodes) {
+        final List<INode> removedINodes, final List<INodeReference> refNodes) {
       Quota.Counts counts = Quota.Counts.newInstance();
       final List<INode> deletedList = getList(ListType.DELETED);
       for (INode d : deletedList) {
         if (INodeReference.tryRemoveReference(d) <= 0) {
           d.computeQuotaUsage(counts, false);
-          d.destroyAndCollectBlocks(collectedBlocks);
+          d.destroyAndCollectBlocks(collectedBlocks, removedINodes);
         } else {
           refNodes.add(d.asReference());
         }
@@ -262,7 +263,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     @Override
     Quota.Counts combinePosteriorAndCollectBlocks(
         final INodeDirectory currentDir, final DirectoryDiff posterior,
-        final BlocksMapUpdateInfo collectedBlocks) {
+        final BlocksMapUpdateInfo collectedBlocks,
+        final List<INode> removedINodes) {
       final Quota.Counts counts = Quota.Counts.newInstance();
       diff.combinePosterior(posterior.diff, new Diff.Processor<INode>() {
         /** Collect blocks for deleted files. */
@@ -271,7 +273,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           if (inode != null) {
             if (INodeReference.tryRemoveReference(inode) <= 0) {
               inode.computeQuotaUsage(counts, false);
-              inode.destroyAndCollectBlocks(collectedBlocks);
+              inode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
             } else {
               // if the node is a reference node, we should continue the 
               // snapshot deletion process
@@ -284,7 +286,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
                 // and it can be identified by the cleanSubtree since we call
                 // recordModification before the rename.
                 counts.add(inode.cleanSubtree(posterior.snapshot, null,
-                    collectedBlocks));
+                    collectedBlocks, removedINodes));
               } catch (QuotaExceededException e) {
                 String error = "should not have QuotaExceededException while deleting snapshot";
                 LOG.error(error, e);
@@ -384,11 +386,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
     @Override
     Quota.Counts destroyDiffAndCollectBlocks(INodeDirectory currentINode,
-        BlocksMapUpdateInfo collectedBlocks) {
+        BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       // this diff has been deleted
       Quota.Counts counts = Quota.Counts.newInstance();
       List<INodeReference> refNodes = new ArrayList<INodeReference>();
-      counts.add(diff.destroyDeletedList(collectedBlocks, refNodes));
+      counts.add(diff.destroyDeletedList(collectedBlocks, removedINodes,
+          refNodes));
       for (INodeReference ref : refNodes) {
         // if the node is a reference node, we should continue the 
         // snapshot deletion process
@@ -401,7 +404,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           // snapshot to be deleted. If the ref node presents the dst node of a 
           // rename operation, we can identify the corresponding prior snapshot 
           // when we come into the subtree of the ref node.
-          counts.add(ref.cleanSubtree(this.snapshot, null, collectedBlocks));
+          counts.add(ref.cleanSubtree(this.snapshot, null, collectedBlocks,
+              removedINodes));
         } catch (QuotaExceededException e) {
           String error = 
               "should not have QuotaExceededException while deleting snapshot " 
@@ -755,7 +759,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   @Override
   public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks)
+      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
       throws QuotaExceededException {
     Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == null) { // delete the current directory
@@ -763,13 +767,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       // delete everything in created list
       DirectoryDiff lastDiff = diffs.getLast();
       if (lastDiff != null) {
-        counts.add(lastDiff.diff.destroyCreatedList(this, collectedBlocks));
+        counts.add(lastDiff.diff.destroyCreatedList(this, collectedBlocks,
+            removedINodes));
       }
     } else {
       // update prior
       prior = getDiffs().updatePrior(snapshot, prior);
       counts.add(getDiffs().deleteSnapshotDiff(snapshot, prior, this, 
-          collectedBlocks));
+          collectedBlocks, removedINodes));
       if (prior != null) {
         DirectoryDiff priorDiff = this.getDiffs().getDiff(prior);
         if (priorDiff != null) {
@@ -780,7 +785,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           // cleanSubtreeRecursively call.
           for (INode cNode : priorDiff.getChildrenDiff().getList(
               ListType.CREATED)) {
-            counts.add(cNode.cleanSubtree(snapshot, null, collectedBlocks));
+            counts.add(cNode.cleanSubtree(snapshot, null, collectedBlocks,
+                removedINodes));
           }
           // When a directory is moved from the deleted list of the posterior
           // diff to the deleted list of this diff, we need to destroy its
@@ -792,12 +798,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           for (INode dNode : priorDiff.getChildrenDiff().getList(
               ListType.DELETED)) {
             counts.add(cleanDeletedINode(dNode, snapshot, prior,
-                collectedBlocks));
+                collectedBlocks, removedINodes));
           }
         }
       }
     }
-    counts.add(cleanSubtreeRecursively(snapshot, prior, collectedBlocks));
+    counts.add(cleanSubtreeRecursively(snapshot, prior, collectedBlocks,
+        removedINodes));
     
     if (isQuotaSet()) {
       this.addSpaceConsumed2Cache(-counts.get(Quota.NAMESPACE),
@@ -816,7 +823,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    * @return Quota usage update.
    */
   private Quota.Counts cleanDeletedINode(INode inode, Snapshot post,
-      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks) {
+      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes) {
     Quota.Counts counts = Quota.Counts.newInstance();
     Deque<INode> queue = new ArrayDeque<INode>();
     queue.addLast(inode);
@@ -825,7 +833,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (topNode instanceof FileWithSnapshot) {
         FileWithSnapshot fs = (FileWithSnapshot) topNode;
         counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior,
-            topNode.asFile(), collectedBlocks));
+            topNode.asFile(), collectedBlocks, removedINodes));
       } else if (topNode.isDirectory()) {
         INodeDirectory dir = topNode.asDirectory();
         if (dir instanceof INodeDirectoryWithSnapshot) {
@@ -835,7 +843,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
           DirectoryDiff priorDiff = sdir.getDiffs().getDiff(prior);
           if (priorDiff != null) {
             counts.add(priorDiff.diff.destroyCreatedList(sdir,
-                collectedBlocks));
+                collectedBlocks, removedINodes));
           }
         }
         for (INode child : dir.getChildrenList(prior)) {
@@ -848,13 +856,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   @Override
   public void destroyAndCollectBlocks(
-      final BlocksMapUpdateInfo collectedBlocks) {
+      final BlocksMapUpdateInfo collectedBlocks, 
+      final List<INode> removedINodes) {
     // destroy its diff list
     for (DirectoryDiff diff : diffs) {
-      diff.destroyDiffAndCollectBlocks(this, collectedBlocks);
+      diff.destroyDiffAndCollectBlocks(this, collectedBlocks, removedINodes);
     }
     diffs.clear();
-    super.destroyAndCollectBlocks(collectedBlocks);
+    super.destroyAndCollectBlocks(collectedBlocks, removedINodes);
   }
 
   @Override

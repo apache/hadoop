@@ -561,7 +561,11 @@ public class FSImageFormat {
     public INode loadINodeWithLocalName(boolean isSnapshotINode,
         DataInput in) throws IOException {
       final byte[] localName = FSImageSerialization.readLocalName(in);
-      return loadINode(localName, isSnapshotINode, in);
+      INode inode = loadINode(localName, isSnapshotINode, in);
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
+        namesystem.dir.addToInodeMapUnprotected(inode);
+      }
+      return inode;
     }
   
   /**

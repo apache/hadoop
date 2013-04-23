@@ -22,8 +22,10 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -520,11 +522,14 @@ public class FSEditLogLoader {
     case OP_DELETE_SNAPSHOT: {
       DeleteSnapshotOp deleteSnapshotOp = (DeleteSnapshotOp) op;
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+      List<INode> removedINodes = new ArrayList<INode>();
       fsNamesys.getSnapshotManager().deleteSnapshot(
           deleteSnapshotOp.snapshotRoot, deleteSnapshotOp.snapshotName,
-          collectedBlocks);
+          collectedBlocks, removedINodes);
       fsNamesys.removeBlocks(collectedBlocks);
       collectedBlocks.clear();
+      fsNamesys.dir.removeFromInodeMap(removedINodes);
+      removedINodes.clear();
       break;
     }
     case OP_RENAME_SNAPSHOT: {
