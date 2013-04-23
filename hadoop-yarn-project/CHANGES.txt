@@ -167,6 +167,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-542. Changed the default global AM max-attempts value to be not one.
     (Zhijie Shen via vinodkv)
 
+    YARN-583. Moved application level local resources to be localized under the
+    filecache sub-directory under application directory. (Omkar Vinit Joshi via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
