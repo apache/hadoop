@@ -327,6 +327,12 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5163. Update MR App to not use API utility methods for collections
     after YARN-441. (Xuan Gong via vinodkv)
 
+    MAPREDUCE-5066. Added a timeout for the job.end.notification.url. (Ivan
+    Mitic via acmurthy)
+
+    MAPREDUCE-5146. application classloader may be used too early to load
+    classes. (Sangjin Lee via tomwhite)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

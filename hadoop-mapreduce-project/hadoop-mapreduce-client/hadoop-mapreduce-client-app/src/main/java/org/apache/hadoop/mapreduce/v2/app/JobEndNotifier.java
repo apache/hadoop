@@ -27,6 +27,7 @@ import java.net.URL;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.mortbay.log.Log;
@@ -54,6 +55,7 @@ public class JobEndNotifier implements Configurable {
   protected String proxyConf;
   protected int numTries; //Number of tries to attempt notification
   protected int waitInterval; //Time (ms) to wait between retrying notification
+  protected int timeout; // Timeout (ms) on the connection and notification
   protected URL urlToNotify; //URL to notify read from the config
   protected Proxy proxyToUse = Proxy.NO_PROXY; //Proxy to use for notification
 
@@ -75,6 +77,9 @@ public class JobEndNotifier implements Configurable {
     , conf.getInt(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, 5000)
     );
     waitInterval = (waitInterval < 0) ? 5000 : waitInterval;
+
+    timeout = conf.getInt(JobContext.MR_JOB_END_NOTIFICATION_TIMEOUT,
+        JobContext.DEFAULT_MR_JOB_END_NOTIFICATION_TIMEOUT);
 
     userUrl = conf.get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL);
 
@@ -112,8 +117,7 @@ public class JobEndNotifier implements Configurable {
   }
   
   /**
-   * Notify the URL just once. Use best effort. Timeout hard coded to 5
-   * seconds.
+   * Notify the URL just once. Use best effort.
    */
   protected boolean notifyURLOnce() {
     boolean success = false;
@@ -121,8 +125,8 @@ public class JobEndNotifier implements Configurable {
       Log.info("Job end notification trying " + urlToNotify);
       HttpURLConnection conn =
         (HttpURLConnection) urlToNotify.openConnection(proxyToUse);
-      conn.setConnectTimeout(5*1000);
-      conn.setReadTimeout(5*1000);
+      conn.setConnectTimeout(timeout);
+      conn.setReadTimeout(timeout);
       conn.setAllowUserInteraction(false);
       if(conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
         Log.warn("Job end notification to " + urlToNotify +" failed with code: "

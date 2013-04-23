@@ -74,18 +74,22 @@ static BOOL ParseMode(LPCWSTR modeString, PMODE_CHANGE_ACTION *actions);
 
 static BOOL FreeActions(PMODE_CHANGE_ACTION actions);
 
-static BOOL ParseCommandLineArguments(__in int argc, __in wchar_t *argv[],
-  __out BOOL *rec, __out_opt INT *mask,
-  __out_opt PMODE_CHANGE_ACTION *actions, __out LPCWSTR *path);
+static BOOL ParseCommandLineArguments(
+  __in int argc,
+  __in_ecount(argc) wchar_t *argv[],
+  __out BOOL *rec,
+  __out_opt INT *mask,
+  __out_opt PMODE_CHANGE_ACTION *actions,
+  __out LPCWSTR *path);
 
 static BOOL ChangeFileModeByActions(__in LPCWSTR path,
-  PMODE_CHANGE_ACTION actions);
+  MODE_CHANGE_ACTION const *actions);
 
 static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt INT mode,
-  __in_opt PMODE_CHANGE_ACTION actions);
+  __in_opt MODE_CHANGE_ACTION const *actions);
 
 static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
-  __in_opt PMODE_CHANGE_ACTION actions);
+  __in_opt MODE_CHANGE_ACTION const *actions);
 
 
 //----------------------------------------------------------------------------
@@ -99,7 +103,7 @@ static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
 //
 // Notes:
 //
-int Chmod(int argc, wchar_t *argv[])
+int Chmod(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   LPWSTR pathName = NULL;
   LPWSTR longPathName = NULL;
@@ -169,7 +173,7 @@ ChmodEnd:
 // Notes:
 //
 static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt INT unixAccessMask,
-  __in_opt PMODE_CHANGE_ACTION actions)
+  __in_opt MODE_CHANGE_ACTION const *actions)
 {
   if (actions != NULL)
     return ChangeFileModeByActions(path, actions);
@@ -202,7 +206,7 @@ static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt INT unixAccessMask,
 //    - Otherwise, call the method on all its children, then change its mode.
 //
 static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt INT mode,
-  __in_opt PMODE_CHANGE_ACTION actions)
+  __in_opt MODE_CHANGE_ACTION const *actions)
 {
   BOOL isDir = FALSE;
   BOOL isSymlink = FALSE;
@@ -335,7 +339,9 @@ ChangeFileModeRecursivelyEnd:
 //	1. Recursive is only set on directories
 //  2. 'actions' is NULL if the mode is octal
 //
-static BOOL ParseCommandLineArguments(__in int argc, __in wchar_t *argv[],
+static BOOL ParseCommandLineArguments(
+  __in int argc,
+  __in_ecount(argc) wchar_t *argv[],
   __out BOOL *rec,
   __out_opt INT *mask,
   __out_opt PMODE_CHANGE_ACTION *actions,
@@ -551,9 +557,9 @@ static INT ComputeNewMode(__in INT oldMode,
 //  none
 //
 static BOOL ConvertActionsToMask(__in LPCWSTR path,
-  __in PMODE_CHANGE_ACTION actions, __out PINT puMask)
+  __in MODE_CHANGE_ACTION const *actions, __out PINT puMask)
 {
-  PMODE_CHANGE_ACTION curr = NULL;
+  MODE_CHANGE_ACTION const *curr = NULL;
 
   BY_HANDLE_FILE_INFORMATION fileInformation;
   DWORD dwErrorCode = ERROR_SUCCESS;
@@ -608,7 +614,7 @@ static BOOL ConvertActionsToMask(__in LPCWSTR path,
 //  none
 //
 static BOOL ChangeFileModeByActions(__in LPCWSTR path,
-  PMODE_CHANGE_ACTION actions)
+  MODE_CHANGE_ACTION const *actions)
 {
   INT mask = 0;
 
@@ -769,10 +775,14 @@ static BOOL ParseMode(LPCWSTR modeString, PMODE_CHANGE_ACTION *pActions)
       switch (c)
       {
       case NULL:
+        __fallthrough;
       case L',':
         i++;
+        __fallthrough;
       case L'+':
+        __fallthrough;
       case L'-':
+        __fallthrough;
       case L'=':
         state = PARSE_MODE_ACTION_WHO_STATE;
 

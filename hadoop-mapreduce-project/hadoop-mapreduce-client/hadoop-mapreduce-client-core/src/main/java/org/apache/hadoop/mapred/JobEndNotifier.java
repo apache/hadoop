@@ -44,9 +44,10 @@ public class JobEndNotifier {
     JobEndStatusInfo notification = null;
     String uri = conf.getJobEndNotificationURI();
     if (uri != null) {
-      // +1 to make logic for first notification identical to a retry
-      int retryAttempts = conf.getInt(JobContext.MR_JOB_END_RETRY_ATTEMPTS, 0) + 1;
+      int retryAttempts = conf.getInt(JobContext.MR_JOB_END_RETRY_ATTEMPTS, 0);
       long retryInterval = conf.getInt(JobContext.MR_JOB_END_RETRY_INTERVAL, 30000);
+      int timeout = conf.getInt(JobContext.MR_JOB_END_NOTIFICATION_TIMEOUT,
+          JobContext.DEFAULT_MR_JOB_END_NOTIFICATION_TIMEOUT);
       if (uri.contains("$jobId")) {
         uri = uri.replace("$jobId", status.getJobID().toString());
       }
@@ -56,17 +57,22 @@ public class JobEndNotifier {
             (status.getRunState() == JobStatus.FAILED) ? "FAILED" : "KILLED";
         uri = uri.replace("$jobStatus", statusStr);
       }
-      notification = new JobEndStatusInfo(uri, retryAttempts, retryInterval);
+      notification = new JobEndStatusInfo(
+          uri, retryAttempts, retryInterval, timeout);
     }
     return notification;
   }
 
-  private static int httpNotification(String uri) throws IOException {
+  private static int httpNotification(String uri, int timeout)
+      throws IOException {
     URI url = new URI(uri, false);
-    HttpClient m_client = new HttpClient();
+    HttpClient httpClient = new HttpClient();
+    httpClient.getParams().setSoTimeout(timeout);
+    httpClient.getParams().setConnectionManagerTimeout(timeout);
+
     HttpMethod method = new GetMethod(url.getEscapedURI());
     method.setRequestHeader("Accept", "*/*");
-    return m_client.executeMethod(method);
+    return httpClient.executeMethod(method);
   }
 
   // for use by the LocalJobRunner, without using a thread&queue,
@@ -74,9 +80,10 @@ public class JobEndNotifier {
   public static void localRunnerNotification(JobConf conf, JobStatus status) {
     JobEndStatusInfo notification = createNotification(conf, status);
     if (notification != null) {
-      while (notification.configureForRetry()) {
+      do {
         try {
-          int code = httpNotification(notification.getUri());
+          int code = httpNotification(notification.getUri(),
+              notification.getTimeout());
           if (code != 200) {
             throw new IOException("Invalid response status code: " + code);
           }
@@ -96,7 +103,7 @@ public class JobEndNotifier {
         catch (InterruptedException iex) {
           LOG.error("Notification retry error [" + notification + "]", iex);
         }
-      }
+      } while (notification.configureForRetry());
     }
   }
 
@@ -105,12 +112,15 @@ public class JobEndNotifier {
     private int retryAttempts;
     private long retryInterval;
     private long delayTime;
+    private int timeout;
 
-    JobEndStatusInfo(String uri, int retryAttempts, long retryInterval) {
+    JobEndStatusInfo(String uri, int retryAttempts, long retryInterval,
+        int timeout) {
       this.uri = uri;
       this.retryAttempts = retryAttempts;
       this.retryInterval = retryInterval;
       this.delayTime = System.currentTimeMillis();
+      this.timeout = timeout;
     }
 
     public String getUri() {
@@ -123,6 +133,10 @@ public class JobEndNotifier {
 
     public long getRetryInterval() {
       return retryInterval;
+    }
+
+    public int getTimeout() {
+      return timeout;
     }
 
     public boolean configureForRetry() {

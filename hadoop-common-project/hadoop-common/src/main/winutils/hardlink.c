@@ -37,7 +37,7 @@ typedef enum HardLinkCommandOptionType
 // TRUE: If the command line is valid
 // FALSE: otherwise
 static BOOL ParseCommandLine(__in int argc,
-                             __in wchar_t *argv[],
+                             __in_ecount(argc) wchar_t *argv[],
                              __out HardLinkCommandOption *command)
 {
   *command = HardLinkInvalid;
@@ -161,7 +161,7 @@ HardlinkCreateExit:
 // Returns:
 // EXIT_SUCCESS: On success
 // EXIT_FAILURE: otherwise
-int Hardlink(int argc, wchar_t *argv[])
+int Hardlink(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   DWORD dwErrorCode = ERROR_SUCCESS;
   int ret = EXIT_FAILURE;

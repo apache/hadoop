@@ -32,7 +32,7 @@
 //  altered. The caller need to initilize the mask string to be all '-' to get
 //  the correct mask string.
 //
-static BOOL GetMaskString(INT accessMask, LPWSTR maskString)
+static BOOL GetMaskString(__in INT accessMask, __in_ecount(10) LPWSTR maskString)
 {
   if(wcslen(maskString) != 10)
     return FALSE;
@@ -163,7 +163,10 @@ static wchar_t* CurrentDir = L".";
 //   TRUE on the valid command line, FALSE otherwise
 //
 BOOL ParseCommandLine(
-  int argc, wchar_t *argv[], wchar_t** path, int *optionsMask)
+  __in int argc,
+  __in_ecount(argc) wchar_t *argv[],
+  __deref_out PWSTR *path,
+  __out int *optionsMask)
 {
   int MaxOptions = 2; // Should be equal to the number of elems in CmdLineOption
   int i = 0;
@@ -236,7 +239,7 @@ BOOL ParseCommandLine(
 //
 // Notes:
 //
-int Ls(int argc, wchar_t *argv[])
+int Ls(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   LPWSTR pathName = NULL;
   LPWSTR longPathName = NULL;

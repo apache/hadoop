@@ -616,6 +616,9 @@ public interface MRJobConfig {
   public static final String MR_JOB_END_NOTIFICATION_PROXY =
     "mapreduce.job.end-notification.proxy";
 
+  public static final String MR_JOB_END_NOTIFICATION_TIMEOUT =
+      "mapreduce.job.end-notification.timeout";
+
   public static final String MR_JOB_END_RETRY_ATTEMPTS =
     "mapreduce.job.end-notification.retry.attempts";
 
@@ -627,6 +630,9 @@ public interface MRJobConfig {
 
   public static final String MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL =
     "mapreduce.job.end-notification.max.retry.interval";
+
+  public static final int DEFAULT_MR_JOB_END_NOTIFICATION_TIMEOUT =
+      5000;
 
   /*
    * MR AM Service Authorization
