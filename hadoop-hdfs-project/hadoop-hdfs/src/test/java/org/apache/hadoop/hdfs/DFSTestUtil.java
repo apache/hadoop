@@ -48,6 +48,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -91,6 +93,8 @@ import com.google.common.base.Joiner;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
+
+  private static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
   
   private static Random gen = new Random();
   private static String[] dirNames = {
@@ -723,7 +727,11 @@ public class DFSTestUtil {
     File file = new File(filename);
     DataInputStream in = new DataInputStream(new FileInputStream(file));
     byte[] content = new byte[(int)file.length()];
-    in.readFully(content);
+    try {
+      in.readFully(content);
+    } finally {
+      IOUtils.cleanup(LOG, in);
+    }
     return content;
   }
 

@@ -255,7 +255,6 @@ public class TestEditLogJournalFailures {
       doThrow(new IOException("fail on setReadyToFlush()")).when(spyElos)
         .setReadyToFlush();
     }
-    doNothing().when(spyElos).abort();
   }
 
   private EditLogFileOutputStream spyOnStream(JournalAndStream jas) {

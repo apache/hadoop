@@ -360,6 +360,9 @@ Trunk (Unreleased)
     HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
     datanode data directory as URI. (Chris Nauroth via suresh)
 
+    HDFS-4725. Fix HDFS file handle leaks in FSEditLog, NameNode,
+    OfflineEditsBinaryLoader and some tests.  (Chris Nauroth via szetszwo)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.

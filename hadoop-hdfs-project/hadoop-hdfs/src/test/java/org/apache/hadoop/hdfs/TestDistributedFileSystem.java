@@ -631,44 +631,48 @@ public class TestDistributedFileSystem {
         true);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2).build();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    // Create two files
-    Path tmpFile1 = new Path("/tmpfile1.dat");
-    Path tmpFile2 = new Path("/tmpfile2.dat");
-    DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
-    DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
-    // Get locations of blocks of both files and concat together
-    BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
-    BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
-    BlockLocation[] blockLocs = (BlockLocation[]) ArrayUtils.addAll(blockLocs1,
-        blockLocs2);
-    // Fetch VolumeBlockLocations in batch
-    BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
-        .asList(blockLocs));
-    int counter = 0;
-    // Print out the list of ids received for each block
-    for (BlockStorageLocation l : locs) {
-      for (int i = 0; i < l.getVolumeIds().length; i++) {
-        VolumeId id = l.getVolumeIds()[i];
-        String name = l.getNames()[i];
-        if (id != null) {
-          System.out.println("Datanode " + name + " has block " + counter
-              + " on volume id " + id.toString());
+    try {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      // Create two files
+      Path tmpFile1 = new Path("/tmpfile1.dat");
+      Path tmpFile2 = new Path("/tmpfile2.dat");
+      DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
+      DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
+      // Get locations of blocks of both files and concat together
+      BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
+      BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
+      BlockLocation[] blockLocs = (BlockLocation[]) ArrayUtils.addAll(blockLocs1,
+          blockLocs2);
+      // Fetch VolumeBlockLocations in batch
+      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
+          .asList(blockLocs));
+      int counter = 0;
+      // Print out the list of ids received for each block
+      for (BlockStorageLocation l : locs) {
+        for (int i = 0; i < l.getVolumeIds().length; i++) {
+          VolumeId id = l.getVolumeIds()[i];
+          String name = l.getNames()[i];
+          if (id != null) {
+            System.out.println("Datanode " + name + " has block " + counter
+                + " on volume id " + id.toString());
+          }
+        }
+        counter++;
+      }
+      assertEquals("Expected two HdfsBlockLocations for two 1-block files", 2,
+          locs.length);
+      for (BlockStorageLocation l : locs) {
+        assertEquals("Expected two replicas for each block", 2,
+            l.getVolumeIds().length);
+        for (int i = 0; i < l.getVolumeIds().length; i++) {
+          VolumeId id = l.getVolumeIds()[i];
+          String name = l.getNames()[i];
+          assertTrue("Expected block to be valid on datanode " + name,
+              id.isValid());
         }
       }
-      counter++;
-    }
-    assertEquals("Expected two HdfsBlockLocations for two 1-block files", 2,
-        locs.length);
-    for (BlockStorageLocation l : locs) {
-      assertEquals("Expected two replicas for each block", 2,
-          l.getVolumeIds().length);
-      for (int i = 0; i < l.getVolumeIds().length; i++) {
-        VolumeId id = l.getVolumeIds()[i];
-        String name = l.getNames()[i];
-        assertTrue("Expected block to be valid on datanode " + name,
-            id.isValid());
-      }
+    } finally {
+      cluster.shutdown();
     }
   }
 
@@ -683,27 +687,31 @@ public class TestDistributedFileSystem {
         true);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2).build();
-    cluster.getDataNodes();
-    DistributedFileSystem fs = cluster.getFileSystem();
-    // Create a file
-    Path tmpFile = new Path("/tmpfile1.dat");
-    DFSTestUtil.createFile(fs, tmpFile, 1024, (short) 2, 0xDEADDEADl);
-    // Get locations of blocks of the file
-    BlockLocation[] blockLocs = fs.getFileBlockLocations(tmpFile, 0, 1024);
-    // Stop a datanode to simulate a failure
-    cluster.stopDataNode(0);
-    // Fetch VolumeBlockLocations
-    BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
-        .asList(blockLocs));
+    try {
+      cluster.getDataNodes();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      // Create a file
+      Path tmpFile = new Path("/tmpfile1.dat");
+      DFSTestUtil.createFile(fs, tmpFile, 1024, (short) 2, 0xDEADDEADl);
+      // Get locations of blocks of the file
+      BlockLocation[] blockLocs = fs.getFileBlockLocations(tmpFile, 0, 1024);
+      // Stop a datanode to simulate a failure
+      cluster.stopDataNode(0);
+      // Fetch VolumeBlockLocations
+      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
+          .asList(blockLocs));
 
-    assertEquals("Expected one HdfsBlockLocation for one 1-block file", 1,
-        locs.length);
+      assertEquals("Expected one HdfsBlockLocation for one 1-block file", 1,
+          locs.length);
 
-    for (BlockStorageLocation l : locs) {
-      assertEquals("Expected two replicas for each block", 2,
-          l.getVolumeIds().length);
-      assertTrue("Expected one valid and one invalid replica",
-          (l.getVolumeIds()[0].isValid()) ^ (l.getVolumeIds()[1].isValid()));
+      for (BlockStorageLocation l : locs) {
+        assertEquals("Expected two replicas for each block", 2,
+            l.getVolumeIds().length);
+        assertTrue("Expected one valid and one invalid replica",
+            (l.getVolumeIds()[0].isValid()) ^ (l.getVolumeIds()[1].isValid()));
+      }
+    } finally {
+      cluster.shutdown();
     }
   }
 

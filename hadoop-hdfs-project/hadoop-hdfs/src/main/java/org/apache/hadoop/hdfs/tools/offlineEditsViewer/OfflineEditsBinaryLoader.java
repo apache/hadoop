@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * OfflineEditsBinaryLoader loads edits from a binary edits file
@@ -59,43 +60,49 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
    */
   @Override
   public void loadEdits() throws IOException {
-    visitor.start(inputStream.getVersion());
-    while (true) {
-      try {
-        FSEditLogOp op = inputStream.readOp();
-        if (op == null)
-          break;
-        if (fixTxIds) {
-          if (nextTxId <= 0) {
-            nextTxId = op.getTransactionId();
+    try {
+      visitor.start(inputStream.getVersion());
+      while (true) {
+        try {
+          FSEditLogOp op = inputStream.readOp();
+          if (op == null)
+            break;
+          if (fixTxIds) {
             if (nextTxId <= 0) {
-              nextTxId = 1;
+              nextTxId = op.getTransactionId();
+              if (nextTxId <= 0) {
+                nextTxId = 1;
+              }
             }
+            op.setTransactionId(nextTxId);
+            nextTxId++;
           }
-          op.setTransactionId(nextTxId);
-          nextTxId++;
+          visitor.visitOp(op);
+        } catch (IOException e) {
+          if (!recoveryMode) {
+            // Tell the visitor to clean up, then re-throw the exception
+            LOG.error("Got IOException at position " +
+              inputStream.getPosition());
+            visitor.close(e);
+            throw e;
+          }
+          LOG.error("Got IOException while reading stream!  Resyncing.", e);
+          inputStream.resync();
+        } catch (RuntimeException e) {
+          if (!recoveryMode) {
+            // Tell the visitor to clean up, then re-throw the exception
+            LOG.error("Got RuntimeException at position " +
+              inputStream.getPosition());
+            visitor.close(e);
+            throw e;
+          }
+          LOG.error("Got RuntimeException while reading stream!  Resyncing.", e);
+          inputStream.resync();
         }
-        visitor.visitOp(op);
-      } catch (IOException e) {
-        if (!recoveryMode) {
-          // Tell the visitor to clean up, then re-throw the exception
-          LOG.error("Got IOException at position " + inputStream.getPosition());
-          visitor.close(e);
-          throw e;
-        }
-        LOG.error("Got IOException while reading stream!  Resyncing.", e);
-        inputStream.resync();
-      } catch (RuntimeException e) {
-        if (!recoveryMode) {
-          // Tell the visitor to clean up, then re-throw the exception
-          LOG.error("Got RuntimeException at position " + inputStream.getPosition());
-          visitor.close(e);
-          throw e;
-        }
-        LOG.error("Got RuntimeException while reading stream!  Resyncing.", e);
-        inputStream.resync();
       }
+      visitor.close(null);
+    } finally {
+      IOUtils.cleanup(LOG, inputStream);
     }
-    visitor.close(null);
   }
 }

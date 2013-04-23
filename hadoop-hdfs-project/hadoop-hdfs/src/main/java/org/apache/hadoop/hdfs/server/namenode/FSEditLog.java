@@ -317,21 +317,23 @@ public class FSEditLog implements LogsPurgeable {
       LOG.debug("Closing log when already closed");
       return;
     }
-    if (state == State.IN_SEGMENT) {
-      assert editLogStream != null;
-      waitForSyncToFinish();
-      endCurrentLogSegment(true);
-    }
-    
-    if (journalSet != null && !journalSet.isEmpty()) {
-      try {
-        journalSet.close();
-      } catch (IOException ioe) {
-        LOG.warn("Error closing journalSet", ioe);
-      }
-    }
 
-    state = State.CLOSED;
+    try {
+      if (state == State.IN_SEGMENT) {
+        assert editLogStream != null;
+        waitForSyncToFinish();
+        endCurrentLogSegment(true);
+      }
+    } finally {
+      if (journalSet != null && !journalSet.isEmpty()) {
+        try {
+          journalSet.close();
+        } catch (IOException ioe) {
+          LOG.warn("Error closing journalSet", ioe);
+        }
+      }
+      state = State.CLOSED;
+    }
   }
 
 
@@ -583,6 +585,7 @@ public class FSEditLog implements LogsPurgeable {
                 "due to " + e.getMessage() + ". " +
                 "Unsynced transactions: " + (txid - synctxid);
             LOG.fatal(msg, new Exception());
+            IOUtils.cleanup(LOG, journalSet);
             terminate(1, msg);
           }
         } finally {
@@ -606,6 +609,7 @@ public class FSEditLog implements LogsPurgeable {
               "Could not sync enough journals to persistent storage. "
               + "Unsynced transactions: " + (txid - synctxid);
           LOG.fatal(msg, new Exception());
+          IOUtils.cleanup(LOG, journalSet);
           terminate(1, msg);
         }
       }
