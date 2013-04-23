@@ -252,8 +252,9 @@ public class TestDFSUpgradeFromImage {
 
     // Now try to start an NN from it
 
+    MiniDFSCluster cluster = null;
     try {
-      new MiniDFSCluster.Builder(conf).numDataNodes(0)
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .format(false)
         .manageDataDfsDirs(false)
         .manageNameDfsDirs(false)
@@ -263,6 +264,11 @@ public class TestDFSUpgradeFromImage {
     } catch (IOException ioe) {
       if (!ioe.toString().contains("Old layout version is 'too old'")) {
         throw ioe;
+      }
+    } finally {
+      // We expect startup to fail, but just in case it didn't, shutdown now.
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }

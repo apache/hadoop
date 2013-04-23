@@ -326,6 +326,10 @@ Trunk (Unreleased)
     HDFS-4646. createNNProxyWithClientProtocol ignores configured timeout
     value (Jagane Sundar via cos)
 
+    HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
+    failure to unpack old image tarball that contains hard links.
+    (Chris Nauroth via szetszwo)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
