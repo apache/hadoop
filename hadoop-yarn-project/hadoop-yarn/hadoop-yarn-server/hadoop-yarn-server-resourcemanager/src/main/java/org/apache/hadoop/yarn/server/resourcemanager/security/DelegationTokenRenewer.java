@@ -48,6 +48,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Service to renew application delegation tokens.
  */
@@ -139,7 +141,8 @@ public class DelegationTokenRenewer extends AbstractService {
    * class that is used for keeping tracks of DT to renew
    *
    */
-  private static class DelegationTokenToRenew {
+  @VisibleForTesting
+  protected static class DelegationTokenToRenew {
     public final Token<?> token;
     public final ApplicationId applicationId;
     public final Configuration conf;
@@ -252,7 +255,16 @@ public class DelegationTokenRenewer extends AbstractService {
   private void addTokenToList(DelegationTokenToRenew t) {
     delegationTokens.add(t);
   }
-  
+
+  @VisibleForTesting
+  public Set<Token<?>> getDelegationTokens() {
+    Set<Token<?>> tokens = new HashSet<Token<?>>();
+    for(DelegationTokenToRenew delegationToken : delegationTokens) {
+      tokens.add(delegationToken.token);
+    }
+    return tokens;
+  }
+
   /**
    * Add application tokens for renewal.
    * @param applicationId added application
@@ -343,7 +355,8 @@ public class DelegationTokenRenewer extends AbstractService {
   /**
    * set task to renew the token
    */
-  private void setTimerForTokenRenewal(DelegationTokenToRenew token)
+  @VisibleForTesting
+  protected void setTimerForTokenRenewal(DelegationTokenToRenew token)
       throws IOException {
       
     // calculate timer time
@@ -358,7 +371,8 @@ public class DelegationTokenRenewer extends AbstractService {
   }
 
   // renew a token
-  private void renewToken(final DelegationTokenToRenew dttr)
+  @VisibleForTesting
+  protected void renewToken(final DelegationTokenToRenew dttr)
       throws IOException {
     // need to use doAs so that http can find the kerberos tgt
     // NOTE: token renewers should be responsible for the correct UGI!
