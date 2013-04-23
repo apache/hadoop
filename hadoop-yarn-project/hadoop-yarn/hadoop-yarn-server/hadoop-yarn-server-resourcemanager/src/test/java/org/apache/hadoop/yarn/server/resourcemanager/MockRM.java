@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.Map;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -41,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -130,26 +134,26 @@ public class MockRM extends ResourceManager {
   public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
     return submitApp(masterMemory, name, user, null, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }
   
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls) throws Exception {
     return submitApp(masterMemory, name, user, acls, false, null,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }  
 
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, String queue) throws Exception {
     return submitApp(masterMemory, name, user, acls, false, queue,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
   }
 
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
-      int maxAppAttempts) throws Exception {
+      int maxAppAttempts, Credentials ts) throws Exception {
     ClientRMProtocol client = getClientRMService();
     GetNewApplicationResponse resp = client.getNewApplication(Records
         .newRecord(GetNewApplicationRequest.class));
@@ -175,6 +179,12 @@ public class MockRM extends ResourceManager {
     sub.setResource(capability);
     clc.setApplicationACLs(acls);
     clc.setUser(user);
+    if (ts != null && UserGroupInformation.isSecurityEnabled()) {
+      DataOutputBuffer dob = new DataOutputBuffer();
+      ts.writeTokenStorageToStream(dob);
+      ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      clc.setContainerTokens(securityTokens);
+    }
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
@@ -355,6 +365,10 @@ public class MockRM extends ResourceManager {
 
   public NodesListManager getNodesListManager() {
     return this.nodesListManager;
+  }
+
+  public RMDelegationTokenSecretManager getRMDTSecretManager() {
+    return this.rmDTSecretManager;
   }
 
   @Override

@@ -18,11 +18,21 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -33,9 +43,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -43,6 +55,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -60,10 +74,8 @@ public class TestRMRestart {
     
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
-    conf.set(YarnConfiguration.RM_STORE, 
-    "org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore");
-    conf.set(YarnConfiguration.RM_SCHEDULER, 
-    "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler");
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -159,7 +171,7 @@ public class TestRMRestart {
     // create unmanaged app
     RMApp appUnmanaged = rm1.submitApp(200, "someApp", "someUser", null, true,
         null, conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
+          YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
     ApplicationAttemptId unmanagedAttemptId = 
                         appUnmanaged.getCurrentAppAttempt().getAppAttemptId();
     // assert appUnmanaged info is saved
@@ -321,8 +333,7 @@ public class TestRMRestart {
 
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
-    conf.set(YarnConfiguration.RM_STORE, 
-    "org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore");
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -340,10 +351,12 @@ public class TestRMRestart {
 
     // submit an app with maxAppAttempts equals to 1
     RMApp app1 = rm1.submitApp(200, "name", "user",
-        new HashMap<ApplicationAccessType, String>(), false, "default", 1);
+          new HashMap<ApplicationAccessType, String>(), false, "default", 1,
+          null);
     // submit an app with maxAppAttempts equals to -1
     RMApp app2 = rm1.submitApp(200, "name", "user",
-        new HashMap<ApplicationAccessType, String>(), false, "default", -1);
+          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+          null);
 
     // assert app1 info is saved
     ApplicationState appState = rmAppState.get(app1.getApplicationId());
@@ -388,5 +401,114 @@ public class TestRMRestart {
     // stop the RM  
     rm1.stop();
     rm2.stop();
+  }
+
+  @Test
+  public void testTokenRestoredOnRMrestart() throws Exception {
+    Logger rootLogger = LogManager.getRootLogger();
+    rootLogger.setLevel(Level.DEBUG);
+    ExitUtil.disableSystemExit();
+
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+    MockRM rm1 = new MyMockRM(conf, memStore);
+    rm1.start();
+
+    HashSet<Token<RMDelegationTokenIdentifier>> tokenSet =
+        new HashSet<Token<RMDelegationTokenIdentifier>>();
+
+    // create an empty credential
+    Credentials ts = new Credentials();
+
+    // create tokens and add into credential
+    Text userText1 = new Text("user1");
+    RMDelegationTokenIdentifier dtId1 =
+        new RMDelegationTokenIdentifier(userText1, new Text("renewer1"),
+          userText1);
+    Token<RMDelegationTokenIdentifier> token1 =
+        new Token<RMDelegationTokenIdentifier>(dtId1,
+          rm1.getRMDTSecretManager());
+    ts.addToken(userText1, token1);
+    tokenSet.add(token1);
+
+    Text userText2 = new Text("user2");
+    RMDelegationTokenIdentifier dtId2 =
+        new RMDelegationTokenIdentifier(userText2, new Text("renewer2"),
+          userText2);
+    Token<RMDelegationTokenIdentifier> token2 =
+        new Token<RMDelegationTokenIdentifier>(dtId2,
+          rm1.getRMDTSecretManager());
+    ts.addToken(userText2, token2);
+    tokenSet.add(token2);
+
+    // submit an app with customized credential
+    RMApp app = rm1.submitApp(200, "name", "user",
+        new HashMap<ApplicationAccessType, String>(), false, "default", 1, ts);
+
+    // assert app info is saved
+    ApplicationState appState = rmAppState.get(app.getApplicationId());
+    Assert.assertNotNull(appState);
+
+    // assert delegation tokens are saved
+    DataOutputBuffer dob = new DataOutputBuffer();
+    ts.writeTokenStorageToStream(dob);
+    ByteBuffer securityTokens =
+        ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    Assert.assertEquals(securityTokens, appState
+      .getApplicationSubmissionContext().getAMContainerSpec()
+      .getContainerTokens());
+
+    // start new RM
+    MockRM rm2 = new MyMockRM(conf, memStore);
+    rm2.start();
+
+    // verify tokens are properly populated back to DelegationTokenRenewer
+    Assert.assertEquals(tokenSet, rm1.getRMContext()
+      .getDelegationTokenRenewer().getDelegationTokens());
+
+    // stop the RM
+    rm1.stop();
+    rm2.stop();
+  }
+
+  class MyMockRM extends MockRM {
+
+    public MyMockRM(Configuration conf, RMStateStore store) {
+      super(conf, store);
+    }
+
+    @Override
+    protected void doSecureLogin() throws IOException {
+      // Do nothing.
+    }
+
+    @Override
+    protected DelegationTokenRenewer createDelegationTokenRenewer() {
+      return new DelegationTokenRenewer() {
+        @Override
+        protected void renewToken(final DelegationTokenToRenew dttr)
+            throws IOException {
+          // Do nothing
+        }
+
+        @Override
+        protected void setTimerForTokenRenewal(DelegationTokenToRenew token)
+            throws IOException {
+          // Do nothing
+        }
+      };
+    }
   }
 }
