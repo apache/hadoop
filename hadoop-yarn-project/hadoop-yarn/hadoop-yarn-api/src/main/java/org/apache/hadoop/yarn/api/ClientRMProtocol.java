@@ -96,7 +96,9 @@ public interface ClientRMProtocol {
    * 
    * <p>Currently the <code>ResourceManager</code> sends an immediate (empty) 
    * {@link SubmitApplicationResponse} on accepting the submission and throws 
-   * an exception if it rejects the submission.</p>
+   * an exception if it rejects the submission. However, this call needs to be
+   * followed by {@link #getApplicationReport(GetApplicationReportRequest)}
+   * to make sure that the application gets properly submitted.</p>
    * 
    * <p> In secure mode,the <code>ResourceManager</code> verifies access to
    * queues etc. before accepting the application submission.</p>

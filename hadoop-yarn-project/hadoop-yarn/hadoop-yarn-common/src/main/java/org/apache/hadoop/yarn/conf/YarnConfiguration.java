@@ -692,6 +692,19 @@ public class YarnConfiguration extends Configuration {
    */
   public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
 
+  ////////////////////////////////
+  // Other Configs
+  ////////////////////////////////
+
+  /**
+   * The interval of the yarn client's querying application state after
+   * application submission. The unit is millisecond.
+   */
+  public static final String YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
+      YARN_PREFIX + "client.app-submission.poll-interval";
+  public static final long DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
+      1000;
+
   public YarnConfiguration() {
     super();
   }

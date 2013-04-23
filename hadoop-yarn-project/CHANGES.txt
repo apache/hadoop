@@ -277,6 +277,9 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-594. Update test and add comments in YARN-534 (Jian He via bikas)
 
+    YARN-549. YarnClient.submitApplication should wait for application to be
+    accepted by the RM (Zhijie Shen via bikas)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

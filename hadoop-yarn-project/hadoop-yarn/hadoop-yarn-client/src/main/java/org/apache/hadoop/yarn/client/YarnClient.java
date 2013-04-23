@@ -63,7 +63,9 @@ public interface YarnClient extends Service {
 
   /**
    * <p>
-   * Submit a new application to <code>YARN.</code>
+   * Submit a new application to <code>YARN.</code> It is a blocking call, such
+   * that it will not return {@link ApplicationId} until the submitted
+   * application has been submitted and accepted by the ResourceManager.
    * </p>
    * 
    * @param appContext
