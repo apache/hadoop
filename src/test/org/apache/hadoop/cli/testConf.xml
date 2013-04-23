@@ -1872,7 +1872,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^put: `wrongdir': specified destination directory doest not exist</expected-output>
+          <expected-output>^put: `wrongdir': specified destination directory does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2128,7 +2128,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^copyFromLocal: `wrongdir': specified destination directory doest not exist</expected-output>
+          <expected-output>^copyFromLocal: `wrongdir': specified destination directory does not exist</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -3161,7 +3161,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^moveFromLocal: `wrongdir': specified destination directory doest not exist</expected-output>
+          <expected-output>^moveFromLocal: `wrongdir': specified destination directory does not exist</expected-output>
         </comparator>
       </comparators>
     </test>

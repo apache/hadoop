@@ -571,6 +571,8 @@ Release 1.2.0 - 2013.04.16
     HDFS-4715. Backport HDFS-3577, HDFS-3318 and HDFS-3788: fix some WebHDFS
     performance issues.  (Mark Wagner via szetszwo)
 
+    HADOOP-9492. Update testConf.xml for HADOOP-9473.  (Jing Zhao via szetszwo)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
