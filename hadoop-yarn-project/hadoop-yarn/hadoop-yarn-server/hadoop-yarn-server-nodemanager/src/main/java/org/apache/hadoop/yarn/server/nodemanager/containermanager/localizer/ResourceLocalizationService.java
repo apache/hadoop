@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -46,7 +47,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,6 +65,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -481,18 +482,15 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   private String getUserFileCachePath(String user) {
-    String path =
-        "." + Path.SEPARATOR + ContainerLocalizer.USERCACHE + Path.SEPARATOR
-            + user + Path.SEPARATOR + ContainerLocalizer.FILECACHE;
-    return path;
+    return StringUtils.join(Path.SEPARATOR, Arrays.asList(".",
+      ContainerLocalizer.USERCACHE, user, ContainerLocalizer.FILECACHE));
+
   }
 
-  private String getUserAppCachePath(String user, String appId) {
-    String path =
-        "." + Path.SEPARATOR + ContainerLocalizer.USERCACHE + Path.SEPARATOR
-            + user + Path.SEPARATOR + ContainerLocalizer.APPCACHE
-            + Path.SEPARATOR + appId;
-    return path;
+  private String getAppFileCachePath(String user, String appId) {
+    return StringUtils.join(Path.SEPARATOR, Arrays.asList(".",
+      ContainerLocalizer.USERCACHE, user, ContainerLocalizer.APPCACHE, appId,
+      ContainerLocalizer.FILECACHE));
   }
   
   @VisibleForTesting
@@ -942,7 +940,7 @@ public class ResourceLocalizationService extends CompositeService
       if (vis == LocalResourceVisibility.PRIVATE) {// PRIVATE Only
         cacheDirectory = getUserFileCachePath(user);
       } else {// APPLICATION ONLY
-        cacheDirectory = getUserAppCachePath(user, appId.toString());
+        cacheDirectory = getAppFileCachePath(user, appId.toString());
       }
       Path dirPath =
           dirsHandler.getLocalPathForWrite(cacheDirectory,
