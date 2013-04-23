@@ -266,3 +266,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4727. Update inodeMap after deleting files/directories/snapshots.
   (Jing Zhao via szetszwo)
+
+  HDFS-4719. Remove AbstractINodeDiff.Factory and move its methods to 
+  AbstractINodeDiffList.  (Arpit Agarwal via szetszwo)

@@ -29,28 +29,10 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
  * Represent an {@link INodeFileUnderConstruction} that is snapshotted.
- * Note that snapshot files are represented by
- * {@link INodeFileUnderConstructionSnapshot}.
  */
 @InterfaceAudience.Private
 public class INodeFileUnderConstructionWithSnapshot
     extends INodeFileUnderConstruction implements FileWithSnapshot {
-  /**
-   * Factory for {@link INodeFileUnderConstruction} diff.
-   */
-  static class FileUcDiffFactory extends FileDiffFactory {
-    static final FileUcDiffFactory INSTANCE = new FileUcDiffFactory();
-
-    @Override
-    INodeFileUnderConstruction createSnapshotCopy(INodeFile file) {
-      final INodeFileUnderConstruction uc = (INodeFileUnderConstruction)file;
-      final INodeFileUnderConstruction copy = new INodeFileUnderConstruction(
-          uc, uc.getClientName(), uc.getClientMachine(), uc.getClientNode());
-      copy.setBlocks(null);
-      return copy;
-    }
-  }
-
   private final FileDiffList diffs;
   private boolean isCurrentFileDeleted = false;
 
@@ -61,7 +43,6 @@ public class INodeFileUnderConstructionWithSnapshot
       final FileDiffList diffs) {
     super(f, clientName, clientMachine, clientNode);
     this.diffs = diffs != null? diffs: new FileDiffList();
-    this.diffs.setFactory(FileUcDiffFactory.INSTANCE);
   }
 
   /**

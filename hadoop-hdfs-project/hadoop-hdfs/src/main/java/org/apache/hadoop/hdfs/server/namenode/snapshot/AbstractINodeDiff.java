@@ -30,7 +30,7 @@ import com.google.common.base.Preconditions;
 
 /**
  * The difference of an inode between in two snapshots.
- * {@link AbstractINodeDiff2} maintains a list of snapshot diffs,
+ * {@link AbstractINodeDiffList} maintains a list of snapshot diffs,
  * <pre>
  *   d_1 -> d_2 -> ... -> d_n -> null,
  * </pre>
@@ -49,15 +49,6 @@ import com.google.common.base.Preconditions;
 abstract class AbstractINodeDiff<N extends INode,
                                  D extends AbstractINodeDiff<N, D>>
     implements Comparable<Snapshot> {
-  /** A factory for creating diff and snapshot copy of an inode. */
-  static abstract class Factory<N extends INode,
-                                D extends AbstractINodeDiff<N, D>> {
-    /** @return an {@link AbstractINodeDiff}. */
-    abstract D createDiff(Snapshot snapshot, N currentINode);
-
-    /** @return a snapshot copy of the current inode. */
-    abstract N createSnapshotCopy(N currentINode);
-  }
 
   /** The snapshot will be obtained after this diff is applied. */
   Snapshot snapshot;
@@ -105,13 +96,9 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Save the INode state to the snapshot if it is not done already. */
-  void saveSnapshotCopy(N snapshotCopy, Factory<N, D> factory, N currentINode) {
-    if (snapshotINode == null) {
-      if (snapshotCopy == null) {
-        snapshotCopy = factory.createSnapshotCopy(currentINode);
-      }
-      snapshotINode = snapshotCopy;
-    }
+  void saveSnapshotCopy(N snapshotCopy, N currentINode) {
+    Preconditions.checkState(snapshotINode == null, "Expected snapshotINode to be null");
+    snapshotINode = snapshotCopy;
   }
 
   /** @return the inode corresponding to the snapshot. */

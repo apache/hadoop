@@ -116,30 +116,6 @@ public interface FileWithSnapshot {
     }
   }
 
-  static class FileDiffFactory
-      extends AbstractINodeDiff.Factory<INodeFile, FileDiff> {
-    static final FileDiffFactory INSTANCE = new FileDiffFactory();
-
-    @Override
-    FileDiff createDiff(Snapshot snapshot, INodeFile file) {
-      return new FileDiff(snapshot, file);
-    }
-
-    @Override
-    INodeFile createSnapshotCopy(INodeFile currentINode) {
-      final INodeFile copy = new INodeFile(currentINode);
-      copy.setBlocks(null);
-      return copy;
-    }
-  }
-
-  /**
-   * A list of {@link FileDiff}.
-   */
-  public static class FileDiffList
-      extends AbstractINodeDiffList<INodeFile, FileDiff> {
-  }
-
   /** @return the {@link INodeFile} view of this object. */
   public INodeFile asINodeFile();
 

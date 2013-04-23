@@ -37,14 +37,8 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
 abstract class AbstractINodeDiffList<N extends INode,
                                      D extends AbstractINodeDiff<N, D>> 
     implements Iterable<D> {
-  private AbstractINodeDiff.Factory<N, D> factory;
-
   /** Diff list sorted by snapshot IDs, i.e. in chronological order. */
   private final List<D> diffs = new ArrayList<D>();
-
-  void setFactory(AbstractINodeDiff.Factory<N, D> factory) {
-    this.factory = factory;
-  }
 
   /** @return this list as a unmodifiable {@link List}. */
   public final List<D> asList() {
@@ -55,6 +49,12 @@ abstract class AbstractINodeDiffList<N extends INode,
   public void clear() {
     diffs.clear();
   }
+
+  /** @return an {@link AbstractINodeDiff}. */
+  abstract D createDiff(Snapshot snapshot, N currentINode);
+
+  /** @return a snapshot copy of the current inode. */  
+  abstract N createSnapshotCopy(N currentINode);
 
   /**
    * Delete a snapshot. The synchronization of the diff list will be done 
@@ -109,7 +109,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   final D addDiff(Snapshot latest, N currentINode)
       throws QuotaExceededException {
     currentINode.addSpaceConsumed(1, 0, true);
-    return addLast(factory.createDiff(latest, currentINode));
+    return addLast(createDiff(latest, currentINode));
   }
 
   /** Append the diff at the end of the list. */
@@ -258,8 +258,13 @@ abstract class AbstractINodeDiffList<N extends INode,
   public void saveSelf2Snapshot(Snapshot latest, N currentINode, N snapshotCopy)
       throws QuotaExceededException {
     if (latest != null) {
-      checkAndAddLatestSnapshotDiff(latest, currentINode).saveSnapshotCopy(
-          snapshotCopy, factory, currentINode);
+      D diff = checkAndAddLatestSnapshotDiff(latest, currentINode);
+      if (diff.snapshotINode == null) {
+        if (snapshotCopy == null) {
+          snapshotCopy = createSnapshotCopy(currentINode);
+        }
+        diff.saveSnapshotCopy(snapshotCopy, currentINode);
+      }
     }
   }
   

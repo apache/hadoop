@@ -142,13 +142,6 @@ public class INodeDirectory extends INodeWithAdditionalFields {
   }
 
   /**
-   * Remove the specified child and all its snapshot copies from this directory.
-   */
-  public boolean removeChildAndAllSnapshotCopies(INode child) {
-    return removeChild(child);
-  }
-
-  /**
    * Replace itself with {@link INodeDirectoryWithQuota} or
    * {@link INodeDirectoryWithSnapshot} depending on the latest snapshot.
    */

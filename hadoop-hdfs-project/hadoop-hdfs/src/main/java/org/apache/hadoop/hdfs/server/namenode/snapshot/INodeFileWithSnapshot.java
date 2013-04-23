@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
  * Represent an {@link INodeFile} that is snapshotted.
- * Note that snapshot files are represented by {@link INodeFileSnapshot}.
  */
 @InterfaceAudience.Private
 public class INodeFileWithSnapshot extends INodeFile
@@ -44,7 +43,6 @@ public class INodeFileWithSnapshot extends INodeFile
   public INodeFileWithSnapshot(INodeFile f, FileDiffList diffs) {
     super(f);
     this.diffs = diffs != null? diffs: new FileDiffList();
-    this.diffs.setFactory(FileDiffFactory.INSTANCE);
   }
 
   @Override
