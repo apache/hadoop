@@ -53,10 +53,6 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-3817. Avoid printing SafeModeException stack trace.
     (Brandon Li via suresh)
 
-    HDFS-4112. A few improvements on INodeDirectory include adding a utility
-    method for casting; avoiding creation of new empty lists; cleaning up 
-    some code and rewriting some javadoc. (szetszwo)
-
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
     returning more than INode array. (Jing Zhao via suresh)
 
