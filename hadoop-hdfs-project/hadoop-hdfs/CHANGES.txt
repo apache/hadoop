@@ -585,6 +585,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4737. JVM path embedded in fuse binaries. (Sean Mackrory via atm)
 
+    HDFS-4739. NN can miscalculate the number of extra edit log segments to
+    retain. (atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
