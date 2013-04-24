@@ -168,7 +168,7 @@ public class FSImageSerialization {
       out.writeLong(0);   // access time
       out.writeLong(0);   // preferred block size
       out.writeInt(-2);   // # of blocks
-      Text.writeString(out, ((INodeSymlink)node).getLinkValue());
+      Text.writeString(out, ((INodeSymlink)node).getSymlinkString());
       filePerm.fromShort(node.getFsPermissionShort());
       PermissionStatus.write(out, node.getUserName(),
                              node.getGroupName(),

@@ -62,6 +62,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
     INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
 
+    HDFS-4206. Change the fields in INode and its subclasses to private.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

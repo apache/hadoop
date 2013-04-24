@@ -307,7 +307,8 @@ class FSImageFormat {
        INode newNode = loadINode(in); // read rest of inode
 
        // add to parent
-       namesystem.dir.addToParent(localName, parent, newNode, false);
+       newNode.setLocalName(localName);
+       namesystem.dir.addToParent(parent, newNode, false);
      }
      return numChildren;
    }
@@ -341,8 +342,8 @@ class FSImageFormat {
       }
 
       // add new inode
-      parentINode = fsDir.addToParent(pathComponents[pathComponents.length-1], 
-          parentINode, newNode, false);
+      newNode.setLocalName(pathComponents[pathComponents.length-1]);
+      parentINode = fsDir.addToParent(parentINode, newNode, false);
     }
   }
 
@@ -580,8 +581,8 @@ class FSImageFormat {
     private void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      List<INode> children = current.getChildren();
-      if (children == null || children.isEmpty())
+      final List<INode> children = current.getChildrenList();
+      if (children.isEmpty())
         return;
       // print prefix (parent directory name)
       int prefixLen = currentDirName.position();

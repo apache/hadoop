@@ -130,6 +130,16 @@ public class TestFSDirectory {
     Assert.assertTrue(diff.contains(file4.getName()));
   }
   
+  @Test
+  public void testReset() throws Exception {
+    fsdir.reset();
+    Assert.assertFalse(fsdir.isReady());
+    final INodeDirectory root = (INodeDirectory) fsdir.getINode("/");
+    Assert.assertTrue(root.getChildrenList().isEmpty());
+    fsdir.imageLoadComplete();
+    Assert.assertTrue(fsdir.isReady());
+  }
+  
   static void checkClassName(String line) {
     int i = line.lastIndexOf('(');
     int j = line.lastIndexOf('@');
