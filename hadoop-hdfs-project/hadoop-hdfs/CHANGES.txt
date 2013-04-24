@@ -53,6 +53,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-3817. Avoid printing SafeModeException stack trace.
     (Brandon Li via suresh)
 
+    HDFS-4129. Add utility methods to dump NameNode in memory tree for 
+    testing. (szetszwo via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
