@@ -60,6 +60,15 @@ public class TestLayoutVersion {
   }
   
   /**
+   * Test to make sure release 1.2.0 support CONCAT
+   */
+  @Test
+  public void testRelease1_2_0() {
+    assertTrue(LayoutVersion.supports(Feature.CONCAT, 
+        Feature.RESERVED_REL1_2_0.lv));
+  }
+  
+  /**
    * Given feature {@code f}, ensures the layout version of that feature
    * supports all the features supported by it's ancestor.
    */
@@ -69,7 +78,9 @@ public class TestLayoutVersion {
     EnumSet<Feature> ancestorSet = LayoutVersion.map.get(ancestorLV);
     assertNotNull(ancestorSet);
     for (Feature  feature : ancestorSet) {
-      assertTrue(LayoutVersion.supports(feature, lv));
+      assertTrue("LV " + lv + " does nto support " + feature
+          + " supported by the ancestor LV " + f.ancestorLV,
+          LayoutVersion.supports(feature, lv));
     }
   }
 }
