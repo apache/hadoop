@@ -208,7 +208,7 @@ public abstract class FSImageTestUtil {
    * only a specified number of "mkdirs" operations.
    */
   public static void createAbortedLogWithMkdirs(File editsLogDir, int numDirs,
-      long firstTxId) throws IOException {
+      long firstTxId, long newInodeId) throws IOException {
     FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
     editLog.setNextTxId(firstTxId);
     editLog.openForWrite();
@@ -217,7 +217,7 @@ public abstract class FSImageTestUtil {
         FsPermission.createImmutable((short)0755));
     for (int i = 1; i <= numDirs; i++) {
       String dirName = "dir" + i;
-      INodeDirectory dir = new INodeDirectory(dirName, perms);
+      INodeDirectory dir = new INodeDirectory(newInodeId + i -1, dirName, perms);
       editLog.logMkDir("/" + dirName, dir);
     }
     editLog.logSync();

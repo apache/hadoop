@@ -107,7 +107,9 @@ public class FSImageSerialization {
     int numLocs = in.readInt();
     assert numLocs == 0 : "Unexpected block locations";
 
-    return new INodeFileUnderConstruction(name, 
+    //TODO: get inodeId from fsimage after inodeId is persisted
+    return new INodeFileUnderConstruction(INodeId.GRANDFATHER_INODE_ID,
+                                          name,
                                           blockReplication, 
                                           modificationTime,
                                           preferredBlockSize,

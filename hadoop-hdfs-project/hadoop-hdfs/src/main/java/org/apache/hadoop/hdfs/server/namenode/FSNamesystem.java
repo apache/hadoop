@@ -378,6 +378,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private final boolean haEnabled;
     
+  private INodeId inodeId;
+  
+  /**
+   * Set the last allocated inode id when fsimage is loaded or editlog is
+   * applied. 
+   * @throws IOException
+   */
+  public void resetLastInodeId(long newValue) throws IOException {
+    inodeId.resetLastInodeId(newValue);
+  }
+
+  /** Should only be used for tests to reset to any value */
+  void resetLastInodeIdWithoutChecking(long newValue) {
+    inodeId.resetLastInodeIdWithoutChecking(newValue);
+  }
+  
+  public long getLastInodeId() {
+    return inodeId.getLastInodeId();
+  }
+
+  public long allocateNewInodeId() {
+    return inodeId.allocateNewInodeId();
+  }
+  
   /**
    * Clear all loaded data
    */
@@ -386,6 +410,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dtSecretManager.reset();
     generationStamp.setStamp(GenerationStamp.FIRST_VALID_STAMP);
     leaseManager.removeAllLeases();
+    inodeId.resetLastInodeIdWithoutChecking(INodeId.LAST_RESERVED_ID);
   }
 
   @VisibleForTesting
@@ -560,6 +585,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
       this.standbyShouldCheckpoint = conf.getBoolean(
           DFS_HA_STANDBY_CHECKPOINTS_KEY, DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
+      
+      this.inodeId = new INodeId();
       
       // For testing purposes, allow the DT secret manager to be started regardless
       // of whether security is enabled.
@@ -1895,6 +1922,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog) throws IOException {
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                    file.getId(),
                                     file.getLocalNameBytes(),
                                     file.getBlockReplication(),
                                     file.getModificationTime(),

@@ -74,6 +74,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
     FSDirectory and INodeDirectory. (szetszwo)
 
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

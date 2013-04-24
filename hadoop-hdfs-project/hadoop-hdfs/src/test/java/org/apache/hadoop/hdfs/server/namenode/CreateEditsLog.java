@@ -62,7 +62,8 @@ public class CreateEditsLog {
     
     PermissionStatus p = new PermissionStatus("joeDoe", "people",
                                       new FsPermission((short)0777));
-    INodeDirectory dirInode = new INodeDirectory(p, 0L);
+    INodeDirectory dirInode = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID,
+        p, 0L);
     editLog.logMkDir(BASE_PATH, dirInode);
     long blockSize = 10;
     BlockInfo[] blocks = new BlockInfo[blocksPerFile];
@@ -81,8 +82,9 @@ public class CreateEditsLog {
       }
 
       INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
-                    null, replication, 0, blockSize, blocks, p, "", "", null);
-      // Append path to filename with information about blockIDs 
+          INodeId.GRANDFATHER_INODE_ID, null, replication, 0, blockSize,
+          blocks, p, "", "", null);
+     // Append path to filename with information about blockIDs 
       String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
                     "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
       String filePath = nameGenerator.getNextFileName("");
@@ -90,12 +92,12 @@ public class CreateEditsLog {
       // Log the new sub directory in edits
       if ((iF % nameGenerator.getFilesPerDirectory())  == 0) {
         String currentDir = nameGenerator.getCurrentDir();
-        dirInode = new INodeDirectory(p, 0L);
+        dirInode = new INodeDirectory(INodeId.GRANDFATHER_INODE_ID, p, 0L);
         editLog.logMkDir(currentDir, dirInode);
       }
-      editLog.logOpenFile(filePath, 
-          new INodeFileUnderConstruction(
-              p, replication, 0, blockSize, "", "", null));
+      editLog.logOpenFile(filePath, new INodeFileUnderConstruction(
+          INodeId.GRANDFATHER_INODE_ID, p, replication, 0, blockSize, "", "",
+          null));
       editLog.logCloseFile(filePath, inode);
 
       if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks
