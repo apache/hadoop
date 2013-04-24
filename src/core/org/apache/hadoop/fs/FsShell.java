@@ -1235,8 +1235,9 @@ public class FsShell extends Configured implements Tool {
         errors++;
       }
       for(Path path : paths) {
+        FileStatus file = null;
         try {
-          FileStatus file = srcFs.getFileStatus(path);
+          file = srcFs.getFileStatus(path);
           if (file == null) {
             System.err.println(handler.getName() + 
                                ": could not get status for '" + path + "'");
@@ -1248,8 +1249,15 @@ public class FsShell extends Configured implements Tool {
           String msg = (e.getMessage() != null ? e.getLocalizedMessage() :
             (e.getCause().getMessage() != null ? 
                 e.getCause().getLocalizedMessage() : "null"));
-          System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);
+          msg = msg.split("\n")[0];
+          if (file == null) {
+            //getFileStatus fails
+            msg = ": could not get status for '" + path + "': " + msg;
+          } else {
+            //other failure
+            msg = ": failed on '" + path + "': " + msg;
+          }
+          System.err.println(handler.getName() + msg);
           errors++;
         }
       }

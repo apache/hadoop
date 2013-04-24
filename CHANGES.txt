@@ -591,6 +591,9 @@ Release 1.2.0 - 2013.04.16
     HADOOP-9458. Fix RPC.getProxy to ensure it uses retries for
     getProtocolVersion too. (szetszwo via acmurthy)
 
+    HADOOP-9502. chmod/chown do not return error exit codes for some exceptions.
+    (szetszwo)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
