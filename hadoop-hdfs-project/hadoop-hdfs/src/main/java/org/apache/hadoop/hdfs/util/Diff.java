@@ -104,7 +104,7 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
   
   /** 
-   * Undo information for some operations such as {@link Diff#delete(E)}
+   * Undo information for some operations such as delete(E)
    * and {@link Diff#modify(Element, Element)}.
    */
   public static class UndoInfo<E> {
@@ -215,8 +215,8 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
 
   /**
-   * Undo the previous {@link #create(E)} operation. Note that the behavior is
-   * undefined if the previous operation is not {@link #create(E)}.
+   * Undo the previous create(E) operation. Note that the behavior is
+   * undefined if the previous operation is not create(E).
    */
   public void undoCreate(final E element, final int insertionPoint) {
     remove(created, insertionPoint, element);
@@ -242,8 +242,8 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
   
   /**
-   * Undo the previous {@link #delete(E)} operation. Note that the behavior is
-   * undefined if the previous operation is not {@link #delete(E)}.
+   * Undo the previous delete(E) operation. Note that the behavior is
+   * undefined if the previous operation is not delete(E).
    */
   public void undoDelete(final E element, final UndoInfo<E> undoInfo) {
     final int c = undoInfo.createdInsertionPoint;
@@ -285,8 +285,8 @@ public class Diff<K, E extends Diff.Element<K>> {
   }
 
   /**
-   * Undo the previous {@link #modify(E, E)} operation. Note that the behavior
-   * is undefined if the previous operation is not {@link #modify(E, E)}.
+   * Undo the previous modify(E, E) operation. Note that the behavior
+   * is undefined if the previous operation is not modify(E, E).
    */
   public void undoModify(final E oldElement, final E newElement,
       final UndoInfo<E> undoInfo) {
@@ -383,24 +383,24 @@ public class Diff<K, E extends Diff.Element<K>> {
    * 1.2 (0, d')  in this diff: put in c-list --> (c, d')
    * 1.3 (c', d') in this diff: impossible
    * 1.4 (0, 0)   in this diff: put in c-list --> (c, 0)
-   * This is the same logic as {@link #create(E)}.
+   * This is the same logic as create(E).
    * 
    * 2. For (0, d) in the posterior diff,
    * 2.1 (c', 0)  in this diff: remove from c-list --> (0, 0)
    * 2.2 (0, d')  in this diff: impossible
    * 2.3 (c', d') in this diff: remove from c-list --> (0, d')
    * 2.4 (0, 0)   in this diff: put in d-list --> (0, d)
-   * This is the same logic as {@link #delete(E)}.
+   * This is the same logic as delete(E).
    * 
    * 3. For (c, d) in the posterior diff,
    * 3.1 (c', 0)  in this diff: replace the element in c-list --> (c, 0)
    * 3.2 (0, d')  in this diff: impossible
    * 3.3 (c', d') in this diff: replace the element in c-list --> (c, d')
    * 3.4 (0, 0)   in this diff: put in c-list and d-list --> (c, d)
-   * This is the same logic as {@link #modify(E, E)}.
+   * This is the same logic as modify(E, E).
    * </pre>
    * 
-   * @param the posterior diff to combine with.
+   * @param posterior The posterior diff to combine with.
    * @param deletedProcesser
    *     process the deleted/overwritten elements in case 2.1, 2.3, 3.1 and 3.3.
    */

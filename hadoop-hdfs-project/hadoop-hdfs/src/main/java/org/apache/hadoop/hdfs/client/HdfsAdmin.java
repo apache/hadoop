@@ -108,7 +108,7 @@ public class HdfsAdmin {
   
   /**
    * Allow snapshot on a directory.
-   * @param the path of the directory where snapshots will be taken
+   * @param path The path of the directory where snapshots will be taken.
    */
   public void allowSnapshot(Path path) throws IOException {
     dfs.allowSnapshot(path);
@@ -116,7 +116,7 @@ public class HdfsAdmin {
   
   /**
    * Disallow snapshot on a directory.
-   * @param path of the snapshottable directory.
+   * @param path The path of the snapshottable directory.
    */
   public void disallowSnapshot(Path path) throws IOException {
     dfs.disallowSnapshot(path);

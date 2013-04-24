@@ -476,24 +476,24 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    */
   boolean computeDiffBetweenSnapshots(Snapshot fromSnapshot,
       Snapshot toSnapshot, ChildrenDiff diff) {
-    Snapshot earlierSnapshot = fromSnapshot;
-    Snapshot laterSnapshot = toSnapshot;
+    Snapshot earlier = fromSnapshot;
+    Snapshot later = toSnapshot;
     if (Snapshot.ID_COMPARATOR.compare(fromSnapshot, toSnapshot) > 0) {
-      earlierSnapshot = toSnapshot;
-      laterSnapshot = fromSnapshot;
+      earlier = toSnapshot;
+      later = fromSnapshot;
     }
     
-    boolean modified = diffs.changedBetweenSnapshots(earlierSnapshot,
-        laterSnapshot);
+    boolean modified = diffs.changedBetweenSnapshots(earlier,
+        later);
     if (!modified) {
       return false;
     }
     
     final List<DirectoryDiff> difflist = diffs.asList();
     final int size = difflist.size();
-    int earlierDiffIndex = Collections.binarySearch(difflist, earlierSnapshot);
-    int laterDiffIndex = laterSnapshot == null ? size : Collections
-        .binarySearch(difflist, laterSnapshot);
+    int earlierDiffIndex = Collections.binarySearch(difflist, earlier.getId());
+    int laterDiffIndex = later == null ? size : Collections
+        .binarySearch(difflist, later.getId());
     earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
         : earlierDiffIndex;
     laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
@@ -507,10 +507,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       if (dirMetadataChanged == false && sdiff.snapshotINode != null) {
         if (dirCopy == null) {
           dirCopy = sdiff.snapshotINode;
-        } else {
-          if (!dirCopy.metadataEquals(sdiff.snapshotINode)) {
-            dirMetadataChanged = true;
-          }
+        } else if (!dirCopy.metadataEquals(sdiff.snapshotINode)) {
+          dirMetadataChanged = true;
         }
       }
     }
@@ -524,8 +522,9 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         }
       }
       return !dirCopy.metadataEquals(this);
+    } else {
+      return false;
     }
-    return false;
   }
 
   /** Diff list sorted by snapshot IDs, i.e. in chronological order. */

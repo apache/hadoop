@@ -474,10 +474,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     clearChildren();
   }
 
-  /**
-   * Call {@link INode#cleanSubtree(SnapshotDeletionInfo, BlocksMapUpdateInfo)}
-   * recursively down the subtree.
-   */
+  /** Call cleanSubtree(..) recursively down the subtree. */
   public Quota.Counts cleanSubtreeRecursively(final Snapshot snapshot,
       Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) throws QuotaExceededException {

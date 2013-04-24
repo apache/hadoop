@@ -48,7 +48,7 @@ import com.google.common.base.Preconditions;
  */
 abstract class AbstractINodeDiff<N extends INode,
                                  D extends AbstractINodeDiff<N, D>>
-    implements Comparable<Snapshot> {
+    implements Comparable<Integer> {
 
   /** The snapshot will be obtained after this diff is applied. */
   Snapshot snapshot;
@@ -72,8 +72,8 @@ abstract class AbstractINodeDiff<N extends INode,
 
   /** Compare diffs with snapshot ID. */
   @Override
-  public final int compareTo(final Snapshot that) {
-    return Snapshot.ID_COMPARATOR.compare(this.snapshot, that);
+  public final int compareTo(final Integer that) {
+    return Snapshot.ID_INTEGER_COMPARATOR.compare(this.snapshot.getId(), that);
   }
 
   /** @return the snapshot object of this diff. */

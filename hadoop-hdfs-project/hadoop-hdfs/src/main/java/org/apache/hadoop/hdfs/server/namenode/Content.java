@@ -20,8 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
 /**
- * The content types such as file, directory and symlink to be computed
- * in {@link INode#computeContentSummary(CountsMap)}.
+ * The content types such as file, directory and symlink to be computed.
  */
 public enum Content {
   /** The number of files. */
