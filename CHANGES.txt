@@ -616,6 +616,14 @@ Release 1.2.0 - unreleased
 
     HADOOP-9492. Update testConf.xml for HADOOP-9473.  (Jing Zhao via szetszwo)
 
+    MAPREDUCE-4737. Ensure that mapreduce APIs are semantically consistent
+    with mapred API w.r.t Mapper.cleanup and Reducer.cleanup; in the sense
+    that cleanup is now called even if there is an error. The old mapred API
+    already ensures that Mapper.close and Reducer.close are invoked during
+    error handling. Note that it is an incompatible change, however end-users
+    can override Mapper.run and Reducer.run to get the old (inconsistent)
+    behaviour. (acmurthy) 
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES

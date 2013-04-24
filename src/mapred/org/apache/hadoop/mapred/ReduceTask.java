@@ -488,14 +488,16 @@ class ReduceTask extends Task {
     // make output collector
     String finalName = getOutputName(getPartition());
 
-    final RecordWriter<OUTKEY, OUTVALUE> out = new OldTrackingRecordWriter<OUTKEY, OUTVALUE>(
-        reduceOutputCounter, job, reporter, finalName);
+    RecordWriter<OUTKEY, OUTVALUE> out = 
+        new OldTrackingRecordWriter<OUTKEY, OUTVALUE>(
+            reduceOutputCounter, job, reporter, finalName);
+    final RecordWriter<OUTKEY, OUTVALUE> finalOut = out;
     
     OutputCollector<OUTKEY,OUTVALUE> collector = 
       new OutputCollector<OUTKEY,OUTVALUE>() {
         public void collect(OUTKEY key, OUTVALUE value)
           throws IOException {
-          out.write(key, value);
+          finalOut.write(key, value);
           // indicate that progress update needs to be sent
           reporter.progress();
         }
@@ -528,18 +530,14 @@ class ReduceTask extends Task {
 
       //Clean up: repeated in catch block below
       reducer.close();
-      out.close(reporter);
-      //End of clean up.
-    } catch (IOException ioe) {
-      try {
-        reducer.close();
-      } catch (IOException ignored) {}
-        
-      try {
-        out.close(reporter);
-      } catch (IOException ignored) {}
+      reducer = null;
       
-      throw ioe;
+      out.close(reporter);
+      out = null;
+      //End of clean up.
+    } finally {
+      IOUtils.cleanup(LOG, reducer);
+      closeQuietly(out, reporter);
     }
   }
 
@@ -647,8 +645,11 @@ class ReduceTask extends Task {
                                                trackedRW, committer,
                                                reporter, comparator, keyClass,
                                                valueClass);
-    reducer.run(reducerContext);
-    trackedRW.close(reducerContext);
+    try {
+      reducer.run(reducerContext);
+    } finally {
+      trackedRW.close(reducerContext);
+    }
   }
 
   private static enum CopyOutputErrorType {
@@ -3010,5 +3011,16 @@ class ReduceTask extends Task {
 	public long getDecompressedSize() {
 	  return decompressedSize;
 	}
+  }
+  
+  private <OUTKEY, OUTVALUE>
+  void closeQuietly(RecordWriter<OUTKEY, OUTVALUE> c, Reporter r) {
+    if (c != null) {
+      try {
+        c.close(r);
+      } catch (Exception e) {
+        LOG.info("Exception in closing " + c, e);
+      }
+    }
   }
 }
