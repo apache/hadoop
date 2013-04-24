@@ -59,6 +59,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4129. Add utility methods to dump NameNode in memory tree for 
     testing. (szetszwo via suresh)
 
+    HDFS-4152. Add a new class BlocksMapUpdateInfo for the parameter in
+    INode.collectSubtreeBlocksAndClear(..). (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
