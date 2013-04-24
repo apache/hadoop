@@ -22,8 +22,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.FsShell.CmdHandler;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.ChmodParser;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 
 /**
@@ -65,13 +65,7 @@ class FsShellPermissions {
       int newperms = pp.applyNewPermission(file);
 
       if (file.getPermission().toShort() != newperms) {
-        try {
-          srcFs.setPermission(file.getPath(), 
-                                new FsPermission((short)newperms));
-        } catch (IOException e) {
-          System.err.println(getName() + ": changing permissions of '" + 
-                             file.getPath() + "':" + e.getMessage().split("\n")[0]);
-        }
+        srcFs.setPermission(file.getPath(), new FsPermission((short)newperms));
       }
     }
   }
@@ -124,13 +118,7 @@ class FsShellPermissions {
                         null : group;
 
       if (newOwner != null || newGroup != null) {
-        try {
-          srcFs.setOwner(file.getPath(), newOwner, newGroup);
-        } catch (IOException e) {
-          System.err.println(getName() + ": changing ownership of '" + 
-                             file.getPath() + "':" + e.getMessage().split("\n")[0]);
-
-        }
+        srcFs.setOwner(file.getPath(), newOwner, newGroup);
       }
     }
   }
