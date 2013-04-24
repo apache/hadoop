@@ -326,8 +326,10 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
             removedINodes);
         INodeDirectory parent = getParent();
         if (parent != null) {
+          // there will not be any WithName node corresponding to the deleted 
+          // snapshot, thus only update the quota usage in the current tree
           parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-              -counts.get(Quota.DISKSPACE), true);
+              -counts.get(Quota.DISKSPACE), true, Snapshot.INVALID_ID);
         }
       } catch(QuotaExceededException e) {
         LOG.error("BUG: removeSnapshot increases namespace usage.", e);

@@ -89,7 +89,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
 
   @Override
   public Quota.Counts computeQuotaUsage(Quota.Counts counts,
-      boolean updateCache) {
+      boolean updateCache, int lastSnapshotId) {
     counts.add(Quota.NAMESPACE, 1);
     return counts;
   }

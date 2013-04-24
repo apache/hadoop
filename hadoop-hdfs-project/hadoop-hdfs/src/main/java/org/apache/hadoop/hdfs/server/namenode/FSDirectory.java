@@ -614,14 +614,18 @@ public class FSDirectory implements Closeable {
     
     // check srcChild for reference
     final INodeReference.WithCount withCount;
+    Quota.Counts oldSrcCounts = Quota.Counts.newInstance();
     int srcRefDstSnapshot = srcChildIsReference ? srcChild.asReference()
         .getDstSnapshotId() : Snapshot.INVALID_ID;
     if (isSrcInSnapshot) {
       final INodeReference.WithName withName = srcIIP.getINode(-2).asDirectory()
-          .replaceChild4ReferenceWithName(srcChild); 
+          .replaceChild4ReferenceWithName(srcChild, srcIIP.getLatestSnapshot()); 
       withCount = (INodeReference.WithCount) withName.getReferredINode();
       srcChild = withName;
       srcIIP.setLastINode(srcChild);
+      // get the counts before rename
+      withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true,
+          Snapshot.INVALID_ID);
     } else if (srcChildIsReference) {
       // srcChild is reference but srcChild is not in latest snapshot
       withCount = (WithCount) srcChild.asReference().getReferredINode();
@@ -661,8 +665,6 @@ public class FSDirectory implements Closeable {
         final INodeReference.DstReference ref = new INodeReference.DstReference(
             dstParent.asDirectory(), withCount,
             dstSnapshot == null ? Snapshot.INVALID_ID : dstSnapshot.getId());
-        withCount.setParentReference(ref);
-        withCount.incrementReferenceCount();
         toDst = ref;
       }
       
@@ -677,8 +679,18 @@ public class FSDirectory implements Closeable {
         srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshot());
         dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshot());
         // update moved leases with new filename
-        getFSNamesystem().unprotectedChangeLease(src, dst);        
+        getFSNamesystem().unprotectedChangeLease(src, dst);     
 
+        // update the quota usage in src tree
+        if (isSrcInSnapshot) {
+          // get the counts after rename
+          Quota.Counts newSrcCounts = srcChild.computeQuotaUsage(
+              Quota.Counts.newInstance(), false, Snapshot.INVALID_ID);
+          newSrcCounts.subtract(oldSrcCounts);
+          srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
+              newSrcCounts.get(Quota.DISKSPACE), false, Snapshot.INVALID_ID);
+        }
+        
         return true;
       }
     } finally {
@@ -689,16 +701,21 @@ public class FSDirectory implements Closeable {
         if (withCount == null) {
           srcChild.setLocalName(srcChildName);
         } else if (!srcChildIsReference) { // src must be in snapshot
+          // the withCount node will no longer be used thus no need to update
+          // its reference number here
           final INode originalChild = withCount.getReferredINode();
           srcChild = originalChild;
         } else {
+          withCount.removeReference(oldSrcChild.asReference());
           final INodeReference originalRef = new INodeReference.DstReference(
               srcParent, withCount, srcRefDstSnapshot);
-          withCount.setParentReference(originalRef);
           srcChild = originalRef;
         }
         
         if (isSrcInSnapshot) {
+          // srcParent must be an INodeDirectoryWithSnapshot instance since
+          // isSrcInSnapshot is true and src node has been removed from 
+          // srcParent 
           ((INodeDirectoryWithSnapshot) srcParent).undoRename4ScrParent(
               oldSrcChild.asReference(), srcChild, srcIIP.getLatestSnapshot());
         } else {
@@ -849,12 +866,16 @@ public class FSDirectory implements Closeable {
     final INodeReference.WithCount withCount;
     int srcRefDstSnapshot = srcChildIsReference ? srcChild.asReference()
         .getDstSnapshotId() : Snapshot.INVALID_ID;
+    Quota.Counts oldSrcCounts = Quota.Counts.newInstance();    
     if (isSrcInSnapshot) {
       final INodeReference.WithName withName = srcIIP.getINode(-2).asDirectory()
-          .replaceChild4ReferenceWithName(srcChild); 
+          .replaceChild4ReferenceWithName(srcChild, srcIIP.getLatestSnapshot()); 
       withCount = (INodeReference.WithCount) withName.getReferredINode();
       srcChild = withName;
       srcIIP.setLastINode(srcChild);
+      // get the counts before rename
+      withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true,
+          Snapshot.INVALID_ID);
     } else if (srcChildIsReference) {
       // srcChild is reference but srcChild is not in latest snapshot
       withCount = (WithCount) srcChild.asReference().getReferredINode();
@@ -902,8 +923,6 @@ public class FSDirectory implements Closeable {
         final INodeReference.DstReference ref = new INodeReference.DstReference(
             dstIIP.getINode(-2).asDirectory(), withCount,
             dstSnapshot == null ? Snapshot.INVALID_ID : dstSnapshot.getId());
-        withCount.setParentReference(ref);
-        withCount.incrementReferenceCount();
         toDst = ref;
       }
 
@@ -941,6 +960,17 @@ public class FSDirectory implements Closeable {
           // deleted. Need to update the SnapshotManager.
           namesystem.removeSnapshottableDirs(snapshottableDirs);
         }
+        
+        // update the quota usage in src tree
+        if (isSrcInSnapshot) {
+          // get the counts after rename
+          Quota.Counts newSrcCounts = srcChild.computeQuotaUsage(
+              Quota.Counts.newInstance(), false, Snapshot.INVALID_ID);
+          newSrcCounts.subtract(oldSrcCounts);
+          srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
+              newSrcCounts.get(Quota.DISKSPACE), false, Snapshot.INVALID_ID);
+        }
+        
         return filesDeleted >= 0;
       }
     } finally {
@@ -952,12 +982,14 @@ public class FSDirectory implements Closeable {
         if (withCount == null) {
           srcChild.setLocalName(srcChildName);
         } else if (!srcChildIsReference) { // src must be in snapshot
+          // the withCount node will no longer be used thus no need to update
+          // its reference number here
           final INode originalChild = withCount.getReferredINode();
           srcChild = originalChild;
         } else {
+          withCount.removeReference(oldSrcChild.asReference());
           final INodeReference originalRef = new INodeReference.DstReference(
               srcParent, withCount, srcRefDstSnapshot);
-          withCount.setParentReference(originalRef);
           srcChild = originalRef;
         }
         
@@ -977,6 +1009,12 @@ public class FSDirectory implements Closeable {
               removedDst, dstIIP.getLatestSnapshot());
         } else {
           addLastINodeNoQuotaCheck(dstIIP, removedDst);
+        }
+        if (removedDst.isReference()) {
+          final INodeReference removedDstRef = removedDst.asReference();
+          final INodeReference.WithCount wc = 
+              (WithCount) removedDstRef.getReferredINode().asReference();
+          wc.addReference(removedDstRef);
         }
       }
     }
@@ -1368,7 +1406,7 @@ public class FSDirectory implements Closeable {
       Quota.Counts counts = targetNode.cleanSubtree(null, latestSnapshot,
           collectedBlocks, removedINodes);
       parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE), true);
+          -counts.get(Quota.DISKSPACE), true, Snapshot.INVALID_ID);
       removed = counts.get(Quota.NAMESPACE);
     }
     if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -2588,7 +2626,8 @@ public class FSDirectory implements Closeable {
       }
       
       @Override
-      public Counts computeQuotaUsage(Counts counts, boolean useCache) {
+      public Counts computeQuotaUsage(Counts counts, boolean useCache,
+          int lastSnapshotId) {
         return null;
       }
       

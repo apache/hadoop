@@ -674,19 +674,18 @@ public class FSImageFormat {
       //reference
       
       final boolean isWithName = in.readBoolean();
-      int dstSnapshotId = Snapshot.INVALID_ID;
-      if (!isWithName) {
-        dstSnapshotId = in.readInt();
-      }
+      // lastSnapshotId for WithName node, dstSnapshotId for DstReference node
+      int snapshotId = in.readInt();
+      
       final INodeReference.WithCount withCount
           = referenceMap.loadINodeReferenceWithCount(isSnapshotINode, in, this);
 
       if (isWithName) {
-        return new INodeReference.WithName(null, withCount, localName);
+          return new INodeReference.WithName(null, withCount, localName,
+              snapshotId);
       } else {
         final INodeReference ref = new INodeReference.DstReference(null,
-            withCount, dstSnapshotId);
-        withCount.setParentReference(ref);
+            withCount, snapshotId);
         return ref;
       }
     }

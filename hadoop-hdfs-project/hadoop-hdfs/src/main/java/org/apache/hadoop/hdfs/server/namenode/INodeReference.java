@@ -18,6 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -76,11 +80,10 @@ public abstract class INodeReference extends INode {
     if (!(referred instanceof WithCount)) {
       return -1;
     }
+    
     WithCount wc = (WithCount) referred;
-    if (ref == wc.getParentReference()) {
-      wc.setParent(null);
-    }
-    return ((WithCount)referred).decrementReferenceCount();
+    wc.removeReference(ref);
+    return wc.getReferenceCount();
   }
 
   private INode referred;
@@ -222,7 +225,7 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public final Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
       BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
       throws QuotaExceededException {
     return referred.cleanSubtree(snapshot, prior, collectedBlocks,
@@ -248,19 +251,14 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public final Quota.Counts computeQuotaUsage(Quota.Counts counts, boolean useCache) {
-    return referred.computeQuotaUsage(counts, useCache);
+  public Quota.Counts computeQuotaUsage(Quota.Counts counts, boolean useCache,
+      int lastSnapshotId) {
+    return referred.computeQuotaUsage(counts, useCache, lastSnapshotId);
   }
   
   @Override
   public final INode getSnapshotINode(Snapshot snapshot) {
     return referred.getSnapshotINode(snapshot);
-  }
-
-  @Override
-  public final void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify)
-      throws QuotaExceededException {
-    referred.addSpaceConsumed(nsDelta, dsDelta, verify);
   }
 
   @Override
@@ -302,10 +300,11 @@ public abstract class INodeReference extends INode {
   public int getDstSnapshotId() {
     return Snapshot.INVALID_ID;
   }
-
+  
   /** An anonymous reference with reference count. */
   public static class WithCount extends INodeReference {
-    private int referenceCount = 1;
+    
+    private final List<WithName> withNameList = new ArrayList<WithName>();
     
     public WithCount(INodeReference parent, INode referred) {
       super(parent, referred);
@@ -313,30 +312,88 @@ public abstract class INodeReference extends INode {
       referred.setParentReference(this);
     }
     
-    /** @return the reference count. */
     public int getReferenceCount() {
-      return referenceCount;
+      int count = withNameList.size();
+      if (getParentReference() != null) {
+        count++;
+      }
+      return count;
     }
 
     /** Increment and then return the reference count. */
-    public int incrementReferenceCount() {
-      return ++referenceCount;
+    public void addReference(INodeReference ref) {
+      if (ref instanceof WithName) {
+        withNameList.add((WithName) ref);
+      } else if (ref instanceof DstReference) {
+        setParentReference(ref);
+      }
     }
 
     /** Decrement and then return the reference count. */
-    public int decrementReferenceCount() {
-      return --referenceCount;
+    public void removeReference(INodeReference ref) {
+      if (ref instanceof WithName) {
+        Iterator<INodeReference.WithName> iter = withNameList.iterator();
+        while (iter.hasNext()) {
+          if (iter.next() == ref) {
+            iter.remove();
+            break;
+          }
+        }
+      } else if (ref == getParentReference()) {
+        setParent(null);
+      }
+    }
+    
+    @Override
+    public final void addSpaceConsumed(long nsDelta, long dsDelta,
+        boolean verify, int snapshotId) throws QuotaExceededException {
+      INodeReference parentRef = getParentReference();
+      if (parentRef != null) {
+        parentRef.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
+      }
+      addSpaceConsumedToRenameSrc(nsDelta, dsDelta, verify, snapshotId);
+    }
+    
+    @Override
+    public final void addSpaceConsumedToRenameSrc(long nsDelta, long dsDelta,
+        boolean verify, int snapshotId) throws QuotaExceededException {
+      if (snapshotId != Snapshot.INVALID_ID) {
+        // sort withNameList based on the lastSnapshotId
+        Collections.sort(withNameList, new Comparator<WithName>() {
+          @Override
+          public int compare(WithName w1, WithName w2) {
+            return w1.lastSnapshotId - w2.lastSnapshotId;
+          }
+        });
+        for (INodeReference.WithName withName : withNameList) {
+          if (withName.getLastSnapshotId() >= snapshotId) {
+            withName.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
+            break;
+          }
+        }
+      }
     }
   }
-
+  
   /** A reference with a fixed name. */
   public static class WithName extends INodeReference {
 
     private final byte[] name;
 
-    public WithName(INodeDirectory parent, WithCount referred, byte[] name) {
+    /**
+     * The id of the last snapshot in the src tree when this WithName node was 
+     * generated. When calculating the quota usage of the referred node, only 
+     * the files/dirs existing when this snapshot was taken will be counted for 
+     * this WithName node and propagated along its ancestor path.
+     */
+    private final int lastSnapshotId;
+    
+    public WithName(INodeDirectory parent, WithCount referred, byte[] name,
+        int lastSnapshotId) {
       super(parent, referred);
       this.name = name;
+      this.lastSnapshotId = lastSnapshotId;
+      referred.addReference(this);
     }
 
     @Override
@@ -348,6 +405,36 @@ public abstract class INodeReference extends INode {
     public final void setLocalName(byte[] name) {
       throw new UnsupportedOperationException("Cannot set name: " + getClass()
           + " is immutable.");
+    }
+    
+    public int getLastSnapshotId() {
+      return lastSnapshotId;
+    }
+    
+    @Override
+    public final Quota.Counts computeQuotaUsage(Quota.Counts counts,
+        boolean useCache, int lastSnapshotId) {
+      Preconditions.checkState(lastSnapshotId == Snapshot.INVALID_ID
+          || this.lastSnapshotId <= lastSnapshotId);
+      final INode referred = this.getReferredINode().asReference()
+          .getReferredINode();
+      // we cannot use cache for the referred node since its cached quota may
+      // have already been updated by changes in the current tree
+      return referred.computeQuotaUsage(counts, false, this.lastSnapshotId);
+    }
+    
+    @Override
+    public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
+        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes)
+        throws QuotaExceededException {
+      Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
+          collectedBlocks, removedINodes);
+      INodeReference ref = getReferredINode().getParentReference();
+      if (ref != null) {
+        ref.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
+            -counts.get(Quota.DISKSPACE), true, Snapshot.INVALID_ID);
+      }
+      return counts;
     }
   }
   
@@ -373,6 +460,22 @@ public abstract class INodeReference extends INode {
         final int dstSnapshotId) {
       super(parent, referred);
       this.dstSnapshotId = dstSnapshotId;
+      referred.addReference(this);
+    }
+    
+    @Override
+    public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
+        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes)
+        throws QuotaExceededException {
+      Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
+          collectedBlocks, removedINodes);
+      if (snapshot != null) {
+        // also need to update quota usage along the corresponding WithName node
+        WithCount wc = (WithCount) getReferredINode();
+        wc.addSpaceConsumedToRenameSrc(-counts.get(Quota.NAMESPACE),
+            -counts.get(Quota.DISKSPACE), true, snapshot.getId());
+      }
+      return counts;
     }
   }
 }

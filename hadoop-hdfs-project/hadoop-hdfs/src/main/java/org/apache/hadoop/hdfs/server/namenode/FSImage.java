@@ -749,16 +749,16 @@ public class FSImage implements Closeable {
    * throw QuotaExceededException.
    */
   static void updateCountForQuota(INodeDirectoryWithQuota root) {
-    updateCountForQuotaRecursively(root, new Quota.Counts());
+    updateCountForQuotaRecursively(root, Quota.Counts.newInstance());
   }
   
   private static void updateCountForQuotaRecursively(INodeDirectory dir,
       Quota.Counts counts) {
     final long parentNamespace = counts.get(Quota.NAMESPACE);
     final long parentDiskspace = counts.get(Quota.DISKSPACE);
-    
-    dir.computeQuotaUsage4CurrentDirectory(counts);
 
+    dir.computeQuotaUsage4CurrentDirectory(counts);
+    
     for (INode child : dir.getChildrenList(null)) {
       if (child.isDirectory()) {
         updateCountForQuotaRecursively(child.asDirectory(), counts);

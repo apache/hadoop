@@ -354,7 +354,6 @@ public class SnapshotFSImageFormat {
       } else {
         final long id = in.readLong();
         withCount = referenceMap.get(id);
-        withCount.incrementReferenceCount();
       }
       return withCount;
     }

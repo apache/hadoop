@@ -270,6 +270,8 @@ public class FSImageSerialization {
       Preconditions.checkState(ref instanceof INodeReference.DstReference);
       // dst snapshot id
       out.writeInt(((INodeReference.DstReference) ref).getDstSnapshotId());
+    } else {
+      out.writeInt(((INodeReference.WithName) ref).getLastSnapshotId());
     }
     
     final INodeReference.WithCount withCount

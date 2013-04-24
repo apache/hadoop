@@ -293,3 +293,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4738. Changes AbstractINodeDiff to implement Comparable<Integer>, and
   fix javadoc and other warnings.  (szetszwo)
+
+  HDFS-4686. Update quota computation for rename and INodeReference.
+  (Jing Zhao via szetszwo)

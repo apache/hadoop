@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -386,11 +388,17 @@ public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
    * Check and add namespace/diskspace consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
-  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify)
-      throws QuotaExceededException {
-    final INodeDirectory parentDir = getParent();
-    if (parentDir != null) {
-      parentDir.addSpaceConsumed(nsDelta, dsDelta, verify);
+  public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify,
+      int snapshotId) throws QuotaExceededException {
+    if (parent != null) {
+      parent.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
+    }
+  }
+
+  public void addSpaceConsumedToRenameSrc(long nsDelta, long dsDelta,
+      boolean verify, int snapshotId) throws QuotaExceededException {
+    if (parent != null) {
+      parent.addSpaceConsumedToRenameSrc(nsDelta, dsDelta, verify, snapshotId);
     }
   }
 
@@ -420,11 +428,39 @@ public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
   /**
    * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
    * 
+   * With the existence of {@link INodeReference}, the same inode and its
+   * subtree may be referred by multiple {@link WithName} nodes and a
+   * {@link DstReference} node. To avoid circles while quota usage computation,
+   * we have the following rules:
+   * 
+   * <pre>
+   * 1. For a {@link DstReference} node, since the node must be in the current
+   * tree (or has been deleted as the end point of a series of rename 
+   * operations), we compute the quota usage of the referred node (and its 
+   * subtree) in the regular manner, i.e., including every inode in the current
+   * tree and in snapshot copies, as well as the size of diff list.
+   * 
+   * 2. For a {@link WithName} node, since the node must be in a snapshot, we 
+   * only count the quota usage for those nodes that still existed at the 
+   * creation time of the snapshot associated with the {@link WithName} node.
+   * We do not count in the size of the diff list.  
+   * <pre>
+   * 
    * @param counts The subtree counts for returning.
+   * @param useCache Whether to use cached quota usage. Note that 
+   *                 {@link WithName} node never uses cache for its subtree.
+   * @param lastSnapshotId {@link Snapshot#INVALID_ID} indicates the computation
+   *                       is in the current tree. Otherwise the id indicates
+   *                       the computation range for a {@link WithName} node.
    * @return The same objects as the counts parameter.
    */
   public abstract Quota.Counts computeQuotaUsage(Quota.Counts counts,
-      boolean useCache);
+      boolean useCache, int lastSnapshotId);
+
+  public final Quota.Counts computeQuotaUsage(Quota.Counts counts,
+      boolean useCache) {
+    return computeQuotaUsage(counts, useCache, Snapshot.INVALID_ID);
+  }
   
   /**
    * @return null if the local name is null; otherwise, return the local name.

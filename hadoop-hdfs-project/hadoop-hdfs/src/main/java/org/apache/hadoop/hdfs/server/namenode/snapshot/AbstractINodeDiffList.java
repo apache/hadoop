@@ -68,7 +68,8 @@ abstract class AbstractINodeDiffList<N extends INode,
    */
   final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
       Snapshot prior, final N currentINode,
-      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+      final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
+      throws QuotaExceededException {
     int snapshotIndex = Collections.binarySearch(diffs, snapshot.getId());
     
     Quota.Counts counts = Quota.Counts.newInstance();
@@ -80,6 +81,13 @@ abstract class AbstractINodeDiffList<N extends INode,
       } else {
         removed = diffs.remove(0);
         counts.add(Quota.NAMESPACE, 1);
+        // We add 1 to the namespace quota usage since we delete a diff. 
+        // The quota change will be propagated to 
+        // 1) ancestors in the current tree, and 
+        // 2) src tree of any renamed ancestor.
+        // Because for 2) we do not calculate the number of diff for quota 
+        // usage, we need to compensate this diff change for 2)
+        currentINode.addSpaceConsumedToRenameSrc(1, 0, false, snapshot.getId());
         counts.add(removed.destroyDiffAndCollectBlocks(currentINode,
             collectedBlocks, removedINodes));
       }
@@ -91,6 +99,7 @@ abstract class AbstractINodeDiffList<N extends INode,
         // combine the to-be-removed diff with its previous diff
         removed = diffs.remove(snapshotIndex);
         counts.add(Quota.NAMESPACE, 1);
+        currentINode.addSpaceConsumedToRenameSrc(1, 0, false, snapshot.getId());
         if (previous.snapshotINode == null) {
           previous.snapshotINode = removed.snapshotINode;
         } else if (removed.snapshotINode != null) {
@@ -108,7 +117,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
   final D addDiff(Snapshot latest, N currentINode)
       throws QuotaExceededException {
-    currentINode.addSpaceConsumed(1, 0, true);
+    currentINode.addSpaceConsumed(1, 0, true, Snapshot.INVALID_ID);
     return addLast(createDiff(latest, currentINode));
   }
 
@@ -139,6 +148,20 @@ abstract class AbstractINodeDiffList<N extends INode,
   public final Snapshot getLastSnapshot() {
     final AbstractINodeDiff<N, D> last = getLast();
     return last == null? null: last.getSnapshot();
+  }
+  
+  /**
+   * Search for the snapshot whose id is 1) no larger than the given id, and 2)
+   * most close to the given id
+   */
+  public final Snapshot searchSnapshotById(final int snapshotId) {
+    final int i = Collections.binarySearch(diffs, snapshotId);
+    if (i == -1) {
+      return null;
+    } else {
+      int index = i < 0 ? -i - 2 : i;
+      return diffs.get(index).getSnapshot();
+    }
   }
   
   /**
