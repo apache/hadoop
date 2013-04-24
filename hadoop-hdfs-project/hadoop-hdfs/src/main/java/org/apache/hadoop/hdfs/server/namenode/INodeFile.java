@@ -94,6 +94,12 @@ class INodeFile extends INode implements BlockCollection {
     this.blocks = blklist;
   }
 
+  /** @return true unconditionally. */
+  @Override
+  public final boolean isFile() {
+    return true;
+  }
+
   /**
    * Set the {@link FsPermission} of this {@link INodeFile}.
    * Since this is a file,
