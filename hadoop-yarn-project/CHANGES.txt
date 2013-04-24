@@ -290,6 +290,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-549. YarnClient.submitApplication should wait for application to be
     accepted by the RM (Zhijie Shen via bikas)
 
+    YARN-605. Fix failing unit test in TestNMWebServices when versionInfo has
+    parantheses like when running on a git checkout. (Hitesh Shah via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
