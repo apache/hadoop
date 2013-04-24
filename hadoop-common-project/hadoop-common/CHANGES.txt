@@ -39,6 +39,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH
     is PREpended instead of APpended. (Chris Nauroth and harsh via harsh)
 
+    HADOOP-9496. Bad merge of HADOOP-9450 on branch-2 breaks all bin/hadoop
+    calls that need HADOOP_CLASSPATH. (harsh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs

@@ -294,6 +294,18 @@ if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$HADOOP_YARN_HOME/$YARN_DIR" ] ; then
   CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR'/*'
 fi
 
+# Add the user-specified CLASSPATH via HADOOP_CLASSPATH
+# Add it first or last depending on if user has
+# set env-var HADOOP_USER_CLASSPATH_FIRST
+if [ "$HADOOP_CLASSPATH" != "" ]; then
+  # Prefix it if its to be preceded
+  if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ]; then
+    CLASSPATH=${HADOOP_CLASSPATH}:${CLASSPATH}
+  else
+    CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
+  fi
+fi
+
 # cygwin path translation
 if $cygwin; then
   HADOOP_HDFS_HOME=`cygpath -w "$HADOOP_HDFS_HOME"`
@@ -303,5 +315,3 @@ fi
 if $cygwin; then
   TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
 fi
-
-
