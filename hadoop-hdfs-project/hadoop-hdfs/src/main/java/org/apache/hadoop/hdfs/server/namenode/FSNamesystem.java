@@ -5813,7 +5813,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** Allow snapshot on a directroy. */
   void allowSnapshot(String path) throws SafeModeException, IOException {
-    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5821,7 +5820,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot allow snapshot for " + path,
             safeMode);
       }
-      checkOwner(pc, path);
+      checkSuperuserPrivilege();
 
       snapshotManager.setSnapshottable(path);
       getEditLog().logAllowSnapshot(path);
@@ -5837,7 +5836,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** Disallow snapshot on a directory. */
   void disallowSnapshot(String path) throws SafeModeException, IOException {
-    final FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5845,7 +5843,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot disallow snapshot for " + path,
             safeMode);
       }
-      checkOwner(pc, path);
+      checkSuperuserPrivilege();
 
       snapshotManager.resetSnapshottable(path);
       getEditLog().logDisallowSnapshot(path);
@@ -5875,7 +5873,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot create snapshot for "
             + snapshotRoot, safeMode);
       }
-      checkOwner(pc, snapshotRoot);
+      if (isPermissionEnabled) {
+        checkOwner(pc, snapshotRoot);
+      }
 
       if (snapshotName == null || snapshotName.isEmpty()) {
         snapshotName = Snapshot.generateDefaultSnapshotName();
@@ -5917,7 +5917,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new SafeModeException("Cannot rename snapshot for " + path,
             safeMode);
       }
-      checkOwner(pc, path);
+      if (isPermissionEnabled) {
+        checkOwner(pc, path);
+      }
       dir.verifySnapshotName(snapshotNewName, path);
       
       snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
@@ -5978,9 +5980,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   SnapshotDiffReport getSnapshotDiffReport(String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     SnapshotDiffInfo diffs = null;
+    final FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
+      if (isPermissionEnabled) {
+        checkSubtreeReadPermission(pc, path, fromSnapshot);
+        checkSubtreeReadPermission(pc, path, toSnapshot);
+      }
       diffs = snapshotManager.diff(path, fromSnapshot, toSnapshot);
     } finally {
       readUnlock();
@@ -5992,6 +5999,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return diffs != null ? diffs.generateReport() : new SnapshotDiffReport(
         path, fromSnapshot, toSnapshot,
         Collections.<DiffReportEntry> emptyList());
+  }
+  
+  private void checkSubtreeReadPermission(final FSPermissionChecker pc,
+      final String snapshottablePath, final String snapshot)
+          throws AccessControlException, UnresolvedLinkException {
+    final String fromPath = snapshot == null?
+        snapshottablePath: Snapshot.getSnapshotPath(snapshottablePath, snapshot);
+    checkPermission(pc, fromPath, false, null, null, FsAction.READ, FsAction.READ);
   }
   
   /**

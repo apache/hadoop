@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -125,6 +128,8 @@ class ImageLoaderCurrent implements ImageLoader {
       -24, -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39,
       -40, -41, -42, -43};
   private int imageVersion = 0;
+  
+  private final Map<String, String> nodeMap = new HashMap<String, String>();
 
   /* (non-Javadoc)
    * @see ImageLoader#canProcessVersion(int)
@@ -163,16 +168,15 @@ class ImageLoaderCurrent implements ImageLoader {
         v.visit(ImageElement.TRANSACTION_ID, in.readLong());
       }
       
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
+        v.visit(ImageElement.LAST_INODE_ID, in.readLong());
+      }
+      
       boolean supportSnapshot = LayoutVersion.supports(Feature.SNAPSHOT,
           imageVersion);
       if (supportSnapshot) {
         v.visit(ImageElement.SNAPSHOT_COUNTER, in.readInt());
         v.visit(ImageElement.NUM_SNAPSHOTS_TOTAL, in.readInt());
-        v.visit(ImageElement.NUM_SNAPSHOTTABLE_DIRS, in.readInt());
-      }
-
-      if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
-        v.visit(ImageElement.LAST_INODE_ID, in.readLong());
       }
       
       if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imageVersion)) {
@@ -192,6 +196,7 @@ class ImageLoaderCurrent implements ImageLoader {
         }
       }
       processINodes(in, v, numInodes, skipBlocks, supportSnapshot);
+      nodeMap.clear();
 
       processINodesUC(in, v, skipBlocks);
 
@@ -438,6 +443,12 @@ class ImageLoaderCurrent implements ImageLoader {
       boolean skipBlocks) throws IOException {
     // 1. load dir name
     String dirName = FSImageSerialization.readString(in);
+    
+    String oldValue = nodeMap.put(dirName, dirName);
+    if (oldValue != null) { // the subtree has been visited
+      return;
+    }
+    
     // 2. load possible snapshots
     processSnapshots(in, v, dirName);
     // 3. load children nodes
@@ -622,6 +633,21 @@ class ImageLoaderCurrent implements ImageLoader {
       }
     } else if (numBlocks == -2) {
       v.visit(ImageElement.SYMLINK, Text.readString(in));
+    } else if (numBlocks == -3) {
+      final boolean isWithName = in.readBoolean();
+      int dstSnapshotId = Snapshot.INVALID_ID;
+      if (!isWithName) {
+        dstSnapshotId = in.readInt();
+      }
+      v.visit(ImageElement.SNAPSHOT_DST_SNAPSHOT_ID, dstSnapshotId);
+      final boolean firstReferred = in.readBoolean();
+      if (firstReferred) {
+        v.visitEnclosingElement(ImageElement.SNAPSHOT_REF_INODE);
+        processINode(in, v, skipBlocks, parentName, isSnapshotCopy);
+        v.leaveEnclosingElement();  // referred inode    
+      } else {
+        v.visit(ImageElement.SNAPSHOT_REF_INODE_ID, in.readLong());
+      }
     }
 
     processPermission(in, v);

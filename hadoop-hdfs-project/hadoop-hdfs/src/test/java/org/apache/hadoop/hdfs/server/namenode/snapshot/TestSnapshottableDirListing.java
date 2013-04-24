@@ -172,8 +172,8 @@ public class TestSnapshottableDirListing {
     Path dir2_user1 = new Path("/dir2_user1");
     fs1.mkdirs(dir1_user1);
     fs1.mkdirs(dir2_user1);
-    fs1.allowSnapshot(dir1_user1);
-    fs1.allowSnapshot(dir2_user1);
+    hdfs.allowSnapshot(dir1_user1);
+    hdfs.allowSnapshot(dir2_user1);
     
     // user2
     UserGroupInformation ugi2 = UserGroupInformation.createUserForTesting(
@@ -184,8 +184,8 @@ public class TestSnapshottableDirListing {
     Path subdir_user2 = new Path(dir_user2, "subdir");
     fs2.mkdirs(dir_user2);
     fs2.mkdirs(subdir_user2);
-    fs2.allowSnapshot(dir_user2);
-    fs2.allowSnapshot(subdir_user2);
+    hdfs.allowSnapshot(dir_user2);
+    hdfs.allowSnapshot(subdir_user2);
     
     // super user
     String supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY,

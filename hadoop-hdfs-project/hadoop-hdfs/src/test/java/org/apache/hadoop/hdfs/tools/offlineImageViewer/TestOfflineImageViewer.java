@@ -289,6 +289,7 @@ public class TestOfflineImageViewer {
     while((line = br.readLine()) != null) 
       readLsLine(line, fileContents);
     
+    br.close();
     return fileContents;
   }
   
@@ -391,6 +392,7 @@ public class TestOfflineImageViewer {
     File outputFile = new File(ROOT, "/fileDistributionCheckOutput");
 
     int totalFiles = 0;
+    BufferedReader reader = null;
     try {
       copyFile(originalFsimage, testFile);
       ImageVisitor v = new FileDistributionVisitor(outputFile.getPath(), 0, 0);
@@ -399,7 +401,7 @@ public class TestOfflineImageViewer {
 
       oiv.go();
 
-      BufferedReader reader = new BufferedReader(new FileReader(outputFile));
+      reader = new BufferedReader(new FileReader(outputFile));
       String line = reader.readLine();
       assertEquals(line, "Size\tNumFiles");
       while((line = reader.readLine()) != null) {
@@ -408,6 +410,9 @@ public class TestOfflineImageViewer {
         totalFiles += Integer.parseInt(row[1]);
       }
     } finally {
+      if (reader != null) {
+        reader.close();
+      }
       if(testFile.exists()) testFile.delete();
       if(outputFile.exists()) outputFile.delete();
     }
