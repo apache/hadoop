@@ -50,6 +50,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5175. Updated MR App to not set envs that will be set by NMs
     anyways after YARN-561. (Xuan Gong via vinodkv)
 
+    MAPREDUCE-5069. add concrete common implementations of
+    CombineFileInputFormat (Sangjin Lee via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
