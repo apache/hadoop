@@ -588,6 +588,9 @@ Release 1.2.0 - 2013.04.16
     MAPREDUCE-5166. Fix ConcurrentModificationException due to insufficient
     synchronization on updates to task Counters. (Sandy Ryza via acmurthy)
 
+    HADOOP-9458. Fix RPC.getProxy to ensure it uses retries for
+    getProtocolVersion too. (szetszwo via acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES

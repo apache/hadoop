@@ -141,7 +141,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
                 DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_SPEC_KEY,
                 DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_SPEC_DEFAULT
-                ));  
+                ),
+        false);  
     }
 
   private static ClientProtocol createNamenode(ClientProtocol rpcNamenode,
@@ -177,8 +178,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     
     methodNameToPolicyMap.put("create", methodPolicy);
 
-    return (ClientProtocol) RetryProxy.create(ClientProtocol.class,
+    final ClientProtocol cp = (ClientProtocol) RetryProxy.create(ClientProtocol.class,
         rpcNamenode, defaultPolicy, methodNameToPolicyMap);
+    RPC.checkVersion(ClientProtocol.class, ClientProtocol.versionID, cp);
+    return cp;
   }
 
   /** Create {@link ClientDatanodeProtocol} proxy with block/token */
