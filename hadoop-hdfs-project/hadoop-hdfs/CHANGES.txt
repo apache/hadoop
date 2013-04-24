@@ -56,6 +56,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4124. Refactor INodeDirectory#getExistingPathINodes() to enable 
     returning more than INode array. (Jing Zhao via suresh)
 
+    HDFS-4151. Change the methods in FSDirectory to pass INodesInPath instead
+    of INode[] as a parameter. (szetszwo)
+
     HDFS-4129. Add utility methods to dump NameNode in memory tree for 
     testing. (szetszwo via suresh)
 

@@ -132,7 +132,7 @@ class FSPermissionChecker {
     }
     // check if (parentAccess != null) && file exists, then check sb
       // Resolve symlinks, the check is performed on the link target.
-      INode[] inodes = root.getExistingPathINodes(path, true);
+      final INode[] inodes = root.getExistingPathINodes(path, true).getINodes();
       int ancestorIndex = inodes.length - 2;
       for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
           ancestorIndex--);
