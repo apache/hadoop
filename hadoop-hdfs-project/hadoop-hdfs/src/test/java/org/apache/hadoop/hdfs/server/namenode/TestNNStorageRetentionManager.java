@@ -217,11 +217,12 @@ public class TestNNStorageRetentionManager {
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(176, 200), true);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(201, 225), true);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(226, 240), true);
-    // Only retain 2 extra segments. The 301-400 segment is considered required,
-    // not extra.
+    // Only retain 2 extra segments. The 301-350 and 351-400 segments are
+    // considered required, not extra.
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(241, 275), false);
     tc.addLog("/foo2/current/" + getFinalizedEditsFileName(276, 300), false);
-    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 400), false);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 350), false);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(351, 400), false);
     tc.addLog("/foo2/current/" + getInProgressEditsFileName(401), false);
     runTest(tc);
   }
