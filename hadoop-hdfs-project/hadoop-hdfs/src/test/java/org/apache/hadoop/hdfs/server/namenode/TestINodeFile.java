@@ -26,12 +26,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.junit.Test;
@@ -334,6 +336,72 @@ public class TestINodeFile {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNamesystem();
+      assertTrue(fsn.getLastInodeId() == 1001);
+
+      // Create one directory and the last inode id should increase to 1002
+      FileSystem fs = cluster.getFileSystem();
+      Path path = new Path("/test1");
+      assertTrue(fs.mkdirs(path));
+      assertTrue(fsn.getLastInodeId() == 1002);
+
+      int fileLen = 1024;
+      Path filePath = new Path("/test1/file");
+      DFSTestUtil.createFile(fs, filePath, fileLen, (short) 1, 0);
+      assertTrue(fsn.getLastInodeId() == 1003);
+
+      // Rename doesn't increase inode id
+      Path renamedPath = new Path("/test2");
+      fs.rename(path, renamedPath);
+      assertTrue(fsn.getLastInodeId() == 1003);
+
+      cluster.restartNameNode();
+      cluster.waitActive();
+      // Make sure empty editlog can be handled
+      cluster.restartNameNode();
+      cluster.waitActive();
+      fsn = cluster.getNamesystem();
+      assertTrue(fsn.getLastInodeId() == 1003);
+
+      DFSTestUtil.createFile(fs, new Path("/test2/file2"), fileLen, (short) 1,
+          0);
+      long id = fsn.getLastInodeId();
+      assertTrue(id == 1004);
+      fs.delete(new Path("/test2"), true);
+      // create a file under construction
+      FSDataOutputStream outStream = fs.create(new Path("/test3/file"));
+      assertTrue(outStream != null);
+      assertTrue(fsn.getLastInodeId() == 1006);
+
+      // Apply editlogs to fsimage, test fsimage with inodeUnderConstruction can
+      // be handled
+      fsn.enterSafeMode(false);
+      fsn.saveNamespace();
+      fsn.leaveSafeMode();
+
+      outStream.close();
+
+      // The lastInodeId in fsimage should remain 1006 after reboot
+      cluster.restartNameNode();
+      cluster.waitActive();
+      fsn = cluster.getNamesystem();
+      assertTrue(fsn.getLastInodeId() == 1006);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testWriteToRenamedFile() throws IOException {
+
+    Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .build();
     cluster.waitActive();

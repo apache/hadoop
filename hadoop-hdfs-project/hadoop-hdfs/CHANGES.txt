@@ -11,6 +11,11 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4296. Reserve layout version for release 1.2.0. (suresh)
 
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
+    HDFS-4339. Persist inode id in fsimage and editlog. (Brandon Li via
+    suresh)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
@@ -75,8 +80,6 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
     FSDirectory and INodeDirectory. (szetszwo)
-
-    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
 
   OPTIMIZATIONS
 

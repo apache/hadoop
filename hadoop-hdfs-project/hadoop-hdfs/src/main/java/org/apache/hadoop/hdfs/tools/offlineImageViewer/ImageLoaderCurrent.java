@@ -123,7 +123,7 @@ class ImageLoaderCurrent implements ImageLoader {
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
   private static int[] versions = { -16, -17, -18, -19, -20, -21, -22, -23,
       -24, -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39,
-      -40};
+      -40, -41, -42};
   private int imageVersion = 0;
 
   /* (non-Javadoc)
@@ -163,6 +163,10 @@ class ImageLoaderCurrent implements ImageLoader {
         v.visit(ImageElement.TRANSACTION_ID, in.readLong());
       }
 
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
+        v.visit(ImageElement.LAST_INODE_ID, in.readLong());
+      }
+      
       if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imageVersion)) {
         boolean isCompressed = in.readBoolean();
         v.visit(ImageElement.IS_COMPRESSED, String.valueOf(isCompressed));
@@ -440,6 +444,9 @@ class ImageLoaderCurrent implements ImageLoader {
     }
 
     v.visit(ImageElement.INODE_PATH, pathName);
+    if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
+      v.visit(ImageElement.INODE_ID, in.readLong());
+    }
     v.visit(ImageElement.REPLICATION, in.readShort());
     v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
     if(LayoutVersion.supports(Feature.FILE_ACCESS_TIME, imageVersion))
