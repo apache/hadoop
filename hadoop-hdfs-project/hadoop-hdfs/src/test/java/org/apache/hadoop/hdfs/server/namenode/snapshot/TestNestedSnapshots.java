@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SNAPSHOT_LIMIT;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -34,11 +35,13 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 /** Testing nested snapshots. */
@@ -57,16 +60,16 @@ public class TestNestedSnapshots {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem hdfs;
   
-  @BeforeClass
-  public static void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .build();
     cluster.waitActive();
     hdfs = cluster.getFileSystem();
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -278,5 +281,33 @@ public class TestNestedSnapshots {
         Assert.assertEquals(expected < 0, computed < 0);
       }
     }
+  }
+  
+  /**
+   * When we have nested snapshottable directories and if we try to reset the
+   * snapshottable descendant back to an regular directory, we need to replace
+   * the snapshottable descendant with an INodeDirectoryWithSnapshot
+   */
+  @Test
+  public void testDisallowNestedSnapshottableDir() throws Exception {
+    final Path dir = new Path("/dir");
+    final Path sub = new Path(dir, "sub");
+    hdfs.mkdirs(sub);
+    
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
+    final Path file = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
+    
+    FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
+    INode subNode = fsdir.getINode(sub.toString());
+    assertTrue(subNode instanceof INodeDirectoryWithSnapshot);
+    
+    hdfs.allowSnapshot(sub);
+    subNode = fsdir.getINode(sub.toString());
+    assertTrue(subNode instanceof INodeDirectorySnapshottable);
+    
+    hdfs.disallowSnapshot(sub);
+    subNode = fsdir.getINode(sub.toString());
+    assertTrue(subNode instanceof INodeDirectoryWithSnapshot);
   }
 }

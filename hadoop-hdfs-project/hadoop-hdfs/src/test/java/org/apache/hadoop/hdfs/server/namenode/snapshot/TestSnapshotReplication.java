@@ -213,7 +213,6 @@ public class TestSnapshotReplication {
     checkFileReplication(file1, REPLICATION, REPLICATION);
     checkSnapshotFileReplication(file1, snapshotRepMap, REPLICATION);
     
-    // TODO: check replication after deleting snapshot(s)
     // Delete file1
     hdfs.delete(file1, true);
     // Check replication of snapshots

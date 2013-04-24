@@ -411,7 +411,6 @@ public class TestSnapshot {
    *         the owner, and the other indicates the group
    */
   private String[] genRandomOwner() {
-    // TODO
     String[] userGroup = new String[]{"dr.who", "unknown"};
     return userGroup;
   }

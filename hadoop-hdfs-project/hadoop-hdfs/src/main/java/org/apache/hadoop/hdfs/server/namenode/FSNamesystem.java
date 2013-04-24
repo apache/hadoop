@@ -5829,8 +5829,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
     getEditLog().logSync();
-    
-    //TODO: need to update metrics in corresponding SnapshotManager method 
 
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "allowSnapshot", path, null, null);
@@ -5855,8 +5853,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
     getEditLog().logSync();
-
-    //TODO: need to update metrics in corresponding SnapshotManager method 
     
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "disallowSnapshot", path, null, null);

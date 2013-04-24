@@ -148,8 +148,6 @@ public class TestDisallowModifyROSnapshot {
   public void testCreateSymlink() throws Exception {
     @SuppressWarnings("deprecation")
     DFSClient dfsclient = new DFSClient(conf);
-    // TODO: if link is objInSnapshot, ParentNotDirectoryException got thrown
-    // first by verifyParentDir()
     dfsclient.createSymlink(sub2.toString(), "/TestSnapshot/sub1/.snapshot",
         false);
   }

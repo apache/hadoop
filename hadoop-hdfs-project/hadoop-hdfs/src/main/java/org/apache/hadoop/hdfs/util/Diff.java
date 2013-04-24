@@ -271,7 +271,7 @@ public class Diff<K, E extends Diff.Element<K>> {
       // Case 1.1.3 and 2.3.3: element is already in c-list,
       previous = created.set(c, newElement);
       
-      //TODO: fix a bug that previous != oldElement.Set it to oldElement for now
+      // For previous != oldElement, set it to oldElement
       previous = oldElement;
     } else {
       d = search(deleted, oldElement.getKey());

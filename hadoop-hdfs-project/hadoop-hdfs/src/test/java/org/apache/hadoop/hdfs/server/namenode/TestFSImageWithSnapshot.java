@@ -173,7 +173,7 @@ public class TestFSImageWithSnapshot {
    * 6. Dump the FSDirectory again and compare the two dumped string.
    * </pre>
    */
-  @Test (timeout=60000)
+  @Test
   public void testSaveLoadImage() throws Exception {
     int s = 0;
     // make changes to the namesystem
@@ -213,8 +213,9 @@ public class TestFSImageWithSnapshot {
     hdfs.rename(sub2file2, sub1_sub2file2);
     
     hdfs.rename(sub1file1, sub2file1);
-    // TODO: fix case hdfs.rename(sub1file1, sub1file2);
-
+    checkImage(s);
+    
+    hdfs.rename(sub2file1, sub2file2);
     checkImage(s);
   }
 

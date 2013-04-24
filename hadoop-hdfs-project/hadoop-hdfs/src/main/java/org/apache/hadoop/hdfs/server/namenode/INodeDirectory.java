@@ -173,8 +173,6 @@ public class INodeDirectory extends INodeWithAdditionalFields {
 
   /** Replace itself with an {@link INodeDirectoryWithSnapshot}. */
   public INodeDirectoryWithSnapshot replaceSelf4INodeDirectoryWithSnapshot() {
-    Preconditions.checkState(!(this instanceof INodeDirectoryWithSnapshot),
-        "this is already an INodeDirectoryWithSnapshot, this=%s", this);
     return replaceSelf(new INodeDirectoryWithSnapshot(this));
   }
 

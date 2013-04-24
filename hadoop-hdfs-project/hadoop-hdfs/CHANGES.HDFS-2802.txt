@@ -269,3 +269,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4719. Remove AbstractINodeDiff.Factory and move its methods to 
   AbstractINodeDiffList.  (Arpit Agarwal via szetszwo)
+
+  HDFS-4735. DisallowSnapshot throws IllegalStateException for nested
+  snapshottable directories.  (Jing Zhao via szetszwo)
