@@ -71,6 +71,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4215. Remove locking from addToParent(..) since it is used in image
     loading, and add INode.isFile().  (szetszwo)
 
+    HDFS-4209. Clean up the addNode/addChild/addChildNoQuotaCheck methods in
+    FSDirectory and INodeDirectory. (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

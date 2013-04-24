@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -239,8 +240,8 @@ public class TestINodeFile {
       try {
         INodeDirectory.valueOf(from, path);
         fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("Directory does not exist"));
+      } catch(FileNotFoundException e) {
+        assertTrue(e.getMessage().contains("Directory does not exist"));
       }
     }
 
@@ -264,8 +265,7 @@ public class TestINodeFile {
       try {
         INodeDirectory.valueOf(from, path);
         fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("Path is not a directory"));
+      } catch(PathIsNotDirectoryException e) {
       }
     }
 
@@ -286,8 +286,7 @@ public class TestINodeFile {
       try {
         INodeDirectory.valueOf(from, path);
         fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("Path is not a directory"));
+      } catch(PathIsNotDirectoryException e) {
       }
     }
 

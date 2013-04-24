@@ -338,7 +338,7 @@ class FSImageFormat {
       }
       // check if the new inode belongs to the same parent
       if(!isParent(pathComponents, parentPath)) {
-        parentINode = fsDir.getParent(pathComponents);
+        parentINode = fsDir.rootDir.getParent(pathComponents);
         parentPath = getParent(pathComponents);
       }
 
@@ -355,7 +355,7 @@ class FSImageFormat {
    */
   void addToParent(INodeDirectory parent, INode child) {
     // NOTE: This does not update space counts for parents
-    if (parent.addChild(child, false) == null) {
+    if (!parent.addChild(child, false)) {
       return;
     }
     namesystem.dir.cacheName(child);
