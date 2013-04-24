@@ -19,6 +19,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4340. Update addBlock() to inculde inode id as additional argument.
     (Brandon Li via suresh)
 
+    HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
+    exists.  (Brandon Li via suresh)
+
   IMPROVEMENTS
 
     HDFS-4222. NN is unresponsive and loses heartbeats from DNs when 
