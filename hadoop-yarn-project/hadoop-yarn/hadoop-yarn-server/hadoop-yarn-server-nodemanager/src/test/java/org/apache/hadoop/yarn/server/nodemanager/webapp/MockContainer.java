@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import static org.mockito.Mockito.*;
 
 public class MockContainer implements Container {
 
@@ -48,6 +49,7 @@ public class MockContainer implements Container {
   private final Map<Path, List<String>> resource =
       new HashMap<Path, List<String>>();
   private RecordFactory recordFactory;
+  private org.apache.hadoop.yarn.api.records.Container mockContainer;
 
   public MockContainer(ApplicationAttemptId appAttemptId,
       Dispatcher dispatcher, Configuration conf, String user,
@@ -62,15 +64,12 @@ public class MockContainer implements Container {
     launchContext.setUser(user);
     this.state = ContainerState.NEW;
 
+    mockContainer = mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(mockContainer.getId()).thenReturn(id);
   }
 
   public void setState(ContainerState state) {
     this.state = state;
-  }
-
-  @Override
-  public ContainerId getContainerID() {
-    return id;
   }
 
   @Override
@@ -119,8 +118,7 @@ public class MockContainer implements Container {
   }
 
   @Override
-  public Resource getResource() {
-    return null;
+  public org.apache.hadoop.yarn.api.records.Container getContainer() {
+    return this.mockContainer;
   }
-
 }

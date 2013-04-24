@@ -708,4 +708,12 @@
      <value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*</value>
   </property>
 
+  <!-- Other configuration -->
+  <property>
+    <description>The interval of the yarn client's querying application state
+    after application submission. The unit is millisecond.</description>
+    <name>yarn.client.app-submission.poll-interval</name>
+    <value>1000</value>
+  </property>
+
 </configuration>

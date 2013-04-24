@@ -53,9 +53,11 @@ import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
@@ -68,6 +70,7 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
 
   protected ClientRMProtocol rmClient;
   protected InetSocketAddress rmAddress;
+  protected long statePollIntervalMillis;
 
   private static final String ROOT = "root";
 
@@ -90,6 +93,9 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
     if (this.rmAddress == null) {
       this.rmAddress = getRmAddress(conf);
     }
+    statePollIntervalMillis = conf.getLong(
+        YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
     super.init(conf);
   }
 
@@ -131,6 +137,29 @@ public class YarnClientImpl extends AbstractService implements YarnClient {
         Records.newRecord(SubmitApplicationRequest.class);
     request.setApplicationSubmissionContext(appContext);
     rmClient.submitApplication(request);
+
+    int pollCount = 0;
+    while (true) {
+      YarnApplicationState state =
+          getApplicationReport(applicationId).getYarnApplicationState();
+      if (!state.equals(YarnApplicationState.NEW) &&
+          !state.equals(YarnApplicationState.NEW_SAVING)) {
+        break;
+      }
+      // Notify the client through the log every 10 poll, in case the client
+      // is blocked here too long.
+      if (++pollCount % 10 == 0) {
+        LOG.info("Application submission is not finished, " +
+            "submitted application " + applicationId +
+            " is still in " + state);
+      }
+      try {
+        Thread.sleep(statePollIntervalMillis);
+      } catch (InterruptedException ie) {
+      }
+    }
+
+
     LOG.info("Submitted application " + applicationId + " to ResourceManager"
         + " at " + rmAddress);
     return applicationId;

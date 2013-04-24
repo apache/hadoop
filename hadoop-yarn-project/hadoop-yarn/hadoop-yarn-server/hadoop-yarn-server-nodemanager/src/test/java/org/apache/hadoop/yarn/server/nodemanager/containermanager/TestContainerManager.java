@@ -150,6 +150,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getId()).thenReturn(cId);
     when(mockContainer.getResource()).thenReturn(
         BuilderUtils.newResource(512, 1));
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
 
     StartContainerRequest startRequest = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
@@ -245,6 +249,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getId()).thenReturn(cId);
     when(mockContainer.getResource()).thenReturn(
         BuilderUtils.newResource(100, 1)); // MB
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
+
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainer(mockContainer);
@@ -352,7 +360,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getId()).thenReturn(cId);
     when(mockContainer.getResource()).thenReturn(
         BuilderUtils.newResource(100, 1)); // MB
-
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
 	  StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
 	  startRequest.setContainerLaunchContext(containerLaunchContext);
 	  startRequest.setContainer(mockContainer);
@@ -444,6 +454,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getId()).thenReturn(cId);
     when(mockContainer.getResource()).thenReturn(
         BuilderUtils.newResource(100, 1));
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
 
 //    containerLaunchContext.command = new ArrayList<CharSequence>();
 

@@ -37,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -58,7 +59,7 @@ import org.apache.hadoop.yarn.util.Records;
  * creates a new application on the RM and negotiates a new attempt id. Then it
  * waits for the RM app state to reach be YarnApplicationState.ACCEPTED after
  * which it spawns the AM in another process and passes it the container id via
- * env variable ApplicationConstants.AM_CONTAINER_ID_ENV. The AM can be in any
+ * env variable Environment.CONTAINER_ID. The AM can be in any
  * language. The AM can register with the RM using the attempt id obtained
  * from the container id and proceed as normal.
  * The client redirects app stdout and stderr to its own stdout and
@@ -190,10 +191,11 @@ public class UnmanagedAMLauncher {
     containerId.setId(0);
 
     String hostname = InetAddress.getLocalHost().getHostName();
-    envAMList.add(ApplicationConstants.AM_CONTAINER_ID_ENV + "=" + containerId);
-    envAMList.add(ApplicationConstants.NM_HOST_ENV + "=" + hostname);
-    envAMList.add(ApplicationConstants.NM_HTTP_PORT_ENV + "=0");
-    envAMList.add(ApplicationConstants.NM_PORT_ENV + "=0");
+    envAMList.add(Environment.CONTAINER_ID.name() + "=" + containerId);
+    envAMList.add(Environment.NM_HOST.name() + "=" + hostname);
+    envAMList.add(Environment.NM_HTTP_PORT.name() + "=0");
+    envAMList.add(Environment.NM_PORT.name() + "=0");
+    envAMList.add(Environment.LOCAL_DIRS.name() + "= /tmp");
     envAMList.add(ApplicationConstants.APP_SUBMIT_TIME_ENV + "="
         + System.currentTimeMillis());
 

@@ -95,6 +95,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-441. Removed unused utility methods for collections from two API
     records. (Xuan Gong via vinodkv)
 
+    YARN-561. Modified NodeManager to set key information into the environment
+    of every container that it launches. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -166,6 +169,13 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-542. Changed the default global AM max-attempts value to be not one.
     (Zhijie Shen via vinodkv)
+
+    YARN-583. Moved application level local resources to be localized under the
+    filecache sub-directory under application directory. (Omkar Vinit Joshi via
+    vinodkv)
+
+    YARN-581. Added a test to verify that app delegation tokens are restored
+    after RM restart. (Jian He via vinodkv)
 
   OPTIMIZATIONS
 
@@ -276,6 +286,9 @@ Release 2.0.5-beta - UNRELEASED
     which used to cause duplicate downloads. (Omkar Vinit Joshi via vinodkv)
 
     YARN-594. Update test and add comments in YARN-534 (Jian He via bikas)
+
+    YARN-549. YarnClient.submitApplication should wait for application to be
+    accepted by the RM (Zhijie Shen via bikas)
 
 Release 2.0.4-alpha - UNRELEASED
 

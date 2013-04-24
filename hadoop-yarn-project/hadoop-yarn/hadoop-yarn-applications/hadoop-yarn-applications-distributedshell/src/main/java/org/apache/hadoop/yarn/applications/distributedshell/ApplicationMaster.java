@@ -45,6 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.ContainerManager;
 
@@ -320,7 +321,7 @@ public class ApplicationMaster {
 
     Map<String, String> envs = System.getenv();
 
-    if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
+    if (!envs.containsKey(Environment.CONTAINER_ID.name())) {
       if (cliParser.hasOption("app_attempt_id")) {
         String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
         appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
@@ -330,7 +331,7 @@ public class ApplicationMaster {
       }
     } else {
       ContainerId containerId = ConverterUtils.toContainerId(envs
-          .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
+          .get(Environment.CONTAINER_ID.name()));
       appAttemptID = containerId.getApplicationAttemptId();
     }
 
@@ -338,16 +339,16 @@ public class ApplicationMaster {
       throw new RuntimeException(ApplicationConstants.APP_SUBMIT_TIME_ENV
           + " not set in the environment");
     }
-    if (!envs.containsKey(ApplicationConstants.NM_HOST_ENV)) {
-      throw new RuntimeException(ApplicationConstants.NM_HOST_ENV
+    if (!envs.containsKey(Environment.NM_HOST.name())) {
+      throw new RuntimeException(Environment.NM_HOST.name()
           + " not set in the environment");
     }
-    if (!envs.containsKey(ApplicationConstants.NM_HTTP_PORT_ENV)) {
-      throw new RuntimeException(ApplicationConstants.NM_HTTP_PORT_ENV
+    if (!envs.containsKey(Environment.NM_HTTP_PORT.name())) {
+      throw new RuntimeException(Environment.NM_HTTP_PORT
           + " not set in the environment");
     }
-    if (!envs.containsKey(ApplicationConstants.NM_PORT_ENV)) {
-      throw new RuntimeException(ApplicationConstants.NM_PORT_ENV
+    if (!envs.containsKey(Environment.NM_PORT.name())) {
+      throw new RuntimeException(Environment.NM_PORT.name()
           + " not set in the environment");
     }
 

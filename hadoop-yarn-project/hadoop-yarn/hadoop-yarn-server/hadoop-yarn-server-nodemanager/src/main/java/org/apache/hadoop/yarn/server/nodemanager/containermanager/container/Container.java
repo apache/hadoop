@@ -25,12 +25,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 
 public interface Container extends EventHandler<ContainerEvent> {
 
-  org.apache.hadoop.yarn.api.records.ContainerId getContainerID();
+  org.apache.hadoop.yarn.api.records.Container getContainer();
 
   String getUser();
 
@@ -46,5 +45,4 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   String toString();
 
-  Resource getResource();
 }

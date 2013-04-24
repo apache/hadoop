@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -313,16 +312,6 @@ public class ContainerImpl implements Container {
   }
 
   @Override
-  public ContainerId getContainerID() {
-    this.readLock.lock();
-    try {
-      return this.container.getId();
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
   public String getUser() {
     this.readLock.lock();
     try {
@@ -385,10 +374,10 @@ public class ContainerImpl implements Container {
   }
 
   @Override
-  public Resource getResource() {
+  public org.apache.hadoop.yarn.api.records.Container getContainer() {
     this.readLock.lock();
     try {
-      return this.container.getResource();
+      return this.container;
     } finally {
       this.readLock.unlock();
     }

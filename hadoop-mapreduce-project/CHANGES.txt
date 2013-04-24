@@ -206,6 +206,9 @@ Release 2.0.5-beta - UNRELEASED
     instead of extracting and populating information itself to start any
     container. (vinodkv)
 
+    MAPREDUCE-5175. Updated MR App to not set envs that will be set by NMs
+    anyways after YARN-561. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+set(CMAKE_SKIP_RPATH TRUE)
+
 # Find Linux FUSE
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     find_package(PkgConfig REQUIRED)

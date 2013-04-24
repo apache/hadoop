@@ -530,7 +530,11 @@ public class TestStartup {
         .manageDataDfsDirs(false)
         .manageNameDfsDirs(false)
         .build();
-    cluster.waitActive();
+    try {
+      cluster.waitActive();
+    } finally {
+      cluster.shutdown();
+    }
 }
 
   /**

@@ -118,7 +118,7 @@ public class ContainerLaunch implements Callable<Integer> {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
     final Map<Path,List<String>> localResources =
         container.getLocalizedResources();
-    ContainerId containerID = container.getContainerID();
+    ContainerId containerID = container.getContainer().getId();
     String containerIdStr = ConverterUtils.toString(containerID);
     final String user = launchContext.getUser();
     final List<String> command = launchContext.getCommands();
@@ -299,7 +299,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * @throws IOException
    */
   public void cleanupContainer() throws IOException {
-    ContainerId containerId = container.getContainerID();
+    ContainerId containerId = container.getContainer().getId();
     String containerIdStr = ConverterUtils.toString(containerId);
     LOG.info("Cleaning up container " + containerIdStr);
 
@@ -370,7 +370,7 @@ public class ContainerLaunch implements Callable<Integer> {
    */
   private String getContainerPid(Path pidFilePath) throws Exception {
     String containerIdStr = 
-        ConverterUtils.toString(container.getContainerID());
+        ConverterUtils.toString(container.getContainer().getId());
     String processId = null;
     LOG.debug("Accessing pid for container " + containerIdStr
         + " from pid file " + pidFilePath);
@@ -547,6 +547,21 @@ public class ContainerLaunch implements Callable<Integer> {
      * Non-modifiable environment variables
      */
 
+    environment.put(Environment.CONTAINER_ID.name(), container
+        .getContainer().getId().toString());
+
+    environment.put(Environment.NM_PORT.name(),
+        String.valueOf(container.getContainer().getNodeId().getPort()));
+
+    environment.put(Environment.NM_HOST.name(), container.getContainer()
+        .getNodeId().getHost());
+
+    environment.put(Environment.NM_HTTP_PORT.name(), container.getContainer()
+        .getNodeHttpAddress().split(":")[1]);
+
+    environment.put(Environment.LOCAL_DIRS.name(),
+        StringUtils.join(",", appDirs));
+
     putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
     
     putEnvIfNotNull(environment, 
@@ -565,11 +580,6 @@ public class ContainerLaunch implements Callable<Integer> {
     putEnvIfNotNull(environment, 
         Environment.HADOOP_CONF_DIR.name(), 
         System.getenv(Environment.HADOOP_CONF_DIR.name())
-        );
-    
-    putEnvIfNotNull(environment, 
-        ApplicationConstants.LOCAL_DIR_ENV, 
-        StringUtils.join(",", appDirs)
         );
 
     if (!Shell.WINDOWS) {

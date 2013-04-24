@@ -186,7 +186,10 @@ public class TestLinuxContainerExecutor {
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
     HashMap<String, String> env = new HashMap<String,String>();
 
-    when(container.getContainerID()).thenReturn(cId);
+    org.apache.hadoop.yarn.api.records.Container containerAPI =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(container.getContainer()).thenReturn(containerAPI);
+    when(container.getContainer().getId()).thenReturn(cId);
     when(container.getLaunchContext()).thenReturn(context);
 
     when(context.getEnvironment()).thenReturn(env);

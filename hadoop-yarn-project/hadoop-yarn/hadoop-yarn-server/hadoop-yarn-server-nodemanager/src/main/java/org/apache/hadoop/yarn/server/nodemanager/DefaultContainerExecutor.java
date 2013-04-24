@@ -113,13 +113,13 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       List<String> localDirs, List<String> logDirs) throws IOException {
 
     FsPermission dirPerm = new FsPermission(APPDIR_PERM);
-    ContainerId containerId = container.getContainerID();
+    ContainerId containerId = container.getContainer().getId();
 
     // create container dirs on all disks
     String containerIdStr = ConverterUtils.toString(containerId);
     String appIdStr =
         ConverterUtils.toString(
-            container.getContainerID().getApplicationAttemptId().
+            containerId.getApplicationAttemptId().
                 getApplicationId());
     for (String sLocalDir : localDirs) {
       Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);

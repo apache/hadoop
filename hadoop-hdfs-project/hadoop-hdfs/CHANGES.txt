@@ -326,6 +326,10 @@ Trunk (Unreleased)
     HDFS-4646. createNNProxyWithClientProtocol ignores configured timeout
     value (Jagane Sundar via cos)
 
+    HDFS-4732. Fix TestDFSUpgradeFromImage which fails on Windows due to
+    failure to unpack old image tarball that contains hard links.
+    (Chris Nauroth via szetszwo)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
@@ -359,6 +363,9 @@ Trunk (Unreleased)
 
     HDFS-4674. TestBPOfferService fails on Windows due to failure parsing 
     datanode data directory as URI. (Chris Nauroth via suresh)
+
+    HDFS-4725. Fix HDFS file handle leaks in FSEditLog, NameNode,
+    OfflineEditsBinaryLoader and some tests.  (Chris Nauroth via szetszwo)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
@@ -572,6 +579,8 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4695. TestEditLog leaks open file handles between tests.
     (Ivan Mitic via suresh)
+
+    HDFS-4737. JVM path embedded in fuse binaries. (Sean Mackrory via atm)
 
 Release 2.0.4-alpha - UNRELEASED
 
