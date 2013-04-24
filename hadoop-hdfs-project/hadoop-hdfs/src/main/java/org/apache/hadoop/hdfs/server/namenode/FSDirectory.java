@@ -1073,29 +1073,37 @@ public class FSDirectory implements Closeable {
       throws IOException, UnresolvedLinkException {    
     writeLock();
     try {
-      //
-      // Remove the node from the namespace 
-      //
-      if (!oldnode.removeNode()) {
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
-                                     "failed to remove " + path);
-        throw new IOException("FSDirectory.replaceNode: " +
-                              "failed to remove " + path);
-      } 
-      
-      /* Currently oldnode and newnode are assumed to contain the same
-       * blocks. Otherwise, blocks need to be removed from the blocksMap.
-       */
-      rootDir.addINode(path, newnode); 
-
-      int index = 0;
-      for (BlockInfo b : newnode.getBlocks()) {
-        BlockInfo info = getBlockManager().addBlockCollection(b, newnode);
-        newnode.setBlock(index, info); // inode refers to the block in BlocksMap
-        index++;
-      }
+      unprotectedReplaceNode(path, oldnode, newnode);
     } finally {
       writeUnlock();
+    }
+  }
+  
+  void unprotectedReplaceNode(String path, INodeFile oldnode, INodeFile newnode)
+      throws IOException, UnresolvedLinkException {
+    assert hasWriteLock();
+    INodeDirectory parent = oldnode.parent;
+    // Remove the node from the namespace 
+    if (!oldnode.removeNode()) {
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
+                                   "failed to remove " + path);
+      throw new IOException("FSDirectory.replaceNode: " +
+                            "failed to remove " + path);
+    } 
+    
+    // Parent should be non-null, otherwise oldnode.removeNode() will return
+    // false
+    newnode.setLocalName(oldnode.getLocalNameBytes());
+    parent.addChild(newnode, true);
+    
+    /* Currently oldnode and newnode are assumed to contain the same
+     * blocks. Otherwise, blocks need to be removed from the blocksMap.
+     */
+    int index = 0;
+    for (BlockInfo b : newnode.getBlocks()) {
+      BlockInfo info = getBlockManager().addBlockCollection(b, newnode);
+      newnode.setBlock(index, info); // inode refers to the block in BlocksMap
+      index++;
     }
   }
 
