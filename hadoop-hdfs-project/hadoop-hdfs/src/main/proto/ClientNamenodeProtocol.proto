@@ -67,7 +67,8 @@ message CreateRequestProto {
   required uint64 blockSize = 7;
 }
 
-message CreateResponseProto { // void response
+message CreateResponseProto {
+  optional HdfsFileStatusProto fs = 1;
 }
 
 message AppendRequestProto {
@@ -119,6 +120,7 @@ message AddBlockRequestProto {
   required string clientName = 2;
   optional ExtendedBlockProto previous = 3;
   repeated DatanodeInfoProto excludeNodes = 4;
+  optional uint64 fileId = 5 [default = 0];  // default as a bogus id
 }
 
 message AddBlockResponseProto {

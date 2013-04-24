@@ -24,8 +24,10 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options;
@@ -38,6 +40,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.junit.Test;
 
 public class TestINodeFile {
@@ -375,7 +379,7 @@ public class TestINodeFile {
    * @throws IOException
    */
   @Test
-  public void TestInodeId() throws IOException {
+  public void testInodeId() throws IOException {
 
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
@@ -449,32 +453,36 @@ public class TestINodeFile {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .build();
     cluster.waitActive();
-    
-    FSNamesystem fsn = cluster.getNamesystem();
-    long lastId = fsn.getLastInodeId();
-
-    assertTrue(lastId == 1001);
-
-    // Create one directory and the last inode id should increase to 1002
     FileSystem fs = cluster.getFileSystem();
+
     Path path = new Path("/test1");
     assertTrue(fs.mkdirs(path));
-    assertTrue(fsn.getLastInodeId() == 1002);
 
+    int size = conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
+    byte[] data = new byte[size];
+
+    // Create one file
     Path filePath = new Path("/test1/file");
-    fs.create(filePath);
-    assertTrue(fsn.getLastInodeId() == 1003);
+    FSDataOutputStream fos = fs.create(filePath);
 
-    // Rename doesn't increase inode id
+    // Rename /test1 to test2, and recreate /test1/file
     Path renamedPath = new Path("/test2");
     fs.rename(path, renamedPath);
-    assertTrue(fsn.getLastInodeId() == 1003);
+    fs.create(filePath, (short) 1);
 
-    cluster.restartNameNode();
-    cluster.waitActive();
-    // Make sure empty editlog can be handled
-    cluster.restartNameNode();
-    cluster.waitActive();
-    assertTrue(fsn.getLastInodeId() == 1003);
+    // Add new block should fail since /test1/file has a different fileId
+    try {
+      fos.write(data, 0, data.length);
+      // make sure addBlock() request gets to NN immediately
+      fos.hflush();
+
+      fail("Write should fail after rename");
+    } catch (Exception e) {
+      /* Ignore */
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }
