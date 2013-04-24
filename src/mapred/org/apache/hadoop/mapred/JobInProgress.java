@@ -44,16 +44,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.Counters.CountersExceededException;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
-import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.mapreduce.split.JobSplit;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
@@ -654,12 +651,44 @@ public class JobInProgress {
     this.numSlotsPerReduce = numSlotsPerReduce;
   }
 
+  static final String JOB_INIT_EXCEPTION = 
+      "mapreduce.job.init.throw.exception";
+  static final String JT_JOB_INIT_EXCEPTION_OVERRIDE = 
+      "mapreduce.jt.job.init.throw.exception.override";
+  
+  Object jobInitWaitLockForTests = new Object();
+  
+  void signalInitWaitLockForTests() {
+    synchronized (jobInitWaitLockForTests) {
+      jobInitWaitLockForTests.notify();
+    }
+  }
+  
+  void waitForInitWaitLockForTests() {
+    synchronized (jobInitWaitLockForTests) {
+      try {
+        LOG.info("About to wait for jobInitWaitLockForTests");
+        jobInitWaitLockForTests.wait();
+        LOG.info("Done waiting for jobInitWaitLockForTests");
+      } catch (InterruptedException ie) {
+        // Should never occur
+      }
+    }
+  }
+  
   /**
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
    */
   public synchronized void initTasks() 
   throws IOException, KillInterruptedException, UnknownHostException {
+    // Only for tests
+    if (!jobtracker.getConf().getBoolean(JT_JOB_INIT_EXCEPTION_OVERRIDE, false) 
+        &&
+        getJobConf().getBoolean(JOB_INIT_EXCEPTION, false)) {
+        waitForInitWaitLockForTests();
+    }
+    
     if (tasksInited || isComplete()) {
       return;
     }
@@ -688,11 +717,6 @@ public class JobInProgress {
     
     // log the job priority
     setPriority(this.priority);
-    
-    //
-    // generate security keys needed by Tasks
-    //
-    generateAndStoreTokens();
     
     //
     // read input splits and create a map per a split
@@ -3576,31 +3600,6 @@ public class JobInProgress {
 
       LOG.info(summary);
     }
-  }
-
-  /**
-   * generate job token and save it into the file
-   * @throws IOException
-   */
-  private void generateAndStoreTokens() throws IOException {
-    Path jobDir = jobtracker.getSystemDirectoryForJob(jobId);
-    Path keysFile = new Path(jobDir, TokenCache.JOB_TOKEN_HDFS_FILE);
-    if (tokenStorage == null) {
-      tokenStorage = new Credentials();
-    }
-    //create JobToken file and write token to it
-    JobTokenIdentifier identifier = new JobTokenIdentifier(new Text(jobId
-        .toString()));
-    Token<JobTokenIdentifier> token = new Token<JobTokenIdentifier>(identifier,
-        jobtracker.getJobTokenSecretManager());
-    token.setService(identifier.getJobId());
-    
-    TokenCache.setJobToken(token, tokenStorage);
-        
-    // write TokenStorage out
-    tokenStorage.writeTokenStorageFile(keysFile, jobtracker.getConf());
-    LOG.info("jobToken generated and stored with users keys in "
-        + keysFile.toUri().getPath());
   }
 
   /**

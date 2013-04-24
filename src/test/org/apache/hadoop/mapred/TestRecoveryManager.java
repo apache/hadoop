@@ -52,6 +52,7 @@ public class TestRecoveryManager {
   private static final Path TEST_DIR = 
     new Path(System.getProperty("test.build.data", "/tmp"), 
              "test-recovery-manager");
+  
   private FileSystem fs;
   private MiniDFSCluster dfs;
   private MiniMRCluster mr;
@@ -708,6 +709,93 @@ public class TestRecoveryManager {
     
     jobtracker.setInitDone(true);
 
+    UtilsForTests.waitForJobTracker(jc);
+
+    // assert that job is recovered by the jobtracker
+    Assert.assertEquals("Resubmission failed ", 1, jobtracker.getAllJobs().length);
+    JobInProgress jip = jobtracker.getJob(rJob1.getID());
+
+    // Signaling Map task to complete
+    fs.create(new Path(HDFS_TEST_DIR, "signal"));
+    while (!jip.isComplete()) {
+      LOG.info("Waiting for job " + rJob1.getID() + " to be successful");
+      UtilsForTests.waitFor(100);
+    }
+    rJob1 = jc.getJob(rJob1.getID());
+    Assert.assertTrue("Task should be successful", rJob1.isSuccessful());
+  }
+
+  @Test(timeout=120000)
+  public void testJobInitError() throws Exception {
+    LOG.info("Testing error during Job submission");
+    
+    final Path HDFS_TEST_DIR = new Path("/tmp");
+    
+    JobConf conf = new JobConf();
+    
+    dfs = new MiniDFSCluster(conf, 1, true, null);
+    fs = dfs.getFileSystem();
+
+    conf.set("mapreduce.jobtracker.staging.root.dir", "/user");
+    conf.set("mapred.system.dir", "/mapred");
+    
+    String mapredSysDir =  conf.get("mapred.system.dir");
+    mkdirWithPerms(fs, mapredSysDir, (short)0700);
+    fs.setOwner(new Path(mapredSysDir),
+        UserGroupInformation.getCurrentUser().getUserName(), "mrgroup");
+
+    mkdirWithPerms(fs, "/user", (short)0777);
+    mkdirWithPerms(fs, "/mapred", (short)0777);
+    mkdirWithPerms(fs, "/tmp", (short)0777);
+
+    mr = 
+        new MiniMRCluster(
+            1, dfs.getFileSystem().getUri().toString(), 1, null, null, conf);
+
+    String signalFile = new Path(HDFS_TEST_DIR, "signal").toString();
+
+    // make sure that the jobtracker is in recovery mode
+    mr.getJobTrackerConf()
+    .setBoolean("mapred.jobtracker.restart.recover", true);
+
+    JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
+
+    final JobConf job1 = mr.createJobConf();
+    UtilsForTests.configureWaitingJobConf(job1, new Path(HDFS_TEST_DIR, "input"),
+        new Path(HDFS_TEST_DIR, "output3"), 2, 0, "test-resubmission", signalFile,
+        signalFile);
+
+    UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting("bob", new String[]{"users"});
+    job1.setUser(ugi.getUserName());
+
+    JobClient jc = new JobClient(job1);
+    RunningJob rJob1 = ugi.doAs(new PrivilegedExceptionAction<RunningJob>() {
+      public RunningJob run() throws IOException {
+        // Job 1 init should fail
+        job1.setBoolean(JobInProgress.JOB_INIT_EXCEPTION, true);
+        JobClient jc = new JobClient(job1);
+        return jc.submitJob(job1);
+      }
+    });
+    LOG.info("Submitted first job " + rJob1.getID());
+
+    // kill the jobtracker
+    LOG.info("Stopping jobtracker");
+    mr.stopJobTracker();
+
+    // start the jobtracker, after turning off job-init exception
+    LOG.info("Starting jobtracker");
+    mr.getJobTrackerConf().setBoolean(
+        JobInProgress.JT_JOB_INIT_EXCEPTION_OVERRIDE, true);
+    mr.startJobTracker(false);
+
+    while (!mr.getJobTrackerRunner().isUp()) {
+      Thread.sleep(100);
+    }
+    jobtracker = mr.getJobTrackerRunner().getJobTracker();
+    Assert.assertNotNull(jobtracker);
+    
     UtilsForTests.waitForJobTracker(jc);
 
     // assert that job is recovered by the jobtracker

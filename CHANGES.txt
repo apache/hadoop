@@ -624,6 +624,10 @@ Release 1.2.0 - unreleased
     can override Mapper.run and Reducer.run to get the old (inconsistent)
     behaviour. (acmurthy) 
 
+    MAPREDUCE-5169. Fixed JobTracker recovery to ensure both job-info and
+    jobToken file are saved correctly to prevent race-condition between job
+    submission and initialization. (acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
