@@ -585,6 +585,9 @@ Release 1.2.0 - 2013.04.16
     jobToken file are saved correctly to prevent race-condition between job
     submission and initialization. (acmurthy)
 
+    MAPREDUCE-5166. Fix ConcurrentModificationException due to insufficient
+    synchronization on updates to task Counters. (Sandy Ryza via acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
