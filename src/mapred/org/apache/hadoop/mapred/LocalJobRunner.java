@@ -487,7 +487,7 @@ public class LocalJobRunner implements JobSubmissionProtocol {
     /** Return the current values of the counters for this job,
      * including tasks that are in progress.
     */
-    public synchronized Counters GetCurrentCounters() {
+    public synchronized Counters getCurrentCounters() {
       if (null == mapCounters) {
         // Counters not yet initialized for job.
         return new Counters();
