@@ -54,7 +54,7 @@ public class TestComputeInvalidateWork {
         for (int i=0; i<nodes.length; i++) {
           for(int j=0; j<3*blockInvalidateLimit+1; j++) {
             Block block = new Block(i*(blockInvalidateLimit+1)+j, 0, 
-                GenerationStamp.FIRST_VALID_STAMP);
+                GenerationStamp.LAST_RESERVED_STAMP);
             bm.addToInvalidates(block, nodes[i]);
           }
         }

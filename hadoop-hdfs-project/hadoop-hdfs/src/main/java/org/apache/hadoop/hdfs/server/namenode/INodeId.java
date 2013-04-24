@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.SequentialNumber;
 
 /**
  * An id which uniquely identifies an inode
  */
 @InterfaceAudience.Private
-class INodeId implements Comparable<INodeId> {
+class INodeId extends SequentialNumber {
   /**
    * The last reserved inode id. Reserve id 1 to 1000 for potential future
    * usage. The id won't be recycled and is not expected to wrap around in a
@@ -40,66 +38,7 @@ class INodeId implements Comparable<INodeId> {
    */
   public static final long GRANDFATHER_INODE_ID = 0;
 
-  private AtomicLong lastInodeId = new AtomicLong();
-
-  /**
-   * Create a new instance, initialized to LAST_RESERVED_ID.
-   */
   INodeId() {
-    lastInodeId.set(INodeId.LAST_RESERVED_ID);
-  }
-  
-  /**
-   * Set the last allocated inode id when fsimage is loaded or editlog is
-   * applied.
-   * @throws IOException
-   */
-  void resetLastInodeId(long newValue) throws IOException {
-    if (newValue < getLastInodeId()) {
-      throw new IOException(
-          "Can't reset lastInodeId to be less than its current value "
-              + getLastInodeId() + ", newValue=" + newValue);
-    }
-
-    lastInodeId.set(newValue);
-  }
-
-  void resetLastInodeIdWithoutChecking(long newValue) {
-    lastInodeId.set(newValue);
-  }
-
-  long getLastInodeId() {
-    return lastInodeId.get();
-  }
-
-  /**
-   * First increment the counter and then get the id.
-   */
-  long allocateNewInodeId() {
-    return lastInodeId.incrementAndGet();
-  }
-
-  @Override
-  // Comparable
-  public int compareTo(INodeId that) {
-    long id1 = this.getLastInodeId();
-    long id2 = that.getLastInodeId();
-    return id1 < id2 ? -1 : id1 > id2 ? 1 : 0;
-  }
-
-  @Override
-  // Object
-  public boolean equals(Object o) {
-    if (!(o instanceof INodeId)) {
-      return false;
-    }
-    return compareTo((INodeId) o) == 0;
-  }
-
-  @Override
-  // Object
-  public int hashCode() {
-    long id = getLastInodeId();
-    return (int) (id ^ (id >>> 32));
+    super(LAST_RESERVED_ID);
   }
 }
