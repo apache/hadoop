@@ -515,8 +515,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                 MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
                 MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY,
                 MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT
-                )
-            );
+                ),
+            false);
     
     return rpcJobSubmitClient;
   }
@@ -553,8 +553,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     methodNameToPolicyMap.put("killJob", RetryPolicies.TRY_ONCE_THEN_FAIL);
     methodNameToPolicyMap.put("killTask", RetryPolicies.TRY_ONCE_THEN_FAIL);
     
-    return (JobSubmissionProtocol) RetryProxy.create(JobSubmissionProtocol.class,
+    final JobSubmissionProtocol jsp = (JobSubmissionProtocol) RetryProxy.create(
+        JobSubmissionProtocol.class,
         rpcJobSubmitClient, defaultPolicy, methodNameToPolicyMap);
+    RPC.checkVersion(JobSubmissionProtocol.class,
+        JobSubmissionProtocol.versionID, jsp);
+    return jsp;
   }
 
   @InterfaceAudience.Private

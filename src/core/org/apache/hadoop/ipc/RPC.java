@@ -390,7 +390,7 @@ public class RPC {
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
       Configuration conf, SocketFactory factory, int rpcTimeout) throws IOException {
     return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
-        rpcTimeout, null);
+        rpcTimeout, null, true);
   }
 
   /** Construct a client-side proxy object that implements the named protocol,
@@ -399,7 +399,8 @@ public class RPC {
       Class<? extends VersionedProtocol> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
       Configuration conf, SocketFactory factory, int rpcTimeout,
-      RetryPolicy connectionRetryPolicy) throws IOException {
+      RetryPolicy connectionRetryPolicy,
+      boolean checkVersion) throws IOException {
 
     if (UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
@@ -408,11 +409,19 @@ public class RPC {
         rpcTimeout, connectionRetryPolicy);
     VersionedProtocol proxy = (VersionedProtocol)Proxy.newProxyInstance(
         protocol.getClassLoader(), new Class[]{protocol}, invoker);
+    
+    if (checkVersion) {
+      checkVersion(protocol, clientVersion, proxy);
+    }
+    return proxy;
+  }
+
+  /** Get server version and then compare it with client version. */
+  public static void checkVersion(Class<? extends VersionedProtocol> protocol,
+      long clientVersion, VersionedProtocol proxy)  throws IOException {
     long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
                                                   clientVersion);
-    if (serverVersion == clientVersion) {
-      return proxy;
-    } else {
+    if (serverVersion != clientVersion) {
       throw new VersionMismatch(protocol.getName(), clientVersion, 
                                 serverVersion);
     }
