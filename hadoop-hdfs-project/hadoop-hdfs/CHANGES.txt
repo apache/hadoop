@@ -28,6 +28,11 @@ Trunk (Unreleased)
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
+
+    HDFS-4339. Persist inode id in fsimage and editlog. (Brandon Li via
+    suresh)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -180,8 +185,6 @@ Trunk (Unreleased)
     of persistent objects on heap. (harsh)
 
     HDFS-4234. Use generic code for choosing datanode in Balancer.  (szetszwo)
-
-    HDFS-4334. Add a unique id to INode.  (Brandon Li via szetszwo)
 
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
