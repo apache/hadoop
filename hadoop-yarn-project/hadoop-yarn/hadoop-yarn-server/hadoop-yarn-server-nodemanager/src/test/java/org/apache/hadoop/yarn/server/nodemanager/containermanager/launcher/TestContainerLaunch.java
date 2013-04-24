@@ -37,6 +37,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -51,13 +52,13 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
@@ -141,49 +142,14 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } 
     }
   }
-  
-  // this is a dirty hack - but should be ok for a unittest.
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  public static void setNewEnvironmentHack(Map<String, String> newenv) throws Exception {
-    Class[] classes = Collections.class.getDeclaredClasses();
-    Map<String, String> env = System.getenv();
-    for (Class cl : classes) {
-      if ("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
-        Field field = cl.getDeclaredField("m");
-        field.setAccessible(true);
-        Object obj = field.get(env);
-        Map<String, String> map = (Map<String, String>) obj;
-        map.clear();
-        map.putAll(newenv);
-      }
-    }
-  }
 
   /**
    * See if environment variable is forwarded using sanitizeEnv.
    * @throws Exception
    */
-  @Test
+  @Test (timeout = 5000)
   public void testContainerEnvVariables() throws Exception {
     containerManager.start();
-
-    Map<String, String> envWithDummy = new HashMap<String, String>();
-    envWithDummy.putAll(System.getenv());
-    envWithDummy.put(Environment.MALLOC_ARENA_MAX.name(), "99");
-    setNewEnvironmentHack(envWithDummy);
-
-    String malloc = System.getenv(Environment.MALLOC_ARENA_MAX.name());
-    File scriptFile = new File(tmpDir, "scriptFile.sh");
-    PrintWriter fileWriter = new PrintWriter(scriptFile);
-    File processStartFile =
-        new File(tmpDir, "env_vars.txt").getAbsoluteFile();
-    fileWriter.write("\numask 0"); // So that start file is readable by the test
-    fileWriter.write("\necho $" + Environment.MALLOC_ARENA_MAX.name() + " > " + processStartFile);
-    fileWriter.write("\necho $$ >> " + processStartFile);
-    fileWriter.write("\nexec sleep 100");
-    fileWriter.close();
-
-    assert(malloc != null && !"".equals(malloc));
 
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -201,8 +167,37 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ContainerId.class);
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
 
+    Map<String, String> userSetEnv = new HashMap<String, String>();
+    userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
+    userSetEnv.put(Environment.NM_HOST.name(), "user_set_NM_HOST");
+    userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
+    userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
+    userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
     containerLaunchContext.setUser(user);
+    containerLaunchContext.setEnvironment(userSetEnv);
+
+    File scriptFile = new File(tmpDir, "scriptFile.sh");
+    PrintWriter fileWriter = new PrintWriter(scriptFile);
+    File processStartFile =
+        new File(tmpDir, "env_vars.txt").getAbsoluteFile();
+    fileWriter.write("\numask 0"); // So that start file is readable by the test
+    fileWriter.write("\necho $" + Environment.CONTAINER_ID.name() + " > "
+        + processStartFile);
+    fileWriter.write("\necho $" + Environment.NM_HOST.name() + " >> "
+        + processStartFile);
+    fileWriter.write("\necho $" + Environment.NM_PORT.name() + " >> "
+        + processStartFile);
+    fileWriter.write("\necho $" + Environment.NM_HTTP_PORT.name() + " >> "
+        + processStartFile);
+    fileWriter.write("\necho $" + Environment.LOCAL_DIRS.name() + " >> "
+        + processStartFile);
+    fileWriter.write("\necho $$ >> " + processStartFile);
+    fileWriter.write("\nexec sleep 100");
+    fileWriter.close();
 
     // upload the script file so that the container can run it
     URL resource_alpha =
@@ -243,9 +238,40 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         processStartFile.exists());
 
     // Now verify the contents of the file
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<Path> appDirs = new ArrayList<Path>(localDirs.size());
+    for (String localDir : localDirs) {
+      Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
+      Path userdir = new Path(usersdir, user);
+      Path appsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
+      appDirs.add(new Path(appsdir, appId.toString()));
+    }
     BufferedReader reader =
         new BufferedReader(new FileReader(processStartFile));
-    Assert.assertEquals(malloc, reader.readLine());
+    Assert.assertEquals(cId.toString(), reader.readLine());
+    Assert.assertEquals(mockContainer.getNodeId().getHost(),
+        reader.readLine());
+    Assert.assertEquals(String.valueOf(mockContainer.getNodeId().getPort()),
+        reader.readLine());
+    Assert.assertEquals(
+        String.valueOf(mockContainer.getNodeHttpAddress().split(":")[1]),
+        reader.readLine());
+    Assert.assertEquals(StringUtils.join(",", appDirs), reader.readLine());
+
+    Assert.assertEquals(cId.toString(), containerLaunchContext
+        .getEnvironment().get(Environment.CONTAINER_ID.name()));
+    Assert.assertEquals(mockContainer.getNodeId().getHost(),
+        containerLaunchContext.getEnvironment()
+        .get(Environment.NM_HOST.name()));
+    Assert.assertEquals(String.valueOf(mockContainer.getNodeId().getPort()),
+        containerLaunchContext.getEnvironment().get(
+            Environment.NM_PORT.name()));
+    Assert.assertEquals(
+        mockContainer.getNodeHttpAddress().split(":")[1],
+        containerLaunchContext.getEnvironment().get(
+            Environment.NM_HTTP_PORT.name()));
+    Assert.assertEquals(StringUtils.join(",", appDirs), containerLaunchContext
+        .getEnvironment().get(Environment.LOCAL_DIRS.name()));
     // Get the pid of the process
     String pid = reader.readLine().trim();
     // No more lines
@@ -319,6 +345,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ContainerId.class);
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
 
     containerLaunchContext.setUser(user);
 

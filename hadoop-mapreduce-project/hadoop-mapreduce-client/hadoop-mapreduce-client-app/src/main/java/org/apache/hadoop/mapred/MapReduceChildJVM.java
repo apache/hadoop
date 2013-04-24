@@ -111,8 +111,6 @@ public class MapReduceChildJVM {
         MRJobConfig.STDERR_LOGFILE_ENV,
         getTaskLogFile(TaskLog.LogName.STDERR)
         );
-    environment.put(MRJobConfig.APPLICATION_ATTEMPT_ID_ENV, 
-        	conf.get(MRJobConfig.APPLICATION_ATTEMPT_ID).toString());
   }
 
   private static String getChildJavaOpts(JobConf jobConf, boolean isMapTask) {

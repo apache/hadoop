@@ -24,6 +24,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-441. Removed unused utility methods for collections from two API
     records. (Xuan Gong via vinodkv)
 
+    YARN-561. Modified NodeManager to set key information into the environment
+    of every container that it launches. (Xuan Gong via vinodkv)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 

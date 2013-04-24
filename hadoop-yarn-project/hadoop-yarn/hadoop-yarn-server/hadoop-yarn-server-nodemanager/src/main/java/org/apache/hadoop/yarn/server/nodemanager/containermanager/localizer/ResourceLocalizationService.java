@@ -359,13 +359,15 @@ public class ResourceLocalizationService extends CompositeService
       ContainerLocalizationRequestEvent rsrcReqs) {
     Container c = rsrcReqs.getContainer();
     LocalizerContext ctxt = new LocalizerContext(
-        c.getUser(), c.getContainerID(), c.getCredentials());
+        c.getUser(), c.getContainer().getId(), c.getCredentials());
     Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs =
       rsrcReqs.getRequestedResources();
     for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
          rsrcs.entrySet()) {
-      LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
-          c.getContainerID().getApplicationAttemptId().getApplicationId());
+      LocalResourcesTracker tracker =
+          getLocalResourcesTracker(e.getKey(), c.getUser(),
+              c.getContainer().getId().getApplicationAttemptId()
+                  .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
         tracker.handle(new ResourceRequestEvent(req, e.getKey(), ctxt));
       }
@@ -394,19 +396,21 @@ public class ResourceLocalizationService extends CompositeService
     for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
          rsrcs.entrySet()) {
       LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
-          c.getContainerID().getApplicationAttemptId().getApplicationId());
+          c.getContainer().getId().getApplicationAttemptId()
+          .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
-        tracker.handle(new ResourceReleaseEvent(req, c.getContainerID()));
+        tracker.handle(new ResourceReleaseEvent(req,
+            c.getContainer().getId()));
       }
     }
-    String locId = ConverterUtils.toString(c.getContainerID());
+    String locId = ConverterUtils.toString(c.getContainer().getId());
     localizerTracker.cleanupPrivLocalizers(locId);
     
     // Delete the container directories
     String userName = c.getUser();
     String containerIDStr = c.toString();
     String appIDStr = ConverterUtils.toString(
-        c.getContainerID().getApplicationAttemptId().getApplicationId());
+        c.getContainer().getId().getApplicationAttemptId().getApplicationId());
     for (String localDir : dirsHandler.getLocalDirs()) {
 
       // Delete the user-owned container-dir
@@ -425,8 +429,9 @@ public class ResourceLocalizationService extends CompositeService
       delService.delete(null, containerSysDir,  new Path[] {});
     }
 
-    dispatcher.getEventHandler().handle(new ContainerEvent(c.getContainerID(),
-          ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
+    dispatcher.getEventHandler().handle(
+        new ContainerEvent(c.getContainer().getId(),
+            ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
   }
 
 

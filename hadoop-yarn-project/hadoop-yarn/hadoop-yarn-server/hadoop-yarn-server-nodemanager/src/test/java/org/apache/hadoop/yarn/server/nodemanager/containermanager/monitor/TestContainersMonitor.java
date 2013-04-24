@@ -213,6 +213,9 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     cId.setApplicationAttemptId(appAttemptId);
     when(mockContainer.getId()).thenReturn(cId);
 
+    when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
+    when(mockContainer.getNodeHttpAddress()).thenReturn(
+        context.getNodeId().getHost() + ":12345");
     containerLaunchContext.setUser(user);
 
     URL resource_alpha =

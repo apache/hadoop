@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -166,6 +167,9 @@ public class TestNodeManagerShutdown {
     ContainerId cId = createContainerId();
     when(mockContainer.getId()).thenReturn(cId);
 
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 1234);
+    when(mockContainer.getNodeId()).thenReturn(nodeId);
+    when(mockContainer.getNodeHttpAddress()).thenReturn("localhost:12345");
     containerLaunchContext.setUser(user);
 
     URL localResourceUri =

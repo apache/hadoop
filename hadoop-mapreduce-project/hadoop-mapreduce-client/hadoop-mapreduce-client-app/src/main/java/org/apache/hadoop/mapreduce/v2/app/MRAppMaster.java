@@ -116,6 +116,7 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -1270,22 +1271,22 @@ public class MRAppMaster extends CompositeService {
     try {
       Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
       String containerIdStr =
-          System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
-      String nodeHostString = System.getenv(ApplicationConstants.NM_HOST_ENV);
-      String nodePortString = System.getenv(ApplicationConstants.NM_PORT_ENV);
+          System.getenv(Environment.CONTAINER_ID.name());
+      String nodeHostString = System.getenv(Environment.NM_HOST.name());
+      String nodePortString = System.getenv(Environment.NM_PORT.name());
       String nodeHttpPortString =
-          System.getenv(ApplicationConstants.NM_HTTP_PORT_ENV);
+          System.getenv(Environment.NM_HTTP_PORT.name());
       String appSubmitTimeStr =
           System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
       String maxAppAttempts =
           System.getenv(ApplicationConstants.MAX_APP_ATTEMPTS_ENV);
       
       validateInputParam(containerIdStr,
-          ApplicationConstants.AM_CONTAINER_ID_ENV);
-      validateInputParam(nodeHostString, ApplicationConstants.NM_HOST_ENV);
-      validateInputParam(nodePortString, ApplicationConstants.NM_PORT_ENV);
+          Environment.CONTAINER_ID.name());
+      validateInputParam(nodeHostString, Environment.NM_HOST.name());
+      validateInputParam(nodePortString, Environment.NM_PORT.name());
       validateInputParam(nodeHttpPortString,
-          ApplicationConstants.NM_HTTP_PORT_ENV);
+          Environment.NM_HTTP_PORT.name());
       validateInputParam(appSubmitTimeStr,
           ApplicationConstants.APP_SUBMIT_TIME_ENV);
       validateInputParam(maxAppAttempts,

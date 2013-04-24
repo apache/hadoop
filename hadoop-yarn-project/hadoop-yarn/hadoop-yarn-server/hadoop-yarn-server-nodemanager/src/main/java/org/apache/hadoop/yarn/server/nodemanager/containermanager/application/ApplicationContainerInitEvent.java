@@ -36,8 +36,8 @@ public class ApplicationContainerInitEvent extends ApplicationEvent {
   final Container container;
   
   public ApplicationContainerInitEvent(Container container) {
-    super(container.getContainerID().getApplicationAttemptId().getApplicationId(),
-        ApplicationEventType.INIT_CONTAINER);
+    super(container.getContainer().getId().getApplicationAttemptId()
+        .getApplicationId(), ApplicationEventType.INIT_CONTAINER);
     this.container = container;
   }
 

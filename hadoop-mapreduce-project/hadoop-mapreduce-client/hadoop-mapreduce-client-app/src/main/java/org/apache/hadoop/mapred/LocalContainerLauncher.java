@@ -52,6 +52,7 @@ import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerRemoteLaunchEvent;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
@@ -280,7 +281,7 @@ public class LocalContainerLauncher extends AbstractService implements
         // Use the AM's local dir env to generate the intermediate step 
         // output files
         String[] localSysDirs = StringUtils.getTrimmedStrings(
-            System.getenv(ApplicationConstants.LOCAL_DIR_ENV));
+            System.getenv(Environment.LOCAL_DIRS.name()));
         conf.setStrings(MRConfig.LOCAL_DIR, localSysDirs);
         LOG.info(MRConfig.LOCAL_DIR + " for uber task: "
             + conf.get(MRConfig.LOCAL_DIR));

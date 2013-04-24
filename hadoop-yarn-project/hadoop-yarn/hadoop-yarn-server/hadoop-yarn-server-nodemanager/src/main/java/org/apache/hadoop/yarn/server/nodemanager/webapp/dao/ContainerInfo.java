@@ -60,7 +60,7 @@ public class ContainerInfo {
   public ContainerInfo(final Context nmContext, final Container container,
        String requestUri, String pathPrefix) {
 
-    this.id = container.getContainerID().toString();
+    this.id = container.getContainer().getId().toString();
     this.nodeId = nmContext.getNodeId().toString();
     ContainerStatus containerData = container.cloneAndGetContainerStatus();
     this.exitCode = containerData.getExitStatus();
@@ -74,7 +74,7 @@ public class ContainerInfo {
     }
 
     this.user = container.getUser();
-    Resource res = container.getResource();
+    Resource res = container.getContainer().getResource();
     if (res != null) {
       this.totalMemoryNeededMB = res.getMemory();
     }

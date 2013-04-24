@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -71,17 +70,17 @@ public class TestApplicationMasterLauncher {
       launched = true;
       Map<String, String> env =
           request.getContainerLaunchContext().getEnvironment();
-      containerIdAtContainerManager =
-          env.get(ApplicationConstants.AM_CONTAINER_ID_ENV);
       ContainerId containerId =
-          ConverterUtils.toContainerId(containerIdAtContainerManager);
+          request.getContainer().getId();
+      containerIdAtContainerManager = containerId.toString();
       attemptIdAtContainerManager =
           containerId.getApplicationAttemptId().toString();
-      nmHostAtContainerManager = env.get(ApplicationConstants.NM_HOST_ENV);
+      nmHostAtContainerManager = request.getContainer().getNodeId().getHost();
       nmPortAtContainerManager =
-          Integer.parseInt(env.get(ApplicationConstants.NM_PORT_ENV));
+          request.getContainer().getNodeId().getPort();
       nmHttpPortAtContainerManager =
-          Integer.parseInt(env.get(ApplicationConstants.NM_HTTP_PORT_ENV));
+          Integer.parseInt(request.getContainer().getNodeHttpAddress()
+              .split(":")[1]);
       submitTimeAtContainerManager =
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
       maxAppAttempts =

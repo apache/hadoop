@@ -88,10 +88,10 @@ public class DummyContainerManager extends ContainerManagerImpl {
                 .getRequestedResources().values()) {
               for (LocalResourceRequest req : rc) {
                 LOG.info("DEBUG: " + req + ":"
-                    + rsrcReqs.getContainer().getContainerID());
+                    + rsrcReqs.getContainer().getContainer().getId());
                 dispatcher.getEventHandler().handle(
                     new ContainerResourceLocalizedEvent(rsrcReqs.getContainer()
-                        .getContainerID(), req, new Path("file:///local"
+                        .getContainer().getId(), req, new Path("file:///local"
                         + req.getPath().toUri().getPath())));
               }
             }
@@ -101,7 +101,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
               ((ContainerLocalizationEvent) event).getContainer();
           // TODO: delete the container dir
           this.dispatcher.getEventHandler().handle(
-              new ContainerEvent(container.getContainerID(),
+              new ContainerEvent(container.getContainer().getId(),
                   ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
           break;
         case DESTROY_APPLICATION_RESOURCES:
@@ -130,7 +130,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
       @Override
       public void handle(ContainersLauncherEvent event) {
         Container container = event.getContainer();
-        ContainerId containerId = container.getContainerID();
+        ContainerId containerId = container.getContainer().getId();
         switch (event.getType()) {
         case LAUNCH_CONTAINER:
           dispatcher.getEventHandler().handle(

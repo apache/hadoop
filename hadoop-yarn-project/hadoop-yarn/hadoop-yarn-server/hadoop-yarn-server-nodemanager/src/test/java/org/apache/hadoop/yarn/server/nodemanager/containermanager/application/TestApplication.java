@@ -83,7 +83,7 @@ public class TestApplication {
       for (int i = 0; i < wa.containers.size(); i++) {
         verify(wa.containerBus).handle(
             argThat(new ContainerInitMatcher(wa.containers.get(i)
-                .getContainerID())));
+                .getContainer().getId())));
       }
     } finally {
       if (wa != null)
@@ -108,7 +108,7 @@ public class TestApplication {
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
       verify(wa.containerBus).handle(
           argThat(new ContainerInitMatcher(wa.containers.get(0)
-              .getContainerID())));
+              .getContainer().getId())));
 
       wa.initContainer(1);
       wa.initContainer(2);
@@ -118,7 +118,7 @@ public class TestApplication {
       for (int i = 1; i < wa.containers.size(); i++) {
         verify(wa.containerBus).handle(
             argThat(new ContainerInitMatcher(wa.containers.get(i)
-                .getContainerID())));
+                .getContainer().getId())));
       }
     } finally {
       if (wa != null)
@@ -233,7 +233,7 @@ public class TestApplication {
       for (int i = 1; i < wa.containers.size(); i++) {
         verify(wa.containerBus).handle(
             argThat(new ContainerKillMatcher(wa.containers.get(i)
-                .getContainerID())));
+                .getContainer().getId())));
       }
 
       wa.containerFinished(1);
@@ -354,7 +354,7 @@ public class TestApplication {
 
       verify(wa.containerBus).handle(
           argThat(new ContainerKillMatcher(wa.containers.get(0)
-              .getContainerID())));
+              .getContainer().getId())));
       assertEquals(ApplicationState.FINISHING_CONTAINERS_WAIT,
           wa.app.getApplicationState());
 
@@ -487,7 +487,7 @@ public class TestApplication {
 
     public void containerFinished(int containerNum) {
       app.handle(new ApplicationContainerFinishedEvent(containers.get(
-          containerNum).getContainerID()));
+          containerNum).getContainer().getId()));
       drainDispatcherEvents();
     }
 
@@ -514,7 +514,10 @@ public class TestApplication {
         BuilderUtils.newApplicationAttemptId(appId, 1);
     ContainerId cId = BuilderUtils.newContainerId(appAttemptId, containerId);
     Container c = mock(Container.class);
-    when(c.getContainerID()).thenReturn(cId);
+    org.apache.hadoop.yarn.api.records.Container containerAPI =
+        mock(org.apache.hadoop.yarn.api.records.Container.class);
+    when(c.getContainer()).thenReturn(containerAPI);
+    when(c.getContainer().getId()).thenReturn(cId);
     ContainerLaunchContext launchContext = mock(ContainerLaunchContext.class);
     when(c.getLaunchContext()).thenReturn(launchContext);
     when(launchContext.getApplicationACLs()).thenReturn(

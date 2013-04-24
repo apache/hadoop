@@ -178,17 +178,7 @@ public class AMLauncher implements Runnable {
     Map<String, String> environment = container.getEnvironment();
     environment.put(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV,
         application.getWebProxyBase());
-    // Set the AppAttemptId, containerId, NMHTTPAdress, AppSubmitTime to be
-    // consumable by the AM.
-    environment.put(ApplicationConstants.AM_CONTAINER_ID_ENV,
-        containerID.toString());
-    environment.put(ApplicationConstants.NM_HOST_ENV, masterContainer
-        .getNodeId().getHost());
-    environment.put(ApplicationConstants.NM_PORT_ENV,
-        String.valueOf(masterContainer.getNodeId().getPort()));
-    String parts[] =
-        masterContainer.getNodeHttpAddress().split(":");
-    environment.put(ApplicationConstants.NM_HTTP_PORT_ENV, parts[1]);
+    // Set AppSubmitTime and MaxAppAttempts to be consumable by the AM.
     ApplicationId applicationId =
         application.getAppAttemptId().getApplicationId();
     environment.put(
