@@ -444,6 +444,8 @@ Release 2.0.3-alpha - 2013-02-06
 
     HDFS-4456. Add concat to HttpFS and WebHDFS REST API docs. (plamenj2003 via tucu)
 
+    HDFS-4053. Increase the default block size. (eli)
+
   OPTIMIZATIONS
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)

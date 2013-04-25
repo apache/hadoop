@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
-  public static final long    DFS_BLOCK_SIZE_DEFAULT = 64*1024*1024;
+  public static final long    DFS_BLOCK_SIZE_DEFAULT = 128*1024*1024;
   public static final String  DFS_REPLICATION_KEY = "dfs.replication";
   public static final short   DFS_REPLICATION_DEFAULT = 3;
   public static final String  DFS_STREAM_BUFFER_SIZE_KEY = "dfs.stream-buffer-size";

@@ -358,7 +358,7 @@
 
 <property>
   <name>dfs.blocksize</name>
-  <value>67108864</value>
+  <value>134217728</value>
   <description>
       The default block size for new files, in bytes.
       You can use the following suffix (case insensitive):
