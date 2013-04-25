@@ -209,6 +209,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4739. NN can miscalculate the number of extra edit log segments to
     retain. (atm)
 
+    HDFS-4745. TestDataTransferKeepalive#testSlowReader has race condition that
+    causes sporadic failure. (Chris Nauroth via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
