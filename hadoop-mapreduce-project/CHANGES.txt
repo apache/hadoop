@@ -347,6 +347,9 @@ Release 2.0.5-beta - UNRELEASED
     can override Mapper.run and Reducer.run to get the old (inconsistent) 
     behaviour. (acmurthy)
 
+    MAPREDUCE-5166. Fix ConcurrentModificationException due to insufficient
+    synchronization on updates to task Counters. (Sandy Ryza via acmurthy)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
