@@ -22,7 +22,8 @@ import java.util.Collection;
 import java.util.Comparator;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 
@@ -31,6 +32,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class FairSharePolicy extends SchedulingPolicy {
   @VisibleForTesting
   public static final String NAME = "Fairshare";
+  private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
+      new DefaultResourceCalculator();
   private FairShareComparator comparator = new FairShareComparator();
 
   @Override
@@ -59,15 +62,19 @@ public class FairSharePolicy extends SchedulingPolicy {
     public int compare(Schedulable s1, Schedulable s2) {
       double minShareRatio1, minShareRatio2;
       double useToWeightRatio1, useToWeightRatio2;
-      Resource minShare1 = Resources.min(s1.getMinShare(), s1.getDemand());
-      Resource minShare2 = Resources.min(s2.getMinShare(), s2.getDemand());
-      boolean s1Needy = Resources.lessThan(s1.getResourceUsage(), minShare1);
-      boolean s2Needy = Resources.lessThan(s2.getResourceUsage(), minShare2);
+      Resource minShare1 = Resources.min(RESOURCE_CALCULATOR, null,
+          s1.getMinShare(), s1.getDemand());
+      Resource minShare2 = Resources.min(RESOURCE_CALCULATOR, null,
+          s2.getMinShare(), s2.getDemand());
+      boolean s1Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
+          s1.getResourceUsage(), minShare1);
+      boolean s2Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
+          s2.getResourceUsage(), minShare2);
       Resource one = Resources.createResource(1);
       minShareRatio1 = (double) s1.getResourceUsage().getMemory()
-          / Resources.max(minShare1, one).getMemory();
+          / Resources.max(RESOURCE_CALCULATOR, null, minShare1, one).getMemory();
       minShareRatio2 = (double) s2.getResourceUsage().getMemory()
-          / Resources.max(minShare2, one).getMemory();
+          / Resources.max(RESOURCE_CALCULATOR, null, minShare2, one).getMemory();
       useToWeightRatio1 = s1.getResourceUsage().getMemory() / s1.getWeight();
       useToWeightRatio2 = s2.getResourceUsage().getMemory() / s2.getWeight();
       int res = 0;
@@ -161,9 +168,11 @@ public class FairSharePolicy extends SchedulingPolicy {
     for (Schedulable sched : schedulables) {
       Resources.addTo(totalDemand, sched.getDemand());
     }
-    Resource cap = Resources.min(totalDemand, totalResources);
+    Resource cap = Resources.min(RESOURCE_CALCULATOR, null, totalDemand,
+        totalResources);
     double rMax = 1.0;
-    while (Resources.lessThan(resUsedWithWeightToResRatio(rMax, schedulables),
+    while (Resources.lessThan(RESOURCE_CALCULATOR, null,
+        resUsedWithWeightToResRatio(rMax, schedulables),
         cap)) {
       rMax *= 2.0;
     }
@@ -172,7 +181,8 @@ public class FairSharePolicy extends SchedulingPolicy {
     double right = rMax;
     for (int i = 0; i < COMPUTE_FAIR_SHARES_ITERATIONS; i++) {
       double mid = (left + right) / 2.0;
-      if (Resources.lessThan(resUsedWithWeightToResRatio(mid, schedulables),
+      if (Resources.lessThan(RESOURCE_CALCULATOR, null,
+          resUsedWithWeightToResRatio(mid, schedulables),
           cap)) {
         left = mid;
       } else {

@@ -42,6 +42,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -474,8 +475,8 @@ public class QueueManager {
     }
     queueAcls.put(queueName, acls);
     if (maxQueueResources.containsKey(queueName) && minQueueResources.containsKey(queueName)
-        && Resources.lessThan(maxQueueResources.get(queueName),
-            minQueueResources.get(queueName))) {
+        && !Resources.fitsIn(minQueueResources.get(queueName),
+            maxQueueResources.get(queueName))) {
       LOG.warn(String.format("Queue %s has max resources %d less than min resources %d",
           queueName, maxQueueResources.get(queueName), minQueueResources.get(queueName)));
     }
@@ -504,7 +505,7 @@ public class QueueManager {
     if (maxQueueResource != null) {
       return maxQueueResource;
     } else {
-      return Resources.createResource(Integer.MAX_VALUE);
+      return Resources.createResource(Integer.MAX_VALUE, Integer.MAX_VALUE);
     }
   }
 
