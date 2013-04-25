@@ -46,7 +46,7 @@ public class FSSchedulerNode extends SchedulerNode {
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  private Resource availableResource = recordFactory.newRecordInstance(Resource.class);
+  private Resource availableResource;
   private Resource usedResource = recordFactory.newRecordInstance(Resource.class);
 
   private volatile int numContainers;
@@ -62,7 +62,7 @@ public class FSSchedulerNode extends SchedulerNode {
 
   public FSSchedulerNode(RMNode node) {
     this.rmNode = node;
-    this.availableResource.setMemory(node.getTotalCapability().getMemory());
+    this.availableResource = Resources.clone(node.getTotalCapability());
   }
 
   public RMNode getRMNode() {
