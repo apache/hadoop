@@ -113,9 +113,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4482. ReplicationMonitor thread can exit with NPE due to the race 
     between delete and replication of same file. (umamahesh)
 
-    HDFS-4269. DatanodeManager#registerDatanode rejects all datanode
-    registrations from localhost in single-node developer setup  (Chris
-    Nauroth)
+    HDFS-4269. Datanode rejects all datanode registrations from localhost
+    in single-node developer setup on Windows. (Chris Nauroth via suresh)
 
     HDFS-4235. When outputting XML, OfflineEditsViewer can't handle some edits
     containing non-ASCII strings. (Colin Patrick McCabe via atm)
@@ -449,7 +448,7 @@ Release 2.0.3-alpha - 2013-02-06
 
     HDFS-3429. DataNode reads checksums even if client does not need them (todd)
 
-  BUG FIXES 
+  BUG FIXES
 
     HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
     (Andy Isaacson via eli)
@@ -516,7 +515,8 @@ Release 2.0.3-alpha - 2013-02-06
     HDFS-4072. On file deletion remove corresponding blocks pending
     replications. (Jing Zhao via suresh)
 
-    HDFS-4022. Replication not happening for appended block. (Vinay via umamahesh)
+    HDFS-4022. Replication not happening for appended block.
+    (Vinay via umamahesh)
 
     HDFS-3948. Do not use hflush in TestWebHDFS.testNamenodeRestart() since the
     out stream returned by WebHdfsFileSystem does not support it. (Jing Zhao
@@ -570,6 +570,8 @@ Release 2.0.3-alpha - 2013-02-06
 
     HDFS-3623. BKJM: zkLatchWaitTimeout hard coded to 6000. Make use of ZKSessionTimeout instead.
     (umamahesh)
+
+    HDFS-4100. Fix all findbug security warings. (Liang Xie via eli)
 
     HDFS-3507. DFS#isInSafeMode needs to execute only on Active NameNode.
     (Vinay via atm)
@@ -650,7 +652,7 @@ Release 2.0.3-alpha - 2013-02-06
     Chang via atm)
 
     HDFS-4384. test_libhdfs_threaded gets SEGV if JNIEnv cannot be
-    initialized. (Colin McCabe via eli)
+    initialized. (Colin Patrick McCabe via eli)
 
     HDFS-4328. TestLargeBlock#testLargeBlockSize is timing out. (Chris Nauroth
     via atm)
@@ -798,8 +800,6 @@ Release 2.0.3-alpha - 2013-02-06
 
     HDFS-4351. In BlockPlacementPolicyDefault.chooseTarget(..), numOfReplicas
     needs to be updated when avoiding stale nodes.  (Andrew Wang via szetszwo)
-
-    HDFS-4100. Fix all findbug security warings. (Liang Xie via eli)
 
     HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
     via tgraves)
@@ -1108,7 +1108,8 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3422. TestStandbyIsHot timeouts too aggressive (todd)
 
-    HDFS-3433. GetImageServlet should allow administrative requestors when security is enabled. (atm)
+    HDFS-3433. GetImageServlet should allow administrative requestors when
+    security is enabled. (atm)
 
     HDFS-1153. dfsnodelist.jsp should handle invalid input parameters.
     (Ravi Phulari via eli)
@@ -1168,9 +1169,11 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3487. offlineimageviewer should give byte offset information
     when it encounters an exception. (Colin Patrick McCabe via eli)
 
-    HDFS-3442. Incorrect count for Missing Replicas in FSCK report. (Andrew Wang via atm)
+    HDFS-3442. Incorrect count for Missing Replicas in FSCK report. (Andrew
+    Wang via atm)
 
-    HDFS-2025. Go Back to File View link is not working in tail.jsp.(Ashish and Sravan via umamahesh)
+    HDFS-2025. Go Back to File View link is not working in tail.jsp.
+    (Ashish and Sravan via umamahesh)
 
     HDFS-3501. Checkpointing with security enabled will stop working
     after ticket lifetime expires. (atm via eli)
@@ -1184,7 +1187,8 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis
     jumps (Andy Isaacson via todd)
 
-    HDFS-2914. HA: Standby should not enter safemode when resources are low. (Vinay via atm)
+    HDFS-2914. HA: Standby should not enter safemode when resources are low.
+    (Vinay via atm)
 
     HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
     (Henry Robinson via atm)
@@ -1192,7 +1196,7 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3514. Add missing TestParallelLocalRead. (Henry Robinson via atm)
 
     HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
-    
+
     HDFS-3490. DatanodeWebHdfsMethods throws NullPointerException if
     NamenodeRpcAddressParam is not set.  (szetszwo)
 
@@ -1236,7 +1240,8 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3581. FSPermissionChecker#checkPermission sticky bit check
     missing range check. (eli)
 
-    HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
+    HDFS-3541. Deadlock between recovery, xceiver and packet responder.
+    (Vinay via umamahesh)
 
     HDFS-3428. Move DelegationTokenRenewer to common (tucu)
 
@@ -1274,8 +1279,8 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
 
-    HDFS-3608. HDFS-3608. fuse_dfs: detect changes in UID ticket cache. (Colin
-    Patrick McCabe via atm)
+    HDFS-3608. fuse_dfs: detect changes in UID ticket cache. (Colin Patrick
+    McCabe via atm)
 
     HDFS-3709. TestStartup tests still binding to the ephemeral port. (eli)
 
