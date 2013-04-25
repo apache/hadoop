@@ -27,6 +27,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-561. Modified NodeManager to set key information into the environment
     of every container that it launches. (Xuan Gong via vinodkv)
 
+    YARN-579. Stop setting the Application Token in the AppMaster env, in
+    favour of the copy present in the container token field. 
+    (Vinod Kumar Vavilapalli via sseth)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
