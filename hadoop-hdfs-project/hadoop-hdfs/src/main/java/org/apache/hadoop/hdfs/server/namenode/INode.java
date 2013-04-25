@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +33,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.util.LightWeightGSet.LinkedElement;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -43,7 +44,7 @@ import com.google.common.primitives.SignedBytes;
  * directory inodes.
  */
 @InterfaceAudience.Private
-abstract class INode implements Comparable<byte[]>, LinkedElement {
+abstract class INode implements Comparable<byte[]> {
   static final List<INode> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<INode>());
 
   /** Wrapper of two counters for namespace consumed and diskspace consumed. */
@@ -124,7 +125,6 @@ abstract class INode implements Comparable<byte[]>, LinkedElement {
   protected INodeDirectory parent = null;
   protected long modificationTime = 0L;
   protected long accessTime = 0L;
-  protected LinkedElement next = null;
 
   private INode(long id, byte[] name, long permission, INodeDirectory parent,
       long modificationTime, long accessTime) {
@@ -464,12 +464,12 @@ abstract class INode implements Comparable<byte[]>, LinkedElement {
     if (that == null || !(that instanceof INode)) {
       return false;
     }
-    return id == ((INode) that).id;
+    return Arrays.equals(this.name, ((INode)that).name);
   }
 
   @Override
   public final int hashCode() {
-    return (int)(id^(id>>>32));  
+    return Arrays.hashCode(this.name);
   }
   
   /**
@@ -580,15 +580,5 @@ abstract class INode implements Comparable<byte[]>, LinkedElement {
     public void clear() {
       toDeleteList.clear();
     }
-  }
-  
-  @Override
-  public void setNext(LinkedElement next) {
-    this.next = next;
-  }
-  
-  @Override
-  public LinkedElement getNext() {
-    return next;
   }
 }

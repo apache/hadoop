@@ -401,6 +401,7 @@ class INodeDirectory extends INode {
       total += child.collectSubtreeBlocksAndClear(info);
     }
     parent = null;
+    children = null;
     return total;
   }
   
@@ -472,12 +473,5 @@ class INodeDirectory extends INode {
       subs.get(i).dumpTreeRecursively(out, prefix);
     }
     prefix.setLength(prefix.length() - 2);
-  }
-  
-  void clearChildren() {
-    if (children != null) {
-      this.children.clear();
-      this.children = null;
-    }
   }
 }

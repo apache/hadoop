@@ -4,8 +4,6 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
-
   NEW FEATURES
 
     HDFS-1804. Add a new block-volume device choosing policy that looks at

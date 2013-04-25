@@ -67,10 +67,7 @@ class BlocksMap {
 
 
   void close() {
-    if (blocks != null) {
-      blocks.clear();
-      blocks = null;
-    }
+    blocks.clear();
   }
 
   BlockCollection getBlockCollection(Block b) {
