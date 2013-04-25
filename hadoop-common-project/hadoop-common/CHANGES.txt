@@ -559,6 +559,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9450. HADOOP_USER_CLASSPATH_FIRST is not honored; CLASSPATH
     is PREpended instead of APpended. (Chris Nauroth and harsh via harsh)
 
+    HADOOP-9503. Remove sleep between IPC client connect timeouts.
+    (Varun Sharma via szetszwo)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
