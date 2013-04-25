@@ -302,3 +302,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4749. Use INodeId to identify the corresponding directory node in
   FSImage saving/loading.  (Jing Zhao via szetszwo)
+
+  HDFS-4742. Fix appending to a renamed file with snapshot.  (Jing Zhao via
+  szetszwo)

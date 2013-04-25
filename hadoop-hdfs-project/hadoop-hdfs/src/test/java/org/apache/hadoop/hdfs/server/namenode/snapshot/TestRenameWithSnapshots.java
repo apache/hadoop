@@ -30,10 +30,12 @@ import static org.mockito.Mockito.spy;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
@@ -1182,6 +1184,50 @@ public class TestRenameWithSnapshots {
     restartClusterAndCheckImage();
     assertEquals(3, fsdir.getRoot().getNamespace());
     assertEquals(0, fsdir.getRoot().getDiskspace());
+  }
+  
+  /**
+   * Rename a file and then append the same file. 
+   */
+  @Test
+  public void testRenameAndAppend() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    hdfs.mkdirs(sdir1);
+    hdfs.mkdirs(sdir2);
+    
+    final Path foo = new Path(sdir1, "foo");
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    
+    SnapshotTestHelper.createSnapshot(hdfs, sdir1, snap1);
+
+    final Path foo2 = new Path(sdir2, "foo");
+    hdfs.rename(foo, foo2);
+    
+    INode fooRef = fsdir.getINode4Write(foo2.toString());
+    assertTrue(fooRef instanceof INodeReference.DstReference);
+    
+    FSDataOutputStream out = hdfs.append(foo2);
+    try {
+      byte[] content = new byte[1024];
+      (new Random()).nextBytes(content);
+      out.write(content);
+      fooRef = fsdir.getINode4Write(foo2.toString());
+      assertTrue(fooRef instanceof INodeReference.DstReference);
+      INode fooNode = fooRef.asFile();
+      assertTrue(fooNode instanceof INodeFileUnderConstructionWithSnapshot);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+    
+    fooRef = fsdir.getINode4Write(foo2.toString());
+    assertTrue(fooRef instanceof INodeReference.DstReference);
+    INode fooNode = fooRef.asFile();
+    assertTrue(fooNode instanceof INodeFileWithSnapshot);
+    
+    restartClusterAndCheckImage();
   }
   
   /**

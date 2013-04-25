@@ -199,16 +199,18 @@ public class INodeDirectory extends INodeWithAdditionalFields {
   }
 
   /** Replace the given child with a new child. */
-  public void replaceChild(final INode oldChild, final INode newChild) {
+  public void replaceChild(INode oldChild, final INode newChild) {
     Preconditions.checkNotNull(children);
     final int i = searchChildren(newChild.getLocalNameBytes());
     Preconditions.checkState(i >= 0);
-    Preconditions.checkState(oldChild == children.get(i));
+    Preconditions.checkState(oldChild == children.get(i)
+        || oldChild == children.get(i).asReference().getReferredINode()
+            .asReference().getReferredINode());
+    oldChild = children.get(i);
     
     if (oldChild.isReference() && !newChild.isReference()) {
       // replace the referred inode, e.g., 
       // INodeFileWithSnapshot -> INodeFileUnderConstructionWithSnapshot
-      // TODO: add a unit test for rename + append
       final INode withCount = oldChild.asReference().getReferredINode();
       withCount.asReference().setReferredINode(newChild);
     } else {
@@ -219,8 +221,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
         withCount.removeReference(oldChild.asReference());
       }
       // do the replacement
-      final INode removed = children.set(i, newChild);
-      Preconditions.checkState(removed == oldChild);
+      children.set(i, newChild);
     }
   }
 

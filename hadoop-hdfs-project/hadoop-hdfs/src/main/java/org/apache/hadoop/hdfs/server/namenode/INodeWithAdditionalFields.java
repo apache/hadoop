@@ -109,7 +109,8 @@ public abstract class INodeWithAdditionalFields extends INode {
   
   /** @param other Other node to be copied */
   INodeWithAdditionalFields(INodeWithAdditionalFields other) {
-    this(other.getParent(), other.getId(), other.getLocalNameBytes(),
+    this(other.getParentReference() != null ? other.getParentReference()
+        : other.getParent(), other.getId(), other.getLocalNameBytes(),
         other.permission, other.modificationTime, other.accessTime);
   }
 
