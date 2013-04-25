@@ -194,6 +194,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5181. RMCommunicator should not use AMToken from the env.
     (Vinod Kumar Vavilapalli via sseth)
 
+    MAPREDUCE-5178. Update MR App to set progress in ApplicationReport after
+    YARN-577. (Hitesh Shah via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

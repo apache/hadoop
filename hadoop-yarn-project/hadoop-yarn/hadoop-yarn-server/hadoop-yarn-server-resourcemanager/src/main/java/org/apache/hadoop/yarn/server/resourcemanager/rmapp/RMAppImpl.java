@@ -437,6 +437,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       String diags = UNAVAILABLE;
+      float progress = 0.0f;
       if (allowAccess) {
         if (this.currentAttempt != null) {
           currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
@@ -446,8 +447,8 @@ public class RMAppImpl implements RMApp, Recoverable {
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
+          progress = currentAttempt.getProgress();
         }
-
         diags = this.diagnostics.toString();
       }
 
@@ -462,7 +463,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
-          appUsageReport, origTrackingUrl);
+          appUsageReport, origTrackingUrl, progress);
     } finally {
       this.readLock.unlock();
     }

@@ -110,6 +110,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-581. Added a test to verify that app delegation tokens are restored
     after RM restart. (Jian He via vinodkv)
 
+    YARN-577. Add application-progress also to ApplicationReport. (Hitesh Shah
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
