@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -805,14 +806,25 @@ public class FairScheduler implements ResourceScheduler {
 
     AppSchedulable reservedAppSchedulable = node.getReservedAppSchedulable();
     if (reservedAppSchedulable != null) {
-      // Reservation exists; try to fulfill the reservation
-      LOG.info("Trying to fulfill reservation for application "
-          + reservedAppSchedulable.getApp().getApplicationAttemptId()
-          + " on node: " + nm);
+      Priority reservedPriority = node.getReservedContainer().getReservedPriority();
+      if (reservedAppSchedulable != null &&
+          !reservedAppSchedulable.hasContainerForNode(reservedPriority, node)) {
+        // Don't hold the reservation if app can no longer use it
+        LOG.info("Releasing reservation that cannot be satisfied for application "
+            + reservedAppSchedulable.getApp().getApplicationAttemptId()
+            + " on node " + nm);
+        reservedAppSchedulable.unreserve(reservedPriority, node);
+        reservedAppSchedulable = null;
+      } else {
+        // Reservation exists; try to fulfill the reservation
+        LOG.info("Trying to fulfill reservation for application "
+            + reservedAppSchedulable.getApp().getApplicationAttemptId()
+            + " on node: " + nm);
 
-      node.getReservedAppSchedulable().assignReservedContainer(node);
+        node.getReservedAppSchedulable().assignReservedContainer(node);
+      }
     }
-    else {
+    if (reservedAppSchedulable == null) {
       // No reservation, schedule at queue which is farthest below fair share
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {

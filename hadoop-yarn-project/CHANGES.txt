@@ -235,6 +235,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-605. Fix failing unit test in TestNMWebServices when versionInfo has
     parantheses like when running on a git checkout. (Hitesh Shah via vinodkv)
 
+    YARN-289. Fair scheduler allows reservations that won't fit on node.
+    (Sandy Ryza via tomwhite)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
