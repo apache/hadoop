@@ -299,3 +299,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4729. Fix OfflineImageViewer and permission checking for snapshot
   operations.  (Jing Zhao via szetszwo)
+
+  HDFS-4749. Use INodeId to identify the corresponding directory node in
+  FSImage saving/loading.  (Jing Zhao via szetszwo)

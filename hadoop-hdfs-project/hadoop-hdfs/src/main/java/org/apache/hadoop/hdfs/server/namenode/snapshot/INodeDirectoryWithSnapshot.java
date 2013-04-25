@@ -25,19 +25,18 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
-import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.Diff;
@@ -159,15 +158,13 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       writeDeleted(out, referenceMap);    
     }
 
-    /** @return The list of INodeDirectory contained in the deleted list */
-    private List<INodeDirectory> getDirsInDeleted() {
-      List<INodeDirectory> dirList = new ArrayList<INodeDirectory>();
+    /** Get the list of INodeDirectory contained in the deleted list */
+    private void getDirsInDeleted(List<INodeDirectory> dirList) {
       for (INode node : getList(ListType.DELETED)) {
         if (node.isDirectory()) {
           dirList.add(node.asDirectory());
         }
       }
-      return dirList;
     }
     
     /**
@@ -794,21 +791,11 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
    * Get all the directories that are stored in some snapshot but not in the
    * current children list. These directories are equivalent to the directories
    * stored in the deletes lists.
-   * 
-   * @param snapshotDirMap A snapshot-to-directory-list map for returning.
-   * @return The number of directories returned.
    */
-  public int getSnapshotDirectory(
-      Map<Snapshot, List<INodeDirectory>> snapshotDirMap) {
-    int dirNum = 0;
+  public void getSnapshotDirectory(List<INodeDirectory> snapshotDir) {
     for (DirectoryDiff sdiff : diffs) {
-      List<INodeDirectory> list = sdiff.getChildrenDiff().getDirsInDeleted();
-      if (list.size() > 0) {
-        snapshotDirMap.put(sdiff.snapshot, list);
-        dirNum += list.size();
-      }
+      sdiff.getChildrenDiff().getDirsInDeleted(snapshotDir);
     }
-    return dirNum;
   }
 
   @Override

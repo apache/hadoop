@@ -905,7 +905,7 @@ public class TestRenameWithSnapshots {
     hdfs.rename(foo_dir3, foo_dir2);
     hdfs.rename(bar_dir3, bar_dir2);
    
-//    // modification on /dir2/foo
+    // modification on /dir2/foo
     hdfs.setReplication(bar1_dir2, REPL);
     hdfs.setReplication(bar_dir2, REPL);
     
@@ -1173,11 +1173,15 @@ public class TestRenameWithSnapshots {
     // delete snapshot s2.
     hdfs.deleteSnapshot(sdir2, "s2");
     assertFalse(hdfs.exists(bar_s2));
-    
-    // restart the cluster and check fsimage
     restartClusterAndCheckImage();
+    // make sure the whole referred subtree has been destroyed
+    assertEquals(4, fsdir.getRoot().getNamespace());
+    assertEquals(0, fsdir.getRoot().getDiskspace());
+    
     hdfs.deleteSnapshot(sdir1, "s1");
     restartClusterAndCheckImage();
+    assertEquals(3, fsdir.getRoot().getNamespace());
+    assertEquals(0, fsdir.getRoot().getDiskspace());
   }
   
   /**
@@ -1455,5 +1459,27 @@ public class TestRenameWithSnapshots {
         .getReferredINode();
     assertEquals(2, foo3_wc.getReferenceCount());
     assertSame(foo3Node, foo3_wc.getParentReference());
+  }
+  
+  @Test
+  public void testRename2PreDescendant() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(foo, "bar");
+    hdfs.mkdirs(bar);
+    hdfs.mkdirs(sdir2);
+    
+    SnapshotTestHelper.createSnapshot(hdfs, sdir1, snap1);
+    
+    // /dir1/foo/bar -> /dir2/bar
+    final Path bar2 = new Path(sdir2, "bar");
+    hdfs.rename(bar, bar2);
+    
+    // /dir1/foo -> /dir2/bar/foo
+    final Path foo2 = new Path(bar2, "foo");
+    hdfs.rename(foo, foo2);
+    
+    restartClusterAndCheckImage();
   }
 }

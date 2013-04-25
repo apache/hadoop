@@ -2609,7 +2609,6 @@ public class FSDirectory implements Closeable {
     inodeMap = null;
   }
   
-  @VisibleForTesting
   INode getInode(long id) {
     INode inode = new INodeWithAdditionalFields(id, null, new PermissionStatus(
         "", "", new FsPermission((short) 0)), 0, 0) {
