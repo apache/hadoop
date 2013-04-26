@@ -333,8 +333,7 @@ public class BuilderUtils {
       ClientToken clientToken, YarnApplicationState state, String diagnostics,
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
-      ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress) {
+      ApplicationResourceUsageReport appResources, String origTrackingUrl) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -353,7 +352,6 @@ public class BuilderUtils {
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
     report.setOriginalTrackingUrl(origTrackingUrl);
-    report.setProgress(progress);
     return report;
   }
 

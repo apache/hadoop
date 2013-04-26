@@ -29,7 +29,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class FSParentQueue extends FSQueue {
   private static final Log LOG = LogFactory.getLog(
@@ -88,8 +87,8 @@ public class FSParentQueue extends FSQueue {
             " now " + demand);
       }
       demand = Resources.add(demand, toAdd);
-      demand = Resources.componentwiseMin(demand, maxRes);
-      if (Resources.equals(demand, maxRes)) {
+      if (Resources.greaterThanOrEqual(demand, maxRes)) {
+        demand = maxRes;
         break;
       }
     }
@@ -136,14 +135,16 @@ public class FSParentQueue extends FSQueue {
     Resource assigned = Resources.none();
 
     // If this queue is over its limit, reject
-    if (!assignContainerPreCheck(node)) {
+    if (Resources.greaterThan(getResourceUsage(),
+        queueMgr.getMaxResources(getName()))) {
       return assigned;
     }
 
     Collections.sort(childQueues, policy.getComparator());
     for (FSQueue child : childQueues) {
       assigned = child.assignContainer(node);
-      if (!Resources.equals(assigned, Resources.none())) {
+      if (node.getReservedContainer() != null
+          || Resources.greaterThan(assigned, Resources.none())) {
         break;
       }
     }

@@ -209,9 +209,6 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5175. Updated MR App to not set envs that will be set by NMs
     anyways after YARN-561. (Xuan Gong via vinodkv)
 
-    MAPREDUCE-5069. add concrete common implementations of
-    CombineFileInputFormat (Sangjin Lee via bobby)
-
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
@@ -338,23 +335,6 @@ Release 2.0.5-beta - UNRELEASED
 
     MAPREDUCE-5146. application classloader may be used too early to load
     classes. (Sangjin Lee via tomwhite)
-
-    MAPREDUCE-4737. Ensure that mapreduce APIs are semantically consistent
-    with mapred API w.r.t Mapper.cleanup and Reducer.cleanup; in the sense that
-    cleanup is now called even if there is an error. The old mapred API
-    already ensures that Mapper.close and Reducer.close are invoked during
-    error handling. Note that it is an incompatible change, however end-users 
-    can override Mapper.run and Reducer.run to get the old (inconsistent) 
-    behaviour. (acmurthy)
-
-    MAPREDUCE-5166. Fix ConcurrentModificationException due to insufficient
-    synchronization on updates to task Counters. (Sandy Ryza via acmurthy)
-
-    MAPREDUCE-5181. RMCommunicator should not use AMToken from the env.
-    (Vinod Kumar Vavilapalli via sseth)
-
-    MAPREDUCE-5178. Update MR App to set progress in ApplicationReport after
-    YARN-577. (Hitesh Shah via vinodkv)
 
 Release 2.0.4-alpha - UNRELEASED
 

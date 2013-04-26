@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -53,9 +52,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -114,9 +110,6 @@ public class FairScheduler implements ResourceScheduler {
   private Clock clock;
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
-  
-  private static final ResourceCalculator RESOURCE_CALCULATOR =
-      new DefaultResourceCalculator();
   
   // Value that container assignment methods return when a container is
   // reserved
@@ -253,10 +246,8 @@ public class FairScheduler implements ResourceScheduler {
    * Is a queue below its min share for the given task type?
    */
   boolean isStarvedForMinShare(FSLeafQueue sched) {
-    Resource desiredShare = Resources.min(RESOURCE_CALCULATOR, clusterCapacity,
-        sched.getMinShare(), sched.getDemand());
-    return Resources.lessThan(RESOURCE_CALCULATOR, clusterCapacity,
-        sched.getResourceUsage(), desiredShare);
+    Resource desiredShare = Resources.min(sched.getMinShare(), sched.getDemand());
+    return Resources.lessThan(sched.getResourceUsage(), desiredShare);
   }
 
   /**
@@ -264,10 +255,9 @@ public class FairScheduler implements ResourceScheduler {
    * defined as being below half its fair share.
    */
   boolean isStarvedForFairShare(FSLeafQueue sched) {
-    Resource desiredFairShare = Resources.max(RESOURCE_CALCULATOR, clusterCapacity,
+    Resource desiredFairShare = Resources.max(
         Resources.multiply(sched.getFairShare(), .5), sched.getDemand());
-    return Resources.lessThan(RESOURCE_CALCULATOR, clusterCapacity,
-        sched.getResourceUsage(), desiredFairShare);
+    return Resources.lessThan(sched.getResourceUsage(), desiredFairShare);
   }
 
   /**
@@ -293,8 +283,7 @@ public class FairScheduler implements ResourceScheduler {
     for (FSLeafQueue sched : queueMgr.getLeafQueues()) {
       resToPreempt = Resources.add(resToPreempt, resToPreempt(sched, curTime));
     }
-    if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity, resToPreempt,
-        Resources.none())) {
+    if (Resources.greaterThan(resToPreempt, Resources.none())) {
       preemptResources(queueMgr.getLeafQueues(), resToPreempt);
     }
   }
@@ -320,8 +309,7 @@ public class FairScheduler implements ResourceScheduler {
     // Collect running containers from over-scheduled queues
     List<RMContainer> runningContainers = new ArrayList<RMContainer>();
     for (FSLeafQueue sched : scheds) {
-      if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity,
-          sched.getResourceUsage(), sched.getFairShare())) {
+      if (Resources.greaterThan(sched.getResourceUsage(), sched.getFairShare())) {
         for (AppSchedulable as : sched.getAppSchedulables()) {
           for (RMContainer c : as.getApp().getLiveContainers()) {
             runningContainers.add(c);
@@ -344,8 +332,7 @@ public class FairScheduler implements ResourceScheduler {
     // tasks, making sure we don't kill too many from any queue
     for (RMContainer container : runningContainers) {
       FSLeafQueue sched = queues.get(container);
-      if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity,
-          sched.getResourceUsage(), sched.getFairShare())) {
+      if (Resources.greaterThan(sched.getResourceUsage(), sched.getFairShare())) {
         LOG.info("Preempting container (prio=" + container.getContainer().getPriority() +
             "res=" + container.getContainer().getResource() +
             ") from queue " + sched.getName());
@@ -358,8 +345,7 @@ public class FairScheduler implements ResourceScheduler {
 
         toPreempt = Resources.subtract(toPreempt,
             container.getContainer().getResource());
-        if (Resources.lessThanOrEqual(RESOURCE_CALCULATOR, clusterCapacity,
-            toPreempt, Resources.none())) {
+        if (Resources.equals(toPreempt, Resources.none())) {
           break;
         }
       }
@@ -383,21 +369,17 @@ public class FairScheduler implements ResourceScheduler {
     Resource resDueToMinShare = Resources.none();
     Resource resDueToFairShare = Resources.none();
     if (curTime - sched.getLastTimeAtMinShare() > minShareTimeout) {
-      Resource target = Resources.min(RESOURCE_CALCULATOR, clusterCapacity,
-          sched.getMinShare(), sched.getDemand());
-      resDueToMinShare = Resources.max(RESOURCE_CALCULATOR, clusterCapacity,
-          Resources.none(), Resources.subtract(target, sched.getResourceUsage()));
+      Resource target = Resources.min(sched.getMinShare(), sched.getDemand());
+      resDueToMinShare = Resources.max(Resources.none(),
+          Resources.subtract(target, sched.getResourceUsage()));
     }
     if (curTime - sched.getLastTimeAtHalfFairShare() > fairShareTimeout) {
-      Resource target = Resources.min(RESOURCE_CALCULATOR, clusterCapacity,
-          sched.getFairShare(), sched.getDemand());
-      resDueToFairShare = Resources.max(RESOURCE_CALCULATOR, clusterCapacity,
-          Resources.none(), Resources.subtract(target, sched.getResourceUsage()));
+      Resource target = Resources.min(sched.getFairShare(), sched.getDemand());
+      resDueToFairShare = Resources.max(Resources.none(),
+          Resources.subtract(target, sched.getResourceUsage()));
     }
-    Resource resToPreempt = Resources.max(RESOURCE_CALCULATOR, clusterCapacity,
-        resDueToMinShare, resDueToFairShare);
-    if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity,
-        resToPreempt, Resources.none())) {
+    Resource resToPreempt = Resources.max(resDueToMinShare, resDueToFairShare);
+    if (Resources.greaterThan(resToPreempt, Resources.none())) {
       String message = "Should preempt " + resToPreempt + " res for queue "
           + sched.getName() + ": resDueToMinShare = " + resDueToMinShare
           + ", resDueToFairShare = " + resDueToFairShare;
@@ -806,32 +788,21 @@ public class FairScheduler implements ResourceScheduler {
 
     AppSchedulable reservedAppSchedulable = node.getReservedAppSchedulable();
     if (reservedAppSchedulable != null) {
-      Priority reservedPriority = node.getReservedContainer().getReservedPriority();
-      if (reservedAppSchedulable != null &&
-          !reservedAppSchedulable.hasContainerForNode(reservedPriority, node)) {
-        // Don't hold the reservation if app can no longer use it
-        LOG.info("Releasing reservation that cannot be satisfied for application "
-            + reservedAppSchedulable.getApp().getApplicationAttemptId()
-            + " on node " + nm);
-        reservedAppSchedulable.unreserve(reservedPriority, node);
-        reservedAppSchedulable = null;
-      } else {
-        // Reservation exists; try to fulfill the reservation
-        LOG.info("Trying to fulfill reservation for application "
-            + reservedAppSchedulable.getApp().getApplicationAttemptId()
-            + " on node: " + nm);
+      // Reservation exists; try to fulfill the reservation
+      LOG.info("Trying to fulfill reservation for application "
+          + reservedAppSchedulable.getApp().getApplicationAttemptId()
+          + " on node: " + nm);
 
-        node.getReservedAppSchedulable().assignReservedContainer(node);
-      }
+      node.getReservedAppSchedulable().assignReservedContainer(node);
     }
-    if (reservedAppSchedulable == null) {
+    else {
       // No reservation, schedule at queue which is farthest below fair share
       int assignedContainers = 0;
       while (node.getReservedContainer() == null) {
         boolean assignedContainer = false;
-        if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity,
-              queueMgr.getRootQueue().assignContainer(node),
-              Resources.none())) {
+        if (Resources.greaterThan(
+            queueMgr.getRootQueue().assignContainer(node),
+            Resources.none())) {
           assignedContainer = true;
         }
         if (!assignedContainer) { break; }

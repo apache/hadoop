@@ -140,12 +140,9 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
    */
   public void run(Context context) throws IOException, InterruptedException {
     setup(context);
-    try {
-      while (context.nextKeyValue()) {
-        map(context.getCurrentKey(), context.getCurrentValue(), context);
-      }
-    } finally {
-      cleanup(context);
+    while (context.nextKeyValue()) {
+      map(context.getCurrentKey(), context.getCurrentValue(), context);
     }
+    cleanup(context);
   }
 }

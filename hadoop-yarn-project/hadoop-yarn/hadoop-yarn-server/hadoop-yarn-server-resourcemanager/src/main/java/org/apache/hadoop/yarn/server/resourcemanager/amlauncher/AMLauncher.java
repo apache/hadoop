@@ -204,7 +204,7 @@ public class AMLauncher implements Runnable {
 
       ApplicationTokenIdentifier id = new ApplicationTokenIdentifier(
           application.getAppAttemptId());
-      Token<ApplicationTokenIdentifier> appMasterToken =
+      Token<ApplicationTokenIdentifier> token =
           new Token<ApplicationTokenIdentifier>(id,
               this.rmContext.getApplicationTokenSecretManager());
       InetSocketAddress serviceAddr = conf.getSocketAddr(
@@ -212,11 +212,16 @@ public class AMLauncher implements Runnable {
           YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
       // normally the client should set the service after acquiring the token,
-      // but this token is directly provided to the AMs
-      SecurityUtil.setTokenService(appMasterToken, serviceAddr);
+      // but this token is directly provided to the tasks
+      SecurityUtil.setTokenService(token, serviceAddr);
+      String appMasterTokenEncoded = token.encodeToUrlString();
+      LOG.debug("Putting appMaster token in env : " + token);
+      environment.put(
+          ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME,
+          appMasterTokenEncoded);
 
-      // Add the ApplicationMaster token
-      credentials.addToken(appMasterToken.getService(), appMasterToken);
+      // Add the RM token
+      credentials.addToken(token.getService(), token);
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
       container.setContainerTokens(

@@ -706,6 +706,12 @@ public class Client {
       if (curRetries >= maxRetries) {
         throw ioe;
       }
+
+      // otherwise back off and retry
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ignored) {}
+      
       LOG.info("Retrying connect to server: " + server + ". Already tried "
           + curRetries + " time(s); maxRetries=" + maxRetries);
     }

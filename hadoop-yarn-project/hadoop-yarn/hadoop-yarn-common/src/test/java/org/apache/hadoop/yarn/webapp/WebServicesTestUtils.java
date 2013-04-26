@@ -85,10 +85,5 @@ public class WebServicesTestUtils {
         got.contains(expected));
   }
 
-  public static void checkStringEqual(String print, String expected, String got) {
-    assertTrue(
-        print + " is not equal, got: " + got + " expected: " + expected,
-        got.equals(expected));
-  }
 
 }

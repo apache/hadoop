@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client.cli;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.DecimalFormat;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -35,7 +34,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ApplicationCLI extends YarnCLI {
   private static final String APPLICATIONS_PATTERN =
-    "%30s\t%20s\t%10s\t%10s\t%18s\t%18s\t%15s\t%35s" +
+    "%30s\t%20s\t%10s\t%10s\t%18s\t%18s\t%35s" +
     System.getProperty("line.separator");
 
   public static void main(String[] args) throws Exception {
@@ -99,15 +98,12 @@ public class ApplicationCLI extends YarnCLI {
     writer.println("Total Applications:" + appsReport.size());
     writer.printf(APPLICATIONS_PATTERN, "Application-Id",
         "Application-Name", "User", "Queue", "State", "Final-State",
-        "Progress", "Tracking-URL");
+        "Tracking-URL");
     for (ApplicationReport appReport : appsReport) {
-      DecimalFormat formatter = new DecimalFormat("###.##%");
-      String progress = formatter.format(appReport.getProgress());
       writer.printf(APPLICATIONS_PATTERN, appReport.getApplicationId(),
           appReport.getName(), appReport.getUser(), appReport.getQueue(),
           appReport.getYarnApplicationState(), appReport
-              .getFinalApplicationStatus(),
-          progress, appReport.getOriginalTrackingUrl());
+              .getFinalApplicationStatus(), appReport.getOriginalTrackingUrl());
     }
     writer.flush();
   }
@@ -151,10 +147,6 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.println(appReport.getStartTime());
       appReportStr.print("\tFinish-Time : ");
       appReportStr.println(appReport.getFinishTime());
-      appReportStr.print("\tProgress : ");
-      DecimalFormat formatter = new DecimalFormat("###.##%");
-      String progress = formatter.format(appReport.getProgress());
-      appReportStr.println(progress);
       appReportStr.print("\tState : ");
       appReportStr.println(appReport.getYarnApplicationState());
       appReportStr.print("\tFinal-State : ");

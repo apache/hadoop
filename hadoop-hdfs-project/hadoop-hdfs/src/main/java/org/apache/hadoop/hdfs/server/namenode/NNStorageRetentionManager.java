@@ -118,17 +118,11 @@ public class NNStorageRetentionManager {
             .result();
       }
     });
-
-    // Remove from consideration any edit logs that are in fact required.
-    while (editLogs.size() > 0 &&
-        editLogs.get(editLogs.size() - 1).getFirstTxId() >= minimumRequiredTxId) {
-      editLogs.remove(editLogs.size() - 1);
-    }
     
     // Next, adjust the number of transactions to retain if doing so would mean
     // keeping too many segments around.
     while (editLogs.size() > maxExtraEditsSegmentsToRetain) {
-      purgeLogsFrom = editLogs.get(0).getLastTxId() + 1;
+      purgeLogsFrom = editLogs.get(0).getFirstTxId();
       editLogs.remove(0);
     }
     

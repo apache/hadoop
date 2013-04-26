@@ -2282,68 +2282,10 @@ public class FSDirectory implements Closeable {
   }
   
   /* This method is always called with writeLock held */
-  private final void removeFromInodeMap(INode inode) {
-    inodeMap.remove(inode);
-  }
-  
-  /** Remove all the inodes under given inode from the map */
-  private void remvoedAllFromInodesFromMap(INode inode) {
-    removeFromInodeMap(inode);
-    if (!inode.isDirectory()) {
-      return;
-    }
-    INodeDirectory dir = (INodeDirectory) inode;
-    for (INode child : dir.getChildrenList()) {
-      remvoedAllFromInodesFromMap(child);
-    }
-    dir.clearChildren();
-  }
-  
-  /** Update the count of each directory with quota in the namespace
-   * A directory's count is defined as the total number inodes in the tree
-   * rooted at the directory.
-   * 
-   * This is an update of existing state of the filesystem and does not
-   * throw QuotaExceededException.
-   */
-  void updateCountForINodeWithQuota() {
-    updateCountForINodeWithQuota(this, rootDir, new INode.DirCounts(), 
-                                 new ArrayList<INode>(50));
-  }
-  
-  /** 
-   * Update the count of the directory if it has a quota and return the count
-   * 
-   * This does not throw a QuotaExceededException. This is just an update
-   * of of existing state and throwing QuotaExceededException does not help
-   * with fixing the state, if there is a problem.
-   * 
-   * @param dir the root of the tree that represents the directory
-   * @param counters counters for name space and disk space
-   * @param nodesInPath INodes for the each of components in the path.
-   */
-  private static void updateCountForINodeWithQuota(FSDirectory fsd,
-      INodeDirectory dir, INode.DirCounts counts, ArrayList<INode> nodesInPath) {
-    long parentNamespace = counts.nsCount;
-    long parentDiskspace = counts.dsCount;
-    
-    counts.nsCount = 1L;//for self. should not call node.spaceConsumedInTree()
-    counts.dsCount = 0L;
-    
-    /* We don't need nodesInPath if we could use 'parent' field in 
-     * INode. using 'parent' is not currently recommended. */
-    nodesInPath.add(dir);
-
-    for (INode child : dir.getChildrenList()) {
-      fsd.inodeMap.put(child);
-      if (child.isDirectory()) {
-        updateCountForINodeWithQuota(fsd, (INodeDirectory)child, 
-                                     counts, nodesInPath);
-      } else if (child.isSymlink()) {
-        counts.nsCount += 1;
-      } else { // reduce recursive calls
-        counts.nsCount += 1;
-        counts.dsCount += ((INodeFile)child).diskspaceConsumed();
+  final void removeFromInodeMap(List<INode> inodes) {
+    if (inodes != null) {
+      for (INode inode : inodes) {
+        inodeMap.remove(inode);
       }
     }
   }
@@ -2406,14 +2348,10 @@ public class FSDirectory implements Closeable {
         } else if (!quotaNode.isQuotaSet() && latest == null) {
           // will not come here for root because root's nsQuota is always set
           return quotaNode.replaceSelf4INodeDirectory();
-          // update the inodeMap
-          inodeMap.put(newNode);
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota
         return dirNode.replaceSelf4Quota(latest, nsQuota, dsQuota);
-        // update the inodeMap
-        inodeMap.put(newNode);
       }
       return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
     }

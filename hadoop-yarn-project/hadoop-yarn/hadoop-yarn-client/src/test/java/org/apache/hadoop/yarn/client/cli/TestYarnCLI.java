@@ -76,7 +76,7 @@ public class TestYarnCLI {
         applicationId, BuilderUtils.newApplicationAttemptId(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f);
+        FinalApplicationStatus.SUCCEEDED, null, "N/A");
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
     int result = cli.run(new String[] { "-status", applicationId.toString() });
@@ -91,7 +91,6 @@ public class TestYarnCLI {
     pw.println("\tQueue : queue");
     pw.println("\tStart-Time : 0");
     pw.println("\tFinish-Time : 0");
-    pw.println("\tProgress : 53.79%");
     pw.println("\tState : FINISHED");
     pw.println("\tFinal-State : SUCCEEDED");
     pw.println("\tTracking-URL : N/A");
@@ -112,7 +111,7 @@ public class TestYarnCLI {
         applicationId, BuilderUtils.newApplicationAttemptId(applicationId, 1),
         "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f);
+        FinalApplicationStatus.SUCCEEDED, null, "N/A");
     List<ApplicationReport> applicationReports = new ArrayList<ApplicationReport>();
     applicationReports.add(newApplicationReport);
     when(client.getApplicationList()).thenReturn(applicationReports);
@@ -125,12 +124,10 @@ public class TestYarnCLI {
     pw.println("Total Applications:1");
     pw.print("                Application-Id\t    Application-Name");
     pw.print("\t      User\t     Queue\t             State\t       ");
-    pw.print("Final-State\t       Progress");
-    pw.println("\t                       Tracking-URL");
+    pw.println("Final-State\t                       Tracking-URL");
     pw.print("         application_1234_0005\t             ");
     pw.print("appname\t      user\t     queue\t          FINISHED\t         ");
-    pw.print("SUCCEEDED\t         53.79%");
-    pw.println("\t                                N/A");
+    pw.println("SUCCEEDED\t                                N/A");
     pw.close();
     String appsReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appsReportStr, sysOutStream.toString());
