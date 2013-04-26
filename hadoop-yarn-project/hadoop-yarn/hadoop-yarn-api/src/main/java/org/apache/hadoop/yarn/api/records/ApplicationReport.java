@@ -253,4 +253,16 @@ public interface ApplicationReport {
   @Private
   @Unstable
   void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources);
+
+  /**
+   * Get the application's progress ( range 0.0 to 1.0 )
+   * @return application's progress
+   */
+  @Public
+  @Stable
+  float getProgress();
+
+  @Private
+  @Unstable
+  void setProgress(float progress);
 }

@@ -22,8 +22,8 @@ import java.util.Collection;
 import java.util.Comparator;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
 
 import com.google.common.annotations.VisibleForTesting;

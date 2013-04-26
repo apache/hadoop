@@ -1520,4 +1520,28 @@ public class TestFairScheduler {
     }
     assertEquals(FinalApplicationStatus.FAILED, application.getFinalApplicationStatus());
   }
+  
+  @Test
+  public void testReservationThatDoesntFit() {
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    
+    ApplicationAttemptId attId = createSchedulingRequest(2048, "queue1",
+        "user1", 1);
+    scheduler.update();
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(updateEvent);
+    
+    FSSchedulerApp app = scheduler.applications.get(attId);
+    assertEquals(0, app.getLiveContainers().size());
+    assertEquals(0, app.getReservedContainers().size());
+    
+    createSchedulingRequestExistingApplication(1024, 2, attId);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    
+    assertEquals(1, app.getLiveContainers().size());
+    assertEquals(0, app.getReservedContainers().size());
+  }
 }

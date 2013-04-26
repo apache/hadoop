@@ -214,6 +214,12 @@ implements ApplicationReport {
   }
 
   @Override
+  public float getProgress() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getProgress();
+  }
+
+  @Override
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
     if (applicationId == null)
@@ -343,6 +349,12 @@ implements ApplicationReport {
       return;
     }
     builder.setFinalApplicationStatus(convertToProtoFormat(finishState));
+  }
+
+  @Override
+  public void setProgress(float progress) {
+    maybeInitBuilder();
+    builder.setProgress(progress);
   }
 
   @Override

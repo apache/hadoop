@@ -208,4 +208,14 @@ public class Resources {
       Resource lhs, Resource rhs) {
     return resourceCalculator.compare(clusterResource, lhs, rhs) >= 0 ? lhs : rhs;
   }
+  
+  public static boolean fitsIn(Resource smaller, Resource bigger) {
+    return smaller.getMemory() <= bigger.getMemory() &&
+        smaller.getVirtualCores() <= bigger.getVirtualCores();
+  }
+  
+  public static Resource componentwiseMin(Resource lhs, Resource rhs) {
+    return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
+        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()));
+  }
 }

@@ -293,14 +293,14 @@ public class TestRMWebServices extends JerseyTest {
 
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
         VersionInfo.getDate(), hadoopVersionBuiltOn);
-    WebServicesTestUtils.checkStringMatch("hadoopBuildVersion",
+    WebServicesTestUtils.checkStringEqual("hadoopBuildVersion",
         VersionInfo.getBuildVersion(), hadoopBuildVersion);
     WebServicesTestUtils.checkStringMatch("hadoopVersion",
         VersionInfo.getVersion(), hadoopVersion);
 
     WebServicesTestUtils.checkStringMatch("resourceManagerVersionBuiltOn",
         YarnVersionInfo.getDate(), resourceManagerVersionBuiltOn);
-    WebServicesTestUtils.checkStringMatch("resourceManagerBuildVersion",
+    WebServicesTestUtils.checkStringEqual("resourceManagerBuildVersion",
         YarnVersionInfo.getBuildVersion(), resourceManagerBuildVersion);
     WebServicesTestUtils.checkStringMatch("resourceManagerVersion",
         YarnVersionInfo.getVersion(), resourceManagerVersion);

@@ -162,6 +162,7 @@ message ApplicationReportProto {
   optional ApplicationResourceUsageReportProto app_resource_Usage = 16;
   optional string originalTrackingUrl = 17;
   optional ApplicationAttemptIdProto currentApplicationAttemptId = 18;
+  optional float progress = 19;
 }
 
 enum NodeStateProto {
