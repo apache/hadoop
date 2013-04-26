@@ -16,35 +16,45 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 
-/*
- * Contains the state data that needs to be persisted for an ApplicationAttempt
+/**
+ * Contains all the state data that needs to be stored persistently 
+ * for an Application
  */
 @Public
 @Unstable
-public interface ApplicationAttemptStateData {
+public interface ApplicationStateData {
   
   /**
-   * The ApplicationAttemptId for the application attempt
-   * @return ApplicationAttemptId for the application attempt
+   * The time at which the application was received by the Resource Manager
+   * @return submitTime
    */
   @Public
   @Unstable
-  public ApplicationAttemptId getAttemptId();
+  public long getSubmitTime();
   
-  public void setAttemptId(ApplicationAttemptId attemptId);
+  @Public
+  @Unstable
+  public void setSubmitTime(long submitTime);
   
-  /*
-   * The master container running the application attempt
-   * @return Container that hosts the attempt
+  /**
+   * The {@link ApplicationSubmissionContext} for the application
+   * {@link ApplicationId} can be obtained from the this
+   * @return ApplicationSubmissionContext
    */
   @Public
   @Unstable
-  public Container getMasterContainer();
+  public ApplicationSubmissionContext getApplicationSubmissionContext();
   
-  public void setMasterContainer(Container container);
+  @Public
+  @Unstable
+  public void setApplicationSubmissionContext(
+                                          ApplicationSubmissionContext context);
+
 }
