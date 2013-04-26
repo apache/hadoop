@@ -305,3 +305,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4742. Fix appending to a renamed file with snapshot.  (Jing Zhao via
   szetszwo)
+
+  HDFS-4755. Fix AccessControlException message and moves "implements
+  LinkedElement" from INode to INodeWithAdditionalFields.  (szetszwo)

@@ -116,7 +116,7 @@ public class FSDirectory implements Closeable {
   private final int maxComponentLength;
   private final int maxDirItems;
   private final int lsLimit;  // max list limit
-  private GSet<INode, INode> inodeMap; // Synchronized by dirLock
+  private GSet<INode, INodeWithAdditionalFields> inodeMap; // Synchronized by dirLock
 
   // lock to protect the directory and BlockMap
   private ReentrantReadWriteLock dirLock;
@@ -181,12 +181,12 @@ public class FSDirectory implements Closeable {
     namesystem = ns;
   }
   
-  @VisibleForTesting
-  static LightWeightGSet<INode, INode> initInodeMap(INodeDirectory rootDir) {
+  private static GSet<INode, INodeWithAdditionalFields> initInodeMap(
+      INodeDirectory rootDir) {
     // Compute the map capacity by allocating 1% of total memory
     int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
-    LightWeightGSet<INode, INode> map = new LightWeightGSet<INode, INode>(
-        capacity);
+    GSet<INode, INodeWithAdditionalFields> map
+        = new LightWeightGSet<INode, INodeWithAdditionalFields>(capacity);
     map.put(rootDir);
     return map;
   }
@@ -1466,7 +1466,7 @@ public class FSDirectory implements Closeable {
     Preconditions.checkState(hasWriteLock());
 
     oldnode.getParent().replaceChild(oldnode, newnode);
-    inodeMap.put(newnode);
+    addToInodeMapUnprotected(newnode);
     oldnode.clear();
 
     /* Currently oldnode and newnode are assumed to contain the same
@@ -2200,7 +2200,7 @@ public class FSDirectory implements Closeable {
     } else {
       // update parent node
       iip.setINode(pos - 1, child.getParent());
-      inodeMap.put(child);
+      addToInodeMapUnprotected(child);
     }
     return added;
   }
@@ -2232,7 +2232,7 @@ public class FSDirectory implements Closeable {
     }
     if (parent != last.getParent()) {
       // parent is changed
-      inodeMap.put(last.getParent());
+      addToInodeMapUnprotected(last.getParent());
       iip.setINode(-2, last.getParent());
     }
     
@@ -2278,7 +2278,9 @@ public class FSDirectory implements Closeable {
 
   /** This method is always called with writeLock held */
   final void addToInodeMapUnprotected(INode inode) {
-    inodeMap.put(inode);
+    if (inode instanceof INodeWithAdditionalFields) {
+      inodeMap.put((INodeWithAdditionalFields)inode);
+    }
   }
   
   /* This method is always called with writeLock held */

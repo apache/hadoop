@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.Diff;
-import org.apache.hadoop.hdfs.util.LightWeightGSet.LinkedElement;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -52,7 +51,7 @@ import com.google.common.base.Preconditions;
  * directory inodes.
  */
 @InterfaceAudience.Private
-public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
+public abstract class INode implements Diff.Element<byte[]> {
   public static final Log LOG = LogFactory.getLog(INode.class);
 
   /** parent is either an {@link INodeDirectory} or an {@link INodeReference}.*/
@@ -110,7 +109,6 @@ public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
    * @return group name
    */
   abstract String getGroupName(Snapshot snapshot);
-  protected LinkedElement next = null;
 
   /** The same as getGroupName(null). */
   public final String getGroupName() {
@@ -741,15 +739,5 @@ public abstract class INode implements Diff.Element<byte[]>, LinkedElement {
     public void clear() {
       toDeleteList.clear();
     }
-  }
-  
-  @Override
-  public void setNext(LinkedElement next) {
-    this.next = next;
-  }
-  
-  @Override
-  public LinkedElement getNext() {
-    return next;
   }
 }

@@ -560,9 +560,7 @@ public class FSImageFormat {
       final byte[] localName = FSImageSerialization.readLocalName(in);
       INode inode = loadINode(localName, isSnapshotINode, in);
       if (LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
-        if (!inode.isReference()) { // reference node does not have its id
-          namesystem.dir.addToInodeMapUnprotected(inode);
-        }
+        namesystem.dir.addToInodeMapUnprotected(inode);
       }
       return inode;
     }
