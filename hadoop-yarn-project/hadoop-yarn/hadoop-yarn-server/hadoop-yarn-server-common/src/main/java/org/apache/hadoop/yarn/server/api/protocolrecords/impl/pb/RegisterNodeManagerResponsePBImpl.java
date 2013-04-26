@@ -121,6 +121,18 @@ public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeMan
     rebuild = true;
   }
 
+  @Override
+  public long getRMIdentifier() {
+    RegisterNodeManagerResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getRmIdentifier());
+  }
+
+  @Override
+  public void setRMIdentifier(long rmIdentifier) {
+    maybeInitBuilder();
+    builder.setRmIdentifier(rmIdentifier);
+  }
+
   private NodeAction convertFromProtoFormat(NodeActionProto p) {
     return  NodeAction.valueOf(p.name());
   }

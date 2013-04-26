@@ -237,9 +237,9 @@ public class BuilderUtils {
     return containerStatus;
   }
 
-  public static Container newContainer(ContainerId containerId,
-      NodeId nodeId, String nodeHttpAddress,
-      Resource resource, Priority priority, ContainerToken containerToken) {
+  public static Container newContainer(ContainerId containerId, NodeId nodeId,
+      String nodeHttpAddress, Resource resource, Priority priority,
+      ContainerToken containerToken, long rmIdentifier) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -247,6 +247,7 @@ public class BuilderUtils {
     container.setResource(resource);
     container.setPriority(priority);
     container.setContainerToken(containerToken);
+    container.setRMIdentifier(rmIdentifier);
     return container;
   }
 

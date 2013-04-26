@@ -135,4 +135,16 @@ public interface Container extends Comparable<Container> {
   @Private
   @Unstable
   void setContainerToken(ContainerToken containerToken);
+
+  /**
+   * Get the RMIdentifier of RM in which containers are allocated
+   * @return RMIdentifier
+   */
+  @Private
+  @Unstable
+  long getRMIdentifer();
+
+  @Private
+  @Unstable
+  void setRMIdentifier(long rmIdentifier);
 }

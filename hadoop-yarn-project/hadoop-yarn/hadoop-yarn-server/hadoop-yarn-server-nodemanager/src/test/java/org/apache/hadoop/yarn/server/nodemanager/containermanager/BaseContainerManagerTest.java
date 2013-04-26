@@ -156,7 +156,13 @@ public abstract class BaseContainerManagerTest {
     dirsHandler = nodeHealthChecker.getDiskHandler();
     containerManager =
         new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-          metrics, new ApplicationACLsManager(conf), dirsHandler);
+          metrics, new ApplicationACLsManager(conf), dirsHandler) {
+          @Override
+          public void setBlockNewContainerRequests(
+              boolean blockNewContainerRequests) {
+            // do nothing
+          }
+        };
     containerManager.init(conf);
   }
 

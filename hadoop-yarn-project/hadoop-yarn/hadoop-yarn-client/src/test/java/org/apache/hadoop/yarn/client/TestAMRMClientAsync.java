@@ -56,7 +56,7 @@ public class TestAMRMClientAsync {
             BuilderUtils.newContainerId(0, 0, 0, 0),
             ContainerState.COMPLETE, "", 0));
     List<Container> allocated1 = Arrays.asList(
-        BuilderUtils.newContainer(null, null, null, null, null, null));
+        BuilderUtils.newContainer(null, null, null, null, null, null, 0));
     final AllocateResponse response1 = createAllocateResponse(
         new ArrayList<ContainerStatus>(), allocated1);
     final AllocateResponse response2 = createAllocateResponse(completed1,

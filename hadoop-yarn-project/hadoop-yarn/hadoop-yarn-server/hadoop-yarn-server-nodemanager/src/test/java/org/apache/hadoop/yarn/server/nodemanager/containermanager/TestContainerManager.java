@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -49,13 +52,18 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalRMInterface;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -63,7 +71,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 public class TestContainerManager extends BaseContainerManagerTest {
 
@@ -411,7 +418,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     containerManager =
         new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-          metrics, new ApplicationACLsManager(conf), dirsHandler);
+          metrics, new ApplicationACLsManager(conf), dirsHandler) {
+          @Override
+          public void setBlockNewContainerRequests(
+              boolean blockNewContainerRequests) {
+            // do nothing
+          }
+        };
     containerManager.init(conf);
     containerManager.start();
 
@@ -523,5 +536,78 @@ public class TestContainerManager extends BaseContainerManagerTest {
     }
     Assert.assertFalse(targetFile.getAbsolutePath() + " exists!!",
         targetFile.exists());
+  }
+
+  @Test
+  public void testContainerLaunchFromPreviousRM() throws IOException,
+      InterruptedException {
+    // There is no real RM registration, simulate and set RMIdentifier
+    NodeStatusUpdater nodeStatusUpdater = mock(NodeStatusUpdater.class);
+    when(nodeStatusUpdater.getRMIdentifier()).thenReturn((long) 1234);
+    containerManager =
+        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+          metrics, new ApplicationACLsManager(conf), dirsHandler) {
+          @Override
+          public void setBlockNewContainerRequests(
+              boolean blockNewContainerRequests) {
+            // do nothing
+          }
+        };
+    containerManager.init(conf);
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    ContainerId cId1 = createContainerId();
+    ContainerId cId2 = createContainerId();
+    containerLaunchContext.setUser(user);
+    containerLaunchContext
+      .setLocalResources(new HashMap<String, LocalResource>());
+    containerLaunchContext.setUser(containerLaunchContext.getUser());
+    Resource mockResource = mock(Resource.class);
+
+    Container mockContainer1 = mock(Container.class);
+    when(mockContainer1.getId()).thenReturn(cId1);
+    // Construct the Container with Invalid RMIdentifier
+    when(mockContainer1.getRMIdentifer()).thenReturn(
+      (long) ResourceManagerConstants.RM_INVALID_IDENTIFIER);
+    StartContainerRequest startRequest1 =
+        recordFactory.newRecordInstance(StartContainerRequest.class);
+    startRequest1.setContainerLaunchContext(containerLaunchContext);
+    startRequest1.setContainer(mockContainer1);
+    boolean catchException = false;
+    try {
+      containerManager.startContainer(startRequest1);
+    } catch (YarnRemoteException e) {
+      catchException = true;
+      Assert.assertTrue(e.getMessage().contains(
+        "Container " + cId1 + " rejected as it is allocated by a previous RM"));
+      // TO DO: This should be replaced to explicitly check exception
+      // class name after YARN-142
+      Assert.assertTrue(e.getRemoteTrace().contains(
+        InvalidContainerException.class.getName()));
+    }
+
+    // Verify that startContainer fail because of invalid container request
+    Assert.assertTrue(catchException);
+
+    // Construct the Container with a RMIdentifier within current RM
+    Container mockContainer2 = mock(Container.class);
+    when(mockContainer2.getId()).thenReturn(cId2);
+    when(mockContainer2.getRMIdentifer()).thenReturn((long) 1234);
+    when(mockContainer2.getResource()).thenReturn(mockResource);
+    StartContainerRequest startRequest2 =
+        recordFactory.newRecordInstance(StartContainerRequest.class);
+    startRequest2.setContainerLaunchContext(containerLaunchContext);
+    startRequest2.setContainer(mockContainer2);
+    boolean noException = true;
+    try {
+      containerManager.startContainer(startRequest2);
+    } catch (YarnRemoteException e) {
+      noException = false;
+    }
+    // Verify that startContainer get no YarnRemoteException
+    Assert.assertTrue(noException);
   }
 }

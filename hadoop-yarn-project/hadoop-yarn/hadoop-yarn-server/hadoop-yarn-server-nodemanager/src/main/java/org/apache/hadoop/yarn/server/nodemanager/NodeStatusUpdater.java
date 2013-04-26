@@ -24,5 +24,8 @@ import org.apache.hadoop.yarn.service.Service;
 public interface NodeStatusUpdater extends Service {
 
   void sendOutofBandHeartBeat();
+
   NodeStatus getNodeStatusAndUpdateContainersInContext();
+
+  long getRMIdentifier();
 }

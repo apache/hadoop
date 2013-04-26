@@ -187,6 +187,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-595. Refactor fair scheduler to use common Resources. (Sandy Ryza
     via tomwhite)
 
+    YARN-562. Modified NM to reject any containers allocated by a previous
+    ResourceManager. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

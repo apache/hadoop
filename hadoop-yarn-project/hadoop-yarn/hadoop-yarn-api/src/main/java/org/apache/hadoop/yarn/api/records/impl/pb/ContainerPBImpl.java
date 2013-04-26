@@ -230,6 +230,18 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
     this.containerToken = containerToken;
   }
 
+  @Override
+  public long getRMIdentifer() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getRmIdentifier();
+  }
+
+  @Override
+  public void setRMIdentifier(long rmIdentifier) {
+    maybeInitBuilder();
+    builder.setRmIdentifier((rmIdentifier));
+  }
+
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
     return new ContainerIdPBImpl(p);
   }

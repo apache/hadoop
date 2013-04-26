@@ -188,6 +188,7 @@ public class NodeManager implements ContainerManager {
             this.nodeId, nodeHttpAddress,
             requestContainer.getResource(),
             null, null                                 // DKDC - Doesn't matter
+            , 0
             );
 
     ContainerStatus containerStatus =

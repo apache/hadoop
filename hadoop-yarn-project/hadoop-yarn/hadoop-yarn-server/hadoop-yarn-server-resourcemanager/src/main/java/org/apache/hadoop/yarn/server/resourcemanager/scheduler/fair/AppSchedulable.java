@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
@@ -173,7 +174,7 @@ public class AppSchedulable extends Schedulable {
     // Create the container
     Container container = BuilderUtils.newContainer(containerId, nodeId,
         node.getRMNode().getHttpAddress(), capability, priority,
-        containerToken);
+        containerToken, ResourceManager.clusterTimeStamp);
 
     return container;
   }
