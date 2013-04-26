@@ -312,3 +312,6 @@ Branch-2802 Snapshot (Unreleased)
   HDFS-4650. Fix a bug in FSDirectory and add more unit tests for rename with
   existence of snapshottable directories and snapshots.  (Jing Zhao via
   szetszwo)
+
+  HDFS-4650. When passing two non-existing snapshot names to snapshotDiff, it
+  returns success if the names are the same.  (Jing Zhao via szetszwo)

@@ -289,10 +289,6 @@ public class SnapshotManager implements SnapshotStats {
       // both fromSnapshot and toSnapshot indicate the current tree
       return null;
     }
-    // if the start point is equal to the end point, return null
-    if (from.equals(to)) {
-      return null;
-    }
 
     // Find the source root directory path where the snapshots were taken.
     // All the check for path has been included in the valueOf method.

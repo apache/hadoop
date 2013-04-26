@@ -371,7 +371,11 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   SnapshotDiffInfo computeDiff(final String from, final String to)
       throws SnapshotException {
     Snapshot fromSnapshot = getSnapshotByName(from);
-    Snapshot toSnapshot = getSnapshotByName(to); 
+    Snapshot toSnapshot = getSnapshotByName(to);
+    // if the start point is equal to the end point, return null
+    if (from.equals(to)) {
+      return null;
+    }
     SnapshotDiffInfo diffs = new SnapshotDiffInfo(this, fromSnapshot,
         toSnapshot);
     computeDiffRecursively(this, new ArrayList<byte[]>(), diffs);
