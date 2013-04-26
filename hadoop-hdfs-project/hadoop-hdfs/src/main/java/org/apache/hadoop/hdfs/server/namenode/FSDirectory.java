@@ -677,6 +677,7 @@ public class FSDirectory implements Closeable {
         // update modification time of dst and the parent of src
         final INode srcParent = srcIIP.getINode(-2);
         srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshot());
+        dstParent = dstIIP.getINode(-2); // refresh dstParent
         dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshot());
         // update moved leases with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);     

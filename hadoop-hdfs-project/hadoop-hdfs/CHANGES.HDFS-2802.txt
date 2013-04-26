@@ -308,3 +308,7 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4755. Fix AccessControlException message and moves "implements
   LinkedElement" from INode to INodeWithAdditionalFields.  (szetszwo)
+
+  HDFS-4650. Fix a bug in FSDirectory and add more unit tests for rename with
+  existence of snapshottable directories and snapshots.  (Jing Zhao via
+  szetszwo)

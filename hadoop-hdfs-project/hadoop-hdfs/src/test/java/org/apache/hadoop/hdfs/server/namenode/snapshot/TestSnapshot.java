@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -216,7 +217,7 @@ public class TestSnapshot {
    * -> Check previous snapshots -----------------+
    * </pre>
    */
-  @Test (timeout=300000)
+  @Test
   public void testSnapshot() throws Throwable {
     try {
       runTestSnapshot();
@@ -381,6 +382,10 @@ public class TestSnapshot {
       node.nullFileIndex = (node.nullFileIndex + 1) % node.fileList.size();
       Modification dirChange = new DirCreationOrDeletion(node.nodePath, hdfs,
           node, random.nextBoolean());
+      // dir rename
+      Node dstParent = dirTree.getRandomDirNode(random, Arrays.asList(nodes));
+      Modification dirRename = new DirRename(node.nodePath, hdfs, node,
+          dstParent);
       
       mList.add(create);
       mList.add(delete);
@@ -391,8 +396,9 @@ public class TestSnapshot {
       mList.add(chown);
       mList.add(replication);
       mList.add(dirChange);
+      mList.add(dirRename);
     }
-    return mList.toArray(new Modification[0]);
+    return mList.toArray(new Modification[mList.size()]);
   }
   
   /**
@@ -850,5 +856,84 @@ public class TestSnapshot {
         }
       }
     } 
-  } 
+  }
+  
+  /**
+   * Directory creation or deletion.
+   */
+  class DirRename extends Modification {
+    private final TestDirectoryTree.Node srcParent;
+    private final TestDirectoryTree.Node dstParent;
+    private final Path srcPath;
+    private final Path dstPath;
+    private final HashMap<Path, FileStatus> statusMap;
+    
+    DirRename(Path file, FileSystem fs, TestDirectoryTree.Node src,
+        TestDirectoryTree.Node dst) throws Exception {
+      super(file, fs, "dirrename");
+      this.srcParent = src;
+      this.dstParent = dst;
+      dstPath = new Path(dstParent.nodePath, "sub"
+          + dstParent.nonSnapshotChildren.size());
+      
+      // If the srcParent's nonSnapshotChildren is empty, we need to create
+      // sub-directories
+      if (srcParent.nonSnapshotChildren.isEmpty()) {
+        srcPath = new Path(srcParent.nodePath, "sub"
+            + srcParent.nonSnapshotChildren.size());
+        // creation
+        TestDirectoryTree.Node newChild = new TestDirectoryTree.Node(
+            srcPath, srcParent.level + 1, srcParent, hdfs);
+        // create file under the new non-snapshottable directory
+        newChild.initFileList(hdfs, srcParent.nodePath.getName(), BLOCKSIZE,
+            REPLICATION, seed, 2);
+        srcParent.nonSnapshotChildren.add(newChild);
+      } else {
+        srcPath = new Path(srcParent.nodePath, "sub"
+            + (srcParent.nonSnapshotChildren.size() - 1));
+      }
+      this.statusMap = new HashMap<Path, FileStatus>();
+    }
+    
+    @Override
+    void loadSnapshots() throws Exception {
+      for (Path snapshotRoot : snapshotList) {
+        Path snapshotDir = SnapshotTestHelper.getSnapshotFile(snapshotRoot,
+            srcPath);
+        if (snapshotDir != null) {
+          FileStatus status = fs.exists(snapshotDir) ? fs
+              .getFileStatus(snapshotDir) : null;
+          statusMap.put(snapshotDir, status);
+          // In each non-snapshottable directory, we also create a file. Thus
+          // here we also need to check the file's status before/after taking
+          // snapshots
+          Path snapshotFile = new Path(snapshotDir, "file0");
+          status = fs.exists(snapshotFile) ? fs.getFileStatus(snapshotFile)
+              : null;
+          statusMap.put(snapshotFile, status);
+        }
+      }
+    }
+
+    @Override
+    void modify() throws Exception {
+      hdfs.rename(srcPath, dstPath);
+      TestDirectoryTree.Node newDstChild = new TestDirectoryTree.Node(
+          dstPath, dstParent.level + 1, dstParent, hdfs);
+      dstParent.nonSnapshotChildren.add(newDstChild);
+    }
+
+    @Override
+    void checkSnapshots() throws Exception {
+      for (Path snapshot : statusMap.keySet()) {
+        FileStatus currentStatus = fs.exists(snapshot) ? fs
+            .getFileStatus(snapshot) : null;
+        FileStatus originalStatus = statusMap.get(snapshot);
+        assertEquals(currentStatus, originalStatus);
+        if (currentStatus != null) {
+          assertEquals(currentStatus.toString(), originalStatus.toString());
+        }
+      }
+    } 
+  }
 }
