@@ -25,11 +25,11 @@ import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -51,6 +51,14 @@ public class TestApplicationTokens {
 
   private static final Log LOG = LogFactory.getLog(TestApplicationTokens.class);
 
+  private static final Configuration confWithSecurityEnabled =
+      new Configuration();
+  static {
+    confWithSecurityEnabled.set(
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(confWithSecurityEnabled);
+  }
+
   /**
    * Validate that application tokens are unusable after the
    * application-finishes.
@@ -61,7 +69,8 @@ public class TestApplicationTokens {
   public void testTokenExpiry() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm = new MockRMWithAMS(new Configuration(), containerManager);
+    final MockRM rm =
+        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
     rm.start();
 
     final Configuration conf = rm.getConfig();
@@ -76,11 +85,11 @@ public class TestApplicationTokens {
       nm1.nodeHeartbeat(true);
 
       int waitCount = 0;
-      while (containerManager.amContainerEnv == null && waitCount++ < 20) {
+      while (containerManager.amTokens == null && waitCount++ < 20) {
         LOG.info("Waiting for AM Launch to happen..");
         Thread.sleep(1000);
       }
-      Assert.assertNotNull(containerManager.amContainerEnv);
+      Assert.assertNotNull(containerManager.amTokens);
 
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -89,13 +98,12 @@ public class TestApplicationTokens {
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
-      String tokenURLEncodedStr =
-          containerManager.amContainerEnv
-            .get(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-      LOG.info("AppMasterToken is " + tokenURLEncodedStr);
-      Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-      token.decodeFromUrlString(tokenURLEncodedStr);
-      currentUser.addToken(token);
+      Credentials credentials = new Credentials();
+      DataInputByteBuffer buf = new DataInputByteBuffer();
+      containerManager.amTokens.rewind();
+      buf.reset(containerManager.amTokens);
+      credentials.readTokenStorageStream(buf);
+      currentUser.addCredentials(credentials);
 
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 
@@ -152,9 +160,9 @@ public class TestApplicationTokens {
   @Test
   public void testMasterKeyRollOver() throws Exception {
 
-    Configuration config = new Configuration();
     MyContainerManager containerManager = new MyContainerManager();
-    final MockRM rm = new MockRMWithAMS(config, containerManager);
+    final MockRM rm =
+        new MockRMWithAMS(confWithSecurityEnabled, containerManager);
     rm.start();
 
     final Configuration conf = rm.getConfig();
@@ -169,11 +177,11 @@ public class TestApplicationTokens {
       nm1.nodeHeartbeat(true);
 
       int waitCount = 0;
-      while (containerManager.amContainerEnv == null && waitCount++ < 20) {
+      while (containerManager.amTokens == null && waitCount++ < 20) {
         LOG.info("Waiting for AM Launch to happen..");
         Thread.sleep(1000);
       }
-      Assert.assertNotNull(containerManager.amContainerEnv);
+      Assert.assertNotNull(containerManager.amTokens);
 
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -182,13 +190,12 @@ public class TestApplicationTokens {
       UserGroupInformation currentUser =
           UserGroupInformation
             .createRemoteUser(applicationAttemptId.toString());
-      String tokenURLEncodedStr =
-          containerManager.amContainerEnv
-            .get(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
-      LOG.info("AppMasterToken is " + tokenURLEncodedStr);
-      Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
-      token.decodeFromUrlString(tokenURLEncodedStr);
-      currentUser.addToken(token);
+      Credentials credentials = new Credentials();
+      DataInputByteBuffer buf = new DataInputByteBuffer();
+      containerManager.amTokens.rewind();
+      buf.reset(containerManager.amTokens);
+      credentials.readTokenStorageStream(buf);
+      currentUser.addCredentials(credentials);
 
       rmClient = createRMClient(rm, conf, rpc, currentUser);
 

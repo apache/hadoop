@@ -413,7 +413,7 @@ public class TestClientServiceDelegate {
     return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
         "appname", "host", 124, null, YarnApplicationState.FINISHED,
         "diagnostics", "url", 0, 0, FinalApplicationStatus.SUCCEEDED, null,
-        "N/A");
+        "N/A", 0.0f);
   }
 
   private ApplicationReport getRunningApplicationReport(String host, int port) {
@@ -423,7 +423,7 @@ public class TestClientServiceDelegate {
     return BuilderUtils.newApplicationReport(appId, attemptId, "user", "queue",
         "appname", host, port, null, YarnApplicationState.RUNNING,
         "diagnostics", "url", 0, 0, FinalApplicationStatus.UNDEFINED, null,
-        "N/A");
+        "N/A", 0.0f);
   }
 
   private ResourceMgrDelegate getRMDelegate() throws YarnRemoteException {

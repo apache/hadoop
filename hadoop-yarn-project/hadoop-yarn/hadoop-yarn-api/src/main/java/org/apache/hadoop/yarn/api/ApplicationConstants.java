@@ -30,10 +30,6 @@ import org.apache.hadoop.util.Shell;
 public interface ApplicationConstants {
 
   // TODO: They say tokens via env isn't good.
-  public static final String APPLICATION_MASTER_TOKEN_ENV_NAME =
-    "AppMasterTokenEnv";
-
-  // TODO: They say tokens via env isn't good.
   public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
     "AppClientSecretEnv";
   

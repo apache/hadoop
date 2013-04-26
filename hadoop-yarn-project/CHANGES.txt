@@ -98,6 +98,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-561. Modified NodeManager to set key information into the environment
     of every container that it launches. (Xuan Gong via vinodkv)
 
+    YARN-579. Stop setting the Application Token in the AppMaster env, in
+    favour of the copy present in the container token field. 
+    (Vinod Kumar Vavilapalli via sseth)
+
   NEW FEATURES
 
     YARN-482. FS: Extend SchedulingMode to intermediate queues. 
@@ -176,6 +180,12 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-581. Added a test to verify that app delegation tokens are restored
     after RM restart. (Jian He via vinodkv)
+
+    YARN-577. Add application-progress also to ApplicationReport. (Hitesh Shah
+    via vinodkv)
+
+    YARN-595. Refactor fair scheduler to use common Resources. (Sandy Ryza
+    via tomwhite)
 
   OPTIMIZATIONS
 
@@ -289,6 +299,12 @@ Release 2.0.5-beta - UNRELEASED
 
     YARN-549. YarnClient.submitApplication should wait for application to be
     accepted by the RM (Zhijie Shen via bikas)
+
+    YARN-605. Fix failing unit test in TestNMWebServices when versionInfo has
+    parantheses like when running on a git checkout. (Hitesh Shah via vinodkv)
+
+    YARN-289. Fair scheduler allows reservations that won't fit on node.
+    (Sandy Ryza via tomwhite)
 
 Release 2.0.4-alpha - UNRELEASED
 

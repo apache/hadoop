@@ -2349,11 +2349,17 @@ public class FSDirectory implements Closeable {
               counts.get(Quota.DISKSPACE));
         } else if (!quotaNode.isQuotaSet() && latest == null) {
           // will not come here for root because root's nsQuota is always set
-          return quotaNode.replaceSelf4INodeDirectory();
+          INodeDirectory newNode = quotaNode.replaceSelf4INodeDirectory();
+          // update the inodeMap
+          inodeMap.put(newNode);
+          return newNode;
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota
-        return dirNode.replaceSelf4Quota(latest, nsQuota, dsQuota);
+        INodeDirectory newNode = dirNode.replaceSelf4Quota(latest, nsQuota, dsQuota);
+        // update the inodeMap
+        inodeMap.put(newNode);
+        return newNode;
       }
       return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
     }
