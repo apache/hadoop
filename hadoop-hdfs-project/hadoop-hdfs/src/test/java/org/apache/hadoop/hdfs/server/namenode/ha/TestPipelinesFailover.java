@@ -521,9 +521,17 @@ public class TestPipelinesFailover {
         storedBlock instanceof BlockInfoUnderConstruction);
     BlockInfoUnderConstruction ucBlock =
       (BlockInfoUnderConstruction)storedBlock;
-    // We expect that the first indexed replica will be the one
-    // to be in charge of the synchronization / recovery protocol.
-    DatanodeDescriptor expectedPrimary = ucBlock.getExpectedLocations()[0];
+    // We expect that the replica with the most recent heart beat will be
+    // the one to be in charge of the synchronization / recovery protocol.
+    DatanodeDescriptor[] datanodes = ucBlock.getExpectedLocations();
+    DatanodeDescriptor expectedPrimary = datanodes[0];
+    long mostRecentLastUpdate = expectedPrimary.getLastUpdate();
+    for (int i = 1; i < datanodes.length; i++) {
+      if (datanodes[i].getLastUpdate() > mostRecentLastUpdate) {
+        expectedPrimary = datanodes[i];
+        mostRecentLastUpdate = expectedPrimary.getLastUpdate();
+      }
+    }
     return expectedPrimary;
   }
 
