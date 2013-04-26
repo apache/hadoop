@@ -446,6 +446,28 @@ public class NetworkTopology {
     return getNode(node.getNetworkLocation());
   }
   
+  /**
+   * Given a string representation of a rack, return its children
+   * @param loc a path-like string representation of a rack
+   * @return a newly allocated list with all the node's children
+   */
+  public List<Node> getDatanodesInRack(String loc) {
+    netlock.readLock().lock();
+    try {
+      loc = NodeBase.normalize(loc);
+      if (!NodeBase.ROOT.equals(loc)) {
+        loc = loc.substring(1);
+      }
+      InnerNode rack = (InnerNode) clusterMap.getLoc(loc);
+      if (rack == null) {
+        return null;
+      }
+      return new ArrayList<Node>(rack.getChildren());
+    } finally {
+      netlock.readLock().unlock();
+    }
+  }
+
   /** Remove a node
    * Update node counter and rack counter if necessary
    * @param node node to be removed; can be null

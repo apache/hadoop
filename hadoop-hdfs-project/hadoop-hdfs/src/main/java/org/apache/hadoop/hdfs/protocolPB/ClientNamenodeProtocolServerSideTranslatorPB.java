@@ -355,12 +355,15 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     
     try {
       List<DatanodeInfoProto> excl = req.getExcludeNodesList();
+      List<String> favor = req.getFavoredNodesList();
       LocatedBlock result = server.addBlock(
           req.getSrc(),
           req.getClientName(),
           req.hasPrevious() ? PBHelper.convert(req.getPrevious()) : null,
           (excl == null || excl.size() == 0) ? null : PBHelper.convert(excl
-              .toArray(new DatanodeInfoProto[excl.size()])), req.getFileId());
+              .toArray(new DatanodeInfoProto[excl.size()])), req.getFileId(),
+          (favor == null || favor.size() == 0) ? null : favor
+              .toArray(new String[favor.size()]));
       return AddBlockResponseProto.newBuilder()
           .setBlock(PBHelper.convert(result)).build();
     } catch (IOException e) {

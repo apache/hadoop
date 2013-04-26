@@ -125,6 +125,60 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         excludedNodes, blocksize);
   }
 
+  @Override
+  DatanodeDescriptor[] chooseTarget(String src, int numOfReplicas,
+      DatanodeDescriptor writer, HashMap<Node, Node> excludedNodes,
+      long blocksize, List<DatanodeDescriptor> favoredNodes) {
+    try {
+      if (favoredNodes == null || favoredNodes.size() == 0) {
+        // Favored nodes not specified, fall back to regular block placement.
+        return chooseTarget(src, numOfReplicas, writer,
+            new ArrayList<DatanodeDescriptor>(numOfReplicas), false, 
+            excludedNodes, blocksize);
+      }
+
+      HashMap<Node, Node> favoriteAndExcludedNodes = excludedNodes == null ?
+          new HashMap<Node, Node>() : new HashMap<Node, Node>(excludedNodes);
+
+      // Choose favored nodes
+      List<DatanodeDescriptor> results = new ArrayList<DatanodeDescriptor>();
+      boolean avoidStaleNodes = stats != null
+          && stats.isAvoidingStaleDataNodesForWrite();
+      for (int i = 0; i < Math.min(favoredNodes.size(), numOfReplicas); i++) {
+        DatanodeDescriptor favoredNode = favoredNodes.get(i);
+        // Choose a single node which is local to favoredNode.
+        // 'results' is updated within chooseLocalNode
+        DatanodeDescriptor target = chooseLocalNode(favoredNode,
+            favoriteAndExcludedNodes, blocksize, 
+            getMaxNodesPerRack(results, 
+                numOfReplicas)[1], results, avoidStaleNodes);
+        if (target == null) {
+          LOG.warn("Could not find a target for file " + src
+              + " with favored node " + favoredNode); 
+          continue;
+        }
+        favoriteAndExcludedNodes.put(target, target);
+      }
+
+      if (results.size() < numOfReplicas) {        
+        // Not enough favored nodes, choose other nodes.
+        numOfReplicas -= results.size();
+        DatanodeDescriptor[] remainingTargets = 
+            chooseTarget(src, numOfReplicas, writer, results,
+                false, favoriteAndExcludedNodes, blocksize);
+        for (int i = 0; i < remainingTargets.length; i++) {
+          results.add(remainingTargets[i]);
+        }
+      }
+      return results.toArray(new DatanodeDescriptor[results.size()]);
+    } catch (NotEnoughReplicasException nr) {
+      // Fall back to regular block placement disregarding favored nodes hint
+      return chooseTarget(src, numOfReplicas, writer, 
+          new ArrayList<DatanodeDescriptor>(numOfReplicas), false, 
+          excludedNodes, blocksize);
+    }
+  }
+
   /** This is the implementation. */
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
@@ -140,15 +194,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       excludedNodes = new HashMap<Node, Node>();
     }
      
-    int clusterSize = clusterMap.getNumOfLeaves();
-    int totalNumOfReplicas = chosenNodes.size()+numOfReplicas;
-    if (totalNumOfReplicas > clusterSize) {
-      numOfReplicas -= (totalNumOfReplicas-clusterSize);
-      totalNumOfReplicas = clusterSize;
-    }
-      
-    int maxNodesPerRack = 
-      (totalNumOfReplicas-1)/clusterMap.getNumOfRacks()+2;
+    int[] result = getMaxNodesPerRack(chosenNodes, numOfReplicas);
+    numOfReplicas = result[0];
+    int maxNodesPerRack = result[1];
       
     List<DatanodeDescriptor> results = 
       new ArrayList<DatanodeDescriptor>(chosenNodes);
@@ -173,6 +221,18 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // sorting nodes to form a pipeline
     return getPipeline((writer==null)?localNode:writer,
                        results.toArray(new DatanodeDescriptor[results.size()]));
+  }
+
+  private int[] getMaxNodesPerRack(List<DatanodeDescriptor> chosenNodes,
+      int numOfReplicas) {
+    int clusterSize = clusterMap.getNumOfLeaves();
+    int totalNumOfReplicas = chosenNodes.size()+numOfReplicas;
+    if (totalNumOfReplicas > clusterSize) {
+      numOfReplicas -= (totalNumOfReplicas-clusterSize);
+      totalNumOfReplicas = clusterSize;
+    }
+    int maxNodesPerRack = (totalNumOfReplicas-1)/clusterMap.getNumOfRacks()+2;
+    return new int[] {numOfReplicas, maxNodesPerRack};
   }
     
   /* choose <i>numOfReplicas</i> from all data nodes */

@@ -265,6 +265,27 @@ public class DistributedFileSystem extends FileSystem {
             : EnumSet.of(CreateFlag.CREATE), bufferSize, replication,
         blockSize, progress, null);
   }
+
+  /**
+   * Same as  
+   * {@link #create(Path, FsPermission, boolean, int, short, long, 
+   * Progressable)} with the addition of favoredNodes that is a hint to 
+   * where the namenode should place the file blocks.
+   * The favored nodes hint is not persisted in HDFS. Hence it may be honored
+   * at the creation time only. HDFS could move the blocks during balancing or
+   * replication, to move the blocks from favored nodes. A value of null means
+   * no favored nodes for this create
+   */
+  public HdfsDataOutputStream create(Path f, FsPermission permission,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
+      Progressable progress, InetSocketAddress[] favoredNodes) throws IOException {
+    statistics.incrementWriteOps(1);
+    final DFSOutputStream out = dfs.create(getPathName(f), permission,
+        overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+            : EnumSet.of(CreateFlag.CREATE),
+        true, replication, blockSize, progress, bufferSize, null, favoredNodes);
+    return new HdfsDataOutputStream(out, statistics);
+  }
   
   @Override
   public HdfsDataOutputStream create(Path f, FsPermission permission,

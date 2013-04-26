@@ -26,6 +26,7 @@ import static org.mockito.Mockito.spy;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -108,7 +109,7 @@ public class TestAddBlockRetry {
         if(count == 1) { // run second addBlock()
           LOG.info("Starting second addBlock for " + src);
           nn.addBlock(src, "clientName", null, null,
-              INodeId.GRANDFATHER_INODE_ID);
+              INodeId.GRANDFATHER_INODE_ID, null);
           LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
           assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
           lb2 = lbs.get(0);
@@ -119,7 +120,7 @@ public class TestAddBlockRetry {
       }
     }).when(spyBM).chooseTarget(Mockito.anyString(), Mockito.anyInt(),
         Mockito.<DatanodeDescriptor>any(), Mockito.<HashMap<Node, Node>>any(),
-        Mockito.anyLong());
+        Mockito.anyLong(), Mockito.<List<String>>any());
 
     // create file
     nn.create(src, FsPermission.getFileDefault(),
@@ -129,7 +130,7 @@ public class TestAddBlockRetry {
 
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
-    nn.addBlock(src, "clientName", null, null, INodeId.GRANDFATHER_INODE_ID);
+    nn.addBlock(src, "clientName", null, null, INodeId.GRANDFATHER_INODE_ID, null);
 
     // check locations
     LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
