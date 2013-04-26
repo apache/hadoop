@@ -21,6 +21,7 @@ option java_outer_classname = "YarnServerResourceManagerServiceProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+import "yarn_protos.proto";
 
 message RefreshQueuesRequestProto {
 }
@@ -58,4 +59,17 @@ message GetGroupsForUserRequestProto {
 
 message GetGroupsForUserResponseProto {
   repeated string groups = 1;
+}
+
+////////////////////////////////////////////////////////////////////////
+////// RM recovery related records /////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ApplicationStateDataProto {
+  optional int64 submit_time = 1;
+  optional ApplicationSubmissionContextProto application_submission_context = 2;
+}
+
+message ApplicationAttemptStateDataProto {
+  optional ApplicationAttemptIdProto attemptId = 1;
+  optional ContainerProto master_container = 2;
 }

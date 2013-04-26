@@ -190,6 +190,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-562. Modified NM to reject any containers allocated by a previous
     ResourceManager. (Jian He via vinodkv)
 
+    YARN-591. Moved RM recovery related records out of public API as they do not
+    belong there. (vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
