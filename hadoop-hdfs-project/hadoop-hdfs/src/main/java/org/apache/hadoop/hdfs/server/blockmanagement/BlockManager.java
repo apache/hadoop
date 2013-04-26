@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -72,6 +73,7 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
@@ -1333,11 +1335,12 @@ public class BlockManager {
   public DatanodeDescriptor[] chooseTarget(final String src,
       final int numOfReplicas, final DatanodeDescriptor client,
       final HashMap<Node, Node> excludedNodes,
-      final long blocksize) throws IOException {
-    // choose targets for the new block to be allocated.
+      final long blocksize, List<String> favoredNodes) throws IOException {
+    List<DatanodeDescriptor> favoredDatanodeDescriptors = 
+        getDatanodeDescriptors(favoredNodes);
     final DatanodeDescriptor targets[] = blockplacement.chooseTarget(src,
-        numOfReplicas, client, new ArrayList<DatanodeDescriptor>(), false,
-        excludedNodes, blocksize);
+        numOfReplicas, client, excludedNodes, blocksize, 
+        favoredDatanodeDescriptors);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="
@@ -1348,6 +1351,24 @@ public class BlockManager {
           + " node(s) are excluded in this operation.");
     }
     return targets;
+  }
+
+  /**
+   * Get list of datanode descriptors for given list of nodes. Nodes are
+   * hostaddress:port or just hostaddress.
+   */
+  List<DatanodeDescriptor> getDatanodeDescriptors(List<String> nodes) {
+    List<DatanodeDescriptor> datanodeDescriptors = null;
+    if (nodes != null) {
+      datanodeDescriptors = new ArrayList<DatanodeDescriptor>(nodes.size());
+      for (int i = 0; i < nodes.size(); i++) {
+        DatanodeDescriptor node = datanodeManager.getDatanodeDescriptor(nodes.get(i));
+        if (node != null) {
+          datanodeDescriptors.add(node);
+        }
+      }
+    }
+    return datanodeDescriptors;
   }
 
   /**

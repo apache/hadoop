@@ -168,4 +168,9 @@ public class DummyContainerManager extends ContainerManagerImpl {
       }
     };
   }
+
+  @Override
+  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
+    // do nothing
+  }
 }

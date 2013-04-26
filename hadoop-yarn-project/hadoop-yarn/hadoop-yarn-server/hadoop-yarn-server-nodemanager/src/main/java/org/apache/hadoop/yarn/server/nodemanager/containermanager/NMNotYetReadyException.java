@@ -16,21 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.protocolrecords;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.YarnException;
 
-public interface RegisterNodeManagerResponse {
-  MasterKey getMasterKey();
+/**
+ * This exception happens when NM starts from scratch but has not yet connected
+ * with RM.
+ */
+public class NMNotYetReadyException extends YarnException {
 
-  void setMasterKey(MasterKey secretKey);
+  private static final long serialVersionUID = 1L;
 
-  NodeAction getNodeAction();
-
-  void setNodeAction(NodeAction nodeAction);
-
-  long getRMIdentifier();
-
-  void setRMIdentifier(long rmIdentifier);
+  public NMNotYetReadyException(String msg) {
+    super(msg);
+  }
 }

@@ -187,6 +187,12 @@ Release 2.0.5-beta - UNRELEASED
     YARN-595. Refactor fair scheduler to use common Resources. (Sandy Ryza
     via tomwhite)
 
+    YARN-562. Modified NM to reject any containers allocated by a previous
+    ResourceManager. (Jian He via vinodkv)
+
+    YARN-591. Moved RM recovery related records out of public API as they do not
+    belong there. (vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -595,6 +601,9 @@ Release 0.23.8 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-363. Add webapps/proxy directory without which YARN proxy-server fails
+    when started in stand-alone mode. (Kenji Kikushima via vinodkv)
 
 Release 0.23.7 - UNRELEASED
 

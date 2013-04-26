@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -95,6 +97,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
+  private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
@@ -267,6 +270,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         this.resourceTracker = getRMClient();
         regNMResponse =
             this.resourceTracker.registerNodeManager(request);
+        this.rmIdentifier = regNMResponse.getRMIdentifier();
         break;
       } catch(Throwable e) {
         LOG.warn("Trying to connect to ResourceManager, " +
@@ -308,7 +312,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     LOG.info("Registered with ResourceManager as " + this.nodeId
         + " with total resource of " + this.totalResource);
-
+    LOG.info("Notifying ContainerManager to unblock new container-requests");
+    ((ContainerManagerImpl) this.context.getContainerManager())
+      .setBlockNewContainerRequests(false);
   }
 
   private List<ApplicationId> createKeepAliveApplicationList() {
@@ -334,6 +340,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return appList;
   }
 
+  @Override
   public NodeStatus getNodeStatusAndUpdateContainersInContext() {
 
     NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
@@ -407,6 +414,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
   }
 
+  @Override
+  public long getRMIdentifier() {
+    return this.rmIdentifier;
+  }
+
   protected void startStatusUpdater() {
 
     statusUpdaterRunnable = new Runnable() {
@@ -478,6 +490,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             if (response.getNodeAction() == NodeAction.RESYNC) {
               LOG.info("Node is out of sync with ResourceManager,"
                   + " hence rebooting.");
+              // Invalidate the RMIdentifier while resync
+              NodeStatusUpdaterImpl.this.rmIdentifier =
+                  ResourceManagerConstants.RM_INVALID_IDENTIFIER;
               dispatcher.getEventHandler().handle(
                   new NodeManagerEvent(NodeManagerEventType.RESYNC));
               break;

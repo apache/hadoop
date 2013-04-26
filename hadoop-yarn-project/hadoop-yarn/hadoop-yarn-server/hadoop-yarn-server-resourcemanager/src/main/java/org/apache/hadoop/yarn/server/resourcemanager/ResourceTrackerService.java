@@ -196,6 +196,7 @@ public class ResourceTrackerService extends AbstractService implements
         + capability + ", assigned nodeId " + nodeId);
 
     response.setNodeAction(NodeAction.NORMAL);
+    response.setRMIdentifier(ResourceManager.clusterTimeStamp);
     return response;
   }
 

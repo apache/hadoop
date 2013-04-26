@@ -356,6 +356,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5178. Update MR App to set progress in ApplicationReport after
     YARN-577. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-5167. Update MR App after YARN-562 to use the new builder API
+    for the container. (Jian He via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

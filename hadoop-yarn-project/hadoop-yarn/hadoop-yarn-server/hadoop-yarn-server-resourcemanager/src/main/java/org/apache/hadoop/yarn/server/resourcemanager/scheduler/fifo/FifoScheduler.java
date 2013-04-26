@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
@@ -565,7 +566,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         // Create the container
         Container container = BuilderUtils.newContainer(containerId, nodeId,
             node.getRMNode().getHttpAddress(), capability, priority,
-            containerToken);
+            containerToken, ResourceManager.clusterTimeStamp);
         
         // Allocate!
         

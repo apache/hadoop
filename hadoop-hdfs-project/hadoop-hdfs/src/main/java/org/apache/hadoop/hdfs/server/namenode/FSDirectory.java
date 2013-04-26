@@ -2452,6 +2452,8 @@ public class FSDirectory implements Closeable {
     try {
       setReady(false);
       rootDir = createRoot(getFSNamesystem());
+      inodeMap.clear();
+      addToInodeMapUnprotected(rootDir);
       nameCache.reset();
     } finally {
       writeUnlock();

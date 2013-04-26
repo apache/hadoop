@@ -1094,12 +1094,12 @@ public abstract class TaskAttemptImpl implements
         + taInfo.getPort());
     String nodeHttpAddress = StringInterner.weakIntern(taInfo.getHostname() + ":"
         + taInfo.getHttpPort());
-    // Resource/Priority/Tokens are only needed while launching the
-    // container on an NM, these are already completed tasks, so setting them to
-    // null
+    // Resource/Priority/Tokens and RMIdentifier are only needed while
+    // launching the container on an NM, these are already completed tasks, so
+    // setting them to null and RMIdentifier as 0
     container =
         BuilderUtils.newContainer(containerId, containerNodeId,
-          nodeHttpAddress, null, null, null);
+          nodeHttpAddress, null, null, null, 0);
     computeRackAndLocality();
     launchTime = taInfo.getStartTime();
     finishTime = (taInfo.getFinishTime() != -1) ?

@@ -23,10 +23,9 @@ import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -125,6 +124,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ApplicationACLsManager aclsManager;
 
   private final DeletionService deletionService;
+  private AtomicBoolean blockNewContainerRequests = new AtomicBoolean(false);
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -239,7 +239,10 @@ public class ContainerManagerImpl extends CompositeService implements
         false)) {
       refreshServiceAcls(conf, new NMPolicyProvider());
     }
-    
+
+    LOG.info("Blocking new container-requests as container manager rpc" +
+    		" server is still starting.");
+    this.setBlockNewContainerRequests(true);
     server.start();
     InetSocketAddress connectAddress = NetUtils.getConnectAddress(server);
     this.context.getNodeId().setHost(connectAddress.getHostName());
@@ -393,6 +396,13 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
       throws YarnRemoteException {
+
+    if (blockNewContainerRequests.get()) {
+      throw RPCUtil.getRemoteException(new NMNotYetReadyException(
+          "Rejecting new containers as NodeManager has not" +
+          " yet connected with ResourceManager"));
+    }
+
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
     org.apache.hadoop.yarn.api.records.Container lauchContainer =
         request.getContainer();
@@ -401,6 +411,16 @@ public class ContainerManagerImpl extends CompositeService implements
 
     UserGroupInformation remoteUgi = getRemoteUgi(containerIDStr);
     authorizeRequest(containerIDStr, launchContext, lauchContainer, remoteUgi);
+
+    // Is the container coming from unknown RM
+    if (lauchContainer.getRMIdentifer() != nodeStatusUpdater
+      .getRMIdentifier()) {
+      String msg = "\nContainer "+ containerIDStr
+          + " rejected as it is allocated by a previous RM";
+      LOG.error(msg);
+      throw RPCUtil
+        .getRemoteException(new InvalidContainerException(msg));
+    }
 
     LOG.info("Start request for " + containerIDStr + " by user "
         + launchContext.getUser());
@@ -613,6 +633,10 @@ public class ContainerManagerImpl extends CompositeService implements
     default:
       LOG.warn("Invalid event " + event.getType() + ". Ignoring.");
     }
+  }
+
+  public void setBlockNewContainerRequests(boolean blockNewContainerRequests) {
+    this.blockNewContainerRequests.set(blockNewContainerRequests);
   }
 
   @Override

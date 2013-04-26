@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
@@ -265,6 +266,21 @@ public class TestResourceTrackerService {
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
     Assert.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+  }
+
+  @Test
+  public void testSetRMIdentifierInRegistration() throws Exception {
+
+    Configuration conf = new Configuration();
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm = new MockNM("host1:1234", 5120, rm.getResourceTrackerService());
+    RegisterNodeManagerResponse response = nm.registerNode();
+
+    // Verify the RMIdentifier is correctly set in RegisterNodeManagerResponse
+    Assert.assertEquals(ResourceManager.clusterTimeStamp,
+      response.getRMIdentifier());
   }
 
   @Test

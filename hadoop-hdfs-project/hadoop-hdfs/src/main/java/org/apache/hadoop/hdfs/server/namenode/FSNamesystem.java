@@ -2228,7 +2228,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * client to "try again later".
    */
   LocatedBlock getAdditionalBlock(String src, long fileId, String clientName,
-      ExtendedBlock previous, HashMap<Node, Node> excludedNodes)
+      ExtendedBlock previous, HashMap<Node, Node> excludedNodes, 
+      List<String> favoredNodes)
       throws LeaseExpiredException, NotReplicatedYetException,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
       IOException {
@@ -2268,8 +2269,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // choose targets for the new block to be allocated.
-    final DatanodeDescriptor targets[] = getBlockManager().chooseTarget(
-        src, replication, clientNode, excludedNodes, blockSize);
+    final DatanodeDescriptor targets[] = getBlockManager().chooseTarget( 
+        src, replication, clientNode, excludedNodes, blockSize, favoredNodes);
 
     // Part II.
     // Allocate a new block, add it to the INode and the BlocksMap. 

@@ -213,7 +213,7 @@ public class DatanodeManager {
         " = '" + ratioUseStaleDataNodesForWrite + "' is invalid. " +
         "It should be a positive non-zero float value, not greater than 1.0f.");
   }
-  
+
   private static long getStaleIntervalFromConf(Configuration conf,
       long heartbeatExpireInterval) {
     long staleInterval = conf.getLong(
@@ -325,6 +325,68 @@ public class DatanodeManager {
   public DatanodeDescriptor getDatanodeByHost(final String host) {
     return host2DatanodeMap.getDatanodeByHost(host);
   }
+
+  /** @return the datanode descriptor for the host. */
+  public DatanodeDescriptor getDatanodeByXferAddr(String host, int xferPort) {
+    return host2DatanodeMap.getDatanodeByXferAddr(host, xferPort);
+  }
+
+  /**
+   * Given datanode address or host name, returns the DatanodeDescriptor for the
+   * same, or if it doesn't find the datanode, it looks for a machine local and
+   * then rack local datanode, if a rack local datanode is not possible either,
+   * it returns the DatanodeDescriptor of any random node in the cluster.
+   *
+   * @param address hostaddress:transfer address
+   * @return the best match for the given datanode
+   * @throws IOException when no datanode is found for given address
+   */
+  DatanodeDescriptor getDatanodeDescriptor(String address) {
+    DatanodeDescriptor node = null;
+    int colon = address.indexOf(":");
+    int xferPort;
+    String host = address;
+    if (colon > 0) {
+      host = address.substring(0, colon);
+      xferPort = Integer.parseInt(address.substring(colon+1));
+      node = getDatanodeByXferAddr(host, xferPort);
+    }
+    if (node == null) {
+      node = getDatanodeByHost(host);
+    }
+    if (node == null) {
+      String networkLocation = resolveNetworkLocation(host);
+
+      // If the current cluster doesn't contain the node, fallback to
+      // something machine local and then rack local.
+      List<Node> rackNodes = getNetworkTopology()
+                                   .getDatanodesInRack(networkLocation);
+      if (rackNodes != null) {
+        // Try something machine local.
+        for (Node rackNode : rackNodes) {
+          if (((DatanodeDescriptor) rackNode).getIpAddr().equals(host)) {
+            node = (DatanodeDescriptor) rackNode;
+            break;
+          }
+        }
+
+        // Try something rack local.
+        if (node == null && !rackNodes.isEmpty()) {
+          node = (DatanodeDescriptor) (rackNodes
+              .get(DFSUtil.getRandom().nextInt(rackNodes.size())));
+        }
+      }
+
+      // If we can't even choose rack local, just choose any node in the
+      // cluster.
+      if (node == null) {
+        node = (DatanodeDescriptor)getNetworkTopology()
+                                   .chooseRandom(NodeBase.ROOT);
+      }
+    }
+    return node;
+  }
+
 
   /** Get a datanode descriptor given corresponding storageID */
   DatanodeDescriptor getDatanode(final String storageID) {
@@ -455,8 +517,13 @@ public class DatanodeManager {
     }
   }
 
+  public String resolveNetworkLocation(String host) {
+    DatanodeID d = parseDNFromHostsEntry(host);
+    return resolveNetworkLocation(d);
+  }
+
   /* Resolve a node's network location */
-  private void resolveNetworkLocation (DatanodeDescriptor node) {
+  private String resolveNetworkLocation (DatanodeID node) {
     List<String> names = new ArrayList<String>(1);
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
       names.add(node.getIpAddr());
@@ -474,7 +541,7 @@ public class DatanodeManager {
     } else {
       networkLocation = rName.get(0);
     }
-    node.setNetworkLocation(networkLocation);
+    return networkLocation;
   }
 
   private boolean inHostsList(DatanodeID node) {
@@ -707,7 +774,7 @@ public class DatanodeManager {
           nodeS.setDisallowed(false); // Node is in the include list
           
           // resolve network location
-          resolveNetworkLocation(nodeS);
+          nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));
           getNetworkTopology().add(nodeS);
             
           // also treat the registration message as a heartbeat
@@ -739,7 +806,7 @@ public class DatanodeManager {
         = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
       boolean success = false;
       try {
-        resolveNetworkLocation(nodeDescr);
+        nodeDescr.setNetworkLocation(resolveNetworkLocation(nodeDescr));
         networktopology.add(nodeDescr);
   
         // register new datanode
@@ -875,7 +942,7 @@ public class DatanodeManager {
         (numStaleNodes <= heartbeatManager.getLiveDatanodeCount()
             * ratioUseStaleDataNodesForWrite);
   }
-  
+
   /**
    * @return The time interval used to mark DataNodes as stale.
    */
@@ -1093,7 +1160,7 @@ public class DatanodeManager {
    * failed.  As a special case, the loopback address is also considered
    * acceptable.  This is particularly important on Windows, where 127.0.0.1 does
    * not resolve to "localhost".
-   * 
+   *
    * @param address InetAddress to check
    * @return boolean true if name resolution successful or address is loopback
    */
@@ -1127,7 +1194,7 @@ public class DatanodeManager {
           setDatanodeDead(nodeinfo);
           throw new DisallowedDatanodeException(nodeinfo);
         }
-         
+
         if (nodeinfo == null || !nodeinfo.isAlive) {
           return new DatanodeCommand[]{RegisterCommand.REGISTER};
         }
@@ -1142,9 +1209,34 @@ public class DatanodeManager {
           BlockRecoveryCommand brCommand = new BlockRecoveryCommand(
               blocks.length);
           for (BlockInfoUnderConstruction b : blocks) {
-            brCommand.add(new RecoveringBlock(
-                new ExtendedBlock(blockPoolId, b), b.getExpectedLocations(), b
-                    .getBlockRecoveryId()));
+            DatanodeDescriptor[] expectedLocations = b.getExpectedLocations();
+            // Skip stale nodes during recovery - not heart beated for some time (30s by default).
+            List<DatanodeDescriptor> recoveryLocations =
+                new ArrayList<DatanodeDescriptor>(expectedLocations.length);
+            for (int i = 0; i < expectedLocations.length; i++) {
+              if (!expectedLocations[i].isStale(this.staleInterval)) {
+                recoveryLocations.add(expectedLocations[i]);
+              }
+            }
+            // If we only get 1 replica after eliminating stale nodes, then choose all
+            // replicas for recovery and let the primary data node handle failures.
+            if (recoveryLocations.size() > 1) {
+              if (recoveryLocations.size() != expectedLocations.length) {
+                LOG.info("Skipped stale nodes for recovery : " +
+                    (expectedLocations.length - recoveryLocations.size()));
+              }
+              brCommand.add(new RecoveringBlock(
+                  new ExtendedBlock(blockPoolId, b),
+                  recoveryLocations.toArray(new DatanodeDescriptor[recoveryLocations.size()]),
+                  b.getBlockRecoveryId()));
+            } else {
+              // If too many replicas are stale, then choose all replicas to participate
+              // in block recovery.
+              brCommand.add(new RecoveringBlock(
+                  new ExtendedBlock(blockPoolId, b),
+                  expectedLocations,
+                  b.getBlockRecoveryId()));
+            }
           }
           return new DatanodeCommand[] { brCommand };
         }

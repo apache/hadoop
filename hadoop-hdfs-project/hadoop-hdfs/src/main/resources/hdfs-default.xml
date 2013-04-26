@@ -1072,7 +1072,10 @@
     otherwise this may cause too frequent change of stale states. 
     We thus set a minimum stale interval value (the default value is 3 times 
     of heartbeat interval) and guarantee that the stale interval cannot be less
-    than the minimum value.
+    than the minimum value. A stale data node is avoided during lease/block
+    recovery. It can be conditionally avoided for reads (see
+    dfs.namenode.avoid.read.stale.datanode) and for writes (see
+    dfs.namenode.avoid.write.stale.datanode).
   </description>
 </property>
 

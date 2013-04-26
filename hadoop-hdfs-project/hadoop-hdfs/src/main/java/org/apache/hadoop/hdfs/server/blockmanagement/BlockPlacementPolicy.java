@@ -118,6 +118,25 @@ public abstract class BlockPlacementPolicy {
     return chooseTarget(srcBC.getName(), numOfReplicas, writer,
                         chosenNodes, false, excludedNodes, blocksize);
   }
+  
+  /**
+   * Same as {@link #chooseTarget(String, int, DatanodeDescriptor, List, boolean, 
+   * HashMap, long)} with added parameter {@code favoredDatanodes}
+   * @param favoredNodes datanodes that should be favored as targets. This
+   *          is only a hint and due to cluster state, namenode may not be 
+   *          able to place the blocks on these datanodes.
+   */
+  DatanodeDescriptor[] chooseTarget(String src,
+      int numOfReplicas, DatanodeDescriptor writer,
+      HashMap<Node, Node> excludedNodes,
+      long blocksize, List<DatanodeDescriptor> favoredNodes) {
+    // This class does not provide the functionality of placing
+    // a block in favored datanodes. The implementations of this class
+    // are expected to provide this functionality
+    return chooseTarget(src, numOfReplicas, writer, 
+        new ArrayList<DatanodeDescriptor>(numOfReplicas), false, excludedNodes, 
+        blocksize);
+  }
 
   /**
    * Verify that the block is replicated on at least minRacks different racks

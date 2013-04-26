@@ -33,6 +33,7 @@ message RegisterNodeManagerRequestProto {
 message RegisterNodeManagerResponseProto {
   optional MasterKeyProto master_key = 1;
   optional NodeActionProto nodeAction = 2;
+  optional int64 rm_identifier = 3;
 }
 
 message NodeHeartbeatRequestProto {

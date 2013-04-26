@@ -22,6 +22,9 @@ Trunk (Unreleased)
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
+    HDFS-2576. Enhances the DistributedFileSystem's create API so that clients
+    can specify favored datanodes for a file's blocks. (ddas)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -262,6 +265,9 @@ Trunk (Unreleased)
     HDFS-4757. Update FSDirectory#inodeMap when replacing an INodeDirectory
     while setting quota.  (Jing Zhao via szetszwo)
 
+    HDFS-4761. When resetting FSDirectory, the inodeMap should also be reset.
+    (Jing Zhao via szetszwo)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
@@ -456,6 +462,10 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
+
+    HDFS-4721. Speed up lease recovery by avoiding stale datanodes and choosing
+    the datanode with the most recent heartbeat as the primary.  (Varun Sharma
+    via szetszwo)
 
   OPTIMIZATIONS
 
