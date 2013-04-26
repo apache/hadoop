@@ -77,6 +77,7 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -1060,6 +1061,10 @@ public class TestCheckpoint {
       //
       secondary = startSecondaryNameNode(conf);
       secondary.doCheckpoint();
+      
+      FSDirectory secondaryFsDir = secondary.getFSNamesystem().dir;
+      INode rootInMap = secondaryFsDir.getInode(secondaryFsDir.rootDir.getId());
+      Assert.assertSame(rootInMap, secondaryFsDir.rootDir);
       
       fileSys.delete(tmpDir, true);
       fileSys.mkdirs(tmpDir);
