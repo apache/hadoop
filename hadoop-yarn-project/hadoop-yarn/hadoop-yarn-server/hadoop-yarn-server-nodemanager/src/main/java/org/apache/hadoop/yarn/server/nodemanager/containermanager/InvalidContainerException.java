@@ -16,21 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.protocolrecords;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.YarnException;
 
-public interface RegisterNodeManagerResponse {
-  MasterKey getMasterKey();
+/**
+ * This Exception happens when NM is rejecting container requests from RM
+ */
+public class InvalidContainerException extends YarnException {
 
-  void setMasterKey(MasterKey secretKey);
+  private static final long serialVersionUID = 1L;
 
-  NodeAction getNodeAction();
-
-  void setNodeAction(NodeAction nodeAction);
-
-  long getRMIdentifier();
-
-  void setRMIdentifier(long rmIdentifier);
+  public InvalidContainerException(String msg) {
+    super(msg);
+  }
 }

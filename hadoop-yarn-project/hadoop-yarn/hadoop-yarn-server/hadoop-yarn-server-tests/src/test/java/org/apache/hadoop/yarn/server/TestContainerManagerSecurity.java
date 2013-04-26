@@ -359,7 +359,7 @@ public class TestContainerManagerSecurity {
         Container container =
             BuilderUtils.newContainer(newTokenId.getContainerID(), null, null,
                 BuilderUtils.newResource(newTokenId.getResource().getMemory(),
-                    newTokenId.getResource().getVirtualCores()), null, null);
+                    newTokenId.getResource().getVirtualCores()), null, null, 0);
         StartContainerRequest request = Records.newRecord(StartContainerRequest.class);
         request.setContainerLaunchContext(context);
         request.setContainer(container);
@@ -541,7 +541,7 @@ public class TestContainerManagerSecurity {
         createContainerLaunchContextForTest(tokenId);
     Container container =
         BuilderUtils.newContainer(tokenId.getContainerID(), null, null,
-            BuilderUtils.newResource(2048, 1), null, null);
+            BuilderUtils.newResource(2048, 1), null, null, 0);
     request.setContainerLaunchContext(context);
     request.setContainer(container);
     try {
@@ -569,7 +569,7 @@ public class TestContainerManagerSecurity {
     Container container =
         BuilderUtils.newContainer(tokenId.getContainerID(), null, null,
             BuilderUtils.newResource(tokenId.getResource().getMemory(), tokenId
-                .getResource().getVirtualCores()), null, null);
+                .getResource().getVirtualCores()), null, null, 0);
     request.setContainerLaunchContext(context);
     request.setContainer(container);
     try {

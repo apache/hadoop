@@ -16,21 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.protocolrecords;
+package org.apache.hadoop.yarn.server.api;
 
-import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.server.api.records.NodeAction;
+public interface ResourceManagerConstants {
 
-public interface RegisterNodeManagerResponse {
-  MasterKey getMasterKey();
-
-  void setMasterKey(MasterKey secretKey);
-
-  NodeAction getNodeAction();
-
-  void setNodeAction(NodeAction nodeAction);
-
-  long getRMIdentifier();
-
-  void setRMIdentifier(long rmIdentifier);
+  public static final long RM_INVALID_IDENTIFIER = 0;
 }

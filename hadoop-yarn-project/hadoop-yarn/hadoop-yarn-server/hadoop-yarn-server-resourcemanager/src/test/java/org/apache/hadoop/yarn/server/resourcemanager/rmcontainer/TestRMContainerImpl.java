@@ -69,7 +69,7 @@ public class TestRMContainerImpl {
     Priority priority = BuilderUtils.newPriority(5);
 
     Container container = BuilderUtils.newContainer(containerId, nodeId,
-        "host:3465", resource, priority, null);
+        "host:3465", resource, priority, null, 0);
 
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
         nodeId, eventHandler, expirer);
@@ -139,7 +139,7 @@ public class TestRMContainerImpl {
     Priority priority = BuilderUtils.newPriority(5);
 
     Container container = BuilderUtils.newContainer(containerId, nodeId,
-        "host:3465", resource, priority, null);
+        "host:3465", resource, priority, null, 0);
 
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
         nodeId, eventHandler, expirer);

@@ -31,9 +31,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CyclicBarrier;
 
 import junit.framework.Assert;
 
@@ -57,11 +54,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
-import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
@@ -82,7 +77,6 @@ public class TestNodeManagerShutdown {
       .getRecordFactory(null);
   static final String user = "nobody";
   private FileContext localFS;
-  private CyclicBarrier syncBarrier = new CyclicBarrier(2);
 
   @Before
   public void setup() throws UnsupportedFileSystemException {
@@ -103,7 +97,7 @@ public class TestNodeManagerShutdown {
     NodeManager nm = getNodeManager();
     nm.init(createNMConfig());
     nm.start();
-    startContainers(nm);
+    startContainer(nm, localFS, tmpDir, processStartFile);
     
     final int MAX_TRIES=20;
     int numTries = 0;
@@ -136,29 +130,12 @@ public class TestNodeManagerShutdown {
     Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
     reader.close();
   }
-  
-  @SuppressWarnings("unchecked")
-  @Test
-  public void testKillContainersOnResync() throws IOException, InterruptedException {
-    NodeManager nm = new TestNodeManager();
-    YarnConfiguration conf = createNMConfig();
-    nm.init(conf);
-    nm.start();
-    startContainers(nm);
 
-    assert ((TestNodeManager) nm).getNMRegistrationCount() == 1;
-    nm.getNMDispatcher().getEventHandler().
-        handle( new NodeManagerEvent(NodeManagerEventType.RESYNC));
-    try {
-      syncBarrier.await();
-    } catch (BrokenBarrierException e) {
-    }
-    assert ((TestNodeManager) nm).getNMRegistrationCount() == 2;
-  }
-
-  private void startContainers(NodeManager nm) throws IOException {
+  public static void startContainer(NodeManager nm, FileContext localFS,
+      File scriptFileDir, File processStartFile) throws IOException {
     ContainerManagerImpl containerManager = nm.getContainerManager();
-    File scriptFile = createUnhaltingScriptFile();
+    File scriptFile =
+        createUnhaltingScriptFile(scriptFileDir, processStartFile);
     
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -208,7 +185,7 @@ public class TestNodeManagerShutdown {
     Assert.assertEquals(ContainerState.RUNNING, containerStatus.getState());
   }
   
-  private ContainerId createContainerId() {
+  public static ContainerId createContainerId() {
     ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
     appId.setClusterTimestamp(0);
     appId.setId(0);
@@ -237,8 +214,9 @@ public class TestNodeManagerShutdown {
    * Creates a script to run a container that will run forever unless
    * stopped by external means.
    */
-  private File createUnhaltingScriptFile() throws IOException {
-    File scriptFile = new File(tmpDir, "scriptFile.sh");
+  private static File createUnhaltingScriptFile(File scriptFileDir,
+      File processStartFile) throws IOException {
+    File scriptFile = new File(scriptFileDir, "scriptFile.sh");
     BufferedWriter fileWriter = new BufferedWriter(new FileWriter(scriptFile));
     fileWriter.write("#!/bin/bash\n\n");
     fileWriter.write("echo \"Running testscript for delayed kill\"\n");
@@ -263,49 +241,5 @@ public class TestNodeManagerShutdown {
         return myNodeStatusUpdater;
       }
     };
-  }
-
-  class TestNodeManager extends NodeManager {
-
-    private int registrationCount = 0;
-
-    @Override
-    protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-        Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
-      return new TestNodeStatusUpdaterImpl(context, dispatcher,
-          healthChecker, metrics);
-    }
-
-    public int getNMRegistrationCount() {
-      return registrationCount;
-    }
-
-    class TestNodeStatusUpdaterImpl extends MockNodeStatusUpdater {
-
-      public TestNodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
-          NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
-        super(context, dispatcher, healthChecker, metrics);
-      }
-
-      @Override
-      protected void registerWithRM() throws YarnRemoteException {
-        super.registerWithRM();
-        registrationCount++;
-      }
-
-      @Override
-      protected void rebootNodeStatusUpdater() {
-        ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container> containers =
-            getNMContext().getContainers();
-        // ensure that containers are empty before restart nodeStatusUpdater
-        Assert.assertTrue(containers.isEmpty());
-        super.rebootNodeStatusUpdater();
-        try {
-          syncBarrier.await();
-        } catch (InterruptedException e) {
-        } catch (BrokenBarrierException e) {
-        }
-      }
-    }
   }
 }

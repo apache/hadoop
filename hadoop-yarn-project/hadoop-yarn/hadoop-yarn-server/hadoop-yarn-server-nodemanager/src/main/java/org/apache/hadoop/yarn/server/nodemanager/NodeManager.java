@@ -38,6 +38,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
@@ -164,6 +165,7 @@ public class NodeManager extends CompositeService
     addService(nodeHealthChecker);
     dirsHandler = nodeHealthChecker.getDiskHandler();
 
+
     nodeStatusUpdater =
         createNodeStatusUpdater(context, dispatcher, nodeHealthChecker);
 
@@ -174,6 +176,7 @@ public class NodeManager extends CompositeService
         createContainerManager(context, exec, del, nodeStatusUpdater,
         this.aclsManager, dirsHandler);
     addService(containerManager);
+    ((NMContext) context).setContainerManager(containerManager);
 
     Service webServer = createWebServer(context, containerManager
         .getContainersMonitor(), this.aclsManager, dirsHandler);
@@ -221,11 +224,13 @@ public class NodeManager extends CompositeService
     DefaultMetricsSystem.shutdown();
   }
 
-  protected void cleanupContainersOnResync() {
+  protected void resyncWithRM() {
     //we do not want to block dispatcher thread here
     new Thread() {
       @Override
       public void run() {
+        LOG.info("Notifying ContainerManager to block new container-requests");
+        containerManager.setBlockNewContainerRequests(true);
         cleanupContainers(NodeManagerEventType.RESYNC);
         ((NodeStatusUpdaterImpl) nodeStatusUpdater ).rebootNodeStatusUpdater();
       }
@@ -296,7 +301,7 @@ public class NodeManager extends CompositeService
         new ConcurrentSkipListMap<ContainerId, Container>();
 
     private final NMContainerTokenSecretManager containerTokenSecretManager;
-
+    private ContainerManager containerManager;
     private final NodeHealthStatus nodeHealthStatus = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
 
@@ -332,6 +337,15 @@ public class NodeManager extends CompositeService
     @Override
     public NodeHealthStatus getNodeHealthStatus() {
       return this.nodeHealthStatus;
+    }
+
+    @Override
+    public ContainerManager getContainerManager() {
+      return this.containerManager;
+    }
+
+    public void setContainerManager(ContainerManager containerManager) {
+      this.containerManager = containerManager;
     }
   }
 
@@ -376,7 +390,7 @@ public class NodeManager extends CompositeService
       stop();
       break;
     case RESYNC:
-      cleanupContainersOnResync();
+      resyncWithRM();
       break;
     default:
       LOG.warn("Invalid shutdown event " + event.getType() + ". Ignoring.");

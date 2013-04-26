@@ -243,7 +243,7 @@ public class MRAppBenchmark {
                       .newContainer(containerId, BuilderUtils.newNodeId("host"
                           + containerId.getId(), 2345),
                         "host" + containerId.getId() + ":5678", req
-                          .getCapability(), req.getPriority(), null));
+                          .getCapability(), req.getPriority(), null, 0));
                   }
                 }
 

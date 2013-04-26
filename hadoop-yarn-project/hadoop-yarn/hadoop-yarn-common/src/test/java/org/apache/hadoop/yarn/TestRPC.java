@@ -128,7 +128,7 @@ public class TestRPC {
     containerId.setId(100);
     Container mockContainer =
         BuilderUtils.newContainer(containerId, null, null, recordFactory
-            .newRecordInstance(Resource.class), null, null);
+            .newRecordInstance(Resource.class), null, null, 0);
 //    containerLaunchContext.env = new HashMap<CharSequence, CharSequence>();
 //    containerLaunchContext.command = new ArrayList<CharSequence>();
     
