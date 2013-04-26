@@ -19,8 +19,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -889,5 +890,40 @@ public class TestINodeFile {
     components = INode.getPathComponents(testPath);
     resolvedPath = FSDirectory.resolvePath(testPath, components, fsd);
     assertEquals(testPath, resolvedPath);
+  }
+  
+  /**
+   * Test whether the inode in inodeMap has been replaced after regular inode
+   * replacement
+   */
+  @Test
+  public void testInodeReplacement() throws Exception {
+    final Configuration conf = new Configuration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(1).build();
+    cluster.waitActive();
+    final DistributedFileSystem hdfs = cluster.getFileSystem();
+    final FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
+    
+    final Path dir = new Path("/dir");
+    hdfs.mkdirs(dir);
+    INode dirNode = fsdir.getINode(dir.toString());
+    INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
+    assertSame(dirNode, dirNodeFromNode);
+    
+    // set quota to dir, which leads to node replacement
+    hdfs.setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    dirNode = fsdir.getINode(dir.toString());
+    assertTrue(dirNode instanceof INodeDirectoryWithQuota);
+    // the inode in inodeMap should also be replaced
+    dirNodeFromNode = fsdir.getInode(dirNode.getId());
+    assertSame(dirNode, dirNodeFromNode);
+    
+    hdfs.setQuota(dir, -1, -1);
+    dirNode = fsdir.getINode(dir.toString());
+    assertTrue(dirNode instanceof INodeDirectory);
+    // the inode in inodeMap should also be replaced
+    dirNodeFromNode = fsdir.getInode(dirNode.getId());
+    assertSame(dirNode, dirNodeFromNode);
   }
 }

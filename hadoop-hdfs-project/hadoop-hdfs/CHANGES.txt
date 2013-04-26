@@ -259,6 +259,9 @@ Trunk (Unreleased)
     failure to unpack old image tarball that contains hard links.
     (Chris Nauroth via szetszwo)
 
+    HDFS-4757. Update FSDirectory#inodeMap when replacing an INodeDirectory
+    while setting quota.  (Jing Zhao via szetszwo)
+
   BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,

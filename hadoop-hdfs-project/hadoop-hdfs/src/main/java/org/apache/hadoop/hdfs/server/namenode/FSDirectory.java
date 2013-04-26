@@ -1793,7 +1793,6 @@ public class FSDirectory implements Closeable {
     }
     dir.clearChildren();
   }
-
   
   /** Update the count of each directory with quota in the namespace
    * A directory's count is defined as the total number inodes in the tree
@@ -1923,6 +1922,8 @@ public class FSDirectory implements Closeable {
           INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
           dirNode = newNode;
           parent.replaceChild(newNode);
+          // update the inodeMap
+          inodeMap.put(newNode);
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota
@@ -1932,6 +1933,8 @@ public class FSDirectory implements Closeable {
         INodeDirectory parent = (INodeDirectory)inodes[inodes.length-2];
         dirNode = newNode;
         parent.replaceChild(newNode);
+        // update the inodeMap
+        inodeMap.put(newNode);
       }
       return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
     }
