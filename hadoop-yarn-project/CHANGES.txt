@@ -18,6 +18,9 @@ Release 0.23.8 - UNRELEASED
     YARN-71. Fix the NodeManager to clean up local-dirs on restart.
     (Xuan Gong via sseth)
 
+    YARN-363. Add webapps/proxy directory without which YARN proxy-server fails
+    when started in stand-alone mode. (Kenji Kikushima via vinodkv)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES
