@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -41,7 +42,10 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    */
   private List<ReplicaUnderConstruction> replicas;
 
-  /** A data-node responsible for block recovery. */
+  /**
+   * Index of the primary data node doing the recovery. Useful for log
+   * messages.
+   */
   private int primaryNodeIndex = -1;
 
   /**
@@ -62,6 +66,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   static class ReplicaUnderConstruction extends Block {
     private DatanodeDescriptor expectedLocation;
     private ReplicaState state;
+    private boolean chosenAsPrimary;
 
     ReplicaUnderConstruction(Block block,
                              DatanodeDescriptor target,
@@ -69,6 +74,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
       super(block);
       this.expectedLocation = target;
       this.state = state;
+      this.chosenAsPrimary = false;
     }
 
     /**
@@ -89,10 +95,24 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     }
 
     /**
+     * Whether the replica was chosen for recovery.
+     */
+    boolean getChosenAsPrimary() {
+      return chosenAsPrimary;
+    }
+
+    /**
      * Set replica state.
      */
     void setState(ReplicaState s) {
       state = s;
+    }
+
+    /**
+     * Set whether this replica was chosen for recovery.
+     */
+    void setChosenAsPrimary(boolean chosenAsPrimary) {
+      this.chosenAsPrimary = chosenAsPrimary;
     }
 
     /**
@@ -237,18 +257,39 @@ public class BlockInfoUnderConstruction extends BlockInfo {
         + " BlockInfoUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
-
-    int previous = primaryNodeIndex;
-    for(int i = 1; i <= replicas.size(); i++) {
-      int j = (previous + i)%replicas.size();
-      if (replicas.get(j).isAlive()) {
-        primaryNodeIndex = j;
-        DatanodeDescriptor primary = replicas.get(j).getExpectedLocation(); 
-        primary.addBlockToBeRecovered(this);
-        NameNode.blockStateChangeLog.info("BLOCK* " + this
-          + " recovery started, primary=" + primary);
-        return;
+    boolean allLiveReplicasTriedAsPrimary = true;
+    for (int i = 0; i < replicas.size(); i++) {
+      // Check if all replicas have been tried or not.
+      if (replicas.get(i).isAlive()) {
+        allLiveReplicasTriedAsPrimary =
+            (allLiveReplicasTriedAsPrimary && replicas.get(i).getChosenAsPrimary());
       }
+    }
+    if (allLiveReplicasTriedAsPrimary) {
+      // Just set all the replicas to be chosen whether they are alive or not.
+      for (int i = 0; i < replicas.size(); i++) {
+        replicas.get(i).setChosenAsPrimary(false);
+      }
+    }
+    long mostRecentLastUpdate = 0;
+    ReplicaUnderConstruction primary = null;
+    primaryNodeIndex = -1;
+    for(int i = 0; i < replicas.size(); i++) {
+      // Skip alive replicas which have been chosen for recovery.
+      if (!(replicas.get(i).isAlive() && !replicas.get(i).getChosenAsPrimary())) {
+        continue;
+      }
+      if (replicas.get(i).getExpectedLocation().getLastUpdate() > mostRecentLastUpdate) {
+        primary = replicas.get(i);
+        primaryNodeIndex = i;
+        mostRecentLastUpdate = primary.getExpectedLocation().getLastUpdate();
+      }
+    }
+    if (primary != null) {
+      primary.getExpectedLocation().addBlockToBeRecovered(this);
+      primary.setChosenAsPrimary(true);
+      NameNode.blockStateChangeLog.info("BLOCK* " + this
+        + " recovery started, primary=" + primary);
     }
   }
 

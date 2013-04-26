@@ -94,6 +94,10 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4346. Add SequentialNumber as a base class for INodeId and
     GenerationStamp.  (szetszwo)
 
+    HDFS-4721. Speed up lease recovery by avoiding stale datanodes and choosing
+    the datanode with the most recent heartbeat as the primary.  (Varun Sharma
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
