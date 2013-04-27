@@ -644,6 +644,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HADOOP-9473. Typo in FileUtil copy() method. (Glen Mazza via suresh)
 
+    HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
+    createMBeanInfo (Liang Xie via jlowe)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1656,6 +1659,9 @@ Release 0.23.8 - UNRELEASED
 
     HADOOP-9469. mapreduce/yarn source jars not included in dist tarball
     (Robert Parker via tgraves)
+
+    HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
+    createMBeanInfo (Liang Xie via jlowe)
 
 Release 0.23.7 - UNRELEASED
 
