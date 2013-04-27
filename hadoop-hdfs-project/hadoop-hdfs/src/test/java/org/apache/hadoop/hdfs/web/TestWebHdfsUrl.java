@@ -54,7 +54,7 @@ public class TestWebHdfsUrl {
     UserGroupInformation.setConfiguration(new Configuration());
   }
   
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSimpleAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
 
@@ -75,7 +75,7 @@ public class TestWebHdfsUrl {
         fileStatusUrl);
   }
 
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSimpleProxyAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
 
@@ -98,7 +98,7 @@ public class TestWebHdfsUrl {
         fileStatusUrl);
   }
 
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSecureAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
     // fake turning on security so api thinks it should use tokens
@@ -178,7 +178,7 @@ public class TestWebHdfsUrl {
         fileStatusUrl);    
   }
 
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSecureProxyAuthParamsInUrl() throws IOException {
     Configuration conf = new Configuration();
     // fake turning on security so api thinks it should use tokens
@@ -290,7 +290,7 @@ public class TestWebHdfsUrl {
     return (WebHdfsFileSystem) FileSystem.get(uri, conf);
   }
   
-  @Test(timeout=4000)
+  @Test(timeout=60000)
   public void testSelectHdfsDelegationToken() throws Exception {
     SecurityUtilTestHelper.setTokenServiceUseIp(true);
 
