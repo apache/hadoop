@@ -268,7 +268,7 @@ Trunk (Unreleased)
     HDFS-4761. When resetting FSDirectory, the inodeMap should also be reset.
     (Jing Zhao via szetszwo)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
+  BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
     Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
@@ -319,6 +319,9 @@ Trunk (Unreleased)
 
     HDFS-4740. Fixes for a few test failures on Windows.
     (Arpit Agarwal via suresh)
+
+    HDFS-4722. TestGetConf#testFederation times out on Windows.
+    (Ivan Mitic via suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
