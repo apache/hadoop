@@ -525,6 +525,9 @@ Trunk (Unreleased)
 
     HADOOP-9500. TestUserGroupInformation#testGetServerSideGroups fails on 
     Windows due to failure to find winutils.exe. (Chris Nauroth via suresh)
+
+    HADOOP-9490. LocalFileSystem#reportChecksumFailure not closing the 
+    checksum file handle before rename. (Ivan Mitic via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 

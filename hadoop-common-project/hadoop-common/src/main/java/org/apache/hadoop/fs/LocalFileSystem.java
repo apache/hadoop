@@ -130,6 +130,8 @@ public class LocalFileSystem extends ChecksumFileSystem {
       }
       // move checksum file too
       File checkFile = ((RawLocalFileSystem)fs).pathToFile(getChecksumFile(p));
+      // close the stream before rename to release the file handle
+      sums.close();
       b = checkFile.renameTo(new File(badDir, checkFile.getName()+suffix));
       if (!b) {
           LOG.warn("Ignoring failure of renameTo");
