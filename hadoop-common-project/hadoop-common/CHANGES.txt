@@ -382,7 +382,7 @@ Trunk (Unreleased)
 
     HADOOP-9190. packaging docs is broken. (Andy Isaacson via atm)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS
+  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
 
     HADOOP-8924. Hadoop Common creating package-info.java must not depend on
     sh. (Chris Nauroth via suresh)
@@ -519,6 +519,9 @@ Trunk (Unreleased)
 
     HADOOP-9443. Port winutils static code analysis change to trunk.
     (Chuan Liu via suresh)
+
+    HADOOP-9290. Some tests cannot load native library on windows.
+    (Chris Nauroth via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 
