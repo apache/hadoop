@@ -314,6 +314,9 @@ Trunk (Unreleased)
     HDFS-4741. TestStorageRestore#testStorageRestoreFailure fails on Windows.
     (Arpit Agarwal via suresh)
 
+    HDFS-4743. TestNNStorageRetentionManager fails on Windows.
+    (Chris Nauroth via suresh)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
