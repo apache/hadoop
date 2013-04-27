@@ -3298,6 +3298,16 @@ public class JobInProgress {
       jobtracker.storeCompletedJob(this);
       jobtracker.finalizeJob(this);
 
+    }
+    cleanupJob();
+  }
+  
+  /**
+   * The job is dead. We're now cleaning it, getting rid of job directories and
+   * removing all delegation token etc.
+   */
+  void cleanupJob() {
+    synchronized (this) {
       try {
         // Definitely remove the local-disk copy of the job file
         if (localJobFile != null) {

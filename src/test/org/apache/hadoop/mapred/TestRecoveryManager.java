@@ -257,6 +257,8 @@ public class TestRecoveryManager {
       UtilsForTests.waitFor(100);
     }
     Assert.assertTrue("Task should be successful", rJob1.isSuccessful());
+    Assert.assertTrue("Job should be cleaned up", !fs.exists(new Path(job1.get("mapreduce.job.dir"))));
+    Assert.assertTrue("Job should be cleaned up", !fs.exists(new Path(job2.get("mapreduce.job.dir"))));
   }
 
   public static class TestJobTrackerInstrumentation extends JobTrackerInstrumentation {
