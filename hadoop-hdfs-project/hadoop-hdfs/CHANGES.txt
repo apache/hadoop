@@ -582,6 +582,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4745. TestDataTransferKeepalive#testSlowReader has race condition that
     causes sporadic failure. (Chris Nauroth via suresh)
 
+    HDFS-4768. File handle leak in datanode when a block pool is removed.
+    (Chris Nauroth via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
