@@ -178,9 +178,9 @@ public class MiniJournalCluster {
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "127.0.0.1:" +
         httpAddrs[i].getPort());
     
-    JournalNode jn = new JournalNode();
-    jn.setConf(conf);
-    jn.start();
+    nodes[i] = new JournalNode();
+    nodes[i].setConf(conf);
+    nodes[i].start();
   }
 
   public int getQuorumSize() {
