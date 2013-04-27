@@ -2349,11 +2349,16 @@ public class FSDirectory implements Closeable {
           quotaNode.setSpaceConsumed(counts.get(Quota.NAMESPACE),
               counts.get(Quota.DISKSPACE));
         } else if (!quotaNode.isQuotaSet() && latest == null) {
-          // will not come here for root because root's nsQuota is always set
-          INodeDirectory newNode = quotaNode.replaceSelf4INodeDirectory();
-          // update the inodeMap
-          inodeMap.put(newNode);
-          return newNode;
+          // do not replace the node if the node is a snapshottable directory
+          // without snapshots
+          if (!(quotaNode instanceof INodeDirectoryWithSnapshot)) {
+            // will not come here for root because root is snapshottable and
+            // root's nsQuota is always set
+            INodeDirectory newNode = quotaNode.replaceSelf4INodeDirectory();
+            // update the inodeMap
+            inodeMap.put(newNode);
+            return newNode;
+          } 
         }
       } else {
         // a non-quota directory; so replace it with a directory with quota

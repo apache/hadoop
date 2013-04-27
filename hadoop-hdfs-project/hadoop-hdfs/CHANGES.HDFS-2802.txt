@@ -315,3 +315,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4650. When passing two non-existing snapshot names to snapshotDiff, it
   returns success if the names are the same.  (Jing Zhao via szetszwo)
+
+  HDFS-4767. If a directory is snapshottable, do not replace it when clearing
+  quota.  (Jing Zhao via szetszwo)
