@@ -19,19 +19,29 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.junit.Assert.assertEquals;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.junit.After;
 import org.junit.Test;
 
 public class TestFSNamesystem {
+
+  @After
+  public void cleanUp() {
+    FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
+  }
 
   /**
    * Tests that the namenode edits dirs are gotten with duplicates removed
@@ -54,6 +64,9 @@ public class TestFSNamesystem {
   @Test
   public void testFSNamespaceClearLeases() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+    conf.set(DFS_NAMENODE_NAME_DIR_KEY, nameDir.getAbsolutePath());
+
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
     FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);

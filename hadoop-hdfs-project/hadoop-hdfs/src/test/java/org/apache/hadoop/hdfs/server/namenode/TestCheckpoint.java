@@ -750,9 +750,12 @@ public class TestCheckpoint {
   @Test
   public void testSeparateEditsDirLocking() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    File editsDir = new File(MiniDFSCluster.getBaseDirectory() +
-        "/testSeparateEditsDirLocking");
-    
+    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+    File editsDir = new File(MiniDFSCluster.getBaseDirectory(),
+        "testSeparateEditsDirLocking");
+
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        nameDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         editsDir.getAbsolutePath());
     MiniDFSCluster cluster = null;
