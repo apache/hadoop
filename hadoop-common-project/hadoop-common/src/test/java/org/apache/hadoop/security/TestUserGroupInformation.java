@@ -76,7 +76,9 @@ public class TestUserGroupInformation {
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
     // doesn't matter what it is, but getGroups needs it set...
-    System.setProperty("hadoop.home.dir", "/tmp");
+    // use HADOOP_HOME environment variable to prevent interfering with logic
+    // that finds winutils.exe
+    System.setProperty("hadoop.home.dir", System.getenv("HADOOP_HOME"));
     // fake the realm is kerberos is enabled
     System.setProperty("java.security.krb5.kdc", "");
     System.setProperty("java.security.krb5.realm", "DEFAULT.REALM");
