@@ -3609,6 +3609,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         !job.getJobConf().getBoolean(
             JobConf.MAPREDUCE_RECOVER_JOB, 
             JobConf.DEFAULT_MAPREDUCE_RECOVER_JOB)) {
+      LOG.info("Job "+ jobId.toString() + " is not enable for recovery, cleaning up job files");
+      job.cleanupJob();
       return null;
     }
     
