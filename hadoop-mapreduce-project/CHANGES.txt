@@ -200,6 +200,10 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5167. Update MR App after YARN-562 to use the new builder API
     for the container. (Jian He via vinodkv)
 
+    MAPREDUCE-5179. Fix unit test in TestHSWebServices which fails when
+    versionInfo has parantheses like when running on a git checkout. (Hitesh Shah
+    via vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
