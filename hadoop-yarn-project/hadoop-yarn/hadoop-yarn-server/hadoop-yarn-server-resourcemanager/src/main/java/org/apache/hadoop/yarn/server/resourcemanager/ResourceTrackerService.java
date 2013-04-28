@@ -78,6 +78,9 @@ public class ResourceTrackerService extends AbstractService implements
   private static final NodeHeartbeatResponse shutDown = recordFactory
   .newRecordInstance(NodeHeartbeatResponse.class);
   
+  private int minAllocMb;
+  private int minAllocVcores;
+
   static {
     resync.setNodeAction(NodeAction.RESYNC);
 
@@ -111,6 +114,14 @@ public class ResourceTrackerService extends AbstractService implements
           + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS
           + " should be larger than 0.");
     }
+
+    minAllocMb = conf.getInt(
+    	YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+    	YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    minAllocVcores = conf.getInt(
+    	YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+    	YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+    
     super.init(conf);
   }
 
@@ -165,6 +176,16 @@ public class ResourceTrackerService extends AbstractService implements
     if (!this.nodesListManager.isValidNode(host)) {
       LOG.info("Disallowed NodeManager from  " + host
           + ", Sending SHUTDOWN signal to the NodeManager.");
+      response.setNodeAction(NodeAction.SHUTDOWN);
+      return response;
+    }
+
+    // Check if this node has minimum allocations
+    if (capability.getMemory() < minAllocMb
+        || capability.getVirtualCores() < minAllocVcores) {
+      LOG.info("NodeManager from  " + host
+          + " doesn't satisfy minimum allocations, Sending SHUTDOWN"
+          + " signal to the NodeManager.");
       response.setNodeAction(NodeAction.SHUTDOWN);
       return response;
     }

@@ -32,6 +32,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Test;
@@ -281,6 +283,49 @@ public class TestResourceTrackerService {
     // Verify the RMIdentifier is correctly set in RegisterNodeManagerResponse
     Assert.assertEquals(ResourceManager.clusterTimeStamp,
       response.getRMIdentifier());
+  }
+
+  @Test
+  public void testNodeRegistrationWithMinimumAllocations() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, "2048");
+    conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, "4");
+    rm = new MockRM(conf);
+    rm.start();
+
+    ResourceTrackerService resourceTrackerService
+      = rm.getResourceTrackerService();
+    RegisterNodeManagerRequest req = Records.newRecord(
+        RegisterNodeManagerRequest.class);
+    NodeId nodeId = BuilderUtils.newNodeId("host", 1234);
+    req.setNodeId(nodeId);
+
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    req.setResource(capability);
+    RegisterNodeManagerResponse response1 =
+        resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.SHUTDOWN,response1.getNodeAction());
+    
+    capability.setMemory(2048);
+    capability.setVirtualCores(1);
+    req.setResource(capability);
+    RegisterNodeManagerResponse response2 =
+        resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.SHUTDOWN,response2.getNodeAction());
+    
+    capability.setMemory(1024);
+    capability.setVirtualCores(4);
+    req.setResource(capability);
+    RegisterNodeManagerResponse response3 =
+        resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.SHUTDOWN,response3.getNodeAction());
+    
+    capability.setMemory(2048);
+    capability.setVirtualCores(4);
+    req.setResource(capability);
+    RegisterNodeManagerResponse response4 =
+        resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.NORMAL,response4.getNodeAction());
   }
 
   @Test
