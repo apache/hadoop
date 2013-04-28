@@ -528,6 +528,9 @@ Trunk (Unreleased)
 
     HADOOP-9490. LocalFileSystem#reportChecksumFailure not closing the 
     checksum file handle before rename. (Ivan Mitic via suresh)
+
+    HADOOP-9524. Fix ShellCommandFencer to work on Windows.
+    (Arpit Agarwal via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 

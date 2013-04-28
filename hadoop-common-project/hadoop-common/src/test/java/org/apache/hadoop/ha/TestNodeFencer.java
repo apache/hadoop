@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.util.Shell;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -33,7 +34,12 @@ import com.google.common.collect.Lists;
 public class TestNodeFencer {
 
   private HAServiceTarget MOCK_TARGET;
-  
+
+  // Fencer shell commands that always return true on Unix and Windows
+  // respectively. Lacking the POSIX 'true' command on Windows, we use
+  // the batch command 'rem'.
+  private static String FENCER_TRUE_COMMAND_UNIX = "shell(true)";
+  private static String FENCER_TRUE_COMMAND_WINDOWS = "shell(rem)";
 
   @Before
   public void clearMockState() {
@@ -46,6 +52,11 @@ public class TestNodeFencer {
     Mockito.doReturn("my mock").when(MOCK_TARGET).toString();
     Mockito.doReturn(new InetSocketAddress("host", 1234))
         .when(MOCK_TARGET).getAddress();
+  }
+
+  private static String getFencerTrueCommand() {
+    return Shell.WINDOWS ?
+        FENCER_TRUE_COMMAND_WINDOWS : FENCER_TRUE_COMMAND_UNIX;
   }
 
   @Test
@@ -100,7 +111,7 @@ public class TestNodeFencer {
 
   @Test
   public void testShortNameShell() throws BadFencingConfigurationException {
-    NodeFencer fencer = setupFencer("shell(true)");
+    NodeFencer fencer = setupFencer(getFencerTrueCommand());
     assertTrue(fencer.fence(MOCK_TARGET));
   }
 
