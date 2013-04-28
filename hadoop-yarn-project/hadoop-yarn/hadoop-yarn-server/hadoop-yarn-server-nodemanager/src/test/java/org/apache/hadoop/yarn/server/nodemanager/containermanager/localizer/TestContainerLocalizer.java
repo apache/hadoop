@@ -164,16 +164,12 @@ public class TestContainerLocalizer {
       Path base = new Path(new Path(p, ContainerLocalizer.USERCACHE), appUser);
       Path privcache = new Path(base, ContainerLocalizer.FILECACHE);
       // $x/usercache/$user/filecache
-      // FileContext drops the scheme if no authority is present before passing
-      // the path to an AbstractFileSystem
-      Path privcacheAfsPath = new Path(privcache.toUri().getPath());
-      verify(spylfs).mkdir(eq(privcacheAfsPath), isA(FsPermission.class), eq(false));
+      verify(spylfs).mkdir(eq(privcache), isA(FsPermission.class), eq(false));
       Path appDir =
         new Path(base, new Path(ContainerLocalizer.APPCACHE, appId));
       // $x/usercache/$user/appcache/$appId/filecache
       Path appcache = new Path(appDir, ContainerLocalizer.FILECACHE);
-      Path appcacheAfsPath = new Path(appcache.toUri().getPath());
-      verify(spylfs).mkdir(eq(appcacheAfsPath), isA(FsPermission.class), eq(false));
+      verify(spylfs).mkdir(eq(appcache), isA(FsPermission.class), eq(false));
     }
     // verify tokens read at expected location
     verify(spylfs).open(tokenPath);
