@@ -77,8 +77,8 @@ public class TestDataNodeVolumeFailureToleration {
   @After
   public void tearDown() throws Exception {
     for (int i = 0; i < 3; i++) {
-      new File(dataDir, "data"+(2*i+1)).setExecutable(true);
-      new File(dataDir, "data"+(2*i+2)).setExecutable(true);
+      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+1)), true);
+      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+2)), true);
     }
     cluster.shutdown();
   }
@@ -152,7 +152,7 @@ public class TestDataNodeVolumeFailureToleration {
 
     // Fail a volume on the 2nd DN
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
-    assertTrue("Couldn't chmod local vol", dn2Vol1.setExecutable(false));
+    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, false));
 
     // Should only get two replicas (the first DN and the 3rd)
     Path file1 = new Path("/test1");
@@ -165,7 +165,7 @@ public class TestDataNodeVolumeFailureToleration {
 
     // If we restore the volume we should still only be able to get
     // two replicas since the DN is still considered dead.
-    assertTrue("Couldn't chmod local vol", dn2Vol1.setExecutable(true));
+    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, true));
     Path file2 = new Path("/test2");
     DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file2, (short)2);
