@@ -28,7 +28,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -107,10 +106,10 @@ public class TestNNStorageRetentionFunctional {
           getInProgressEditsFileName(5));
       
       LOG.info("Failing first storage dir by chmodding it");
-      FileUtil.setExecutable(sd0, false);
+      sd0.setExecutable(false);
       doSaveNamespace(nn);      
       LOG.info("Restoring accessibility of first storage dir");      
-      FileUtil.setExecutable(sd0, true);
+      sd0.setExecutable(true);
 
       LOG.info("nothing should have been purged in first storage dir");
       assertGlobEquals(cd0, "fsimage_\\d*",
@@ -139,7 +138,7 @@ public class TestNNStorageRetentionFunctional {
       assertGlobEquals(cd0, "edits_.*",
           getInProgressEditsFileName(9));
     } finally {
-      FileUtil.setExecutable(sd0, true);
+      sd0.setExecutable(true);
 
       LOG.info("Shutting down...");
       if (cluster != null) {

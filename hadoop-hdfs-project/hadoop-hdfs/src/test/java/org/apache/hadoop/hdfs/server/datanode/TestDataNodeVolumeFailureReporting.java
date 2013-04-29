@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -89,8 +88,8 @@ public class TestDataNodeVolumeFailureReporting {
   @After
   public void tearDown() throws Exception {
     for (int i = 0; i < 3; i++) {
-      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+1)), true);
-      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+2)), true);
+      new File(dataDir, "data"+(2*i+1)).setExecutable(true);
+      new File(dataDir, "data"+(2*i+2)).setExecutable(true);
     }
     cluster.shutdown();
   }
@@ -132,8 +131,8 @@ public class TestDataNodeVolumeFailureReporting {
      * fail. The client does not retry failed nodes even though
      * perhaps they could succeed because just a single volume failed.
      */
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, false));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, false));
+    assertTrue("Couldn't chmod local vol", dn1Vol1.setExecutable(false));
+    assertTrue("Couldn't chmod local vol", dn2Vol1.setExecutable(false));
 
     /*
      * Create file1 and wait for 3 replicas (ie all DNs can still
@@ -169,7 +168,7 @@ public class TestDataNodeVolumeFailureReporting {
      * Now fail a volume on the third datanode. We should be able to get
      * three replicas since we've already identified the other failures.
      */
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn3Vol1, false));
+    assertTrue("Couldn't chmod local vol", dn3Vol1.setExecutable(false));
     Path file2 = new Path("/test2");
     DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file2, (short)3);
@@ -201,7 +200,7 @@ public class TestDataNodeVolumeFailureReporting {
      * and that it's no longer up. Only wait for two replicas since
      * we'll never get a third.
      */
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn3Vol2, false));
+    assertTrue("Couldn't chmod local vol", dn3Vol2.setExecutable(false));
     Path file3 = new Path("/test3");
     DFSTestUtil.createFile(fs, file3, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file3, (short)2);
@@ -223,10 +222,10 @@ public class TestDataNodeVolumeFailureReporting {
      * restart, so file creation should be able to succeed after
      * restoring the data directories and restarting the datanodes.
      */
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, true));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, true));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn3Vol1, true));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn3Vol2, true));
+    assertTrue("Couldn't chmod local vol", dn1Vol1.setExecutable(true));
+    assertTrue("Couldn't chmod local vol", dn2Vol1.setExecutable(true));
+    assertTrue("Couldn't chmod local vol", dn3Vol1.setExecutable(true));
+    assertTrue("Couldn't chmod local vol", dn3Vol2.setExecutable(true));
     cluster.restartDataNodes();
     cluster.waitActive();
     Path file4 = new Path("/test4");
@@ -262,8 +261,8 @@ public class TestDataNodeVolumeFailureReporting {
     // third healthy so one node in the pipeline will not fail). 
     File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, false));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, false));
+    assertTrue("Couldn't chmod local vol", dn1Vol1.setExecutable(false));
+    assertTrue("Couldn't chmod local vol", dn2Vol1.setExecutable(false));
 
     Path file1 = new Path("/test1");
     DFSTestUtil.createFile(fs, file1, 1024, (short)2, 1L);

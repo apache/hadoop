@@ -27,7 +27,6 @@ import java.net.Socket;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -107,8 +106,8 @@ public class TestDiskError {
       }
     } finally {
       // restore its old permission
-      FileUtil.setWritable(dir1, true);
-      FileUtil.setWritable(dir2, true);
+      dir1.setWritable(true);
+      dir2.setWritable(true);
     }
   }
 

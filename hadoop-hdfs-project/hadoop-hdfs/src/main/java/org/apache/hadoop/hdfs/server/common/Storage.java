@@ -448,7 +448,7 @@ public abstract class Storage extends StorageInfo {
           LOG.warn(rootPath + "is not a directory");
           return StorageState.NON_EXISTENT;
         }
-        if (!FileUtil.canWrite(root)) {
+        if (!root.canWrite()) {
           LOG.warn("Cannot access storage directory " + rootPath);
           return StorageState.NON_EXISTENT;
         }

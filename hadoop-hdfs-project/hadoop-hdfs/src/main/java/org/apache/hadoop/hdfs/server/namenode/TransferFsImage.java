@@ -33,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Time;
@@ -103,7 +102,7 @@ public class TransferFsImage {
     assert !dstFiles.isEmpty() : "No checkpoint targets.";
     
     for (File f : dstFiles) {
-      if (f.exists() && FileUtil.canRead(f)) {
+      if (f.exists() && f.canRead()) {
         LOG.info("Skipping download of remote edit log " +
             log + " since it already is stored locally at " + f);
         return;

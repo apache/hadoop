@@ -31,7 +31,6 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
@@ -92,10 +91,10 @@ public class TestDataNodeVolumeFailure {
   @After
   public void tearDown() throws Exception {
     if(data_fail != null) {
-      FileUtil.setWritable(data_fail, true);
+      data_fail.setWritable(true);
     }
     if(failedDir != null) {
-      FileUtil.setWritable(failedDir, true);
+      failedDir.setWritable(true);
     }
     if(cluster != null) {
       cluster.shutdown();

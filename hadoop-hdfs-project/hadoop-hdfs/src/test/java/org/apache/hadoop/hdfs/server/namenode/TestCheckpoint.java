@@ -157,7 +157,7 @@ public class TestCheckpoint {
       
       try {
         // Simulate the mount going read-only
-        FileUtil.setWritable(dir, false);
+        dir.setWritable(false);
         cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
             .format(false).build();
         fail("NN should have failed to start with " + dir + " set unreadable");
@@ -167,7 +167,7 @@ public class TestCheckpoint {
       } finally {
         cleanup(cluster);
         cluster = null;
-        FileUtil.setWritable(dir, true);
+        dir.setWritable(true);
       }
     }
   }
@@ -1825,7 +1825,7 @@ public class TestCheckpoint {
       StorageDirectory sd1 = storage.getStorageDir(1);
       
       currentDir = sd0.getCurrentDir();
-      FileUtil.setExecutable(currentDir, false);
+      currentDir.setExecutable(false);
 
       // Upload checkpoint when NN has a bad storage dir. This should
       // succeed and create the checkpoint in the good dir.
@@ -1835,7 +1835,7 @@ public class TestCheckpoint {
           new File(sd1.getCurrentDir(), NNStorage.getImageFileName(2)));
       
       // Restore the good dir
-      FileUtil.setExecutable(currentDir, true);
+      currentDir.setExecutable(true);
       nn.restoreFailedStorage("true");
       nn.rollEditLog();
 
@@ -1846,7 +1846,7 @@ public class TestCheckpoint {
       assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
     } finally {
       if (currentDir != null) {
-        FileUtil.setExecutable(currentDir, true);
+        currentDir.setExecutable(true);
       }
       cleanup(secondary);
       secondary = null;
@@ -1896,7 +1896,7 @@ public class TestCheckpoint {
       StorageDirectory sd0 = storage.getStorageDir(0);
       assertEquals(NameNodeDirType.IMAGE, sd0.getStorageDirType());
       currentDir = sd0.getCurrentDir();
-      FileUtil.setExecutable(currentDir, false);
+      currentDir.setExecutable(false);
 
       // Try to upload checkpoint -- this should fail since there are no
       // valid storage dirs
@@ -1909,7 +1909,7 @@ public class TestCheckpoint {
       }
       
       // Restore the good dir
-      FileUtil.setExecutable(currentDir, true);
+      currentDir.setExecutable(true);
       nn.restoreFailedStorage("true");
       nn.rollEditLog();
 
@@ -1920,7 +1920,7 @@ public class TestCheckpoint {
       assertParallelFilesInvariant(cluster, ImmutableList.of(secondary));
     } finally {
       if (currentDir != null) {
-        FileUtil.setExecutable(currentDir, true);
+        currentDir.setExecutable(true);
       }
       cleanup(secondary);
       secondary = null;

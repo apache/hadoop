@@ -34,7 +34,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
@@ -231,8 +230,8 @@ public class NNStorage extends Storage implements Closeable,
         File root = sd.getRoot();
         LOG.info("currently disabled dir " + root.getAbsolutePath() +
                  "; type="+sd.getStorageDirType() 
-                 + ";canwrite="+FileUtil.canWrite(root));
-        if(root.exists() && FileUtil.canWrite(root)) {
+                 + ";canwrite="+root.canWrite());
+        if(root.exists() && root.canWrite()) {
           LOG.info("restoring dir " + sd.getRoot().getAbsolutePath());
           this.addStorageDir(sd); // restore
           this.removedStorageDirs.remove(sd);
@@ -506,7 +505,7 @@ public class NNStorage extends Storage implements Closeable,
       dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
       sd = it.next();
       File fsImage = getStorageFile(sd, NameNodeFile.IMAGE, txid);
-      if(FileUtil.canRead(sd.getRoot()) && fsImage.exists())
+      if(sd.getRoot().canRead() && fsImage.exists())
         return fsImage;
     }
     return null;
@@ -723,7 +722,7 @@ public class NNStorage extends Storage implements Closeable,
   private File findFile(NameNodeDirType dirType, String name) {
     for (StorageDirectory sd : dirIterable(dirType)) {
       File candidate = new File(sd.getCurrentDir(), name);
-      if (FileUtil.canRead(sd.getCurrentDir()) &&
+      if (sd.getCurrentDir().canRead() &&
           candidate.exists()) {
         return candidate;
       }
