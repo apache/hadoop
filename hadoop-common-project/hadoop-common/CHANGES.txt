@@ -6,6 +6,8 @@ Release 2.0.5-beta - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-9194. RPC support for QoS. (Junping Du via llu)
+
     HADOOP-9283. Add support for running the Hadoop client on AIX. (atm)
 
     HADOOP-8415. Add getDouble() and setDouble() in 
