@@ -203,66 +203,6 @@ if defined JAVA_LIBRARY_PATH (
 set HADOOP_OPTS=%HADOOP_OPTS% -Dhadoop.policy.file=%HADOOP_POLICYFILE%
 
 @rem
-@rem put hdfs in classpath if present
-@rem
-
-if not defined HADOOP_HDFS_HOME (
-  if exist %HADOOP_HOME%\hdfs (
-    set HADOOP_HDFS_HOME=%HADOOP_HOME%\hdfs
-  )
-)
-
-if defined HADOOP_HDFS_HOME (
-  for %%i in (%HADOOP_HDFS_HOME%\hadoop-hdfs-*.jar) do (
-    set CLASSPATH=!CLASSPATH!;%%i
-  )
-
-  for %%i in (%HADOOP_HDFS_HOME%\lib\*.jar) do (
-    set CLASSPATH=!CLASSPATH!;%%i
-  )
-
-  if exist %HADOOP_HDFS_HOME%\build\classes (
-    set CLASSPATH=%CLASSPATH%;%HADOOP_HDFS_HOME%\build\classes
-  )
-)
-
-@rem
-@rem set mapred home if mapred is present
-@rem
-
-if not defined HADOOP_MAPRED_HOME (
-  if exist %HADOOP_HOME%\mapred (
-    set HADOOP_MAPRED_HOME=%HADOOP_HOME%\mapred
-  )
-)
-
-if defined HADOOP_MAPRED_HOME (
-  for %%i in (%HADOOP_MAPRED_HOME%\hadoop-mapred-*.jar) do (
-    set CLASSPATH=!CLASSPATH!;%%i
-  )
-
-  for %%i in (%HADOOP_MAPRED_HOME%\lib\*.jar) do (
-    set CLASSPATH=!CLASSPATH!;%%i
-  )
-
-  if exist %HADOOP_MAPRED_HOME%\build\classes (
-    set CLASSPATH=%CLASSPATH%;%HADOOP_MAPRED_HOME%\build\classes
-  )
-
-  if exist %HADOOP_MAPRED_HOME%\build\tools (
-    set CLASSPATH=%CLASSPATH%;%HADOOP_MAPRED_HOME%\build\tools
-  )
-
-  for %%i in (%HADOOP_MAPRED_HOME%\hadoop-mapred-tools-*.jar) do (
-    set TOOL_PATH=!TOOL_PATH!;%%i
-  )
-
-  for %%i in (%HADOOP_MAPRED_HOME%\build\hadoop-mapred-tools-*.jar) do (
-    set TOOL_PATH=!TOOL_PATH!;%%i
-  )
-)
-
-@rem
 @rem add user-specified CLASSPATH last
 @rem
 
