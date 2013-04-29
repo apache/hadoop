@@ -606,6 +606,8 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4748. MiniJournalCluster#restartJournalNode leaks resources, which 
     causes sporadic test failures. (Chris Nauroth via suresh)
 
+    HDFS-4733. Make HttpFS username pattern configurable. (tucu via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
