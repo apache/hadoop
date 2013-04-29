@@ -326,6 +326,9 @@ Trunk (Unreleased)
     HDFS-4705. Address HDFS test failures on Windows because of invalid
     dfs.namenode.name.dir. (Ivan Mitic via suresh)
 
+    HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
+    (Arpit Agarwal via suresh)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.
