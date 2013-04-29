@@ -226,4 +226,12 @@
     </description>
   </property>
 
+  <property>
+    <name>httpfs.user.provider.user.pattern</name>
+    <value>^[A-Za-z_][A-Za-z0-9._-]*[$]?$</value>
+    <description>
+      Valid pattern for user and group names, it must be a valid java regex.
+    </description>
+  </property>
+
 </configuration>

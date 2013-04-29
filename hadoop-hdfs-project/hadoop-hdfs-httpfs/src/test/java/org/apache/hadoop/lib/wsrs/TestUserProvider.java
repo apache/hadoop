@@ -104,34 +104,39 @@ public class TestUserProvider {
   @Test
   @TestException(exception = IllegalArgumentException.class)
   public void userNameEmpty() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    userParam.parseParam("");
+    new UserProvider.UserParam("");
   }
 
   @Test
   @TestException(exception = IllegalArgumentException.class)
   public void userNameInvalidStart() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    userParam.parseParam("1x");
+    new UserProvider.UserParam("1x");
   }
 
   @Test
   @TestException(exception = IllegalArgumentException.class)
   public void userNameInvalidDollarSign() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    userParam.parseParam("1$x");
+    new UserProvider.UserParam("1$x");
   }
 
   @Test
   public void userNameMinLength() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    assertNotNull(userParam.parseParam("a"));
+    new UserProvider.UserParam("a");
   }
 
   @Test
   public void userNameValidDollarSign() {
-    UserProvider.UserParam userParam = new UserProvider.UserParam("username");
-    assertNotNull(userParam.parseParam("a$"));
+    new UserProvider.UserParam("a$");
+  }
+
+  @Test
+  public void customUserPattern() {
+    try {
+      UserProvider.setUserPattern("1");
+      new UserProvider.UserParam("1");      
+    } finally {
+      UserProvider.setUserPattern(UserProvider.USER_PATTERN_DEFAULT);
+    }
   }
 
 }
