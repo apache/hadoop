@@ -113,7 +113,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
       cmd.add(interpretor);
     }
     String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
-    if (!new File(executable).canExecute()) {
+    if (!FileUtil.canExecute(new File(executable))) {
       // LinuxTaskController sets +x permissions on all distcache files already.
       // In case of DefaultTaskController, set permissions here.
       FileUtil.chmod(executable, "u+x");

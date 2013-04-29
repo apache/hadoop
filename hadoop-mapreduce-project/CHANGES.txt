@@ -159,6 +159,9 @@ Trunk (Unreleased)
     HADOOP-9372. Fix bad timeout annotations on tests.
     (Arpit Agarwal via suresh)
 
+    MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
 Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
