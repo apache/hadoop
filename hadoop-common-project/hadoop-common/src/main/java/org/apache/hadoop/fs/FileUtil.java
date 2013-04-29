@@ -44,7 +44,6 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -148,9 +147,9 @@ public class FileUtil {
    * Pure-Java implementation of "chmod +rwx f".
    */
   private static void grantPermissions(final File f) {
-      f.setExecutable(true);
-      f.setReadable(true);
-      f.setWritable(true);
+      FileUtil.setExecutable(f, true);
+      FileUtil.setReadable(f, true);
+      FileUtil.setWritable(f, true);
   }
 
   private static boolean deleteImpl(final File f, final boolean doLog) {
@@ -849,6 +848,129 @@ public class FileUtil {
         + (groupname == null ? "" : ":" + groupname);
     String [] cmd = Shell.getSetOwnerCommand(arg);
     execCommand(file, cmd);
+  }
+
+  /**
+   * Platform independent implementation for {@link File#setReadable(boolean)}
+   * File#setReadable does not work as expected on Windows.
+   * @param f input file
+   * @param readable
+   * @return true on success, false otherwise
+   */
+  public static boolean setReadable(File f, boolean readable) {
+    if (Shell.WINDOWS) {
+      try {
+        String permission = readable ? "u+r" : "u-r";
+        FileUtil.chmod(f.getCanonicalPath(), permission, false);
+        return true;
+      } catch (IOException ex) {
+        return false;
+      }
+    } else {
+      return f.setReadable(readable);
+    }
+  }
+
+  /**
+   * Platform independent implementation for {@link File#setWritable(boolean)}
+   * File#setWritable does not work as expected on Windows.
+   * @param f input file
+   * @param writable
+   * @return true on success, false otherwise
+   */
+  public static boolean setWritable(File f, boolean writable) {
+    if (Shell.WINDOWS) {
+      try {
+        String permission = writable ? "u+w" : "u-w";
+        FileUtil.chmod(f.getCanonicalPath(), permission, false);
+        return true;
+      } catch (IOException ex) {
+        return false;
+      }
+    } else {
+      return f.setWritable(writable);
+    }
+  }
+
+  /**
+   * Platform independent implementation for {@link File#setExecutable(boolean)}
+   * File#setExecutable does not work as expected on Windows.
+   * Note: revoking execute permission on folders does not have the same
+   * behavior on Windows as on Unix platforms. Creating, deleting or renaming
+   * a file within that folder will still succeed on Windows.
+   * @param f input file
+   * @param executable
+   * @return true on success, false otherwise
+   */
+  public static boolean setExecutable(File f, boolean executable) {
+    if (Shell.WINDOWS) {
+      try {
+        String permission = executable ? "u+x" : "u-x";
+        FileUtil.chmod(f.getCanonicalPath(), permission, false);
+        return true;
+      } catch (IOException ex) {
+        return false;
+      }
+    } else {
+      return f.setExecutable(executable);
+    }
+  }
+
+  /**
+   * Platform independent implementation for {@link File#canRead()}
+   * @param f input file
+   * @return On Unix, same as {@link File#canRead()}
+   *         On Windows, true if process has read access on the path
+   */
+  public static boolean canRead(File f) {
+    if (Shell.WINDOWS) {
+      try {
+        return NativeIO.Windows.access(f.getCanonicalPath(),
+            NativeIO.Windows.AccessRight.ACCESS_READ);
+      } catch (IOException e) {
+        return false;
+      }
+    } else {
+      return f.canRead();
+    }
+  }
+
+  /**
+   * Platform independent implementation for {@link File#canWrite()}
+   * @param f input file
+   * @return On Unix, same as {@link File#canWrite()}
+   *         On Windows, true if process has write access on the path
+   */
+  public static boolean canWrite(File f) {
+    if (Shell.WINDOWS) {
+      try {
+        return NativeIO.Windows.access(f.getCanonicalPath(),
+            NativeIO.Windows.AccessRight.ACCESS_WRITE);
+      } catch (IOException e) {
+        return false;
+      }
+    } else {
+      return f.canWrite();
+    }
+  }
+
+  /**
+   * Platform independent implementation for {@link File#canExecute()}
+   * @param f input file
+   * @return On Unix, same as {@link File#canExecute()}
+   *         On Windows, true if process has execute access on the path
+   */
+  public static boolean canExecute(File f) {
+    if (Shell.WINDOWS) {
+      try {
+        return NativeIO.Windows.access(f.getCanonicalPath(),
+            NativeIO.Windows.AccessRight.ACCESS_EXECUTE);
+      } catch (IOException e) {
+        return false;
+      }
+    } else {
+      return f.canExecute();
+    }
   }
 
   /**

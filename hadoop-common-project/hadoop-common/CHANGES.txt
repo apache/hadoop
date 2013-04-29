@@ -531,6 +531,9 @@ Trunk (Unreleased)
 
     HADOOP-9524. Fix ShellCommandFencer to work on Windows.
     (Arpit Agarwal via suresh)
+
+    HADOOP-9413. Add common utils for File#setReadable/Writable/Executable &
+    File#canRead/Write/Execute that work cross-platform. (Ivan Mitic via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 

@@ -103,7 +103,8 @@ public class LocalFileSystem extends ChecksumFileSystem {
       String device = new DF(f, getConf()).getMount();
       File parent = f.getParentFile();
       File dir = null;
-      while (parent!=null && parent.canWrite() && parent.toString().startsWith(device)) {
+      while (parent != null && FileUtil.canWrite(parent) &&
+          parent.toString().startsWith(device)) {
         dir = parent;
         parent = parent.getParentFile();
       }

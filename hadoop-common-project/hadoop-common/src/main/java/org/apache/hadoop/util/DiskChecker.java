@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -160,11 +161,7 @@ public class DiskChecker {
                                    + dir.toString());
     }
 
-    if (Shell.WINDOWS) {
-      checkAccessByFileSystemInteraction(dir);
-    } else {
-      checkAccessByFileMethods(dir);
-    }
+    checkAccessByFileMethods(dir);
   }
 
   /**
@@ -177,68 +174,19 @@ public class DiskChecker {
    */
   private static void checkAccessByFileMethods(File dir)
       throws DiskErrorException {
-    if (!dir.canRead()) {
+    if (!FileUtil.canRead(dir)) {
       throw new DiskErrorException("Directory is not readable: "
                                    + dir.toString());
     }
 
-    if (!dir.canWrite()) {
+    if (!FileUtil.canWrite(dir)) {
       throw new DiskErrorException("Directory is not writable: "
                                    + dir.toString());
     }
 
-    if (!dir.canExecute()) {
+    if (!FileUtil.canExecute(dir)) {
       throw new DiskErrorException("Directory is not executable: "
                                    + dir.toString());
-    }
-  }
-
-  /**
-   * Checks that the current running process can read, write, and execute the
-   * given directory by attempting each of those operations on the file system.
-   * This method contains several workarounds to known JVM bugs that cause
-   * File.canRead, File.canWrite, and File.canExecute to return incorrect results
-   * on Windows with NTFS ACLs.  See:
-   * http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6203387
-   * These bugs are supposed to be fixed in JDK7.
-   * 
-   * @param dir File to check
-   * @throws DiskErrorException if dir is not readable, not writable, or not
-   *   executable
-   */
-  private static void checkAccessByFileSystemInteraction(File dir)
-      throws DiskErrorException {
-    // Make sure we can read the directory by listing it.
-    if (dir.list() == null) {
-      throw new DiskErrorException("Directory is not readable: "
-                                   + dir.toString());
-    }
-
-    // Make sure we can write to the directory by creating a temp file in it.
-    try {
-      File tempFile = File.createTempFile("checkDirAccess", null, dir);
-      if (!tempFile.delete()) {
-        throw new DiskErrorException("Directory is not writable: "
-                                     + dir.toString());
-      }
-    } catch (IOException e) {
-      throw new DiskErrorException("Directory is not writable: "
-                                   + dir.toString(), e);
-    }
-
-    // Make sure the directory is executable by trying to cd into it.  This
-    // launches a separate process.  It does not change the working directory of
-    // the current process.
-    try {
-      String[] cdCmd = new String[] { "cmd", "/C", "cd",
-          dir.getAbsolutePath() };
-      Shell.execCommand(null, cdCmd, SHELL_TIMEOUT);
-    } catch (Shell.ExitCodeException e) {
-      throw new DiskErrorException("Directory is not executable: "
-                                   + dir.toString(), e);
-    } catch (IOException e) {
-      throw new DiskErrorException("Directory is not executable: "
-                                   + dir.toString(), e);
     }
   }
 }

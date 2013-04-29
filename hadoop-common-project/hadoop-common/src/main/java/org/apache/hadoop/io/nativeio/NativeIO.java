@@ -356,6 +356,43 @@ public class NativeIO {
     /** Windows only methods used for getOwner() implementation */
     private static native String getOwner(FileDescriptor fd) throws IOException;
 
+    /** Supported list of Windows access right flags */
+    public static enum AccessRight {
+      ACCESS_READ (0x0001),      // FILE_READ_DATA
+      ACCESS_WRITE (0x0002),     // FILE_WRITE_DATA
+      ACCESS_EXECUTE (0x0020);   // FILE_EXECUTE
+
+      private final int accessRight;
+      AccessRight(int access) {
+        accessRight = access;
+      }
+
+      public int accessRight() {
+        return accessRight;
+      }
+    };
+
+    /** Windows only method used to check if the current process has requested
+     *  access rights on the given path. */
+    private static native boolean access0(String path, int requestedAccess);
+
+    /**
+     * Checks whether the current process has desired access rights on
+     * the given path.
+     * 
+     * Longer term this native function can be substituted with JDK7
+     * function Files#isReadable, isWritable, isExecutable.
+     *
+     * @param path input path
+     * @param desiredAccess ACCESS_READ, ACCESS_WRITE or ACCESS_EXECUTE
+     * @return true if access is allowed
+     * @throws IOException I/O exception on error
+     */
+    public static boolean access(String path, AccessRight desiredAccess)
+        throws IOException {
+      return access0(path, desiredAccess.accessRight());
+    }
+
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
