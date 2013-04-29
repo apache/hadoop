@@ -25,5 +25,10 @@
     <name>hadoop.security.authentication</name>
     <value>simple</value>
   </property>
+  <!-- Disable min block size since most tests use tiny blocks -->
+  <property>
+    <name>dfs.namenode.fs-limits.min-block-size</name>
+    <value>0</value>
+  </property>
 
 </configuration>
