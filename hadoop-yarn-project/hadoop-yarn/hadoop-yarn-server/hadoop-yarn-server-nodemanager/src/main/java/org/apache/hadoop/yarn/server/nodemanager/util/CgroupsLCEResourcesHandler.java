@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -307,7 +308,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     if (controllerPath != null) {
       File f = new File(controllerPath + "/" + this.cgroupPrefix);
 
-      if (f.canWrite()) {
+      if (FileUtil.canWrite(f)) {
         controllerPaths.put(CONTROLLER_CPU, controllerPath);
       } else {
         throw new IOException("Not able to enforce cpu weights; cannot write "

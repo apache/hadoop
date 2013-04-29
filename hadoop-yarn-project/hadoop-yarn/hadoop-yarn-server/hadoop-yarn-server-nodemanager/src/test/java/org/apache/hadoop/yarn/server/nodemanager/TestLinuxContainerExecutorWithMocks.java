@@ -37,6 +37,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -78,8 +79,8 @@ public class TestLinuxContainerExecutorWithMocks {
   @Before
   public void setup() {
     File f = new File("./src/test/resources/mock-container-executor");
-    if(!f.canExecute()) {
-      f.setExecutable(true);
+    if(!FileUtil.canExecute(f)) {
+      FileUtil.setExecutable(f, true);
     }
     String executorPath = f.getAbsolutePath();
     Configuration conf = new Configuration();
@@ -140,8 +141,8 @@ public class TestLinuxContainerExecutorWithMocks {
 
     // set the scheduler priority to make sure still works with nice -n prio
     File f = new File("./src/test/resources/mock-container-executor");
-    if (!f.canExecute()) {
-      f.setExecutable(true);
+    if (!FileUtil.canExecute(f)) {
+      FileUtil.setExecutable(f, true);
     }
     String executorPath = f.getAbsolutePath();
     Configuration conf = new Configuration();
@@ -204,8 +205,8 @@ public class TestLinuxContainerExecutorWithMocks {
 
     // reinitialize executer
     File f = new File("./src/test/resources/mock-container-executer-with-error");
-    if (!f.canExecute()) {
-      f.setExecutable(true);
+    if (!FileUtil.canExecute(f)) {
+      FileUtil.setExecutable(f, true);
     }
     String executorPath = f.getAbsolutePath();
     Configuration conf = new Configuration();

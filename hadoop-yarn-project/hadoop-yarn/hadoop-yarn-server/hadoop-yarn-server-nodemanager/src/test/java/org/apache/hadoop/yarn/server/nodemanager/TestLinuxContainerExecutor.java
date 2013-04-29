@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -104,9 +105,7 @@ public class TestLinuxContainerExecutor {
     FileContext files = FileContext.getLocalFSFileContext();
     Path workSpacePath = new Path(workSpace.getAbsolutePath());
     files.mkdir(workSpacePath, null, true);
-    workSpace.setReadable(true, false);
-    workSpace.setExecutable(true, false);
-    workSpace.setWritable(true, false);
+    FileUtil.chmod(workSpace.getAbsolutePath(), "777");
     File localDir = new File(workSpace.getAbsoluteFile(), "localDir");
     files.mkdir(new Path(localDir.getAbsolutePath()),
         new FsPermission("777"), false);
