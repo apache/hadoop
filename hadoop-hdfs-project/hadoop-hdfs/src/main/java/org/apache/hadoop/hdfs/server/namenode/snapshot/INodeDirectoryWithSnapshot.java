@@ -914,25 +914,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       return super.computeQuotaUsage(counts, useCache, lastSnapshotId);
     }
     
-    final int diffNum = 0;
-    Snapshot lastSnapshot = null;
-    Snapshot lastInDiff = diffs.getLastSnapshot();
-    // if lastSnapshotId > lastInDiff.getId(), the snapshot diff associated with
-    // lastSnapshotId must have been deleted. We should call 
-    // getChildrenList(null) to get the children list for the continuous 
-    // computation. In the meanwhile, there must be some snapshot diff whose
-    // snapshot id is no less than lastSnapshotId. Otherwise the WithName node
-    // itself should have been deleted.
-    if (lastInDiff != null && lastInDiff.getId() >= lastSnapshotId) {
-      lastSnapshot = diffs.searchSnapshotById(lastSnapshotId);
-    }
+    Snapshot lastSnapshot = diffs.getSnapshotById(lastSnapshotId);
     
     ReadOnlyList<INode> childrenList = getChildrenList(lastSnapshot);
     for (INode child : childrenList) {
       child.computeQuotaUsage(counts, useCache, lastSnapshotId);
     }
     
-    counts.add(Quota.NAMESPACE, diffNum + 1);
+    counts.add(Quota.NAMESPACE, 1);
     return counts;
   }
   

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
+import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
 import org.apache.hadoop.io.Text;
@@ -129,7 +130,8 @@ class ImageLoaderCurrent implements ImageLoader {
       -40, -41, -42, -43};
   private int imageVersion = 0;
   
-  private final Map<String, String> nodeMap = new HashMap<String, String>();
+  private final Map<Long, String> subtreeMap = new HashMap<Long, String>();
+  private final Map<Long, String> dirNodeMap = new HashMap<Long, String>();
 
   /* (non-Javadoc)
    * @see ImageLoader#canProcessVersion(int)
@@ -196,7 +198,8 @@ class ImageLoaderCurrent implements ImageLoader {
         }
       }
       processINodes(in, v, numInodes, skipBlocks, supportSnapshot);
-      nodeMap.clear();
+      subtreeMap.clear();
+      dirNodeMap.clear();
 
       processINodesUC(in, v, skipBlocks);
 
@@ -441,10 +444,11 @@ class ImageLoaderCurrent implements ImageLoader {
    */
   private void processDirectoryWithSnapshot(DataInputStream in, ImageVisitor v,
       boolean skipBlocks) throws IOException {
-    // 1. load dir name
-    String dirName = FSImageSerialization.readString(in);
+    // 1. load dir node id
+    long inodeId = in.readLong();
     
-    String oldValue = nodeMap.put(dirName, dirName);
+    String dirName = dirNodeMap.get(inodeId);
+    String oldValue = subtreeMap.put(inodeId, dirName);
     if (oldValue != null) { // the subtree has been visited
       return;
     }
@@ -581,6 +585,8 @@ class ImageLoaderCurrent implements ImageLoader {
       throws IOException {
     boolean supportSnapshot = 
         LayoutVersion.supports(Feature.SNAPSHOT, imageVersion);
+    boolean supportInodeId = 
+        LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion);
     
     v.visitEnclosingElement(ImageElement.INODE);
     String pathName = FSImageSerialization.readString(in);
@@ -591,9 +597,11 @@ class ImageLoaderCurrent implements ImageLoader {
       }
     }
 
+    long inodeId = INodeId.GRANDFATHER_INODE_ID;
     v.visit(ImageElement.INODE_PATH, pathName);
-    if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
-      v.visit(ImageElement.INODE_ID, in.readLong());
+    if (supportInodeId) {
+      inodeId = in.readLong();
+      v.visit(ImageElement.INODE_ID, inodeId);
     }
     v.visit(ImageElement.REPLICATION, in.readShort());
     v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
@@ -619,6 +627,9 @@ class ImageLoaderCurrent implements ImageLoader {
         }
       }
     } else if (numBlocks == -1) { // Directory
+      if (supportSnapshot && supportInodeId) {
+        dirNodeMap.put(inodeId, pathName);
+      }
       v.visit(ImageElement.NS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
       if (LayoutVersion.supports(Feature.DISKSPACE_QUOTA, imageVersion))
         v.visit(ImageElement.DS_QUOTA, numBlocks == -1 ? in.readLong() : -1);

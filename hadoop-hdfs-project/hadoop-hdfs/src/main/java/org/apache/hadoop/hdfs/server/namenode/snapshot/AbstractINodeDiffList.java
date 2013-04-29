@@ -151,20 +151,6 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
   
   /**
-   * Search for the snapshot whose id is 1) no larger than the given id, and 2)
-   * most close to the given id
-   */
-  public final Snapshot searchSnapshotById(final int snapshotId) {
-    final int i = Collections.binarySearch(diffs, snapshotId);
-    if (i == -1) {
-      return null;
-    } else {
-      int index = i < 0 ? -i - 2 : i;
-      return diffs.get(index).getSnapshot();
-    }
-  }
-  
-  /**
    * Find the latest snapshot before a given snapshot.
    * @param anchor The returned snapshot must be taken before this given 
    *               snapshot.
@@ -201,21 +187,34 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         the corresponding snapshot state are the same. 
    */
   public final D getDiff(Snapshot snapshot) {
-    if (snapshot == null) {
-      // snapshot == null means the current state, therefore, return null.
+    return getDiffById(snapshot == null ? 
+        Snapshot.INVALID_ID : snapshot.getId());
+  }
+  
+  private final D getDiffById(final int snapshotId) {
+    if (snapshotId == Snapshot.INVALID_ID) {
       return null;
     }
-    final int i = Collections.binarySearch(diffs, snapshot.getId());
+    final int i = Collections.binarySearch(diffs, snapshotId);
     if (i >= 0) {
       // exact match
       return diffs.get(i);
     } else {
       // Exact match not found means that there were no changes between
       // given snapshot and the next state so that the diff for the given
-      // snapshot was not recorded.  Thus, return the next state.
+      // snapshot was not recorded. Thus, return the next state.
       final int j = -i - 1;
       return j < diffs.size()? diffs.get(j): null;
     }
+  }
+  
+  /**
+   * Search for the snapshot whose id is 1) no less than the given id, 
+   * and 2) most close to the given id.
+   */
+  public final Snapshot getSnapshotById(final int snapshotId) {
+    D diff = getDiffById(snapshotId);
+    return diff == null ? null : diff.getSnapshot();
   }
   
   /**

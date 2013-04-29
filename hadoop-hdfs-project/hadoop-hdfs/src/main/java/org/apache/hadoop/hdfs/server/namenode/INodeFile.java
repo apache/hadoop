@@ -342,9 +342,9 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
         dsDelta = diskspaceConsumed();
       } else if (last.getId() < lastSnapshotId) {
         dsDelta = computeFileSize(true, false) * getFileReplication();
-      } else {
-        Snapshot s = fileDiffList.searchSnapshotById(lastSnapshotId);
-        dsDelta = diskspaceConsumed(s);      
+      } else {      
+        Snapshot s = fileDiffList.getSnapshotById(lastSnapshotId);
+        dsDelta = diskspaceConsumed(s);
       }
     } else {
       dsDelta = diskspaceConsumed();
@@ -441,7 +441,7 @@ public class INodeFile extends INodeWithAdditionalFields implements BlockCollect
    *          if includesLastUcBlock == false.
    * @return file size
    */
-  private final long computeFileSize(boolean includesLastUcBlock,
+  public final long computeFileSize(boolean includesLastUcBlock,
       boolean usePreferredBlockSize4LastUcBlock) {
     if (blocks == null || blocks.length == 0) {
       return 0;

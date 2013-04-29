@@ -321,3 +321,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4578.  Restrict snapshot IDs to 24-bit wide.  (Arpit Agarwal via
   szetszwo)
+
+  HDFS-4773. Fix bugs in quota usage computation and OfflineImageViewer.
+  (Jing Zhao via szetszwo)

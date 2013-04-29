@@ -68,7 +68,10 @@ public interface FileWithSnapshot {
       long oldDiskspace = currentINode.diskspaceConsumed();
       if (removed.snapshotINode != null) {
         short replication = removed.snapshotINode.getFileReplication();
-        if (replication > currentINode.getBlockReplication()) {
+        short currentRepl = currentINode.getBlockReplication();
+        if (currentRepl == 0) {
+          oldDiskspace = currentINode.computeFileSize(true, true) * replication;
+        } else if (replication > currentRepl) {  
           oldDiskspace = oldDiskspace / currentINode.getBlockReplication()
               * replication;
         }

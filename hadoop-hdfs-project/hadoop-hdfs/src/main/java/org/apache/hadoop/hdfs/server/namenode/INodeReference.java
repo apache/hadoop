@@ -414,8 +414,11 @@ public abstract class INodeReference extends INode {
     @Override
     public final Quota.Counts computeQuotaUsage(Quota.Counts counts,
         boolean useCache, int lastSnapshotId) {
-      Preconditions.checkState(lastSnapshotId == Snapshot.INVALID_ID
-          || this.lastSnapshotId <= lastSnapshotId);
+      // if this.lastSnapshotId < lastSnapshotId, the rename of the referred 
+      // node happened before the rename of its ancestor. This should be 
+      // impossible since for WithName node we only count its children at the 
+      // time of the rename. 
+      Preconditions.checkState(this.lastSnapshotId >= lastSnapshotId);
       final INode referred = this.getReferredINode().asReference()
           .getReferredINode();
       // we cannot use cache for the referred node since its cached quota may
