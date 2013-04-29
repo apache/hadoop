@@ -318,3 +318,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4767. If a directory is snapshottable, do not replace it when clearing
   quota.  (Jing Zhao via szetszwo)
+
+  HDFS-4578.  Restrict snapshot IDs to 24-bit wide.  (Arpit Agarwal via
+  szetszwo)
