@@ -239,6 +239,23 @@
 </property>
 
 <property>
+  <name>dfs.namenode.fs-limits.min-block-size</name>
+  <value>1048576</value>
+  <description>Minimum block size in bytes, enforced by the Namenode at create
+      time. This prevents the accidental creation of files with tiny block
+      sizes (and thus many blocks), which can degrade
+      performance.</description>
+</property>
+
+<property>
+    <name>dfs.namenode.fs-limits.max-blocks-per-file</name>
+    <value>1048576</value>
+    <description>Maximum number of blocks per file, enforced by the Namenode on
+        write. This prevents the creation of extremely large files which can
+        degrade performance.</description>
+</property>
+
+<property>
   <name>dfs.namenode.edits.dir</name>
   <value>${dfs.namenode.name.dir}</value>
   <description>Determines where on the local filesystem the DFS name node
