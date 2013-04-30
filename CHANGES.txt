@@ -71,6 +71,8 @@ Release 1.2.0 - 2013.04.16
     MAPREDUCE-4824. Provide a mechanism for jobs to indicate they should not
     be recovered on JobTracker restart. (tomwhite & acmurthy via acmurthy) 
 
+    HDFS-4776. Backport SecondaryNameNode web ui.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.
