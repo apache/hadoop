@@ -213,6 +213,17 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.directory.search.timeout</name>
+  <value>10000</value>
+  <description>
+    The attribute applied to the LDAP SearchControl properties to set a
+    maximum time limit when searching and awaiting a result.
+    Set to 0 if infinite wait period is desired.
+    Default is 10 seconds. Units in milliseconds.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.service.user.name.key</name>
   <value></value>
   <description>
