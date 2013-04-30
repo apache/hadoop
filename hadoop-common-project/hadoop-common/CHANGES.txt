@@ -577,6 +577,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9503. Remove sleep between IPC client connect timeouts.
     (Varun Sharma via szetszwo)
 
+    HADOOP-9322. LdapGroupsMapping doesn't seem to set a timeout for
+    its directory search. (harsh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
