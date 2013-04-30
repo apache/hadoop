@@ -610,6 +610,28 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Sets the {@link Path}'s last modified time <em>only</em> to the given
+   * valid time.
+   *
+   * @param mtime the modification time to set (only if greater than zero).
+   * @param atime currently ignored.
+   * @throws IOException if setting the last modified time fails.
+   */
+  @Override
+  public void setTimes(Path p, long mtime, long atime) throws IOException {
+    File f = pathToFile(p);
+    if(mtime >= 0) {
+      if(!f.setLastModified(mtime)) {
+        throw new IOException(
+          "couldn't set last-modified time to " +
+          mtime +
+          " for " +
+          f.getAbsolutePath());
+      }
+    }
+  }
+
   private static String execCommand(File f, String... cmd) throws IOException {
     String[] args = new String[cmd.length + 1];
     System.arraycopy(cmd, 0, args, 0, cmd.length);
