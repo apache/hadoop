@@ -271,6 +271,9 @@ Trunk (Unreleased)
     HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
     JDK7. (Andrew Wang via atm)
 
+    HDFS-4778. Fixes some issues that the first patch on HDFS-2576 missed.
+    (ddas)
+
   BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
