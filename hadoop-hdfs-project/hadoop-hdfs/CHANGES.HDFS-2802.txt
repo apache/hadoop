@@ -326,3 +326,6 @@ Branch-2802 Snapshot (Unreleased)
   (Jing Zhao via szetszwo)
 
   HDFS-4760. Update inodeMap after node replacement.  (Jing Zhao via szetszwo)
+
+  HDFS-4758. Disallow nested snapshottable directories and unwrap
+  RemoteException.  (szetszwo)

@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
-import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -167,7 +166,7 @@ public class TestSnapshotRename {
     // Create snapshot for sub1
     SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
     
-    exception.expect(RemoteException.class);
+    exception.expect(SnapshotException.class);
     String error = "The snapshot wrongName does not exist for directory "
         + sub1.toString();
     exception.expectMessage(error);
@@ -184,7 +183,7 @@ public class TestSnapshotRename {
     SnapshotTestHelper.createSnapshot(hdfs, sub1, "s1");
     SnapshotTestHelper.createSnapshot(hdfs, sub1, "s2");
     
-    exception.expect(RemoteException.class);
+    exception.expect(SnapshotException.class);
     String error = "The snapshot s2 already exists for directory "
         + sub1.toString();
     exception.expectMessage(error);

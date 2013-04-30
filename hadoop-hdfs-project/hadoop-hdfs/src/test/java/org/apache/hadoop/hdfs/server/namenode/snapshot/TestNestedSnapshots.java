@@ -83,6 +83,8 @@ public class TestNestedSnapshots {
    */
   @Test (timeout=300000)
   public void testNestedSnapshots() throws Exception {
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+
     final Path foo = new Path("/testNestedSnapshots/foo");
     final Path bar = new Path(foo, "bar");
     final Path file1 = new Path(bar, "file1");
@@ -110,6 +112,7 @@ public class TestNestedSnapshots {
     assertFile(s1path, s2path, file1, true, true, true);
     assertFile(s1path, s2path, file2, true, false, false);
 
+    //test root
     final String rootStr = "/";
     final Path rootPath = new Path(rootStr);
     hdfs.allowSnapshot(rootPath);
@@ -120,6 +123,47 @@ public class TestNestedSnapshots {
     print("delete snapshot " + rootSnapshot);
     hdfs.disallowSnapshot(rootPath);
     print("disallow snapshot " + rootStr);
+    
+    //change foo to non-snapshottable
+    hdfs.deleteSnapshot(foo, s1name);
+    hdfs.disallowSnapshot(foo);
+    
+    //test disallow nested snapshots
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(false);
+    try {
+      hdfs.allowSnapshot(rootPath);
+      Assert.fail();
+    } catch(SnapshotException se) {
+      assertNestedSnapshotException(se, "ancestor");
+    }
+    try {
+      hdfs.allowSnapshot(foo);
+      Assert.fail();
+    } catch(SnapshotException se) {
+      assertNestedSnapshotException(se, "ancestor");
+    }
+
+    final Path sub1Bar = new Path(bar, "sub1");
+    final Path sub2Bar = new Path(sub1Bar, "sub2");
+    hdfs.mkdirs(sub2Bar);
+    try {
+      hdfs.allowSnapshot(sub1Bar);
+      Assert.fail();
+    } catch(SnapshotException se) {
+      assertNestedSnapshotException(se, "subdirectory");
+    }
+    try {
+      hdfs.allowSnapshot(sub2Bar);
+      Assert.fail();
+    } catch(SnapshotException se) {
+      assertNestedSnapshotException(se, "subdirectory");
+    }
+  }
+  
+  static void assertNestedSnapshotException(SnapshotException se, String substring) {
+    Assert.assertTrue(se.getMessage().startsWith(
+        "Nested snapshottable directories not allowed"));
+    Assert.assertTrue(se.getMessage().contains(substring));
   }
 
   private static void print(String message) throws UnresolvedLinkException {
@@ -226,22 +270,18 @@ public class TestNestedSnapshots {
       // createSnapshot should fail with quota
       hdfs.createSnapshot(dir);
       Assert.fail();
-    } catch(RemoteException re) {
-      final IOException ioe = re.unwrapRemoteException();
-      if (ioe instanceof NSQuotaExceededException) {
-        SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
-      }
+    } catch(NSQuotaExceededException e) {
+      SnapshotTestHelper.LOG.info("The exception is expected.", e);
     }
 
     try {
       // setPermission f1 should fail with quote since it cannot add diff.
       hdfs.setPermission(f1, new FsPermission((short)0));
       Assert.fail();
-    } catch(RemoteException re) {
-      final IOException ioe = re.unwrapRemoteException();
-      if (ioe instanceof NSQuotaExceededException) {
-        SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
-      }
+    } catch(RemoteException e) {
+      Assert.assertSame(NSQuotaExceededException.class,
+          e.unwrapRemoteException().getClass());
+      SnapshotTestHelper.LOG.info("The exception is expected.", e);
     }
 
     // setPermission f2 since it was created after the snapshot
@@ -294,6 +334,8 @@ public class TestNestedSnapshots {
    */
   @Test
   public void testDisallowNestedSnapshottableDir() throws Exception {
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+
     final Path dir = new Path("/dir");
     final Path sub = new Path(dir, "sub");
     hdfs.mkdirs(sub);

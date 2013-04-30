@@ -5809,7 +5809,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         .shouldAvoidStaleDataNodesForWrite();
   }
   
-  SnapshotManager getSnapshotManager() {
+  public SnapshotManager getSnapshotManager() {
     return snapshotManager;
   }
   
@@ -5826,7 +5826,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       dir.writeLock();
       try {
-        snapshotManager.setSnapshottable(path);
+        snapshotManager.setSnapshottable(path, true);
       } finally {
         dir.writeUnlock();
       }

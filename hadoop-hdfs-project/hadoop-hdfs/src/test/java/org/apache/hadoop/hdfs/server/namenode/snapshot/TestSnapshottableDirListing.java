@@ -75,6 +75,8 @@ public class TestSnapshottableDirListing {
    */
   @Test (timeout=60000)
   public void testListSnapshottableDir() throws Exception {
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+
     // Initially there is no snapshottable directories in the system
     SnapshottableDirectoryStatus[] dirs = hdfs.getSnapshottableDirListing();
     assertNull(dirs);
@@ -158,6 +160,8 @@ public class TestSnapshottableDirListing {
    */
   @Test (timeout=60000)
   public void testListWithDifferentUser() throws Exception {
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+
     // first make dir1 and dir2 snapshottable
     hdfs.allowSnapshot(dir1);
     hdfs.allowSnapshot(dir2);

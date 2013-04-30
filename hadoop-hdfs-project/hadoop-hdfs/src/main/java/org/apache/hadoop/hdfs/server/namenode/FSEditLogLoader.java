@@ -542,7 +542,7 @@ public class FSEditLogLoader {
     case OP_ALLOW_SNAPSHOT: {
       AllowSnapshotOp allowSnapshotOp = (AllowSnapshotOp) op;
       fsNamesys.getSnapshotManager().setSnapshottable(
-          allowSnapshotOp.snapshotRoot);
+          allowSnapshotOp.snapshotRoot, false);
       break;
     }
     case OP_DISALLOW_SNAPSHOT: {

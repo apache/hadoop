@@ -185,6 +185,16 @@ public abstract class INode implements Diff.Element<byte[]> {
     return this == child.asReference().getReferredINode();
   }
   
+  /** @return true if the given inode is an ancestor directory of this inode. */
+  public final boolean isAncestorDirectory(final INodeDirectory dir) {
+    for(INodeDirectory p = getParent(); p != null; p = p.getParent()) {
+      if (p == dir) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * When {@link #recordModification} is called on a referred node,
    * this method tells which snapshot the modification should be

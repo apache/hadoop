@@ -171,6 +171,8 @@ public class TestSnapshotDiffReport {
   /** Test the computation and representation of diff between snapshots */
   @Test (timeout=60000)
   public void testDiffReport() throws Exception {
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+
     Path subsub1 = new Path(sub1, "subsub1");
     Path subsubsub1 = new Path(subsub1, "subsubsub1");
     hdfs.mkdirs(subsubsub1);

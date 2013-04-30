@@ -784,6 +784,8 @@ public class TestSnapshotDeletion {
    */
   @Test (timeout=300000)
   public void testRenameSnapshotDiff() throws Exception {
+    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+
     final Path subFile0 = new Path(sub, "file0");
     final Path subsubFile0 = new Path(subsub, "file0");
     DFSTestUtil.createFile(hdfs, subFile0, BLOCKSIZE, REPLICATION, seed);
