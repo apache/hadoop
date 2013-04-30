@@ -4,6 +4,9 @@ Release 2.0.5-beta - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-4305. Add a configurable limit on number of blocks per file, and min
+    block size. (Andrew Wang via atm)
+
   NEW FEATURES
 
     HDFS-1804. Add a new block-volume device choosing policy that looks at
@@ -218,9 +221,6 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4748. MiniJournalCluster#restartJournalNode leaks resources, which 
     causes sporadic test failures. (Chris Nauroth via suresh)
-
-    HDFS-4305. Add a configurable limit on number of blocks per file, and min
-    block size. (Andrew Wang via atm)
 
 Release 2.0.4-alpha - UNRELEASED
 
