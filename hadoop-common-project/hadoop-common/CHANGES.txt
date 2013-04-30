@@ -166,6 +166,8 @@ Trunk (Unreleased)
     HADOOP-9486. Promoted Windows and Shell related utils from YARN to Hadoop
     Common. (Chris Nauroth via vinodkv)
 
+    HADOOP-8608. Add Configuration API for parsing time durations. (cdouglas)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
