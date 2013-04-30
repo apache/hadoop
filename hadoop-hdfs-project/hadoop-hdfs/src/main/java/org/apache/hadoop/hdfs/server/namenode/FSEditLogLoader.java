@@ -315,8 +315,8 @@ public class FSEditLogLoader {
       // update the block list.
       
       // Update the salient file attributes.
-      newFile.setAccessTime(addCloseOp.atime, null);
-      newFile.setModificationTime(addCloseOp.mtime, null);
+      newFile.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
+      newFile.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
     }
@@ -334,8 +334,8 @@ public class FSEditLogLoader {
       final INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
 
       // Update the salient file attributes.
-      oldFile.setAccessTime(addCloseOp.atime, null);
-      oldFile.setModificationTime(addCloseOp.mtime, null);
+      oldFile.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
+      oldFile.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file

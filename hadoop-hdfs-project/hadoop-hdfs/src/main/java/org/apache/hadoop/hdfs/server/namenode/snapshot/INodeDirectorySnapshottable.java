@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.Content.CountsMap.Key;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -274,8 +275,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   }
 
   /** Add a snapshot. */
-  Snapshot addSnapshot(int id, String name)
-      throws SnapshotException, QuotaExceededException {
+  Snapshot addSnapshot(int id, String name) throws SnapshotException,
+      QuotaExceededException {
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
@@ -296,8 +297,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     snapshotsByNames.add(-i - 1, s);
 
     //set modification time
-    updateModificationTime(Time.now(), null);
-    s.getRoot().setModificationTime(getModificationTime(), null);
+    updateModificationTime(Time.now(), null, null);
+    s.getRoot().setModificationTime(getModificationTime(), null, null);
     return s;
   }
   
@@ -455,13 +456,15 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    * Replace itself with {@link INodeDirectoryWithSnapshot} or
    * {@link INodeDirectory} depending on the latest snapshot.
    */
-  void replaceSelf(final Snapshot latest) throws QuotaExceededException {
+  INodeDirectory replaceSelf(final Snapshot latest, final INodeMap inodeMap)
+      throws QuotaExceededException {
     if (latest == null) {
       Preconditions.checkState(getLastSnapshot() == null,
           "latest == null but getLastSnapshot() != null, this=%s", this);
-      replaceSelf4INodeDirectory();
+      return replaceSelf4INodeDirectory(inodeMap);
     } else {
-      replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest);
+      return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
+          .recordModification(latest, null);
     }
   }
 

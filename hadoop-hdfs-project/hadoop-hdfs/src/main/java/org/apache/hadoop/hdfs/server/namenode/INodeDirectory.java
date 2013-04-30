@@ -113,11 +113,11 @@ public class INodeDirectory extends INodeWithAdditionalFields {
    * @param child the child inode to be removed
    * @param latest See {@link INode#recordModification(Snapshot)}.
    */
-  public boolean removeChild(INode child, Snapshot latest)
-      throws QuotaExceededException {
+  public boolean removeChild(INode child, Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
     if (isInLatestSnapshot(latest)) {
-      return replaceSelf4INodeDirectoryWithSnapshot()
-          .removeChild(child, latest);
+      return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
+          .removeChild(child, latest, inodeMap);
     }
 
     return removeChild(child);
@@ -147,59 +147,66 @@ public class INodeDirectory extends INodeWithAdditionalFields {
    * {@link INodeDirectoryWithSnapshot} depending on the latest snapshot.
    */
   INodeDirectoryWithQuota replaceSelf4Quota(final Snapshot latest,
-      final long nsQuota, final long dsQuota) throws QuotaExceededException {
+      final long nsQuota, final long dsQuota, final INodeMap inodeMap)
+      throws QuotaExceededException {
     Preconditions.checkState(!(this instanceof INodeDirectoryWithQuota),
         "this is already an INodeDirectoryWithQuota, this=%s", this);
 
     if (!this.isInLatestSnapshot(latest)) {
       final INodeDirectoryWithQuota q = new INodeDirectoryWithQuota(
           this, true, nsQuota, dsQuota);
-      replaceSelf(q);
+      replaceSelf(q, inodeMap);
       return q;
     } else {
       final INodeDirectoryWithSnapshot s = new INodeDirectoryWithSnapshot(this);
       s.setQuota(nsQuota, dsQuota);
-      return replaceSelf(s).saveSelf2Snapshot(latest, this);
+      return replaceSelf(s, inodeMap).saveSelf2Snapshot(latest, this);
     }
   }
   /** Replace itself with an {@link INodeDirectorySnapshottable}. */
   public INodeDirectorySnapshottable replaceSelf4INodeDirectorySnapshottable(
-      Snapshot latest) throws QuotaExceededException {
+      Snapshot latest, final INodeMap inodeMap) throws QuotaExceededException {
     Preconditions.checkState(!(this instanceof INodeDirectorySnapshottable),
         "this is already an INodeDirectorySnapshottable, this=%s", this);
     final INodeDirectorySnapshottable s = new INodeDirectorySnapshottable(this);
-    replaceSelf(s).saveSelf2Snapshot(latest, this);
+    replaceSelf(s, inodeMap).saveSelf2Snapshot(latest, this);
     return s;
   }
 
   /** Replace itself with an {@link INodeDirectoryWithSnapshot}. */
-  public INodeDirectoryWithSnapshot replaceSelf4INodeDirectoryWithSnapshot() {
-    return replaceSelf(new INodeDirectoryWithSnapshot(this));
+  public INodeDirectoryWithSnapshot replaceSelf4INodeDirectoryWithSnapshot(
+      final INodeMap inodeMap) {
+    return replaceSelf(new INodeDirectoryWithSnapshot(this), inodeMap);
   }
 
   /** Replace itself with {@link INodeDirectory}. */
-  public INodeDirectory replaceSelf4INodeDirectory() {
+  public INodeDirectory replaceSelf4INodeDirectory(final INodeMap inodeMap) {
     Preconditions.checkState(getClass() != INodeDirectory.class,
         "the class is already INodeDirectory, this=%s", this);
-    return replaceSelf(new INodeDirectory(this, true));
+    return replaceSelf(new INodeDirectory(this, true), inodeMap);
   }
 
   /** Replace itself with the given directory. */
-  private final <N extends INodeDirectory> N replaceSelf(final N newDir) {
+  private final <N extends INodeDirectory> N replaceSelf(final N newDir,
+      final INodeMap inodeMap) {
     final INodeReference ref = getParentReference();
     if (ref != null) {
       ref.setReferredINode(newDir);
+      if (inodeMap != null) {
+        inodeMap.put(newDir);
+      }
     } else {
       final INodeDirectory parent = getParent();
       Preconditions.checkArgument(parent != null, "parent is null, this=%s", this);
-      parent.replaceChild(this, newDir);
+      parent.replaceChild(this, newDir, inodeMap);
     }
     clear();
     return newDir;
   }
 
   /** Replace the given child with a new child. */
-  public void replaceChild(INode oldChild, final INode newChild) {
+  public void replaceChild(INode oldChild, final INode newChild,
+      final INodeMap inodeMap) {
     Preconditions.checkNotNull(children);
     final int i = searchChildren(newChild.getLocalNameBytes());
     Preconditions.checkState(i >= 0);
@@ -220,8 +227,11 @@ public class INodeDirectory extends INodeWithAdditionalFields {
             (WithCount) oldChild.asReference().getReferredINode();
         withCount.removeReference(oldChild.asReference());
       }
-      // do the replacement
       children.set(i, newChild);
+    }
+    // update the inodeMap
+    if (inodeMap != null) {
+      inodeMap.put(newChild);
     }
   }
 
@@ -241,43 +251,47 @@ public class INodeDirectory extends INodeWithAdditionalFields {
     }
     final INodeReference.WithName ref = new INodeReference.WithName(this,
         withCount, oldChild.getLocalNameBytes(), latest.getId());
-    replaceChild(oldChild, ref);
+    replaceChild(oldChild, ref, null);
     return ref;
   }
   
-  private void replaceChildFile(final INodeFile oldChild, final INodeFile newChild) {
-    replaceChild(oldChild, newChild);
+  private void replaceChildFile(final INodeFile oldChild,
+      final INodeFile newChild, final INodeMap inodeMap) {
+    replaceChild(oldChild, newChild, inodeMap);
     oldChild.clear();
     newChild.updateBlockCollection();
   }
 
   /** Replace a child {@link INodeFile} with an {@link INodeFileWithSnapshot}. */
   INodeFileWithSnapshot replaceChild4INodeFileWithSnapshot(
-      final INodeFile child) {
+      final INodeFile child, final INodeMap inodeMap) {
     Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
         "Child file is already an INodeFileWithSnapshot, child=" + child);
     final INodeFileWithSnapshot newChild = new INodeFileWithSnapshot(child);
-    replaceChildFile(child, newChild);
+    replaceChildFile(child, newChild, inodeMap);
     return newChild;
   }
 
   /** Replace a child {@link INodeFile} with an {@link INodeFileUnderConstructionWithSnapshot}. */
   INodeFileUnderConstructionWithSnapshot replaceChild4INodeFileUcWithSnapshot(
-      final INodeFileUnderConstruction child) {
+      final INodeFileUnderConstruction child, final INodeMap inodeMap) {
     Preconditions.checkArgument(!(child instanceof INodeFileUnderConstructionWithSnapshot),
         "Child file is already an INodeFileUnderConstructionWithSnapshot, child=" + child);
     final INodeFileUnderConstructionWithSnapshot newChild
         = new INodeFileUnderConstructionWithSnapshot(child, null);
-    replaceChildFile(child, newChild);
+    replaceChildFile(child, newChild, inodeMap);
     return newChild;
   }
 
   @Override
-  public INodeDirectory recordModification(Snapshot latest)
-      throws QuotaExceededException {
-    return isInLatestSnapshot(latest)?
-        replaceSelf4INodeDirectoryWithSnapshot().recordModification(latest)
-        : this;
+  public INodeDirectory recordModification(Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
+    if (isInLatestSnapshot(latest)) {
+      return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
+          .recordModification(latest, inodeMap);
+    } else {
+      return this;
+    }
   }
 
   /**
@@ -286,12 +300,13 @@ public class INodeDirectory extends INodeWithAdditionalFields {
    * @return the child inode, which may be replaced.
    */
   public INode saveChild2Snapshot(final INode child, final Snapshot latest,
-      final INode snapshotCopy) throws QuotaExceededException {
+      final INode snapshotCopy, final INodeMap inodeMap)
+      throws QuotaExceededException {
     if (latest == null) {
       return child;
     }
-    return replaceSelf4INodeDirectoryWithSnapshot()
-        .saveChild2Snapshot(child, latest, snapshotCopy);
+    return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
+        .saveChild2Snapshot(child, latest, snapshotCopy, inodeMap);
   }
 
   /**
@@ -378,24 +393,28 @@ public class INodeDirectory extends INodeWithAdditionalFields {
    * @param setModTime set modification time for the parent node
    *                   not needed when replaying the addition and 
    *                   the parent already has the proper mod time
+   * @param inodeMap update the inodeMap if the directory node gets replaced
    * @return false if the child with this name already exists; 
    *         otherwise, return true;
    */
   public boolean addChild(INode node, final boolean setModTime,
-      final Snapshot latest) throws QuotaExceededException {
+      final Snapshot latest, final INodeMap inodeMap)
+      throws QuotaExceededException {
     final int low = searchChildren(node.getLocalNameBytes());
     if (low >= 0) {
       return false;
     }
 
     if (isInLatestSnapshot(latest)) {
-      return replaceSelf4INodeDirectoryWithSnapshot()
-          .addChild(node, setModTime, latest);
+      INodeDirectoryWithSnapshot sdir = 
+          replaceSelf4INodeDirectoryWithSnapshot(inodeMap);
+      boolean added = sdir.addChild(node, setModTime, latest, inodeMap);
+      return added;
     }
     addChild(node, low);
     if (setModTime) {
       // update modification time of the parent directory
-      updateModificationTime(node.getModificationTime(), latest);
+      updateModificationTime(node.getModificationTime(), latest, inodeMap);
     }
     return true;
   }

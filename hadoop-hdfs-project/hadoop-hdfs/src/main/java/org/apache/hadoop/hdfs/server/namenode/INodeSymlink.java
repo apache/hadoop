@@ -46,10 +46,13 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  INode recordModification(Snapshot latest) throws QuotaExceededException {
-    return isInLatestSnapshot(latest)?
-        getParent().saveChild2Snapshot(this, latest, new INodeSymlink(this))
-        : this;
+  INode recordModification(Snapshot latest, final INodeMap inodeMap)
+      throws QuotaExceededException {
+    if (isInLatestSnapshot(latest)) {
+      INodeDirectory parent = getParent();
+      parent.saveChild2Snapshot(this, latest, new INodeSymlink(this), inodeMap);
+    }
+    return this;
   }
 
   /** @return true unconditionally. */

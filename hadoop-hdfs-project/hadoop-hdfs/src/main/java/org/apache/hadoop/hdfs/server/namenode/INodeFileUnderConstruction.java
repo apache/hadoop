@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -130,12 +131,16 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   }
   
   @Override
-  public INodeFileUnderConstruction recordModification(final Snapshot latest)
-      throws QuotaExceededException {
-    return isInLatestSnapshot(latest)?
-        getParent().replaceChild4INodeFileUcWithSnapshot(this)
-            .recordModification(latest)
-        : this;
+  public INodeFileUnderConstruction recordModification(final Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
+    if (isInLatestSnapshot(latest)) {
+      INodeFileUnderConstructionWithSnapshot newFile = getParent()
+          .replaceChild4INodeFileUcWithSnapshot(this, inodeMap)
+          .recordModification(latest, inodeMap);
+      return newFile;
+    } else {
+      return this;
+    }
   }
 
   /** Assert all blocks are complete. */

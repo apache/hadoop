@@ -1990,7 +1990,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlock prepareFileForWrite(String src, INodeFile file,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog, Snapshot latestSnapshot) throws IOException {
-    file = file.recordModification(latestSnapshot);
+    file = file.recordModification(latestSnapshot, dir.getINodeMap());
     final INodeFileUnderConstruction cons = file.toUnderConstruction(
         leaseHolder, clientMachine, clientNode);
 
@@ -3400,7 +3400,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasWriteLock();
     leaseManager.removeLease(pendingFile.getClientName(), src);
     
-    pendingFile = pendingFile.recordModification(latestSnapshot);
+    pendingFile = pendingFile.recordModification(latestSnapshot,
+        dir.getINodeMap());
 
     // The file is no longer pending.
     // Create permanent INode, update blocks
@@ -5823,7 +5824,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       checkSuperuserPrivilege();
 
-      snapshotManager.setSnapshottable(path);
+      dir.writeLock();
+      try {
+        snapshotManager.setSnapshottable(path);
+      } finally {
+        dir.writeUnlock();
+      }
       getEditLog().logAllowSnapshot(path);
     } finally {
       writeUnlock();
@@ -5846,7 +5852,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       checkSuperuserPrivilege();
 
-      snapshotManager.resetSnapshottable(path);
+      dir.writeLock();
+      try {
+        snapshotManager.resetSnapshottable(path);
+      } finally {
+        dir.writeUnlock();
+      }
       getEditLog().logDisallowSnapshot(path);
     } finally {
       writeUnlock();

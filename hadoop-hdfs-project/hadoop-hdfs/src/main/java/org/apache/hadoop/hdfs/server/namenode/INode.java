@@ -96,9 +96,9 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract void setUser(String user);
 
   /** Set user */
-  final INode setUser(String user, Snapshot latest)
+  final INode setUser(String user, Snapshot latest, INodeMap inodeMap)
       throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest);
+    final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setUser(user);
     return nodeToUpdate;
   }
@@ -119,9 +119,9 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract void setGroup(String group);
 
   /** Set group */
-  final INode setGroup(String group, Snapshot latest)
+  final INode setGroup(String group, Snapshot latest, INodeMap inodeMap)
       throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest);
+    final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setGroup(group);
     return nodeToUpdate;
   }
@@ -143,9 +143,9 @@ public abstract class INode implements Diff.Element<byte[]> {
   abstract void setPermission(FsPermission permission);
 
   /** Set the {@link FsPermission} of this {@link INode} */
-  INode setPermission(FsPermission permission, Snapshot latest)
-      throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest);
+  INode setPermission(FsPermission permission, Snapshot latest,
+      INodeMap inodeMap) throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setPermission(permission);
     return nodeToUpdate;
   }
@@ -219,12 +219,14 @@ public abstract class INode implements Diff.Element<byte[]> {
    *
    * @param latest the latest snapshot that has been taken.
    *        Note that it is null if no snapshots have been taken.
+   * @param inodeMap while recording modification, the inode or its parent may 
+   *                 get replaced, and the inodeMap needs to be updated.
    * @return The current inode, which usually is the same object of this inode.
    *         However, in some cases, this inode may be replaced with a new inode
    *         for maintaining snapshots. The current inode is then the new inode.
    */
-  abstract INode recordModification(final Snapshot latest)
-      throws QuotaExceededException;
+  abstract INode recordModification(final Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException;
 
   /** Check whether it's a reference. */
   public boolean isReference() {
@@ -564,16 +566,16 @@ public abstract class INode implements Diff.Element<byte[]> {
   }
 
   /** Update modification time if it is larger than the current value. */
-  public abstract INode updateModificationTime(long mtime, Snapshot latest)
-      throws QuotaExceededException;
+  public abstract INode updateModificationTime(long mtime, Snapshot latest,
+      INodeMap inodeMap) throws QuotaExceededException;
 
   /** Set the last modification time of inode. */
   public abstract void setModificationTime(long modificationTime);
 
   /** Set the last modification time of inode. */
-  public final INode setModificationTime(long modificationTime, Snapshot latest)
-      throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest);
+  public final INode setModificationTime(long modificationTime,
+      Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setModificationTime(modificationTime);
     return nodeToUpdate;
   }
@@ -599,9 +601,9 @@ public abstract class INode implements Diff.Element<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, Snapshot latest)
-      throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest);
+  public final INode setAccessTime(long accessTime, Snapshot latest,
+      INodeMap inodeMap) throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setAccessTime(accessTime);
     return nodeToUpdate;
   }

@@ -82,7 +82,8 @@ public class SnapshotManager implements SnapshotStats {
       s = (INodeDirectorySnapshottable)d; 
       s.setSnapshotQuota(INodeDirectorySnapshottable.SNAPSHOT_LIMIT);
     } else {
-      s = d.replaceSelf4INodeDirectorySnapshottable(iip.getLatestSnapshot());
+      s = d.replaceSelf4INodeDirectorySnapshottable(iip.getLatestSnapshot(),
+          fsdir.getINodeMap());
     }
     addSnapshottable(s);
   }
@@ -124,7 +125,7 @@ public class SnapshotManager implements SnapshotStats {
     if (s == fsdir.getRoot()) {
       s.setSnapshotQuota(0); 
     } else {
-      s.replaceSelf(iip.getLatestSnapshot());
+      s.replaceSelf(iip.getLatestSnapshot(), fsdir.getINodeMap());
     }
     removeSnapshottable(s);
   }

@@ -28,7 +28,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -160,10 +159,6 @@ public class INodesInPath {
                 && curNode.asDirectory() instanceof INodeDirectoryWithSnapshot) {
               lastSnapshot = ((INodeDirectoryWithSnapshot) curNode
                   .asDirectory()).getLastSnapshot();
-            } else if (curNode.isFile()
-                && curNode.asFile() instanceof INodeFileWithSnapshot) {
-              lastSnapshot = ((INodeFileWithSnapshot) curNode
-                  .asFile()).getDiffs().getLastSnapshot();
             }
             existing.setSnapshot(lastSnapshot);
           }

@@ -324,3 +324,5 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4773. Fix bugs in quota usage computation and OfflineImageViewer.
   (Jing Zhao via szetszwo)
+
+  HDFS-4760. Update inodeMap after node replacement.  (Jing Zhao via szetszwo)

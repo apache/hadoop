@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -634,8 +635,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public INodeDirectoryWithSnapshot recordModification(final Snapshot latest)
-      throws QuotaExceededException {
+  public INodeDirectoryWithSnapshot recordModification(final Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
     if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
       return saveSelf2Snapshot(latest, null);
     }
@@ -652,7 +653,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   @Override
   public INode saveChild2Snapshot(final INode child, final Snapshot latest,
-      final INode snapshotCopy) throws QuotaExceededException {
+      final INode snapshotCopy, final INodeMap inodeMap)
+      throws QuotaExceededException {
     Preconditions.checkArgument(!child.isDirectory(),
         "child is a directory, child=%s", child);
     if (latest == null) {
@@ -670,15 +672,15 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public boolean addChild(INode inode, boolean setModTime, Snapshot latest)
-      throws QuotaExceededException {
+  public boolean addChild(INode inode, boolean setModTime, Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
     ChildrenDiff diff = null;
     Integer undoInfo = null;
     if (latest != null) {
       diff = diffs.checkAndAddLatestSnapshotDiff(latest, this).diff;
       undoInfo = diff.create(inode);
     }
-    final boolean added = super.addChild(inode, setModTime, null);
+    final boolean added = super.addChild(inode, setModTime, null, inodeMap);
     if (!added && undoInfo != null) {
       diff.undoCreate(inode, undoInfo);
     }
@@ -686,8 +688,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public boolean removeChild(INode child, Snapshot latest)
-      throws QuotaExceededException {
+  public boolean removeChild(INode child, Snapshot latest,
+      final INodeMap inodeMap) throws QuotaExceededException {
     ChildrenDiff diff = null;
     UndoInfo<INode> undoInfo = null;
     if (latest != null) {
@@ -705,8 +707,9 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
   
   @Override
-  public void replaceChild(final INode oldChild, final INode newChild) {
-    super.replaceChild(oldChild, newChild);
+  public void replaceChild(final INode oldChild, final INode newChild,
+      final INodeMap inodeMap) {
+    super.replaceChild(oldChild, newChild, inodeMap);
     diffs.replaceChild(ListType.CREATED, oldChild, newChild);
   }
   
@@ -747,7 +750,9 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       throws QuotaExceededException {
     diffs.removeChild(ListType.DELETED, oldChild);
     diffs.replaceChild(ListType.CREATED, oldChild, newChild);
-    addChild(newChild, true, null);
+    // pass null for inodeMap since the parent node will not get replaced when
+    // undoing rename
+    addChild(newChild, true, null, null);
   }
   
   /**
@@ -759,8 +764,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       Snapshot latestSnapshot) throws QuotaExceededException {
     boolean removeDeletedChild = diffs.removeChild(ListType.DELETED,
         deletedChild);
+    // pass null for inodeMap since the parent node will not get replaced when
+    // undoing rename
     final boolean added = addChild(deletedChild, true, removeDeletedChild ? null
-        : latestSnapshot);
+        : latestSnapshot, null);
     // update quota usage if adding is successfully and the old child has not
     // been stored in deleted list before
     if (added && !removeDeletedChild) {
@@ -804,7 +811,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       throws QuotaExceededException {
     Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == null) { // delete the current directory
-      recordModification(prior);
+      recordModification(prior, null);
       // delete everything in created list
       DirectoryDiff lastDiff = diffs.getLast();
       if (lastDiff != null) {

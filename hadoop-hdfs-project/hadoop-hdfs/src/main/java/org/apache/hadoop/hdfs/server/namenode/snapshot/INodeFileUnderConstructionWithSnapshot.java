@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
+import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
@@ -78,7 +79,8 @@ public class INodeFileUnderConstructionWithSnapshot
 
   @Override
   public INodeFileUnderConstructionWithSnapshot recordModification(
-      final Snapshot latest) throws QuotaExceededException {
+      final Snapshot latest, final INodeMap inodeMap)
+      throws QuotaExceededException {
     if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
       diffs.saveSelf2Snapshot(latest, this, null);
     }
@@ -100,7 +102,7 @@ public class INodeFileUnderConstructionWithSnapshot
       final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
       throws QuotaExceededException {
     if (snapshot == null) { // delete the current file
-      recordModification(prior);
+      recordModification(prior, null);
       isCurrentFileDeleted = true;
       Util.collectBlocksAndClear(this, collectedBlocks, removedINodes);
       return Quota.Counts.newInstance();

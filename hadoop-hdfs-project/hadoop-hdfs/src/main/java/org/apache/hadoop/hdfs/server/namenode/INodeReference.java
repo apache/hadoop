@@ -197,9 +197,9 @@ public abstract class INodeReference extends INode {
   }
   
   @Override
-  public final INode updateModificationTime(long mtime, Snapshot latest)
-      throws QuotaExceededException {
-    return referred.updateModificationTime(mtime, latest);
+  public final INode updateModificationTime(long mtime, Snapshot latest,
+      INodeMap inodeMap) throws QuotaExceededException {
+    return referred.updateModificationTime(mtime, latest, inodeMap);
   }
   
   @Override
@@ -218,8 +218,9 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final INode recordModification(Snapshot latest) throws QuotaExceededException {
-    referred.recordModification(latest);
+  final INode recordModification(Snapshot latest, final INodeMap inodeMap)
+      throws QuotaExceededException {
+    referred.recordModification(latest, inodeMap);
     // reference is never replaced 
     return this;
   }
