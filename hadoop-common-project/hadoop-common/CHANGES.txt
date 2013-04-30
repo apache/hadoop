@@ -546,6 +546,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-8415. Add getDouble() and setDouble() in
     org.apache.hadoop.conf.Configuration (Jan van der Lugt via harsh)
 
+    HADOOP-9338. FsShell Copy Commands Should Optionally Preserve File
+    Attributes. (Nick White via atm)
+
   IMPROVEMENTS
 
     HADOOP-9253. Capture ulimit info in the logs at service start time.

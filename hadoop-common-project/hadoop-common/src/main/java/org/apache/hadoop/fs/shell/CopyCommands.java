@@ -129,17 +129,19 @@ class CopyCommands {
 
   static class Cp extends CommandWithDestination {
     public static final String NAME = "cp";
-    public static final String USAGE = "<src> ... <dst>";
+    public static final String USAGE = "[-f] [-p] <src> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src> to a\n" +
       "destination.  When copying multiple files, the destination\n" +
-      "must be a directory.";
+      "must be a directory. Passing -p preserves access and\n" +
+      "modification times, ownership and the mode.\n";
     
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f");
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f", "p");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
+      setPreserve(cf.getOpt("p"));
       // should have a -r option
       setRecursive(true);
       getRemoteDestination(args);
@@ -152,20 +154,23 @@ class CopyCommands {
   public static class Get extends CommandWithDestination {
     public static final String NAME = "get";
     public static final String USAGE =
-      "[-ignoreCrc] [-crc] <src> ... <localdst>";
+      "[-p] [-ignoreCrc] [-crc] <src> ... <localdst>";
     public static final String DESCRIPTION =
       "Copy files that match the file pattern <src>\n" +
       "to the local name.  <src> is kept.  When copying multiple,\n" +
-      "files, the destination must be a directory.";
+      "files, the destination must be a directory. Passing\n" +
+      "-p preserves access and modification times,\n" +
+      "ownership and the mode.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
       CommandFormat cf = new CommandFormat(
-          1, Integer.MAX_VALUE, "crc", "ignoreCrc");
+          1, Integer.MAX_VALUE, "crc", "ignoreCrc", "p");
       cf.parse(args);
       setWriteChecksum(cf.getOpt("crc"));
       setVerifyChecksum(!cf.getOpt("ignoreCrc"));
+      setPreserve(cf.getOpt("p"));
       setRecursive(true);
       getLocalDestination(args);
     }
@@ -176,16 +181,20 @@ class CopyCommands {
    */
   public static class Put extends CommandWithDestination {
     public static final String NAME = "put";
-    public static final String USAGE = "<localsrc> ... <dst>";
+    public static final String USAGE = "[-f] [-p] <localsrc> ... <dst>";
     public static final String DESCRIPTION =
       "Copy files from the local file system\n" +
-      "into fs.";
+      "into fs. Copying fails if the file already\n" +
+      "exists, unless the -f flag is given. Passing\n" +
+      "-p preserves access and modification times,\n" +
+      "ownership and the mode.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f");
+      CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "f", "p");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
+      setPreserve(cf.getOpt("p"));
       getRemoteDestination(args);
       // should have a -r option
       setRecursive(true);
