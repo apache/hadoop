@@ -38,7 +38,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -72,7 +71,6 @@ import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -83,15 +81,11 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -266,48 +260,61 @@ public class ClientRMService extends AbstractService implements
     ApplicationSubmissionContext submissionContext = request
         .getApplicationSubmissionContext();
     ApplicationId applicationId = submissionContext.getApplicationId();
-    String user = submissionContext.getAMContainerSpec().getUser();
+
+    // ApplicationSubmissionContext needs to be validated for safety - only
+    // those fields that are independent of the RM's configuration will be
+    // checked here, those that are dependent on RM configuration are validated
+    // in RMAppManager.
+
+    String user = null;
     try {
+      // Safety
       user = UserGroupInformation.getCurrentUser().getShortUserName();
-      if (rmContext.getRMApps().get(applicationId) != null) {
-        throw new IOException("Application with id " + applicationId
-            + " is already present! Cannot add a duplicate!");
-      }
-
-      // Safety 
       submissionContext.getAMContainerSpec().setUser(user);
+    } catch (IOException ie) {
+      LOG.warn("Unable to get the current user.", ie);
+      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
+          ie.getMessage(), "ClientRMService",
+          "Exception in submitting application", applicationId);
+      throw RPCUtil.getRemoteException(ie);
+    }
 
-      // Check whether AM resource requirements are within required limits
-      if (!submissionContext.getUnmanagedAM()) {
-        ResourceRequest amReq = BuilderUtils.newResourceRequest(
-            RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-            submissionContext.getResource(), 1);
-        try {
-          SchedulerUtils.validateResourceRequest(amReq,
-              scheduler.getMaximumResourceCapability());
-        } catch (InvalidResourceRequestException e) {
-          LOG.warn("RM app submission failed in validating AM resource request"
-              + " for application " + applicationId, e);
-          throw RPCUtil.getRemoteException(e);
-        }
-      }
+    // Though duplication will checked again when app is put into rmContext,
+    // but it is good to fail the invalid submission as early as possible.
+    if (rmContext.getRMApps().get(applicationId) != null) {
+      String message = "Application with id " + applicationId +
+          " is already present! Cannot add a duplicate!";
+      LOG.warn(message);
+      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
+          message, "ClientRMService", "Exception in submitting application",
+          applicationId);
+      throw RPCUtil.getRemoteException(message);
+    }
 
-      // This needs to be synchronous as the client can query 
-      // immediately following the submission to get the application status.
-      // So call handle directly and do not send an event.
-      rmAppManager.handle(new RMAppManagerSubmitEvent(submissionContext, System
-          .currentTimeMillis()));
+    if (submissionContext.getQueue() == null) {
+      submissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+    }
+    if (submissionContext.getApplicationName() == null) {
+      submissionContext.setApplicationName(
+          YarnConfiguration.DEFAULT_APPLICATION_NAME);
+    }
+
+    try {
+      // call RMAppManager to submit application directly
+      rmAppManager.submitApplication(submissionContext,
+          System.currentTimeMillis(), false);
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);
       RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
           "ClientRMService", applicationId);
-    } catch (IOException ie) {
-      LOG.info("Exception in submitting application", ie);
-      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST, 
-          ie.getMessage(), "ClientRMService",
+    } catch (YarnRemoteException e) {
+      LOG.info("Exception in submitting application with id " +
+          applicationId.getId(), e);
+      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
+          e.getMessage(), "ClientRMService",
           "Exception in submitting application", applicationId);
-      throw RPCUtil.getRemoteException(ie);
+      throw e;
     }
 
     SubmitApplicationResponse response = recordFactory

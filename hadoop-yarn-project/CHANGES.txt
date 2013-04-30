@@ -197,6 +197,10 @@ Release 2.0.5-beta - UNRELEASED
     YARN-591. Moved RM recovery related records out of public API as they do not
     belong there. (vinodkv)
 
+    YARN-599. Refactoring submitApplication in ClientRMService and RMAppManager
+    to separate out various validation checks depending on whether they rely on
+    RM configuration or not. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
