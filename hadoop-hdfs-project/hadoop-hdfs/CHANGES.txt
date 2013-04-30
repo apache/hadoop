@@ -397,6 +397,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
 
+    HDFS-4305. Add a configurable limit on number of blocks per file, and min
+    block size. (Andrew Wang via atm)
+
   NEW FEATURES
 
     HDFS-1804. Add a new block-volume device choosing policy that looks at
@@ -613,9 +616,6 @@ Release 2.0.5-beta - UNRELEASED
     causes sporadic test failures. (Chris Nauroth via suresh)
 
     HDFS-4733. Make HttpFS username pattern configurable. (tucu via atm)
-
-    HDFS-4305. Add a configurable limit on number of blocks per file, and min
-    block size. (Andrew Wang via atm)
 
 Release 2.0.4-alpha - UNRELEASED
 
