@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.test.MockitoUtil;
+import org.apache.hadoop.util.Shell;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -73,6 +74,17 @@ public class TestDFSHAAdmin {
   private static String HOST_A = "1.2.3.1";
   private static String HOST_B = "1.2.3.2";
 
+  // Fencer shell commands that always return true and false respectively
+  // on Unix.
+  private static String FENCER_TRUE_COMMAND_UNIX = "shell(true)";
+  private static String FENCER_FALSE_COMMAND_UNIX = "shell(false)";
+
+  // Fencer shell commands that always return true and false respectively
+  // on Windows. Lacking POSIX 'true' and 'false' commands we use the DOS
+  // commands 'rem' and 'help.exe'.
+  private static String FENCER_TRUE_COMMAND_WINDOWS = "shell(rem)";
+  private static String FENCER_FALSE_COMMAND_WINDOWS = "shell(help.exe /? >NUL)";
+
   private HdfsConfiguration getHAConf() {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, NSID);    
@@ -87,6 +99,16 @@ public class TestDFSHAAdmin {
             DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, NSID, "nn2"),
         HOST_B + ":12345");
     return conf;
+  }
+
+  public static String getFencerTrueCommand() {
+    return Shell.WINDOWS ?
+        FENCER_TRUE_COMMAND_WINDOWS : FENCER_TRUE_COMMAND_UNIX;
+  }
+
+  public static String getFencerFalseCommand() {
+    return Shell.WINDOWS ?
+        FENCER_FALSE_COMMAND_WINDOWS : FENCER_FALSE_COMMAND_UNIX;
   }
 
   @Before
@@ -173,7 +195,7 @@ public class TestDFSHAAdmin {
     // Turn on auto-HA in the config
     HdfsConfiguration conf = getHAConf();
     conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
 
     // Should fail without the forcemanual flag
@@ -250,7 +272,7 @@ public class TestDFSHAAdmin {
   public void testFailoverWithFencerConfigured() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "nn1", "nn2"));
   }
@@ -259,7 +281,7 @@ public class TestDFSHAAdmin {
   public void testFailoverWithFencerAndNameservice() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-ns", "ns1", "-failover", "nn1", "nn2"));
   }
@@ -268,7 +290,7 @@ public class TestDFSHAAdmin {
   public void testFailoverWithFencerConfiguredAndForce() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
   }
@@ -277,7 +299,7 @@ public class TestDFSHAAdmin {
   public void testFailoverWithForceActive() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forceactive"));
   }
@@ -286,7 +308,7 @@ public class TestDFSHAAdmin {
   public void testFailoverWithInvalidFenceArg() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "notforcefence"));
   }
@@ -312,7 +334,7 @@ public class TestDFSHAAdmin {
     // Turn on auto-HA in the config
     HdfsConfiguration conf = getHAConf();
     conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
 
     assertEquals(0, runTool("-failover", "nn1", "nn2"));
@@ -323,7 +345,7 @@ public class TestDFSHAAdmin {
   public void testForceFenceOptionListedBeforeArgs() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "--forcefence", "nn1", "nn2"));
   }
@@ -359,23 +381,23 @@ public class TestDFSHAAdmin {
     
     HdfsConfiguration conf = getHAConf();
     // Set the default fencer to succeed
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
     
     // Set the NN-specific fencer to fail. Should fail to fence.
-    conf.set(nnSpecificKey, "shell(false)");
+    conf.set(nnSpecificKey, getFencerFalseCommand());
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
     conf.unset(nnSpecificKey);
 
     // Set an NS-specific fencer to fail. Should fail.
-    conf.set(nsSpecificKey, "shell(false)");
+    conf.set(nsSpecificKey, getFencerFalseCommand());
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
     
     // Set the NS-specific fencer to succeed. Should succeed
-    conf.set(nsSpecificKey, "shell(true)");
+    conf.set(nsSpecificKey, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
   }

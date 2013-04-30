@@ -373,6 +373,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private final long maxFsObjects;          // maximum number of fs objects
 
+  private final long minBlockSize;         // minimum block size
+  private final long maxBlocksPerFile;     // maximum # of blocks per file
+
   /**
    * The global generation stamp for this file system. 
    */
@@ -604,6 +607,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
 
+      this.minBlockSize = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_DEFAULT);
+      this.maxBlocksPerFile = conf.getLong(DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT);
       this.accessTimePrecision = conf.getLong(DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
           DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT);
       this.supportAppends = conf.getBoolean(DFS_SUPPORT_APPEND_KEY, DFS_SUPPORT_APPEND_DEFAULT);
@@ -1838,6 +1845,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final HdfsFileStatus stat;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
+    if (blockSize < minBlockSize) {
+      throw new IOException("Specified block size is less than configured" +
+          " minimum value (" + DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY
+          + "): " + blockSize + " < " + minBlockSize);
+    }
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
@@ -2260,7 +2272,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // This is a retry. Just return the last block.
         return onRetryBlock[0];
       }
-
+      if (pendingFile.getBlocks().length >= maxBlocksPerFile) {
+        throw new IOException("File has reached the limit on maximum number of"
+            + " blocks (" + DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY
+            + "): " + pendingFile.getBlocks().length + " >= "
+            + maxBlocksPerFile);
+      }
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
       replication = pendingFile.getFileReplication();

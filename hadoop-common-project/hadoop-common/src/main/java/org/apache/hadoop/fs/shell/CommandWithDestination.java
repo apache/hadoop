@@ -45,6 +45,7 @@ import org.apache.hadoop.io.IOUtils;
 abstract class CommandWithDestination extends FsCommand {  
   protected PathData dst;
   private boolean overwrite = false;
+  private boolean preserve = false;
   private boolean verifyChecksum = true;
   private boolean writeChecksum = true;
   
@@ -66,6 +67,16 @@ abstract class CommandWithDestination extends FsCommand {
     writeChecksum = flag;
   }
   
+  /**
+   * If true, the last modified time, last access time,
+   * owner, group and permission information of the source
+   * file will be preserved as far as target {@link FileSystem}
+   * implementation allows.
+   */
+  protected void setPreserve(boolean preserve) {
+    this.preserve = preserve;
+  }
+
   /**
    *  The last arg is expected to be a local path, if only one argument is
    *  given then the destination will be the current directory 
@@ -227,6 +238,19 @@ abstract class CommandWithDestination extends FsCommand {
     try {
       in = src.fs.open(src.path);
       copyStreamToTarget(in, target);
+      if(preserve) {
+        target.fs.setTimes(
+          target.path,
+          src.stat.getModificationTime(),
+          src.stat.getAccessTime());
+        target.fs.setOwner(
+          target.path,
+          src.stat.getOwner(),
+          src.stat.getGroup());
+        target.fs.setPermission(
+          target.path,
+          src.stat.getPermission());
+      }
     } finally {
       IOUtils.closeStream(in);
     }

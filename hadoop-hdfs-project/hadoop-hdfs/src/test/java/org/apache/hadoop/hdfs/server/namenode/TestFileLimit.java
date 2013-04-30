@@ -28,7 +28,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 
@@ -158,5 +161,60 @@ public class TestFileLimit {
     simulatedStorage = true;
     testFileLimit();
     simulatedStorage = false;
+  }
+
+  @Test(timeout=60000)
+  public void testMaxBlocksPerFileLimit() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    // Make a small block size and a low limit
+    final long blockSize = 4096;
+    final long numBlocks = 2;
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY, numBlocks);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    HdfsDataOutputStream fout =
+        (HdfsDataOutputStream)fs.create(new Path("/testmaxfilelimit"));
+    try {
+      // Write maximum number of blocks
+      fout.write(new byte[(int)blockSize*(int)numBlocks]);
+      fout.hflush();
+      // Try to write one more block
+      try {
+        fout.write(new byte[1]);
+        fout.hflush();
+        assert false : "Expected IOException after writing too many blocks";
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("File has reached the limit" +
+            " on maximum number of", e);
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testMinBlockSizeLimit() throws Exception {
+    final long blockSize = 4096;
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+
+    try {
+      // Try with min block size
+      fs.create(new Path("/testmblock1"), true, 4096, (short)3, blockSize);
+      try {
+        // Try with min block size - 1
+        fs.create(new Path("/testmblock2"), true, 4096, (short)3, blockSize-1);
+        assert false : "Expected IOException after creating a file with small" +
+            " blocks ";
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("Specified block size is less",
+            e);
+      }
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

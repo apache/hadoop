@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -31,12 +34,15 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -46,11 +52,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service;
-import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -163,9 +169,10 @@ public class TestAppManager{
       super.setCompletedAppsMax(max);
     }
     public void submitApplication(
-        ApplicationSubmissionContext submissionContext) {
-      super.submitApplication(
-          submissionContext, System.currentTimeMillis(), false);
+        ApplicationSubmissionContext submissionContext)
+            throws YarnRemoteException {
+      super.submitApplication(submissionContext, System.currentTimeMillis(),
+          false);
     }
   }
 
@@ -177,6 +184,40 @@ public class TestAppManager{
         appMonitor.finishApplication(app.getApplicationId());
       }
     }
+  }
+
+  private RMContext rmContext;
+  private TestRMAppManager appMonitor;
+  private ApplicationSubmissionContext asContext;
+  private ApplicationId appId;
+
+  @Before
+  public void setUp() {
+    long now = System.currentTimeMillis();
+
+    rmContext = mockRMContext(1, now - 10);
+    ResourceScheduler scheduler = mockResourceScheduler();
+    Configuration conf = new Configuration();
+    ApplicationMasterService masterService =
+        new ApplicationMasterService(rmContext, scheduler);
+    appMonitor = new TestRMAppManager(rmContext,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
+        new ApplicationACLsManager(conf), conf);
+
+    appId = MockApps.newAppID(1);
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    asContext =
+        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    asContext.setApplicationId(appId);
+    asContext.setAMContainerSpec(mockContainerLaunchContext(recordFactory));
+    asContext.setResource(mockResource());
+    setupDispatcher(rmContext, conf);
+  }
+
+  @After
+  public void tearDown() {
+    setAppEventType(RMAppEventType.KILL);
+    ((Service)rmContext.getDispatcher()).stop();
   }
 
   @Test
@@ -334,38 +375,10 @@ public class TestAppManager{
 
   @Test
   public void testRMAppSubmit() throws Exception {
-    long now = System.currentTimeMillis();
-
-    RMContext rmContext = mockRMContext(0, now - 10);
-    ResourceScheduler scheduler = new CapacityScheduler();
-    Configuration conf = new Configuration();
-    ApplicationMasterService masterService =
-        new ApplicationMasterService(rmContext, scheduler);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
-        new ApplicationACLsManager(conf), conf);
-
-    ApplicationId appID = MockApps.newAppID(1);
-    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    ApplicationSubmissionContext context = 
-        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(appID);
-    ContainerLaunchContext amContainer = recordFactory
-        .newRecordInstance(ContainerLaunchContext.class);
-    amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());
-    context.setAMContainerSpec(amContainer);
-    setupDispatcher(rmContext, conf);
-
-    appMonitor.submitApplication(context);
-    RMApp app = rmContext.getRMApps().get(appID);
+    appMonitor.submitApplication(asContext);
+    RMApp app = rmContext.getRMApps().get(appId);
     Assert.assertNotNull("app is null", app);
-    Assert.assertEquals("app id doesn't match", appID, app.getApplicationId());
-    Assert.assertEquals("app name doesn't match", 
-        YarnConfiguration.DEFAULT_APPLICATION_NAME, 
-        app.getName());
-    Assert.assertEquals("app queue doesn't match", 
-        YarnConfiguration.DEFAULT_QUEUE_NAME, 
-        app.getQueue());
+    Assert.assertEquals("app id doesn't match", appId, app.getApplicationId());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
 
     // wait for event to be processed
@@ -374,9 +387,8 @@ public class TestAppManager{
         timeoutSecs++ < 20) {
       Thread.sleep(1000);
     }
-    Assert.assertEquals("app event type sent is wrong", RMAppEventType.START, getAppEventType());
-    setAppEventType(RMAppEventType.KILL); 
-    ((Service)rmContext.getDispatcher()).stop();
+    Assert.assertEquals("app event type sent is wrong", RMAppEventType.START,
+        getAppEventType());
   }
 
   @Test (timeout = 30000)
@@ -390,10 +402,7 @@ public class TestAppManager{
         new int[]{ 1, 1, 1, 1 }};
     for (int i = 0; i < globalMaxAppAttempts.length; ++i) {
       for (int j = 0; j < individualMaxAppAttempts.length; ++j) {
-        long now = System.currentTimeMillis();
-
-        RMContext rmContext = mockRMContext(0, now - 10);
-        ResourceScheduler scheduler = new CapacityScheduler();
+        ResourceScheduler scheduler = mockResourceScheduler();
         Configuration conf = new Configuration();
         conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, globalMaxAppAttempts[i]);
         ApplicationMasterService masterService =
@@ -402,21 +411,12 @@ public class TestAppManager{
             new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
             new ApplicationACLsManager(conf), conf);
 
-        RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-        ApplicationSubmissionContext context =
-            recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-        ContainerLaunchContext amContainer = recordFactory
-            .newRecordInstance(ContainerLaunchContext.class);
-        amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());
-        context.setAMContainerSpec(amContainer);
-        setupDispatcher(rmContext, conf);
-
-        ApplicationId appID = MockApps.newAppID(1);
-        context.setApplicationId(appID);
+        ApplicationId appID = MockApps.newAppID(i * 4 + j + 1);
+        asContext.setApplicationId(appID);
         if (individualMaxAppAttempts[i][j] != 0) {
-          context.setMaxAppAttempts(individualMaxAppAttempts[i][j]);
+          asContext.setMaxAppAttempts(individualMaxAppAttempts[i][j]);
         }
-        appMonitor.submitApplication(context);
+        appMonitor.submitApplication(asContext);
         RMApp app = rmContext.getRMApps().get(appID);
         Assert.assertEquals("max application attempts doesn't match",
             expectedNums[i][j], app.getMaxAppAttempts());
@@ -428,96 +428,73 @@ public class TestAppManager{
           Thread.sleep(1000);
         }
         setAppEventType(RMAppEventType.KILL);
-        ((Service)rmContext.getDispatcher()).stop();
       }
     }
   }
 
-  @Test (timeout = 3000)
-  public void testRMAppSubmitWithQueueAndName() throws Exception {
-    long now = System.currentTimeMillis();
-
-    RMContext rmContext = mockRMContext(1, now - 10);
-    ResourceScheduler scheduler = new CapacityScheduler();
-    Configuration conf = new Configuration();
-    ApplicationMasterService masterService =
-        new ApplicationMasterService(rmContext, scheduler);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
-        new ApplicationACLsManager(conf), conf);
-
-    ApplicationId appID = MockApps.newAppID(10);
-    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(appID);
-    context.setApplicationName("testApp1");
-    context.setQueue("testQueue");
-    ContainerLaunchContext amContainer = recordFactory
-        .newRecordInstance(ContainerLaunchContext.class);
-    amContainer
-        .setApplicationACLs(new HashMap<ApplicationAccessType, String>());
-    context.setAMContainerSpec(amContainer);
-
-    setupDispatcher(rmContext, conf);
-
-    appMonitor.submitApplication(context);
-    RMApp app = rmContext.getRMApps().get(appID);
-    Assert.assertNotNull("app is null", app);
-    Assert.assertEquals("app id doesn't match", appID, app.getApplicationId());
-    Assert.assertEquals("app name doesn't match", "testApp1", app.getName());
-    Assert.assertEquals("app queue doesn't match", "testQueue", app.getQueue());
-    Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
-
-    // wait for event to be processed
-    int timeoutSecs = 0;
-    while ((getAppEventType() == RMAppEventType.KILL) && 
-        timeoutSecs++ < 20) {
-      Thread.sleep(1000);
-    }
-    Assert.assertEquals("app event type sent is wrong", RMAppEventType.START, getAppEventType());
-    setAppEventType(RMAppEventType.KILL); 
-    ((Service)rmContext.getDispatcher()).stop();
-  }
-
-  @Test
-  public void testRMAppSubmitError() throws Exception {
-    long now = System.currentTimeMillis();
-
-    // specify 1 here and use same appId below so it gets duplicate entry
-    RMContext rmContext = mockRMContext(1, now - 10);
-    ResourceScheduler scheduler = new CapacityScheduler();
-    Configuration conf = new Configuration();
-    ApplicationMasterService masterService =
-        new ApplicationMasterService(rmContext, scheduler);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
-        new ApplicationACLsManager(conf), conf);
-
-    ApplicationId appID = MockApps.newAppID(0);
-    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-    context.setApplicationId(appID);
-    context.setApplicationName("testApp1");
-    context.setQueue("testQueue");
-
-    setupDispatcher(rmContext, conf);
-
-    RMApp appOrig = rmContext.getRMApps().get(appID);
+  @Test (timeout = 30000)
+  public void testRMAppSubmitDuplicateApplicationId() throws Exception {
+    ApplicationId appId = MockApps.newAppID(0);
+    asContext.setApplicationId(appId);
+    RMApp appOrig = rmContext.getRMApps().get(appId);
     Assert.assertTrue("app name matches but shouldn't", "testApp1" != appOrig.getName());
 
-    ContainerLaunchContext clc =
-        BuilderUtils.newContainerLaunchContext(null, null, null, null, null,
-            null, null);
-    context.setAMContainerSpec(clc);
     // our testApp1 should be rejected and original app with same id should be left in place
-    appMonitor.submitApplication(context);
+    try {
+      appMonitor.submitApplication(asContext);
+      Assert.fail("Exception is expected when applicationId is duplicate.");
+    } catch (YarnRemoteException e) {
+      Assert.assertTrue("The thrown exception is not the expectd one.",
+          e.getMessage().contains("Cannot add a duplicate!"));
+    }
 
     // make sure original app didn't get removed
-    RMApp app = rmContext.getRMApps().get(appID);
+    RMApp app = rmContext.getRMApps().get(appId);
     Assert.assertNotNull("app is null", app);
-    Assert.assertEquals("app id doesn't match", appID, app.getApplicationId());
-    Assert.assertEquals("app name doesn't matches", appOrig.getName(), app.getName());
-    ((Service)rmContext.getDispatcher()).stop();
+    Assert.assertEquals("app id doesn't match", appId, app.getApplicationId());
+    Assert.assertEquals("app state doesn't match", RMAppState.FINISHED, app.getState());
+  }
+
+  @Test (timeout = 30000)
+  public void testRMAppSubmitInvalidResourceRequest() throws Exception {
+    asContext.setResource(Resources.createResource(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB + 1));
+
+    // submit an app
+    try {
+      appMonitor.submitApplication(asContext);
+      Assert.fail("Application submission should fail because resource" +
+          " request is invalid.");
+    } catch (YarnRemoteException e) {
+      // Exception is expected
+      Assert.assertTrue("The thrown exception is not" +
+          " InvalidResourceRequestException",
+          e.getMessage().startsWith("Invalid resource request"));
+    }
+  }
+
+  private static ResourceScheduler mockResourceScheduler() {
+    ResourceScheduler scheduler = mock(ResourceScheduler.class);
+    when(scheduler.getMinimumResourceCapability()).thenReturn(
+        Resources.createResource(
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
+    when(scheduler.getMaximumResourceCapability()).thenReturn(
+        Resources.createResource(
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+    return scheduler;
+  }
+
+  private static ContainerLaunchContext mockContainerLaunchContext(
+      RecordFactory recordFactory) {
+    ContainerLaunchContext amContainer = recordFactory.newRecordInstance(
+        ContainerLaunchContext.class);
+    amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());;
+    return amContainer;
+  }
+
+  private static Resource mockResource() {
+    return Resources.createResource(
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
   }
 
 }

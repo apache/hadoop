@@ -46,6 +46,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -394,7 +395,7 @@ public class StreamJob implements Tool {
   throws IllegalArgumentException {
     for (String file : values) {
       File f = new File(file);
-      if (!f.canRead()) {
+      if (!FileUtil.canRead(f)) {
         fail("File: " + f.getAbsolutePath()
           + " does not exist, or is not readable.");
       }

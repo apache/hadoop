@@ -353,15 +353,15 @@ public class TestFileUtil {
   }
   
   private static void grantPermissions(final File f) {
-    f.setReadable(true);
-    f.setWritable(true);
-    f.setExecutable(true);
+    FileUtil.setReadable(f, true);
+    FileUtil.setWritable(f, true);
+    FileUtil.setExecutable(f, true);
   }
   
   private static void revokePermissions(final File f) {
-     f.setWritable(false);
-     f.setExecutable(false);
-     f.setReadable(false);
+     FileUtil.setWritable(f, false);
+     FileUtil.setExecutable(f, false);
+     FileUtil.setReadable(f, false);
   }
   
   // Validates the return value.

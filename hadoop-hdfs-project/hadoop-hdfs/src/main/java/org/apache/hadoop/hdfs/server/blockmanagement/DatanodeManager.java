@@ -339,7 +339,6 @@ public class DatanodeManager {
    *
    * @param address hostaddress:transfer address
    * @return the best match for the given datanode
-   * @throws IOException when no datanode is found for given address
    */
   DatanodeDescriptor getDatanodeDescriptor(String address) {
     DatanodeDescriptor node = null;

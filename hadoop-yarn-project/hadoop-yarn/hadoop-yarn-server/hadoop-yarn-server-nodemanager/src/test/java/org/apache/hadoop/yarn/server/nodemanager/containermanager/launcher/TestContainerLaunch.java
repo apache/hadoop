@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.util.Shell;
@@ -99,7 +100,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       String timeoutCommand = Shell.WINDOWS ? "@echo \"hello\"" :
         "echo \"hello\"";
       PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));    
-      shellFile.setExecutable(true);
+      FileUtil.setExecutable(shellFile, true);
       writer.println(timeoutCommand);
       writer.close();
 
@@ -123,7 +124,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
       fos.flush();
       fos.close();
-      tempFile.setExecutable(true);
+      FileUtil.setExecutable(tempFile, true);
 
       Shell.ShellCommandExecutor shexc 
       = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
@@ -367,7 +368,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       writer.println("while true; do\nsleep 1s;\ndone");
     }
     writer.close();
-    scriptFile.setExecutable(true);
+    FileUtil.setExecutable(scriptFile, true);
 
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);

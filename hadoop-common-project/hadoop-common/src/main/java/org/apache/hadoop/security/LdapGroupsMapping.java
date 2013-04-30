@@ -144,7 +144,15 @@ public class LdapGroupsMapping
    */
   public static final String GROUP_NAME_ATTR_KEY = LDAP_CONFIG_PREFIX + ".search.attr.group.name";
   public static final String GROUP_NAME_ATTR_DEFAULT = "cn";
-  
+
+  /*
+   * LDAP {@link SearchControls} attribute to set the time limit
+   * for an invoked directory search. Prevents infinite wait cases.
+   */
+  public static final String DIRECTORY_SEARCH_TIMEOUT =
+    LDAP_CONFIG_PREFIX + ".directory.search.timeout";
+  public static final int DIRECTORY_SEARCH_TIMEOUT_DEFAULT = 10000; // 10s
+
   private static final Log LOG = LogFactory.getLog(LdapGroupsMapping.class);
 
   private static final SearchControls SEARCH_CONTROLS = new SearchControls();
@@ -325,6 +333,9 @@ public class LdapGroupsMapping
         conf.get(GROUP_MEMBERSHIP_ATTR_KEY, GROUP_MEMBERSHIP_ATTR_DEFAULT);
     groupNameAttr =
         conf.get(GROUP_NAME_ATTR_KEY, GROUP_NAME_ATTR_DEFAULT);
+
+    int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT, DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
+    SEARCH_CONTROLS.setTimeLimit(dirSearchTimeout);
 
     this.conf = conf;
   }

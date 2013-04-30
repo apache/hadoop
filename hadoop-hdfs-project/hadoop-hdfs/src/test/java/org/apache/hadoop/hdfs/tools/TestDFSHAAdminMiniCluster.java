@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -114,7 +115,8 @@ public class TestDFSHAAdminMiniCluster {
   
   @Test
   public void testTryFailoverToSafeMode() throws Exception {
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, 
+             TestDFSHAAdmin.getFencerTrueCommand());
     tool.setConf(conf);
 
     NameNodeAdapter.enterSafeMode(cluster.getNameNode(0), false);
@@ -136,10 +138,17 @@ public class TestDFSHAAdminMiniCluster {
     // tmp file, so we can verify that the args were substituted right
     File tmpFile = File.createTempFile("testFencer", ".txt");
     tmpFile.deleteOnExit();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-        "shell(echo -n $target_nameserviceid.$target_namenodeid " +
-        "$target_port $dfs_ha_namenode_id > " +
-        tmpFile.getAbsolutePath() + ")");
+    if (Shell.WINDOWS) {
+      conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
+          "shell(echo %target_nameserviceid%.%target_namenodeid% " +
+              "%target_port% %dfs_ha_namenode_id% > " +
+              tmpFile.getAbsolutePath() + ")");
+    } else {
+      conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
+          "shell(echo -n $target_nameserviceid.$target_namenodeid " +
+          "$target_port $dfs_ha_namenode_id > " +
+          tmpFile.getAbsolutePath() + ")");
+    }
 
     // Test failover with fencer
     tool.setConf(conf);
@@ -156,9 +165,11 @@ public class TestDFSHAAdminMiniCluster {
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
     
     // The fence script should run with the configuration from the target
-    // node, rather than the configuration from the fencing node
-    assertEquals("minidfs-ns.nn1 " + nn1Port + " nn1",
-        Files.toString(tmpFile, Charsets.UTF_8));
+    // node, rather than the configuration from the fencing node. Strip
+    // out any trailing spaces and CR/LFs which may be present on Windows.
+    String fenceCommandOutput =Files.toString(tmpFile, Charsets.UTF_8).
+            replaceAll(" *[\r\n]+", "");
+    assertEquals("minidfs-ns.nn1 " + nn1Port + " nn1", fenceCommandOutput);
     tmpFile.delete();
     
     // Test failover with forceactive option
@@ -181,7 +192,8 @@ public class TestDFSHAAdminMiniCluster {
     assertFalse(tmpFile.exists());
 
     // Test failover with force fence listed before the other arguments
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, 
+             TestDFSHAAdmin.getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "--forcefence", "nn1", "nn2"));
   }

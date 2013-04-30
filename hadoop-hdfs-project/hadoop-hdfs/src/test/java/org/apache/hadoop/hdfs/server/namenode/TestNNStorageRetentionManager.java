@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEdits
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -247,30 +248,32 @@ public class TestNNStorageRetentionManager {
       .purgeLog(logsPurgedCaptor.capture());
 
     // Check images
-    Set<String> purgedPaths = Sets.newHashSet();
+    Set<String> purgedPaths = Sets.newLinkedHashSet();
     for (FSImageFile purged : imagesPurgedCaptor.getAllValues()) {
-      purgedPaths.add(purged.getFile().toString());
+      purgedPaths.add(fileToPath(purged.getFile()));
     }    
-    Assert.assertEquals(Joiner.on(",").join(tc.expectedPurgedImages),
-        Joiner.on(",").join(purgedPaths));
+    Assert.assertEquals(
+      Joiner.on(",").join(filesToPaths(tc.expectedPurgedImages)),
+      Joiner.on(",").join(purgedPaths));
 
     // Check images
     purgedPaths.clear();
     for (EditLogFile purged : logsPurgedCaptor.getAllValues()) {
-      purgedPaths.add(purged.getFile().toString());
+      purgedPaths.add(fileToPath(purged.getFile()));
     }    
-    Assert.assertEquals(Joiner.on(",").join(tc.expectedPurgedLogs),
-        Joiner.on(",").join(purgedPaths));
+    Assert.assertEquals(
+      Joiner.on(",").join(filesToPaths(tc.expectedPurgedLogs)),
+      Joiner.on(",").join(purgedPaths));
   }
   
   private static class TestCaseDescription {
-    private Map<String, FakeRoot> dirRoots = Maps.newHashMap();
-    private Set<String> expectedPurgedLogs = Sets.newHashSet();
-    private Set<String> expectedPurgedImages = Sets.newHashSet();
+    private Map<File, FakeRoot> dirRoots = Maps.newHashMap();
+    private Set<File> expectedPurgedLogs = Sets.newLinkedHashSet();
+    private Set<File> expectedPurgedImages = Sets.newLinkedHashSet();
     
     private static class FakeRoot {
       NameNodeDirType type;
-      List<String> files;
+      List<File> files;
       
       FakeRoot(NameNodeDirType type) {
         this.type = type;
@@ -280,33 +283,35 @@ public class TestNNStorageRetentionManager {
       StorageDirectory mockStorageDir() {
         return FSImageTestUtil.mockStorageDirectory(
             type, false,
-            files.toArray(new String[0]));
+            filesToPaths(files).toArray(new String[0]));
       }
     }
 
     void addRoot(String root, NameNodeDirType dir) {
-      dirRoots.put(root, new FakeRoot(dir));
+      dirRoots.put(new File(root), new FakeRoot(dir));
     }
 
-    private void addFile(String path) {
-      for (Map.Entry<String, FakeRoot> entry : dirRoots.entrySet()) {
-        if (path.startsWith(entry.getKey())) {
-          entry.getValue().files.add(path);
+    private void addFile(File file) {
+      for (Map.Entry<File, FakeRoot> entry : dirRoots.entrySet()) {
+        if (fileToPath(file).startsWith(fileToPath(entry.getKey()))) {
+          entry.getValue().files.add(file);
         }
       }
     }
     
     void addLog(String path, boolean expectPurge) {
-      addFile(path);
+      File file = new File(path);
+      addFile(file);
       if (expectPurge) {
-        expectedPurgedLogs.add(path);
+        expectedPurgedLogs.add(file);
       }
     }
     
     void addImage(String path, boolean expectPurge) {
-      addFile(path);
+      File file = new File(path);
+      addFile(file);
       if (expectPurge) {
-        expectedPurgedImages.add(path);
+        expectedPurgedImages.add(file);
       }
     }
     
@@ -362,6 +367,30 @@ public class TestNNStorageRetentionManager {
           Mockito.anyLong(), Mockito.anyBoolean());
       return mockLog;
     }
+  }
+
+  /**
+   * Converts a file to a platform-agnostic URI path.
+   * 
+   * @param file File to convert
+   * @return String path
+   */
+  private static String fileToPath(File file) {
+    return file.toURI().getPath();
+  }
+
+  /**
+   * Converts multiple files to platform-agnostic URI paths.
+   * 
+   * @param files Collection<File> files to convert
+   * @return Collection<String> paths
+   */
+  private static Collection<String> filesToPaths(Collection<File> files) {
+    List<String> paths = Lists.newArrayList();
+    for (File file: files) {
+      paths.add(fileToPath(file));
+    }
+    return paths;
   }
 
   private static NNStorage mockStorageForDirs(final StorageDirectory ... mockDirs)

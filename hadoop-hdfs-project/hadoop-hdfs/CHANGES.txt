@@ -22,9 +22,6 @@ Trunk (Unreleased)
     Azure environments. (See breakdown of tasks below for subtasks and
     contributors)
 
-    HDFS-2576. Enhances the DistributedFileSystem's create API so that clients
-    can specify favored datanodes for a file's blocks. (ddas)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -268,7 +265,10 @@ Trunk (Unreleased)
     HDFS-4761. When resetting FSDirectory, the inodeMap should also be reset.
     (Jing Zhao via szetszwo)
 
-  BREAKDOWN OF HADOOP-8562 SUBTASKS AND RELATED JIRAS
+    HDFS-4687. TestDelegationTokenForProxyUser#testWebHdfsDoAs is flaky with
+    JDK7. (Andrew Wang via atm)
+
+  BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
     Bikas Saha, Lauren Yang, Chuan Liu, Thejas M Nair and Ivan Mitic via suresh)
@@ -310,6 +310,27 @@ Trunk (Unreleased)
 
     HDFS-4584. Skip TestNNWithQJM.testNewNamenodeTakesOverWriter() on Windows.
     (Arpit Agarwal via szetszwo)
+
+    HDFS-4741. TestStorageRestore#testStorageRestoreFailure fails on Windows.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4743. TestNNStorageRetentionManager fails on Windows.
+    (Chris Nauroth via suresh)
+
+    HDFS-4740. Fixes for a few test failures on Windows.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4722. TestGetConf#testFederation times out on Windows.
+    (Ivan Mitic via suresh)
+
+    HDFS-4705. Address HDFS test failures on Windows because of invalid
+    dfs.namenode.name.dir. (Ivan Mitic via suresh)
+
+    HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
+    (Arpit Agarwal via suresh)
+
+    HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
 
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
@@ -373,6 +394,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
 
+    HDFS-4305. Add a configurable limit on number of blocks per file, and min
+    block size. (Andrew Wang via atm)
+
   NEW FEATURES
 
     HDFS-1804. Add a new block-volume device choosing policy that looks at
@@ -390,6 +414,9 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4502. JsonUtil.toFileStatus(..) should check if the fileId property
     exists.  (Brandon Li via suresh)
+
+    HDFS-2576. Enhances the DistributedFileSystem's create API so that clients
+    can specify favored datanodes for a file's blocks. (ddas)
 
   IMPROVEMENTS
 
@@ -581,6 +608,17 @@ Release 2.0.5-beta - UNRELEASED
 
     HDFS-4745. TestDataTransferKeepalive#testSlowReader has race condition that
     causes sporadic failure. (Chris Nauroth via suresh)
+
+    HDFS-4768. File handle leak in datanode when a block pool is removed.
+    (Chris Nauroth via suresh)
+
+    HDFS-4748. MiniJournalCluster#restartJournalNode leaks resources, which 
+    causes sporadic test failures. (Chris Nauroth via suresh)
+
+    HDFS-4733. Make HttpFS username pattern configurable. (tucu via atm)
+
+    HDFS-4778. Fixes some issues that the first patch on HDFS-2576 missed.
+    (ddas)
 
 Release 2.0.4-alpha - UNRELEASED
 

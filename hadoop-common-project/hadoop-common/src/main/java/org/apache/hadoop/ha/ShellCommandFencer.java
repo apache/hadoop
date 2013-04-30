@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.util.Shell;
 
 /**
  * Fencing method that runs a shell command. It should be specified
@@ -33,8 +34,8 @@ import com.google.common.annotations.VisibleForTesting;
  * <code>
  *   shell(/path/to/my/script.sh arg1 arg2 ...)
  * </code><br>
- * The string between '(' and ')' is passed directly to a bash shell and
- * may not include any closing parentheses.<p>
+ * The string between '(' and ')' is passed directly to a bash shell
+ * (cmd.exe on Windows) and may not include any closing parentheses.<p>
  * 
  * The shell command will be run with an environment set up to contain
  * all of the current Hadoop configuration variables, with the '_' character 
@@ -58,11 +59,11 @@ public class ShellCommandFencer
 
   /** Prefix for target parameters added to the environment */
   private static final String TARGET_PREFIX = "target_";
-  
+
   @VisibleForTesting
   static Log LOG = LogFactory.getLog(
       ShellCommandFencer.class);
-  
+
   @Override
   public void checkArgs(String args) throws BadFencingConfigurationException {
     if (args == null || args.isEmpty()) {
@@ -74,8 +75,14 @@ public class ShellCommandFencer
 
   @Override
   public boolean tryFence(HAServiceTarget target, String cmd) {
-    ProcessBuilder builder = new ProcessBuilder(
-        "bash", "-e", "-c", cmd);
+    ProcessBuilder builder;
+
+    if (!Shell.WINDOWS) {
+      builder = new ProcessBuilder("bash", "-e", "-c", cmd);
+    } else {
+      builder = new ProcessBuilder("cmd.exe", "/c", cmd);
+    }
+
     setConfAsEnvVars(builder.environment());
     addTargetInfoAsEnvVars(target, builder.environment());
 

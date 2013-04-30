@@ -169,6 +169,8 @@ public class TestAllowFormat {
     InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 9020);
     HATestUtil.setFailoverConfigurations(conf, logicalName, nnAddr1, nnAddr2);
 
+    conf.set(DFS_NAMENODE_NAME_DIR_KEY,
+        new File(hdfsDir, "name").getAbsolutePath());
     conf.setBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, true);
     conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_EDITS_PLUGIN_PREFIX, "dummy"),

@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Assert;
@@ -89,7 +90,7 @@ public class TestRMNMRPCResponseId {
   @Test
   public void testRPCResponseId() throws IOException {
     String node = "localhost";
-    Resource capability = recordFactory.newRecordInstance(Resource.class);
+    Resource capability = BuilderUtils.newResource(1024, 1);
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     nodeId = Records.newRecord(NodeId.class);
     nodeId.setHost(node);

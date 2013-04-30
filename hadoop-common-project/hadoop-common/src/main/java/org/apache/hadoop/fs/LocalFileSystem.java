@@ -103,7 +103,8 @@ public class LocalFileSystem extends ChecksumFileSystem {
       String device = new DF(f, getConf()).getMount();
       File parent = f.getParentFile();
       File dir = null;
-      while (parent!=null && parent.canWrite() && parent.toString().startsWith(device)) {
+      while (parent != null && FileUtil.canWrite(parent) &&
+          parent.toString().startsWith(device)) {
         dir = parent;
         parent = parent.getParentFile();
       }
@@ -130,6 +131,8 @@ public class LocalFileSystem extends ChecksumFileSystem {
       }
       // move checksum file too
       File checkFile = ((RawLocalFileSystem)fs).pathToFile(getChecksumFile(p));
+      // close the stream before rename to release the file handle
+      sums.close();
       b = checkFile.renameTo(new File(badDir, checkFile.getName()+suffix));
       if (!b) {
           LOG.warn("Ignoring failure of renameTo");

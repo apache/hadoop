@@ -87,6 +87,16 @@ public class TestGetConf {
     return values;
   }
 
+  /**
+   * Add namenodes to the static resolution list to avoid going
+   * through DNS which can be really slow in some configurations.
+   */
+  private void setupStaticHostResolution(int nameServiceIdCount) {
+    for (int i = 0; i < nameServiceIdCount; i++) {
+      NetUtils.addStaticResolution("nn" + i, "localhost");
+    }
+  }
+
   /*
    * Convert the map returned from DFSUtil functions to an array of
    * addresses represented as "host:port"
@@ -306,6 +316,7 @@ public class TestGetConf {
     String[] nnAddresses = setupAddress(conf,
         DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nsCount, 1000);
     setupAddress(conf, DFS_NAMENODE_RPC_ADDRESS_KEY, nsCount, 1500);
+    setupStaticHostResolution(nsCount);
     String[] backupAddresses = setupAddress(conf,
         DFS_NAMENODE_BACKUP_ADDRESS_KEY, nsCount, 2000);
     String[] secondaryAddresses = setupAddress(conf,
