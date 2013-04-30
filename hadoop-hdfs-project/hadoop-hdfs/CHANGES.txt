@@ -332,6 +332,9 @@ Trunk (Unreleased)
     HDFS-4734. HDFS Tests that use ShellCommandFencer are broken on Windows.
     (Arpit Agarwal via suresh)
 
+    HDFS-4610. Use common utils FileUtil#setReadable/Writable/Executable and 
+    FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
   BREAKDOWN OF HDFS-347 SUBTASKS AND RELATED JIRAS
 
     HDFS-4353. Encapsulate connections to peers in Peer and PeerServer classes.

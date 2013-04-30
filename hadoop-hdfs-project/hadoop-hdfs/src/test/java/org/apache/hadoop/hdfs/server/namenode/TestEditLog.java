@@ -881,14 +881,14 @@ public class TestEditLog {
     logDir.mkdirs();
     FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
     try {
-      logDir.setWritable(false);
+      FileUtil.setWritable(logDir, false);
       log.openForWrite();
       fail("Did no throw exception on only having a bad dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
           "too few journals successfully started", ioe);
     } finally {
-      logDir.setWritable(true);
+      FileUtil.setWritable(logDir, true);
       log.close();
     }
   }
