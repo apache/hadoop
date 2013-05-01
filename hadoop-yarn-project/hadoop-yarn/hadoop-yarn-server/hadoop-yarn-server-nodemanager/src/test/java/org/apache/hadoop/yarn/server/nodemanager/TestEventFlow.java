@@ -58,6 +58,7 @@ public class TestEventFlow {
       TestEventFlow.class.getName() + "-localLogDir").getAbsoluteFile();
   private static File remoteLogDir = new File("target",
       TestEventFlow.class.getName() + "-remoteLogDir").getAbsoluteFile();
+  private static final long SIMULATED_RM_IDENTIFIER = 1234;
 
   @Test
   public void testSuccessfulContainerLaunch() throws InterruptedException,
@@ -100,6 +101,11 @@ public class TestEventFlow {
       protected void startStatusUpdater() {
         return; // Don't start any updating thread.
       }
+
+      @Override
+      public long getRMIdentifier() {
+        return SIMULATED_RM_IDENTIFIER;
+      }
     };
 
     DummyContainerManager containerManager =
@@ -124,6 +130,8 @@ public class TestEventFlow {
     when(mockContainer.getId()).thenReturn(cID);
     when(mockContainer.getResource()).thenReturn(recordFactory
         .newRecordInstance(Resource.class));
+    when(mockContainer.getRMIdentifer()).thenReturn(SIMULATED_RM_IDENTIFIER);
+
     launchContext.setUser("testing");
     StartContainerRequest request = 
         recordFactory.newRecordInstance(StartContainerRequest.class);

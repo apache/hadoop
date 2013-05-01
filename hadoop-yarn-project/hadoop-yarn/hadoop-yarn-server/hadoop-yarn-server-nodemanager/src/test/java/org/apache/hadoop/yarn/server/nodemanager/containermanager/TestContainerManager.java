@@ -59,7 +59,6 @@ import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
@@ -157,6 +156,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":12345");
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
     StartContainerRequest startRequest = 
         recordFactory.newRecordInstance(StartContainerRequest.class);
@@ -250,6 +250,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":12345");
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     startRequest.setContainer(mockContainer);
@@ -357,6 +359,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":12345");
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+
 	  StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
 	  startRequest.setContainerLaunchContext(containerLaunchContext);
 	  startRequest.setContainer(mockContainer);
@@ -457,6 +461,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     when(mockContainer.getNodeId()).thenReturn(context.getNodeId());
     when(mockContainer.getNodeHttpAddress()).thenReturn(
         context.getNodeId().getHost() + ":12345");
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
 //    containerLaunchContext.command = new ArrayList<CharSequence>();
 
@@ -528,19 +533,6 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerLaunchFromPreviousRM() throws IOException,
       InterruptedException {
-    // There is no real RM registration, simulate and set RMIdentifier
-    NodeStatusUpdater nodeStatusUpdater = mock(NodeStatusUpdater.class);
-    when(nodeStatusUpdater.getRMIdentifier()).thenReturn((long) 1234);
-    containerManager =
-        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-          metrics, new ApplicationACLsManager(conf), dirsHandler) {
-          @Override
-          public void setBlockNewContainerRequests(
-              boolean blockNewContainerRequests) {
-            // do nothing
-          }
-        };
-    containerManager.init(conf);
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -582,7 +574,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // Construct the Container with a RMIdentifier within current RM
     Container mockContainer2 = mock(Container.class);
     when(mockContainer2.getId()).thenReturn(cId2);
-    when(mockContainer2.getRMIdentifer()).thenReturn((long) 1234);
+    when(mockContainer2.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
+
     when(mockContainer2.getResource()).thenReturn(mockResource);
     StartContainerRequest startRequest2 =
         recordFactory.newRecordInstance(StartContainerRequest.class);

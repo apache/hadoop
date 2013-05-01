@@ -20,5 +20,10 @@ package org.apache.hadoop.yarn.server.api;
 
 public interface ResourceManagerConstants {
 
-  public static final long RM_INVALID_IDENTIFIER = 0;
+  /**
+   * This states the invalid identifier of Resource Manager. This is used as a
+   * default value for initializing RM identifier. Currently, RM is using time
+   * stamp as RM identifier.
+   */
+  public static final long RM_INVALID_IDENTIFIER = -1;
 }

@@ -98,6 +98,7 @@ public abstract class BaseContainerManagerTest {
   protected String user = "nobody";
   protected NodeHealthCheckerService nodeHealthChecker;
   protected LocalDirsHandlerService dirsHandler;
+  protected final long DUMMY_RM_IDENTIFIER = 1234;
 
   protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
       context, new AsyncDispatcher(), null, metrics) {
@@ -109,6 +110,12 @@ public abstract class BaseContainerManagerTest {
     @Override
     protected void startStatusUpdater() {
       return; // Don't start any updating thread.
+    }
+
+    @Override
+    public long getRMIdentifier() {
+      // There is no real RM registration, simulate and set RMIdentifier
+      return DUMMY_RM_IDENTIFIER;
     }
   };
 
