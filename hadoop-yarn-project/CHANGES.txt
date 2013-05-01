@@ -201,6 +201,9 @@ Release 2.0.5-beta - UNRELEASED
     to separate out various validation checks depending on whether they rely on
     RM configuration or not. (Zhijie Shen via vinodkv)
 
+    YARN-618. Modified RM_INVALID_IDENTIFIER to be -1 instead of zero. (Jian He
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

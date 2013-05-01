@@ -691,6 +691,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     ContainerId cId = BuilderUtils.newContainerId(appAttemptId, 0);
 
     when(mockContainer.getId()).thenReturn(cId);
+    when(mockContainer.getRMIdentifer()).thenReturn(super.DUMMY_RM_IDENTIFIER);
 
     containerLaunchContext.setUser(this.user);
 
