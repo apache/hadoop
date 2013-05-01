@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public class CleanupQueue {
@@ -57,16 +58,38 @@ public class CleanupQueue {
     final Path fullPath;// full path of file or dir
     final Configuration conf;
     final UserGroupInformation ugi;
+    final JobID jobIdTokenRenewalToCancel;
 
     public PathDeletionContext(Path fullPath, Configuration conf) {
-      this(fullPath, conf, null);
+      this(fullPath, conf, null, null);
     }
 
     public PathDeletionContext(Path fullPath, Configuration conf,
         UserGroupInformation ugi) {
+      this(fullPath, conf, ugi, null);
+    }
+    
+    /**
+     * PathDeletionContext ctor which also allows for a job-delegation token
+     * renewal to be cancelled.
+     * 
+     * This is usually used at the end of a job to delete it's final path and 
+     * to cancel renewal of it's job-delegation token.
+     * 
+     * @param fullPath path to be deleted
+     * @param conf job configuration
+     * @param ugi ugi of the job to be used to delete the path
+     * @param jobIdTokenRenewalToCancel jobId of the job whose job-delegation
+     *                                  token renewal should be cancelled. No
+     *                                  cancellation is attempted if this is
+     *                                  <code>null</code>
+     */
+    public PathDeletionContext(Path fullPath, Configuration conf,
+        UserGroupInformation ugi, JobID jobIdTokenRenewalToCancel) {
       this.fullPath = fullPath;
       this.conf = conf;
       this.ugi = ugi;
+      this.jobIdTokenRenewalToCancel = jobIdTokenRenewalToCancel;
     }
     
     protected Path getPathForCleanup() {
@@ -86,6 +109,13 @@ public class CleanupQueue {
              return null;
             }
           });
+      
+      // Cancel renewal of job-delegation token if necessary
+      if (jobIdTokenRenewalToCancel != null && 
+          conf.getBoolean(JobContext.JOB_CANCEL_DELEGATION_TOKEN, true)) {
+        DelegationTokenRenewal.removeDelegationTokenRenewalForJob(
+            jobIdTokenRenewalToCancel);
+      }
     }
 
     @Override

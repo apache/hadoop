@@ -605,6 +605,9 @@ Release 1.2.0 - 2013.04.16
     causing failures since task directories were being cleaned up in multiple
     threads. (arpit via acmurthy)
 
+    MAPREDUCE-5154. Ensure job delegation token renewal is cancelled after job
+    staging directory is deleted. (Sandy Ryza & Arun C. Murthy via acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
