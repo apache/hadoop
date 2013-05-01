@@ -43,7 +43,7 @@ if exist %HADOOP_HOME%\contrib\capacity-scheduler (
 @rem set HADOOP_NAMENODE_INIT_HEAPSIZE=""
 
 @rem Extra Java runtime options.  Empty by default.
-@rem set HADOOP_OPTS=-Djava.net.preferIPv4Stack=true %HADOOP_CLIENT_OPTS%
+@rem set HADOOP_OPTS=-Djava.net.preferIPv4Stack=true
 
 @rem Command specific options appended to HADOOP_OPTS when specified
 if not defined HADOOP_SECURITY_LOGGER (
