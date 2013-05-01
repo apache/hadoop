@@ -138,6 +138,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9504. MetricsDynamicMBeanBase has concurrency issues in
     createMBeanInfo (Liang Xie via jlowe)
 
+    HADOOP-9455. HADOOP_CLIENT_OPTS appended twice causes JVM failures.
+    (Chris Nauroth via suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
