@@ -212,6 +212,8 @@ Release 1.2.0 - 2013.04.16
 
   BUG FIXES
 
+    MAPREDUCE-5202. Revert MAPREDUCE-4397 to improve LinuxTaskController security. (omalley)
+
     HADOOP-9467. Metrics2 record filter should check name as well as tags.
     (Ganeshan Iyler via llu)
 
