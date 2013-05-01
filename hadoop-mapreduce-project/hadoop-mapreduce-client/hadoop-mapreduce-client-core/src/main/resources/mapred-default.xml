@@ -1250,10 +1250,11 @@
 
 <property>
   <name>mapreduce.am.max-attempts</name>
-  <value>1</value>
+  <value>2</value>
   <description>The maximum number of application attempts. It is a
   application-specific setting. It should not be larger than the global number
-  set by resourcemanager. Otherwise, it will be override.</description>
+  set by resourcemanager. Otherwise, it will be override. The default number is
+  set to 2, to allow at least one retry for AM.</description>
 </property>
 
 <!-- Job Notification Configuration -->
