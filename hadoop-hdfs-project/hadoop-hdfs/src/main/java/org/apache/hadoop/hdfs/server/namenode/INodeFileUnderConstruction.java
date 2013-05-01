@@ -57,8 +57,8 @@ class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollec
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(id, permissions.applyUMask(UMASK), BlockInfo.EMPTY_ARRAY,
-        replication, modTime, modTime, preferredBlockSize);
+    super(id, permissions, BlockInfo.EMPTY_ARRAY, replication, modTime,
+        modTime, preferredBlockSize);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
     this.clientNode = clientNode;

@@ -190,14 +190,28 @@ public class TestPermission {
       catch(java.io.FileNotFoundException e) {
         LOG.info("GOOD: got " + e);
       }
+      
+      // make sure nn can take user specified permission (with default fs
+      // permission umask applied)
+      FSDataOutputStream out = nnfs.create(CHILD_FILE1, new FsPermission(
+          (short) 0777), true, 1024, (short) 1, 1024, null);
+      FileStatus status = nnfs.getFileStatus(CHILD_FILE1);
+      // FS_PERMISSIONS_UMASK_DEFAULT is 0022
+      assertTrue(status.getPermission().toString().equals("rwxr-xr-x"));
+      nnfs.delete(CHILD_FILE1, false);
+      
       // following dir/file creations are legal
       nnfs.mkdirs(CHILD_DIR1);
-      FSDataOutputStream out = nnfs.create(CHILD_FILE1);
+      out = nnfs.create(CHILD_FILE1);
+      status = nnfs.getFileStatus(CHILD_FILE1);
+      assertTrue(status.getPermission().toString().equals("rw-r--r--"));
       byte data[] = new byte[FILE_LEN];
       RAN.nextBytes(data);
       out.write(data);
       out.close();
       nnfs.setPermission(CHILD_FILE1, new FsPermission("700"));
+      status = nnfs.getFileStatus(CHILD_FILE1);
+      assertTrue(status.getPermission().toString().equals("rwx------"));
 
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];
@@ -208,6 +222,15 @@ public class TestPermission {
         assertEquals(data[i], dataIn[i]);
       }
 
+      // test execution bit support for files
+      nnfs.setPermission(CHILD_FILE1, new FsPermission("755"));
+      status = nnfs.getFileStatus(CHILD_FILE1);
+      assertTrue(status.getPermission().toString().equals("rwxr-xr-x"));
+      nnfs.setPermission(CHILD_FILE1, new FsPermission("744"));
+      status = nnfs.getFileStatus(CHILD_FILE1);
+      assertTrue(status.getPermission().toString().equals("rwxr--r--"));
+      nnfs.setPermission(CHILD_FILE1, new FsPermission("700"));
+      
       ////////////////////////////////////////////////////////////////
       // test illegal file/dir creation
       UserGroupInformation userGroupInfo = 
