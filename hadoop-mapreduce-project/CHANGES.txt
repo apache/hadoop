@@ -215,6 +215,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5069. add concrete common implementations of
     CombineFileInputFormat (Sangjin Lee via bobby)
 
+    MAPREDUCE-5145. Changed default max-attempts to be more than one for MR jobs
+    inline with YARN. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 

@@ -90,6 +90,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
+     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
          JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -116,8 +117,9 @@ import org.junit.Test;
      appId.setId(0);
      attemptId.setApplicationId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
+     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
-         JobStateInternal.REBOOT, 4);
+         JobStateInternal.REBOOT, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
      appMaster.start();
      //shutdown the job, not the lastRetry
@@ -144,7 +146,7 @@ import org.junit.Test;
      attemptId.setApplicationId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
-         JobStateInternal.REBOOT, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
+         JobStateInternal.REBOOT, 1); //no retry
      appMaster.init(conf);
      appMaster.start();
      //shutdown the job, is lastRetry
@@ -201,8 +203,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
-         MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
+     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc, 1); //no retry
      appMaster.init(conf);
      //simulate the process being killed
      MRAppMaster.MRAppMasterShutdownHook hook = 
