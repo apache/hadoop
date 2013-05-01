@@ -653,6 +653,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-5154. Ensure job delegation token renewal is cancelled after job
     staging directory is deleted. (Sandy Ryza & Arun C. Murthy via acmurthy)
 
+    HADOOP-9537. Backport changes to add support running Hadoop client on AIX.
+    (Aaron T. Myers, backported by Arpit Agarwal via suresh)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
