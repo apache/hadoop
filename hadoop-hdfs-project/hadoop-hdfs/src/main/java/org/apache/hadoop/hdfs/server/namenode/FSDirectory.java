@@ -1588,7 +1588,8 @@ public class FSDirectory implements Closeable {
         src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
     
     final INode node = this.getINode(dirPath);
-    if (node.isDirectory()
+    if (node != null
+        && node.isDirectory()
         && node.asDirectory() instanceof INodeDirectorySnapshottable) {
       return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
           HdfsFileStatus.EMPTY_NAME, -1L);

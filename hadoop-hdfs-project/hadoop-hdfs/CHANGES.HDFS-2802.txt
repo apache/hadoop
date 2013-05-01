@@ -329,3 +329,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4758. Disallow nested snapshottable directories and unwrap
   RemoteException.  (szetszwo)
+
+  HDFS-4781. Fix a NullPointerException when listing .snapshot under
+  a non-existing directory.  (szetszwo)

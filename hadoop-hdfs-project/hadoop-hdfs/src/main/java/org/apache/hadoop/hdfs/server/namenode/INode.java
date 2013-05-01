@@ -313,12 +313,12 @@ public abstract class INode implements Diff.Element<byte[]> {
    * children.
    * 
    * 1.3 The current inode is a {@link FileWithSnapshot}.
-   * Call {@link INode#recordModification(Snapshot)} to capture the 
-   * current states. Mark the INode as deleted.
+   * Call recordModification(..) to capture the current states.
+   * Mark the INode as deleted.
    * 
    * 1.4 The current inode is a {@link INodeDirectoryWithSnapshot}.
-   * Call {@link INode#recordModification(Snapshot)} to capture the 
-   * current states. Destroy files/directories created after the latest snapshot 
+   * Call recordModification(..) to capture the current states. 
+   * Destroy files/directories created after the latest snapshot 
    * (i.e., the inodes stored in the created list of the latest snapshot).
    * Recursively clean remaining children. 
    *

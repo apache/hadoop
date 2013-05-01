@@ -22,6 +22,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.FileNotFoundException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -238,6 +240,18 @@ public class TestSnapshotPathINodes {
     final INode last = nodesInPath.getLastINode();
     assertEquals(last.getFullPathName(), sub1.toString());
     assertFalse(last instanceof INodeFileWithSnapshot);
+    
+    String[] invalidPathComponent = {"invalidDir", "foo", ".snapshot", "bar"};
+    Path invalidPath = new Path(invalidPathComponent[0]);
+    for(int i = 1; i < invalidPathComponent.length; i++) {
+      invalidPath = new Path(invalidPath, invalidPathComponent[i]);
+      try {
+        hdfs.getFileStatus(invalidPath);
+        Assert.fail();
+      } catch(FileNotFoundException fnfe) {
+        System.out.println("The exception is expected: " + fnfe);
+      }
+    }
   }
   
   /** 
