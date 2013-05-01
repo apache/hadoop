@@ -45,7 +45,7 @@ done
 #export HADOOP_NAMENODE_INIT_HEAPSIZE=""
 
 # Extra Java runtime options.  Empty by default.
-export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true $HADOOP_CLIENT_OPTS"
+export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true"
 
 MAC_OSX=false
 case "`uname`" in
