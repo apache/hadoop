@@ -17,15 +17,6 @@
  */
 
 /**
- * Get the full path of the configuration file.
- * Use $HADOOP_SECURITY_CONF_DIR for the configuration directory, and if
- * it's not set, use the default value in default_conf_dir.
- */
-void get_config_path(char* conf_file_path, int size,
-                     char* default_conf_dir,
-                     const char* conf_file_name);
-
-/**
  * Ensure that the configuration file and all of the containing directories
  * are only writable by root. Otherwise, an attacker can change the 
  * configuration and potentially cause damage.

@@ -80,11 +80,7 @@ int main(int argc, char **argv) {
   #error HADOOP_CONF_DIR must be defined
 #endif
 
-  char orig_conf_file[PATH_MAX + 1]; // realpath is limitted by PATH_MAX
-  orig_conf_file[PATH_MAX] = 0; // in case of snprintf error
-  get_config_path(orig_conf_file, PATH_MAX + 1,
-                  STRINGIFY(HADOOP_CONF_DIR),
-                  CONF_FILENAME);
+  char *orig_conf_file = STRINGIFY(HADOOP_CONF_DIR) "/" CONF_FILENAME;
   char *conf_file = realpath(orig_conf_file, NULL);
 
   if (conf_file == NULL) {
