@@ -601,6 +601,10 @@ Release 1.2.0 - 2013.04.16
     false to indicate they don't want to be recovered. (Mayank Bansal via
     acmurthy) 
 
+    MAPREDUCE-5198. Fix a race condition during TaskTracker re-init which was
+    causing failures since task directories were being cleaned up in multiple
+    threads. (arpit via acmurthy)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES

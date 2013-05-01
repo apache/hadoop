@@ -1458,7 +1458,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       new TreeMap<TaskAttemptID, TaskInProgress>();
     tasksToClose.putAll(tasks);
     for (TaskInProgress tip : tasksToClose.values()) {
-      tip.jobHasFinished(false);
+      tip.jobHasFinished(true, false);
     }
     
     this.running = false;
@@ -2239,7 +2239,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         rjob.distCacheMgr.release();
         // Add this tips of this job to queue of tasks to be purged 
         for (TaskInProgress tip : rjob.tasks) {
-          tip.jobHasFinished(false);
+          tip.jobHasFinished(false, false);
           Task t = tip.getTask();
           if (t.isMapTask()) {
             indexCache.removeMap(tip.getTask().getTaskID().toString());
@@ -2313,7 +2313,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       // Remove the task from running jobs, 
       // removing the job if it's the last task
       removeTaskFromJob(tip.getTask().getJobID(), tip);
-      tip.jobHasFinished(wasFailure);
+      tip.jobHasFinished(false, wasFailure);
       if (tip.getTask().isMapTask()) {
         indexCache.removeMap(tip.getTask().getTaskID().toString());
       }
@@ -2611,7 +2611,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           tip.reportDiagnosticInfo(msg);
           try {
             tip.kill(true);
-            tip.cleanup(true);
+            tip.cleanup(false, true);
           } catch (IOException ie2) {
             LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
           } catch (InterruptedException ie2) {
@@ -3182,7 +3182,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         removeTaskFromJob(task.getJobID(), this);
       }
       try {
-        cleanup(needCleanup);
+        cleanup(false, needCleanup);
       } catch (IOException ie) {
       }
 
@@ -3270,11 +3270,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     /**
      * We no longer need anything from this task, as the job has
      * finished.  If the task is still running, kill it and clean up.
-     * 
+     *
+     * @param ttReInit is the TaskTracker executing re-initialization sequence?
      * @param wasFailure did the task fail, as opposed to was it killed by
      *                   the framework
      */
-    public void jobHasFinished(boolean wasFailure) throws IOException {
+    public void jobHasFinished(boolean ttReInit, boolean wasFailure) 
+        throws IOException {
       // Kill the task if it is still running
       synchronized(this){
         if (getRunState() == TaskStatus.State.RUNNING ||
@@ -3291,7 +3293,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       }
       
       // Cleanup on the finished task
-      cleanup(true);
+      cleanup(ttReInit, true);
     }
 
     /**
@@ -3373,7 +3375,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
      * otherwise the current working directory of the task 
      * i.e. &lt;taskid&gt;/work is cleaned up.
      */
-    void cleanup(boolean needCleanup) throws IOException {
+    void cleanup(boolean ttReInit, boolean needCleanup) throws IOException {
       TaskAttemptID taskId = task.getTaskID();
       LOG.debug("Cleaning up " + taskId);
 
@@ -3402,7 +3404,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           return;
         }
         try {
-          removeTaskFiles(needCleanup);
+          // TT re-initialization sequence: no need to cleanup, TT will cleanup
+          if (!ttReInit) {
+            removeTaskFiles(needCleanup);
+          }
         } catch (Throwable ie) {
           LOG.info("Error cleaning up task runner: "
               + StringUtils.stringifyException(ie));

@@ -268,32 +268,51 @@ class LinuxTaskController extends TaskController {
 
   @Override
   public void deleteAsUser(String user, String subDir) throws IOException {
-    String[] command = 
-      new String[]{taskControllerExe, 
-                   user,
-                   localStorage.getDirsString(),
-                   Integer.toString(Commands.DELETE_AS_USER.getValue()),
-                   subDir};
-    ShellCommandExecutor shExec = new ShellCommandExecutor(command);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("deleteAsUser: " + Arrays.toString(command));
+    String[] command = new String[] { taskControllerExe, user,
+        localStorage.getDirsString(),
+        Integer.toString(Commands.DELETE_AS_USER.getValue()), subDir };
+    ShellCommandExecutor shExec = null;
+    try {
+      shExec = new ShellCommandExecutor(command);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("deleteAsUser: " + Arrays.toString(command));
+      }
+      shExec.execute();
+    } catch (IOException e) {
+      if (shExec != null) {
+        int exitCode = shExec.getExitCode();
+        LOG.info("deleteAsUser: " + Arrays.toString(command));
+        LOG.warn("Exit code is : " + exitCode);
+        LOG.info("Output from deleteAsUser LinuxTaskController:");
+        logOutput(shExec.getOutput());
+      }
+      throw e;
     }
-    shExec.execute();
   }
 
   @Override
   public void deleteLogAsUser(String user, String subDir) throws IOException {
-    String[] command = 
-      new String[]{taskControllerExe, 
-                   user,
-                   localStorage.getDirsString(),
-                   Integer.toString(Commands.DELETE_LOG_AS_USER.getValue()),
-                   subDir};
-    ShellCommandExecutor shExec = new ShellCommandExecutor(command);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("deleteLogAsUser: " + Arrays.toString(command));
+    String[] command = new String[] { taskControllerExe, user,
+        localStorage.getDirsString(),
+        Integer.toString(Commands.DELETE_LOG_AS_USER.getValue()), subDir };
+    ShellCommandExecutor shExec = null;
+    try {
+      shExec = new ShellCommandExecutor(command);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("deleteLogAsUser: " + Arrays.toString(command));
+      }
+      shExec.execute();
+    } catch (IOException e) {
+      if (shExec != null) {
+        int exitCode = shExec.getExitCode();
+        LOG.info("deleteLogAsUser: " + Arrays.toString(command));
+        LOG.warn("Exit code is : " + exitCode);
+        LOG.info("Output from deleteLogAsUser LinuxTaskController:");
+        logOutput(shExec.getOutput());
+      }
+      throw e;
     }
-    shExec.execute();
   }
 
   @Override
