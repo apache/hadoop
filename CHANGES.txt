@@ -73,6 +73,9 @@ Release 1.2.0 - 2013.04.16
 
     HDFS-4776. Backport SecondaryNameNode web ui.  (szetszwo)
 
+    HDFS-4774. Backport HDFS-4525: Provide an API for knowing whether a file is
+    closed.  (Ted Yu via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-9434. Backport HADOOP-9267: hadoop -h|-{0,2}help should print usage.

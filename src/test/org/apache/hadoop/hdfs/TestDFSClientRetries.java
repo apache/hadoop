@@ -225,6 +225,10 @@ public class TestDFSClientRetries extends TestCase {
       return versionID;
     }
 
+    public boolean isFileClosed(String src) throws IOException {
+      return true;
+    }
+
     public LocatedBlock addBlock(String src, String clientName)
     throws IOException
     {

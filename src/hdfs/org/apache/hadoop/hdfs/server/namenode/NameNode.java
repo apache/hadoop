@@ -728,6 +728,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /** {@inheritDoc} */
+  public boolean isFileClosed(String src) throws IOException {
+    return namesystem.isFileClosed(src);
+  }
+
+  /** {@inheritDoc} */
   public boolean recoverLease(String src, String clientName) throws IOException {
     String clientMachine = getClientMachine();
     return namesystem.recoverLease(src, clientName, clientMachine);
