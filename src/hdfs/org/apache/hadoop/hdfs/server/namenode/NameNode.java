@@ -324,7 +324,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     this.server = RPC.getServer(this, socAddr.getHostName(),
         socAddr.getPort(), handlerCount, false, conf, namesystem
         .getDelegationTokenSecretManager());
-
+    // Set terse exception whose stack trace won't be logged
+    this.server.addTerseExceptions(SafeModeException.class);
+    
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.serverAddress = this.server.getListenerAddress(); 
     FileSystem.setDefaultUri(conf, getUri(serverAddress));
