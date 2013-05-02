@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerRequestPB
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerResponsePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerRequestProto;
@@ -93,7 +93,7 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
       return new GetContainerStatusResponsePBImpl(proxy.getContainerStatus(
         null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -106,7 +106,7 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
       return new StartContainerResponsePBImpl(proxy.startContainer(null,
         requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -119,7 +119,7 @@ public class ContainerManagerPBClientImpl implements ContainerManager,
       return new StopContainerResponsePBImpl(proxy.stopContainer(null,
         requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 }
