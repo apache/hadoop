@@ -451,8 +451,27 @@ public class TestINodeFile {
       assertTrue(fs.delete(renamedPath, true));
       inodeCount -= 2;
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
+      
+      // Create and concat /test/file1 /test/file2
+      // Create /test1/file1 and /test1/file2
+      String file1 = "/test1/file1";
+      String file2 = "/test1/file2";
+      DFSTestUtil.createFile(fs, new Path(file1), 512, (short) 1, 0);
+      DFSTestUtil.createFile(fs, new Path(file2), 512, (short) 1, 0);
+      inodeCount += 3; // test1, file1 and file2 are created
+      expectedLastInodeId += 3;
+      assertEquals(inodeCount, fsn.dir.getInodeMapSize());
+      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      // Concat the /test1/file1 /test1/file2 into /test1/file2
+      nnrpc.concat(file2, new String[] {file1});
+      inodeCount--; // file1 and file2 are concatenated to file2
+      assertEquals(inodeCount, fsn.dir.getInodeMapSize());
+      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertTrue(fs.delete(new Path("/test1"), true));
+      inodeCount -= 2; // test1 and file2 is deleted
+      assertEquals(inodeCount, fsn.dir.getInodeMapSize());
 
-      // Make sure empty editlog can be handled
+      // Make sure editlog is loaded correctly 
       cluster.restartNameNode();
       cluster.waitActive();
       fsn = cluster.getNamesystem();

@@ -971,6 +971,7 @@ public class FSDirectory implements Closeable {
       
       nodeToRemove.setBlocks(null);
       trgParent.removeChild(nodeToRemove);
+      inodeMap.remove(nodeToRemove);
       count++;
     }
     
