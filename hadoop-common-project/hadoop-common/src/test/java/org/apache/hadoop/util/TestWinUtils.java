@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assume.*;
+import static org.hamcrest.CoreMatchers.*;
 
 /**
  * Test cases for helper Windows winutils.exe utility.
@@ -357,6 +359,87 @@ public class TestWinUtils {
     } catch (IOException e) {
       LOG.info(
         "Expected: Failed to create symlink with forward slashes in target");
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testReadLink() throws IOException {
+    // Create TEST_DIR\dir1\file1.txt
+    //
+    File dir1 = new File(TEST_DIR, "dir1");
+    assertTrue(dir1.mkdirs());
+
+    File file1 = new File(dir1, "file1.txt");
+    assertTrue(file1.createNewFile());
+
+    File dirLink = new File(TEST_DIR, "dlink");
+    File fileLink = new File(TEST_DIR, "flink");
+
+    // Next create a directory symlink to dir1 and a file
+    // symlink to file1.txt.
+    //
+    Shell.execCommand(
+        Shell.WINUTILS, "symlink", dirLink.toString(), dir1.toString());
+    Shell.execCommand(
+        Shell.WINUTILS, "symlink", fileLink.toString(), file1.toString());
+
+    // Read back the two links and ensure we get what we expected.
+    //
+    String readLinkOutput = Shell.execCommand(Shell.WINUTILS,
+        "readlink",
+        dirLink.toString());
+    assertThat(readLinkOutput, equalTo(dir1.toString()));
+
+    readLinkOutput = Shell.execCommand(Shell.WINUTILS,
+        "readlink",
+        fileLink.toString());
+    assertThat(readLinkOutput, equalTo(file1.toString()));
+
+    // Try a few invalid inputs and verify we get an ExitCodeException for each.
+    //
+    try {
+      // No link name specified.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", "");
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Bad link name.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", "ThereIsNoSuchLink");
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Non-symlink directory target.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", dir1.toString());
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Non-symlink file target.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", file1.toString());
+      fail("Failed to get Shell.ExitCodeException when reading bad symlink");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    try {
+      // Too many parameters.
+      //
+      Shell.execCommand(Shell.WINUTILS, "readlink", "a", "b");
+      fail("Failed to get Shell.ExitCodeException with bad parameters");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
     }
   }
 }
