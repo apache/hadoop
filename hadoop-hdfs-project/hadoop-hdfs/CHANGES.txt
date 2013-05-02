@@ -224,6 +224,9 @@ Release 2.0.5-beta - UNRELEASED
     HDFS-4748. MiniJournalCluster#restartJournalNode leaks resources, which 
     causes sporadic test failures. (Chris Nauroth via suresh)
 
+    HDFS-4785. Concat operation does not remove concatenated files from
+    InodeMap. (suresh)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
