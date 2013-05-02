@@ -1090,7 +1090,7 @@ public class FSDirectory implements Closeable {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           +src+" is removed");
     }
-    remvoedAllFromInodesFromMap(targetNode);
+    removeAllFromInodesFromMap(targetNode);
     return filesRemoved;
   }
   
@@ -1783,14 +1783,14 @@ public class FSDirectory implements Closeable {
   }
   
   /** Remove all the inodes under given inode from the map */
-  private void remvoedAllFromInodesFromMap(INode inode) {
+  private void removeAllFromInodesFromMap(INode inode) {
     removeFromInodeMap(inode);
     if (!inode.isDirectory()) {
       return;
     }
     INodeDirectory dir = (INodeDirectory) inode;
     for (INode child : dir.getChildrenList()) {
-      remvoedAllFromInodesFromMap(child);
+      removeAllFromInodesFromMap(child);
     }
     dir.clearChildren();
   }
@@ -2258,14 +2258,18 @@ public class FSDirectory implements Closeable {
     try {
       id = Long.valueOf(inodeId);
     } catch (NumberFormatException e) {
-      throw new FileNotFoundException(
-          "File for given inode path does not exist: " + src);
+      throw new FileNotFoundException("Invalid inode path: " + src);
     }
     if (id == INodeId.ROOT_INODE_ID && pathComponents.length == 4) {
       return Path.SEPARATOR;
     }
+    INode inode = fsd.getInode(id);
+    if (inode == null) {
+      throw new FileNotFoundException(
+          "File for given inode path does not exist: " + src);
+    }
     StringBuilder path = id == INodeId.ROOT_INODE_ID ? new StringBuilder()
-        : new StringBuilder(fsd.getInode(id).getFullPathName());
+        : new StringBuilder(inode.getFullPathName());
     for (int i = 4; i < pathComponents.length; i++) {
       path.append(Path.SEPARATOR).append(DFSUtil.bytes2String(pathComponents[i]));
     }

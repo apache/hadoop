@@ -909,6 +909,17 @@ public class TestINodeFile {
     components = INode.getPathComponents(testPath);
     resolvedPath = FSDirectory.resolvePath(testPath, components, fsd);
     assertEquals(testPath, resolvedPath);
+    
+    // Test path with nonexistent(deleted or wrong id) inode
+    Mockito.doReturn(null).when(fsd).getInode(Mockito.anyLong());
+    testPath = "/.reserved/.inodes/1234";
+    components = INode.getPathComponents(testPath);
+    try {
+      String realPath = FSDirectory.resolvePath(testPath, components, fsd);
+      fail("Path should not be resolved:" + realPath);
+    } catch (IOException e) {
+      assertTrue(e instanceof FileNotFoundException);
+    }
   }
   
   /**

@@ -273,6 +273,8 @@ Trunk (Unreleased)
     HDFS-4785. Concat operation does not remove concatenated files from
     InodeMap. (suresh)
 
+    HDFS-4784. NPE in FSDirectory.resolvePath(). (Brandon Li via suresh)
+
   BREAKDOWN OF HADOOP-8562 and HDFS-3602 SUBTASKS AND RELATED JIRAS
 
     HDFS-4145. Merge hdfs cmd line scripts from branch-1-win. (David Lao,
