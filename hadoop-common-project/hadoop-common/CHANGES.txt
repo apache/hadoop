@@ -541,7 +541,7 @@ Trunk (Unreleased)
     (Chris Nauroth via suresh)
 
     HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
-    (Chris Nauroth via suresh)
+    (Chris Nauroth and Arpit Agarwal via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 
