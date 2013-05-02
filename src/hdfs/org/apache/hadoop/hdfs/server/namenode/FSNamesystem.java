@@ -1654,6 +1654,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   /**
+   * Returns true if the file is closed
+   */
+  boolean isFileClosed(String src)
+      throws AccessControlException, IOException {
+    FSPermissionChecker pc = getPermissionChecker();
+    synchronized (this) {
+      if (isPermissionEnabled) {
+        checkTraverse(pc, src);
+      }
+      INode inode = dir.getFileINode(src);
+      if (inode == null) {
+        throw new FileNotFoundException("File not found " + src);
+      }
+
+      return !inode.isUnderConstruction();
+    }
+  }
+  
+  /**
    * Recover lease;
    * Immediately revoke the lease of the current lease holder and start lease
    * recovery so that the file can be forced to be closed.

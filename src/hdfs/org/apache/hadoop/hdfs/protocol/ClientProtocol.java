@@ -54,7 +54,8 @@ public interface ClientProtocol extends VersionedProtocol {
    *     multiple blocks within a single BlockTokenIdentifier 
    *     
    *     (bumped to 61 to bring in line with trunk)
-   * Added concat() - since this an addition of method, it does not break
+   * Added concat() and isFileClosed()
+   * - since this is addition of methods, it does not break
    * compatibility and version number does not need to be changed.
    */
   public static final long versionID = 61L;
@@ -160,6 +161,18 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public boolean recoverLease(String src, String clientName) throws IOException;
+
+  /**
+   * Get the close status of a file
+   * @param src The string representation of the path to the file
+   *
+   * @return return true if file is closed
+   * @throws AccessControlException permission denied
+   * @throws FileNotFoundException file <code>src</code> is not found
+   * @throws IOException If an I/O error occurred
+   */
+  public boolean isFileClosed(String src) throws AccessControlException,
+      FileNotFoundException, IOException;
 
   /**
    * Set replication for an existing file.

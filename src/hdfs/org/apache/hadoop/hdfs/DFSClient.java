@@ -892,6 +892,20 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
   
   /**
+   * Close status of a file
+   * @return true if file is already closed
+   */
+  public boolean isFileClosed(String src) throws IOException{
+    checkOpen();
+    try {
+      return namenode.isFileClosed(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
+  }
+
+  /**
    * Append to an existing HDFS file.  
    * 
    * @param src file name
