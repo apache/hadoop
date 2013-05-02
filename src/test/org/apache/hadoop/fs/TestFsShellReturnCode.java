@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -150,7 +151,8 @@ public class TestFsShellReturnCode {
     assertTrue(fileSys.exists(p1));
 
     // Test 1: exit code for chown on existing file is 0
-    String argv[] = { "-chown", "admin", f1 };
+    final String username = UserGroupInformation.getCurrentUser().getShortUserName();
+    String argv[] = { "-chown", username, f1 };
     verify(fs, "-chown", argv, 1, fsShell, 0);
 
     // Test 2: exit code for chown on non-existing path is 1
@@ -170,7 +172,7 @@ public class TestFsShellReturnCode {
     assertTrue(fileSys.exists(p6));
 
     // Test 4: exit code for chown on existing path with globbed input is 0
-    String argv4[] = { "-chown", "admin", f7 };
+    String argv4[] = { "-chown", username, f7 };
     verify(fs, "-chown", argv4, 1, fsShell, 0);
 
   }

@@ -665,6 +665,9 @@ Release 1.2.0 - unreleased
     HDFS-3817. Avoid printing stack information for SafeModeException.
     (Brandon Li via suresh)
 
+    HADOOP-9543. TestFsShellReturnCode may fail if the hardcoded user "admin"
+    is not a valid user in the loacl OS.  (szetszwo)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
