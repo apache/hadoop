@@ -613,6 +613,9 @@ Release 1.2.0 - 2013.04.16
     HADOOP-9537. Backport changes to add support running Hadoop client on AIX.
     (Aaron T. Myers, backported by Arpit Agarwal via suresh)
 
+    HADOOP-8711. Provide an option for IPC server users to avoid printing stack
+    information for certain exceptions. (Brandon Li via suresh)
+
 Release 1.1.2 - 2013.01.30
 
   INCOMPATIBLE CHANGES
