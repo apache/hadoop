@@ -207,6 +207,9 @@ Release 2.0.5-beta - UNRELEASED
     versionInfo has parantheses like when running on a git checkout. (Hitesh Shah
     via vinodkv)
 
+    MAPREDUCE-5193. A few MR tests use block sizes which are smaller than the
+    default minimum block size. (Andrew Wang via atm)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
