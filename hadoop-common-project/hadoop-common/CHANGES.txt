@@ -539,6 +539,9 @@ Trunk (Unreleased)
 
     HADOOP-9532. HADOOP_CLIENT_OPTS is appended twice by Windows cmd scripts.
     (Chris Nauroth via suresh)
+
+    HADOOP-9043. Disallow in winutils creating symlinks with forwards slashes.
+    (Chris Nauroth via suresh)
     
 Release 2.0.5-beta - UNRELEASED
 

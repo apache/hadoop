@@ -60,6 +60,17 @@ int Symlink(__in int argc, __in_ecount(argc) wchar_t *argv[])
     goto SymlinkEnd;
   }
 
+  if (wcschr(longLinkName, L'/') != NULL || wcschr(longFileName, L'/') != NULL)
+  {
+    // Reject forward-slash separated paths as they result in unusable symlinks.
+    //
+    fwprintf(stderr,
+      L"Rejecting forward-slash separated path which would result in an "
+      L"unusable symlink: link = %s, target = %s\n", longLinkName, longFileName);
+    ret = FAILURE;
+    goto SymlinkEnd;
+  }
+
   // Check if the the process's access token has the privilege to create
   // symbolic links. Without this step, the call to CreateSymbolicLink() from
   // users have the privilege to create symbolic links will still succeed.
