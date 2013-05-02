@@ -56,6 +56,9 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5145. Changed default max-attempts to be more than one for MR jobs
     inline with YARN. (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-5036. Default shuffle handler port should not be 8080.
+    (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4974. Optimising the LineRecordReader initialize() method 
