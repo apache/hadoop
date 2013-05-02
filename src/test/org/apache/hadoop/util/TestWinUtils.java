@@ -19,6 +19,7 @@
 package org.apache.hadoop.util;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,6 +45,8 @@ public class TestWinUtils {
 
   @Before
   public void setUp() {
+    // Not supported on non-Windows platforms
+    assumeTrue(Shell.WINDOWS);
     TEST_DIR.mkdirs();
   }
 
@@ -70,11 +73,6 @@ public class TestWinUtils {
 
   @Test
   public void testLs() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     final String content = "6bytes";
     final int contentSize = content.length();
     File testFile = new File(TEST_DIR, "file1");
@@ -104,11 +102,6 @@ public class TestWinUtils {
 
   @Test
   public void testGroups() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     String currentUser = System.getProperty("user.name");
 
     // Verify that groups command returns information about the current user
@@ -229,11 +222,6 @@ public class TestWinUtils {
 
   @Test
   public void testBasicChmod() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     // - Create a file.
     // - Change mode to 377 so owner does not have read permission.
     // - Verify the owner truly does not have the permissions to read.
@@ -285,11 +273,6 @@ public class TestWinUtils {
 
   @Test
   public void testChmod() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     testChmodInternal("7", "-------rwx");
     testChmodInternal("70", "----rwx---");
     testChmodInternal("u-x,g+r,o=g", "-rw-r--r--");
@@ -322,11 +305,6 @@ public class TestWinUtils {
 
   @Test
   public void testChown() throws IOException {
-    if (!Shell.WINDOWS) {
-      // Not supported on non-Windows platforms
-      return;
-    }
-
     File a = new File(TEST_DIR, "a");
     assertTrue(a.createNewFile());
     String username = System.getProperty("user.name");
@@ -348,5 +326,37 @@ public class TestWinUtils {
 
     assertTrue(a.delete());
     assertFalse(a.exists());
+  }
+
+  @Test (timeout = 30000)
+  public void testSymlinkRejectsForwardSlashesInLink() throws IOException {
+    File newFile = new File(TEST_DIR, "file");
+    assertTrue(newFile.createNewFile());
+    String target = newFile.getPath();
+    String link = new File(TEST_DIR, "link").getPath().replaceAll("\\\\", "/");
+    try {
+      Shell.execCommand(Shell.WINUTILS, "symlink", link, target);
+      fail(String.format("did not receive expected failure creating symlink "
+        + "with forward slashes in link: link = %s, target = %s", link, target));
+    } catch (IOException e) {
+      LOG.info(
+        "Expected: Failed to create symlink with forward slashes in target");
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testSymlinkRejectsForwardSlashesInTarget() throws IOException {
+    File newFile = new File(TEST_DIR, "file");
+    assertTrue(newFile.createNewFile());
+    String target = newFile.getPath().replaceAll("\\\\", "/");
+    String link = new File(TEST_DIR, "link").getPath();
+    try {
+      Shell.execCommand(Shell.WINUTILS, "symlink", link, target);
+      fail(String.format("did not receive expected failure creating symlink "
+        + "with forward slashes in target: link = %s, target = %s", link, target));
+    } catch (IOException e) {
+      LOG.info(
+        "Expected: Failed to create symlink with forward slashes in target");
+    }
   }
 }
