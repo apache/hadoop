@@ -129,6 +129,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-618. Modified RM_INVALID_IDENTIFIER to be -1 instead of zero. (Jian He
     via vinodkv)
 
+    YARN-625. Move the utility method unwrapAndThrowException from
+    YarnRemoteExceptionPBImpl to RPCUtil. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -98,7 +98,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequ
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 
 import com.google.protobuf.ServiceException;
 
@@ -133,7 +133,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetJobReportResponsePBImpl(proxy.getJobReport(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -144,7 +144,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetTaskReportResponsePBImpl(proxy.getTaskReport(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -155,7 +155,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetTaskAttemptReportResponsePBImpl(proxy.getTaskAttemptReport(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -166,7 +166,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetCountersResponsePBImpl(proxy.getCounters(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -177,7 +177,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetTaskAttemptCompletionEventsResponsePBImpl(proxy.getTaskAttemptCompletionEvents(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -188,7 +188,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetTaskReportsResponsePBImpl(proxy.getTaskReports(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -199,7 +199,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new GetDiagnosticsResponsePBImpl(proxy.getDiagnostics(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
   
@@ -212,7 +212,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
       return new GetDelegationTokenResponsePBImpl(proxy.getDelegationToken(
           null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
   
@@ -223,7 +223,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new KillJobResponsePBImpl(proxy.killJob(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -234,7 +234,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new KillTaskResponsePBImpl(proxy.killTask(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -245,7 +245,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new KillTaskAttemptResponsePBImpl(proxy.killTaskAttempt(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -256,7 +256,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     try {
       return new FailTaskAttemptResponsePBImpl(proxy.failTaskAttempt(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
  
@@ -269,7 +269,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
       return new RenewDelegationTokenResponsePBImpl(proxy.renewDelegationToken(
           null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -283,7 +283,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
           proxy.cancelDelegationToken(null, requestProto));
 
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 }

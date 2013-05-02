@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -58,7 +58,7 @@ private ResourceTrackerPB proxy;
     try {
       return new RegisterNodeManagerResponsePBImpl(proxy.registerNodeManager(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 
@@ -69,7 +69,7 @@ private ResourceTrackerPB proxy;
     try {
       return new NodeHeartbeatResponsePBImpl(proxy.nodeHeartbeat(null, requestProto));
     } catch (ServiceException e) {
-      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+      throw RPCUtil.unwrapAndThrowException(e);
     }
   }
 

@@ -109,30 +109,5 @@ public class YarnRemoteExceptionPBImpl extends YarnRemoteException {
     }
     viaProto = false;
   }
-  
-  /**
-   * Utility method that unwraps and throws appropriate exception. 
-   * @param se ServiceException
-   * @throws YarnRemoteException
-   * @throws UndeclaredThrowableException
-   */
-  public static YarnRemoteException unwrapAndThrowException(ServiceException se) 
-     throws UndeclaredThrowableException {
-    if (se.getCause() instanceof RemoteException) {
-      try {
-        throw ((RemoteException) se.getCause())
-            .unwrapRemoteException(YarnRemoteExceptionPBImpl.class);
-      } catch (YarnRemoteException ex) {
-        return ex;
-      } catch (IOException e1) {
-        throw new UndeclaredThrowableException(e1);
-      }
-    } else if (se.getCause() instanceof YarnRemoteException) {
-      return (YarnRemoteException)se.getCause();
-    } else if (se.getCause() instanceof UndeclaredThrowableException) {
-      throw (UndeclaredThrowableException)se.getCause();
-    } else {
-      throw new UndeclaredThrowableException(se);
-    }
-  }
+
 }
