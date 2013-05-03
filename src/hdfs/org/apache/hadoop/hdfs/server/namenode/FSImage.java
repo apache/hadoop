@@ -1822,7 +1822,7 @@ public class FSImage extends Storage {
   static private final UTF8 U_STR = new UTF8();
   public static String readString(DataInputStream in) throws IOException {
     U_STR.readFields(in);
-    return U_STR.toString();
+    return U_STR.toStringChecked();
   }
 
   static String readString_EmptyAsNull(DataInputStream in) throws IOException {
