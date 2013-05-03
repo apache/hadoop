@@ -53,6 +53,9 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9322. LdapGroupsMapping doesn't seem to set a timeout for
     its directory search. (harsh)
 
+    HADOOP-9523. Provide a generic IBM java vendor flag in PlatformName.java
+    to support non-Sun JREs. (Tian Hong Wang via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
