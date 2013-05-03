@@ -163,4 +163,32 @@ public class TestFileAppendRestart {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Test to append to the file, when one of datanode in the existing pipeline is down.
+   * @throws Exception
+   */
+  @Test
+  public void testAppendWithPipelineRecovery() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).manageDataDfsDirs(true)
+          .manageNameDfsDirs(true).numDataNodes(4)
+          .racks(new String[] { "/rack1", "/rack1", "/rack1", "/rack2" })
+          .build();
+      cluster.waitActive();
+
+      DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+      Path path = new Path("/test1");
+      DFSTestUtil.createFile(fs, path, 1024, (short) 3, 1l);
+
+      cluster.stopDataNode(3);
+      DFSTestUtil.appendFile(fs, path, "hello");
+    } finally {
+      if (null != cluster) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

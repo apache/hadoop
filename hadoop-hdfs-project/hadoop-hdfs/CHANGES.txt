@@ -17,6 +17,10 @@ Release 0.23.8 - UNRELEASED
     HDFS-4699. TestPipelinesFailover#testPipelineRecoveryStress fails
     sporadically (Chris Nauroth via kihwal)
 
+    HDFS-3436. In DataNode.transferReplicaForPipelineRecovery(..), it should
+    use the stored generation stamp to check if the block is valid.  (Vinay
+    via szetszwo)
+
 Release 0.23.7 - 2013-04-18
 
   INCOMPATIBLE CHANGES

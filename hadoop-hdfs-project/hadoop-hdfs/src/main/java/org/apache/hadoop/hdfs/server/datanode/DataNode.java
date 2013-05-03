@@ -2123,6 +2123,18 @@ public class DataNode extends Configured
 
     //get replica information
     synchronized(data) {
+      Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
+          b.getBlockId());
+      if (null == storedBlock) {
+        throw new IOException(b + " not found in datanode.");
+      }
+      storedGS = storedBlock.getGenerationStamp();
+      if (storedGS < b.getGenerationStamp()) {
+        throw new IOException(storedGS
+            + " = storedGS < b.getGenerationStamp(), b=" + b);
+      }
+      // Update the genstamp with storedGS
+      b.setGenerationStamp(storedGS);
       if (data.isValidRbw(b)) {
         stage = BlockConstructionStage.TRANSFER_RBW;
       } else if (data.isValidBlock(b)) {
@@ -2131,18 +2143,9 @@ public class DataNode extends Configured
         final String r = data.getReplicaString(b.getBlockPoolId(), b.getBlockId());
         throw new IOException(b + " is neither a RBW nor a Finalized, r=" + r);
       }
-
-      storedGS = data.getStoredBlock(b.getBlockPoolId(),
-          b.getBlockId()).getGenerationStamp();
-      if (storedGS < b.getGenerationStamp()) {
-        throw new IOException(
-            storedGS + " = storedGS < b.getGenerationStamp(), b=" + b);        
-      }
       visible = data.getReplicaVisibleLength(b);
     }
-
-    //set storedGS and visible length
-    b.setGenerationStamp(storedGS);
+    //set visible length
     b.setNumBytes(visible);
 
     if (targets.length > 0) {
