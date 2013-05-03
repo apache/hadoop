@@ -32,20 +32,24 @@ public class PlatformName {
    * The complete platform 'name' to identify the platform as 
    * per the java-vm.
    */
-  private static final String platformName =
+  public static final String PLATFORM_NAME =
       (Shell.WINDOWS ? System.getenv("os") : System.getProperty("os.name"))
       + "-" + System.getProperty("os.arch")
       + "-" + System.getProperty("sun.arch.data.model");
   
   /**
-   * Get the complete platform as per the java-vm.
-   * @return returns the complete platform as per the java-vm.
+   * The java vendor name used in this platform. 
    */
-  public static String getPlatformName() {
-    return platformName;
-  }
+  public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
+
+  /**
+   * A public static variable to indicate the current java vendor is 
+   * IBM java or not. 
+   */
+  public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM");
   
   public static void main(String[] args) {
-    System.out.println(platformName);
+    System.out.println("platform name: " + PLATFORM_NAME);
+    System.out.println("java vendor name: " + JAVA_VENDOR_NAME);
   }
 }

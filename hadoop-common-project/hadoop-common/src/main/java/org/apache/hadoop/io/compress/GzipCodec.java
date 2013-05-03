@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.zlib.*;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
  * This class creates gzip compressors/decompressors. 
@@ -41,10 +42,9 @@ public class GzipCodec extends DefaultCodec {
 
     private static class ResetableGZIPOutputStream extends GZIPOutputStream {
       private static final int TRAILER_SIZE = 8;
-      public static final String JVMVendor= System.getProperty("java.vendor");
       public static final String JVMVersion= System.getProperty("java.version");
       private static final boolean HAS_BROKEN_FINISH =
-          (JVMVendor.contains("IBM") && JVMVersion.contains("1.6.0"));
+          (IBM_JAVA && JVMVersion.contains("1.6.0"));
 
       public ResetableGZIPOutputStream(OutputStream out) throws IOException {
         super(out);
