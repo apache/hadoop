@@ -597,6 +597,10 @@ Release 2.0.5-beta - UNRELEASED
     HADOOP-9523. Provide a generic IBM java vendor flag in PlatformName.java
     to support non-Sun JREs. (Tian Hong Wang via suresh)
 
+    HADOOP-9511. Adding support for additional input streams (FSDataInputStream
+    and RandomAccessFile) in SecureIOUtils so as to help YARN-578. (Omkar Vinit
+    Joshi via vinodkv)
+
   OPTIMIZATIONS
 
     HADOOP-9150. Avoid unnecessary DNS resolution attempts for logical URIs
