@@ -173,6 +173,25 @@ creations/deletions), or "all".</description>
       directories, for redundancy. Default value is same as dfs.name.dir
   </description>
 </property>
+
+<property>
+  <name>dfs.namenode.edits.toleration.length</name>
+  <value>0</value>
+  <description>
+    The length in bytes that namenode is willing to tolerate when the edit log
+    is corrupted.  The edit log toleration feature checks the entire edit log.
+    It computes read length (the length of valid data), corruption length and
+    padding length.  In case that corruption length is non-zero, the corruption
+    will be tolerated only if the corruption length is less than or equal to
+    the toleration length.
+
+    For disabling edit log toleration feature, set this property to -1.  When
+    the feature is disabled, the end of edit log will not be checked.  In this
+    case, namenode will startup normally even if the end of edit log is
+    corrupted.
+  </description>
+</property>
+
 <property>
   <name>dfs.web.ugi</name>
   <value>webuser,webgroup</value>

@@ -77,6 +77,36 @@ public class TestEditLog extends TestCase {
     }
   }
 
+  public void testEditLogPreallocation() throws IOException {
+    final File TEST_DIR =
+        new File(System.getProperty("test.build.data", "/tmp"));
+    final File TEST_EDITS = new File(TEST_DIR, "edit_log");
+    
+    FSEditLog.EditLogFileOutputStream elfos = null;
+    try {
+      elfos = new FSEditLog.EditLogFileOutputStream(TEST_EDITS);
+      byte b[] = new byte[1024];
+      for (int i = 0; i < b.length; i++) {
+        b[i] = 0;
+      }
+      elfos.write(b);
+      elfos.setReadyToFlush();
+      elfos.flushAndSync();
+      assertEquals(FSEditLog.MIN_PREALLOCATION_LENGTH,
+          elfos.getFile().length());
+      for (int i = 0;
+          i < 2 * FSEditLog.MIN_PREALLOCATION_LENGTH / b.length; i++) {
+        elfos.write(b);
+        elfos.setReadyToFlush();
+        elfos.flushAndSync();
+      }
+      assertEquals(3 * FSEditLog.MIN_PREALLOCATION_LENGTH, elfos.getFile().length());
+    } finally {
+      if (elfos != null) elfos.close();
+      if (TEST_EDITS.exists()) TEST_EDITS.delete();
+    }
+  }
+    
   /**
    * Tests transaction logging in dfs.
    */
@@ -142,7 +172,7 @@ public class TestEditLog extends TestCase {
             fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
       File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
       System.out.println("Verifying file: " + editFile);
-      int numEdits = FSEditLog.loadFSEdits(new EditLogFileInputStream(editFile));
+      int numEdits = FSEditLog.loadFSEdits(new EditLogFileInputStream(editFile), -1);
       int numLeases = FSNamesystem.getFSNamesystem().leaseManager.countLease();
       System.out.println("Number of outstanding leases " + numLeases);
       assertEquals(0, numLeases);

@@ -394,3 +394,5 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
     can override Mapper.run and Reducer.run to get the old (inconsistent)
     behaviour. (acmurthy)
 
+    HDFS-4782. Backport edit log corruption toleration. (Chris Nauroth via
+    szetszwo)
