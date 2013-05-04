@@ -437,8 +437,8 @@ public class ProtobufRpcEngine implements RpcEngine {
      */
     static class ProtoBufRpcInvoker implements RpcInvoker {
       private static ProtoClassProtoImpl getProtocolImpl(RPC.Server server,
-          String protoName, long version) throws IOException {
-        ProtoNameVer pv = new ProtoNameVer(protoName, version);
+          String protoName, long clientVersion) throws RpcServerException {
+        ProtoNameVer pv = new ProtoNameVer(protoName, clientVersion);
         ProtoClassProtoImpl impl = 
             server.getProtocolImplMap(RPC.RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
         if (impl == null) { // no match for Protocol AND Version
@@ -446,10 +446,11 @@ public class ProtobufRpcEngine implements RpcEngine {
               server.getHighestSupportedProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, 
                   protoName);
           if (highest == null) {
-            throw new IOException("Unknown protocol: " + protoName);
+            throw new RpcNoSuchProtocolException(
+                "Unknown protocol: " + protoName);
           }
           // protocol supported but not the version that client wants
-          throw new RPC.VersionMismatch(protoName, version,
+          throw new RPC.VersionMismatch(protoName, clientVersion,
               highest.version);
         }
         return impl;
@@ -513,7 +514,7 @@ public class ProtobufRpcEngine implements RpcEngine {
           String msg = "Unknown method " + methodName + " called on " 
                                 + connectionProtocolName + " protocol.";
           LOG.warn(msg);
-          throw new RpcServerException(msg);
+          throw new RpcNoSuchMethodException(msg);
         }
         Message prototype = service.getRequestPrototype(methodDescriptor);
         Message param = prototype.newBuilderForType()

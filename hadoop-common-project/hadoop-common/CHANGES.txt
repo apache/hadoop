@@ -19,6 +19,8 @@ Trunk (Unreleased)
 
     HADOOP-9194. RPC Support for QoS. (Junping Du via llu)
 
+    HADOOP-9425 Add error codes to rpc-response (sanjay Radia)
+
   NEW FEATURES
     
     HADOOP-8561. Introduce HADOOP_PROXY_USER for secure impersonation in child

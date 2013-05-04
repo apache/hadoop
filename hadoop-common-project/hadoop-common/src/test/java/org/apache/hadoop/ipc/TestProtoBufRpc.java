@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto;
@@ -183,6 +184,8 @@ public class TestProtoBufRpc {
       RemoteException re = (RemoteException)e.getCause();
       RpcServerException rse = (RpcServerException) re
           .unwrapRemoteException(RpcServerException.class);
+      Assert.assertTrue(re.getErrorCode().equals(
+          RpcErrorCodeProto.ERROR_RPC_SERVER));
     }
   }
   
@@ -223,6 +226,8 @@ public class TestProtoBufRpc {
       Assert.assertTrue(re.getClassName().equals(
           URISyntaxException.class.getName()));
       Assert.assertTrue(re.getMessage().contains("testException"));
+      Assert.assertTrue(
+          re.getErrorCode().equals(RpcErrorCodeProto.ERROR_APPLICATION));
     }
   }
 }

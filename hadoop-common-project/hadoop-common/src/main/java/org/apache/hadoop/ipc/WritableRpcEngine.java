@@ -416,62 +416,62 @@ public class WritableRpcEngine implements RpcEngine {
      @Override
       public Writable call(org.apache.hadoop.ipc.RPC.Server server,
           String protocolName, Writable rpcRequest, long receivedTime)
-          throws IOException {
-        try {
-          Invocation call = (Invocation)rpcRequest;
-          if (server.verbose) log("Call: " + call);
+          throws IOException, RPC.VersionMismatch {
 
-          // Verify rpc version
-          if (call.getRpcVersion() != writableRpcVersion) {
-            // Client is using a different version of WritableRpc
-            throw new IOException(
-                "WritableRpc version mismatch, client side version="
-                    + call.getRpcVersion() + ", server side version="
-                    + writableRpcVersion);
+        Invocation call = (Invocation)rpcRequest;
+        if (server.verbose) log("Call: " + call);
+
+        // Verify writable rpc version
+        if (call.getRpcVersion() != writableRpcVersion) {
+          // Client is using a different version of WritableRpc
+          throw new RpcServerException(
+              "WritableRpc version mismatch, client side version="
+                  + call.getRpcVersion() + ", server side version="
+                  + writableRpcVersion);
+        }
+
+        long clientVersion = call.getProtocolVersion();
+        final String protoName;
+        ProtoClassProtoImpl protocolImpl;
+        if (call.declaringClassProtocolName.equals(VersionedProtocol.class.getName())) {
+          // VersionProtocol methods are often used by client to figure out
+          // which version of protocol to use.
+          //
+          // Versioned protocol methods should go the protocolName protocol
+          // rather than the declaring class of the method since the
+          // the declaring class is VersionedProtocol which is not 
+          // registered directly.
+          // Send the call to the highest  protocol version
+          VerProtocolImpl highest = server.getHighestSupportedProtocol(
+              RPC.RpcKind.RPC_WRITABLE, protocolName);
+          if (highest == null) {
+            throw new RpcServerException("Unknown protocol: " + protocolName);
           }
+          protocolImpl = highest.protocolTarget;
+        } else {
+          protoName = call.declaringClassProtocolName;
 
-          long clientVersion = call.getProtocolVersion();
-          final String protoName;
-          ProtoClassProtoImpl protocolImpl;
-          if (call.declaringClassProtocolName.equals(VersionedProtocol.class.getName())) {
-            // VersionProtocol methods are often used by client to figure out
-            // which version of protocol to use.
-            //
-            // Versioned protocol methods should go the protocolName protocol
-            // rather than the declaring class of the method since the
-            // the declaring class is VersionedProtocol which is not 
-            // registered directly.
-            // Send the call to the highest  protocol version
-            VerProtocolImpl highest = server.getHighestSupportedProtocol(
-                RPC.RpcKind.RPC_WRITABLE, protocolName);
+          // Find the right impl for the protocol based on client version.
+          ProtoNameVer pv = 
+              new ProtoNameVer(call.declaringClassProtocolName, clientVersion);
+          protocolImpl = 
+              server.getProtocolImplMap(RPC.RpcKind.RPC_WRITABLE).get(pv);
+          if (protocolImpl == null) { // no match for Protocol AND Version
+             VerProtocolImpl highest = 
+                 server.getHighestSupportedProtocol(RPC.RpcKind.RPC_WRITABLE, 
+                     protoName);
             if (highest == null) {
-              throw new IOException("Unknown protocol: " + protocolName);
-            }
-            protocolImpl = highest.protocolTarget;
-          } else {
-            protoName = call.declaringClassProtocolName;
-
-            // Find the right impl for the protocol based on client version.
-            ProtoNameVer pv = 
-                new ProtoNameVer(call.declaringClassProtocolName, clientVersion);
-            protocolImpl = 
-                server.getProtocolImplMap(RPC.RpcKind.RPC_WRITABLE).get(pv);
-            if (protocolImpl == null) { // no match for Protocol AND Version
-               VerProtocolImpl highest = 
-                   server.getHighestSupportedProtocol(RPC.RpcKind.RPC_WRITABLE, 
-                       protoName);
-              if (highest == null) {
-                throw new IOException("Unknown protocol: " + protoName);
-              } else { // protocol supported but not the version that client wants
-                throw new RPC.VersionMismatch(protoName, clientVersion,
-                  highest.version);
-              }
+              throw new RpcServerException("Unknown protocol: " + protoName);
+            } else { // protocol supported but not the version that client wants
+              throw new RPC.VersionMismatch(protoName, clientVersion,
+                highest.version);
             }
           }
+        }
           
 
           // Invoke the protocol method
-
+       try {
           long startTime = Time.now();
           Method method = 
               protocolImpl.protocolClass.getMethod(call.getMethodName(),
