@@ -375,6 +375,8 @@ Release 2.0.5-beta - UNRELEASED
     MAPREDUCE-5193. A few MR tests use block sizes which are smaller than the
     default minimum block size. (Andrew Wang via atm)
 
+    MAPREDUCE-5205. Fixed MR App to load tokens correctly. (vinodkv)
+
 Release 2.0.4-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
