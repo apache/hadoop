@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server;
+package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -44,7 +44,7 @@ public class RMDelegationTokenSecretManager
    *        for expired tokens
    */
   public RMDelegationTokenSecretManager(long delegationKeyUpdateInterval,
-                                      long delegationTokenMaxLifetime, 
+                                      long delegationTokenMaxLifetime,
                                       long delegationTokenRenewInterval,
                                       long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
