@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -287,6 +286,12 @@ class ImageLoaderCurrent implements ImageLoader {
       byte [] name = FSImageSerialization.readBytes(in);
       String n = new String(name, "UTF8");
       v.visit(ImageElement.INODE_PATH, n);
+      
+      if (LayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {
+        long inodeId = in.readLong();
+        v.visit(ImageElement.INODE_ID, inodeId);
+      }
+      
       v.visit(ImageElement.REPLICATION, in.readShort());
       v.visit(ImageElement.MODIFICATION_TIME, formatDate(in.readLong()));
 
@@ -644,13 +649,15 @@ class ImageLoaderCurrent implements ImageLoader {
       }
     } else if (numBlocks == -2) {
       v.visit(ImageElement.SYMLINK, Text.readString(in));
-    } else if (numBlocks == -3) {
+    } else if (numBlocks == -3) { // reference node
       final boolean isWithName = in.readBoolean();
-      int dstSnapshotId = Snapshot.INVALID_ID;
-      if (!isWithName) {
-        dstSnapshotId = in.readInt();
+      int snapshotId = in.readInt();
+      if (isWithName) {
+        v.visit(ImageElement.SNAPSHOT_LAST_SNAPSHOT_ID, snapshotId);
+      } else {
+        v.visit(ImageElement.SNAPSHOT_DST_SNAPSHOT_ID, snapshotId);
       }
-      v.visit(ImageElement.SNAPSHOT_DST_SNAPSHOT_ID, dstSnapshotId);
+      
       final boolean firstReferred = in.readBoolean();
       if (firstReferred) {
         v.visitEnclosingElement(ImageElement.SNAPSHOT_REF_INODE);

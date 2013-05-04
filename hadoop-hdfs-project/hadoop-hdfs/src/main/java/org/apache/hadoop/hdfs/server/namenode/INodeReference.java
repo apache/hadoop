@@ -21,12 +21,13 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -86,6 +87,32 @@ public abstract class INodeReference extends INode {
     return wc.getReferenceCount();
   }
 
+  /**
+   * When destroying a reference node (WithName or DstReference), we call this
+   * method to identify the snapshot which is the latest snapshot before the
+   * reference node's creation. 
+   */
+  static Snapshot getPriorSnapshot(INodeReference ref) {
+    WithCount wc = (WithCount) ref.getReferredINode();
+    WithName wn = null;
+    if (ref instanceof DstReference) {
+      wn = wc.getLastWithName();
+    } else if (ref instanceof WithName) {
+      wn = wc.getPriorWithName((WithName) ref);
+    }
+    if (wn != null) {
+      INode referred = wc.getReferredINode();
+      if (referred instanceof FileWithSnapshot) {
+        return ((FileWithSnapshot) referred).getDiffs().getPrior(
+            wn.lastSnapshotId);
+      } else if (referred instanceof INodeDirectoryWithSnapshot) { 
+        return ((INodeDirectoryWithSnapshot) referred).getDiffs().getPrior(
+            wn.lastSnapshotId);
+      }
+    }
+    return null;
+  }
+  
   private INode referred;
   
   public INodeReference(INode parent, INode referred) {
@@ -225,7 +252,7 @@ public abstract class INodeReference extends INode {
     return this;
   }
 
-  @Override
+  @Override // used by WithCount
   public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
       BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
       throws QuotaExceededException {
@@ -233,8 +260,8 @@ public abstract class INodeReference extends INode {
         removedINodes);
   }
 
-  @Override
-  public final void destroyAndCollectBlocks(
+  @Override // used by WithCount
+  public void destroyAndCollectBlocks(
       BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
     if (removeReference(this) <= 0) {
       referred.destroyAndCollectBlocks(collectedBlocks, removedINodes);
@@ -307,6 +334,18 @@ public abstract class INodeReference extends INode {
     
     private final List<WithName> withNameList = new ArrayList<WithName>();
     
+    /**
+     * Compare snapshot with IDs, where null indicates the current status thus
+     * is greater than any non-null snapshot.
+     */
+    public static final Comparator<WithName> WITHNAME_COMPARATOR
+        = new Comparator<WithName>() {
+      @Override
+      public int compare(WithName left, WithName right) {
+        return left.lastSnapshotId - right.lastSnapshotId;
+      }
+    };
+    
     public WithCount(INodeReference parent, INode referred) {
       super(parent, referred);
       Preconditions.checkArgument(!referred.isReference());
@@ -324,7 +363,11 @@ public abstract class INodeReference extends INode {
     /** Increment and then return the reference count. */
     public void addReference(INodeReference ref) {
       if (ref instanceof WithName) {
-        withNameList.add((WithName) ref);
+        WithName refWithName = (WithName) ref;
+        int i = Collections.binarySearch(withNameList, refWithName,
+            WITHNAME_COMPARATOR);
+        Preconditions.checkState(i < 0);
+        withNameList.add(-i - 1, refWithName);
       } else if (ref instanceof DstReference) {
         setParentReference(ref);
       }
@@ -333,15 +376,29 @@ public abstract class INodeReference extends INode {
     /** Decrement and then return the reference count. */
     public void removeReference(INodeReference ref) {
       if (ref instanceof WithName) {
-        Iterator<INodeReference.WithName> iter = withNameList.iterator();
-        while (iter.hasNext()) {
-          if (iter.next() == ref) {
-            iter.remove();
-            break;
-          }
+        int i = Collections.binarySearch(withNameList, (WithName) ref,
+            WITHNAME_COMPARATOR);
+        if (i >= 0) {
+          withNameList.remove(i);
         }
       } else if (ref == getParentReference()) {
         setParent(null);
+      }
+    }
+    
+    WithName getLastWithName() {
+      return withNameList.size() > 0 ? 
+          withNameList.get(withNameList.size() - 1) : null;
+    }
+    
+    WithName getPriorWithName(WithName post) {
+      int i = Collections.binarySearch(withNameList, post, WITHNAME_COMPARATOR);
+      if (i > 0) {
+        return withNameList.get(i - 1);
+      } else if (i == 0 || i == -1) {
+        return null;
+      } else {
+        return withNameList.get(-i - 2);
       }
     }
     
@@ -359,13 +416,6 @@ public abstract class INodeReference extends INode {
     public final void addSpaceConsumedToRenameSrc(long nsDelta, long dsDelta,
         boolean verify, int snapshotId) throws QuotaExceededException {
       if (snapshotId != Snapshot.INVALID_ID) {
-        // sort withNameList based on the lastSnapshotId
-        Collections.sort(withNameList, new Comparator<WithName>() {
-          @Override
-          public int compare(WithName w1, WithName w2) {
-            return w1.lastSnapshotId - w2.lastSnapshotId;
-          }
-        });
         for (INodeReference.WithName withName : withNameList) {
           if (withName.getLastSnapshotId() >= snapshotId) {
             withName.addSpaceConsumed(nsDelta, dsDelta, verify, snapshotId);
@@ -429,8 +479,14 @@ public abstract class INodeReference extends INode {
     
     @Override
     public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
-        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes)
-        throws QuotaExceededException {
+        final BlocksMapUpdateInfo collectedBlocks,
+        final List<INode> removedINodes) throws QuotaExceededException {
+      // since WithName node resides in deleted list acting as a snapshot copy,
+      // the parameter snapshot must be non-null
+      Preconditions.checkArgument(snapshot != null);
+      // if prior is null, or if prior's id is <= dstSnapshotId, we will call
+      // destroyAndCollectBlocks method
+      Preconditions.checkArgument(prior != null);
       Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
           collectedBlocks, removedINodes);
       INodeReference ref = getReferredINode().getParentReference();
@@ -439,6 +495,48 @@ public abstract class INodeReference extends INode {
             -counts.get(Quota.DISKSPACE), true, Snapshot.INVALID_ID);
       }
       return counts;
+    }
+    
+    @Override
+    public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
+        final List<INode> removedINodes) {
+      if (removeReference(this) <= 0) {
+        getReferredINode().destroyAndCollectBlocks(collectedBlocks,
+            removedINodes);
+      } else {
+        Snapshot prior = getPriorSnapshot(this);
+        INode referred = getReferredINode().asReference().getReferredINode();
+        Snapshot snapshot = getSelfSnapshot();
+        
+        if (snapshot != null) {
+          Preconditions.checkState(prior == null || 
+              snapshot.getId() > prior.getId());
+          try {
+            Quota.Counts counts = referred.cleanSubtree(snapshot, prior,
+                collectedBlocks, removedINodes);
+            INodeReference ref = getReferredINode().getParentReference();
+            if (ref != null) {
+              ref.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
+                  -counts.get(Quota.DISKSPACE), true, Snapshot.INVALID_ID);
+            }
+          } catch (QuotaExceededException e) {
+            LOG.error("should not exceed quota while snapshot deletion", e);
+          }
+        }
+      }
+    }
+    
+    private Snapshot getSelfSnapshot() {
+      INode referred = getReferredINode().asReference().getReferredINode();
+      Snapshot snapshot = null;
+      if (referred instanceof FileWithSnapshot) {
+        snapshot = ((FileWithSnapshot) referred).getDiffs().getPrior(
+            lastSnapshotId);
+      } else if (referred instanceof INodeDirectoryWithSnapshot) {
+        snapshot = ((INodeDirectoryWithSnapshot) referred).getDiffs().getPrior(
+            lastSnapshotId);
+      }
+      return snapshot;
     }
   }
   
@@ -471,15 +569,89 @@ public abstract class INodeReference extends INode {
     public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
         BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes)
         throws QuotaExceededException {
-      Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
-          collectedBlocks, removedINodes);
-      if (snapshot != null) {
-        // also need to update quota usage along the corresponding WithName node
-        WithCount wc = (WithCount) getReferredINode();
-        wc.addSpaceConsumedToRenameSrc(-counts.get(Quota.NAMESPACE),
-            -counts.get(Quota.DISKSPACE), true, snapshot.getId());
+      if (snapshot == null && prior == null) {
+        Quota.Counts counts = Quota.Counts.newInstance();
+        this.computeQuotaUsage(counts, true);
+        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        return counts;
+      } else {
+        return getReferredINode().cleanSubtree(snapshot, prior,
+            collectedBlocks, removedINodes);
       }
-      return counts;
+    }
+    
+    /**
+     * {@inheritDoc}
+     * <br/>
+     * To destroy a DstReference node, we first remove its link with the 
+     * referred node. If the reference number of the referred node is <= 0, we 
+     * destroy the subtree of the referred node. Otherwise, we clean the 
+     * referred node's subtree and delete everything created after the last 
+     * rename operation, i.e., everything outside of the scope of the prior 
+     * WithName nodes.
+     */
+    @Override
+    public void destroyAndCollectBlocks(
+        BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+      if (removeReference(this) <= 0) {
+        getReferredINode().destroyAndCollectBlocks(collectedBlocks,
+            removedINodes);
+      } else {
+        // we will clean everything, including files, directories, and 
+        // snapshots, that were created after this prior snapshot
+        Snapshot prior = getPriorSnapshot(this);
+        // prior must be non-null, otherwise we do not have any previous 
+        // WithName nodes, and the reference number will be 0.
+        Preconditions.checkState(prior != null);
+        // identify the snapshot created after prior
+        Snapshot snapshot = getSelfSnapshot(prior);
+        
+        INode referred = getReferredINode().asReference().getReferredINode();
+        if (referred instanceof FileWithSnapshot) {
+          // if referred is a file, it must be a FileWithSnapshot since we did
+          // recordModification before the rename
+          FileWithSnapshot sfile = (FileWithSnapshot) referred;
+          // make sure we mark the file as deleted
+          sfile.deleteCurrentFile();
+          if (snapshot != null) {
+            try {
+              referred.cleanSubtree(snapshot, prior, collectedBlocks,
+                  removedINodes);
+            } catch (QuotaExceededException e) {
+              LOG.error("should not exceed quota while snapshot deletion", e);
+            }
+          }
+        } else if (referred instanceof INodeDirectoryWithSnapshot) {
+          // similarly, if referred is a directory, it must be an
+          // INodeDirectoryWithSnapshot
+          INodeDirectoryWithSnapshot sdir = 
+              (INodeDirectoryWithSnapshot) referred;
+          try {
+            INodeDirectoryWithSnapshot.destroyDstSubtree(sdir, snapshot, prior,
+                collectedBlocks, removedINodes);
+          } catch (QuotaExceededException e) {
+            LOG.error("should not exceed quota while snapshot deletion", e);
+          }
+        }
+      }
+    }
+    
+    private Snapshot getSelfSnapshot(final Snapshot prior) {
+      WithCount wc = (WithCount) getReferredINode().asReference();
+      INode referred = wc.getReferredINode();
+      Snapshot lastSnapshot = null;
+      if (referred instanceof FileWithSnapshot) {
+        lastSnapshot = ((FileWithSnapshot) referred).getDiffs()
+            .getLastSnapshot(); 
+      } else if (referred instanceof INodeDirectoryWithSnapshot) {
+        lastSnapshot = ((INodeDirectoryWithSnapshot) referred)
+            .getLastSnapshot();
+      }
+      if (lastSnapshot != null && !lastSnapshot.equals(prior)) {
+        return lastSnapshot;
+      } else {
+        return null;
+      }
     }
   }
 }

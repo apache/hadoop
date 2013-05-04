@@ -244,6 +244,7 @@ public class INodeDirectory extends INodeWithAdditionalFields {
 
     final INodeReference.WithCount withCount;
     if (oldChild.isReference()) {
+      Preconditions.checkState(oldChild instanceof INodeReference.DstReference);
       withCount = (INodeReference.WithCount) oldChild.asReference()
           .getReferredINode();
     } else {

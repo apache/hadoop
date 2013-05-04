@@ -66,7 +66,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @param collectedBlocks Used to collect information for blocksMap update
    * @return delta in namespace. 
    */
-  final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
+  public final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
       Snapshot prior, final N currentINode,
       final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes)
       throws QuotaExceededException {
@@ -152,28 +152,45 @@ abstract class AbstractINodeDiffList<N extends INode,
   
   /**
    * Find the latest snapshot before a given snapshot.
-   * @param anchor The returned snapshot must be taken before this given 
-   *               snapshot.
+   * @param anchorId The returned snapshot's id must be <= or < this given 
+   *                 snapshot id.
+   * @param exclusive True means the returned snapshot's id must be < the given
+   *                  id, otherwise <=.
    * @return The latest snapshot before the given snapshot.
    */
-  private final Snapshot getPrior(Snapshot anchor) {
-    if (anchor == null) {
+  private final Snapshot getPrior(int anchorId, boolean exclusive) {
+    if (anchorId == Snapshot.INVALID_ID) {
       return getLastSnapshot();
     }
-    final int i = Collections.binarySearch(diffs, anchor.getId());
-    if (i == -1 || i == 0) {
-      return null;
-    } else {
-      int priorIndex = i > 0 ? i - 1 : -i - 2;
-      return diffs.get(priorIndex).getSnapshot();
+    final int i = Collections.binarySearch(diffs, anchorId);
+    if (exclusive) { // must be the one before
+      if (i == -1 || i == 0) {
+        return null;
+      } else {
+        int priorIndex = i > 0 ? i - 1 : -i - 2;
+        return diffs.get(priorIndex).getSnapshot();
+      }
+    } else { // the one, or the one before if not existing
+      if (i >= 0) {
+        return diffs.get(i).getSnapshot();
+      } else if (i < -1) {
+        return diffs.get(-i - 2).getSnapshot();
+      } else { // i == -1
+        return null;
+      }
     }
+  }
+  
+  public final Snapshot getPrior(int snapshotId) {
+    return getPrior(snapshotId, false);
   }
   
   /**
    * Update the prior snapshot.
    */
   final Snapshot updatePrior(Snapshot snapshot, Snapshot prior) {
-    Snapshot s = getPrior(snapshot);
+    int id = snapshot == null ? Snapshot.INVALID_ID : snapshot.getId();
+    Snapshot s = getPrior(id, true);
     if (s != null && 
         (prior == null || Snapshot.ID_COMPARATOR.compare(s, prior) > 0)) {
       return s;

@@ -332,3 +332,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4781. Fix a NullPointerException when listing .snapshot under
   a non-existing directory.  (szetszwo)
+
+  HDFS-4791. Update and fix deletion of reference inode.  (Jing Zhao via
+  szetszwo)

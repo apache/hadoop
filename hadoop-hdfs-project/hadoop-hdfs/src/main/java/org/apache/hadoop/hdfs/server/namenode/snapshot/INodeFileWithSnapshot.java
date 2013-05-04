@@ -59,6 +59,11 @@ public class INodeFileWithSnapshot extends INodeFile
   public boolean isCurrentFileDeleted() {
     return isCurrentFileDeleted;
   }
+  
+  @Override
+  public void deleteCurrentFile() {
+    isCurrentFileDeleted = true;
+  }
 
   @Override
   public INodeFile getSnapshotINode(Snapshot snapshot) {

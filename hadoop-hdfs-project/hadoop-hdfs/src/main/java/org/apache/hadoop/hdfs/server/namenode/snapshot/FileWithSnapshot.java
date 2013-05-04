@@ -127,6 +127,9 @@ public interface FileWithSnapshot {
 
   /** Is the current file deleted? */
   public boolean isCurrentFileDeleted();
+  
+  /** Delete the file from the current tree */
+  public void deleteCurrentFile();
 
   /** Utility methods for the classes which implement the interface. */
   public static class Util {
