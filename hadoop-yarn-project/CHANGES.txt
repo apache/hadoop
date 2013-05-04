@@ -132,6 +132,9 @@ Release 2.0.5-beta - UNRELEASED
     YARN-625. Move the utility method unwrapAndThrowException from
     YarnRemoteExceptionPBImpl to RPCUtil. (Siddharth Seth via vinodkv)
 
+    YARN-645. Moved RMDelegationTokenSecretManager from yarn-server-common to
+    yarn-server-resourcemanager where it really belongs. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
