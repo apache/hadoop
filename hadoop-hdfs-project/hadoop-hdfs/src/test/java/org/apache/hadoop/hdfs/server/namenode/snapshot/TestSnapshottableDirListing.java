@@ -81,6 +81,19 @@ public class TestSnapshottableDirListing {
     SnapshottableDirectoryStatus[] dirs = hdfs.getSnapshottableDirListing();
     assertNull(dirs);
     
+    // Make root as snapshottable
+    final Path root = new Path("/");
+    hdfs.allowSnapshot(root);
+    dirs = hdfs.getSnapshottableDirListing();
+    assertEquals(1, dirs.length);
+    assertEquals("", dirs[0].getDirStatus().getLocalName());
+    assertEquals(root, dirs[0].getFullPath());
+    
+    // Make root non-snaphsottable
+    hdfs.disallowSnapshot(root);
+    dirs = hdfs.getSnapshottableDirListing();
+    assertNull(dirs);
+    
     // Make dir1 as snapshottable
     hdfs.allowSnapshot(dir1);
     dirs = hdfs.getSnapshottableDirListing();

@@ -98,10 +98,17 @@ public class SnapshottableDirectoryStatus {
    * @return Full path of the file
    */
   public Path getFullPath() {
-    String parentFullPathStr = (parentFullPath == null || parentFullPath.length == 0) ? null
-        : DFSUtil.bytes2String(parentFullPath);
-    return parentFullPathStr == null ? new Path(dirStatus.getLocalName())
-        : new Path(parentFullPathStr, dirStatus.getLocalName());
+    String parentFullPathStr = 
+        (parentFullPath == null || parentFullPath.length == 0) ? 
+            null : DFSUtil.bytes2String(parentFullPath);
+    if (parentFullPathStr == null
+        && dirStatus.getLocalNameInBytes().length == 0) {
+      // root
+      return new Path("/");
+    } else {
+      return parentFullPathStr == null ? new Path(dirStatus.getLocalName())
+          : new Path(parentFullPathStr, dirStatus.getLocalName());
+    }
   }
   
   /**

@@ -341,3 +341,6 @@ Branch-2802 Snapshot (Unreleased)
 
   HDFS-4800. Fix INodeDirectoryWithSnapshot#cleanDeletedINode.  (Jing Zhao via
   szetszwo)
+
+  HDFS-4801. lsSnapshottableDir throws IllegalArgumentException when root is
+  snapshottable.  (Jing Zhao via szetszwo)
